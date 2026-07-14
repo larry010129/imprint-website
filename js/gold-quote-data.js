@@ -5,8 +5,8 @@ window.__GOLD_QUOTE_BOOTSTRAP__ = {
     "sell": 4228.427,
     "source": "bot",
     "bot_posted_at": "2026/07/14 15:24",
-    "fetched_at": "2026-07-14T15:54:33.654Z",
-    "fetched_at_display": "2026/7/14 23:54:33",
+    "fetched_at": "2026-07-14T15:46:47.019Z",
+    "fetched_at_display": "2026/7/14 23:46:47",
     "is_stale": false,
     "source_url": "https://rate.bot.com.tw/gold/quote/recent"
   },
