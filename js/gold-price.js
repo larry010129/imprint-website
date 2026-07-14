@@ -1,4 +1,4 @@
-/* Gold price page — live quote via GET /api/bot-gold (FastAPI / uvicorn). */
+/* Gold price page — live quote via GET /api/bot-gold (FastAPI / gunicorn on Render). */
 (function (global) {
   'use strict';
 
@@ -92,7 +92,7 @@
     };
   }
 
-  /** Live BOT quote from Node server (Render / npm run dev). */
+  /** Live BOT quote from FastAPI server (Render / dev.bat). */
   function fetchLiveQuote() {
     return fetch(API_URL, { cache: 'no-store' })
       .then(function (res) {
@@ -143,7 +143,7 @@
       return;
     }
     el.classList.remove('hidden');
-    el.textContent = '無法連線即時 API。Render 請使用 Web Service，Start Command：uvicorn server.main:app --host 0.0.0.0 --port $PORT。本機：dev.bat 或 npm run dev。';
+    el.textContent = '無法連線即時 API。Render 請使用 Python Web Service，Start：gunicorn server.main:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT。本機：dev.bat。';
   }
 
   function refreshMessage(data) {

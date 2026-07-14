@@ -1,10 +1,9 @@
 {
   "name": "imprint-diamond-site",
   "private": true,
-  "description": "Static Diamond v3 site with Python FastAPI server for live BOT gold quotes (Render / local dev).",
+  "description": "Local dev helpers only — Render deploys via render.yaml (Python + FastAPI).",
   "scripts": {
     "dev": "python -m uvicorn server.main:app --reload --host 127.0.0.1 --port 8080",
-    "start": "python -m uvicorn server.main:app --host 0.0.0.0 --port 8080",
     "fetch:gold": "python scripts/fetch_gold_quote.py"
   }
 }
