@@ -1,0 +1,15 @@
+{
+  "name": "diamond-v3-scripts",
+  "private": true,
+  "type": "module",
+  "description": "Maintenance scripts for the static Diamond v3 site (no Python).",
+  "scripts": {
+    "sync:ring-images": "node sync_ring_images_from_calculator.mjs",
+    "build:layout": "node build-site-layout.mjs",
+    "serve": "node serve-site.mjs",
+    "fetch:gold": "node fetch-gold-quote.mjs"
+  },
+  "dependencies": {
+    "sharp": "^0.33.5"
+  }
+}

@@ -1,0 +1,412 @@
+/* Guided wizard UX for shop/calculator — progressive disclosure, one step at a time */
+
+.shop-calculator-page {
+  padding-top: 16px;
+  padding-bottom: 48px;
+}
+
+.shop-calculator-wrap {
+  max-width: 1100px;
+}
+
+.shop-wizard-header {
+  margin-bottom: 28px;
+  padding: 28px 28px 24px;
+  background: linear-gradient(165deg, var(--paper-warm) 0%, #fff 55%);
+  border: 1px solid var(--mint-line);
+  border-radius: 16px;
+}
+
+.shop-step-rail {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.shop-step-rail-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, color 0.2s, box-shadow 0.2s;
+}
+
+.shop-step-rail-item:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.shop-step-rail-item.is-active {
+  border-color: var(--mint-deep);
+  background: var(--mint-soft);
+  color: var(--ink);
+  box-shadow: 0 4px 16px rgba(94, 207, 207, 0.18);
+}
+
+.shop-step-rail-item.is-done:not(:disabled) {
+  border-color: var(--mint-deep);
+  color: var(--ink);
+}
+
+.shop-step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--paper-warm);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.shop-step-rail-item.is-active .shop-step-num,
+.shop-step-rail-item.is-done .shop-step-num {
+  background: var(--mint-deep);
+  color: #fff;
+}
+
+.shop-step-rail-line {
+  width: 32px;
+  height: 2px;
+  background: var(--mint-line);
+  flex-shrink: 0;
+}
+
+.shop-wizard-eyebrow {
+  margin: 0 0 8px;
+  font-size: 12px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: #7FAFAF;
+  text-align: center;
+}
+
+.shop-wizard-title {
+  margin: 0 0 10px;
+  font-family: var(--serif);
+  font-size: clamp(24px, 4vw, 34px);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-align: center;
+  line-height: 1.45;
+}
+
+.shop-wizard-desc {
+  margin: 0 auto;
+  max-width: 520px;
+  text-align: center;
+  font-size: 15px;
+  color: var(--ink-soft);
+  line-height: 1.8;
+}
+
+.shop-wizard-progress {
+  height: 4px;
+  margin-top: 22px;
+  background: var(--mint-line);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.shop-wizard-progress-fill {
+  display: block;
+  height: 100%;
+  width: 8%;
+  background: linear-gradient(90deg, var(--mint-deep), var(--mint));
+  border-radius: inherit;
+  transition: width 0.35s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.shop-breadcrumb--compact {
+  margin-bottom: 16px;
+  font-size: 12px;
+}
+
+/* Steps 1–2: full width, hide price sidebar (catalog grids = shop.css shop-fit) */
+.shop-page.shop-step-catalog .shop-body,
+.shop-page.shop-step-styles .shop-body {
+  grid-template-columns: 1fr;
+  max-width: none;
+  margin: 0;
+}
+
+.shop-page.shop-step-catalog .shop-price-panel,
+.shop-page.shop-step-styles .shop-price-panel {
+  display: none;
+}
+
+.shop-page.shop-step-catalog .mobile-buy-bar,
+.shop-page.shop-step-styles .mobile-buy-bar {
+  display: none !important;
+}
+
+.shop-section-hint {
+  margin: 0 0 18px;
+  padding: 12px 16px;
+  background: var(--mint-soft);
+  border-left: 3px solid var(--mint-deep);
+  border-radius: 0 8px 8px 0;
+  font-size: 14px;
+  color: var(--ink-soft);
+  letter-spacing: 0.04em;
+}
+
+.shop-section-hint--action {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  background: linear-gradient(90deg, var(--mint-soft) 0%, #fff 100%);
+  border: 1px solid var(--mint-line);
+  border-left: 4px solid var(--mint-deep);
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ink);
+  box-shadow: 0 4px 16px rgba(94, 207, 207, 0.12);
+}
+
+.shop-hint-icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--mint-deep);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.shop-section-title--sub {
+  font-size: 18px;
+  margin-bottom: 16px;
+  color: var(--ink-soft);
+}
+
+.catalog-filters-wrap {
+  margin-bottom: 20px;
+}
+
+.catalog-filters-toggle {
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--ink-soft);
+  letter-spacing: 0.06em;
+  padding: 8px 0;
+  list-style: none;
+}
+
+.catalog-filters-wrap:not([open]) .catalog-filters {
+  display: none;
+}
+
+.catalog-filters-wrap[open] .catalog-filters {
+  margin-top: 12px;
+}
+
+/* Step 3 layout */
+.shop-page.shop-step-product .shop-body {
+  grid-template-columns: 1fr 300px;
+  gap: 32px;
+}
+
+.product-layout--wizard {
+  gap: 24px;
+}
+
+.product-info-tabs--collapsed .product-tab-nav {
+  display: none;
+}
+
+.product-about-details {
+  margin-bottom: 20px;
+  border: 1px solid var(--mint-line);
+  border-radius: 10px;
+  background: #fff;
+}
+
+.product-about-details summary {
+  padding: 12px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--ink-soft);
+  letter-spacing: 0.04em;
+}
+
+.product-about-details .product-tab-panels {
+  padding: 0 16px 16px;
+}
+
+/* Step 3 config — flat layout, all options visible (imprint shop style) */
+.shop-page.shop-step-product .product-buy-col {
+  overflow-y: visible;
+  padding-right: 0;
+}
+
+/* Price panel — cleaner */
+.shop-price-panel--wizard {
+  position: sticky;
+  top: 100px;
+  padding: 22px;
+  border: 1px solid var(--mint-line);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: var(--shadow-soft);
+}
+
+.shop-price-panel-head {
+  margin-bottom: 8px;
+}
+
+.shop-price-panel-label {
+  display: block;
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  color: var(--ink-soft);
+  margin-bottom: 6px;
+}
+
+.shop-price-panel--wizard .hero-price-disclaimer {
+  font-size: 11px;
+  line-height: 1.6;
+  margin-top: 8px;
+}
+
+.shop-action-row--primary {
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.shop-action-row--primary .shop-cta {
+  width: 100%;
+  justify-content: center;
+  padding: 14px 20px;
+  font-size: 15px;
+}
+
+.shop-secondary-actions--compact {
+  margin-top: 12px;
+  justify-content: center;
+  gap: 16px;
+}
+
+.shop-secondary-actions--compact button {
+  font-size: 13px;
+  color: var(--ink-soft);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+
+@media (max-width: 900px) {
+  .shop-step-rail {
+    gap: 6px;
+  }
+
+  .shop-step-rail-line {
+    width: 16px;
+  }
+
+  .shop-step-label {
+    display: none;
+  }
+
+  .shop-step-rail-item {
+    padding: 8px 12px;
+  }
+
+  .shop-wizard-header {
+    padding: 20px 16px 18px;
+  }
+
+  .shop-page.shop-step-product .shop-body {
+    grid-template-columns: 1fr;
+  }
+
+  .shop-price-panel--wizard {
+    position: static;
+  }
+
+  .product-layout--wizard {
+    grid-template-columns: 1fr;
+  }
+
+  .product-gallery-col {
+    max-width: 320px;
+    margin: 0 auto;
+  }
+}
+
+/* Wizard: release viewport-lock so price breakdown is never clipped */
+.shop-page.shop-wizard.shop-fit {
+  height: auto;
+  min-height: 0;
+  overflow: visible;
+}
+
+.shop-page.shop-wizard .shop-body {
+  align-items: start;
+}
+
+.shop-page.shop-wizard .shop-main {
+  overflow: visible;
+}
+
+.shop-page.shop-wizard .shop-section:not(.hidden) {
+  overflow: visible;
+  height: auto;
+}
+
+.shop-page.shop-wizard .shop-price-panel,
+.shop-page.shop-wizard .shop-price-panel--wizard {
+  height: auto;
+  max-height: none;
+  overflow: visible;
+}
+
+.shop-page.shop-wizard .price-breakdown-details {
+  flex: none;
+  min-height: auto;
+  overflow: visible;
+}
+
+.shop-page.shop-wizard .price-breakdown-panel {
+  flex: none;
+  min-height: auto;
+  max-height: none;
+  overflow: visible;
+}
+
+/* Wizard: always show full breakdown (克拉、台金、金工費) */
+.shop-page.shop-wizard .price-breakdown-details:not([open]) .price-breakdown-panel {
+  display: block !important;
+}
+
+@media (min-width: 901px) {
+  .shop-page.shop-wizard.shop-step-catalog .shop-body,
+  .shop-page.shop-wizard.shop-step-styles .shop-body {
+    grid-template-columns: minmax(0, 1fr) 280px;
+    gap: 24px;
+  }
+
+  .shop-page.shop-wizard.shop-step-catalog .shop-price-panel,
+  .shop-page.shop-wizard.shop-step-styles .shop-price-panel {
+    display: flex;
+  }
+}

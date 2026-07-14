@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<script>window.imgFallback=function(img){var s=img.dataset.fbStep?parseInt(img.dataset.fbStep,10):0;var e=["jpg","png","jpeg"];var pic=img.parentElement&&img.parentElement.tagName==="PICTURE"?img.parentElement:null;if(s<e.length-1){s++;img.dataset.fbStep=String(s);if(pic){var srcs=pic.querySelectorAll("source");for(var i=0;i<srcs.length;i++){srcs[i].remove();}}img.src=img.src.replace(/\.(jpg|jpeg|png)(\?.*)?$/i,"."+e[s]+"$2");}else{(pic||img).remove();}};</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>銘印鑽石｜管理後台</title>
+<meta name="robots" content="noindex">
+<!-- 上線時建議打開 Google Fonts:
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;600&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+-->
+<style>
+/* ============================================================
+   銘印鑽石 管理後台（前端示意版）
+   說明：此為靜態前端 mockup,表格內容皆為示意資料。
+   正式使用需由工程師串接後端（資料庫/LINE API/表單來源）。
+============================================================ */
+:root{
+  --ink:#2B2320; --ink-soft:#5C534E; --ink-faint:#8A817B;
+  --mint:#9CEFEF; --mint-deep:#5ECFCF; --mint-soft:#F4FBFB; --mint-line:#DCF2F2;
+  --paper:#FBFAF8; --card:#FFFFFF;
+  --ok:#4CAF7D; --warn:#E0A458; --info:#6C9BD1;
+  --sans:"Noto Sans TC","Microsoft JhengHei",sans-serif;
+  --serif:"Noto Serif TC",serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:var(--sans);background:var(--paper);color:var(--ink);font-size:14px;line-height:1.7;}
+a{color:inherit;text-decoration:none;}
+button{font-family:inherit;cursor:pointer;border:none;background:none;}
+
+.layout{display:grid;grid-template-columns:232px 1fr;min-height:100vh;}
+
+/* 側邊欄 */
+.side{background:var(--ink);color:#B8AFA8;padding:28px 0;display:flex;flex-direction:column;}
+.side-brand{display:flex;align-items:center;gap:10px;padding:0 24px 26px;border-bottom:1px solid rgba(255,255,255,.08);}
+.side-brand svg{width:44px;height:22px;flex:none;}
+.side-brand .zh{font-family:var(--serif);font-size:16px;color:#F7F4F1;letter-spacing:.24em;}
+.side-brand .en{font-size:8.5px;letter-spacing:.26em;color:#7A716B;display:block;}
+.side-nav{padding:18px 12px;flex:1;}
+.side-nav p{font-size:10.5px;letter-spacing:.3em;color:#6E655F;padding:14px 14px 8px;}
+.side-nav button{
+  display:flex;align-items:center;gap:12px;width:100%;text-align:left;
+  padding:11px 14px;border-radius:6px;color:#B8AFA8;font-size:13.5px;letter-spacing:.08em;
+  transition:all .2s;
+}
+.side-nav button:hover{background:rgba(255,255,255,.06);color:#F7F4F1;}
+.side-nav button.is-active{background:rgba(156,239,239,.14);color:var(--mint);}
+.side-nav .dot{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.7;flex:none;}
+.side-foot{padding:18px 24px;font-size:11.5px;color:#6E655F;border-top:1px solid rgba(255,255,255,.08);}
+
+/* 主區 */
+.main{padding:0 36px 60px;}
+.main-top{
+  display:flex;align-items:center;justify-content:space-between;gap:20px;
+  padding:22px 0;border-bottom:1px solid #EDE7E0;margin-bottom:30px;
+}
+.main-top h1{font-family:var(--serif);font-size:21px;letter-spacing:.14em;font-weight:600;}
+.main-top .meta{font-size:12px;color:var(--ink-faint);letter-spacing:.06em;}
+.badge-demo{
+  display:inline-block;background:#FFF4E3;color:#B07C2E;border:1px solid #F0DDBB;
+  font-size:11px;letter-spacing:.12em;padding:3px 10px;border-radius:20px;margin-left:10px;vertical-align:2px;
+}
+
+/* 分頁面板 */
+.panel{display:none;}
+.panel.is-active{display:block;animation:fadeUp .4s ease;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+
+/* 統計卡 */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:30px;}
+.stat{
+  background:var(--card);border:1px solid #EDE7E0;border-radius:8px;padding:22px 24px;
+  box-shadow:0 8px 24px rgba(43,35,32,.04);
+}
+.stat .k{font-size:12px;color:var(--ink-faint);letter-spacing:.14em;margin-bottom:10px;}
+.stat .v{font-family:var(--serif);font-size:30px;font-weight:600;letter-spacing:.04em;}
+.stat .v small{font-size:13px;color:var(--ink-faint);font-family:var(--sans);margin-left:4px;}
+.stat .d{font-size:11.5px;margin-top:6px;letter-spacing:.06em;}
+.stat .d.up{color:var(--ok);} .stat .d.flat{color:var(--ink-faint);}
+
+/* 卡片與表格 */
+.card{
+  background:var(--card);border:1px solid #EDE7E0;border-radius:8px;
+  box-shadow:0 8px 24px rgba(43,35,32,.04);margin-bottom:26px;overflow:hidden;
+}
+.card-head{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding:18px 24px;border-bottom:1px solid #F2EDE7;
+}
+.card-head h2{font-size:15px;font-weight:500;letter-spacing:.14em;}
+.card-head .hint{font-size:11.5px;color:var(--ink-faint);}
+table{width:100%;border-collapse:collapse;}
+th{
+  text-align:left;font-size:11.5px;color:var(--ink-faint);font-weight:500;
+  letter-spacing:.14em;padding:12px 24px;background:#FBF9F6;border-bottom:1px solid #F2EDE7;
+  white-space:nowrap;
+}
+td{padding:15px 24px;border-bottom:1px solid #F7F3EE;vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:#FDFCFA;}
+.name{font-weight:500;}
+.sub{font-size:11.5px;color:var(--ink-faint);display:block;}
+
+/* 狀態籤 */
+.chip{
+  display:inline-block;font-size:11.5px;letter-spacing:.1em;padding:4px 12px;border-radius:20px;white-space:nowrap;
+}
+.chip-new{background:#EAF3FC;color:#4A7FB5;}
+.chip-talk{background:#FFF4E3;color:#B07C2E;}
+.chip-grow{background:var(--mint-soft);color:#3AA8A8;border:1px solid var(--mint-line);}
+.chip-cut{background:#F0EAFB;color:#7E5FB5;}
+.chip-done{background:#EAF7EF;color:#3E8E62;}
+.chip-cold{background:#F3F0EC;color:#8A817B;}
+
+/* 進度條 */
+.prog{width:150px;}
+.prog .bar{height:6px;background:#EFEAE3;border-radius:4px;overflow:hidden;}
+.prog .fill{height:100%;background:linear-gradient(to right,var(--mint),var(--mint-deep));border-radius:4px;}
+.prog .lab{font-size:11px;color:var(--ink-faint);margin-top:5px;letter-spacing:.06em;}
+
+/* 按鈕 */
+.btn-sm{
+  font-size:12px;letter-spacing:.1em;padding:7px 16px;border-radius:5px;
+  border:1px solid #DDD5CC;color:var(--ink-soft);transition:all .2s;background:#fff;
+}
+.btn-sm:hover{border-color:var(--mint-deep);color:var(--mint-deep);}
+.btn-primary{
+  background:var(--ink);color:#fff;border-color:var(--ink);
+}
+.btn-primary:hover{background:#453A34;color:#fff;}
+
+/* 內容管理列表 */
+.content-list{padding:8px 0;}
+.content-row{
+  display:flex;align-items:center;justify-content:space-between;gap:18px;
+  padding:16px 24px;border-bottom:1px solid #F7F3EE;
+}
+.content-row:last-child{border-bottom:none;}
+.content-row .t{font-weight:500;}
+.content-row .path{font-size:11.5px;color:var(--ink-faint);letter-spacing:.04em;}
+
+/* 提醒盒 */
+.note{
+  background:var(--mint-soft);border:1px solid var(--mint-line);border-radius:8px;
+  padding:16px 22px;font-size:12.5px;color:#3A7A7A;letter-spacing:.05em;margin-bottom:26px;line-height:1.9;
+}
+.note.warn{ background:#FFF6E9;border-color:#F0DDBB;color:#8A6420; }
+
+/* 價格設定：可編輯表格 */
+.price-edit-table{ width:100%; border-collapse:collapse; }
+.price-edit-table th{
+  text-align:left;font-size:11px;color:var(--ink-faint);font-weight:500;letter-spacing:.1em;
+  padding:10px 18px;background:#FBF9F6;border-bottom:1px solid #F2EDE7;white-space:nowrap;
+}
+.price-edit-table td{ padding:8px 18px;border-bottom:1px solid #F7F3EE;vertical-align:middle; }
+.price-edit-table tr:last-child td{ border-bottom:none; }
+.price-edit-table input[type="number"]{
+  width:120px;font-family:inherit;font-size:13.5px;padding:8px 10px;
+  border:1px solid #DDD5CC;border-radius:5px;color:var(--ink);
+}
+.price-edit-table input[type="number"]:focus{ outline:none;border-color:var(--mint-deep); }
+.price-edit-table input.is-na{ background:#F7F3EE;color:var(--ink-faint); }
+.src-tag{
+  display:inline-block;font-size:10px;letter-spacing:.08em;padding:2px 8px;border-radius:20px;margin-left:8px;vertical-align:1px;
+}
+.src-tag.official{ background:#EAF7EF;color:#3E8E62; }
+.src-tag.estimate{ background:#FFF4E3;color:#B07C2E; }
+.pricing-savebar{
+  position:sticky;bottom:0;display:flex;align-items:center;justify-content:space-between;gap:16px;
+  background:#fff;border:1px solid #EDE7E0;border-radius:8px;padding:16px 22px;margin-top:20px;
+  box-shadow:0 -8px 24px rgba(43,35,32,.06);
+}
+.pricing-savebar .msg{ font-size:12.5px;color:var(--ok);min-height:16px; }
+.pricing-savebar .btns{ display:flex;gap:10px; }
+
+@media (max-width:960px){
+  .layout{grid-template-columns:1fr;}
+  .side{flex-direction:row;overflow-x:auto;padding:10px;position:sticky;top:0;z-index:10;}
+  .side-brand{border:none;padding:0 14px;}
+  .side-nav{display:flex;padding:0;flex:none;}
+  .side-nav p,.side-foot{display:none;}
+  .stats{grid-template-columns:1fr 1fr;}
+  .main{padding:0 16px 40px;}
+  .card{overflow-x:auto;}
+  table{min-width:720px;}
+}
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- 側邊欄 -->
+  <aside class="side">
+    <div class="side-brand">
+      <svg viewBox="7684 11471 5729 2870" aria-hidden="true">
+        <path d="M12299 14276l-1463 -1021c-1,-1 -3,-2 -4,-3 -28,-19 -35,-58 -15,-85 135,-193 384,-30 400,-19 1,0 1,1 2,1l1123 784 715 -442 0 -1169 -715 -442 -1658 1153 0 0c-86,60 2,-1 -86,60 -217,152 -769,540 -850,596 -49,33 -83,57 -118,82l-3 2c-143,100 -304,213 -463,306 -163,95 -325,170 -466,192 -25,4 -49,7 -71,9 -24,2 -48,3 -70,3 -101,0 -199,-17 -292,-51 -92,-34 -177,-83 -253,-149 -87,-75 -157,-166 -204,-265 -48,-100 -74,-208 -74,-315 0,-118 33,-236 93,-346 49,-90 116,-174 198,-249 -82,-75 -149,-160 -198,-250 -60,-111 -93,-229 -93,-346 0,-107 26,-215 74,-315 48,-99 117,-190 204,-265 94,-81 203,-138 319,-170 116,-32 241,-39 367,-19 142,22 304,97 467,193 159,93 320,206 464,307l14 10c31,21 60,42 104,72 52,36 297,208 523,366l90 63c26,18 35,52 19,80 -7,12 -54,89 -157,103 -50,7 -114,-2 -192,-42 -3,-2 -6,-3 -9,-5 -174,-122 -247,-173 -283,-199 -74,-52 -134,-94 -164,-114l0 0 0 0c-11,-8 -31,-21 -55,-38 -1,-1 -3,-2 -4,-3 -68,-48 9,6 -62,-43 -126,-89 -276,-194 -422,-281 -141,-84 -277,-151 -380,-167 -83,-13 -163,-9 -238,12 -74,20 -143,56 -203,107 -54,46 -97,102 -127,162 -29,59 -45,122 -45,184 0,80 30,164 82,244 54,81 131,156 225,214 2,1 4,2 6,4l50 35c17,11 29,30 29,52l0 96 0 0c0,19 -9,38 -26,50l-52 36 0 0c-1,1 -2,1 -3,2 -95,58 -174,134 -228,215 -52,79 -82,164 -82,244 0,62 16,126 45,185 29,60 73,116 127,162 60,51 128,87 202,107 74,20 152,24 233,12 2,0 3,-1 5,-1 208,-32 547,-269 797,-443 1,-1 2,-2 3,-2l1 0 0 0 0 0c53,-37 36,-25 63,-44 15,-10 34,-24 60,-42 104,-71 2653,-1849 2722,-1898 20,-15 47,-17 69,-3l963 596c20,10 34,31 34,55l0 1442 0 0c0,20 -10,40 -29,52l-968 599 0 0c-20,12 -47,12 -67,-2z" fill="#F7F4F1"/>
+      </svg>
+      <div>
+        <span class="zh">銘印鑽石</span>
+        <span class="en">ADMIN CONSOLE</span>
+      </div>
+    </div>
+    <nav class="side-nav">
+      <p>營運</p>
+      <button class="is-active" data-panel="dash"><span class="dot"></span>儀表板</button>
+      <button data-panel="leads"><span class="dot"></span>諮詢名單</button>
+      <button data-panel="orders"><span class="dot"></span>訂單與製作進度</button>
+      <p>商品</p>
+      <button data-panel="pricing"><span class="dot"></span>價格設定</button>
+      <p>網站</p>
+      <button data-panel="content"><span class="dot"></span>內容管理</button>
+    </nav>
+    <div class="side-foot">前端示意版<br>需串接後端啟用</div>
+  </aside>
+
+  <!-- 主區 -->
+  <main class="main">
+    <div class="main-top">
+      <h1 id="pageTitle">儀表板</h1>
+      <span class="meta" id="topMeta">載入中…</span>
+    </div>
+
+    <!-- 儀表板 -->
+    <section class="panel is-active" id="panel-dash">
+      <div class="stats">
+        <div class="stat"><p class="k">待回覆表單留言</p><p class="v" id="statNewMessages">-</p></div>
+        <div class="stat"><p class="k">待處理估價需求</p><p class="v" id="statPendingQuotes">-</p></div>
+        <div class="stat"><p class="k">進行中訂單</p><p class="v" id="statActiveOrders">-</p></div>
+        <div class="stat"><p class="k">已完成訂單</p><p class="v" id="statCompletedOrders">-</p></div>
+      </div>
+    </section>
+
+    <!-- 諮詢名單 -->
+    <section class="panel" id="panel-leads">
+      <p class="note">
+        這份名單彙整官網表單、LINE 官方帳號與電話來的詢問。此客群考慮期長達數年——
+        「觀望中」的客人請保持低頻率的溫柔跟進，切勿密集催促。
+      </p>
+      <div class="card">
+        <div class="card-head">
+          <h2>諮詢名單</h2>
+          <span class="hint">彙整官網「聯絡表單」與「線上估價需求」，依建立時間排序</span>
+        </div>
+        <table>
+          <thead><tr><th>客戶</th><th>來源</th><th>內容摘要</th><th>建立時間</th><th>狀態</th><th></th></tr></thead>
+          <tbody id="leadsTableBody">
+            <tr><td colspan="6" style="text-align:center;color:var(--ink-faint);">載入中…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 訂單與製作進度 -->
+    <section class="panel" id="panel-orders">
+      <div class="card">
+        <div class="card-head">
+          <h2>訂單列表</h2>
+          <button class="btn-sm btn-primary" id="btnNewOrder">+ 新增訂單</button>
+        </div>
+        <table>
+          <thead><tr><th>訂單</th><th>系列/規格</th><th>狀態</th><th>備註</th><th>建立時間</th><th></th></tr></thead>
+          <tbody id="ordersTableBody">
+            <tr><td colspan="6" style="text-align:center;color:var(--ink-faint);">載入中…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 價格設定 -->
+    <section class="panel" id="panel-pricing">
+      <p class="note">
+        這裡調整的價格會直接存進資料庫，儲存後全站所有裝置（你自己的電腦、同事的電腦、
+        客人的手機）都會同步看到新價格，客製試算頁重新整理即可套用。
+      </p>
+
+      <div class="card">
+        <div class="card-head">
+          <h2>單顆鑽石價格<span class="src-tag official">★官方報價單</span></h2>
+          <span class="hint">依「顏色 × 克拉」查表；彩鑽 0.10／0.20 目前無法製作，留空即可</span>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="price-edit-table" id="tblDiamond">
+            <thead><tr><th>克拉</th><th>白鑽</th><th>彩鑽（黃鑽・粉鑽・淺藍鑽）</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2>非圓形切工加價<span class="src-tag official">★官方規則</span></h2>
+          <span class="hint">公主方／橢圓／梨形／心形／祖母綠形／亞瑟方形／馬眼形／三角形／枕形，統一套用此加成</span>
+        </div>
+        <div style="padding:18px 24px;">
+          <label style="display:flex;align-items:center;gap:10px;font-size:13.5px;">
+            加價百分比
+            <input type="number" id="inpShapePct" min="0" max="100" step="1" style="width:90px;">
+            %
+          </label>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2>飾品戒台費用<span class="src-tag estimate">估算值，待確認</span></h2>
+          <span class="hint">只有「9K 經典款項鍊 NT$10,000」是官方公開數字，其餘請盡快改成正式報價</span>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="price-edit-table" id="tblMounting">
+            <thead><tr><th>款式</th><th>18K 金</th><th>14K 金</th><th>9K 金</th><th>PT950 鉑金</th><th>純銀</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2>腰圍刻字費用<span class="src-tag estimate">估算值，待確認</span></h2>
+        </div>
+        <div style="padding:18px 24px;">
+          <label style="display:flex;align-items:center;gap:10px;font-size:13.5px;">
+            每件刻字加收
+            <input type="number" id="inpEngraveFee" min="0" step="100" style="width:120px;">
+            元（設 0 代表刻字不加價）
+          </label>
+        </div>
+      </div>
+
+      <div class="pricing-savebar">
+        <span class="msg" id="pricingMsg"></span>
+        <div class="btns">
+          <button class="btn-sm" id="btnResetPricing">還原成預設值</button>
+          <button class="btn-sm btn-primary" id="btnSavePricing">儲存價格設定</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 內容管理 -->
+    <section class="panel" id="panel-content">
+      <p class="note">
+        內容紅線提醒：全站文案迴避「培育鑽石與天然鑽石的比較」話題；
+        見證需取得客戶同意後上架，化名亦可。
+      </p>
+      <div class="card">
+        <div class="card-head">
+          <h2>頁面內容</h2>
+          <button class="btn-sm btn-primary">+ 新增頁面</button>
+        </div>
+        <div class="content-list">
+          <div class="content-row">
+            <div><p class="t">首頁</p><p class="path">/index.html・meta 已設定</p></div>
+            <div><span class="chip chip-done">已發布</span> <button class="btn-sm">編輯</button></div>
+          </div>
+          <div class="content-row">
+            <div><p class="t">常見問題 FAQ</p><p class="path">/faq・含 FAQPage 結構化資料</p></div>
+            <div><span class="chip chip-done">已發布</span> <button class="btn-sm">編輯</button></div>
+          </div>
+          <div class="content-row">
+            <div><p class="t">客戶故事：沈小姐與毛孩（訪談中）</p><p class="path">/stories/pet-diamond-story</p></div>
+            <div><span class="chip chip-talk">草稿</span> <button class="btn-sm">編輯</button></div>
+          </div>
+          <div class="content-row">
+            <div><p class="t">見證輪播（首頁）</p><p class="path">3 則示意文案待換真實見證</p></div>
+            <div><span class="chip chip-new">待更新</span> <button class="btn-sm">編輯</button></div>
+          </div>
+          <div class="content-row">
+            <div><p class="t">價目表</p><p class="path">/price・2026/03 版本</p></div>
+            <div><span class="chip chip-done">已發布</span> <button class="btn-sm">編輯</button></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script src="js/api-client.js"></script>
+<script src="js/order-status.js"></script>
+<script src="js/admin.js"></script>
+<script src="js/pricing-config.js?v=1.1"></script>
+<script>
+/* 側邊欄分頁切換（純前端示意） */
+(function(){
+  var buttons = document.querySelectorAll('.side-nav button');
+  var titles = { dash:'儀表板', leads:'諮詢名單', orders:'訂單與製作進度', pricing:'價格設定', content:'內容管理' };
+  buttons.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      buttons.forEach(function(b){ b.classList.remove('is-active'); });
+      btn.classList.add('is-active');
+      document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('is-active'); });
+      document.getElementById('panel-' + btn.dataset.panel).classList.add('is-active');
+      var demoBadge = (btn.dataset.panel === 'content')
+        ? '<span class="badge-demo">示意資料</span>'
+        : '';
+      document.getElementById('pageTitle').innerHTML = titles[btn.dataset.panel] + demoBadge;
+      if (btn.dataset.panel === 'pricing' && window.PricingPanel) window.PricingPanel.refresh();
+      if (window.AdminPanel) window.AdminPanel.onPanelSwitch(btn.dataset.panel);
+    });
+  });
+})();
+
+/* 價格設定面板：讀寫 window.ImprintPricing */
+(function(){
+  if (!window.ImprintPricing) return;
+
+  var CARAT_ROWS = [
+    ['0.10','0.10 克拉'], ['0.20','0.20 克拉'], ['0.30','0.30 克拉'], ['0.50','0.50 克拉'],
+    ['0.60','0.60 克拉'], ['0.70','0.70 克拉'], ['0.80','0.80 克拉'], ['0.90','0.90 克拉'],
+    ['1.00','1.00 克拉'], ['1.50','1.50 克拉'], ['2.00','2.00 克拉'], ['3.00','3.00 克拉']
+  ];
+  var MOUNTING_ROWS = [
+    ['necklace','項鍊'], ['ring','戒指'], ['earring','耳環'], ['bracelet','手鍊']
+  ];
+  var METAL_COLS = ['18k','14k','9k','pt950','silver'];
+
+  var tblDiamondBody = document.querySelector('#tblDiamond tbody');
+  var tblMountingBody = document.querySelector('#tblMounting tbody');
+  var inpShapePct = document.getElementById('inpShapePct');
+  var inpEngraveFee = document.getElementById('inpEngraveFee');
+  var msg = document.getElementById('pricingMsg');
+
+  function buildDiamondRows(){
+    tblDiamondBody.innerHTML = '';
+    CARAT_ROWS.forEach(function(row){
+      var carat = row[0], label = row[1];
+      var tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td>' + label + '</td>' +
+        '<td><input type="number" min="0" step="1000" data-diamond="white" data-carat="' + carat + '"></td>' +
+        '<td><input type="number" min="0" step="1000" data-diamond="fancy" data-carat="' + carat + '" placeholder="無法製作"></td>';
+      tblDiamondBody.appendChild(tr);
+    });
+  }
+
+  function buildMountingRows(){
+    tblMountingBody.innerHTML = '';
+    MOUNTING_ROWS.forEach(function(row){
+      var key = row[0], label = row[1];
+      var tds = '<td>' + label + '</td>';
+      METAL_COLS.forEach(function(metal){
+        tds += '<td><input type="number" min="0" step="500" data-mounting="' + key + '" data-metal="' + metal + '"></td>';
+      });
+      var tr = document.createElement('tr');
+      tr.innerHTML = tds;
+      tblMountingBody.appendChild(tr);
+    });
+  }
+
+  function fillValues(){
+    var p = window.ImprintPricing.getAll();
+    document.querySelectorAll('[data-diamond]').forEach(function(inp){
+      var color = inp.dataset.diamond, carat = inp.dataset.carat;
+      var v = p.diamond[color] ? p.diamond[color][carat] : null;
+      inp.value = (v != null) ? v : '';
+      inp.classList.toggle('is-na', v == null);
+    });
+    document.querySelectorAll('[data-mounting]').forEach(function(inp){
+      var key = inp.dataset.mounting, metal = inp.dataset.metal;
+      var v = p.mounting[key] ? p.mounting[key][metal] : null;
+      inp.value = (v != null) ? v : 0;
+    });
+    inpShapePct.value = p.shapeSurchargePct;
+    inpEngraveFee.value = p.engraveFee;
+  }
+
+  function collectOverrides(){
+    var overrides = { diamond: { white: {}, fancy: {} }, mounting: {} };
+    document.querySelectorAll('[data-diamond]').forEach(function(inp){
+      var color = inp.dataset.diamond, carat = inp.dataset.carat;
+      if (inp.value === '') {
+        overrides.diamond[color][carat] = null; // 空白 = 此規格無法製作
+      } else {
+        overrides.diamond[color][carat] = Number(inp.value);
+      }
+    });
+    MOUNTING_ROWS.forEach(function(row){
+      overrides.mounting[row[0]] = {};
+    });
+    document.querySelectorAll('[data-mounting]').forEach(function(inp){
+      var key = inp.dataset.mounting, metal = inp.dataset.metal;
+      overrides.mounting[key][metal] = Number(inp.value) || 0;
+    });
+    overrides.shapeSurchargePct = Number(inpShapePct.value) || 0;
+    overrides.engraveFee = Number(inpEngraveFee.value) || 0;
+    return overrides;
+  }
+
+  var btnSave = document.getElementById('btnSavePricing');
+  var btnReset = document.getElementById('btnResetPricing');
+
+  btnSave.addEventListener('click', function(){
+    btnSave.disabled = true;
+    var originalText = btnSave.textContent;
+    btnSave.textContent = '儲存中…';
+    window.ImprintPricing.saveOverrides(collectOverrides()).then(function(res){
+      btnSave.disabled = false;
+      btnSave.textContent = originalText;
+      if (res && res.error) {
+        msg.textContent = '儲存失敗：' + res.error.message;
+        setTimeout(function(){ msg.textContent = ''; }, 8000);
+        return;
+      }
+      msg.textContent = '已儲存，全站所有裝置會同步套用新價格。';
+      setTimeout(function(){ msg.textContent = ''; }, 6000);
+    });
+  });
+
+  btnReset.addEventListener('click', function(){
+    if (!confirm('確定要清除調整過的價格，全站還原成系統預設值嗎？')) return;
+    btnReset.disabled = true;
+    window.ImprintPricing.resetOverrides().then(function(res){
+      btnReset.disabled = false;
+      if (res && res.error) {
+        msg.textContent = '還原失敗：' + res.error.message;
+        setTimeout(function(){ msg.textContent = ''; }, 8000);
+        return;
+      }
+      fillValues();
+      msg.textContent = '已還原成預設值。';
+      setTimeout(function(){ msg.textContent = ''; }, 6000);
+    });
+  });
+
+  buildDiamondRows();
+  buildMountingRows();
+  msg.textContent = '讀取目前價格中…';
+  window.ImprintPricing.ready.then(function(){
+    fillValues();
+    msg.textContent = '';
+  });
+
+  window.PricingPanel = { refresh: fillValues };
+})();
+</script>
+</body>
+</html>

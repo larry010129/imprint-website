@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  銘印鑽石 IMPRINT DIAMOND｜網站地圖
+  【上線前請確認】網址先以正式網域佔位：https://www.imprint-diamond.com/。
+  若最終部署網址不同，請把下面所有網址換成實際網址。
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+
+  <url>
+    <loc>https://www.imprint-diamond.com/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://www.imprint-diamond.com/images/hero/imprint-diamond-family-memorial.jpg</image:loc>
+      <image:title>DNA紀念鑽石－銘印鑽石品牌意象</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://www.imprint-diamond.com/images/hero/imprint-diamond-newborn-baby-necklace.jpg</image:loc>
+      <image:title>滿月鑽石－寶寶胎髮紀念鑽石</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://www.imprint-diamond.com/images/hero/imprint-diamond-pet-memorial-cat.jpg</image:loc>
+      <image:title>寵物鑽石－毛孩毛髮紀念鑽石</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://www.imprint-diamond.com/images/hero/imprint-diamond-wedding-couple-ring.jpg</image:loc>
+      <image:title>結髮鑽石－夫妻髮絲紀念鑽石</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://www.imprint-diamond.com/images/hero/imprint-diamond-family-portrait-jewelry.jpg</image:loc>
+      <image:title>全家福鑽石－全家人髮絲紀念鑽石</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://www.imprint-diamond.com/images/hero/imprint-diamond-heirloom-memorial.jpg</image:loc>
+      <image:title>生命鑽石－親人毛髮骨灰紀念鑽石</image:title>
+    </image:image>
+  </url>
+
+  <url><loc>https://www.imprint-diamond.com/diamonds.html</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+
+  <url>
+    <loc>https://www.imprint-diamond.com/series/first-love/</loc>
+    <changefreq>monthly</changefreq><priority>0.8</priority>
+    <image:image><image:loc>https://www.imprint-diamond.com/images/hero/imprint-diamond-newborn-baby-necklace.jpg</image:loc><image:title>滿月鑽石－寶寶胎髮紀念鑽石</image:title></image:image>
+  </url>
+  <url>
+    <loc>https://www.imprint-diamond.com/series/pet/</loc>
+    <changefreq>monthly</changefreq><priority>0.8</priority>
+    <image:image><image:loc>https://www.imprint-diamond.com/images/hero/imprint-diamond-pet-memorial-cat.jpg</image:loc><image:title>寵物鑽石－毛孩毛髮紀念鑽石</image:title></image:image>
+  </url>
+  <url>
+    <loc>https://www.imprint-diamond.com/series/love/</loc>
+    <changefreq>monthly</changefreq><priority>0.8</priority>
+    <image:image><image:loc>https://www.imprint-diamond.com/images/hero/imprint-diamond-wedding-couple-ring.jpg</image:loc><image:title>結髮鑽石－夫妻髮絲紀念鑽石</image:title></image:image>
+  </url>
+  <url>
+    <loc>https://www.imprint-diamond.com/series/family/</loc>
+    <changefreq>monthly</changefreq><priority>0.8</priority>
+    <image:image><image:loc>https://www.imprint-diamond.com/images/hero/imprint-diamond-family-portrait-jewelry.jpg</image:loc><image:title>全家福鑽石－全家人髮絲紀念鑽石</image:title></image:image>
+  </url>
+  <url>
+    <loc>https://www.imprint-diamond.com/series/heirloom/</loc>
+    <changefreq>monthly</changefreq><priority>0.8</priority>
+    <image:image><image:loc>https://www.imprint-diamond.com/images/hero/imprint-diamond-heirloom-memorial.jpg</image:loc><image:title>生命鑽石－親人毛髮骨灰紀念鑽石</image:title></image:image>
+  </url>
+
+  <url><loc>https://www.imprint-diamond.com/what-is-dna-diamond.html</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://www.imprint-diamond.com/price.html</loc><changefreq>monthly</changefreq><priority>0.85</priority></url>
+  <url><loc>https://www.imprint-diamond.com/gold-price.html</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.imprint-diamond.com/shop/calculator/</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.imprint-diamond.com/faq.html</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url>
+    <loc>https://www.imprint-diamond.com/jewelry/</loc>
+    <changefreq>monthly</changefreq><priority>0.8</priority>
+    <image:image><image:loc>https://www.imprint-diamond.com/images/hero/imprint-diamond-family-portrait-jewelry.jpg</image:loc><image:title>時尚珠寶－戒指項鍊耳環手鍊 DNA紀念鑽石</image:title></image:image>
+  </url>
+
+  <url>
+    <loc>https://www.imprint-diamond.com/jewelry/rings/</loc>
+    <changefreq>monthly</changefreq><priority>0.75</priority>
+    <image:image><image:loc>https://www.imprint-diamond.com/images/hero/imprint-diamond-wedding-couple-ring.jpg</image:loc><image:title>戒指系列－DNA紀念鑽石戒指訂製</image:title></image:image>
+  </url>
+  <url><loc>https://www.imprint-diamond.com/jewelry/rings/classic-solitaire/</loc><changefreq>monthly</changefreq><priority>0.65</priority></url>
+  <url><loc>https://www.imprint-diamond.com/jewelry/rings/pave-halo/</loc><changefreq>monthly</changefreq><priority>0.65</priority></url>
+  <url><loc>https://www.imprint-diamond.com/jewelry/rings/vintage-vine/</loc><changefreq>monthly</changefreq><priority>0.65</priority></url>
+  <url><loc>https://www.imprint-diamond.com/jewelry/rings/modern-band/</loc><changefreq>monthly</changefreq><priority>0.65</priority></url>
+
+  <url>
+    <loc>https://www.imprint-diamond.com/jewelry/necklaces/</loc>
+    <changefreq>monthly</changefreq><priority>0.75</priority>
+    <image:image><image:loc>https://www.imprint-diamond.com/images/hero/imprint-diamond-newborn-baby-necklace.jpg</image:loc><image:title>項鍊系列－DNA紀念鑽石項鍊訂製</image:title></image:image>
+  </url>
+  <url><loc>https://www.imprint-diamond.com/jewelry/necklaces/classic-pendant/</loc><changefreq>monthly</changefreq><priority>0.65</priority></url>
+  <url><loc>https://www.imprint-diamond.com/jewelry/necklaces/halo-pendant/</loc><changefreq>monthly</changefreq><priority>0.65</priority></url>
+  <url><loc>https://www.imprint-diamond.com/jewelry/necklaces/bar/</loc><changefreq>monthly</changefreq><priority>0.65</priority></url>
+  <url><loc>https://www.imprint-diamond.com/jewelry/necklaces/double-layer/</loc><changefreq>monthly</changefreq><priority>0.65</priority></url>
+
+  <url>
+    <loc>https://www.imprint-diamond.com/jewelry/earrings/</loc>
+    <changefreq>monthly</changefreq><priority>0.75</priority>
+    <image:image><image:loc>https://www.imprint-diamond.com/images/hero/imprint-diamond-family-portrait-jewelry.jpg</image:loc><image:title>耳環系列－DNA紀念鑽石耳環訂製</image:title></image:image>
+  </url>
+  <url><loc>https://www.imprint-diamond.com/jewelry/earrings/stud/</loc><changefreq>monthly</changefreq><priority>0.65</priority></url>
+  <url><loc>https://www.imprint-diamond.com/jewelry/earrings/drop/</loc><changefreq>monthly</changefreq><priority>0.65</priority></url>
+  <url><loc>https://www.imprint-diamond.com/jewelry/earrings/hoop/</loc><changefreq>monthly</changefreq><priority>0.65</priority></url>
+  <url><loc>https://www.imprint-diamond.com/jewelry/earrings/ear-cuff/</loc><changefreq>monthly</changefreq><priority>0.65</priority></url>
+
+  <url>
+    <loc>https://www.imprint-diamond.com/jewelry/bracelets/</loc>
+    <changefreq>monthly</changefreq><priority>0.75</priority>
+    <image:image><image:loc>https://www.imprint-diamond.com/images/hero/imprint-diamond-heirloom-memorial.jpg</image:loc><image:title>手鍊系列－DNA紀念鑽石手鍊訂製</image:title></image:image>
+  </url>
+  <url><loc>https://www.imprint-diamond.com/jewelry/bracelets/tennis/</loc><changefreq>monthly</changefreq><priority>0.65</priority></url>
+  <url><loc>https://www.imprint-diamond.com/jewelry/bracelets/chain/</loc><changefreq>monthly</changefreq><priority>0.65</priority></url>
+  <url><loc>https://www.imprint-diamond.com/jewelry/bracelets/charm/</loc><changefreq>monthly</changefreq><priority>0.65</priority></url>
+  <url><loc>https://www.imprint-diamond.com/jewelry/bracelets/bangle/</loc><changefreq>monthly</changefreq><priority>0.65</priority></url>
+
+  <url><loc>https://www.imprint-diamond.com/about.html</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://www.imprint-diamond.com/stories.html</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://www.imprint-diamond.com/contact.html</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+
+</urlset>

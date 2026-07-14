@@ -1,0 +1,13 @@
+{
+  "rewrites": [
+    {
+      "source": "/bot-gold/:path*",
+      "destination": "https://rate.bot.com.tw/:path*"
+    }
+  ],
+  "functions": {
+    "api/bot-gold.js": {
+      "maxDuration": 15
+    }
+  }
+}

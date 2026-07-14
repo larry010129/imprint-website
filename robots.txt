@@ -1,0 +1,10 @@
+# 銘印鑽石 IMPRINT DIAMOND
+# 【上線前請確認】若最終網址不是網域根目錄（例如放在 /site/ 這種子路徑），
+# 這個檔案必須搬到「網域根目錄」（https://your-domain/robots.txt）才會生效，
+# 且下面 Sitemap 網址也要換成實際部署後的正確網址。
+
+User-agent: *
+Allow: /
+Disallow: /admin.html
+
+Sitemap: https://www.imprint-diamond.com/sitemap.xml

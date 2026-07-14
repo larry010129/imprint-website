@@ -1,0 +1,5 @@
+[[redirects]]
+  from = "/bot-gold/*"
+  to = "https://rate.bot.com.tw/:splat"
+  status = 200
+  force = true

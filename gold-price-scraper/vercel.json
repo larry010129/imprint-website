@@ -1,0 +1,11 @@
+{
+  "crons": [
+    { "path": "/api/scrape-gold", "schedule": "0 0-14 * * *" }
+  ],
+  "functions": {
+    "api/scrape-gold.js": {
+      "maxDuration": 60,
+      "memory": 1024
+    }
+  }
+}

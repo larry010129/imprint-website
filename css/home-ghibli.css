@@ -1,0 +1,581 @@
+/* ============================================================
+   首頁 Ghibli-inspired landing style
+   Adapted from ghibli-inspired-landing-page reference
+   Scoped to .page-home only — other pages unchanged
+============================================================ */
+
+.page-home{
+  --gh-cream:#FBF6ED;
+  --gh-ink:#2a2438;
+  --gh-muted:#6b6578;
+  --gh-twilight:#2a1845;
+  --gh-dna:#8eedf0;
+  --gh-dna-light:#daf8f9;
+  --gh-dna-deep:#52c4c8;
+  --gh-grad-start:#8eedf0;
+  --gh-grad-end:#c8f7f8;
+  --gh-grad-deep-end:#58cfd4;
+  --gh-grad:linear-gradient(135deg, #8eedf0 0%, #c8f7f8 100%);
+  --gh-grad-soft:linear-gradient(135deg, #8eedf0 0%, #e8fcfc 100%);
+  --gh-grad-deep:linear-gradient(135deg, #8eedf0 0%, #58cfd4 100%);
+  --gh-grad-hero-text:linear-gradient(135deg, #8eedf0 0%, #ffffff 88%);
+  --gh-grad-script-light:linear-gradient(135deg, #8eedf0 0%, #52c4c8 100%);
+  --gh-rose:var(--gh-dna);
+  --gh-rose-light:var(--gh-dna-light);
+  --gh-mint-soft:var(--gh-dna);
+  --gh-accent-rgb:142,237,240;
+  --gh-script:"Dancing Script", "Segoe Script", cursive;
+  background:var(--gh-cream);
+}
+
+.page-home .topbar{
+  position:absolute; left:0; right:0; z-index:102;
+  background:linear-gradient(180deg, rgba(42,24,69,.55) 0%, transparent 100%);
+  border:none; color:rgba(255,255,255,.82);
+}
+.page-home .topbar b{ color:var(--gh-mint-soft); }
+
+.page-home .nav{
+  position:absolute; left:0; right:0; top:36px; z-index:101;
+  background:transparent; border:none; backdrop-filter:none;
+  box-shadow:none !important;
+}
+.page-home .nav.is-scrolled{
+  position:sticky; top:0;
+  background:rgba(251,246,237,.94);
+  backdrop-filter:blur(14px);
+  border-bottom:1px solid rgba(var(--gh-accent-rgb),.22);
+}
+.page-home .nav:not(.is-scrolled) .brand-name .zh,
+.page-home .nav:not(.is-scrolled) .brand-name .en,
+.page-home .nav:not(.is-scrolled) .nav-item > a{ color:#fff; }
+.page-home .nav:not(.is-scrolled) .brand-mark path{ fill:#F7F4F1; }
+.page-home .nav:not(.is-scrolled) .nav-item > a:hover{ color:var(--gh-mint-soft); }
+.page-home .nav:not(.is-scrolled) .btn-line{
+  border-color:rgba(255,255,255,.55); color:#fff;
+}
+.page-home .nav:not(.is-scrolled) .btn-line:hover{
+  background:rgba(255,255,255,.12); color:#fff;
+}
+.page-home .nav:not(.is-scrolled) .btn-mint{
+  background:var(--gh-grad-deep);
+  color:var(--gh-twilight);
+}
+.page-home .nav:not(.is-scrolled) .btn-dark{
+  background:rgba(255,255,255,.15); color:#fff; border:1px solid rgba(255,255,255,.35);
+}
+.page-home .nav .btn-mint,
+.page-home .nav-cta .btn-mint{
+  background:var(--gh-grad-deep);
+  color:var(--gh-twilight);
+}
+.page-home .nav .btn-mint:hover{
+  filter:brightness(1.05);
+}
+.page-home .gh-faq-wrap .faq-q:hover{
+  color:var(--gh-dna-deep);
+}
+
+.page-home #home-poem{
+  scroll-margin-top:88px;
+}
+
+/* ---------- Hero ---------- */
+.gh-hero{
+  position:relative; min-height:min(92vh, 880px);
+  display:flex; align-items:center; justify-content:center;
+  text-align:center; color:#fff; overflow:hidden;
+}
+.gh-hero__bg{
+  position:absolute; inset:0;
+}
+.gh-hero__bg img{
+  width:100%; height:100%; object-fit:cover; object-position:center;
+}
+.gh-hero__bg--sky{
+  z-index:0;
+}
+.gh-hero__bg--brand{
+  z-index:1; opacity:.42; mix-blend-mode:soft-light;
+}
+.gh-hero__tint{
+  position:absolute; inset:0; z-index:2;
+  background:linear-gradient(180deg, rgba(42,24,69,.48) 0%, rgba(42,24,69,.08) 42%, rgba(42,24,69,.25) 100%);
+}
+.gh-hero__fade-bottom{
+  position:absolute; left:0; right:0; bottom:0; z-index:6; height:12rem;
+  background:linear-gradient(to top, var(--gh-cream) 0%, transparent 100%);
+  pointer-events:none;
+}
+.gh-hero__sky{
+  position:absolute; inset:0; z-index:0; pointer-events:none;
+}
+.gh-hero__sky img{
+  width:100%; height:100%; object-fit:cover; opacity:.35;
+}
+
+/* Hero carousel — original brand slides inside Ghibli shell */
+.gh-hero--carousel{
+  display:block; min-height:0; padding:0;
+}
+.gh-hc-viewport{
+  position:relative; z-index:4;
+  height:min(92vh, 880px); min-height:600px; max-height:880px;
+}
+.gh-hc-scrim{
+  background:linear-gradient(180deg, rgba(42,24,69,.55) 0%, rgba(42,24,69,.12) 45%, rgba(42,24,69,.42) 100%) !important;
+}
+.hc-slide[data-align="center"] .hc-copy{
+  align-items:center; text-align:center;
+}
+.hc-slide[data-align="center"] .hc-actions{ justify-content:center; }
+.gh-hc-copy{
+  padding:120px 16px 88px; max-width:760px; margin:0 auto;
+}
+.gh-hc-copy .gh-hero__title{ margin-bottom:18px; }
+.gh-hc-copy .gh-hero__lead{ margin-bottom:28px; }
+.gh-hc-arrow{
+  background:rgba(255,255,255,.22); border-color:rgba(255,255,255,.55); color:#fff;
+}
+.gh-hc-arrow:hover{ background:rgba(255,255,255,.35); }
+.gh-hc-dots{ bottom:36px; }
+.gh-hc-dots .hc-dot.is-active{
+  background:var(--gh-grad);
+  box-shadow:0 0 0 2px rgba(255,255,255,.35);
+}
+
+.gh-hero__inner{
+  position:relative; z-index:4;
+  padding:140px 16px 100px; max-width:760px;
+}
+.gh-script{
+  font-family:var(--gh-script); font-size:clamp(22px, 3.2vw, 32px);
+  margin-bottom:8px; letter-spacing:.02em;
+  background:var(--gh-grad-hero-text);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+.gh-poem .gh-script,
+.gh-section .gh-script{
+  background:var(--gh-grad-script-light);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+.gh-cta .gh-script{
+  background:var(--gh-grad-hero-text);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+.gh-hero__title{
+  font-family:var(--serif); font-weight:600;
+  font-size:clamp(32px, 5.5vw, 58px); letter-spacing:.08em; line-height:1.45;
+  text-shadow:0 4px 32px rgba(0,0,0,.25); margin-bottom:22px;
+}
+.gh-hero__title em{
+  font-style:normal;
+  background:var(--gh-grad-hero-text);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+.page-home .gh-dna{ font-weight:600; }
+.page-home .gh-hc-scrim .gh-dna{
+  background:var(--gh-grad-hero-text);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+.page-home .gh-poem__copy .gh-dna,
+.page-home .gh-section__title .gh-dna{
+  background:var(--gh-grad-script-light);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+.gh-hero__lead{
+  font-size:clamp(14px, 1.8vw, 16px); line-height:2.1;
+  color:rgba(255,255,255,.88); max-width:520px; margin:0 auto 34px;
+}
+.gh-hero__actions{
+  display:flex; flex-wrap:wrap; gap:14px; justify-content:center; margin-bottom:48px;
+}
+.gh-btn{
+  display:inline-flex; align-items:center; justify-content:center;
+  padding:14px 32px; border-radius:999px; font-size:14px; letter-spacing:.14em;
+  transition:transform .3s var(--ease), box-shadow .3s var(--ease), filter .3s;
+  white-space:nowrap;
+}
+button.gh-btn{
+  border:none; background:none; font:inherit; font-family:inherit; cursor:pointer;
+  -webkit-appearance:none; appearance:none;
+}
+button.gh-btn--ghost{ background:rgba(255,255,255,.08); }
+button.gh-btn--primary{ border:none; }
+.gh-btn--primary{
+  background:var(--gh-grad-deep);
+  color:var(--gh-twilight); box-shadow:0 8px 28px rgba(var(--gh-accent-rgb),.45);
+}
+.gh-btn--primary:hover{
+  transform:translateY(-2px); box-shadow:0 12px 36px rgba(var(--gh-accent-rgb),.55); filter:brightness(1.05);
+}
+.gh-btn--ghost{
+  border:1px solid rgba(255,255,255,.5); color:#fff;
+  background:rgba(255,255,255,.08); backdrop-filter:blur(6px);
+}
+.gh-btn--ghost:hover{ background:rgba(255,255,255,.16); }
+
+.gh-chips{
+  display:flex; flex-wrap:wrap; gap:14px; justify-content:center;
+}
+.gh-chip{
+  display:flex; flex-direction:column; align-items:center; gap:8px;
+  width:88px; text-decoration:none; color:#fff;
+}
+.gh-chip__icon{
+  width:56px; height:56px; border-radius:18px;
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--serif); font-size:18px; font-weight:600;
+  box-shadow:0 8px 24px rgba(0,0,0,.2);
+  transition:transform .3s var(--ease);
+}
+.gh-chip:hover .gh-chip__icon{ transform:scale(1.08) translateY(-3px); }
+.gh-chip__icon--1{ background:var(--gh-grad-deep); color:var(--gh-twilight); }
+.gh-chip__icon--2{ background:var(--gh-grad); color:var(--gh-twilight); }
+.gh-chip__icon--3{ background:var(--gh-grad-soft); color:var(--gh-twilight); }
+.gh-chip__icon--4{ background:var(--gh-grad-deep); color:var(--gh-twilight); }
+.gh-chip span:last-child{
+  font-size:11px; letter-spacing:.08em; opacity:.92; line-height:1.4;
+}
+
+/* ---------- Poem bridge ---------- */
+.gh-poem{
+  position:relative;
+  background:linear-gradient(180deg, rgba(142,237,240,.14) 0%, var(--gh-cream) 220px);
+  padding:72px 16px 64px; text-align:center;
+}
+.gh-poem .gh-script{ color:transparent; }
+.gh-poem__title{
+  font-family:var(--serif); font-size:clamp(24px, 3.6vw, 40px);
+  font-weight:600; letter-spacing:.08em; line-height:1.65;
+  color:var(--gh-ink); max-width:640px; margin:0 auto 28px;
+}
+.gh-poem__link{
+  display:inline-flex; align-items:center; gap:12px;
+  padding:12px 24px; border-radius:999px;
+  border:1px solid rgba(42,36,56,.12); background:#fff;
+  font-size:13.5px; letter-spacing:.1em; color:var(--gh-ink);
+  box-shadow:0 4px 20px rgba(42,36,56,.06);
+  transition:box-shadow .3s var(--ease);
+}
+.gh-poem__link:hover{ box-shadow:0 8px 28px rgba(42,36,56,.1); }
+.gh-poem__play{
+  width:32px; height:32px; border-radius:50%;
+  background:var(--gh-grad-deep);
+  display:flex; align-items:center; justify-content:center; flex:none;
+}
+.gh-poem__play svg{ margin-left:2px; fill:var(--gh-twilight); }
+.gh-poem__text{
+  font-size:14.5px; color:var(--gh-muted); line-height:2.05;
+  max-width:480px; margin:0 auto 24px;
+}
+.gh-poem--split{ padding:64px 16px 56px; text-align:left; }
+.gh-poem-grid{
+  display:grid; grid-template-columns:1fr 1fr; gap:48px; align-items:center;
+  max-width:980px; margin:0 auto;
+}
+.gh-poem__visual{
+  border-radius:24px; overflow:hidden;
+  box-shadow:0 20px 56px rgba(42,36,56,.12);
+  aspect-ratio:4/3;
+}
+.gh-poem__visual img{
+  width:100%; height:100%; object-fit:cover; display:block;
+}
+.gh-poem__copy .gh-poem__title{ margin-left:0; margin-right:0; text-align:left; }
+.gh-poem__copy .gh-poem__text{ margin-left:0; margin-right:0; }
+
+/* ---------- About (DNA diamond) ---------- */
+.gh-about{ padding-top:56px; }
+.gh-about-grid{
+  display:grid; grid-template-columns:1fr 1fr; gap:48px;
+  max-width:980px; margin:0 auto; text-align:left;
+}
+.gh-about-steps{ display:flex; flex-direction:column; gap:22px; }
+.gh-about-step{
+  display:flex; gap:16px; align-items:flex-start;
+}
+.gh-about-step__no{
+  font-family:var(--serif); font-size:28px; font-weight:600;
+  line-height:1; flex:none; width:44px;
+  background:var(--gh-grad-script-light);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+.gh-about-step h3{
+  font-family:var(--serif); font-size:17px; font-weight:600;
+  letter-spacing:.08em; margin-bottom:6px; color:var(--gh-ink);
+}
+.gh-about-step p{
+  font-size:13.5px; color:var(--gh-muted); line-height:1.95;
+}
+.gh-about-visual{
+  position:relative; border-radius:24px; overflow:hidden;
+  box-shadow:0 20px 56px rgba(42,36,56,.12);
+}
+.gh-about-visual img{
+  width:100%; aspect-ratio:4/5; object-fit:cover; display:block;
+}
+.gh-usp-list{
+  position:absolute; left:0; right:0; bottom:0; margin:0; padding:18px 16px;
+  list-style:none; display:grid; grid-template-columns:1fr 1fr; gap:10px;
+  background:linear-gradient(to top, rgba(42,24,69,.88), rgba(42,24,69,.5) 70%, transparent);
+  color:#fff;
+}
+.gh-usp-list li{
+  font-size:11px; line-height:1.5; letter-spacing:.04em;
+}
+.gh-usp-list strong{
+  display:block; font-size:12px; letter-spacing:.08em; margin-bottom:2px;
+}
+
+/* ---------- Stories teaser ---------- */
+.gh-stories{
+  background:var(--gh-cream); padding:64px 16px;
+}
+.gh-stories-grid{
+  display:grid; grid-template-columns:1fr 1fr; gap:48px; align-items:center;
+  max-width:980px; margin:0 auto;
+}
+.gh-stories__media{
+  border-radius:24px; overflow:hidden;
+  box-shadow:0 20px 56px rgba(42,36,56,.12);
+}
+.gh-stories__media img{
+  width:100%; aspect-ratio:4/3; object-fit:cover; display:block;
+}
+.gh-stories__copy{ text-align:left; }
+.gh-stories__copy .gh-section__title{ margin-left:0; margin-right:0; text-align:left; }
+.gh-stories__quote{
+  margin:20px 0 28px; padding:0; border:none;
+  font-family:var(--serif); font-size:clamp(17px, 2.2vw, 22px);
+  line-height:1.85; letter-spacing:.06em; color:var(--gh-ink);
+}
+.gh-stories__quote footer{
+  margin-top:14px; font-family:var(--sans); font-size:12px;
+  color:var(--gh-muted); letter-spacing:.08em;
+}
+.gh-btn--dark{
+  border-color:rgba(42,36,56,.2); color:var(--gh-ink);
+  background:#fff;
+}
+.gh-btn--dark:hover{ background:var(--gh-ink); color:#fff; border-color:var(--gh-ink); }
+
+/* ---------- Atmospheric scene dividers ---------- */
+.gh-scene{
+  position:relative; height:clamp(220px, 32vw, 380px); overflow:hidden;
+}
+.gh-scene img{
+  width:100%; height:100%; object-fit:cover; object-position:center;
+}
+.gh-scene__fade-top,
+.gh-scene__fade-bottom{
+  position:absolute; left:0; right:0; height:8rem; pointer-events:none;
+}
+.gh-scene__fade-top{
+  top:0; background:linear-gradient(to bottom, var(--gh-cream), transparent);
+}
+.gh-scene__fade-bottom{
+  bottom:0; background:linear-gradient(to top, var(--gh-cream), transparent);
+}
+
+/* ---------- Section shell ---------- */
+.gh-section{
+  background:linear-gradient(180deg, rgba(142,237,240,.1) 0%, var(--gh-cream) 180px);
+  padding:64px 16px 72px; text-align:center;
+}
+.gh-section .gh-script{ color:transparent; margin-bottom:12px; }
+.gh-section__title{
+  font-family:var(--serif); font-size:clamp(24px, 3.4vw, 38px);
+  font-weight:600; letter-spacing:.08em; line-height:1.55;
+  color:var(--gh-ink); max-width:640px; margin:0 auto 14px;
+}
+.gh-section__lead{
+  font-size:14.5px; color:var(--gh-muted); line-height:2.05;
+  max-width:520px; margin:0 auto 40px;
+}
+
+/* ---------- Series grid (Captain-style) ---------- */
+.gh-series-grid{
+  display:grid; grid-template-columns:repeat(5, 1fr); gap:20px 16px;
+  max-width:960px; margin:0 auto 36px;
+}
+.gh-series-item{
+  display:flex; flex-direction:column; align-items:center; gap:10px;
+  text-decoration:none; color:var(--gh-ink);
+}
+.gh-series-item__icon{
+  width:64px; height:64px; border-radius:20px;
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:0 8px 22px rgba(42,36,56,.12);
+  transition:transform .35s var(--ease);
+}
+.gh-series-item:hover .gh-series-item__icon{
+  transform:scale(1.08) translateY(-4px);
+}
+.gh-series-item__icon svg{ width:36px; height:36px; }
+.gh-series-item__icon--1{ background:linear-gradient(160deg,#FFF7F0,#FCEEE4); }
+.gh-series-item__icon--2{ background:var(--gh-grad-soft); }
+.gh-series-item__icon--3{ background:linear-gradient(160deg, #8eedf0 0%, #daf8f9 100%); }
+.gh-series-item__icon--4{ background:linear-gradient(160deg, #8eedf0 0%, #e8fcfc 100%); }
+.gh-series-item__icon--5{ background:linear-gradient(160deg, #8eedf0 0%, #daf8f9 100%); }
+.gh-series-item__en{
+  font-size:10px; letter-spacing:.28em; color:#9FB8B8; text-transform:uppercase;
+}
+.gh-series-item__name{
+  font-family:var(--serif); font-size:15px; font-weight:600; letter-spacing:.1em;
+}
+
+/* ---------- Series photo cards ---------- */
+.gh-series-cards{
+  display:grid; grid-template-columns:repeat(3, 1fr); gap:22px;
+  max-width:980px; margin:0 auto 36px; text-align:left;
+}
+.gh-series-card{
+  display:flex; flex-direction:column; border-radius:20px; overflow:hidden;
+  background:#fff; border:1px solid rgba(42,36,56,.08);
+  box-shadow:0 4px 24px rgba(42,36,56,.06);
+  text-decoration:none; color:var(--gh-ink);
+  transition:transform .35s var(--ease), box-shadow .35s var(--ease);
+}
+.gh-series-card:hover{
+  transform:translateY(-6px); box-shadow:0 16px 40px rgba(42,36,56,.12);
+}
+.gh-series-card__media{
+  aspect-ratio:16/10; overflow:hidden; background:var(--paper-warm, #F6ECDD);
+}
+.gh-series-card__media img{
+  width:100%; height:100%; object-fit:cover;
+  transition:transform .6s var(--ease);
+}
+.gh-series-card:hover .gh-series-card__media img{ transform:scale(1.04); }
+.gh-series-card__body{ padding:18px 18px 20px; flex:1; display:flex; flex-direction:column; }
+.gh-series-card__en{
+  font-size:10px; letter-spacing:.28em; color:#9FB8B8; text-transform:uppercase; margin-bottom:6px;
+}
+.gh-series-card__body h3{
+  font-family:var(--serif); font-size:17px; font-weight:600; letter-spacing:.08em; margin-bottom:8px;
+}
+.gh-series-card__body p{
+  font-size:12.5px; color:var(--gh-muted); line-height:1.9; flex:1; margin-bottom:12px;
+}
+.gh-series-card__more{
+  font-size:11px; letter-spacing:.14em; font-weight:500;
+  background:var(--gh-grad-script-light);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+
+/* ---------- Explore cards (Teamwork-style) ---------- */
+.gh-cards{
+  display:grid; grid-template-columns:repeat(2, 1fr); gap:20px;
+  max-width:880px; margin:0 auto;
+}
+.gh-card{
+  display:flex; flex-direction:column; align-items:stretch; text-align:left;
+  padding:0; border-radius:20px;
+  border:1px solid rgba(42,36,56,.08); background:#fff;
+  box-shadow:0 4px 24px rgba(42,36,56,.05);
+  transition:transform .35s var(--ease), box-shadow .35s var(--ease);
+  text-decoration:none; color:var(--gh-ink); overflow:hidden;
+}
+.gh-card:hover{
+  transform:translateY(-6px); box-shadow:0 16px 40px rgba(42,36,56,.1);
+  border-color:rgba(var(--gh-accent-rgb),.35);
+}
+.gh-card__media{
+  aspect-ratio:16/9; overflow:hidden; background:var(--paper-warm, #F6ECDD);
+}
+.gh-card__media img{
+  width:100%; height:100%; object-fit:cover;
+  transition:transform .6s var(--ease);
+}
+.gh-card:hover .gh-card__media img{ transform:scale(1.04); }
+.gh-card h3{
+  font-family:var(--serif); font-size:18px; font-weight:600;
+  letter-spacing:.08em; margin:18px 20px 10px;
+}
+.gh-card p{
+  font-size:13px; color:var(--gh-muted); line-height:1.95; flex:1;
+  margin:0 20px 14px;
+}
+.gh-card__link{
+  font-size:12px; letter-spacing:.14em; font-weight:500;
+  margin:0 20px 20px;
+  background:var(--gh-grad-script-light);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+
+/* ---------- FAQ card (Own-data style) ---------- */
+.gh-faq-wrap{
+  max-width:720px; margin:0 auto;
+  border-radius:20px; border:1px solid rgba(42,36,56,.08);
+  background:#fff; box-shadow:0 12px 48px rgba(42,36,56,.08);
+  overflow:hidden; text-align:left;
+}
+.gh-faq-wrap .faq-list{ margin-top:0; max-width:none; }
+.gh-faq-wrap .faq-item{ border-color:rgba(42,36,56,.08); }
+.gh-faq-wrap .faq-q{ letter-spacing:.06em; }
+.gh-faq-more{ margin-top:28px; text-align:center; }
+.gh-faq-more .btn-line{
+  border-radius:999px; border-color:rgba(var(--gh-accent-rgb),.45); color:var(--gh-dna-deep);
+}
+.gh-faq-more .btn-line:hover{
+  background:var(--gh-grad-deep); color:var(--gh-twilight); border-color:transparent;
+}
+
+/* ---------- Dark CTA (Developer-style) ---------- */
+.gh-cta{
+  position:relative; background:#0f0e14; color:#fff;
+  text-align:center; overflow:hidden;
+}
+.gh-cta__scene{
+  position:relative; height:clamp(240px, 36vw, 420px);
+}
+.gh-cta__scene img{ width:100%; height:100%; object-fit:cover; }
+.gh-cta__scene-fade-top{
+  position:absolute; inset:0 0 auto; height:8rem;
+  background:linear-gradient(to bottom, var(--gh-cream), transparent);
+}
+.gh-cta__scene-fade-bottom{
+  position:absolute; inset:auto 0 0; height:8rem;
+  background:linear-gradient(to top, #0f0e14, transparent);
+}
+.gh-cta__body{ padding:48px 16px 72px; }
+.gh-cta .gh-script{ color:transparent; }
+.gh-cta__title{
+  font-family:var(--serif); font-size:clamp(24px, 3.4vw, 36px);
+  font-weight:600; letter-spacing:.1em; line-height:1.65;
+  margin-bottom:18px;
+}
+.gh-cta__lead{
+  font-size:14.5px; color:rgba(255,255,255,.72); line-height:2.1;
+  max-width:480px; margin:0 auto 32px;
+}
+.gh-cta .hint{ color:rgba(255,255,255,.45); }
+
+.page-home .footer{
+  background:#1a1520; border-top:1px solid rgba(255,255,255,.06);
+}
+
+@media (max-width:900px){
+  .gh-poem-grid,
+  .gh-about-grid,
+  .gh-stories-grid{ grid-template-columns:1fr; gap:32px; }
+  .gh-poem__copy{ text-align:center; }
+  .gh-poem__copy .gh-poem__title,
+  .gh-stories__copy .gh-section__title{ text-align:center; }
+  .gh-poem__copy .gh-poem__text{ margin-left:auto; margin-right:auto; }
+  .gh-stories__copy{ text-align:center; }
+  .gh-about-grid{ text-align:center; }
+  .gh-about-step{ text-align:left; }
+  .gh-series-cards{ grid-template-columns:1fr 1fr; }
+  .gh-usp-list{ grid-template-columns:1fr; }
+}
+@media (max-width:640px){
+  .gh-hc-viewport{ min-height:520px; }
+  .gh-hc-copy{ padding:100px 16px 76px; }
+  .gh-hc-arrow{ width:40px; height:40px; }
+  .gh-hc-dots{ bottom:24px; }
+  .gh-series-cards,
+  .gh-cards{ grid-template-columns:1fr; }
+  .gh-series-grid{ grid-template-columns:repeat(2, 1fr); gap:24px 16px; }
+}
