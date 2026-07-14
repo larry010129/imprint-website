@@ -6,7 +6,7 @@ services:
     name: imprint-diamond
     runtime: python
     plan: free
-    buildCommand: pip install -r requirements.txt
+    buildCommand: bash scripts/render-build.sh
     startCommand: gunicorn server.main:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT
     healthCheckPath: /gold-price.html
     envVars:
