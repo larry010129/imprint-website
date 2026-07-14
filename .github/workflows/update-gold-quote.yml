@@ -15,15 +15,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-python@v5
         with:
-          node-version: '20'
+          python-version: '3.12'
 
-      - name: Install backend parser deps
-        run: npm install --prefix backend cheerio@^1.0.0
+      - name: Install Python deps
+        run: pip install -r requirements.txt
 
       - name: Fetch latest BOT gold quote
-        run: node scripts/fetch-gold-quote.mjs
+        run: python scripts/fetch_gold_quote.py
 
       - name: Commit updated quote files
         run: |

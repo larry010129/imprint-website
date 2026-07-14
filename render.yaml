@@ -1,14 +1,14 @@
-# Render — Node web service (static site + /api/bot-gold for live BOT gold quotes)
+# Render — Python web service (static site + /api/bot-gold for live BOT gold quotes)
 # https://render.com/docs/blueprint-spec
 services:
   - type: web
     name: imprint-diamond
-    runtime: node
+    runtime: python
     plan: free
-    buildCommand: npm install && npm install --prefix backend
-    startCommand: npm start
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn server.main:app --host 0.0.0.0 --port $PORT
     envVars:
-      - key: NODE_ENV
-        value: production
+      - key: PYTHON_VERSION
+        value: "3.12.8"
       - key: NO_OPEN
         value: "1"

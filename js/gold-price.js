@@ -1,4 +1,4 @@
-/* Gold price page — live quote via GET /api/bot-gold (Render npm start / npm run dev). */
+/* Gold price page — live quote via GET /api/bot-gold (FastAPI / uvicorn). */
 (function (global) {
   'use strict';
 
@@ -143,13 +143,13 @@
       return;
     }
     el.classList.remove('hidden');
-    el.textContent = '無法連線即時 API。Render 請使用 Web Service，Start Command：npm start。本機：npm run dev。';
+    el.textContent = '無法連線即時 API。Render 請使用 Web Service，Start Command：uvicorn server.main:app --host 0.0.0.0 --port $PORT。本機：dev.bat 或 npm run dev。';
   }
 
   function refreshMessage(data) {
     if (data.refreshed) return { text: '牌價已更新', ok: true };
     if (data.fromCache || data.fromBootstrap) {
-      return { text: liveReady ? '台銀暫時無回應，顯示備援牌價' : '顯示備援牌價（需 npm start 才能即時抓取）', ok: false };
+      return { text: liveReady ? '台銀暫時無回應，顯示備援牌價' : '顯示備援牌價（需 FastAPI 伺服器才能即時抓取）', ok: false };
     }
     if (data.fromFallback) return { text: '顯示預設備援牌價', ok: false };
     return { text: '牌價已更新', ok: true };

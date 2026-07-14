@@ -1,16 +1,10 @@
 {
   "name": "imprint-diamond-site",
   "private": true,
-  "description": "Static Diamond v3 site with Node server for live BOT gold quotes (Render / local dev).",
-  "engines": {
-    "node": ">=20"
-  },
+  "description": "Static Diamond v3 site with Python FastAPI server for live BOT gold quotes (Render / local dev).",
   "scripts": {
-    "dev": "node scripts/serve-site.mjs",
-    "start": "node scripts/serve-site.mjs",
-    "fetch:gold": "node scripts/fetch-gold-quote.mjs"
-  },
-  "dependencies": {
-    "cheerio": "^1.0.0"
+    "dev": "python -m uvicorn server.main:app --reload --host 127.0.0.1 --port 8080",
+    "start": "python -m uvicorn server.main:app --host 0.0.0.0 --port 8080",
+    "fetch:gold": "python scripts/fetch_gold_quote.py"
   }
 }

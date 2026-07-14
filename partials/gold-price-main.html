@@ -68,7 +68,7 @@
       </div>
     </div>
 
-    <p class="price-ref-note gold-price-schedule">Render 部署：使用 <strong>Web Service</strong>（非 Static Site），Start Command 設 <code>npm start</code>，即可即時抓取台銀牌價（<code>/api/bot-gold</code>）。本機：<code>npm run dev</code>。</p>
+    <p class="price-ref-note gold-price-schedule">Render 部署：使用 <strong>Web Service</strong>（非 Static Site），Build：<code>pip install -r requirements.txt</code>，Start：<code>uvicorn server.main:app --host 0.0.0.0 --port $PORT</code>，即可即時抓取台銀牌價（<code>/api/bot-gold</code>）。本機：<code>dev.bat</code> 或 <code>npm run dev</code>。</p>
 
     <div class="price-reference-foot gold-price-foot">
       <a class="btn btn-mint" href="{{ROOT}}shop/calculator/index.html">品項訂製試算</a>
