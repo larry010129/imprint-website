@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/member-app.css?v=1">
+{% endblock %}
+{% block content %}
+<!-- @component partials/view-login.html -->
+<section class="auth-section" id="view-login">
+  <div class="auth-card">
+    <h1>會員登入</h1>
+    <p class="sub">登入後可查詢您的訂製進度，並保留聯絡資料。</p>
+    <form id="loginForm" novalidate>
+      <div class="form-field">
+        <label for="lEmail">Email <span class="req">*</span></label>
+        <input type="email" id="lEmail" name="email" autocomplete="email" required>
+      </div>
+      <div class="form-field">
+        <label for="lPassword">密碼 <span class="req">*</span></label>
+        <input type="password" id="lPassword" name="password" autocomplete="current-password" required>
+      </div>
+      <button type="submit" class="btn btn-dark" id="loginSubmitBtn">登入</button>
+      <p class="form-msg" id="loginFormMsg" role="status" aria-live="polite"></p>
+    </form>
+    <p class="switch-link">
+      <button type="button" class="btn-text" id="forgotPwBtn">忘記密碼？</button>
+    </p>
+    <p class="switch-link">還不是會員？<a href="/register.html">立即註冊</a></p>
+  </div>
+</section>
+{% endblock %}
+{% block extra_scripts %}
+<script src="/static/js/api-client.js"></script>
+<script src="/static/js/mvc/core.js"></script>
+<script src="/static/js/mvc/models/login-model.js"></script>
+<script src="/static/js/mvc/views/login-view.js"></script>
+<script src="/static/js/mvc/controllers/login-controller.js"></script>
+{% endblock %}

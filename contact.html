@@ -38,14 +38,14 @@
 }
 </script>
 </head>
-<body data-site-root="" data-site-active="about" class="site-layout">
-<!-- @component partials/topbar.html -->
+<body data-site-root="" data-site-active="about" data-mvc="contact" class="site-layout">
+<!-- @component partials/layout-topbar.html -->
 <!-- Top announcement bar — same on every page -->
 <div class="topbar">
   全台唯一在地 DNA 鑽石培育實驗室｜門市採預約制 <b>02-2977-0268</b>
 </div>
 
-<!-- @component partials/nav.html -->
+<!-- @component partials/layout-nav.html -->
 <!-- Site navigation — canonical copy from index.html (landing page).
      Relative paths are rewritten when pages are built from partials/. -->
 <header class="nav">
@@ -122,6 +122,11 @@
           <div class="dropdown">
             <a href="login.html">會員登入</a>
             <a href="register.html">加入會員</a>
+            <a href="cart.html">購物車</a>
+            <a href="favorites.html">收藏款式</a>
+            <a href="history.html">訂購紀錄</a>
+            <a href="notifications.html">通知</a>
+            <a href="profile.html">帳戶設定</a>
             <a href="track-order.html">查詢訂製進度</a>
           </div>
         </li>
@@ -176,7 +181,8 @@
   </div>
 </section>
 
-<section class="contact-section" style="padding-top:0;">
+<!-- @component partials/view-contact-form.html -->
+<section class="contact-section" style="padding-top:0;" id="view-contact-form">
   <div class="container">
     <div class="contact-card contact-form-card" style="max-width:640px;margin:0 auto;">
       <h3>線上留言諮詢</h3>
@@ -206,10 +212,9 @@
     </div>
   </div>
 </section>
-
 </main>
 
-<!-- @component partials/footer.html -->
+<!-- @component partials/layout-footer.html -->
 <!-- Site footer — canonical copy from index.html (landing page).
      Relative paths are rewritten when pages are built from partials/. -->
 <footer class="footer">
@@ -271,6 +276,9 @@
 <script src="js/site-layout.js?v=1.2"></script>
 <script src="js/main.js?v=2.1"></script>
 <script src="js/api-client.js"></script>
-<script src="js/contact-form.js"></script>
+<script src="js/mvc/core.js"></script>
+<script src="js/mvc/models/contact-model.js"></script>
+<script src="js/mvc/views/contact-view.js"></script>
+<script src="js/mvc/controllers/contact-controller.js"></script>
 </body>
 </html>

@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/member-app.css?v=1">
+{% endblock %}
+{% block content %}
+<!-- @component partials/view-notifications.html -->
+<section class="page-section member-app" id="mvc-notifications" aria-label="通知">
+  <div class="container">
+    <div class="price-reference member-panel">
+      <div class="price-reference-head">
+        <p class="eyebrow">INBOX</p>
+        <h1 class="price-reference-title">通知</h1>
+        <p class="price-reference-lead">系統訊息與訂單更新。</p>
+        <span class="member-notify-pill hidden" id="notifications-unread-pill"></span>
+      </div>
+      <div class="member-state" id="notifications-loading">載入中…</div>
+      <div class="hidden" id="notifications-feed"></div>
+      <div class="member-state member-state--empty hidden" id="notifications-empty">
+        <p>目前沒有通知。</p>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+{% block extra_scripts %}
+<script src="/static/js/api-client.js"></script>
+<script src="/static/js/mvc/core.js"></script>
+<script src="/static/js/mvc/models/notifications-model.js"></script>
+<script src="/static/js/mvc/views/notifications-view.js"></script>
+<script src="/static/js/mvc/controllers/notifications-controller.js"></script>
+{% endblock %}

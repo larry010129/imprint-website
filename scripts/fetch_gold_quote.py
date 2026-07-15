@@ -11,7 +11,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from server.bot_gold import fetch_bot_gold_quote  # noqa: E402
+from app.bot_gold import fetch_bot_gold_quote  # noqa: E402
 
 OUT = ROOT / "data" / "gold-quote.json"
 JS_OUT = ROOT / "js" / "gold-quote-data.js"

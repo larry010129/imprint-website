@@ -1,0 +1,27 @@
+<section class="auth-section" id="view-register">
+  <div class="auth-card">
+    <h1>加入會員</h1>
+    <p class="sub">註冊會員即可查詢您的訂製進度、保留聯絡資料，讓顧問更快為您服務。</p>
+    <form id="registerForm" novalidate>
+      <div class="form-field">
+        <label for="rName">姓名 <span class="req">*</span></label>
+        <input type="text" id="rName" name="fullName" autocomplete="name" required>
+      </div>
+      <div class="form-field">
+        <label for="rPhone">電話 <span class="req">*</span></label>
+        <input type="tel" id="rPhone" name="phone" autocomplete="tel" required>
+      </div>
+      <div class="form-field">
+        <label for="rEmail">Email <span class="req">*</span></label>
+        <input type="email" id="rEmail" name="email" autocomplete="email" required>
+      </div>
+      <div class="form-field">
+        <label for="rPassword">密碼（至少 6 碼） <span class="req">*</span></label>
+        <input type="password" id="rPassword" name="password" autocomplete="new-password" required minlength="6">
+      </div>
+      <button type="submit" class="btn btn-dark" id="registerSubmitBtn">建立會員帳號</button>
+      <p class="form-msg" id="registerFormMsg" role="status" aria-live="polite"></p>
+    </form>
+    <p class="switch-link">已經是會員了？<a href="login.html">直接登入</a></p>
+  </div>
+</section>

@@ -7,7 +7,25 @@
 <title>品項訂製｜鑽石戒台選購試算－銘印鑽石 IMPRINT DIAMOND</title>
 <meta name="description" content="線上選擇戒指、項墜、耳飾、手鍊與鍊條款式，配置克拉數、鑽石顏色、金屬成色與戒圍，即時試算參考價格並下單。">
 <link rel="canonical" href="https://www.imprint-diamond.com/shop/calculator/">
-<!-- @component partials/head-common.html -->
+<!-- @component partials/layout-head.html -->
+<!-- Shared <head> baseline — from index.html (landing page).
+     Copy into each page, or load via js/site-layout.js into <head data-site-include="head-common">.
+     Replace ../../ with path back to site root (empty at root, ../../../ three levels deep, etc.). -->
+<meta charset="utf-8">
+<script>window.imgFallback=function(img){var s=img.dataset.fbStep?parseInt(img.dataset.fbStep,10):0;var e=["jpg","png","jpeg"];var pic=img.parentElement&&img.parentElement.tagName==="PICTURE"?img.parentElement:null;if(s<e.length-1){s++;img.dataset.fbStep=String(s);if(pic){var srcs=pic.querySelectorAll("source");for(var i=0;i<srcs.length;i++){srcs[i].remove();}}img.src=img.src.replace(/\.(jpg|jpeg|png)(\?.*)?$/i,"."+e[s]+"$2");}else{(pic||img).remove();}};</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="../../favicon.svg">
+<link rel="stylesheet" href="../../css/base.css?v=3.7">
+<link rel="stylesheet" href="../../css/nav.css?v=3.7">
+<link rel="stylesheet" href="../../css/home.css?v=3.7">
+<link rel="stylesheet" href="../../css/pages.css?v=3.7">
+<link rel="stylesheet" href="../../css/responsive.css?v=3.7">
+<link rel="icon" type="image/svg+xml" href="../../favicon.svg">
+<link rel="stylesheet" href="../../css/base.css?v=3.7">
+<link rel="stylesheet" href="../../css/nav.css?v=3.7">
+<link rel="stylesheet" href="../../css/home.css?v=3.7">
+<link rel="stylesheet" href="../../css/pages.css?v=3.7">
+<link rel="stylesheet" href="../../css/responsive.css?v=3.7">
 <link rel="icon" type="image/svg+xml" href="../../favicon.svg">
 <link rel="stylesheet" href="../../css/base.css?v=3.7">
 <link rel="stylesheet" href="../../css/nav.css?v=3.7">
@@ -18,13 +36,13 @@
 <link rel="stylesheet" href="../../css/shop-wizard.css?v=8">
 </head>
 <body data-site-root="../../" data-site-active="shop" class="site-layout">
-<!-- @component partials/topbar.html -->
+<!-- @component partials/layout-topbar.html -->
 <!-- Top announcement bar — same on every page -->
 <div class="topbar">
   全台唯一在地 DNA 鑽石培育實驗室｜門市採預約制 <b>02-2977-0268</b>
 </div>
 
-<!-- @component partials/nav.html -->
+<!-- @component partials/layout-nav.html -->
 <!-- Site navigation — canonical copy from index.html (landing page).
      Relative paths are rewritten when pages are built from partials/. -->
 <header class="nav">
@@ -43,6 +61,12 @@
       <ul class="nav-menu">
         <li class="nav-item" data-nav-id="price">
           <a href="../../price.html">價格試算</a>
+          <button type="button" class="dd-toggle" aria-label="展開 價格試算 子選單" aria-expanded="false"><svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <div class="dropdown">
+            <a href="../../price.html">DNA 鑽石價格</a>
+            <a href="../../gold-price.html">台銀金價</a>
+            <a href="../../shop/calculator/index.html">品項訂製試算</a>
+          </div>
         </li>
         <li class="nav-item" data-nav-id="shop">
           <a href="../../shop/calculator/index.html">品項訂製</a>
@@ -95,6 +119,11 @@
           <div class="dropdown">
             <a href="../../login.html">會員登入</a>
             <a href="../../register.html">加入會員</a>
+            <a href="../../cart.html">購物車</a>
+            <a href="../../favorites.html">收藏款式</a>
+            <a href="../../history.html">訂購紀錄</a>
+            <a href="../../notifications.html">通知</a>
+            <a href="../../profile.html">帳戶設定</a>
             <a href="../../track-order.html">查詢訂製進度</a>
           </div>
         </li>
@@ -641,7 +670,7 @@
   </div><!-- /.shop-calculator-wrap -->
 </main>
 
-<!-- @component partials/footer.html -->
+<!-- @component partials/layout-footer.html -->
 <!-- Site footer — canonical copy from index.html (landing page).
      Relative paths are rewritten when pages are built from partials/. -->
 <footer class="footer">
@@ -701,7 +730,7 @@
 </footer>
 
 <script src="../../js/site-layout.js?v=1.2"></script>
-<script src="../../js/main.js?v=1.9"></script>
+<script src="../../js/main.js?v=2.1"></script>
 <script>
   window.shopConfig = {
     mode: 'order',

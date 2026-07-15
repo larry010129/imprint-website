@@ -1,72 +1,76 @@
-# Component-based layout
+# Component-based layout (MVC View Structure)
 
-All public pages share chrome from **`partials/`**, loaded at runtime by **`js/site-layout.js`**.
+Public pages share chrome from **`partials/`**, baked into HTML by **`npm run build:layout`**.
 
-Edit nav / footer / topbar **once** in `partials/` — every page updates automatically.
+## Directory layout
 
-## Partials
+```
+partials/
+  layout/          ← topbar, nav, footer, head-common
+  views/
+    content/       ← homepage, gold-price, price-reference
+    member/        ← cart, auth, profile, contact form, etc.
 
-| File | Loaded on |
+js/mvc/
+  core.js          ← ImprintMVC helpers
+  models/          ← API / data
+  views/           ← DOM rendering
+  controllers/     ← bind model → view
+```
+
+Registry: **`scripts/mvc-registry.mjs`** (partials map + page list for `generate-pages`).
+
+## Partials (slot ids)
+
+| Slot id | File |
 |---|---|
-| `head-common.html` | Optional head injection (favicon + CSS baseline) |
-| `topbar.html` | Every page |
-| `nav.html` | Every page — canonical menu from landing page |
-| `footer.html` | Every page |
-| `home-main.html` | `index.html` only — homepage sections |
+| `layout-topbar` | `layout/topbar.html` |
+| `layout-nav` | `layout/nav.html` |
+| `layout-footer` | `layout/footer.html` |
+| `layout-head` | `layout/head-common.html` |
+| `view-home` | `views/content/home-main.html` |
+| `view-price-ref` | `views/content/price-reference.html` |
+| `view-gold-price` | `views/content/gold-price.html` |
+| `view-cart` … `view-404` | `views/member/*.html` |
+
+## MVC pages
+
+Member/auth pages are generated from the registry:
+
+```bash
+npm run generate:pages
+npm run build:layout
+```
+
+Each generated page sets `data-mvc="cart"` (etc.) on `<body>`; controllers boot via `ImprintMVC.isPage()`.
+
+Shared styles: `css/member-app.css`.
 
 ## Page structure
 
 ```html
-<body data-site-root="../../../" data-site-active="jewelry" class="site-layout">
-  <div data-site-include="topbar"></div>
-  <div data-site-include="nav"></div>
+<body data-site-root="" data-site-active="shop" data-mvc="cart" class="site-layout">
+  <div data-site-include="layout-topbar"></div>
+  <div data-site-include="layout-nav"></div>
   <main>
-    <!-- page-only content here -->
+    <div data-site-include="view-cart"></div>
   </main>
-  <div data-site-include="footer"></div>
-  <script src="../../../js/site-layout.js?v=1.1"></script>
-  <script src="../../../js/main.js?v=1.9"></script>
+  <div data-site-include="layout-footer"></div>
+  <script src="js/site-layout.js?v=1.2"></script>
+  <script src="js/main.js?v=2.1"></script>
+  <!-- MVC bundle from registry -->
 </body>
 ```
 
 ### `data-site-root`
 
-Relative path back to site root:
+Relative path back to site root (`../` for nested pages).
 
-| Location | Value |
-|---|---|
-| `about.html` | *(empty)* |
-| `jewelry/index.html` | `../` |
-| `jewelry/rings/classic-solitaire/index.html` | `../../../` |
-| `shop/calculator/index.html` | `../../` |
+### `data-site-active`
 
-### `data-site-active` (optional)
-
-Highlights the current nav item: `price`, `shop`, `diamonds`, `jewelry`, `knowledge`, `about`, `account`.
-
-## New pages
-
-1. Copy `template.html` from repo root.
-2. Replace `{{ROOT}}`, `{{NAV_ACTIVE}}`, and page content placeholders.
-3. Keep the four `data-site-include` slots + layout scripts.
-
-Homepage uses an extra slot inside `<main>`:
-
-```html
-<div data-site-include="home-main"></div>
-```
+Highlights nav: `price`, `shop`, `diamonds`, `jewelry`, `knowledge`, `about`, `account`.
 
 ## Requirements
 
-- Serve over HTTP (`npx serve .` or your host) — `fetch` does not work from `file://`.
-- Load **`site-layout.js` before `main.js`** so nav/burger init runs after injection.
-
-## Migration script
-
-Re-apply layout to HTML files (safe to re-run; skips already-migrated pages):
-
-```bash
-node scripts/migrate-layout-components.mjs
-```
-
-`admin.html` and `index.html` are excluded — admin uses its own UI; index uses `home-main` partial.
+- Serve over HTTP — `fetch` does not work from `file://`.
+- Load **`site-layout.js` before `main.js`**.

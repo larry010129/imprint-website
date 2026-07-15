@@ -10,23 +10,18 @@
 <meta name="description" content="{{PAGE_DESCRIPTION}}">
 <meta name="robots" content="index, follow, max-image-preview:large">
 
-<!-- @component partials/head-common.html -->
-<link rel="icon" type="image/svg+xml" href="{{ROOT}}favicon.svg">
-<link rel="stylesheet" href="{{ROOT}}css/base.css?v=3.7">
-<link rel="stylesheet" href="{{ROOT}}css/nav.css?v=3.7">
-<link rel="stylesheet" href="{{ROOT}}css/home.css?v=3.7">
-<link rel="stylesheet" href="{{ROOT}}css/pages.css?v=3.7">
-<link rel="stylesheet" href="{{ROOT}}css/responsive.css?v=3.7">
+<!-- @component partials/layout-head.html -->
+<div data-site-include="layout-head"></div>
 
 <!-- {{EXTRA_HEAD}} — optional page CSS, JSON-LD, preload -->
 </head>
 <body data-site-root="{{ROOT}}" data-site-active="{{NAV_ACTIVE}}" class="site-layout">
 
 <!-- Shared layout components (single source: partials/) -->
-<!-- @component partials/topbar.html -->
-<div data-site-include="topbar"></div>
-<!-- @component partials/nav.html -->
-<div data-site-include="nav"></div>
+<!-- @component partials/layout-topbar.html -->
+<div data-site-include="layout-topbar"></div>
+<!-- @component partials/layout-nav.html -->
+<div data-site-include="layout-nav"></div>
 
 <main>
   <!-- {{PAGE_CONTENT}} -->
@@ -38,8 +33,8 @@
   </section>
 </main>
 
-<!-- @component partials/footer.html -->
-<div data-site-include="footer"></div>
+<!-- @component partials/layout-footer.html -->
+<div data-site-include="layout-footer"></div>
 
 <!-- {{EXTRA_SCRIPTS}} -->
 <script src="{{ROOT}}js/site-layout.js?v=1.1"></script>

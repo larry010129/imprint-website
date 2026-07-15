@@ -97,16 +97,16 @@ function setBodyAttrs(html, root, active) {
 
 function injectLayoutSlots(html) {
   const slots = [
-    '<!-- @component partials/topbar.html -->',
-    '<div data-site-include="topbar"></div>',
-    '<!-- @component partials/nav.html -->',
-    '<div data-site-include="nav"></div>',
+    '<!-- @component partials/layout-topbar.html -->',
+    '<div data-site-include="layout-topbar"></div>',
+    '<!-- @component partials/layout-nav.html -->',
+    '<div data-site-include="layout-nav"></div>',
     '',
   ].join('\n');
 
   if (/<div data-site-include="topbar"><\/div>/i.test(html)) {
     return html.replace(
-      /<!-- @component partials\/topbar\.html -->[\s\S]*?<div data-site-include="nav"><\/div>\s*/i,
+      /<!-- @component partials\/(?:layout-topbar|topbar)\.html -->[\s\S]*?<div data-site-include="(?:layout-nav|nav)"><\/div>\s*/i,
       slots,
     );
   }
@@ -117,8 +117,8 @@ function injectLayoutSlots(html) {
 function injectFooterSlot(html) {
   const slot = [
     '',
-    '<!-- @component partials/footer.html -->',
-    '<div data-site-include="footer"></div>',
+    '<!-- @component partials/layout-footer.html -->',
+    '<div data-site-include="layout-footer"></div>',
     '',
   ].join('\n');
 

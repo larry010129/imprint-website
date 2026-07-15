@@ -16,12 +16,12 @@
 <link rel="stylesheet" href="css/gold-price.css?v=3">
 </head>
 <body data-site-root="" data-site-active="gold" class="site-layout">
-<!-- @component partials/topbar.html -->
+<!-- @component partials/layout-topbar.html -->
 <!-- Top announcement bar — same on every page -->
 <div class="topbar">
   全台唯一在地 DNA 鑽石培育實驗室｜門市採預約制 <b>02-2977-0268</b>
 </div>
-<!-- @component partials/nav.html -->
+<!-- @component partials/layout-nav.html -->
 <!-- Site navigation — canonical copy from index.html (landing page).
      Relative paths are rewritten when pages are built from partials/. -->
 <header class="nav">
@@ -98,6 +98,11 @@
           <div class="dropdown">
             <a href="login.html">會員登入</a>
             <a href="register.html">加入會員</a>
+            <a href="cart.html">購物車</a>
+            <a href="favorites.html">收藏款式</a>
+            <a href="history.html">訂購紀錄</a>
+            <a href="notifications.html">通知</a>
+            <a href="profile.html">帳戶設定</a>
             <a href="track-order.html">查詢訂製進度</a>
           </div>
         </li>
@@ -120,7 +125,7 @@
 
 <section class="price-detail" style="padding-top:70px;">
   <div class="container">
-    <!-- @component partials/gold-price-main.html -->
+    <!-- @component partials/view-gold-price.html -->
 <section class="price-reference gold-price-reference" id="gold-price-page" aria-label="台銀黃金牌價">
   <div class="price-reference-inner">
     <div class="price-reference-head">
@@ -191,7 +196,7 @@
       </div>
     </div>
 
-    <p class="price-ref-note gold-price-schedule">Render 部署：<strong>Python Web Service</strong>。Build：<code>pip install -r requirements.txt</code>，Start：<code>gunicorn server.main:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT</code>（見 <code>render.yaml</code>）。本機：<code>dev.bat</code>。</p>
+    <p class="price-ref-note gold-price-schedule">Render 部署：<strong>Python Web Service</strong>。Build：<code>pip install -r requirements.txt</code>，Start：<code>gunicorn main:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT</code>（見 <code>render.yaml</code>）。本機：<code>dev.bat</code>。</p>
 
     <div class="price-reference-foot gold-price-foot">
       <a class="btn btn-mint" href="shop/calculator/index.html">品項訂製試算</a>
@@ -203,7 +208,7 @@
 </section>
 </main>
 
-<!-- @component partials/footer.html -->
+<!-- @component partials/layout-footer.html -->
 <!-- Site footer — canonical copy from index.html (landing page).
      Relative paths are rewritten when pages are built from partials/. -->
 <footer class="footer">

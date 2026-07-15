@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/member-app.css?v=1">
+{% endblock %}
+{% block content %}
+<!-- @component partials/view-history.html -->
+<section class="page-section member-app" id="mvc-history" aria-label="訂購紀錄">
+  <div class="container">
+    <div class="price-reference member-panel">
+      <div class="price-reference-head">
+        <p class="eyebrow">ORDERS</p>
+        <h1 class="price-reference-title">訂購紀錄</h1>
+        <p class="price-reference-lead">您最近的送出紀錄。</p>
+      </div>
+
+      <form class="member-search" id="history-search-form" role="search">
+        <input type="search" id="history-search-input" name="q" placeholder="搜尋訂單編號、品項…" autocomplete="off">
+        <button type="submit" class="btn btn-mint">搜尋</button>
+      </form>
+
+      <div class="member-tabs" role="tablist">
+        <button type="button" class="member-tab is-active" data-tab="incomplete" role="tab">未完成 <span class="member-tab-count" id="history-tabcount-incomplete">0</span></button>
+        <button type="button" class="member-tab" data-tab="complete" role="tab">已完成 <span class="member-tab-count" id="history-tabcount-complete">0</span></button>
+        <button type="button" class="member-tab" data-tab="cancelled" role="tab">已取消 <span class="member-tab-count" id="history-tabcount-cancelled">0</span></button>
+      </div>
+
+      <div class="member-tab-panel" id="history-panel-incomplete" data-tab-panel="incomplete">
+        <div class="member-table-wrap">
+          <table class="member-table"><thead><tr><th>編號</th><th>日期</th><th>品項</th><th>總計</th><th>狀態</th></tr></thead><tbody id="history-tbody-incomplete"></tbody></table>
+        </div>
+      </div>
+      <div class="member-tab-panel hidden" id="history-panel-complete" data-tab-panel="complete" hidden>
+        <div class="member-table-wrap">
+          <table class="member-table"><thead><tr><th>編號</th><th>日期</th><th>品項</th><th>總計</th><th>狀態</th></tr></thead><tbody id="history-tbody-complete"></tbody></table>
+        </div>
+      </div>
+      <div class="member-tab-panel hidden" id="history-panel-cancelled" data-tab-panel="cancelled" hidden>
+        <div class="member-table-wrap">
+          <table class="member-table"><thead><tr><th>編號</th><th>日期</th><th>品項</th><th>總計</th><th>狀態</th></tr></thead><tbody id="history-tbody-cancelled"></tbody></table>
+        </div>
+      </div>
+
+      <div class="member-state" id="history-loading">載入中…</div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+{% block extra_scripts %}
+<script src="/static/js/api-client.js"></script>
+<script src="/static/js/mvc/core.js"></script>
+<script src="/static/js/mvc/models/history-model.js"></script>
+<script src="/static/js/mvc/views/history-view.js"></script>
+<script src="/static/js/mvc/controllers/history-controller.js"></script>
+{% endblock %}

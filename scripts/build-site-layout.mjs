@@ -1,26 +1,36 @@
 #!/usr/bin/env node
 /**
  * Bake partials/ into HTML pages so nav/footer render without fetch.
- * Re-run after editing partials/:  node scripts/build-site-layout.mjs
+ * Re-run after editing partials/:  npm run build:layout
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { PARTIALS } from './mvc-registry.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 const PARTIALS_DIR = path.join(ROOT, 'partials');
 
 const SKIP = new Set(['admin.html', 'template.html']);
-const SKIP_DIRS = ['partials', 'shop/partials', 'scripts', 'node_modules'];
+const SKIP_DIRS = ['partials', 'shop/partials', 'scripts', 'node_modules', 'server'];
 
-const PARTIALS = {
-  topbar: 'topbar.html',
-  nav: 'nav.html',
-  footer: 'footer.html',
-  'home-main': 'home-main.html',
-  'price-reference': 'price-reference.html',
-  'gold-price-main': 'gold-price-main.html',
+/** Legacy slot comment names before MVC rearrange */
+const LEGACY_SLOT = {
+  'layout-topbar': 'topbar',
+  'layout-nav': 'nav',
+  'layout-footer': 'footer',
+  'layout-head': 'head-common',
+  'view-home': 'home-main',
+  'view-price-ref': 'price-reference',
+  'view-gold-price': 'gold-price-main',
+  'view-cart': 'mvc-cart',
+  'view-favorites': 'mvc-favorites',
+  'view-notifications': 'mvc-notifications',
+  'view-history': 'mvc-history',
+  'view-success': 'mvc-success',
+  'view-profile': 'mvc-profile',
+  'view-404': 'mvc-404',
 };
 
 const IMG_FALLBACK = `<script>window.imgFallback=function(img){var s=img.dataset.fbStep?parseInt(img.dataset.fbStep,10):0;var e=["jpg","png","jpeg"];var pic=img.parentElement&&img.parentElement.tagName==="PICTURE"?img.parentElement:null;if(s<e.length-1){s++;img.dataset.fbStep=String(s);if(pic){var srcs=pic.querySelectorAll("source");for(var i=0;i<srcs.length;i++){srcs[i].remove();}}img.src=img.src.replace(/\\.(jpg|jpeg|png)(\\?.*)?$/i,"."+e[s]+"$2");}else{(pic||img).remove();}};</script>`;
@@ -31,9 +41,9 @@ function shouldSkip(filePath) {
   return SKIP_DIRS.some((d) => rel === d || rel.startsWith(d + '/'));
 }
 
-function readPartial(name) {
-  const file = PARTIALS[name];
-  if (!file) throw new Error('Unknown partial: ' + name);
+function readPartial(slotId) {
+  const file = PARTIALS[slotId];
+  if (!file) throw new Error('Unknown partial: ' + slotId);
   return fs.readFileSync(path.join(PARTIALS_DIR, file), 'utf8');
 }
 
@@ -46,6 +56,17 @@ function siteRootFromHtml(html) {
   return m ? m[1] : '';
 }
 
+function commentNames(slotId) {
+  const names = [slotId];
+  if (LEGACY_SLOT[slotId]) names.push(LEGACY_SLOT[slotId]);
+  return names;
+}
+
+function commentPattern(slotId) {
+  const names = commentNames(slotId).map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  return new RegExp(`<!-- @component partials/(?:${names.join('|')})\\.html -->`, 'i');
+}
+
 function ensureImgFallback(html) {
   if (html.includes('window.imgFallback')) return html;
   return html.replace(/(<meta charset="utf-8">\s*)/i, `$1${IMG_FALLBACK}\n`);
@@ -53,33 +74,36 @@ function ensureImgFallback(html) {
 
 function inlineIncludes(html, root) {
   let out = html;
-  for (const name of Object.keys(PARTIALS)) {
-    const rendered = applyRoot(readPartial(name), root).trim();
+  for (const slotId of Object.keys(PARTIALS)) {
+    const rendered = applyRoot(readPartial(slotId), root).trim();
     const slotRe = new RegExp(
-      `(<!--\\s*@component partials/${name}\\.html\\s*-->\\s*)?<div data-site-include="${name}"><\\/div>`,
+      `(<!--\\s*@component partials/(?:${commentNames(slotId).join('|')})\\.html\\s*-->\\s*)?<div data-site-include="${slotId}"><\\/div>`,
       'i',
     );
     if (!slotRe.test(out)) continue;
-    out = out.replace(slotRe, `<!-- @component partials/${name}.html -->\n${rendered}\n`);
+    out = out.replace(slotRe, `<!-- @component partials/${slotId}.html -->\n${rendered}\n`);
   }
   return out;
 }
 
-const REFRESH_PATTERNS = {
-  topbar: /<!-- @component partials\/topbar\.html -->[\s\S]*?<\/div>(?=\s*\n<!-- @component partials\/nav\.html -->)/,
-  nav: /<!-- @component partials\/nav\.html -->[\s\S]*?<\/header>/,
-  footer: /<!-- @component partials\/footer\.html -->[\s\S]*?<\/footer>/,
-  'home-main': /<!-- @component partials\/home-main\.html -->[\s\S]*?(?=\n<\/main>)/,
-  'price-reference': /<!-- @component partials\/price-reference\.html -->[\s\S]*?(?=\n\s*<\/section>\s*\n<\/main>|\n\s*<\/div>\s*\n<\/section>\s*\n<\/main>)/,
-  'gold-price-main': /<!-- @component partials\/gold-price-main\.html -->[\s\S]*?(?=\n\s*<\/div>\s*\n<\/section>\s*\n<\/main>)/,
+const REFRESH_END = {
+  'layout-topbar': /<!-- @component partials\/(?:layout-topbar|topbar)\.html -->[\s\S]*?<\/div>(?=\s*\n<!-- @component partials\/(?:layout-nav|nav)\.html -->)/,
+  'layout-nav': /<!-- @component partials\/(?:layout-nav|nav)\.html -->[\s\S]*?<\/header>/,
+  'layout-footer': /<!-- @component partials\/(?:layout-footer|footer)\.html -->[\s\S]*?<\/footer>/,
+  'layout-head': /<!-- @component partials\/(?:layout-head|head-common)\.html -->[\s\S]*?(?=\n<link rel="icon"|\n<link rel="stylesheet")/,
+  'view-home': /<!-- @component partials\/(?:view-home|home-main)\.html -->[\s\S]*?(?=\n<\/main>)/,
+  'view-price-ref': /<!-- @component partials\/(?:view-price-ref|price-reference)\.html -->[\s\S]*?(?=\n\s*<\/section>\s*\n<\/main>|\n\s*<\/div>\s*\n<\/section>\s*\n<\/main>)/,
+  'view-gold-price': /<!-- @component partials\/(?:view-gold-price|gold-price-main)\.html -->[\s\S]*?(?=\n\s*<\/div>\s*\n<\/section>\s*\n<\/main>)/,
+  'view-contact-form': /<!-- @component partials\/(?:view-contact-form)\.html -->[\s\S]*?(?=\n<\/main>)/,
 };
 
 function refreshComponents(html, root) {
   let out = html;
-  for (const [name, pattern] of Object.entries(REFRESH_PATTERNS)) {
+  for (const [slotId, pattern] of Object.entries(REFRESH_END)) {
+    if (!PARTIALS[slotId]) continue;
     if (!pattern.test(out)) continue;
-    const rendered = applyRoot(readPartial(name), root).trim();
-    out = out.replace(pattern, `<!-- @component partials/${name}.html -->\n${rendered}`);
+    const rendered = applyRoot(readPartial(slotId), root).trim();
+    out = out.replace(pattern, `<!-- @component partials/${slotId}.html -->\n${rendered}`);
   }
   return out;
 }
@@ -109,7 +133,12 @@ function normalizeLayoutScripts(html, root) {
 
 function processFile(filePath) {
   let html = fs.readFileSync(filePath, 'utf8');
-  if (!html.includes('data-site-include=') && !/\bsite-layout\b/.test(html)) {
+  const hasSlots = html.includes('data-site-include=');
+  const hasLayout = /\bsite-layout\b/.test(html);
+  const hasLegacy = Object.values(LEGACY_SLOT).some((legacy) =>
+    html.includes(`@component partials/${legacy}.html`),
+  );
+  if (!hasSlots && !hasLayout && !hasLegacy) {
     return false;
   }
 

@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/member-app.css?v=1">
+{% endblock %}
+{% block content %}
+<!-- @component partials/view-profile.html -->
+<section class="page-section member-app" id="mvc-profile" aria-label="帳戶設定">
+  <div class="container">
+    <div class="price-reference member-panel">
+      <div class="price-reference-head">
+        <p class="eyebrow">ACCOUNT</p>
+        <h1 class="price-reference-title">帳戶設定</h1>
+      </div>
+      <div class="member-profile-cards">
+        <div class="member-profile-card">
+          <h2>帳戶資訊</h2>
+          <dl class="member-dl">
+            <dt>店家名稱</dt><dd id="profile-store">—</dd>
+            <dt>登入帳號</dt><dd id="profile-username">—</dd>
+            <dt>角色</dt><dd id="profile-role">—</dd>
+          </dl>
+        </div>
+        <div class="member-profile-card">
+          <h2>訂單統計</h2>
+          <dl class="member-dl">
+            <dt>總訂單數</dt><dd id="profile-stat-total">—</dd>
+            <dt>待處理</dt><dd id="profile-stat-pending">—</dd>
+          </dl>
+          <p style="margin-top:12px;font-size:13px;"><a href="/history.html" style="color:var(--mint-deep);">查看完整訂購紀錄 →</a></p>
+        </div>
+        <div class="member-profile-card">
+          <h2>變更密碼</h2>
+          <p style="font-size:13px;color:var(--ink-soft);">請至 <a href="/reset-password.html" style="color:var(--mint-deep);">重設密碼</a> 頁面。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+{% block extra_scripts %}
+<script src="/static/js/api-client.js"></script>
+<script src="/static/js/mvc/core.js"></script>
+<script src="/static/js/mvc/models/profile-model.js"></script>
+<script src="/static/js/mvc/views/profile-view.js"></script>
+<script src="/static/js/mvc/controllers/profile-controller.js"></script>
+{% endblock %}

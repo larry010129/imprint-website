@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block extra_head %}
+{% for block in extra_head_blocks %}
+<script type="application/ld+json">
+{{ block | safe }}
+</script>
+{% endfor %}
+{% endblock %}
+{% block content %}
+{{ content_html | safe }}
+{% endblock %}
