@@ -1,18 +1,11 @@
-/* Vercel serverless function: scrapes Bank of Taiwan (BOT) 黃金條塊 (gold bar)
- * 本行賣出 price using a headless browser, then writes it to Neon Postgres
- * (same DATABASE_URL/table the /backend project reads from via /api/gold-price).
+/* Legacy scraper (optional): BOT 黃金條塊賣出價 → Neon gold_price_cache.
+ * Production uses scripts/fetch_gold_quote.py + GitHub Actions instead.
  *
- * JS/Node port of imprint-calculator's bot_metal_feed.py (Python + Playwright).
- * Same problem the Python version solves: BOT's gold-quote page sits behind a
- * bot-challenge (redirect + sec_cpt cookie) that a plain fetch() cannot pass,
- * so this also needs a real headless browser — puppeteer-core + @sparticuz/chromium
- * is the Node/serverless equivalent of Python's Playwright + chromium.
+ * BOT's page needs a headless browser (bot challenge). puppeteer-core +
+ * @sparticuz/chromium for Linux/serverless hosts.
  *
- * Trigger: Vercel Cron (see vercel.json), hourly 08:00-22:00 Asia/Taipei.
- * Auth: Vercel Cron automatically sends `Authorization: Bearer <CRON_SECRET>`
- * when a `CRON_SECRET` env var is set on the project — this checks that, so
- * the endpoint can't be triggered by anyone who finds the public URL.
- * https://vercel.com/docs/cron-jobs/manage-cron-jobs#securing-cron-jobs
+ * Trigger: your own cron (systemd, GitHub Actions, Render cron, etc.).
+ * Auth: send Authorization: Bearer <CRON_SECRET> if CRON_SECRET is set.
  */
 const chromium = require('@sparticuz/chromium');
 const puppeteer = require('puppeteer-core');

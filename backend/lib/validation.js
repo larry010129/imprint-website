@@ -2,7 +2,7 @@
  * JSON 版本的 validate_submission_fields（原本是 Flask form-encoded，這裡
  * API 收 JSON body，邏輯一致）。validate_product_fields 簡化為 JSON 版本：
  * 圖片改收「已上傳好的圖檔網址」而非原本的 multipart 檔案上傳，因為 serverless
- * function 的檔案上傳需要額外的儲存服務(如 Vercel Blob/S3)，尚未串接
+ * function 的檔案上傳需要物件儲存（S3、R2 等），尚未串接
  * (見 backend/README.md「尚未完成」章節)。
  */
 

@@ -1,7 +1,5 @@
-/* Neon connection. Uses @neondatabase/serverless's HTTP-based driver instead
- * of a pooled TCP connection (pg) — the recommended approach for Neon in
- * serverless functions, since each Vercel invocation is short-lived and a
- * TCP pool would exhaust Neon's connection limit under concurrent requests.
+/* Neon connection. Uses @neondatabase/serverless HTTP driver (short-lived
+ * serverless invocations) instead of a long-lived TCP pool.
  */
 const { neon } = require('@neondatabase/serverless');
 

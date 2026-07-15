@@ -533,9 +533,21 @@
   </div><!-- /.shop-calculator-wrap -->
 {% endblock %}
 {% block extra_scripts %}
+<script src="/static/js/api-client.js"></script>
+<script>
+  window.shopConfig = Object.assign({
+    mode: 'order',
+    useApi: true,
+    loginUrl: '/login.html',
+    cartUrl: '/cart.html',
+    successUrl: '/success.html',
+    quoteSheetUrl: '/quote-sheet',
+    shareBaseUrl: '/s/TOKEN',
+  }, window.shopConfig || {});
+</script>
 <script src="/static/js/shop-assets.js"></script>
 <script src="/static/js/shop-catalog-data.js"></script>
 <script src="/static/js/shop-pricing-local.js"></script>
 <script src="/static/js/shop-i18n.js"></script>
-<script src="/static/js/shop.js?v=8"></script>
+<script src="/static/js/shop.js?v=11"></script>
 {% endblock %}

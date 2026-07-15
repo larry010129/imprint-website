@@ -2,8 +2,8 @@
    說明給工程師/接手的人：
    - 這是全站唯一的「價格資料來源」。五大系列頁的客製選單(configurator.js)
      跟後台的「價格設定」頁(admin.html)都讀寫同一份資料，靠這支檔案串起來。
-   - 價格真正存在後端(backend/，Neon Postgres)的 pricing_settings 資料表
-     (一筆固定 id=1 的 JSON)，透過 js/api-client.js 呼叫 API 讀寫，
+   - 價格真正存在 Postgres 的 pricing_settings 資料表
+     (一筆固定 id=1 的 JSON)，透過 js/api-client.js 呼叫 FastAPI /api 讀寫，
      後台改一次，全站所有裝置都會同步看到新價格。
    - 為了讓頁面「立刻有數字可以顯示」不用整頁空白等網路，這裡同時把最後一次
      讀到的價格快取一份在瀏覽器的 localStorage：頁面一開場先用快取畫面，
@@ -20,11 +20,9 @@
    取其「公式與資料」。該專案的資料庫金重查表(每個商品的實際克重)沒有搬過來，
    因為 V3 的商品線是全新設計，沒有對應的克重資料，mounting 目前仍是估算表。
 
-   即時金價：/gold-price-scraper 資料夾是一個獨立部署的 Node/Vercel 專案
-   (puppeteer-core + @sparticuz/chromium，取代原本 Python + Playwright 的爬蟲)，
-   排程爬 台灣銀行黃金牌價 寫進 Neon 的 gold_price_cache 表。這支檔案的
-   getLiveGoldPrice() 只負責透過 API 讀那張表，目前沒有任何計算邏輯在用它
-   (mounting 費用還是查表估算，不是即時金重試算)，讀到的價格僅供顯示參考用。
+   即時金價：排程腳本 scripts/fetch_gold_quote.py（GitHub Actions）更新
+   data/gold-quote.json；線上則由 FastAPI GET /api/bot-gold 提供。
+   getLiveGoldPrice() 透過 API 讀快取，目前 mounting 仍用估算表，金價僅供顯示參考。
 */
 (function (global) {
   'use strict';

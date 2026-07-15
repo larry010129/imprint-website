@@ -1,5 +1,8 @@
 import * as React from "react"
 
+import { AccountMenu } from "@/components/AccountMenu"
+import { fetchSession, type Session } from "@/lib/session"
+
 type NavChild = {
   label: string
   href: string
@@ -55,16 +58,6 @@ const NAV_ITEMS: NavItem[] = [
     ],
   },
   { id: "track-order", label: "查詢訂製進度", href: "/track-order.html" },
-  {
-    id: "account",
-    label: "會員專區",
-    href: "/account.html",
-    children: [
-      { label: "會員登入", href: "/login.html" },
-      { label: "購物車", href: "/cart.html" },
-      { label: "訂購紀錄", href: "/history.html" },
-    ],
-  },
 ]
 
 const BRAND_PATH =
@@ -133,6 +126,17 @@ export default function SiteNav() {
   const siteRoot = useSiteRoot()
   const homeHref = resolveHref("/", siteRoot)
   const headerRef = React.useRef<HTMLElement>(null)
+  const [session, setSession] = React.useState<Session | null>(null)
+
+  React.useEffect(() => {
+    let active = true
+    fetchSession().then((data) => {
+      if (active) setSession(data)
+    })
+    return () => {
+      active = false
+    }
+  }, [])
 
   React.useEffect(() => {
     const header = headerRef.current
@@ -234,6 +238,7 @@ export default function SiteNav() {
         </nav>
 
         <div className="nav-cta nav-cta-col">
+          <AccountMenu siteRoot={siteRoot} session={session} />
           <a
             className="btn btn-mint btn-calc"
             href={resolveHref("/shop/calculator/", siteRoot)}

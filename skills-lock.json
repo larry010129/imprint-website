@@ -1,6 +1,12 @@
 {
   "version": 1,
   "skills": {
+    "audit": {
+      "source": "Hainrixz/claude-seo-ai",
+      "sourceType": "github",
+      "skillPath": "skills/audit/SKILL.md",
+      "computedHash": "e5069f830dcd77c17fa387e904047bc38549abc83c872a356522a14e90c55dc5"
+    },
     "cavecrew": {
       "source": "JuliusBrussee/caveman",
       "sourceType": "github",
@@ -42,6 +48,174 @@
       "sourceType": "github",
       "skillPath": "skills/caveman-stats/SKILL.md",
       "computedHash": "331f720e2fa97b68cacdae44384878071e8cac6013479edea68f4c8eca308852"
+    },
+    "fix": {
+      "source": "Hainrixz/claude-seo-ai",
+      "sourceType": "github",
+      "skillPath": "skills/fix/SKILL.md",
+      "computedHash": "f46f4fc2ee6bc6401e4cc93418c13d7c02eb5d9c3de23033e431a81be0e4f87c"
+    },
+    "geo": {
+      "source": "Hainrixz/claude-seo-ai",
+      "sourceType": "github",
+      "skillPath": "skills/geo/SKILL.md",
+      "computedHash": "bf5af59be2180f77ac14713188824f94e3358751500ce42837b2d7da6640082a"
+    },
+    "score": {
+      "source": "Hainrixz/claude-seo-ai",
+      "sourceType": "github",
+      "skillPath": "skills/score/SKILL.md",
+      "computedHash": "8148175e4a9044d32949fed39b08b69a7876f36ac5f5360267819e630ab27636"
+    },
+    "seo-ai-crawlers": {
+      "source": "Hainrixz/claude-seo-ai",
+      "sourceType": "github",
+      "skillPath": "skills/seo-ai-crawlers/SKILL.md",
+      "computedHash": "e9352613e9a918cdb1c868d5034503b4717f4d37069ace1227e67ff8552c406d"
+    },
+    "seo-core-web-vitals": {
+      "source": "Hainrixz/claude-seo-ai",
+      "sourceType": "github",
+      "skillPath": "skills/seo-core-web-vitals/SKILL.md",
+      "computedHash": "ebace70e6fc45c45d96eae617f94d0610754d38399a1353e8f08d24c40631725"
+    },
+    "seo-crawl-render": {
+      "source": "Hainrixz/claude-seo-ai",
+      "sourceType": "github",
+      "skillPath": "skills/seo-crawl-render/SKILL.md",
+      "computedHash": "86f90dc46f88d5dbce0ebdd1b908c3807c87c90b0499296b94faba1a4909ddee"
+    },
+    "seo-crawlability": {
+      "source": "Hainrixz/claude-seo-ai",
+      "sourceType": "github",
+      "skillPath": "skills/seo-crawlability/SKILL.md",
+      "computedHash": "bc5840810d1752cab127d21b4052298a223fefb18677591cffa6d29d1bffe542"
+    },
+    "seo-ecommerce": {
+      "source": "Hainrixz/claude-seo-ai",
+      "sourceType": "github",
+      "skillPath": "skills/seo-ecommerce/SKILL.md",
+      "computedHash": "ff5d3c9a668886bcda52d2fd91b796200bc4dc5dd93a69e10ec2791b00d07f86"
+    },
+    "seo-eeat": {
+      "source": "Hainrixz/claude-seo-ai",
+      "sourceType": "github",
+      "skillPath": "skills/seo-eeat/SKILL.md",
+      "computedHash": "3df9236faa8f931015fc67f179377777b986e9e28a8079780c6509139d571081"
+    },
+    "seo-entity-linking": {
+      "source": "Hainrixz/claude-seo-ai",
+      "sourceType": "github",
+      "skillPath": "skills/seo-entity-linking/SKILL.md",
+      "computedHash": "16795148bcea3418ae7727e461685d9d5fccedc3d4d7dafd074c04e0dd48eea2"
+    },
+    "seo-freshness": {
+      "source": "Hainrixz/claude-seo-ai",
+      "sourceType": "github",
+      "skillPath": "skills/seo-freshness/SKILL.md",
+      "computedHash": "44e6cfdb16cd170d402e5fec66d65232cae35fb7a36f3afc38dc30bee5a486f8"
+    },
+    "seo-geo-answerblocks": {
+      "source": "Hainrixz/claude-seo-ai",
+      "sourceType": "github",
+      "skillPath": "skills/seo-geo-answerblocks/SKILL.md",
+      "computedHash": "27ab0db3af8682f0475a0ad040ab12cd35eb9db61ace2aa22708efe63e0b08eb"
+    },
+    "seo-geo-factdensity": {
+      "source": "Hainrixz/claude-seo-ai",
+      "sourceType": "github",
+      "skillPath": "skills/seo-geo-factdensity/SKILL.md",
+      "computedHash": "e28ddaacfb050b004476f092367032c7ebc8a8702a507a44358dccb9a73d16e0"
+    },
+    "seo-headings-structure": {
+      "source": "Hainrixz/claude-seo-ai",
+      "sourceType": "github",
+      "skillPath": "skills/seo-headings-structure/SKILL.md",
+      "computedHash": "d5836783d6bcd4f285859e76dcd2ab60feecf37987c119f483846a6ff0e4a462"
+    },
+    "seo-images-media": {
+      "source": "Hainrixz/claude-seo-ai",
+      "sourceType": "github",
+      "skillPath": "skills/seo-images-media/SKILL.md",
+      "computedHash": "01648d2dec36cf48bb9a834f595fc5321797c16ad6fa53fcf52add7ac17c7ba6"
+    },
+    "seo-indexability": {
+      "source": "Hainrixz/claude-seo-ai",
+      "sourceType": "github",
+      "skillPath": "skills/seo-indexability/SKILL.md",
+      "computedHash": "ae8b876adbb99eba6a21d4535de2789903c7ae0ca3d3e514e729b2e55a5f8c61"
+    },
+    "seo-internal-linking": {
+      "source": "Hainrixz/claude-seo-ai",
+      "sourceType": "github",
+      "skillPath": "skills/seo-internal-linking/SKILL.md",
+      "computedHash": "57ee069a4f788a5aeca4b0a59f0e0ff2f4640647e924c5d9099246e20d99ca3c"
+    },
+    "seo-international": {
+      "source": "Hainrixz/claude-seo-ai",
+      "sourceType": "github",
+      "skillPath": "skills/seo-international/SKILL.md",
+      "computedHash": "2ed81b82eb66570f1981fa2827200bbcf3428fbe15947ba41ecc21eeb7efce35"
+    },
+    "seo-local": {
+      "source": "Hainrixz/claude-seo-ai",
+      "sourceType": "github",
+      "skillPath": "skills/seo-local/SKILL.md",
+      "computedHash": "535f81964adf82313f96c8fda14c66014719081c7e42e6b8494248f694077d65"
+    },
+    "seo-meta-onpage": {
+      "source": "Hainrixz/claude-seo-ai",
+      "sourceType": "github",
+      "skillPath": "skills/seo-meta-onpage/SKILL.md",
+      "computedHash": "c6865d5d052e8fd9ca2ebc4dfa1c2d5c66163de17fd3c10f8c38f5f7eefb7b5b"
+    },
+    "seo-mobile": {
+      "source": "Hainrixz/claude-seo-ai",
+      "sourceType": "github",
+      "skillPath": "skills/seo-mobile/SKILL.md",
+      "computedHash": "7bd042c47d29db26b97f7976a0586db97141dff4ec2c778e7652549c9669a5e7"
+    },
+    "seo-orchestrator": {
+      "source": "Hainrixz/claude-seo-ai",
+      "sourceType": "github",
+      "skillPath": "skills/seo-orchestrator/SKILL.md",
+      "computedHash": "61e6e2c0f0d4279c457eed4d043326c41f7e53e6aea0c3d4a5aac52d13003ccc"
+    },
+    "seo-rendering": {
+      "source": "Hainrixz/claude-seo-ai",
+      "sourceType": "github",
+      "skillPath": "skills/seo-rendering/SKILL.md",
+      "computedHash": "a660766b4d9537c831b4241edc264fa840c41e3a0b3902316eb58db15a058f28"
+    },
+    "seo-schema-jsonld": {
+      "source": "Hainrixz/claude-seo-ai",
+      "sourceType": "github",
+      "skillPath": "skills/seo-schema-jsonld/SKILL.md",
+      "computedHash": "195fa42a32a4b05b05dc09ed8c29e877e675850b1858269d96fbd1c9369b1ad1"
+    },
+    "seo-score": {
+      "source": "Hainrixz/claude-seo-ai",
+      "sourceType": "github",
+      "skillPath": "skills/seo-score/SKILL.md",
+      "computedHash": "f4e5bd0963ae9519b8d025a98836c7e870a777f7b7f576a4d6d2877518634c7b"
+    },
+    "seo-sitemaps": {
+      "source": "Hainrixz/claude-seo-ai",
+      "sourceType": "github",
+      "skillPath": "skills/seo-sitemaps/SKILL.md",
+      "computedHash": "78e8ac827c0377d792a150179b3eb88d33f3099691e1084ac76e3be8bbdcf50d"
+    },
+    "seo-social-cards": {
+      "source": "Hainrixz/claude-seo-ai",
+      "sourceType": "github",
+      "skillPath": "skills/seo-social-cards/SKILL.md",
+      "computedHash": "4df1312a4987c183fab81753bd558905ad5833dfc6be64ac3b63634dd38ed386"
+    },
+    "seo-vertical-detect": {
+      "source": "Hainrixz/claude-seo-ai",
+      "sourceType": "github",
+      "skillPath": "skills/seo-vertical-detect/SKILL.md",
+      "computedHash": "5a7a9d262f7345fdb6c6c7496a77dc0935d7b7bc0ca6a1739f5cffd43ddac1b1"
     }
   }
 }

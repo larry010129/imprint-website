@@ -27,6 +27,8 @@ const contactInfo = [
   {
     icon: <MapPin size={18} style={{ color: MINT }} />,
     text: "新北市三重區福德南路 43 號 1 樓（預約制）",
+    href: "https://www.google.com/maps/search/?api=1&query=%E6%96%B0%E5%8C%97%E5%B8%82%E4%B8%89%E9%87%8D%E5%8D%80%E7%A6%8F%E5%BE%B7%E5%8D%97%E8%B7%AF43%E8%99%9F1%E6%A8%93",
+    external: true,
   },
   {
     icon: <Phone size={18} style={{ color: MINT }} />,
@@ -57,7 +59,7 @@ export default function HoverFooter() {
   return (
     <footer className="relative m-0 h-fit overflow-hidden rounded-none bg-[#2B2320]/95">
       <div className="relative z-40 mx-auto max-w-7xl p-8 md:p-14">
-        <div className="grid grid-cols-1 gap-12 pb-12 md:grid-cols-2 md:gap-8 lg:grid-cols-4 lg:gap-12">
+        <div className="grid grid-cols-1 gap-12 pb-6 md:grid-cols-2 md:gap-8 lg:grid-cols-4 lg:gap-12">
           <div className="flex flex-col space-y-4">
             <div className="flex flex-col space-y-1">
               <span className="text-2xl font-bold tracking-wide text-[#9CEFEF] md:text-3xl">
@@ -138,7 +140,10 @@ export default function HoverFooter() {
           </div>
         </div>
 
-        <hr className="my-8 border-[#5ECFCF]/20" />
+        <hr
+          className="border-[#5ECFCF]/20"
+          style={{ marginTop: "1.25rem", marginBottom: "1.25rem" }}
+        />
 
         <div className="flex flex-col items-center justify-between space-y-4 text-sm text-[#F7F4F1]/60 md:flex-row md:space-y-0">
           <div className="flex space-x-6">
@@ -162,7 +167,10 @@ export default function HoverFooter() {
         </div>
       </div>
 
-      <div className="footer-hover-text -mb-36 -mt-52 h-[30rem]">
+      <div
+        className="footer-hover-text"
+        style={{ height: "8rem", marginTop: "-4.25rem", marginBottom: "-2rem" }}
+      >
         <TextHoverEffect text="IMPRINT" className="z-50" />
       </div>
 

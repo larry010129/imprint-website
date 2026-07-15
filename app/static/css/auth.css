@@ -1,0 +1,514 @@
+/* 會員登入／註冊頁 — 共用樣式（login.html、register.html）
+   原本是 React 元件(animated-sign-in/up.tsx)搭配 Tailwind 編譯，
+   現在改為 Jinja 直接輸出的靜態 HTML + 純 CSS + 一般 <script>。 */
+
+.auth-layout,
+.auth-main {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.auth-main {
+  display: flex;
+  flex-direction: column;
+}
+
+.login-container {
+  --background: #fdfcfa;
+  --foreground: #2b2320;
+  --primary: #5ecfcf;
+  --primary-foreground: #2b2320;
+  --accent: #eef9f9;
+  --accent-foreground: #2b2320;
+  --border: #dcf2f2;
+  --ring: #5ecfcf;
+  --login-paper: #fdfcfa;
+  --login-ink: #2b2320;
+  --login-ink-soft: #5a524e;
+  --login-ink-faint: #8a817b;
+  --login-mint: #9cefef;
+  --login-mint-deep: #5ecfcf;
+  --login-mint-border: #dcf2f2;
+  --login-card: #ffffff;
+  --login-shadow: 0 18px 50px rgba(43, 35, 32, 0.08);
+  font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+  letter-spacing: 0.05em;
+  color: var(--login-ink);
+  position: relative;
+  flex: 1;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 20px 64px;
+  background: linear-gradient(160deg, var(--login-paper) 0%, #f7f4f1 55%, #eef9f9 100%);
+  overflow: hidden;
+}
+
+.login-container.dark {
+  --background: #1e1917;
+  --foreground: #f7f4f1;
+  --primary: #5ecfcf;
+  --primary-foreground: #1e1917;
+  --accent: #2b2320;
+  --accent-foreground: #f7f4f1;
+  --border: #3d3532;
+  --ring: #9cefef;
+  --login-paper: #1e1917;
+  --login-ink: #f7f4f1;
+  --login-ink-soft: #d4cdc8;
+  --login-ink-faint: #b5ada8;
+  --login-mint: #5ecfcf;
+  --login-mint-deep: #9cefef;
+  --login-mint-border: #3d3532;
+  --login-card: #2b2320;
+  --login-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+  background: linear-gradient(160deg, #1e1917 0%, #2b2320 55%, #1a2e2e 100%);
+}
+
+.login-container .particles-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.login-container .back-home {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-family: inherit;
+  border: 1px solid var(--login-mint-border);
+  border-radius: 8px;
+  background: var(--login-card);
+  color: var(--login-ink-soft);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.login-container .back-home svg {
+  width: 16px;
+  height: 16px;
+}
+
+.login-container .back-home:hover {
+  background: var(--login-mint);
+  border-color: var(--login-mint-deep);
+  color: var(--login-ink);
+}
+
+.login-container .theme-toggle {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--login-mint-border);
+  border-radius: 50%;
+  background: var(--login-card);
+  color: var(--login-mint-deep);
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, transform 0.2s;
+}
+
+.login-container .theme-toggle:hover {
+  background: var(--login-mint);
+  border-color: var(--login-mint-deep);
+  transform: scale(1.05);
+}
+
+.login-container .login-card {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 420px;
+  background: var(--login-card);
+  border: 1px solid var(--login-mint-border);
+  border-radius: 16px;
+  box-shadow: var(--login-shadow);
+  backdrop-filter: blur(8px);
+  animation: login-card-in 0.6s ease-out;
+}
+
+@keyframes login-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.login-container .login-card-inner {
+  padding: 40px 36px 32px;
+}
+
+.login-container .login-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.login-container .login-header h1 {
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: var(--login-ink);
+  margin: 0 0 10px;
+}
+
+.login-container .login-header p {
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--login-ink-faint);
+  margin: 0;
+}
+
+.login-container .login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  transition: transform 0.3s ease;
+}
+
+.login-container .login-form.form-success {
+  animation: login-success-pulse 0.5s ease;
+}
+
+@keyframes login-success-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.01);
+  }
+}
+
+.login-container .form-field {
+  position: relative;
+}
+
+.login-container .form-field input {
+  width: 100%;
+  padding: 16px 14px 8px;
+  font-size: 15px;
+  font-family: inherit;
+  color: var(--login-ink);
+  background: var(--login-paper);
+  border: 1.5px solid var(--login-mint-border);
+  border-radius: 10px;
+  outline: none;
+  transition: border-color 0.25s, box-shadow 0.25s, background 0.25s;
+}
+
+.login-container .form-field input:focus {
+  border-color: var(--login-mint-deep);
+  box-shadow: 0 0 0 3px rgba(94, 207, 207, 0.2);
+  background: #fff;
+}
+
+.login-container.dark .form-field input:focus {
+  background: #3d3532;
+}
+
+.login-container .form-field label {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 14px;
+  color: var(--login-ink-faint);
+  pointer-events: none;
+  transition: top 0.2s, font-size 0.2s, color 0.2s;
+}
+
+/* Floating label: CSS-only "has content" detection via the placeholder-shown
+   trick — these inputs carry placeholder=" " (a single space) specifically
+   so :placeholder-shown correctly reflects empty vs filled, no JS needed. */
+.login-container .form-field input:focus + label,
+.login-container .form-field input:not(:placeholder-shown) + label {
+  top: 10px;
+  font-size: 11px;
+  color: var(--login-mint-deep);
+  transform: none;
+}
+
+.login-container .form-field.invalid input {
+  border-color: #e07070;
+}
+
+.login-container .form-field-email > .email-field-label {
+  position: static;
+  display: block;
+  transform: none;
+  font-size: 13px;
+  color: var(--login-ink-soft);
+  margin-bottom: 8px;
+  pointer-events: auto;
+}
+
+.login-container .email-split {
+  display: flex;
+  align-items: stretch;
+  border: 1.5px solid var(--login-mint-border);
+  border-radius: 10px;
+  background: var(--login-paper);
+  overflow: hidden;
+  transition: border-color 0.25s, box-shadow 0.25s, background 0.25s;
+}
+
+.login-container .email-split:focus-within {
+  border-color: var(--login-mint-deep);
+  box-shadow: 0 0 0 3px rgba(94, 207, 207, 0.2);
+  background: #fff;
+}
+
+.login-container.dark .email-split:focus-within {
+  background: #3d3532;
+}
+
+.login-container .email-split input[type="text"] {
+  flex: 1;
+  min-width: 0;
+  padding: 14px 12px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.login-container .email-split input[type="text"]:focus {
+  box-shadow: none;
+  background: transparent;
+}
+
+.login-container .email-at {
+  display: flex;
+  align-items: center;
+  padding: 0 2px;
+  font-size: 15px;
+  color: var(--login-ink-faint);
+  user-select: none;
+}
+
+.login-container .email-split select {
+  flex: 0 1 auto;
+  max-width: 52%;
+  min-width: 108px;
+  padding: 14px 28px 14px 10px;
+  border: none;
+  border-left: 1px solid var(--login-mint-border);
+  border-radius: 0;
+  background: transparent;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--login-ink);
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238a817b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+
+.login-container .email-split select:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.login-container .form-field-email .email-domain-custom {
+  margin-top: 8px;
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--login-ink);
+  background: var(--login-paper);
+  border: 1.5px solid var(--login-mint-border);
+  border-radius: 10px;
+  outline: none;
+  transition: border-color 0.25s, box-shadow 0.25s;
+}
+
+.login-container .form-field-email .email-domain-custom:focus {
+  border-color: var(--login-mint-deep);
+  box-shadow: 0 0 0 3px rgba(94, 207, 207, 0.2);
+  background: #fff;
+}
+
+.login-container .form-field-email.invalid .email-split {
+  border-color: #e07070;
+}
+
+.login-container .form-field .error-message {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #c44;
+}
+
+.login-container .form-field .error-message[hidden] {
+  display: none;
+}
+
+.login-container .form-field .toggle-password {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border: none;
+  background: none;
+  color: var(--login-ink-faint);
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.login-container .form-field .toggle-password:hover {
+  color: var(--login-mint-deep);
+}
+
+.login-container .form-field .toggle-password svg {
+  width: 18px;
+  height: 18px;
+}
+
+.login-container .form-options {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.login-container .remember-me {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  color: var(--login-ink-soft);
+  user-select: none;
+}
+
+.login-container .remember-me input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.login-container .remember-me .checkmark {
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--login-mint-border);
+  border-radius: 4px;
+  background: var(--login-paper);
+  transition: background 0.2s, border-color 0.2s;
+  flex-shrink: 0;
+}
+
+.login-container .remember-me input:checked + .checkmark {
+  background: var(--login-mint-deep);
+  border-color: var(--login-mint-deep);
+}
+
+.login-container .forgot-password {
+  border: none;
+  background: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: 12.5px;
+  color: var(--login-mint-deep);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.login-container .forgot-password:hover {
+  color: #3ba8a8;
+}
+
+.login-container .login-button {
+  width: 100%;
+  padding: 13px 20px;
+  font-size: 15px;
+  font-family: inherit;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--login-ink);
+  background: linear-gradient(135deg, var(--login-mint) 0%, var(--login-mint-deep) 100%);
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+  box-shadow: 0 4px 16px rgba(94, 207, 207, 0.35);
+}
+
+.login-container .login-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(94, 207, 207, 0.45);
+}
+
+.login-container .login-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.login-container .form-msg {
+  margin: 0;
+  font-size: 13px;
+  text-align: center;
+  line-height: 1.6;
+  color: var(--login-ink-faint);
+}
+
+.login-container .form-msg:empty {
+  display: none;
+}
+
+.login-container .form-msg.is-err {
+  color: #c44;
+}
+
+.login-container .form-msg.is-ok {
+  color: #2a8a6a;
+}
+
+.login-container .signup-prompt {
+  margin: 24px 0 0;
+  text-align: center;
+  font-size: 13px;
+  color: var(--login-ink-soft);
+}
+
+.login-container .signup-prompt a {
+  margin-left: 4px;
+  color: var(--login-mint-deep);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.login-container .signup-prompt a:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}

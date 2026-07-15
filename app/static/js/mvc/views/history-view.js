@@ -11,7 +11,8 @@
 
   global.ImprintViews = global.ImprintViews || {};
   global.ImprintViews.History = {
-    render: function (orders) {
+    render: function (orders, statusLabel) {
+      statusLabel = statusLabel || function (s) { return s; };
       var loading = document.getElementById('history-loading');
       if (loading) loading.classList.add('hidden');
       var buckets = { incomplete: [], complete: [], cancelled: [] };
@@ -34,7 +35,7 @@
             '<td>' + M.escapeHtml(o.created_at_display || o.created_at || '—') + '</td>' +
             '<td>' + M.escapeHtml(o.summary || o.product_type || '—') + '</td>' +
             '<td>' + (price != null ? Math.round(price).toLocaleString('en-US') : '—') + '</td>' +
-            '<td>' + M.escapeHtml(o.status_label || o.status || '—') + '</td></tr>';
+            '<td>' + M.escapeHtml(statusLabel(o.status) || '—') + '</td></tr>';
         }).join('');
       });
     },

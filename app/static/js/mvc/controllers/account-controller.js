@@ -11,11 +11,8 @@
 
       var statusLabel = global.ImprintOrderStatus ? global.ImprintOrderStatus.label : function (s) { return s; };
 
-      Model.getSession().then(function (res) {
-        if (!res || !res.user) {
-          global.location.href = 'login.html?next=account.html';
-          return;
-        }
+      M.requireSession('account.html').then(function (res) {
+        if (!res) return;
         View.renderProfile(res);
         return Model.getOrders();
       }).then(function (oRes) {
@@ -31,7 +28,7 @@
       if (e.logoutBtn) {
         e.logoutBtn.addEventListener('click', function () {
           Model.logout().then(function () {
-            global.location.href = 'index.html';
+            global.location.href = '/';
           });
         });
       }

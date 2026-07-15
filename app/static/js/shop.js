@@ -4,9 +4,15 @@ function shopLang() { return localStorage.getItem('appLang') || 'zh'; }
 const shopMode = (window.shopConfig && window.shopConfig.mode) || 'order';
 const isGuestShop = shopMode === 'guest';
 
+if (new URLSearchParams(window.location.search).get('preview') === '1') {
+  window.shopConfig = Object.assign({}, window.shopConfig || {}, { preview: true, useApi: true });
+}
+
 /** Static calculator: bundled catalog + client pricing (no backend). Set useApi:true to enable API. */
 function shopUsesApi() {
-  return !!(window.shopConfig && window.shopConfig.useApi);
+  if (window.shopConfig && window.shopConfig.useApi === true) return true;
+  if (window.shopConfig && window.shopConfig.useApi === false) return false;
+  return !!(window.imprintAPI || shopApiBase());
 }
 
 function shopApiBase() {
@@ -17,7 +23,15 @@ function shopApiBase() {
 
 function shopApiConfigured() {
   const base = shopApiBase();
-  return Boolean(base && !/YOUR-BACKEND-PROJECT/i.test(base));
+  if (/YOUR-BACKEND-PROJECT/i.test(base)) return false;
+  // Empty base = same-origin /api (local uvicorn or single-app Render deploy).
+  if (window.shopConfig?.useApi === true || window.imprintAPI) return true;
+  return Boolean(base);
+}
+
+/** ponytail: FastAPI has /api/catalog but not /api/prices|quote yet — use bundled calculator math when present. */
+function shopUsesLocalPricing() {
+  return Boolean(window.ShopPricingLocal?.computeOrderPricing);
 }
 
 function guestLoginUrl() {
@@ -783,19 +797,18 @@ async function loadMetalPrices() {
   const pricePanel = document.getElementById("shop-price-panel");
   pricePanel?.classList.add("is-loading-prices");
   try {
-    if (!shopUsesApi()) {
-      const payload = window.ShopPricingLocal?.pricesPayload?.();
-      if (!payload) throw new Error('static pricing missing');
-      Object.assign(pricePerGram, payload.perGram);
-      Object.assign(diamondPrice, payload.diamond);
-      Object.assign(laborFee, payload.laborFee || {});
-      if (payload.chinToGrams != null) chinToGrams = payload.chinToGrams;
-      if (payload.taxRate != null) taxRate = payload.taxRate;
-      if (payload.ringSizeMin != null) ringSizeMin = payload.ringSizeMin;
-      if (payload.ringSizeMax != null) ringSizeMax = payload.ringSizeMax;
-      ringSizeReference = payload.ringSizeReference || {};
-      if (payload.diamondOptions) {
-        diamondOptions = { ...diamondOptions, ...payload.diamondOptions };
+    const localPayload = window.ShopPricingLocal?.pricesPayload?.();
+    if (localPayload && (shopUsesLocalPricing() || !shopUsesApi())) {
+      Object.assign(pricePerGram, localPayload.perGram);
+      Object.assign(diamondPrice, localPayload.diamond);
+      Object.assign(laborFee, localPayload.laborFee || {});
+      if (localPayload.chinToGrams != null) chinToGrams = localPayload.chinToGrams;
+      if (localPayload.taxRate != null) taxRate = localPayload.taxRate;
+      if (localPayload.ringSizeMin != null) ringSizeMin = localPayload.ringSizeMin;
+      if (localPayload.ringSizeMax != null) ringSizeMax = localPayload.ringSizeMax;
+      ringSizeReference = localPayload.ringSizeReference || {};
+      if (localPayload.diamondOptions) {
+        diamondOptions = { ...diamondOptions, ...localPayload.diamondOptions };
       }
       pricesLoaded = true;
       populateRingSizeSelect();
@@ -806,6 +819,9 @@ async function loadMetalPrices() {
         setRingSizeActive(initialData.ringSize);
       }
       return;
+    }
+    if (!shopUsesApi()) {
+      throw new Error('static pricing missing');
     }
     const { res, data } = await shopApiFetch('/api/prices');
     if (!res.ok) throw new Error(`API ${res.status}`);
@@ -1196,9 +1212,8 @@ function buildQuotePayload() {
 }
 
 async function fetchQuote() {
-  if (!shopUsesApi()) {
-    const compute = window.ShopPricingLocal?.computeOrderPricing;
-    if (!compute) return null;
+  const compute = window.ShopPricingLocal?.computeOrderPricing;
+  if (compute && (shopUsesLocalPricing() || !shopUsesApi())) {
     return compute(buildQuotePayload(), catalog);
   }
   const id = ++quoteRequestId;
@@ -1887,7 +1902,7 @@ document.getElementById('back-to-styles')?.addEventListener('click', () => {
 function buildSubmitPayload() {
   ensureStoneCountDefault();
   const submitColor = effectiveColor();
-  return {
+  const payload = {
     category: state.category,
     type:     state.type,
     gold:     state.gold,
@@ -1907,6 +1922,23 @@ function buildSubmitPayload() {
     stoneCount: state.stoneCount,
     diamondShape: state.diamondShape,
   };
+  const product = getSelectedProduct();
+  if (product) payload.summaryZh = productName(product);
+  const pricing = window.ShopPricingLocal?.computeOrderPricing?.(buildQuotePayload(), catalog);
+  if (pricing?.ready && pricing.total != null) {
+    payload.clientPricing = {
+      total: pricing.total,
+      diamondPrice: pricing.diamondPrice,
+      taijinPrice: pricing.taijinPrice,
+      laborPrice: pricing.laborPrice,
+      chainPrice: pricing.chainPrice,
+      taxAmount: pricing.taxAmount,
+      weightGrams: pricing.weightGrams,
+      goldRatePerGram: pricing.goldRatePerGram,
+      priceSource: 'client',
+    };
+  }
+  return payload;
 }
 
 function encodeConfigToken(payload) {
@@ -2165,7 +2197,7 @@ async function handleSubmit() {
     if (checkoutResult.res.status === 401) { window.location.href = guestLoginUrl(); return; }
     if (checkoutResult.res.ok && checkoutResult.data.ok) {
       const orderNo = (checkoutResult.data.orderNumbers || [])[0];
-      const successUrl = window.shopConfig?.successUrl || '/account.html';
+      const successUrl = window.shopConfig?.successUrl || '/success.html';
       window.location.href = orderNo ? successUrl + '?order=' + encodeURIComponent(orderNo) : successUrl;
     } else {
       resetButtons();

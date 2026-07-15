@@ -10,7 +10,7 @@ const REGISTER_MAX_ATTEMPTS = 10;
 const REGISTER_LOCKOUT_SECONDS = 600;
 
 function clientIp(req) {
-  // Vercel sets x-forwarded-for; the first entry is the original client.
+  // Proxies often set x-forwarded-for; first hop is the client.
   const fwd = req.headers['x-forwarded-for'];
   if (fwd) return String(fwd).split(',')[0].trim();
   return req.socket && req.socket.remoteAddress || 'unknown';

@@ -162,12 +162,6 @@
   margin: 12px auto 20px;
 }
 
-.gold-price-schedule {
-  text-align: center;
-  max-width: 560px;
-  margin: 20px auto 0;
-}
-
 .gold-price-foot {
   display: flex;
   flex-wrap: wrap;

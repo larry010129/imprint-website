@@ -1,119 +1,151 @@
-import { TestimonialsColumn } from "@/components/ui/testimonials-columns-1";
-import type { Testimonial } from "@/components/ui/testimonials-columns-1";
+import { TestimonialsRow } from "@/components/ui/testimonials-row";
+import { TESTIMONIALS } from "@/data/testimonials";
 import { motion } from "motion/react";
 
-const testimonials: Testimonial[] = [
-  {
-    text: "牠陪了我十四年。現在牠變成一顆小小的、會發光的存在，還是天天跟著我出門。等待的三個月裡，我常常想像牠正在慢慢長成一顆星星。",
-    image:
-      "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=80&h=80&fit=crop",
-    name: "沈小姐",
-    role: "寵物鑽石・高雄（示意文案）",
-  },
-  {
-    text: "猶豫了快兩年才決定。顧問從來沒有催促過我們，只是每次都把問題答得很清楚。拿到爸爸的鑽石那天，全家人都覺得——他一直都在。",
-    image:
-      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&h=80&fit=crop",
-    name: "林先生",
-    role: "生命鑽石・台北（示意文案）",
-  },
-  {
-    text: "用我們兩個人的頭髮，養出了一顆鑽石，鑲在她的婚戒上。交換戒指的時候，我跟她說：這顆鑽石裡，有你也有我。",
-    image:
-      "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&h=80&fit=crop",
-    name: "張先生",
-    role: "結髮鑽石・新竹（示意文案）",
-  },
-  {
-    text: "寶寶滿月剃頭的時候，我把胎髮留了下來，沒想到真的可以做成鑽石。現在做成項鍊，等她長大，這會是我第一個要交給她的禮物。",
-    image:
-      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&h=80&fit=crop",
-    name: "周小姐",
-    role: "滿月鑽石・台中（示意文案）",
-  },
-  {
-    text: "把三個孩子的胎髮合在一起，做成一顆全家福鑽石。每次看著它，就像他們還在身邊吵吵鬧鬧，卻又安靜地陪著我。",
-    image:
-      "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=80&h=80&fit=crop",
-    name: "吳太太",
-    role: "全家福鑽石・台南（示意文案）",
-  },
-  {
-    text: "媽媽離開後，我把她的髮絲做成鑽石鑲在胸針上。出席重要場合時戴上，總覺得她仍在為我加油。",
-    image:
-      "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=80&h=80&fit=crop",
-    name: "陳小姐",
-    role: "生命鑽石・桃園（示意文案）",
-  },
-  {
-    text: "老狗離開那年冬天，我幾乎不敢再碰牠留下的項圈。後來把毛髮做成鑽石，終於能帶著牠去看我們常散步的海邊。",
-    image:
-      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&h=80&fit=crop",
-    name: "黃小姐",
-    role: "寵物鑽石・花蓮（示意文案）",
-  },
-  {
-    text: "結婚十週年，我們各自剪下一縷頭髮，一起養成這顆鑽石。它比任何珠寶店的成品都更像我們的故事。",
-    image:
-      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&h=80&fit=crop",
-    name: "劉先生",
-    role: "結髮鑽石・台中（示意文案）",
-  },
-  {
-    text: "祖母留給我的髮簪，我一直捨不得用。後來把髮絲做成鑽石傳給孫女，這是我能想到最溫柔的傳承。",
-    image:
-      "https://images.unsplash.com/photo-1519345182560-3f2917c472ef?w=80&h=80&fit=crop",
-    name: "許先生",
-    role: "傳家鑽石・台北（示意文案）",
-  },
+const LINE_URL = "https://lin.ee/ktVBtmx";
+
+function siteRoot() {
+  return document.body.dataset.siteRoot ?? "";
+}
+
+function excerpt(text: string, max = 88) {
+  const plain = text.replace(/^「|」$/g, "");
+  return plain.length > max ? `${plain.slice(0, max)}…` : plain;
+}
+
+const WALL_ITEMS = TESTIMONIALS.map((item) => ({
+  text: `「${excerpt(item.text)}」`,
+  name: item.name,
+  role: item.role,
+}));
+
+const WALL_ROW_CHUNK = Math.ceil(WALL_ITEMS.length / 2);
+const WALL_ROWS = [
+  WALL_ITEMS.slice(0, WALL_ROW_CHUNK),
+  WALL_ITEMS.slice(WALL_ROW_CHUNK, WALL_ROW_CHUNK * 2),
 ];
 
-const firstColumn = testimonials.slice(0, 3);
-const secondColumn = testimonials.slice(3, 6);
-const thirdColumn = testimonials.slice(6, 9);
-
 export default function StoriesTestimonials() {
+  const root = siteRoot();
+
   return (
-    <section className="bg-background py-16 md:py-20 relative">
-      <div className="container z-10 mx-auto px-4">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-          viewport={{ once: true }}
-          className="flex flex-col items-center justify-center max-w-[540px] mx-auto"
-        >
-          <div className="flex justify-center">
-            <div className="border border-primary/30 py-1 px-4 rounded-lg text-sm tracking-widest text-primary">
-              客戶見證
-            </div>
-          </div>
-
-          <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight mt-5 text-center">
+    <>
+      <section className="relative flex min-h-[320px] items-end overflow-hidden bg-[#2b2320] text-white sm:min-h-[380px]">
+        <picture className="absolute inset-0">
+          <source
+            srcSet={`${root}images/hero/imprint-diamond-pet-memorial-cat.webp`}
+            type="image/webp"
+          />
+          <img
+            src={`${root}images/hero/imprint-diamond-pet-memorial-cat.jpg`}
+            alt=""
+            className="h-full w-full object-cover opacity-50"
+            loading="eager"
+            decoding="async"
+          />
+        </picture>
+        <div className="absolute inset-0 bg-gradient-to-t from-[#14100d]/90 via-[#14100d]/55 to-[#14100d]/30" />
+        <div className="container relative z-10 mx-auto px-4 pb-10 pt-16 sm:pb-12">
+          <p className="text-sm text-[#c9c0b8]">
+            <a href={`${root}index.html`} className="hover:text-[#5ecfcf]">
+              首頁
+            </a>
+            <span className="mx-2 opacity-50">/</span>
+            <a href={`${root}about.html`} className="hover:text-[#5ecfcf]">
+              關於我們
+            </a>
+            <span className="mx-2 opacity-50">/</span>
+            <span className="text-white">客戶見證</span>
+          </p>
+          <p className="mt-6 text-xs tracking-[0.35em] text-[#9fe8e8]">
+            TESTIMONIALS
+          </p>
+          <h1
+            className="mt-4 max-w-2xl text-3xl font-semibold leading-snug tracking-wide sm:text-4xl md:text-[2.75rem]"
+            style={{ fontFamily: "var(--serif, 'Noto Serif TC', serif)" }}
+          >
             思念，在他們手中發著光
-          </h2>
-          <p className="text-center mt-5 opacity-75 leading-relaxed">
-            每一顆銘印鑽石背後，都是一段真實的故事。
+          </h1>
+          <p className="mt-4 max-w-xl text-sm leading-loose text-[#e5dfd8] sm:text-[15px]">
+            每一顆銘印鑽石背後，都是一段真實的故事——來自寵物、摯愛、家人，或送給自己的珍視。
           </p>
-          <p className="text-center mt-3 text-sm opacity-60 leading-relaxed">
-            以下故事為示意文案，取得客戶同意後將替換為真實見證，化名亦可保留隱私。
-          </p>
-        </motion.div>
-
-        <div className="flex justify-center gap-6 mt-10 [mask-image:linear-gradient(to_bottom,transparent,black_25%,black_75%,transparent)] max-h-[740px] overflow-hidden">
-          <TestimonialsColumn testimonials={firstColumn} duration={15} />
-          <TestimonialsColumn
-            testimonials={secondColumn}
-            className="stories-col-md"
-            duration={19}
-          />
-          <TestimonialsColumn
-            testimonials={thirdColumn}
-            className="stories-col-lg"
-            duration={17}
-          />
         </div>
-      </div>
-    </section>
+      </section>
+
+      <section className="border-b border-[#E3DCD3] bg-[#fdfcfa] py-8">
+        <div className="container mx-auto grid max-w-4xl grid-cols-1 gap-6 px-4 sm:grid-cols-3 sm:gap-8">
+          {[
+            { value: `${TESTIMONIALS.length}+`, label: "則真實客戶見證" },
+            { value: "全台唯一", label: "在地 DNA 鑽石培育實驗室" },
+            { value: "可預約", label: "親眼見證鑽石生長過程" },
+          ].map((stat) => (
+            <div key={stat.label} className="text-center">
+              <p className="text-2xl font-semibold tracking-wide text-[#2b2320]">
+                {stat.value}
+              </p>
+              <p className="mt-1 text-xs tracking-wider text-[#8a817b]">
+                {stat.label}
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="overflow-hidden bg-background py-14 md:py-20">
+        <div className="container mx-auto px-4">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+            viewport={{ once: true }}
+            className="mx-auto flex max-w-[540px] flex-col items-center justify-center"
+          >
+            <div className="flex justify-center">
+              <div className="rounded-lg border border-[#E3DCD3] px-4 py-1 text-xs tracking-[0.2em] text-[#2b2320]">
+                TESTIMONIALS
+              </div>
+            </div>
+            <h2
+              className="mt-5 text-center text-2xl font-bold tracking-tight text-[#2b2320] sm:text-3xl md:text-4xl"
+              style={{ fontFamily: "var(--serif, 'Noto Serif TC', serif)" }}
+            >
+              他們選擇把思念，留成永恆
+            </h2>
+            <p className="mt-5 text-center text-sm text-[#8a817b]">
+              來自不同城市、不同故事的顧客，寫下他們與銘印鑽石相遇的片刻。
+            </p>
+          </motion.div>
+
+          <div className="mt-10 flex flex-col gap-6 overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
+            <TestimonialsRow testimonials={WALL_ROWS[0]} duration={32} />
+            <TestimonialsRow testimonials={WALL_ROWS[1]} duration={36} reverse />
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-[#2b2320] px-4 py-20 text-center">
+        <div className="mx-auto h-px w-10 bg-[#5ecfcf]" />
+        <h2
+          className="mt-8 text-2xl font-semibold tracking-wide text-[#f7f4f1] md:text-3xl"
+          style={{ fontFamily: "var(--serif, 'Noto Serif TC', serif)" }}
+        >
+          您的故事，也值得被好好記住
+        </h2>
+        <p className="mx-auto mt-5 max-w-md text-sm leading-loose text-[#b8afa8]">
+          如果您也在考慮訂製一顆紀念鑽石，
+          <br />
+          歡迎加入官方 LINE，讓顧問陪您慢慢聊聊。
+        </p>
+        <a
+          href={LINE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-10 inline-block rounded-full bg-[#5ecfcf] px-8 py-3.5 text-sm font-medium tracking-wider text-[#2b2320] transition-colors hover:bg-[#7edede]"
+        >
+          加入官方 LINE 好友
+        </a>
+        <p className="mt-6 text-xs text-[#7a716b]">不會頻繁打擾，隨時可以取消</p>
+      </section>
+    </>
   );
 }

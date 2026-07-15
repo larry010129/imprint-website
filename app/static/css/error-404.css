@@ -1,0 +1,132 @@
+/* 404 — animated empty state (brand colorDNA: mint / ink / gold) */
+
+body.page-404 main {
+  padding: 0;
+}
+
+.error-404 {
+  position: relative;
+  display: flex;
+  min-height: calc(100vh - 120px);
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 64px 24px 96px;
+  text-align: center;
+  background:
+    radial-gradient(circle at center, rgba(156, 239, 239, 0.14), transparent 72%),
+    linear-gradient(180deg, var(--paper) 0%, var(--mint-soft) 100%);
+}
+
+.error-404__orbs {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.error-404__orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(64px);
+  will-change: transform;
+}
+
+.error-404__orb--primary {
+  top: 38%;
+  left: 28%;
+  width: 16rem;
+  height: 16rem;
+  background: linear-gradient(135deg, rgba(94, 207, 207, 0.28), rgba(156, 239, 239, 0.18));
+  animation: error404-orb-a 5s ease-in-out infinite;
+}
+
+.error-404__orb--secondary {
+  right: 22%;
+  bottom: 28%;
+  width: 18rem;
+  height: 18rem;
+  background: linear-gradient(135deg, rgba(196, 180, 158, 0.2), rgba(94, 207, 207, 0.12));
+  animation: error404-orb-b 5s ease-in-out infinite;
+}
+
+@keyframes error404-orb-a {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  25% { transform: translate(40px, 20px) rotate(10deg); }
+  50% { transform: translate(-40px, -20px) rotate(-10deg); }
+  75% { transform: translate(20px, -10px) rotate(5deg); }
+}
+
+@keyframes error404-orb-b {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(-40px, -20px); }
+  50% { transform: translate(40px, 20px); }
+  75% { transform: translate(-20px, 10px); }
+}
+
+.error-404__content {
+  position: relative;
+  z-index: 1;
+  width: min(560px, 100%);
+}
+
+.error-404__title {
+  font-family: var(--serif);
+  font-size: clamp(5rem, 18vw, 7.5rem);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  color: var(--ink);
+  margin-bottom: 20px;
+}
+
+.error-404__desc {
+  font-size: clamp(15px, 2.4vw, 17px);
+  line-height: 1.9;
+  color: var(--ink-soft);
+  letter-spacing: 0.08em;
+  margin-bottom: 36px;
+}
+
+.error-404__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+}
+
+.error-404__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 28px;
+}
+
+.error-404__btn svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .error-404__orb {
+    animation: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .error-404 {
+    min-height: calc(100vh - 108px);
+    padding: 48px 20px 72px;
+  }
+
+  .error-404__actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .error-404__btn {
+    justify-content: center;
+  }
+}

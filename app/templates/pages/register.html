@@ -1,39 +1,34 @@
-{% extends "base.html" %}
+{% extends "base-auth.html" %}
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/member-app.css?v=1">
+<link rel="stylesheet" href="/static/css/auth.css?v=2">
 {% endblock %}
 {% block content %}
-<!-- @component partials/view-register.html -->
-<section class="auth-section" id="view-register">
-  <div class="auth-card">
+{% from "partials/auth_macros.html" import auth_shell, auth_email_field, auth_password_field %}
+{% call auth_shell() %}
+  <div class="login-header">
     <h1>加入會員</h1>
-    <p class="sub">註冊會員即可查詢您的訂製進度、保留聯絡資料，讓顧問更快為您服務。</p>
-    <form id="registerForm" novalidate>
-      <div class="form-field">
-        <label for="rName">姓名 <span class="req">*</span></label>
-        <input type="text" id="rName" name="fullName" autocomplete="name" required>
-      </div>
-      <div class="form-field">
-        <label for="rPhone">電話 <span class="req">*</span></label>
-        <input type="tel" id="rPhone" name="phone" autocomplete="tel" required>
-      </div>
-      <div class="form-field">
-        <label for="rEmail">Email <span class="req">*</span></label>
-        <input type="email" id="rEmail" name="email" autocomplete="email" required>
-      </div>
-      <div class="form-field">
-        <label for="rPassword">密碼（至少 6 碼） <span class="req">*</span></label>
-        <input type="password" id="rPassword" name="password" autocomplete="new-password" required minlength="6">
-      </div>
-      <button type="submit" class="btn btn-dark" id="registerSubmitBtn">建立會員帳號</button>
-      <p class="form-msg" id="registerFormMsg" role="status" aria-live="polite"></p>
-    </form>
-    <p class="switch-link">已經是會員了？<a href="/login.html">直接登入</a></p>
+    <p>註冊會員即可查詢您的訂製進度、保留聯絡資料，讓顧問更快為您服務。</p>
   </div>
-</section>
+  <form class="login-form" id="registerForm" novalidate>
+    <div class="form-field">
+      <input type="text" id="rName" name="fullName" placeholder=" " autocomplete="name" required>
+      <label for="rName">姓名</label>
+    </div>
+    <div class="form-field">
+      <input type="tel" id="rPhone" name="phone" placeholder=" " autocomplete="tel" required>
+      <label for="rPhone">電話</label>
+    </div>
+    {{ auth_email_field('register-email') }}
+    {{ auth_password_field('rPassword', label='密碼（至少 6 碼）', autocomplete='new-password', minlength=6) }}
+    <button type="submit" class="login-button" id="registerSubmitBtn">建立會員帳號</button>
+    <p class="form-msg" id="registerFormMsg" role="status" aria-live="polite"></p>
+  </form>
+  <p class="signup-prompt">已經是會員了？<a href="/login.html">直接登入</a></p>
+{% endcall %}
 {% endblock %}
 {% block extra_scripts %}
 <script src="/static/js/api-client.js"></script>
+<script src="/static/js/auth-shell.js"></script>
 <script src="/static/js/mvc/core.js"></script>
 <script src="/static/js/mvc/models/register-model.js"></script>
 <script src="/static/js/mvc/views/register-view.js"></script>

@@ -67,6 +67,23 @@ def register_pages(app: FastAPI) -> None:
     async def sitemap() -> FileResponse:
         return FileResponse(settings.site_root / "sitemap.xml")
 
+    @app.get("/admin.html", include_in_schema=False)
+    async def admin_page() -> FileResponse:
+        path = settings.site_root / "admin.html"
+        if not path.is_file():
+            raise StarletteHTTPException(status_code=404, detail="Not Found")
+        return FileResponse(path, media_type="text/html; charset=utf-8")
+
+    @app.get("/s/{token}", include_in_schema=False)
+    async def share_config(request: Request, token: str) -> HTMLResponse:
+        from app.routers.pages_registry import STANDALONE_SHARE_SUMMARY
+
+        return templates.TemplateResponse(
+            request,
+            STANDALONE_SHARE_SUMMARY.template,
+            _context(request, STANDALONE_SHARE_SUMMARY),
+        )
+
     @app.exception_handler(StarletteHTTPException)
     async def not_found(request: Request, exc: StarletteHTTPException) -> HTMLResponse:
         if exc.status_code != 404:

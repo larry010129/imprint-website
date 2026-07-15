@@ -91,6 +91,64 @@
 .page-home [data-site-nav-root].is-nav-hero .nav-cta .btn-dark:hover{
   background:rgba(255,255,255,.22) !important;
 }
+
+/* Account menu — liquid glass on hero */
+.page-home .nav:not(.is-scrolled) .account-menu-trigger,
+.page-home [data-site-nav-root].is-nav-hero .account-menu-trigger{
+  background:rgba(255,255,255,.12);
+  border-color:rgba(255,255,255,.38);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  box-shadow:0 4px 20px rgba(42,24,69,.18);
+}
+.page-home .nav:not(.is-scrolled) .account-menu-trigger:hover,
+.page-home [data-site-nav-root].is-nav-hero .account-menu-trigger:hover{
+  background:rgba(255,255,255,.2);
+  border-color:rgba(255,255,255,.55);
+}
+.page-home .nav:not(.is-scrolled) .account-menu-name,
+.page-home [data-site-nav-root].is-nav-hero .account-menu-name{ color:#fff; }
+.page-home .nav:not(.is-scrolled) .account-menu-email,
+.page-home [data-site-nav-root].is-nav-hero .account-menu-email{ color:rgba(255,255,255,.78); }
+.page-home .nav:not(.is-scrolled) .account-menu-avatar--guest,
+.page-home [data-site-nav-root].is-nav-hero .account-menu-avatar--guest{
+  background:rgba(255,255,255,.14);
+  border-color:rgba(255,255,255,.42);
+  color:#fff;
+}
+.page-home .nav:not(.is-scrolled) .account-menu-panel,
+.page-home [data-site-nav-root].is-nav-hero .account-menu-panel{
+  background:rgba(42,24,69,.42);
+  border-color:rgba(255,255,255,.22);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+  box-shadow:0 14px 36px rgba(42,24,69,.28);
+}
+.page-home .nav:not(.is-scrolled) .account-menu-item,
+.page-home [data-site-nav-root].is-nav-hero .account-menu-item{ color:#fff; }
+.page-home .nav:not(.is-scrolled) .account-menu-item:hover,
+.page-home [data-site-nav-root].is-nav-hero .account-menu-item:hover{
+  background:rgba(255,255,255,.14);
+}
+.page-home .nav:not(.is-scrolled) .account-menu-logout,
+.page-home [data-site-nav-root].is-nav-hero .account-menu-logout{ color:#ffb4ab; }
+.page-home .nav:not(.is-scrolled) .account-menu-logout:hover,
+.page-home [data-site-nav-root].is-nav-hero .account-menu-logout:hover{
+  background:rgba(255,120,110,.18);
+}
+
+/* Account menu — scrolled home nav */
+.page-home .nav.is-scrolled .account-menu-trigger{
+  background:rgba(255,255,255,.62);
+  border-color:rgba(var(--gh-accent-rgb),.28);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+}
+.page-home .nav.is-scrolled .account-menu-trigger:hover{
+  background:rgba(255,255,255,.78);
+  border-color:rgba(var(--gh-accent-rgb),.42);
+}
+
 .page-home .nav .btn-mint,
 .page-home .nav-cta .btn-mint{
   background:var(--gh-grad-deep);

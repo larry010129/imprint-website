@@ -1,17 +1,17 @@
 /* 銘印鑽石｜後端 API 連線設定
-   取代 supabase-client.js。後端是獨立部署的 Node/Vercel 專案(見 /backend)，
-   資料庫用 Neon Postgres，取代原本 Supabase 的 Postgres + Auth + PostgREST。
+   取代 supabase-client.js。正式環境為同站 FastAPI（Render 或本機 uvicorn），
+   路徑前綴 /api；資料庫為 Postgres（Neon 或本機）。
 
    所有方法回傳 Promise，resolve 成 { ok, error, ...資料 } 這種形狀(呼叫端看
    result.error 有沒有值來判斷成功/失敗)，只有真的連不上網路才會 reject。
    登入狀態靠後端設定的 httpOnly cookie 維持，所以每個 fetch 都要帶
-   credentials:'include'，跨網域才吃得到 cookie。
+   credentials:'include'。
 */
 (function (global) {
   'use strict';
 
   var API_BASE = (typeof global.IMPRINT_API_BASE === 'string' && global.IMPRINT_API_BASE)
-    || ''; // 部署時在頁面設 window.IMPRINT_API_BASE 指向 /backend 網址
+    || ''; // 同站部署留空；僅在 API 與靜態站不同網域時才設 window.IMPRINT_API_BASE
 
   function request(path, options) {
     options = options || {};
@@ -79,12 +79,56 @@
 
     // ---- admin ----
     admin: {
-      getDashboardStats: function () { return request('/api/admin/dashboard'); },
+      getDashboardStats: function (params) {
+        var qs = '';
+        if (params) {
+          var parts = [];
+          Object.keys(params).forEach(function (key) {
+            if (params[key] != null && params[key] !== '') {
+              parts.push(encodeURIComponent(key) + '=' + encodeURIComponent(params[key]));
+            }
+          });
+          if (parts.length) qs = '?' + parts.join('&');
+        }
+        return request('/api/admin/dashboard' + qs);
+      },
+      dashboardExportUrl: function (params) {
+        var qs = '';
+        if (params) {
+          var parts = [];
+          Object.keys(params).forEach(function (key) {
+            if (params[key] != null && params[key] !== '') {
+              parts.push(encodeURIComponent(key) + '=' + encodeURIComponent(params[key]));
+            }
+          });
+          if (parts.length) qs = '?' + parts.join('&');
+        }
+        return (API_BASE || '') + '/api/admin/dashboard/export' + qs;
+      },
       getLeads: function () { return request('/api/admin/leads'); },
       markLeadDone: function (type, id) { return request('/api/admin/leads', { method: 'POST', body: { type: type, id: id } }); },
       getOrders: function () { return request('/api/admin/orders'); },
       createOrder: function (fields) { return request('/api/admin/orders', { method: 'POST', body: fields }); },
       updateOrderStatus: function (id, status, statusNote) { return request('/api/admin/order-update', { method: 'POST', body: { id: id, status: status, statusNote: statusNote } }); },
+      cancelOrder: function (id, reason) { return request('/api/admin/order-cancel', { method: 'POST', body: { id: id, reason: reason } }); },
+      bulkUpdateOrders: function (ids, status, cancelReason) {
+        return request('/api/admin/orders-bulk-update', { method: 'POST', body: { ids: ids, status: status, cancelReason: cancelReason || null } });
+      },
+      deleteOrder: function (id, reason) { return request('/api/admin/order-cancel', { method: 'POST', body: { id: id, reason: reason || '管理員取消' } }); },
+      getProducts: function () { return request('/api/admin/products'); },
+      saveProduct: function (fields) { return request('/api/admin/products', { method: 'POST', body: fields }); },
+      updateProduct: function (fields) { return request('/api/admin/product-update', { method: 'POST', body: fields }); },
+      productAction: function (id, action) { return request('/api/admin/product-action', { method: 'POST', body: { id: id, action: action } }); },
+      reorderProducts: function (order) { return request('/api/admin/products-reorder', { method: 'POST', body: { order: order } }); },
+      getInvites: function () { return request('/api/admin/invites'); },
+      createInvite: function (fields) { return request('/api/admin/invites', { method: 'POST', body: fields }); },
+      inviteAction: function (id, action) { return request('/api/admin/invite-action', { method: 'POST', body: { id: id, action: action } }); },
+      getAccounts: function () { return request('/api/admin/accounts'); },
+      accountAction: function (id, action, extra) {
+        var body = { id: id, action: action };
+        if (extra) Object.keys(extra).forEach(function (k) { body[k] = extra[k]; });
+        return request('/api/admin/account-action', { method: 'POST', body: body });
+      },
     },
   };
 })(window);

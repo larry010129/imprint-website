@@ -8,7 +8,8 @@
     in_production: '製作中',
     quality_check: '品管檢驗中',
     shipped: '已出貨',
-    completed: '已完成'
+    completed: '已完成',
+    cancelled: '已取消'
   };
   global.ImprintOrderStatus = {
     labels: labels,

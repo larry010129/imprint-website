@@ -62,28 +62,316 @@
       if (closeBtn) closeBtn.addEventListener('click', closeModal);
     }
 
-    /* ---------- 儀表板 ---------- */
-    function loadDashboardStats() {
-      api.admin.getDashboardStats().then(function (stats) {
-        if (stats.error) return;
-        var map = {
-          statNewMessages: stats.newMessages,
-          statPendingQuotes: stats.pendingQuotes,
-          statActiveOrders: stats.activeOrders,
-          statCompletedOrders: stats.completedOrders
-        };
-        Object.keys(map).forEach(function (id) {
+    function formatCurrency(amount) {
+      return 'NT$ ' + Number(amount || 0).toLocaleString('zh-TW', { maximumFractionDigits: 0 });
+    }
+
+    function setText(id, value) {
+      var el = document.getElementById(id);
+      if (el) el.textContent = value;
+    }
+
+    var dashParams = { granularity: 'month' };
+
+    function readDashParamsFromUrl() {
+      var qs = new URLSearchParams(window.location.search);
+      dashParams = {
+        granularity: qs.get('granularity') || 'month',
+        period: qs.get('period') || '',
+        start: qs.get('start') || '',
+        end: qs.get('end') || '',
+      };
+    }
+
+    function writeDashParamsToUrl() {
+      var qs = new URLSearchParams();
+      qs.set('granularity', dashParams.granularity || 'month');
+      if (dashParams.granularity === 'day') {
+        if (dashParams.start) qs.set('start', dashParams.start);
+        if (dashParams.end) qs.set('end', dashParams.end);
+      } else if (dashParams.period) {
+        qs.set('period', dashParams.period);
+      }
+      var next = window.location.pathname + '?' + qs.toString();
+      window.history.replaceState(null, '', next);
+    }
+
+    function dashboardRequestParams() {
+      var p = { granularity: dashParams.granularity || 'month' };
+      if (p.granularity === 'day') {
+        if (dashParams.start) p.start = dashParams.start;
+        if (dashParams.end) p.end = dashParams.end;
+      } else if (dashParams.period) {
+        p.period = dashParams.period;
+      }
+      return p;
+    }
+
+    function renderGranularityButtons(granularity) {
+      var host = document.getElementById('dashGranularity');
+      if (!host) return;
+      host.querySelectorAll('[data-granularity]').forEach(function (btn) {
+        btn.classList.toggle('is-active', btn.dataset.granularity === granularity);
+      });
+    }
+
+    function renderRangeControls(stats) {
+      var gran = stats.granularity || 'month';
+      var monthSel = document.getElementById('dashPeriodMonth');
+      var weekSel = document.getElementById('dashPeriodWeek');
+      var startInp = document.getElementById('dashPeriodStart');
+      var endInp = document.getElementById('dashPeriodEnd');
+      var sep = document.getElementById('dashPeriodSep');
+      if (!monthSel || !weekSel || !startInp || !endInp) return;
+
+      monthSel.hidden = gran !== 'month';
+      weekSel.hidden = gran !== 'week';
+      startInp.hidden = gran !== 'day';
+      endInp.hidden = gran !== 'day';
+      if (sep) sep.hidden = gran !== 'day';
+
+      if (gran === 'month') {
+        monthSel.innerHTML = (stats.monthOptions || []).map(function (opt) {
+          return '<option value="' + escapeHtml(opt.value) + '">' + escapeHtml(opt.label) + '</option>';
+        }).join('');
+        monthSel.value = stats.period || '';
+      } else if (gran === 'week') {
+        weekSel.innerHTML = (stats.weekOptions || []).map(function (opt) {
+          return '<option value="' + escapeHtml(opt.value) + '">' + escapeHtml(opt.label) + '</option>';
+        }).join('');
+        weekSel.value = stats.period || '';
+      } else {
+        startInp.value = stats.start || '';
+        endInp.value = stats.end || '';
+      }
+
+      renderGranularityButtons(gran);
+      setText('dashPeriodLabel', stats.periodLabel || '');
+      setText('dashToolbarPeriod', stats.periodLabel || '');
+
+      var exportBtn = document.getElementById('dashExportBtn');
+      if (exportBtn) {
+        exportBtn.href = api.admin.dashboardExportUrl(dashboardRequestParams());
+      }
+    }
+
+    function bindDashboardRangeControls() {
+      var granHost = document.getElementById('dashGranularity');
+      if (granHost && !granHost.dataset.bound) {
+        granHost.dataset.bound = '1';
+        granHost.querySelectorAll('[data-granularity]').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            dashParams.granularity = btn.dataset.granularity;
+            dashParams.period = '';
+            dashParams.start = '';
+            dashParams.end = '';
+            writeDashParamsToUrl();
+            loadDashboardStats();
+          });
+        });
+      }
+
+      var form = document.getElementById('dashRangeForm');
+      if (form && !form.dataset.bound) {
+        form.dataset.bound = '1';
+        ['dashPeriodMonth', 'dashPeriodWeek', 'dashPeriodStart', 'dashPeriodEnd'].forEach(function (id) {
           var el = document.getElementById(id);
-          if (el) el.textContent = (map[id] != null ? map[id] : '-');
+          if (!el) return;
+          el.addEventListener('change', function () {
+            if (id === 'dashPeriodMonth') {
+              dashParams.granularity = 'month';
+              dashParams.period = el.value;
+            } else if (id === 'dashPeriodWeek') {
+              dashParams.granularity = 'week';
+              dashParams.period = el.value;
+            } else {
+              dashParams.granularity = 'day';
+              dashParams.start = document.getElementById('dashPeriodStart').value;
+              dashParams.end = document.getElementById('dashPeriodEnd').value;
+            }
+            writeDashParamsToUrl();
+            loadDashboardStats();
+          });
+        });
+      }
+    }
+
+    function renderTrendChart(trend) {
+      if (window.AdminDashboardChart) {
+        window.AdminDashboardChart.init(trend || []);
+      }
+    }
+
+    function statusRingSvg(pct, color) {
+      var r = 30;
+      var c = 2 * Math.PI * r;
+      var dash = Math.max(0, Math.min(100, pct)) / 100 * c;
+      return (
+        '<svg class="dash-stat-ring-svg" viewBox="0 0 80 80" aria-hidden="true">' +
+          '<circle class="dash-stat-ring-bg" cx="40" cy="40" r="' + r + '" />' +
+          '<circle class="dash-stat-ring-fill" cx="40" cy="40" r="' + r + '" stroke="' + color + '"' +
+            ' stroke-dasharray="' + dash + ' ' + c + '" transform="rotate(-90 40 40)" />' +
+        '</svg>'
+      );
+    }
+
+    function renderStatusRows(rows) {
+      var host = document.getElementById('dashStatusList');
+      if (!host) return;
+
+      var groups = [
+        { key: 'pending', label: '待處理', color: 'hsl(200, 70%, 50%)', codes: ['received', 'dna_lab', 'deposit_confirmed'] },
+        { key: 'making', label: '製作中', color: 'hsl(120, 70%, 50%)', codes: ['in_production', 'quality_check'] },
+        { key: 'shipped', label: '已出貨', color: 'hsl(340, 70%, 50%)', codes: ['shipped'] },
+        { key: 'done', label: '已完成', color: 'hsl(280, 70%, 50%)', codes: ['completed'] },
+      ];
+      var byCode = {};
+      (rows || []).forEach(function (r) { byCode[r.code] = r; });
+      var total = (rows || []).reduce(function (s, r) { return s + (r.count || 0); }, 0);
+
+      if (!total) {
+        host.innerHTML = '<p class="dash-recent-empty">尚無訂單</p>';
+        return;
+      }
+
+      host.innerHTML = groups.map(function (g) {
+        var count = 0;
+        g.codes.forEach(function (c) {
+          if (byCode[c]) count += byCode[c].count;
+        });
+        var pct = Math.round(1000 * count / total) / 10;
+        var pctLabel = pct % 1 === 0 ? String(Math.round(pct)) : pct.toFixed(1);
+        return (
+          '<article class="dash-stat-card dash-stat-card--ring" data-goto-panel="orders" role="button" tabindex="0">' +
+            '<div class="dash-stat-card-inner">' +
+              '<div class="dash-stat-ring-wrap">' +
+                statusRingSvg(pct, g.color) +
+                '<span class="dash-stat-ring-pct">' + pctLabel + '%</span>' +
+              '</div>' +
+              '<div class="dash-stat-card-text">' +
+                '<p class="dash-stat-card-title">' + escapeHtml(g.label) + '</p>' +
+                '<p class="dash-stat-card-sub">' + count + ' / ' + total + ' 筆</p>' +
+              '</div>' +
+            '</div>' +
+          '</article>'
+        );
+      }).join('');
+
+      host.querySelectorAll('[data-goto-panel]').forEach(function (el) {
+        function go() {
+          var panel = el.dataset.gotoPanel;
+          var navBtn = document.querySelector('.side-nav button[data-panel="' + panel + '"]');
+          if (navBtn) navBtn.click();
+        }
+        el.addEventListener('click', go);
+        el.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); }
         });
       });
     }
 
+    function renderTopProducts(items) {
+      var host = document.getElementById('dashTopProducts');
+      if (!host) return;
+      if (!items || !items.length) {
+        host.innerHTML = '<p class="dash-recent-empty">尚無訂單</p>';
+        return;
+      }
+      host.innerHTML = items.map(function (item) {
+        var initial = (item.name || '?').slice(0, 1);
+        return (
+          '<div class="dash-rank-item">' +
+            '<div class="dash-rank-left">' +
+              '<span class="dash-rank-avatar">' + escapeHtml(initial) + '</span>' +
+              '<div><p class="dash-rank-name">' + escapeHtml(item.name) + '</p><p class="dash-rank-sub">累計訂單</p></div>' +
+            '</div>' +
+            '<span class="dash-rank-val">' + item.orders + ' 筆</span>' +
+          '</div>'
+        );
+      }).join('');
+    }
+
+    function renderTopSeries(items) {
+      var host = document.getElementById('dashTopSeries');
+      if (!host) return;
+      if (!items || !items.length) {
+        host.innerHTML = '<p class="dash-recent-empty">尚無資料</p>';
+        return;
+      }
+      host.innerHTML = items.map(function (item, i) {
+        var initial = (item.name || '?').slice(0, 1);
+        return (
+          '<div class="dash-rank-item">' +
+            '<div class="dash-rank-left">' +
+              '<span class="dash-rank-avatar">' + escapeHtml(initial) + '</span>' +
+              '<div><p class="dash-rank-name">' + escapeHtml(item.name) + '</p>' +
+                '<p class="dash-rank-sub">' + item.orders + ' 筆訂單</p></div>' +
+            '</div>' +
+            '<span class="dash-rank-val">' + formatCurrency(item.revenue) + '</span>' +
+          '</div>'
+        );
+      }).join('');
+    }
+
+    function renderRecentOrders(orders) {
+      var host = document.getElementById('dashRecentOrders');
+      if (!host) return;
+      if (!orders || !orders.length) {
+        host.innerHTML = '<p class="dash-recent-empty">尚無訂單</p>';
+        return;
+      }
+      host.innerHTML = orders.map(function (o) {
+        var product = o.product_type || o.category || '訂製品項';
+        return (
+          '<div class="dash-recent-item">' +
+            '<div>' +
+              '<div class="dash-recent-amt">' + formatCurrency(o.total_price) + '</div>' +
+              '<div class="dash-recent-meta">' + escapeHtml(product) + ' · ' + escapeHtml(o.customer_name || '客戶') + '</div>' +
+            '</div>' +
+            '<div class="dash-recent-time">' + formatDateTime(o.created_at) + '<br>' + escapeHtml(o.order_number || '') + '</div>' +
+          '</div>'
+        );
+      }).join('');
+    }
+
+    /* ---------- 儀表板 ---------- */
+    function loadDashboardStats() {
+      api.admin.getDashboardStats(dashboardRequestParams()).then(function (stats) {
+        if (stats.error) return;
+        var pendingTotal = (stats.newMessages || 0) + (stats.pendingQuotes || 0) + (stats.activeOrders || 0);
+        var orderCount = stats.periodOrderCount != null ? stats.periodOrderCount : (stats.totalOrders || 0);
+
+        setText('statNewMessages', stats.newMessages != null ? stats.newMessages : '-');
+        setText('statPendingQuotes', stats.pendingQuotes != null ? stats.pendingQuotes : '-');
+        setText('statActiveOrders', stats.activeOrders != null ? stats.activeOrders : '-');
+        setText('statPendingTotal', pendingTotal);
+        setText('statOrderCount', orderCount);
+        setText('statTotalRevenue', formatCurrency(stats.totalRevenue));
+        setText('statAverageSale', formatCurrency(stats.averageSale));
+
+        dashParams.granularity = stats.granularity || dashParams.granularity;
+        dashParams.period = stats.period || '';
+        dashParams.start = stats.start || '';
+        dashParams.end = stats.end || '';
+        renderRangeControls(stats);
+        bindDashboardRangeControls();
+
+        renderTrendChart(stats.monthlyTrend || []);
+        renderStatusRows(stats.statusRows || []);
+        renderTopProducts(stats.topProducts || []);
+        renderTopSeries(stats.topSeries || []);
+        renderRecentOrders(stats.recentOrders || []);
+      });
+    }
+
+    var leadsLoaded = false;
+
     /* ---------- 諮詢名單（合併聯絡表單＋線上估價） ---------- */
-    function loadLeads() {
+    function loadLeads(silent, force) {
       var tbody = document.getElementById('leadsTableBody');
       if (!tbody) return;
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--ink-faint);">載入中…</td></tr>';
+      if (leadsLoaded && !force) return;
+      if (!silent) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--ink-faint);">載入中…</td></tr>';
 
       api.admin.getLeads().then(function (res) {
         if (res.error) {
@@ -105,23 +393,32 @@
 
         if (!all.length) {
           tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--ink-faint);">目前沒有諮詢紀錄。</td></tr>';
-          return;
-        }
-
-        tbody.innerHTML = all.map(function (item) {
+          leadsLoaded = true;
+        } else {
+          leadsLoaded = true;
+          tbody.innerHTML = all.map(function (item) {
           var sourceLabel = item.type === 'message' ? '官網留言表單' : '線上估價';
           var isDone = ['replied', 'contacted', 'converted', 'closed'].indexOf(item.status) !== -1;
+          var statusLabel = isDone ? '已處理' : '待處理';
           return (
-            '<tr>' +
+            '<tr data-sort-name="' + escapeHtml(item.name) + '"' +
+              ' data-sort-source="' + escapeHtml(sourceLabel) + '"' +
+              ' data-sort-summary="' + escapeHtml(item.summary) + '"' +
+              ' data-sort-created="' + escapeHtml(item.created_at || '') + '"' +
+              ' data-sort-status="' + escapeHtml(statusLabel) + '">' +
               '<td class="name">' + escapeHtml(item.name) + '<span class="sub">' + escapeHtml(item.phone || item.email || '') + '</span></td>' +
               '<td>' + sourceLabel + '</td>' +
               '<td>' + escapeHtml(item.summary) + '</td>' +
               '<td>' + formatDateTime(item.created_at) + '</td>' +
-              '<td><span class="chip ' + (isDone ? 'chip-done' : 'chip-new') + '">' + (isDone ? '已處理' : '待處理') + '</span></td>' +
+              '<td><span class="chip ' + (isDone ? 'chip-done' : 'chip-new') + '">' + statusLabel + '</span></td>' +
               '<td>' + (isDone ? '' : '<button class="btn-sm" data-mark-done="' + item.type + ':' + item.id + '">標記已處理</button>') + '</td>' +
             '</tr>'
           );
         }).join('');
+        }
+
+        var leadsTable = tbody.closest('table');
+        if (leadsTable && window.AdminTableSort) window.AdminTableSort.bind(leadsTable);
 
         tbody.querySelectorAll('[data-mark-done]').forEach(function (btn) {
           btn.addEventListener('click', function () {
@@ -137,7 +434,7 @@
                 btn.textContent = '更新失敗，再試一次';
                 return;
               }
-              loadLeads();
+              loadLeads(true, true);
               loadDashboardStats();
             });
           });
@@ -145,91 +442,8 @@
       });
     }
 
-    /* ---------- 訂單與製作進度 ---------- */
-    function loadOrders() {
-      var tbody = document.getElementById('ordersTableBody');
-      if (!tbody) return;
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--ink-faint);">載入中…</td></tr>';
-
-      api.admin.getOrders().then(function (res) {
-        if (res.error) {
-          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--ink-faint);">載入失敗，請重新整理頁面。</td></tr>';
-          return;
-        }
-        var orders = res.orders || [];
-        if (!orders.length) {
-          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--ink-faint);">目前沒有訂單，點右上角「+ 新增訂單」建立第一筆。</td></tr>';
-          return;
-        }
-
-        tbody.innerHTML = orders.map(function (o) {
-          var spec = [o.series, o.product_type].filter(Boolean).join(' ・ ') || '-';
-          return (
-            '<tr>' +
-              '<td class="name">' + o.order_number + '<span class="sub">' + escapeHtml(o.customer_name) + '・' + escapeHtml(o.customer_phone) + '</span></td>' +
-              '<td>' + escapeHtml(spec) + '</td>' +
-              '<td><span class="chip ' + (STATUS_CHIP[o.status] || 'chip-new') + '">' + statusLabel(o.status) + '</span></td>' +
-              '<td>' + escapeHtml(o.status_note || '-') + '</td>' +
-              '<td>' + formatDateTime(o.created_at) + '</td>' +
-              '<td><button class="btn-sm" data-update-order="' + o.id + '">更新進度</button></td>' +
-            '</tr>'
-          );
-        }).join('');
-
-        tbody.querySelectorAll('[data-update-order]').forEach(function (btn) {
-          btn.addEventListener('click', function () {
-            var order = orders.filter(function (o) { return o.id === btn.dataset.updateOrder; })[0];
-            if (order) openUpdateOrderModal(order);
-          });
-        });
-      });
-    }
-
-    function openUpdateOrderModal(order) {
-      var optionsHtml = STATUS_OPTIONS.map(function (s) {
-        return '<option value="' + s + '"' + (s === order.status ? ' selected' : '') + '>' + statusLabel(s) + '</option>';
-      }).join('');
-
-      openModal(
-        '<div class="qr-modal" role="dialog" aria-modal="true">' +
-          '<button type="button" class="qr-modal-close" data-modal-close aria-label="關閉">&times;</button>' +
-          '<h3>更新訂單進度</h3>' +
-          '<p class="qr-modal-sub">' + order.order_number + '・' + escapeHtml(order.customer_name) + '</p>' +
-          '<form id="updateOrderForm" novalidate>' +
-            '<div class="form-field"><label for="uoStatus">目前狀態</label>' +
-              '<select id="uoStatus" style="width:100%;font-family:inherit;font-size:14px;padding:11px 14px;border:1px solid #E3DCD3;border-radius:6px;background:#FBFAF8;color:var(--ink);">' + optionsHtml + '</select>' +
-            '</div>' +
-            '<div class="form-field"><label for="uoNote">給客戶看的備註</label><textarea id="uoNote" rows="3">' + escapeHtml(order.status_note || '') + '</textarea></div>' +
-            '<button type="submit" class="btn btn-dark" id="uoSubmitBtn">儲存更新</button>' +
-            '<p class="form-msg" id="uoMsg"></p>' +
-          '</form>' +
-        '</div>'
-      );
-
-      document.getElementById('updateOrderForm').addEventListener('submit', function (e) {
-        e.preventDefault();
-        var newStatus = document.getElementById('uoStatus').value;
-        var newNote = document.getElementById('uoNote').value.trim();
-        var btn = document.getElementById('uoSubmitBtn');
-        var msg = document.getElementById('uoMsg');
-        btn.disabled = true;
-        btn.textContent = '儲存中…';
-        api.admin.updateOrderStatus(order.id, newStatus, newNote).then(function (res) {
-          if (res.error) {
-            msg.textContent = '更新失敗：' + res.error;
-            msg.className = 'form-msg is-err';
-            btn.disabled = false;
-            btn.textContent = '儲存更新';
-            return;
-          }
-          closeModal();
-          loadOrders();
-          loadDashboardStats();
-        });
-      });
-    }
-
-    function openNewOrderModal() {
+    /* ---------- 訂單：由 admin-orders.js 渲染 ---------- */
+    function openNewOrderModal(onDone) {
       openModal(
         '<div class="qr-modal" role="dialog" aria-modal="true">' +
           '<button type="button" class="qr-modal-close" data-modal-close aria-label="關閉">&times;</button>' +
@@ -276,14 +490,9 @@
             btn.textContent = '建立訂單';
             return;
           }
-          loadOrders();
+          closeModal();
+          if (typeof onDone === 'function') onDone();
           loadDashboardStats();
-          document.getElementById('newOrderForm').innerHTML =
-            '<div class="qr-modal-summary" style="margin-bottom:0;">' +
-              '<p style="margin-bottom:8px;">訂單已建立！訂單編號：</p>' +
-              '<p style="font-family:var(--serif);font-size:20px;font-weight:600;">' + res.orderNumber + '</p>' +
-              '<p style="font-size:12.5px;color:#3A7A7A;margin-top:8px;">請把這組編號提供給客戶，客戶就能在「查詢訂製進度」頁面查詢。</p>' +
-            '</div>';
         });
       });
     }
@@ -301,20 +510,27 @@
       }
 
       if (topMeta) topMeta.textContent = res.user.email;
+      readDashParamsFromUrl();
+      bindDashboardRangeControls();
       loadDashboardStats();
-      loadLeads();
-      loadOrders();
 
-      var newOrderBtn = document.getElementById('btnNewOrder');
-      if (newOrderBtn) newOrderBtn.addEventListener('click', openNewOrderModal);
+      window.AdminPanel = {
+        currentUserId: res.user.id,
+        openModal: openModal,
+        closeModal: closeModal,
+        escapeHtml: escapeHtml,
+        openNewOrderModal: openNewOrderModal,
+        onPanelSwitch: function (panel) {
+          var main = document.querySelector('.main');
+          if (main) main.classList.toggle('is-orders-view', panel === 'orders');
+          if (panel === 'dash') loadDashboardStats();
+          if (panel === 'leads') loadLeads(leadsLoaded);
+          if (panel === 'orders' && window.AdminOrdersPanel) window.AdminOrdersPanel.ensureLoaded();
+          if (panel === 'products' && window.AdminProductsPanel) window.AdminProductsPanel.ensureLoaded();
+          if (panel === 'invites' && window.AdminInvitesPanel) window.AdminInvitesPanel.ensureLoaded();
+          if (panel === 'accounts' && window.AdminAccountsPanel) window.AdminAccountsPanel.ensureLoaded();
+        }
+      };
     });
-
-    window.AdminPanel = {
-      onPanelSwitch: function (panel) {
-        if (panel === 'dash') loadDashboardStats();
-        if (panel === 'leads') loadLeads();
-        if (panel === 'orders') loadOrders();
-      }
-    };
   });
 })();

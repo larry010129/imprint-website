@@ -58,7 +58,7 @@ PAGE_404 = PageMeta(
     breadcrumbs=[],
     nav_active='about',
     mvc_page='error-404',
-    extra_body_class=None,
+    extra_body_class='page-404',
     content_fragment=None,
     extra_head_blocks=[],
 )
@@ -227,7 +227,7 @@ PAGE_LOGIN = PageMeta(
     og_image=None,
     breadcrumbs=[],
     nav_active='account',
-    mvc_page=None,
+    mvc_page='login',
     extra_body_class='page-login',
     content_fragment=None,
     extra_head_blocks=[],
@@ -854,6 +854,14 @@ STANDALONE_QUOTE_SHEET = PageMeta(
     canonical_path='',
 )
 
+STANDALONE_QUOTE_SHEET_SHORT = PageMeta(
+    route='/quote-sheet',
+    template='pages/shop/quote-sheet.html',
+    title='珠寶報價單｜銘印鑽石',
+    description='',
+    canonical_path='',
+)
+
 STANDALONE_SHARE_SUMMARY = PageMeta(
     route='/share/summary.html',
     template='pages/share/summary.html',
@@ -917,5 +925,6 @@ ALL_PAGES: list[PageMeta] = [
 
 STANDALONE_PAGES: list[PageMeta] = [
     STANDALONE_QUOTE_SHEET,
+    STANDALONE_QUOTE_SHEET_SHORT,
     STANDALONE_SHARE_SUMMARY,
 ]

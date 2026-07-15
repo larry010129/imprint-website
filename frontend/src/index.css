@@ -1,4 +1,9 @@
-@import "tailwindcss";
+/* Utilities imported WITHOUT layer() so they beat the site's unlayered
+   `*{margin:0;padding:0}` reset in base.css (unlayered > @layer rules). */
+@layer theme, base, components;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/preflight.css" layer(base);
+@import "tailwindcss/utilities.css";
 @import "tw-animate-css";
 
 @theme inline {
@@ -23,6 +28,7 @@
   --color-destructive-foreground: var(--destructive-foreground);
   --animate-accordion-down: accordion-down 0.2s ease-out;
   --animate-accordion-up: accordion-up 0.2s ease-out;
+  --animate-border-beam: border-beam calc(var(--duration) * 1s) infinite linear;
 }
 
 @keyframes accordion-down {
@@ -40,6 +46,12 @@
   }
   to {
     height: 0;
+  }
+}
+
+@keyframes border-beam {
+  100% {
+    offset-distance: 100%;
   }
 }
 
@@ -74,13 +86,13 @@
 }
 
 [data-stories-root] {
-  --background: #2b2320;
-  --foreground: #f7f4f1;
+  --background: #f7f4f1;
+  --foreground: #2b2320;
   --card: #fdfcfa;
   --card-foreground: #2b2320;
-  --border: #3d3532;
-  --muted: #3d3532;
-  --muted-foreground: #b5ada8;
+  --border: #E3DCD3;
+  --muted: #f7f4f1;
+  --muted-foreground: #8a817b;
   --primary: #5ecfcf;
   --ring: #5ecfcf;
   font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
@@ -88,21 +100,8 @@
   color: var(--foreground);
 }
 
-[data-stories-root] .stories-col-md,
-[data-stories-root] .stories-col-lg {
-  display: none;
-}
-
-@media (width >= 768px) {
-  [data-stories-root] .stories-col-md {
-    display: block;
-  }
-}
-
-@media (width >= 1024px) {
-  [data-stories-root] .stories-col-lg {
-    display: block;
-  }
+[data-stories-root] a {
+  text-decoration: none;
 }
 
 [data-hover-footer-root] .footer-hover-text {
@@ -175,3 +174,139 @@
 [data-price-root] a:hover {
   color: #0485f7;
 }
+
+.account-menu {
+  position: relative;
+}
+
+.account-menu-trigger {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px 6px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.52);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 4px 18px rgba(43, 35, 32, 0.08);
+  cursor: pointer;
+  max-width: 220px;
+  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+
+.account-menu-trigger:hover {
+  border-color: rgba(94, 207, 207, 0.55);
+  background: rgba(255, 255, 255, 0.68);
+  box-shadow: 0 6px 22px rgba(43, 35, 32, 0.1);
+}
+
+a.account-menu-trigger {
+  text-decoration: none;
+  color: inherit;
+}
+
+.account-menu-trigger--guest .account-menu-avatar--guest {
+  background: rgba(255, 255, 255, 0.22);
+  border: 1px solid rgba(94, 207, 207, 0.35);
+  color: var(--ink, #2b2320);
+}
+
+.account-menu-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  text-align: left;
+}
+
+.account-menu-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink, #2b2320);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+
+.account-menu-email {
+  font-size: 10px;
+  color: var(--ink-faint, #8a817b);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+
+.account-menu-avatar {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #5ecfcf, #9c8fd9);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.account-menu-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 60;
+  min-width: 180px;
+  padding: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 12px 32px rgba(43, 35, 32, 0.14);
+}
+
+.account-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink, #2b2320);
+  font-size: 13px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.account-menu-item:hover {
+  background: rgba(94, 207, 207, 0.14);
+}
+
+.account-menu-logout {
+  color: #c0392b;
+}
+
+.account-menu-logout:hover {
+  background: #fdecea;
+}
+
+.account-menu-admin {
+  color: #3aa8a8;
+}
+
+.account-menu-admin:hover {
+  background: rgba(94, 207, 207, 0.18);
+}
+
+@media (max-width: 860px) {
+  .account-menu {
+    display: none;
+  }
+}
+

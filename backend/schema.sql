@@ -23,7 +23,8 @@ create table if not exists profiles (
   id uuid primary key references users(id) on delete cascade,
   full_name text,
   phone text,
-  store_name text
+  store_name text,
+  is_partner boolean not null default false
 );
 
 create table if not exists staff_admins (
@@ -63,12 +64,14 @@ create table if not exists audit_log (
 create table if not exists invite_codes (
   id uuid primary key default gen_random_uuid(),
   code text unique not null,
+  label text,
   created_by_id uuid references users(id) on delete set null,
   used_by_id uuid references users(id) on delete set null,
   use_count int not null default 0,
   max_uses int,
   is_active boolean not null default true,
   grants_admin boolean not null default false,
+  grants_partner boolean not null default false,
   expires_at timestamptz,
   used_at timestamptz,
   created_at timestamptz not null default now()

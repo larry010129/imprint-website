@@ -3,10 +3,21 @@ import { motion } from "motion/react";
 
 export type Testimonial = {
   text: string;
-  image: string;
+  image?: string;
   name: string;
   role: string;
 };
+
+export function InitialAvatar({ name }: { name: string }) {
+  return (
+    <div
+      aria-hidden
+      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-sm font-medium tracking-normal text-primary"
+    >
+      {name.charAt(0)}
+    </div>
+  );
+}
 
 export const TestimonialsColumn = (props: {
   className?: string;
@@ -37,13 +48,17 @@ export const TestimonialsColumn = (props: {
                 >
                   <div>{text}</div>
                   <div className="flex items-center gap-2 mt-5">
-                    <img
-                      width={40}
-                      height={40}
-                      src={image}
-                      alt={name}
-                      className="h-10 w-10 rounded-full object-cover"
-                    />
+                    {image ? (
+                      <img
+                        width={40}
+                        height={40}
+                        src={image}
+                        alt={name}
+                        className="h-10 w-10 rounded-full object-cover"
+                      />
+                    ) : (
+                      <InitialAvatar name={name} />
+                    )}
                     <div className="flex flex-col">
                       <div className="font-medium tracking-tight leading-5">
                         {name}

@@ -13,7 +13,8 @@
         return Model.load();
       }).then(function (res) {
         if (!res) return;
-        View.render(res.orders || []);
+        var statusLabel = global.ImprintOrderStatus ? global.ImprintOrderStatus.label : function (st) { return st; };
+        View.render(res.orders || [], statusLabel);
       });
     },
   });
