@@ -89,6 +89,12 @@
 }
 </script>
 {% endblock %}
+{% block extra_css %}
+{% include "partials/faq-react-css.html" %}
+{% endblock %}
+{% block extra_scripts %}
+{% include "partials/faq-react-js.html" %}
+{% endblock %}
 {% block content %}
 <section class="page-hero" style="min-height:260px;">
   <div class="page-hero-media"></div>
@@ -104,46 +110,7 @@
 <section class="faq" style="padding-top:70px;">
   <div class="container">
     <div class="faq-list">
-      <div class="faq-item">
-        <button class="faq-q" aria-expanded="false">需要準備多少毛髮或骨灰，才能製作 DNA 鑽石？<span class="toggle"></span></button>
-        <div class="faq-a"><div class="faq-a-inner">毛髮約需一顆雞蛋的大小（或 100ml 養樂多瓶約 8 分滿）；骨灰約需 3 至 5 公克。若您手邊的份量不確定是否足夠，請先透過官方 LINE 與顧問確認——我們會依您的狀況評估，不需要先寄送樣本。每一份樣本我們都以單一客戶、單一培育流程處理，確保專屬與純粹。</div></div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" aria-expanded="false">DNA 鑽石是怎麼製作的？<span class="toggle"></span></button>
-        <div class="faq-a"><div class="faq-a-inner">DNA 鑽石是萃取毛髮或骨灰中的元素，注入鑽石生長設備中，經晶化培育而成的專屬個人化鑽石。完整流程為：樣本萃取 → 元素注入生長設備 → 晶化培育 → 切割拋光 →（可選）鑲嵌為飾品。從萃取、培育到飾品設計，全程於台灣完成。</div></div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" aria-expanded="false">製作一顆紀念鑽石需要多久？<span class="toggle"></span></button>
-        <div class="faq-a"><div class="faq-a-inner">約 3 個月（70–90 天）。培育鑽石需要時間讓晶體自然生長，每一顆的培育過程都獨立進行。完工後，我們會連同銘印保證卡與專屬影音紀念盒一併交付。</div></div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" aria-expanded="false">樣本會送到國外處理嗎？<span class="toggle"></span></button>
-        <div class="faq-a"><div class="faq-a-inner">不會。銘印鑽石是全台唯一擁有在地 DNA 鑽石培育實驗室的紀念鑽石品牌，從萃取、培育到成品，全程在台灣完成。您珍視的毛髮與骨灰不需要經歷國際運送，每一個環節都在您觸手可及的距離裡被安心對待。</div></div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" aria-expanded="false">完成的鑽石有鑑定證書嗎？<span class="toggle"></span></button>
-        <div class="faq-a"><div class="faq-a-inner">有。每顆鑽石皆附銘印保證卡；0.20 克拉以上的鑽石，可代送 GIA 或 IGI 國際鑑定機構出具證書（費用另計）。第三方鑑定為您的珍藏提供客觀保障，也讓這顆鑽石在未來傳承時，有正式的身分證明。</div></div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" aria-expanded="false">DNA 紀念鑽石的價格怎麼計算？<span class="toggle"></span></button>
-        <div class="faq-a"><div class="faq-a-inner">價格依克拉數計算：0.10 克拉 NT$24,000 起、0.50 克拉 NT$98,000、1.00 克拉 NT$250,000（圓形明亮式切工／白鑽）。非圓形切工（公主方、橢圓、梨形等）加價 10%，且需 0.30 克拉以上才能製作；彩鑽最低製作規格為 0.30 克拉，報價依顏色稀有度而定；3.00 克拉以上請洽官方 LINE 專屬報價。完整價目請見<a href="/price.html">價格試算・價格總覽</a>。</div></div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" aria-expanded="false">寵物的毛髮也可以做成鑽石嗎？<span class="toggle"></span></button>
-        <div class="faq-a"><div class="faq-a-inner">可以。寵物鑽石是我們的主要系列之一，許多飼主以毛孩的毛髮訂製鑽石，讓陪伴以另一種形式延續。毛髮份量同樣約需一顆雞蛋大小；若毛量不足，請先與顧問討論，我們會依實際狀況給您建議。</div></div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" aria-expanded="false">鑽石可以鑲嵌成戒指或項鍊嗎？<span class="toggle"></span></button>
-        <div class="faq-a"><div class="faq-a-inner">可以。鑽石完成後，可鑲嵌為戒指、項鍊、耳環或手鍊，材質可選 18K 金、14K 金、9K 金或 PT950 鉑金。飾品戒台依款式與材質另計（例：9K 經典款項鍊 NT$10,000 起，不含鑽），由專屬顧問與您討論設計與預算，依您的故事量身打造。</div></div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" aria-expanded="false">完工後我會收到什麼？<span class="toggle"></span></button>
-        <div class="faq-a"><div class="faq-a-inner">您會收到：專屬培育的 DNA 鑽石（或已鑲嵌完成的飾品）、銘印保證卡，以及專屬影音紀念盒——封存這顆鑽石從樣本到成品的珍貴過程。</div></div>
-      </div>
-      <div class="faq-item">
-        <button class="faq-q" aria-expanded="false">如何開始訂製？<span class="toggle"></span></button>
-        <div class="faq-a"><div class="faq-a-inner">銘印鑽石採預約制。請透過官方 LINE 預約，由專屬顧問與您一對一討論需求、確認樣本份量與報價，再進行採樣與培育。官方 LINE：<a href="https://lin.ee/ktVBtmx" target="_blank" rel="noopener">點此加入</a>；電話：02-2977-0268；門市：新北市三重區福德南路 43 號 1 樓（預約制）。</div></div>
-      </div>
+      <div data-faq-root data-variant="full"></div>
     </div>
     <div class="faq-more">
       <a class="btn btn-line" href="https://lin.ee/ktVBtmx" target="_blank" rel="noopener">還有想了解的？問問顧問</a>

@@ -108,7 +108,8 @@
     document.querySelectorAll('.reveal').forEach(function (el) { el.classList.add('is-in'); });
   }
 
-  /* ---------- FAQ 手風琴 ---------- */
+  /* ---------- FAQ 手風琴（略過 React 島） ---------- */
+  if (!document.querySelector('[data-faq-root]')) {
   document.querySelectorAll('.faq-item').forEach(function (item) {
     var q = item.querySelector('.faq-q');
     var a = item.querySelector('.faq-a');
@@ -126,6 +127,7 @@
       }
     });
   });
+  }
 
   /* ---------- Hero 輪播:箭頭/圓點/拖曳滑動/自動播放 ---------- */
   var hcViewport = document.getElementById('hcViewport');

@@ -68,7 +68,7 @@ Relative path back to site root (`../` for nested pages).
 
 ### `data-site-active`
 
-Highlights nav: `price`, `shop`, `diamonds`, `jewelry`, `knowledge`, `about`, `account`.
+Highlights nav: `price`, `shop`, `diamonds`, `jewelry`, `knowledge`, `about`, `track-order`, `account`.
 
 ## Requirements
 

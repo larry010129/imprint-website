@@ -88,8 +88,8 @@ function inlineIncludes(html, root) {
 
 const REFRESH_END = {
   'layout-topbar': /<!-- @component partials\/(?:layout-topbar|topbar)\.html -->[\s\S]*?<\/div>(?=\s*\n<!-- @component partials\/(?:layout-nav|nav)\.html -->)/,
-  'layout-nav': /<!-- @component partials\/(?:layout-nav|nav)\.html -->[\s\S]*?<\/header>/,
-  'layout-footer': /<!-- @component partials\/(?:layout-footer|footer)\.html -->[\s\S]*?<\/footer>/,
+  'layout-nav': /<!-- @component partials\/(?:layout-nav|nav)\.html -->[\s\S]*?<script type="module" src="[^"]*nav\.js[^"]*"><\/script>/,
+  'layout-footer': /<!-- @component partials\/(?:layout-footer|footer)\.html -->[\s\S]*?(?=\n<script src=)/,
   'layout-head': /<!-- @component partials\/(?:layout-head|head-common)\.html -->[\s\S]*?(?=\n<link rel="icon"|\n<link rel="stylesheet")/,
   'view-home': /<!-- @component partials\/(?:view-home|home-main)\.html -->[\s\S]*?(?=\n<\/main>)/,
   'view-price-ref': /<!-- @component partials\/(?:view-price-ref|price-reference)\.html -->[\s\S]*?(?=\n\s*<\/section>\s*\n<\/main>|\n\s*<\/div>\s*\n<\/section>\s*\n<\/main>)/,
@@ -117,9 +117,11 @@ function normalizeLayoutScripts(html, root) {
 
   const bundle = `<script src="${layoutSrc}"></script>\n<script src="${mainSrc}"></script>\n`;
 
-  const footerEnd = html.lastIndexOf('</footer>');
-  if (footerEnd !== -1) {
-    const insertAt = footerEnd + '</footer>'.length;
+  const footerIslandRe =
+    /<!-- @component partials\/(?:layout-footer|footer)\.html -->[\s\S]*?<script type="module" src="[^"]*footer\.js[^"]*"><\/script>/;
+  const footerMatch = html.match(footerIslandRe);
+  if (footerMatch) {
+    const insertAt = html.indexOf(footerMatch[0]) + footerMatch[0].length;
     return html.slice(0, insertAt) + '\n\n' + bundle + html.slice(insertAt).trimStart();
   }
 

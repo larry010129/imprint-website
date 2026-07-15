@@ -4,6 +4,7 @@
   "description": "Local dev helpers only — Render deploys via render.yaml (Python + FastAPI).",
   "scripts": {
     "dev": "python -m uvicorn main:app --reload --host 127.0.0.1 --port 8080",
+    "build:frontend": "npm run build --prefix frontend",
     "fetch:gold": "python scripts/fetch_gold_quote.py",
     "generate:pages": "node scripts/generate-pages.mjs",
     "generate:app-pages": "node scripts/generate-pages.mjs",

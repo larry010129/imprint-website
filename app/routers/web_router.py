@@ -75,5 +75,11 @@ def register_pages(app: FastAPI) -> None:
 
 
 def mount_static(app: FastAPI) -> None:
-    """Mount /static last so page + API routes take precedence."""
+    """Mount static assets last so page + API routes take precedence."""
+    js_dir = settings.static_dir / "js"
+    css_dir = settings.static_dir / "css"
+    if js_dir.is_dir():
+        app.mount("/js", StaticFiles(directory=str(js_dir)), name="js")
+    if css_dir.is_dir():
+        app.mount("/css", StaticFiles(directory=str(css_dir)), name="css")
     app.mount("/static", StaticFiles(directory=str(settings.static_dir)), name="static")

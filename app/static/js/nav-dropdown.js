@@ -110,7 +110,7 @@
   }
 
   function init() {
-    document.querySelectorAll('.nav-menu[data-safe-triangle-menu] > .nav-item').forEach(setup);
+    document.querySelectorAll('.site-nav-desktop .nav-menu[data-safe-triangle-menu] > .nav-item, .site-nav-mobile .nav-menu[data-safe-triangle-menu] > .nav-item, .nav-inner > nav:not(.site-nav-desktop) .nav-menu[data-safe-triangle-menu] > .nav-item').forEach(setup);
   }
 
   if (document.readyState === 'loading') {

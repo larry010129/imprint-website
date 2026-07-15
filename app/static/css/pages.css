@@ -330,9 +330,20 @@
 .diamond-hub-cta p{ color:#E5DFD8; font-size:14px; max-width:480px; }
 .diamond-hub-cta h3{ font-family:var(--serif); color:#fff; font-size:19px; letter-spacing:.08em; margin-bottom:10px; }
 
-/* price.html — DNA 鑽石價格參考（JS 渲染表格） */
-.price-page-cta{ margin:48px 0 32px; }
-.price-page-cta + .price-page-cta{ margin-top:0; }
+/* price.html — post-table pathway links (light strip, not dark hub CTA) */
+.price-path-links{
+  display:flex; flex-wrap:wrap; gap:16px; align-items:center; justify-content:space-between;
+  background:var(--paper-warm); border:1px solid var(--mint-line); border-radius:8px;
+  padding:28px 32px; margin-top:32px;
+}
+.price-path-primary{
+  font-family:var(--serif); font-size:17px; letter-spacing:.06em; color:var(--ink);
+  text-decoration:none;
+}
+.price-path-primary:hover{ color:#3A7A7A; }
+.price-path-actions{ display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+.price-path-text{ font-size:13px; color:var(--ink-faint); text-decoration:underline; }
+.price-path-text:hover{ color:var(--ink); }
 
 .price-reference {
   margin-top: 0;

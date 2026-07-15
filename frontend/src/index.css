@@ -1,0 +1,177 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+}
+
+@keyframes accordion-down {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-accordion-content-height);
+  }
+}
+
+@keyframes accordion-up {
+  from {
+    height: var(--radix-accordion-content-height);
+  }
+  to {
+    height: 0;
+  }
+}
+
+[data-faq-root] {
+  --background: #fdfcfa;
+  --foreground: #2b2320;
+  --card: #ffffff;
+  --card-foreground: #2b2320;
+  --border: #dcf2f2;
+  --muted: #f7f4f1;
+  --muted-foreground: #8a817b;
+  --primary: #5ecfcf;
+  --ring: #5ecfcf;
+  font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+  letter-spacing: 0.05em;
+  color: var(--foreground);
+}
+
+[data-faq-root] a {
+  color: #5ecfcf;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+[data-faq-root] a:hover {
+  color: #0485f7;
+}
+
+[data-hover-footer-root] {
+  font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+  letter-spacing: 0.05em;
+}
+
+[data-stories-root] {
+  --background: #2b2320;
+  --foreground: #f7f4f1;
+  --card: #fdfcfa;
+  --card-foreground: #2b2320;
+  --border: #3d3532;
+  --muted: #3d3532;
+  --muted-foreground: #b5ada8;
+  --primary: #5ecfcf;
+  --ring: #5ecfcf;
+  font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+  letter-spacing: 0.05em;
+  color: var(--foreground);
+}
+
+[data-stories-root] .stories-col-md,
+[data-stories-root] .stories-col-lg {
+  display: none;
+}
+
+@media (width >= 768px) {
+  [data-stories-root] .stories-col-md {
+    display: block;
+  }
+}
+
+@media (width >= 1024px) {
+  [data-stories-root] .stories-col-lg {
+    display: block;
+  }
+}
+
+[data-hover-footer-root] .footer-hover-text {
+  display: none;
+}
+
+@media (width >= 1024px) {
+  [data-hover-footer-root] .footer-hover-text {
+    display: flex;
+  }
+}
+
+[data-site-nav-root] {
+  font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+  letter-spacing: 0.05em;
+}
+
+[data-site-nav-root] a {
+  text-decoration: none;
+}
+
+[data-site-nav-root] .nav,
+[data-site-nav-root] .site-nav-desktop {
+  overflow: visible;
+}
+
+/* Scoped show/hide — never use Tailwind `hidden` (pages.css `.hidden !important`) */
+[data-site-nav-root] .site-nav-desktop {
+  display: none;
+}
+
+[data-site-nav-root] .site-nav-mobile {
+  display: block;
+}
+
+@media (width >= 861px) {
+  [data-site-nav-root] .site-nav-desktop {
+    display: flex;
+    justify-content: center;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  [data-site-nav-root] .site-nav-mobile {
+    display: none;
+  }
+}
+
+[data-price-root] {
+  --background: #fdfcfa;
+  --foreground: #2b2320;
+  --card: #ffffff;
+  --card-foreground: #2b2320;
+  --border: #dcf2f2;
+  --muted: #f7f4f1;
+  --muted-foreground: #8a817b;
+  --primary: #5ecfcf;
+  --ring: #5ecfcf;
+  font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+  letter-spacing: 0.05em;
+  color: var(--foreground);
+}
+
+[data-price-root] a {
+  color: #5ecfcf;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+[data-price-root] a:hover {
+  color: #0485f7;
+}

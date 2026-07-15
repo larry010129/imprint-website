@@ -1,4 +1,10 @@
 {% extends "base.html" %}
+{% block extra_css %}
+{% include "partials/stories-react-css.html" %}
+{% endblock %}
+{% block extra_scripts %}
+{% include "partials/stories-react-js.html" %}
+{% endblock %}
 {% block content %}
 <section class="page-hero" style="min-height:260px;">
   <div class="page-hero-media"></div>
@@ -11,38 +17,7 @@
   </div>
 </section>
 
-<section class="stories" style="background:var(--ink); padding-top:70px;">
-  <div class="container">
-    <p class="stories-note">以下故事為示意文案，取得客戶同意後將替換為真實見證，化名亦可保留隱私。</p>
-    <div class="stories-page-grid">
-
-      <div class="story-card">
-        <div class="quote-mark">&ldquo;</div>
-        <p>牠陪了我十四年。現在牠變成一顆小小的、會發光的存在，還是天天跟著我出門。等待的三個月裡，我常常想像牠正在慢慢長成一顆星星。</p>
-        <p class="who"><b>沈小姐</b>｜寵物鑽石・高雄（示意文案）</p>
-      </div>
-
-      <div class="story-card">
-        <div class="quote-mark">&ldquo;</div>
-        <p>猶豫了快兩年才決定。顧問從來沒有催促過我們，只是每次都把問題答得很清楚。拿到爸爸的鑽石那天，全家人都覺得——他一直都在。</p>
-        <p class="who"><b>林先生</b>｜生命鑽石・台北（示意文案）</p>
-      </div>
-
-      <div class="story-card">
-        <div class="quote-mark">&ldquo;</div>
-        <p>用我們兩個人的頭髮，養出了一顆鑽石，鑲在她的婚戒上。交換戒指的時候，我跟她說：這顆鑽石裡，有你也有我。</p>
-        <p class="who"><b>張先生</b>｜結髮鑽石・新竹（示意文案）</p>
-      </div>
-
-      <div class="story-card">
-        <div class="quote-mark">&ldquo;</div>
-        <p>寶寶滿月剃頭的時候，我把胎髮留了下來，沒想到真的可以做成鑽石。現在做成項鍊，等她長大，這會是我第一個要交給她的禮物。</p>
-        <p class="who"><b>周小姐</b>｜滿月鑽石・台中（示意文案）</p>
-      </div>
-
-    </div>
-  </div>
-</section>
+<div data-stories-root></div>
 
 <section class="capture" id="contact">
   <div class="rule"></div>

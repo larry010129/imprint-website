@@ -32,12 +32,13 @@ function siteRootFor(filePath) {
 function siteActiveFor(relPath) {
   const p = relPath.replace(/\\/g, '/').toLowerCase();
   if (p.includes('shop/calculator')) return 'shop';
-  if (p === 'price.html') return 'price';
+  if (p === 'price.html' || p === 'gold-price.html') return 'shop';
   if (p === 'diamonds.html' || p.startsWith('series/')) return 'diamonds';
   if (p.startsWith('jewelry/')) return 'jewelry';
   if (p === 'what-is-dna-diamond.html' || p === 'faq.html') return 'knowledge';
   if (p === 'about.html' || p === 'stories.html' || p === 'contact.html') return 'about';
-  if (['account.html', 'login.html', 'register.html', 'track-order.html', 'reset-password.html'].includes(p)) {
+  if (p === 'track-order.html') return 'track-order';
+  if (['account.html', 'login.html', 'register.html', 'reset-password.html'].includes(p)) {
     return 'account';
   }
   return '';

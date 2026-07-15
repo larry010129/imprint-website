@@ -1,90 +1,33 @@
-{% extends "base.html" %}
-{% block content %}
-<section class="page-hero">
-  <div class="page-hero-media"></div>
-  <div class="page-hero-scrim"></div>
-  <div class="container page-hero-inner">
-    <p class="breadcrumb"><a href="/">首頁</a><span class="sep">/</span><span class="current">價格試算</span></p>
-    <p class="eyebrow">PRICE GUIDE</p>
-    <h1>DNA 鑽石價格試算</h1>
-    <p>圓形明亮式切工／白鑽基準價，0.10 克拉 NT$24,000 起。依您的需求選擇：規劃 DNA 鑽石規格、選戒台訂製，或查閱下方完整價格表。</p>
-  </div>
-</section>
-
-<section class="price-detail" style="padding-top:70px;">
-  <div class="container">
-
-    <div class="diamond-hub-cta reveal price-page-cta">
-      <div>
-        <h3>戒台試算用即時金價</h3>
-        <p>台銀黃金條塊本行賣出牌價與 9K / 14K / 18K 成色金價換算，供戒台訂製試算參考。</p>
-      </div>
-      <div style="display:flex; gap:12px; flex-wrap:wrap;">
-        <a class="btn btn-mint" href="/gold-price.html">台銀金價</a>
-        <a class="btn btn-ghost-light" href="/shop/calculator/">品項訂製試算</a>
-      </div>
-    </div>
-
-    <div class="diamond-hub-cta reveal price-page-cta">
-      <div>
-        <h3>已有鑽石，想選戒台訂製？</h3>
-        <p>戒指、項墜、耳飾、手鍊或鍊條——線上選款式、配置金屬與戒圍，即時試算戒台參考價並下單。</p>
-      </div>
-      <div style="display:flex; gap:12px; flex-wrap:wrap;">
-        <a class="btn btn-mint" href="/shop/calculator/">品項訂製試算</a>
-        <a class="btn btn-ghost-light" href="/jewelry/">瀏覽時尚珠寶</a>
-      </div>
-    </div>
-
-    <div class="diamond-hub-cta reveal price-page-cta">
-      <div>
-        <h3>還在規劃 DNA 鑽石規格？</h3>
-        <p>選擇訂製系列，在各系列頁線上試算克拉、顏色、切工與顆數；不確定從哪開始，也可先與顧問聊聊。</p>
-      </div>
-      <div style="display:flex; gap:12px; flex-wrap:wrap;">
-        <a class="btn btn-mint" href="/diamonds.html">五大訂製系列</a>
-        <a class="btn btn-ghost-light" href="https://lin.ee/ktVBtmx" target="_blank" rel="noopener">預約諮詢</a>
-      </div>
-    </div>
-
-    <!-- @component partials/view-price-ref.html -->
-<section class="price-reference" id="price-reference" aria-label="DNA 鑽石價格參考">
-  <div class="price-reference-inner">
-    <div class="price-reference-head">
-      <p class="eyebrow">PRICE REFERENCE</p>
-      <h2 class="price-reference-title">DNA 鑽石價格參考</h2>
-      <p class="price-reference-lead">圓形明亮式切工／白鑽基準價。實際規格請與顧問確認，或至各系列頁線上試算。</p>
-    </div>
-
-    <div id="price-ref-snapshot" class="price-ref-snapshot" aria-live="polite"></div>
-
-    <details class="price-ref-panel" id="price-ref-details-single">
-      <summary>單顆鑽石・完整克拉價格表</summary>
-      <div class="price-ref-tabs" id="price-ref-single-tabs"></div>
-    </details>
-
-    <details class="price-ref-panel" id="price-ref-details-multi">
-      <summary>多顆珍藏方案</summary>
-      <div class="price-ref-tabs" id="price-ref-multi-tabs"></div>
-      <p class="price-ref-note">同一份樣本可培育 2～4 顆鑽石，適合結髮或全家福系列。顆數越多，平均單顆越划算。</p>
-    </details>
-
-    <details class="price-ref-panel price-ref-panel--rules" id="price-ref-details-rules">
-      <summary>切工與報價規則</summary>
-      <ul class="price-ref-rules" id="price-ref-rules-list"></ul>
-      <p class="price-ref-faq-link"><a href="/faq.html">更多常見問題 →</a></p>
-    </details>
-
-    <div class="price-reference-foot">
-      <a class="btn btn-dark" href="https://lin.ee/ktVBtmx" target="_blank" rel="noopener">索取專屬報價</a>
-    </div>
-  </div>
-</section>
-
-  </div>
-</section>
-{% endblock %}
-{% block extra_scripts %}
-<script src="/static/js/pricing-config.js"></script>
-<script src="/static/js/price-reference.js"></script>
-{% endblock %}
+{% extends "base.html" %}
+{% block extra_css %}
+{% include "partials/price-react-css.html" %}
+{% endblock %}
+{% block content %}
+<section class="page-hero">
+  <div class="page-hero-media"></div>
+  <div class="page-hero-scrim"></div>
+  <div class="container page-hero-inner">
+    <p class="breadcrumb"><a href="/">首頁</a><span class="sep">/</span><span class="current">DNA 鑽石價格</span></p>
+    <p class="eyebrow">PRICE GUIDE</p>
+    <h1>DNA 鑽石價格表</h1>
+    <p>圓形明亮式切工／白鑽基準價，0.10 克拉 NT$24,000 起。下方為完整價格參考表，單顆與多顆方案一覽。</p>
+  </div>
+</section>
+
+<section class="price-detail" style="padding-top:70px;">
+  <div class="container">
+    <div data-price-root></div>
+
+    <div class="price-path-links reveal">
+      <a class="price-path-primary" href="/diamonds.html">還在規劃 DNA 鑽石規格？</a>
+      <div class="price-path-actions">
+        <a class="btn btn-mint" href="/shop/calculator/">戒台試算</a>
+        <a class="price-path-text" href="/gold-price.html">台銀金價</a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+{% block extra_scripts %}
+{% include "partials/price-react-js.html" %}
+{% endblock %}

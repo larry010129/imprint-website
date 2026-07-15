@@ -49,7 +49,7 @@ export const MVC_PAGES = [
   { file: 'login.html', title: '會員登入', mvc: 'login', navActive: 'account', view: 'view-login', scripts: mvcScripts('login') },
   { file: 'register.html', title: '加入會員', mvc: 'register', navActive: 'account', view: 'view-register', scripts: mvcScripts('register') },
   { file: 'account.html', title: '會員專區', mvc: 'account', navActive: 'account', view: 'view-account', scripts: mvcScripts('account', ['js/order-status.js']) },
-  { file: 'track-order.html', title: '查詢訂製進度', mvc: 'track-order', navActive: 'account', view: 'view-track-order', scripts: mvcScripts('track-order', ['js/order-status.js']) },
+  { file: 'track-order.html', title: '查詢訂製進度', mvc: 'track-order', navActive: 'track-order', view: 'view-track-order', scripts: mvcScripts('track-order', ['js/order-status.js']) },
   { file: 'reset-password.html', title: '重設密碼', mvc: 'reset-password', navActive: 'account', view: 'view-reset-password', scripts: mvcScripts('reset-password') },
   { file: '404.html', title: '找不到頁面', mvc: 'error-404', navActive: 'about', view: 'view-404', scripts: [] },
 ];

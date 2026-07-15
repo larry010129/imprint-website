@@ -23,10 +23,12 @@
 {% endblock %}
 
 <link rel="stylesheet" href="/static/css/base.css?v=3.7">
-<link rel="stylesheet" href="/static/css/nav.css?v=3.7">
+<link rel="stylesheet" href="/static/css/nav.css?v=3.8">
 <link rel="stylesheet" href="/static/css/home.css?v=3.7">
 <link rel="stylesheet" href="/static/css/pages.css?v=3.7">
 <link rel="stylesheet" href="/static/css/responsive.css?v=3.7">
+{% include "partials/nav-react-css.html" %}
+{% include "partials/footer-react-css.html" %}
 {% block extra_css %}{% endblock %}
 
 {% if breadcrumbs %}
@@ -39,15 +41,17 @@
 <body class="site-layout{% if extra_body_class %} {{ extra_body_class }}{% endif %}"{% if mvc_page %} data-mvc="{{ mvc_page }}"{% endif %}>
 {% include "partials/topbar.html" %}
 {% include "partials/nav.html" %}
+{% include "partials/nav-react-js.html" %}
 
 <main{% block main_class %}{% endblock %}>
 {% block content %}{% endblock %}
 </main>
 
 {% include "partials/footer.html" %}
-
-<script src="/static/js/main.js?v=2.1"></script>
 <script src="/static/js/nav-dropdown.js?v=1"></script>
 {% block extra_scripts %}{% endblock %}
+{% include "partials/footer-react-js.html" %}
+<script src="js/site-layout.js?v=1.2"></script>
+<script src="js/main.js?v=2.1"></script>
 </body>
 </html>
