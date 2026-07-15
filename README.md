@@ -28,6 +28,7 @@ Open `http://127.0.0.1:8080/`. API is same-origin (`/api/...`); leave `window.IM
 1. Connect repo → Blueprint from `render.yaml`
 2. Set env vars: `DATABASE_URL`, `JWT_SECRET`, etc. (see `.env.example`)
 3. Run `backend/schema.sql` once on the database
+4. **Start Command** must be `bash scripts/render-start.sh` (not `render.yaml`). Dashboard → Settings, or Blueprint → Sync.
 
 ## Legacy folders (not deployed)
 

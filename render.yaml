@@ -7,7 +7,7 @@ services:
     runtime: python
     plan: free
     buildCommand: bash scripts/render-build.sh
-    startCommand: gunicorn main:app -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT
+    startCommand: bash scripts/render-start.sh
     healthCheckPath: /gold-price.html
     envVars:
       - key: PYTHON_VERSION
