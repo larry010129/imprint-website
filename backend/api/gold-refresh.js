@@ -1,9 +1,9 @@
 /* POST: fetch latest BOT 黃金條塊牌價 and update gold_price_cache.
  * Uses cheerio parser (same rules as gold-price-scraper). May fail when BOT
  * serves a bot-challenge page — in that case the cache is left unchanged. */
-const { neon } = require('@neondatabase/serverless');
 const { applyCors } = require('../lib/cors');
 const { findGoldBarPrices, isBotChallenge } = require('../lib/parseBotGold');
+const { sql } = require('../lib/db');
 const { buildGoldQuotePayload, BOT_SOURCE_URL } = require('../lib/goldQuotePayload');
 
 const BOT_RECENT_URL = 'https://rate.bot.com.tw/gold/quote/recent';
@@ -47,8 +47,6 @@ async function scrapeBotGold() {
 module.exports = async function handler(req, res) {
   if (applyCors(req, res)) return;
   if (req.method !== 'POST') return res.status(405).json({ error: 'method not allowed' });
-
-  const sql = neon(process.env.DATABASE_URL);
 
   try {
     const { perGram, stamp, sourceUrl } = await scrapeBotGold();

@@ -1,4 +1,4 @@
-/* Legacy scraper (optional): BOT 黃金條塊賣出價 → Neon gold_price_cache.
+/* Legacy scraper (optional): BOT 黃金條塊賣出價 → Supabase gold_price_cache.
  * Production uses scripts/fetch_gold_quote.py + GitHub Actions instead.
  *
  * BOT's page needs a headless browser (bot challenge). puppeteer-core +
@@ -9,7 +9,7 @@
  */
 const chromium = require('@sparticuz/chromium');
 const puppeteer = require('puppeteer-core');
-const { neon } = require('@neondatabase/serverless');
+const { sql } = require('../lib/db');
 const { findGoldBarPrices, isBotChallenge } = require('../lib/parseBotGold');
 
 const BOT_LIVE_URL = 'https://rate.bot.com.tw/gold?Lang=zh-TW';
@@ -78,7 +78,7 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  const sql = neon(process.env.DATABASE_URL);
+  const sql = require('../lib/db').sql;
 
   try {
     const { perGram, stamp, sourceUrl } = await downloadBotHtml();
@@ -97,7 +97,7 @@ module.exports = async function handler(req, res) {
     res.status(200).json({ ok: true, xauPerGram: perGram, botPostedAt: stamp });
   } catch (err) {
     // Deliberately do NOT overwrite gold_price_cache on failure — keep the
-    // last known-good value in Neon, same defensive behavior as the
+    // last known-good value in Postgres, same defensive behavior as the
     // Python version (never wipe a good cache just because one fetch failed).
     console.error('gold scrape failed:', err);
     res.status(502).json({ ok: false, error: String(err && err.message || err) });

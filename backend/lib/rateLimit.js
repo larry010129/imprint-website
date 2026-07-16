@@ -1,7 +1,7 @@
 /* 銘印鑽石｜登入/註冊失敗鎖定 — JS 版本，邏輯移植自 imprint-calculator 的
  * auth.py。原本用 process 記憶體內的 dict 存失敗次數，在 serverless
  * function 上每次呼叫都是新的 process，記憶體不會保留，所以改存在
- * Neon 的 login_lockouts 表(見 schema.sql)。
+ * Supabase login_lockouts 表(見 schema.sql)。
  */
 
 const LOGIN_MAX_ATTEMPTS = 5;

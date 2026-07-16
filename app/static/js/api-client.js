@@ -1,6 +1,6 @@
 /* 銘印鑽石｜後端 API 連線設定
    取代 supabase-client.js。正式環境為同站 FastAPI（Render 或本機 uvicorn），
-   路徑前綴 /api；資料庫為 Postgres（Neon 或本機）。
+   路徑前綴 /api；資料庫為 Postgres（Supabase 或本機）。
 
    所有方法回傳 Promise，resolve 成 { ok, error, ...資料 } 這種形狀(呼叫端看
    result.error 有沒有值來判斷成功/失敗)，只有真的連不上網路才會 reject。

@@ -1,6 +1,6 @@
 # gold-price-scraper (legacy)
 
-> **Not deployed.** Scheduled gold quotes use **`scripts/fetch_gold_quote.py`** and GitHub Actions (`.github/workflows/update-gold-quote.yml`). This folder is an older Puppeteer + Neon experiment.
+> **Not deployed.** Scheduled gold quotes use **`scripts/fetch_gold_quote.py`** and GitHub Actions. This folder is an older Puppeteer + Supabase experiment.
 
 JS port of imprint-calculator's BOT gold-price scraper. `rate.bot.com.tw` needs a real browser (bot challenge); plain `fetch()` fails.
 

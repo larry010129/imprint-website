@@ -188,7 +188,7 @@
     return base;
   }
 
-  /* 讀取 /gold-price-scraper 寫進 Neon gold_price_cache 的即時金價(僅供顯示參考，
+  /* 讀取 gold_price_cache 的即時金價(僅供顯示參考，
      目前站上任何試算都不吃這個值)。回傳 { xauPerGram, xptPerGram, xagPerGram,
      botPostedAt, fetchedAt } 或 null(尚未部署爬蟲 / 查無資料 / 連線失敗)。 */
   function getLiveGoldPrice() {

@@ -1,15 +1,8 @@
 #!/usr/bin/env node
-/* Apply backend/schema.sql to Neon (one statement at a time). */
+/* Apply backend/schema.sql to Supabase Postgres (one statement at a time). */
 const fs = require('fs');
 const path = require('path');
-const { neon } = require('@neondatabase/serverless');
-
-if (!process.env.DATABASE_URL) {
-  console.error('DATABASE_URL is not set');
-  process.exit(1);
-}
-
-const sql = neon(process.env.DATABASE_URL);
+const { sql } = require('../lib/db');
 
 function parseStatements(fileText) {
   const withoutComments = fileText
@@ -29,13 +22,14 @@ async function main() {
   for (let i = 0; i < statements.length; i++) {
     const stmt = statements[i];
     try {
-      await sql(stmt);
+      await sql.unsafe(stmt);
     } catch (err) {
       console.error(`Failed on statement ${i + 1}:`, stmt.slice(0, 80) + '…');
       throw err;
     }
   }
   console.log('Schema applied.');
+  await sql.end({ timeout: 5 });
 }
 
 main().catch((err) => {

@@ -2,11 +2,11 @@
   "name": "imprint-diamond-gold-scraper",
   "version": "1.0.0",
   "private": true,
-  "description": "Scrapes Bank of Taiwan gold bar sell price via headless Chrome and writes it to Neon Postgres, for the static Diamond v3 site (via /backend) to read. JS/Node port of imprint-calculator's bot_metal_feed.py.",
+  "description": "Scrapes Bank of Taiwan gold bar sell price via headless Chrome and writes it to Supabase Postgres.",
   "dependencies": {
     "@sparticuz/chromium": "^123.0.1",
     "puppeteer-core": "^22.15.0",
     "cheerio": "^1.0.0",
-    "@neondatabase/serverless": "^0.9.4"
+    "postgres": "^3.4.7"
   }
 }

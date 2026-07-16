@@ -2,13 +2,13 @@
 
 > **Not deployed.** Production uses **`app/`** (FastAPI on Render). This folder is the original Node serverless API kept for reference while porting finished.
 
-Auth + data API for the Diamond v3 site, on Neon Postgres. Started as a Supabase replacement, then grew to port the imprint-calculator feature set in JavaScript.
+Auth + data API for the Diamond v3 site, on Supabase Postgres.
 
 Most routes now live under `app/routers/` (`auth_router`, `admin_router`, `api_router`, `shop_router`). Prefer extending the Python app, not this folder.
 
 ## If you still run it locally
 
-1. Create a Neon project, run `schema.sql`.
+1. Create a Supabase project, run `schema.sql` (see `docs/SUPABASE.md`).
 2. `cd backend && npm install`
 3. Set env from `.env.example` (`DATABASE_URL`, `JWT_SECRET`, …)
 4. Use a Node HTTP adapter of your choice (this tree has no `vercel.json` and is **not** intended for Vercel).

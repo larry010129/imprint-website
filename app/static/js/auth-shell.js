@@ -83,8 +83,8 @@
     toggle.addEventListener('click', function () {
       var isDark = container.classList.toggle('dark');
       container.classList.toggle('light', !isDark);
-      if (moonIcon) moonIcon.hidden = isDark;
-      if (sunIcon) sunIcon.hidden = !isDark;
+      if (moonIcon) moonIcon.toggleAttribute('hidden', isDark);
+      if (sunIcon) sunIcon.toggleAttribute('hidden', !isDark);
       toggle.setAttribute('aria-label', isDark ? '切換淺色模式' : '切換深色模式');
       if (particles) particles.refreshColors();
     });
@@ -100,8 +100,8 @@
       btn.addEventListener('click', function () {
         var showing = input.type === 'text';
         input.type = showing ? 'password' : 'text';
-        if (eyeIcon) eyeIcon.hidden = !showing;
-        if (eyeOffIcon) eyeOffIcon.hidden = showing;
+        if (eyeIcon) eyeIcon.toggleAttribute('hidden', !showing);
+        if (eyeOffIcon) eyeOffIcon.toggleAttribute('hidden', showing);
         btn.setAttribute('aria-label', showing ? '顯示密碼' : '隱藏密碼');
       });
     });
@@ -118,6 +118,27 @@
         custom.required = isCustom;
         if (isCustom) custom.focus();
       });
+    });
+  }
+
+  function initPhoneNumeric(root) {
+    root.querySelectorAll('input[type="tel"]').forEach(function (input) {
+      input.addEventListener('input', function () {
+        var digitsOnly = input.value.replace(/\D/g, '');
+        if (digitsOnly !== input.value) input.value = digitsOnly;
+      });
+    });
+  }
+
+  function initPartnerToggle(root) {
+    var toggle = root.querySelector('[data-auth-partner-toggle]');
+    var field = root.querySelector('[data-auth-invite-code-field]');
+    if (!toggle || !field) return;
+    var input = field.querySelector('input');
+    toggle.addEventListener('change', function () {
+      field.hidden = !toggle.checked;
+      if (input) input.required = toggle.checked;
+      if (toggle.checked && input) input.focus();
     });
   }
 
@@ -149,6 +170,8 @@
     initTheme(container, particles);
     initPasswordToggles(container);
     initEmailDomainCustom(container);
+    initPhoneNumeric(container);
+    initPartnerToggle(container);
   }
 
   global.ImprintAuthShell = { composeEmail: composeEmail };

@@ -1,12 +1,12 @@
 #!/usr/bin/env node
-/* Seed published legacy catalog rows into Neon (13 style slots + 3 chains).
+/* Seed published legacy catalog rows into Supabase (13 style slots + 3 chains).
  *
  * Usage (from repo root or backend/):
  *   set DATABASE_URL=postgresql://...   (Windows)
  *   export DATABASE_URL=postgresql://... (macOS/Linux)
  *   node backend/scripts/seed-catalog.js
  *
- * Prerequisite: run backend/schema.sql on the Neon database first.
+ * Prerequisite: run backend/schema.sql on the database first.
  */
 const { sql } = require('../lib/db');
 const { buildSeedRows } = require('../lib/catalog-seed-data');
@@ -58,7 +58,7 @@ async function seedCatalog() {
 }
 
 async function main() {
-  console.log('Seeding legacy catalog into Neon…');
+  console.log('Seeding legacy catalog into Supabase…');
   const n = await seedCatalog();
   console.log(n ? `Done — ${n} product(s) created.` : 'Nothing to do.');
 }

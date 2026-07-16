@@ -23,13 +23,14 @@
 
         var fullName = e.form.fullName.value.trim();
         var phone = e.form.phone.value.trim();
-        var emailField = e.form.querySelector('.form-field-email');
-        var email = global.ImprintAuthShell.composeEmail(emailField);
+        var email = e.form.email.value.trim();
         var password = e.form.password.value;
+        var confirmPassword = e.form.passwordConfirm.value;
         var storeName = (e.form.storeName && e.form.storeName.value.trim()) || '';
+        var isPartner = !!(e.form.querySelector('[data-auth-partner-toggle]') || {}).checked;
         var inviteCode = (e.form.inviteCode && e.form.inviteCode.value.trim()) || '';
 
-        if (!fullName || !phone || !email || !password) {
+        if (!fullName || !phone || !email || !password || !confirmPassword) {
           View.setMsg('請完整填寫所有欄位。', 'err');
           return;
         }
@@ -39,6 +40,14 @@
         }
         if (password.length < 6) {
           View.setMsg('密碼至少需要 6 碼。', 'err');
+          return;
+        }
+        if (password !== confirmPassword) {
+          View.setMsg('兩次輸入的密碼不一致。', 'err');
+          return;
+        }
+        if (isPartner && !inviteCode) {
+          View.setMsg('請輸入邀請碼。', 'err');
           return;
         }
 

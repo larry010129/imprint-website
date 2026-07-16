@@ -8,7 +8,7 @@ Static site + **FastAPI** API in one repo. Production deploys to **Render** (`re
 |-------|----------|--------|
 | Web + API | `app/`, `main.py` | FastAPI serves pages, `/api/*`, `/static/*` |
 | Admin | `admin.html` | Product/orders/accounts UI |
-| Database | Postgres (Neon or local) | `backend/schema.sql` |
+| Database | Postgres (Supabase or local) | `backend/schema.sql`, `docs/SUPABASE.md` |
 | Gold quote fallback | `scripts/fetch_gold_quote.py` | GitHub Actions cron (`.github/workflows/update-gold-quote.yml`) |
 
 ## Local dev

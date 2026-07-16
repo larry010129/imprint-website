@@ -41,9 +41,9 @@
 </div>
 {% endmacro %}
 
-{% macro auth_password_field(id, label='密碼', autocomplete='current-password', minlength=None) %}
+{% macro auth_password_field(id, label='密碼', autocomplete='current-password', minlength=None, name='password') %}
 <div class="form-field">
-  <input type="password" id="{{ id }}" name="password" placeholder=" " autocomplete="{{ autocomplete }}"{% if minlength %} minlength="{{ minlength }}"{% endif %} required>
+  <input type="password" id="{{ id }}" name="{{ name }}" placeholder=" " autocomplete="{{ autocomplete }}"{% if minlength %} minlength="{{ minlength }}"{% endif %} required>
   <label for="{{ id }}">{{ label }}</label>
   <button type="button" class="toggle-password" data-auth-toggle-password aria-label="顯示密碼">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-auth-eye-icon><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>

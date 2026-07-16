@@ -356,12 +356,16 @@
             '<div class="ap-carousel-track">' +
               slides +
               '<div class="ap-carousel-item ap-carousel-item--upload">' +
-                '<div class="ap-carousel-card ap-carousel-card--upload">' +
+                '<div class="ap-carousel-card ap-carousel-card--upload" data-dropzone>' +
                   '<label class="ap-image-upload-btn">' +
-                    '<span class="ap-upload-plus">+</span>' +
-                    '<span>上傳圖片</span>' +
+                    '<span class="ap-upload-icon">' +
+                      '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>' +
+                    '</span>' +
+                    '<span class="ap-upload-title">上傳圖片</span>' +
+                    '<span class="ap-upload-hint">或點擊瀏覽<br>PNG / JPG / WEBP，5MB 內</span>' +
                     '<input type="file" class="ap-image-input" accept="image/png,image/jpeg,image/webp" multiple hidden>' +
                   '</label>' +
+                  '<div class="ap-upload-progress" hidden><div class="ap-upload-progress-bar"></div></div>' +
                   '<span class="ap-uploading" hidden>上傳中…</span>' +
                 '</div>' +
               '</div>' +
@@ -455,6 +459,77 @@
     });
   }
 
+  function uploadFilesToSlot(files, slot, form) {
+    var track = slot.querySelector('.ap-carousel-track');
+    var uploadItem = slot.querySelector('.ap-carousel-item--upload');
+    var uploading = slot.querySelector('.ap-uploading');
+    var progressWrap = slot.querySelector('.ap-upload-progress');
+    var progressBar = slot.querySelector('.ap-upload-progress-bar');
+    if (!files.length || !track || !uploadItem) return;
+
+    var color = slotColorKey(slot) || 'white';
+    var progressByIndex = files.map(function () { return 0; });
+
+    function updateProgress() {
+      if (!progressBar) return;
+      var avg = progressByIndex.reduce(function (a, b) { return a + b; }, 0) / progressByIndex.length;
+      progressBar.style.width = avg + '%';
+    }
+
+    function uploadOne(file, index) {
+      return new Promise(function (resolve) {
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', '/api/admin/product-upload');
+        xhr.withCredentials = true;
+        xhr.upload.addEventListener('progress', function (ev) {
+          if (ev.lengthComputable) {
+            progressByIndex[index] = (ev.loaded / ev.total) * 100;
+            updateProgress();
+          }
+        });
+        xhr.onload = function () {
+          var res = {};
+          try { res = JSON.parse(xhr.responseText); } catch (e) { res = { error: 'parse' }; }
+          progressByIndex[index] = 100;
+          updateProgress();
+          resolve(res);
+        };
+        xhr.onerror = function () { resolve({ error: 'network' }); };
+        var fd = new FormData();
+        fd.append('file', file);
+        xhr.send(fd);
+      });
+    }
+
+    if (uploading) uploading.hidden = true;
+    if (progressWrap) progressWrap.hidden = false;
+    updateProgress();
+
+    Promise.all(files.map(uploadOne)).then(function (results) {
+      if (progressWrap) progressWrap.hidden = true;
+      if (progressBar) progressBar.style.width = '0%';
+      var hadError = false;
+      results.forEach(function (res) {
+        if (res.error || !res.url) { hadError = true; return; }
+        var wrap = document.createElement('div');
+        wrap.innerHTML = imageSlideHtml(res.url, color);
+        var item = wrap.firstElementChild;
+        item.dataset.url = res.url;
+        track.insertBefore(item, uploadItem);
+        item.querySelector('.ap-remove-image')?.addEventListener('click', function () {
+          item.remove();
+          var carousel = slot.querySelector('[data-carousel]');
+          if (carousel && carousel._refreshCarousel) carousel._refreshCarousel();
+        });
+      });
+      refreshAllCarousels(form);
+      if (hadError && uploading) {
+        uploading.hidden = false;
+        uploading.textContent = '上傳失敗';
+      }
+    });
+  }
+
   function bindImageSlot(slot, form) {
     if (slot.dataset.bound) return;
     slot.dataset.bound = '1';
@@ -499,45 +574,31 @@
       });
 
       var input = slot.querySelector('.ap-image-input');
-      var uploading = slot.querySelector('.ap-uploading');
-      var track = slot.querySelector('.ap-carousel-track');
-      var uploadItem = slot.querySelector('.ap-carousel-item--upload');
+      var dropzone = slot.querySelector('[data-dropzone]');
 
       input?.addEventListener('change', function () {
         var files = Array.from(input.files || []);
-        if (!files.length || !track || !uploadItem) return;
-        if (uploading) uploading.hidden = false;
-        var color = slotColorKey(slot) || 'white';
-        var uploads = files.map(function (file) {
-          var fd = new FormData();
-          fd.append('file', file);
-          return fetch('/api/admin/product-upload', { method: 'POST', credentials: 'include', body: fd })
-            .then(function (r) { return r.json(); });
-        });
-        Promise.all(uploads).then(function (results) {
-          if (uploading) uploading.hidden = true;
-          results.forEach(function (res) {
-            if (res.error || !res.url) return;
-            var wrap = document.createElement('div');
-            wrap.innerHTML = imageSlideHtml(res.url, color);
-            var item = wrap.firstElementChild;
-            item.dataset.url = res.url;
-            track.insertBefore(item, uploadItem);
-            item.querySelector('.ap-remove-image')?.addEventListener('click', function () {
-              item.remove();
-              var carousel = slot.querySelector('[data-carousel]');
-              if (carousel && carousel._refreshCarousel) carousel._refreshCarousel();
-            });
-          });
-          input.value = '';
-          refreshAllCarousels(form);
-        }).catch(function () {
-          if (uploading) {
-            uploading.hidden = false;
-            uploading.textContent = '上傳失敗';
-          }
-        });
+        uploadFilesToSlot(files, slot, form);
+        input.value = '';
       });
+
+      if (dropzone) {
+        dropzone.addEventListener('dragover', function (e) {
+          e.preventDefault();
+          dropzone.classList.add('is-dragover');
+        });
+        dropzone.addEventListener('dragleave', function () {
+          dropzone.classList.remove('is-dragover');
+        });
+        dropzone.addEventListener('drop', function (e) {
+          e.preventDefault();
+          dropzone.classList.remove('is-dragover');
+          var files = Array.from((e.dataTransfer && e.dataTransfer.files) || []).filter(function (f) {
+            return /^image\//.test(f.type);
+          });
+          uploadFilesToSlot(files, slot, form);
+        });
+      }
   }
 
   function bindImageSlots(form) {

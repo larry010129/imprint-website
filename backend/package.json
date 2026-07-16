@@ -2,13 +2,13 @@
   "name": "imprint-diamond-backend",
   "version": "1.0.0",
   "private": true,
-  "description": "Auth + data API for the static Diamond v3 site, backed by Neon Postgres. Replaces Supabase (Postgres + Auth + PostgREST + RLS).",
+  "description": "Auth + data API for the static Diamond v3 site, backed by Supabase Postgres.",
   "scripts": {
     "schema": "node scripts/apply-schema.js",
     "seed:catalog": "node scripts/seed-catalog.js"
   },
   "dependencies": {
-    "@neondatabase/serverless": "^0.9.4",
+    "postgres": "^3.4.7",
     "bcryptjs": "^2.4.3",
     "cheerio": "^1.0.0",
     "jsonwebtoken": "^9.0.2"

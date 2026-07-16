@@ -1,33 +1,66 @@
-{% extends "base.html" %}
-{% block extra_css %}
-{% include "partials/price-react-css.html" %}
-{% endblock %}
-{% block content %}
-<section class="page-hero">
-  <div class="page-hero-media"></div>
-  <div class="page-hero-scrim"></div>
-  <div class="container page-hero-inner">
-    <p class="breadcrumb"><a href="/">首頁</a><span class="sep">/</span><span class="current">DNA 鑽石價格</span></p>
-    <p class="eyebrow">PRICE GUIDE</p>
-    <h1>DNA 鑽石價格表</h1>
-    <p>圓形明亮式切工／白鑽基準價，0.10 克拉 NT$24,000 起。下方為完整價格參考表，單顆與多顆方案一覽。</p>
-  </div>
-</section>
-
-<section class="price-detail" style="padding-top:70px;">
-  <div class="container">
-    <div data-price-root></div>
-
-    <div class="price-path-links reveal">
-      <a class="price-path-primary" href="/diamonds.html">還在規劃 DNA 鑽石規格？</a>
-      <div class="price-path-actions">
-        <a class="btn btn-mint" href="/shop/calculator/">戒台試算</a>
-        <a class="price-path-text" href="/gold-price.html">台銀金價</a>
-      </div>
-    </div>
-  </div>
-</section>
-{% endblock %}
-{% block extra_scripts %}
-{% include "partials/price-react-js.html" %}
-{% endblock %}
+{% extends "base.html" %}
+
+{% block extra_css %}
+
+{% include "partials/price-react-css.html" %}
+
+{% endblock %}
+
+{% block content %}
+
+<section class="page-hero">
+
+  <div class="page-hero-media"></div>
+
+  <div class="page-hero-scrim"></div>
+
+  <div class="container page-hero-inner">
+
+    <p class="breadcrumb"><a href="/">首頁</a><span class="sep">/</span><span class="current">DNA 鑽石價格</span></p>
+
+    <p class="eyebrow">PRICE GUIDE</p>
+
+    <h1>DNA 鑽石價格表</h1>
+
+    <p>圓形明亮式切工／白鑽基準價，0.10 克拉 NT$24,000 起。下方為完整價格參考表，單顆與多顆方案一覽。</p>
+
+  </div>
+
+</section>
+
+
+
+<section class="price-detail" style="padding-top:70px;">
+
+  <div class="container">
+
+    <div data-price-root></div>
+
+
+
+    <div class="price-path-links reveal">
+
+      <a class="price-path-primary" href="/diamonds.html">還在規劃 DNA 鑽石規格？</a>
+
+      <div class="price-path-actions">
+
+        <a class="btn btn-mint" href="/shop/calculator/">戒台試算</a>
+
+        <a class="price-path-text" href="/gold-price.html">台銀金價</a>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</section>
+
+{% endblock %}
+
+{% block extra_scripts %}
+
+{% include "partials/price-react-js.html" %}
+
+{% endblock %}
+
