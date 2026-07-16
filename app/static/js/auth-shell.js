@@ -107,20 +107,6 @@
     });
   }
 
-  function initEmailDomainCustom(root) {
-    root.querySelectorAll('[data-auth-email-field]').forEach(function (field) {
-      var select = field.querySelector('select');
-      var custom = field.querySelector('.email-domain-custom');
-      if (!select || !custom) return;
-      select.addEventListener('change', function () {
-        var isCustom = select.value === '__custom__';
-        custom.hidden = !isCustom;
-        custom.required = isCustom;
-        if (isCustom) custom.focus();
-      });
-    });
-  }
-
   function initPhoneNumeric(root) {
     root.querySelectorAll('input[type="tel"]').forEach(function (input) {
       input.addEventListener('input', function () {
@@ -142,19 +128,6 @@
     });
   }
 
-  function composeEmail(emailField) {
-    if (!emailField) return '';
-    var local = emailField.querySelector('input[name="emailLocal"]');
-    var domainSelect = emailField.querySelector('select');
-    var domainCustom = emailField.querySelector('.email-domain-custom');
-    var localValue = (local && local.value || '').trim().split('@')[0];
-    var domainValue = domainSelect && domainSelect.value === '__custom__'
-      ? (domainCustom && domainCustom.value || '').trim()
-      : (domainSelect && domainSelect.value || '').trim();
-    if (!localValue || !domainValue) return '';
-    return localValue + '@' + domainValue;
-  }
-
   function init() {
     var container = document.querySelector('[data-auth-container]');
     if (!container) return;
@@ -169,12 +142,9 @@
 
     initTheme(container, particles);
     initPasswordToggles(container);
-    initEmailDomainCustom(container);
     initPhoneNumeric(container);
     initPartnerToggle(container);
   }
-
-  global.ImprintAuthShell = { composeEmail: composeEmail };
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);

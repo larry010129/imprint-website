@@ -3,14 +3,17 @@
 <link rel="stylesheet" href="/static/css/auth.css?v=2">
 {% endblock %}
 {% block content %}
-{% from "partials/auth_macros.html" import auth_shell, auth_email_field, auth_password_field %}
+{% from "partials/auth_macros.html" import auth_shell, auth_password_field %}
 {% call auth_shell() %}
   <div class="login-header">
     <h1>歡迎回來</h1>
     <p>登入後可查詢您的訂製進度，並保留聯絡資料。</p>
   </div>
   <form class="login-form" id="loginForm" novalidate>
-    {{ auth_email_field('login-email') }}
+    <div class="form-field">
+      <input type="email" id="loginEmail" name="email" placeholder=" " autocomplete="username" required>
+      <label for="loginEmail">電子郵件</label>
+    </div>
     {{ auth_password_field('loginPassword', label='密碼') }}
     <div class="form-options">
       <label class="remember-me">

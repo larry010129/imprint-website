@@ -42,10 +42,18 @@
   min-height: 100dvh;
   display: flex;
   align-items: center;
+  align-items: safe center;
   justify-content: center;
   padding: 48px 20px 64px;
   background: linear-gradient(160deg, var(--login-paper) 0%, #f7f4f1 55%, #eef9f9 100%);
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.login-container *,
+.login-container *::before,
+.login-container *::after {
+  box-sizing: border-box;
 }
 
 .login-container.dark {
@@ -261,108 +269,6 @@
 }
 
 .login-container .form-field.invalid input {
-  border-color: #e07070;
-}
-
-.login-container .form-field-email > .email-field-label {
-  position: static;
-  display: block;
-  transform: none;
-  font-size: 13px;
-  color: var(--login-ink-soft);
-  margin-bottom: 8px;
-  pointer-events: auto;
-}
-
-.login-container .email-split {
-  display: flex;
-  align-items: stretch;
-  border: 1.5px solid var(--login-mint-border);
-  border-radius: 10px;
-  background: var(--login-paper);
-  overflow: hidden;
-  transition: border-color 0.25s, box-shadow 0.25s, background 0.25s;
-}
-
-.login-container .email-split:focus-within {
-  border-color: var(--login-mint-deep);
-  box-shadow: 0 0 0 3px rgba(94, 207, 207, 0.2);
-  background: #fff;
-}
-
-.login-container.dark .email-split:focus-within {
-  background: #3d3532;
-}
-
-.login-container .email-split input[type="text"] {
-  flex: 1;
-  min-width: 0;
-  padding: 14px 12px;
-  border: none;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.login-container .email-split input[type="text"]:focus {
-  box-shadow: none;
-  background: transparent;
-}
-
-.login-container .email-at {
-  display: flex;
-  align-items: center;
-  padding: 0 2px;
-  font-size: 15px;
-  color: var(--login-ink-faint);
-  user-select: none;
-}
-
-.login-container .email-split select {
-  flex: 0 1 auto;
-  max-width: 52%;
-  min-width: 108px;
-  padding: 14px 28px 14px 10px;
-  border: none;
-  border-left: 1px solid var(--login-mint-border);
-  border-radius: 0;
-  background: transparent;
-  font-family: inherit;
-  font-size: 13px;
-  color: var(--login-ink);
-  cursor: pointer;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238a817b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 10px center;
-}
-
-.login-container .email-split select:focus {
-  outline: none;
-  box-shadow: none;
-}
-
-.login-container .form-field-email .email-domain-custom {
-  margin-top: 8px;
-  width: 100%;
-  padding: 12px 14px;
-  font-size: 14px;
-  font-family: inherit;
-  color: var(--login-ink);
-  background: var(--login-paper);
-  border: 1.5px solid var(--login-mint-border);
-  border-radius: 10px;
-  outline: none;
-  transition: border-color 0.25s, box-shadow 0.25s;
-}
-
-.login-container .form-field-email .email-domain-custom:focus {
-  border-color: var(--login-mint-deep);
-  box-shadow: 0 0 0 3px rgba(94, 207, 207, 0.2);
-  background: #fff;
-}
-
-.login-container .form-field-email.invalid .email-split {
   border-color: #e07070;
 }
 

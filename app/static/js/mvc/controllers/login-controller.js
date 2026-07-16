@@ -30,8 +30,7 @@
           return;
         }
 
-        var emailField = e.form.querySelector('.form-field-email');
-        var email = global.ImprintAuthShell.composeEmail(emailField);
+        var email = e.form.email.value.trim();
         var password = e.form.password.value;
         if (!email || !password) {
           View.setMsg('請輸入 Email 與密碼。', 'err');

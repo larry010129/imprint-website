@@ -20,27 +20,6 @@
 </div>
 {% endmacro %}
 
-{% macro auth_email_field(id_prefix, label='電子郵件') %}
-<div class="form-field form-field-email" data-auth-email-field>
-  <label class="email-field-label" for="{{ id_prefix }}-local">{{ label }}</label>
-  <div class="email-split">
-    <input type="text" id="{{ id_prefix }}-local" name="emailLocal" autocomplete="username" inputmode="email" spellcheck="false" placeholder="使用者名稱" required>
-    <span class="email-at" aria-hidden="true">@</span>
-    <select id="{{ id_prefix }}-domain" name="emailDomain" aria-label="Email 網域">
-      <option value="gmail.com">gmail.com</option>
-      <option value="yahoo.com.tw">yahoo.com.tw</option>
-      <option value="hotmail.com">hotmail.com</option>
-      <option value="outlook.com">outlook.com</option>
-      <option value="icloud.com">icloud.com</option>
-      <option value="yahoo.com">yahoo.com</option>
-      <option value="__custom__">其他</option>
-    </select>
-  </div>
-  <input type="text" id="{{ id_prefix }}-domain-custom" class="email-domain-custom" placeholder="example.com" hidden autocomplete="off">
-  <span class="error-message" hidden>請輸入有效的電子郵件</span>
-</div>
-{% endmacro %}
-
 {% macro auth_password_field(id, label='密碼', autocomplete='current-password', minlength=None, name='password') %}
 <div class="form-field">
   <input type="password" id="{{ id }}" name="{{ name }}" placeholder=" " autocomplete="{{ autocomplete }}"{% if minlength %} minlength="{{ minlength }}"{% endif %} required>
