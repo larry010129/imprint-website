@@ -1,0 +1,1236 @@
+[
+  {
+    "category": "pendant",
+    "style": "A",
+    "nameZh": "四爪項墜",
+    "defaultColor": "white",
+    "sortOrder": 0,
+    "variants": [
+      {
+        "gold": "9k",
+        "carat": "0.1",
+        "weightChin": 0.09
+      },
+      {
+        "gold": "9k",
+        "carat": "0.3",
+        "weightChin": 0.12
+      },
+      {
+        "gold": "9k",
+        "carat": "0.5",
+        "weightChin": 0.15
+      },
+      {
+        "gold": "9k",
+        "carat": "1.0",
+        "weightChin": 0.2
+      },
+      {
+        "gold": "14k",
+        "carat": "0.1",
+        "weightChin": 0.1
+      },
+      {
+        "gold": "14k",
+        "carat": "0.3",
+        "weightChin": 0.14
+      },
+      {
+        "gold": "14k",
+        "carat": "0.5",
+        "weightChin": 0.17
+      },
+      {
+        "gold": "14k",
+        "carat": "1.0",
+        "weightChin": 0.23
+      },
+      {
+        "gold": "18k",
+        "carat": "0.1",
+        "weightChin": 0.12
+      },
+      {
+        "gold": "18k",
+        "carat": "0.3",
+        "weightChin": 0.16
+      },
+      {
+        "gold": "18k",
+        "carat": "0.5",
+        "weightChin": 0.2
+      },
+      {
+        "gold": "18k",
+        "carat": "1.0",
+        "weightChin": 0.27
+      },
+      {
+        "gold": "pt950",
+        "carat": "0.1",
+        "weightChin": 0.15
+      },
+      {
+        "gold": "pt950",
+        "carat": "0.3",
+        "weightChin": 0.2
+      },
+      {
+        "gold": "pt950",
+        "carat": "0.5",
+        "weightChin": 0.25
+      },
+      {
+        "gold": "pt950",
+        "carat": "1.0",
+        "weightChin": 0.35
+      },
+      {
+        "gold": "s925",
+        "carat": "0.1",
+        "weightChin": 0.08
+      },
+      {
+        "gold": "s925",
+        "carat": "0.3",
+        "weightChin": 0.11
+      },
+      {
+        "gold": "s925",
+        "carat": "0.5",
+        "weightChin": 0.13
+      },
+      {
+        "gold": "s925",
+        "carat": "1.0",
+        "weightChin": 0.18
+      }
+    ],
+    "images": [
+      {
+        "color": "white",
+        "filePath": "images/shop/styles/pendant-A.svg"
+      },
+      {
+        "color": "yellow",
+        "filePath": "images/shop/styles/pendant-A.svg"
+      },
+      {
+        "color": "rose",
+        "filePath": "images/shop/styles/pendant-A.svg"
+      }
+    ]
+  },
+  {
+    "category": "pendant",
+    "style": "B",
+    "nameZh": "兔耳項墜",
+    "defaultColor": "white",
+    "sortOrder": 1,
+    "variants": [
+      {
+        "gold": "9k",
+        "carat": "0.1",
+        "weightChin": 0.1
+      },
+      {
+        "gold": "9k",
+        "carat": "0.3",
+        "weightChin": 0.15
+      },
+      {
+        "gold": "9k",
+        "carat": "0.5",
+        "weightChin": 0.19
+      },
+      {
+        "gold": "9k",
+        "carat": "1.0",
+        "weightChin": 0.28
+      },
+      {
+        "gold": "14k",
+        "carat": "0.1",
+        "weightChin": 0.11
+      },
+      {
+        "gold": "14k",
+        "carat": "0.3",
+        "weightChin": 0.17
+      },
+      {
+        "gold": "14k",
+        "carat": "0.5",
+        "weightChin": 0.22
+      },
+      {
+        "gold": "14k",
+        "carat": "1.0",
+        "weightChin": 0.33
+      },
+      {
+        "gold": "18k",
+        "carat": "0.1",
+        "weightChin": 0.13
+      },
+      {
+        "gold": "18k",
+        "carat": "0.3",
+        "weightChin": 0.2
+      },
+      {
+        "gold": "18k",
+        "carat": "0.5",
+        "weightChin": 0.26
+      },
+      {
+        "gold": "18k",
+        "carat": "1.0",
+        "weightChin": 0.39
+      },
+      {
+        "gold": "pt950",
+        "carat": "0.1",
+        "weightChin": 0.16
+      },
+      {
+        "gold": "pt950",
+        "carat": "0.3",
+        "weightChin": 0.25
+      },
+      {
+        "gold": "pt950",
+        "carat": "0.5",
+        "weightChin": 0.34
+      },
+      {
+        "gold": "pt950",
+        "carat": "1.0",
+        "weightChin": 0.52
+      },
+      {
+        "gold": "s925",
+        "carat": "0.1",
+        "weightChin": 0.09
+      },
+      {
+        "gold": "s925",
+        "carat": "0.3",
+        "weightChin": 0.13
+      },
+      {
+        "gold": "s925",
+        "carat": "0.5",
+        "weightChin": 0.17
+      },
+      {
+        "gold": "s925",
+        "carat": "1.0",
+        "weightChin": 0.25
+      }
+    ],
+    "images": [
+      {
+        "color": "white",
+        "filePath": "images/shop/styles/pendant-B.svg"
+      },
+      {
+        "color": "yellow",
+        "filePath": "images/shop/styles/pendant-B.svg"
+      },
+      {
+        "color": "rose",
+        "filePath": "images/shop/styles/pendant-B.svg"
+      }
+    ]
+  },
+  {
+    "category": "pendant",
+    "style": "C",
+    "nameZh": "水滴項墜",
+    "defaultColor": "white",
+    "sortOrder": 2,
+    "variants": [
+      {
+        "gold": "9k",
+        "carat": "0.1",
+        "weightChin": 0.14
+      },
+      {
+        "gold": "9k",
+        "carat": "0.3",
+        "weightChin": 0.21
+      },
+      {
+        "gold": "9k",
+        "carat": "0.5",
+        "weightChin": 0.28
+      },
+      {
+        "gold": "9k",
+        "carat": "1.0",
+        "weightChin": 0.46
+      },
+      {
+        "gold": "14k",
+        "carat": "0.1",
+        "weightChin": 0.16
+      },
+      {
+        "gold": "14k",
+        "carat": "0.3",
+        "weightChin": 0.24
+      },
+      {
+        "gold": "14k",
+        "carat": "0.5",
+        "weightChin": 0.32
+      },
+      {
+        "gold": "14k",
+        "carat": "1.0",
+        "weightChin": 0.52
+      },
+      {
+        "gold": "18k",
+        "carat": "0.1",
+        "weightChin": 0.19
+      },
+      {
+        "gold": "18k",
+        "carat": "0.3",
+        "weightChin": 0.28
+      },
+      {
+        "gold": "18k",
+        "carat": "0.5",
+        "weightChin": 0.37
+      },
+      {
+        "gold": "18k",
+        "carat": "1.0",
+        "weightChin": 0.6
+      },
+      {
+        "gold": "pt950",
+        "carat": "0.1",
+        "weightChin": 0.25
+      },
+      {
+        "gold": "pt950",
+        "carat": "0.3",
+        "weightChin": 0.37
+      },
+      {
+        "gold": "pt950",
+        "carat": "0.5",
+        "weightChin": 0.49
+      },
+      {
+        "gold": "pt950",
+        "carat": "1.0",
+        "weightChin": 0.8
+      },
+      {
+        "gold": "s925",
+        "carat": "0.1",
+        "weightChin": 0.13
+      },
+      {
+        "gold": "s925",
+        "carat": "0.3",
+        "weightChin": 0.19
+      },
+      {
+        "gold": "s925",
+        "carat": "0.5",
+        "weightChin": 0.25
+      },
+      {
+        "gold": "s925",
+        "carat": "1.0",
+        "weightChin": 0.4
+      }
+    ],
+    "images": [
+      {
+        "color": "white",
+        "filePath": "images/shop/styles/pendant-C.svg"
+      },
+      {
+        "color": "yellow",
+        "filePath": "images/shop/styles/pendant-C.svg"
+      },
+      {
+        "color": "rose",
+        "filePath": "images/shop/styles/pendant-C.svg"
+      }
+    ]
+  },
+  {
+    "category": "ring",
+    "style": "A",
+    "nameZh": "經典六爪",
+    "defaultColor": "white",
+    "sortOrder": 0,
+    "variants": [
+      {
+        "gold": "9k",
+        "carat": "0.1",
+        "weightChin": 0.39
+      },
+      {
+        "gold": "9k",
+        "carat": "0.3",
+        "weightChin": 0.48
+      },
+      {
+        "gold": "9k",
+        "carat": "0.5",
+        "weightChin": 0.57
+      },
+      {
+        "gold": "9k",
+        "carat": "1.0",
+        "weightChin": 0.74
+      },
+      {
+        "gold": "14k",
+        "carat": "0.1",
+        "weightChin": 0.46
+      },
+      {
+        "gold": "14k",
+        "carat": "0.3",
+        "weightChin": 0.57
+      },
+      {
+        "gold": "14k",
+        "carat": "0.5",
+        "weightChin": 0.67
+      },
+      {
+        "gold": "14k",
+        "carat": "1.0",
+        "weightChin": 0.87
+      },
+      {
+        "gold": "18k",
+        "carat": "0.1",
+        "weightChin": 0.53
+      },
+      {
+        "gold": "18k",
+        "carat": "0.3",
+        "weightChin": 0.65
+      },
+      {
+        "gold": "18k",
+        "carat": "0.5",
+        "weightChin": 0.77
+      },
+      {
+        "gold": "18k",
+        "carat": "1.0",
+        "weightChin": 1.01
+      },
+      {
+        "gold": "pt950",
+        "carat": "0.1",
+        "weightChin": 0.7
+      },
+      {
+        "gold": "pt950",
+        "carat": "0.3",
+        "weightChin": 0.86
+      },
+      {
+        "gold": "pt950",
+        "carat": "0.5",
+        "weightChin": 1.02
+      },
+      {
+        "gold": "pt950",
+        "carat": "1.0",
+        "weightChin": 1.33
+      },
+      {
+        "gold": "s925",
+        "carat": "0.1",
+        "weightChin": 0.35
+      },
+      {
+        "gold": "s925",
+        "carat": "0.3",
+        "weightChin": 0.44
+      },
+      {
+        "gold": "s925",
+        "carat": "0.5",
+        "weightChin": 0.52
+      },
+      {
+        "gold": "s925",
+        "carat": "1.0",
+        "weightChin": 0.68
+      }
+    ],
+    "images": [
+      {
+        "color": "white",
+        "filePath": "images/shop/styles/ring-A.svg"
+      },
+      {
+        "color": "yellow",
+        "filePath": "images/shop/styles/ring-A.svg"
+      },
+      {
+        "color": "rose",
+        "filePath": "images/shop/styles/ring-A.svg"
+      }
+    ]
+  },
+  {
+    "category": "ring",
+    "style": "B",
+    "nameZh": "低語之光",
+    "defaultColor": "white",
+    "sortOrder": 1,
+    "variants": [
+      {
+        "gold": "9k",
+        "carat": "0.1",
+        "weightChin": 0.4
+      },
+      {
+        "gold": "9k",
+        "carat": "0.3",
+        "weightChin": 0.62
+      },
+      {
+        "gold": "9k",
+        "carat": "0.5",
+        "weightChin": 0.84
+      },
+      {
+        "gold": "9k",
+        "carat": "1.0",
+        "weightChin": 1.39
+      },
+      {
+        "gold": "14k",
+        "carat": "0.1",
+        "weightChin": 0.47
+      },
+      {
+        "gold": "14k",
+        "carat": "0.3",
+        "weightChin": 0.75
+      },
+      {
+        "gold": "14k",
+        "carat": "0.5",
+        "weightChin": 1.03
+      },
+      {
+        "gold": "14k",
+        "carat": "1.0",
+        "weightChin": 1.73
+      },
+      {
+        "gold": "18k",
+        "carat": "0.1",
+        "weightChin": 0.54
+      },
+      {
+        "gold": "18k",
+        "carat": "0.3",
+        "weightChin": 0.86
+      },
+      {
+        "gold": "18k",
+        "carat": "0.5",
+        "weightChin": 1.18
+      },
+      {
+        "gold": "18k",
+        "carat": "1.0",
+        "weightChin": 1.98
+      },
+      {
+        "gold": "pt950",
+        "carat": "0.1",
+        "weightChin": 0.71
+      },
+      {
+        "gold": "pt950",
+        "carat": "0.3",
+        "weightChin": 1.13
+      },
+      {
+        "gold": "pt950",
+        "carat": "0.5",
+        "weightChin": 1.55
+      },
+      {
+        "gold": "pt950",
+        "carat": "1.0",
+        "weightChin": 2.6
+      },
+      {
+        "gold": "s925",
+        "carat": "0.1",
+        "weightChin": 0.36
+      },
+      {
+        "gold": "s925",
+        "carat": "0.3",
+        "weightChin": 0.58
+      },
+      {
+        "gold": "s925",
+        "carat": "0.5",
+        "weightChin": 0.8
+      },
+      {
+        "gold": "s925",
+        "carat": "1.0",
+        "weightChin": 1.35
+      }
+    ],
+    "images": [
+      {
+        "color": "white",
+        "filePath": "images/shop/styles/ring-B.svg"
+      },
+      {
+        "color": "yellow",
+        "filePath": "images/shop/styles/ring-B.svg"
+      },
+      {
+        "color": "rose",
+        "filePath": "images/shop/styles/ring-B.svg"
+      }
+    ]
+  },
+  {
+    "category": "ring",
+    "style": "C",
+    "nameZh": "羽翼",
+    "defaultColor": "white",
+    "sortOrder": 2,
+    "variants": [
+      {
+        "gold": "9k",
+        "carat": "0.1",
+        "weightChin": 0.4
+      },
+      {
+        "gold": "9k",
+        "carat": "0.3",
+        "weightChin": 0.69
+      },
+      {
+        "gold": "9k",
+        "carat": "0.5",
+        "weightChin": 0.97
+      },
+      {
+        "gold": "9k",
+        "carat": "1.0",
+        "weightChin": 1.54
+      },
+      {
+        "gold": "14k",
+        "carat": "0.1",
+        "weightChin": 0.48
+      },
+      {
+        "gold": "14k",
+        "carat": "0.3",
+        "weightChin": 0.82
+      },
+      {
+        "gold": "14k",
+        "carat": "0.5",
+        "weightChin": 1.15
+      },
+      {
+        "gold": "14k",
+        "carat": "1.0",
+        "weightChin": 1.82
+      },
+      {
+        "gold": "18k",
+        "carat": "0.1",
+        "weightChin": 0.55
+      },
+      {
+        "gold": "18k",
+        "carat": "0.3",
+        "weightChin": 0.92
+      },
+      {
+        "gold": "18k",
+        "carat": "0.5",
+        "weightChin": 1.33
+      },
+      {
+        "gold": "18k",
+        "carat": "1.0",
+        "weightChin": 2.11
+      },
+      {
+        "gold": "pt950",
+        "carat": "0.1",
+        "weightChin": 0.72
+      },
+      {
+        "gold": "pt950",
+        "carat": "0.3",
+        "weightChin": 1.24
+      },
+      {
+        "gold": "pt950",
+        "carat": "0.5",
+        "weightChin": 1.75
+      },
+      {
+        "gold": "pt950",
+        "carat": "1.0",
+        "weightChin": 2.78
+      },
+      {
+        "gold": "s925",
+        "carat": "0.1",
+        "weightChin": 0.36
+      },
+      {
+        "gold": "s925",
+        "carat": "0.3",
+        "weightChin": 0.62
+      },
+      {
+        "gold": "s925",
+        "carat": "0.5",
+        "weightChin": 0.88
+      },
+      {
+        "gold": "s925",
+        "carat": "1.0",
+        "weightChin": 1.4
+      }
+    ],
+    "images": [
+      {
+        "color": "white",
+        "filePath": "images/shop/styles/ring-C.svg"
+      },
+      {
+        "color": "yellow",
+        "filePath": "images/shop/styles/ring-C.svg"
+      },
+      {
+        "color": "rose",
+        "filePath": "images/shop/styles/ring-C.svg"
+      }
+    ]
+  },
+  {
+    "category": "earring",
+    "style": "A",
+    "nameZh": "六爪耳釘",
+    "defaultColor": "white",
+    "sortOrder": 0,
+    "variants": [
+      {
+        "gold": "9k",
+        "carat": "0.1",
+        "weightChin": 0.09
+      },
+      {
+        "gold": "9k",
+        "carat": "0.3",
+        "weightChin": 0.14
+      },
+      {
+        "gold": "9k",
+        "carat": "0.5",
+        "weightChin": 0.18
+      },
+      {
+        "gold": "9k",
+        "carat": "1.0",
+        "weightChin": 0.27
+      },
+      {
+        "gold": "14k",
+        "carat": "0.1",
+        "weightChin": 0.1
+      },
+      {
+        "gold": "14k",
+        "carat": "0.3",
+        "weightChin": 0.15
+      },
+      {
+        "gold": "14k",
+        "carat": "0.5",
+        "weightChin": 0.2
+      },
+      {
+        "gold": "14k",
+        "carat": "1.0",
+        "weightChin": 0.3
+      },
+      {
+        "gold": "18k",
+        "carat": "0.1",
+        "weightChin": 0.12
+      },
+      {
+        "gold": "18k",
+        "carat": "0.3",
+        "weightChin": 0.18
+      },
+      {
+        "gold": "18k",
+        "carat": "0.5",
+        "weightChin": 0.24
+      },
+      {
+        "gold": "18k",
+        "carat": "1.0",
+        "weightChin": 0.36
+      }
+    ],
+    "images": [
+      {
+        "color": "white",
+        "filePath": "images/shop/styles/earring-A.svg"
+      },
+      {
+        "color": "yellow",
+        "filePath": "images/shop/styles/earring-A.svg"
+      },
+      {
+        "color": "rose",
+        "filePath": "images/shop/styles/earring-A.svg"
+      }
+    ]
+  },
+  {
+    "category": "bracelet",
+    "style": "A",
+    "nameZh": "微笑單鑽",
+    "defaultColor": "white",
+    "sortOrder": 0,
+    "variants": [
+      {
+        "gold": "9k",
+        "carat": "0.1",
+        "weightChin": 0.66
+      },
+      {
+        "gold": "9k",
+        "carat": "0.2",
+        "weightChin": 0.77
+      },
+      {
+        "gold": "14k",
+        "carat": "0.1",
+        "weightChin": 0.78
+      },
+      {
+        "gold": "14k",
+        "carat": "0.2",
+        "weightChin": 0.935
+      },
+      {
+        "gold": "18k",
+        "carat": "0.1",
+        "weightChin": 0.91
+      },
+      {
+        "gold": "18k",
+        "carat": "0.2",
+        "weightChin": 1.06
+      },
+      {
+        "gold": "pt950",
+        "carat": "0.1",
+        "weightChin": 1.19
+      },
+      {
+        "gold": "pt950",
+        "carat": "0.2",
+        "weightChin": 1.39
+      },
+      {
+        "gold": "s925",
+        "carat": "0.1",
+        "weightChin": 0.6
+      },
+      {
+        "gold": "s925",
+        "carat": "0.2",
+        "weightChin": 0.715
+      }
+    ],
+    "images": [
+      {
+        "color": "white",
+        "filePath": "images/shop/styles/bracelet-A.svg"
+      },
+      {
+        "color": "yellow",
+        "filePath": "images/shop/styles/bracelet-A.svg"
+      },
+      {
+        "color": "rose",
+        "filePath": "images/shop/styles/bracelet-A.svg"
+      }
+    ]
+  },
+  {
+    "category": "bracelet",
+    "style": "B",
+    "nameZh": "銘印手鍊",
+    "defaultColor": "white",
+    "sortOrder": 1,
+    "variants": [
+      {
+        "gold": "9k",
+        "carat": "0.1",
+        "weightChin": 0.46
+      },
+      {
+        "gold": "14k",
+        "carat": "0.1",
+        "weightChin": 0.55
+      },
+      {
+        "gold": "18k",
+        "carat": "0.1",
+        "weightChin": 0.64
+      },
+      {
+        "gold": "pt950",
+        "carat": "0.1",
+        "weightChin": 0.84
+      },
+      {
+        "gold": "s925",
+        "carat": "0.1",
+        "weightChin": 0.77
+      }
+    ],
+    "images": [
+      {
+        "color": "white",
+        "filePath": "images/shop/styles/bracelet-B.svg"
+      },
+      {
+        "color": "yellow",
+        "filePath": "images/shop/styles/bracelet-B.svg"
+      },
+      {
+        "color": "rose",
+        "filePath": "images/shop/styles/bracelet-B.svg"
+      }
+    ]
+  },
+  {
+    "category": "bracelet",
+    "style": "C",
+    "nameZh": "單鑽手鍊",
+    "defaultColor": "white",
+    "sortOrder": 2,
+    "variants": [
+      {
+        "gold": "9k",
+        "carat": "0.1",
+        "weightChin": 0.3
+      },
+      {
+        "gold": "9k",
+        "carat": "0.2",
+        "weightChin": 0.35
+      },
+      {
+        "gold": "14k",
+        "carat": "0.1",
+        "weightChin": 0.36
+      },
+      {
+        "gold": "14k",
+        "carat": "0.2",
+        "weightChin": 0.43
+      },
+      {
+        "gold": "18k",
+        "carat": "0.1",
+        "weightChin": 0.42
+      },
+      {
+        "gold": "18k",
+        "carat": "0.2",
+        "weightChin": 0.49
+      },
+      {
+        "gold": "pt950",
+        "carat": "0.1",
+        "weightChin": 0.55
+      },
+      {
+        "gold": "pt950",
+        "carat": "0.2",
+        "weightChin": 0.64
+      },
+      {
+        "gold": "s925",
+        "carat": "0.1",
+        "weightChin": 0.28
+      },
+      {
+        "gold": "s925",
+        "carat": "0.2",
+        "weightChin": 0.335
+      }
+    ],
+    "images": [
+      {
+        "color": "white",
+        "filePath": "images/shop/styles/bracelet-C.svg"
+      },
+      {
+        "color": "yellow",
+        "filePath": "images/shop/styles/bracelet-C.svg"
+      },
+      {
+        "color": "rose",
+        "filePath": "images/shop/styles/bracelet-C.svg"
+      }
+    ]
+  },
+  {
+    "category": "chain",
+    "style": "A",
+    "nameZh": "斗圓鍊 K白",
+    "defaultColor": "white",
+    "sortOrder": 0,
+    "variants": [
+      {
+        "gold": "9k",
+        "carat": "3fen",
+        "weightChin": 0.3
+      },
+      {
+        "gold": "9k",
+        "carat": "4fen",
+        "weightChin": 0.4
+      },
+      {
+        "gold": "14k",
+        "carat": "3fen",
+        "weightChin": 0.3
+      },
+      {
+        "gold": "14k",
+        "carat": "4fen",
+        "weightChin": 0.4
+      },
+      {
+        "gold": "18k",
+        "carat": "3fen",
+        "weightChin": 0.3
+      },
+      {
+        "gold": "18k",
+        "carat": "4fen",
+        "weightChin": 0.4
+      },
+      {
+        "gold": "pt950",
+        "carat": "3fen",
+        "weightChin": 0.3
+      },
+      {
+        "gold": "pt950",
+        "carat": "4fen",
+        "weightChin": 0.4
+      },
+      {
+        "gold": "s925",
+        "carat": "3fen",
+        "weightChin": 0.3
+      },
+      {
+        "gold": "s925",
+        "carat": "4fen",
+        "weightChin": 0.4
+      }
+    ],
+    "images": [
+      {
+        "color": "white",
+        "filePath": "images/shop/styles/chain-A.svg"
+      },
+      {
+        "color": "yellow",
+        "filePath": "images/shop/styles/chain-A.svg"
+      },
+      {
+        "color": "rose",
+        "filePath": "images/shop/styles/chain-A.svg"
+      }
+    ]
+  },
+  {
+    "category": "chain",
+    "style": "B",
+    "nameZh": "斗圓鍊 K玫瑰",
+    "defaultColor": "rose",
+    "sortOrder": 1,
+    "variants": [
+      {
+        "gold": "9k",
+        "carat": "3fen",
+        "weightChin": 0.3
+      },
+      {
+        "gold": "9k",
+        "carat": "4fen",
+        "weightChin": 0.4
+      },
+      {
+        "gold": "14k",
+        "carat": "3fen",
+        "weightChin": 0.3
+      },
+      {
+        "gold": "14k",
+        "carat": "4fen",
+        "weightChin": 0.4
+      },
+      {
+        "gold": "18k",
+        "carat": "3fen",
+        "weightChin": 0.3
+      },
+      {
+        "gold": "18k",
+        "carat": "4fen",
+        "weightChin": 0.4
+      },
+      {
+        "gold": "pt950",
+        "carat": "3fen",
+        "weightChin": 0.3
+      },
+      {
+        "gold": "pt950",
+        "carat": "4fen",
+        "weightChin": 0.4
+      },
+      {
+        "gold": "s925",
+        "carat": "3fen",
+        "weightChin": 0.3
+      },
+      {
+        "gold": "s925",
+        "carat": "4fen",
+        "weightChin": 0.4
+      }
+    ],
+    "images": [
+      {
+        "color": "white",
+        "filePath": "images/shop/styles/chain-B.svg"
+      },
+      {
+        "color": "yellow",
+        "filePath": "images/shop/styles/chain-B.svg"
+      },
+      {
+        "color": "rose",
+        "filePath": "images/shop/styles/chain-B.svg"
+      }
+    ]
+  },
+  {
+    "category": "chain",
+    "style": "C",
+    "nameZh": "斗圓鍊 K黃",
+    "defaultColor": "yellow",
+    "sortOrder": 2,
+    "variants": [
+      {
+        "gold": "9k",
+        "carat": "3fen",
+        "weightChin": 0.3
+      },
+      {
+        "gold": "9k",
+        "carat": "4fen",
+        "weightChin": 0.4
+      },
+      {
+        "gold": "14k",
+        "carat": "3fen",
+        "weightChin": 0.3
+      },
+      {
+        "gold": "14k",
+        "carat": "4fen",
+        "weightChin": 0.4
+      },
+      {
+        "gold": "18k",
+        "carat": "3fen",
+        "weightChin": 0.3
+      },
+      {
+        "gold": "18k",
+        "carat": "4fen",
+        "weightChin": 0.4
+      },
+      {
+        "gold": "pt950",
+        "carat": "3fen",
+        "weightChin": 0.3
+      },
+      {
+        "gold": "pt950",
+        "carat": "4fen",
+        "weightChin": 0.4
+      },
+      {
+        "gold": "s925",
+        "carat": "3fen",
+        "weightChin": 0.3
+      },
+      {
+        "gold": "s925",
+        "carat": "4fen",
+        "weightChin": 0.4
+      }
+    ],
+    "images": [
+      {
+        "color": "white",
+        "filePath": "images/shop/styles/chain-C.svg"
+      },
+      {
+        "color": "yellow",
+        "filePath": "images/shop/styles/chain-C.svg"
+      },
+      {
+        "color": "rose",
+        "filePath": "images/shop/styles/chain-C.svg"
+      }
+    ]
+  }
+]

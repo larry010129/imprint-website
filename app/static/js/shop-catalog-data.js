@@ -31,45 +31,45 @@
         ],
         "images": {
           "white": [
-            "/static/images/shop/styles/pendant-A.svg"
+            "../../images/shop/styles/pendant-A.svg"
           ],
           "yellow": [
-            "/static/images/shop/styles/pendant-A.svg"
+            "../../images/shop/styles/pendant-A.svg"
           ],
           "rose": [
-            "/static/images/shop/styles/pendant-A.svg"
+            "../../images/shop/styles/pendant-A.svg"
           ]
         },
         "weights": {
           "9k": {
-            "0.1": 0.0853,
-            "0.3": 0.1194,
-            "0.5": 0.1449,
-            "1.0": 0.1962
+            "0.1": 0.09,
+            "0.3": 0.12,
+            "0.5": 0.15,
+            "1.0": 0.2
           },
           "14k": {
-            "0.1": 0.1001,
+            "0.1": 0.1,
             "0.3": 0.14,
-            "0.5": 0.1699,
+            "0.5": 0.17,
             "1.0": 0.23
           },
           "18k": {
-            "0.1": 0.1156,
-            "0.3": 0.1618,
-            "0.5": 0.1964,
-            "1.0": 0.2658
+            "0.1": 0.12,
+            "0.3": 0.16,
+            "0.5": 0.2,
+            "1.0": 0.27
           },
           "pt950": {
-            "0.1": 0.1548,
-            "0.3": 0.2167,
-            "0.5": 0.2629,
-            "1.0": 0.3559
+            "0.1": 0.15,
+            "0.3": 0.2,
+            "0.5": 0.25,
+            "1.0": 0.35
           },
           "s925": {
-            "0.1": 0.0767,
-            "0.3": 0.1074,
-            "0.5": 0.1303,
-            "1.0": 0.1764
+            "0.1": 0.08,
+            "0.3": 0.11,
+            "0.5": 0.13,
+            "1.0": 0.18
           }
         },
         "manualPrices": {},
@@ -102,45 +102,45 @@
         ],
         "images": {
           "white": [
-            "/static/images/shop/styles/pendant-B.svg"
+            "../../images/shop/styles/pendant-B.svg"
           ],
           "yellow": [
-            "/static/images/shop/styles/pendant-B.svg"
+            "../../images/shop/styles/pendant-B.svg"
           ],
           "rose": [
-            "/static/images/shop/styles/pendant-B.svg"
+            "../../images/shop/styles/pendant-B.svg"
           ]
         },
         "weights": {
           "9k": {
-            "0.1": 0.0939,
-            "0.3": 0.1449,
-            "0.5": 0.1876,
-            "1.0": 0.2815
+            "0.1": 0.1,
+            "0.3": 0.15,
+            "0.5": 0.19,
+            "1.0": 0.28
           },
           "14k": {
-            "0.1": 0.1102,
-            "0.3": 0.1699,
+            "0.1": 0.11,
+            "0.3": 0.17,
             "0.5": 0.22,
-            "1.0": 0.3301
+            "1.0": 0.33
           },
           "18k": {
-            "0.1": 0.1273,
-            "0.3": 0.1964,
-            "0.5": 0.2542,
-            "1.0": 0.3815
+            "0.1": 0.13,
+            "0.3": 0.2,
+            "0.5": 0.26,
+            "1.0": 0.39
           },
           "pt950": {
-            "0.1": 0.1704,
-            "0.3": 0.2629,
-            "0.5": 0.3403,
-            "1.0": 0.5108
+            "0.1": 0.16,
+            "0.3": 0.25,
+            "0.5": 0.34,
+            "1.0": 0.52
           },
           "s925": {
-            "0.1": 0.0845,
-            "0.3": 0.1303,
-            "0.5": 0.1686,
-            "1.0": 0.2531
+            "0.1": 0.09,
+            "0.3": 0.13,
+            "0.5": 0.17,
+            "1.0": 0.25
           }
         },
         "manualPrices": {},
@@ -173,45 +173,45 @@
         ],
         "images": {
           "white": [
-            "/static/images/shop/styles/pendant-C.svg"
+            "../../images/shop/styles/pendant-C.svg"
           ],
           "yellow": [
-            "/static/images/shop/styles/pendant-C.svg"
+            "../../images/shop/styles/pendant-C.svg"
           ],
           "rose": [
-            "/static/images/shop/styles/pendant-C.svg"
+            "../../images/shop/styles/pendant-C.svg"
           ]
         },
         "weights": {
           "9k": {
-            "0.1": 0.1363,
-            "0.3": 0.2048,
-            "0.5": 0.2729,
-            "1.0": 0.4433
+            "0.1": 0.14,
+            "0.3": 0.21,
+            "0.5": 0.28,
+            "1.0": 0.46
           },
           "14k": {
-            "0.1": 0.1598,
-            "0.3": 0.2401,
+            "0.1": 0.16,
+            "0.3": 0.24,
             "0.5": 0.32,
-            "1.0": 0.5198
+            "1.0": 0.52
           },
           "18k": {
-            "0.1": 0.1847,
-            "0.3": 0.2775,
-            "0.5": 0.3698,
-            "1.0": 0.6007
+            "0.1": 0.19,
+            "0.3": 0.28,
+            "0.5": 0.37,
+            "1.0": 0.6
           },
           "pt950": {
-            "0.1": 0.2473,
-            "0.3": 0.3715,
-            "0.5": 0.4952,
-            "1.0": 0.8043
+            "0.1": 0.25,
+            "0.3": 0.37,
+            "0.5": 0.49,
+            "1.0": 0.8
           },
           "s925": {
-            "0.1": 0.1225,
-            "0.3": 0.1841,
-            "0.5": 0.2454,
-            "1.0": 0.3985
+            "0.1": 0.13,
+            "0.3": 0.19,
+            "0.5": 0.25,
+            "1.0": 0.4
           }
         },
         "manualPrices": {},
@@ -246,45 +246,45 @@
         ],
         "images": {
           "white": [
-            "/static/images/shop/styles/ring-A.svg"
+            "../../images/shop/styles/ring-A.svg"
           ],
           "yellow": [
-            "/static/images/shop/styles/ring-A.svg"
+            "../../images/shop/styles/ring-A.svg"
           ],
           "rose": [
-            "/static/images/shop/styles/ring-A.svg"
+            "../../images/shop/styles/ring-A.svg"
           ]
         },
         "weights": {
           "9k": {
-            "0.1": 0.3923,
-            "0.3": 0.486,
-            "0.5": 0.5713,
-            "1.0": 0.742
+            "0.1": 0.39,
+            "0.3": 0.48,
+            "0.5": 0.57,
+            "1.0": 0.74
           },
           "14k": {
-            "0.1": 0.4601,
-            "0.3": 0.5699,
+            "0.1": 0.46,
+            "0.3": 0.57,
             "0.5": 0.67,
-            "1.0": 0.8701
+            "1.0": 0.87
           },
           "18k": {
-            "0.1": 0.5316,
-            "0.3": 0.6585,
-            "0.5": 0.7742,
-            "1.0": 1.0055
+            "0.1": 0.53,
+            "0.3": 0.65,
+            "0.5": 0.77,
+            "1.0": 1.01
           },
           "pt950": {
-            "0.1": 0.7118,
-            "0.3": 0.8817,
-            "0.5": 1.0366,
-            "1.0": 1.3463
+            "0.1": 0.7,
+            "0.3": 0.86,
+            "0.5": 1.02,
+            "1.0": 1.33
           },
           "s925": {
-            "0.1": 0.3527,
-            "0.3": 0.4369,
-            "0.5": 0.5136,
-            "1.0": 0.6671
+            "0.1": 0.35,
+            "0.3": 0.44,
+            "0.5": 0.52,
+            "1.0": 0.68
           }
         },
         "manualPrices": {},
@@ -317,45 +317,45 @@
         ],
         "images": {
           "white": [
-            "/static/images/shop/styles/ring-B.svg"
+            "../../images/shop/styles/ring-B.svg"
           ],
           "yellow": [
-            "/static/images/shop/styles/ring-B.svg"
+            "../../images/shop/styles/ring-B.svg"
           ],
           "rose": [
-            "/static/images/shop/styles/ring-B.svg"
+            "../../images/shop/styles/ring-B.svg"
           ]
         },
         "weights": {
           "9k": {
-            "0.1": 0.4009,
-            "0.3": 0.6395,
-            "0.5": 0.8783,
-            "1.0": 1.4754
+            "0.1": 0.4,
+            "0.3": 0.62,
+            "0.5": 0.84,
+            "1.0": 1.39
           },
           "14k": {
-            "0.1": 0.4702,
-            "0.3": 0.7499,
+            "0.1": 0.47,
+            "0.3": 0.75,
             "0.5": 1.03,
-            "1.0": 1.7302
+            "1.0": 1.73
           },
           "18k": {
-            "0.1": 0.5433,
-            "0.3": 0.8665,
-            "0.5": 1.1902,
-            "1.0": 1.9993
+            "0.1": 0.54,
+            "0.3": 0.86,
+            "0.5": 1.18,
+            "1.0": 1.98
           },
           "pt950": {
-            "0.1": 0.7274,
-            "0.3": 1.1602,
-            "0.5": 1.5936,
-            "1.0": 2.6769
+            "0.1": 0.71,
+            "0.3": 1.13,
+            "0.5": 1.55,
+            "1.0": 2.6
           },
           "s925": {
-            "0.1": 0.3605,
-            "0.3": 0.5749,
-            "0.5": 0.7896,
-            "1.0": 1.3265
+            "0.1": 0.36,
+            "0.3": 0.58,
+            "0.5": 0.8,
+            "1.0": 1.35
           }
         },
         "manualPrices": {},
@@ -388,45 +388,45 @@
         ],
         "images": {
           "white": [
-            "/static/images/shop/styles/ring-C.svg"
+            "../../images/shop/styles/ring-C.svg"
           ],
           "yellow": [
-            "/static/images/shop/styles/ring-C.svg"
+            "../../images/shop/styles/ring-C.svg"
           ],
           "rose": [
-            "/static/images/shop/styles/ring-C.svg"
+            "../../images/shop/styles/ring-C.svg"
           ]
         },
         "weights": {
           "9k": {
-            "0.1": 0.4092,
-            "0.3": 0.6993,
-            "0.5": 0.9806,
-            "1.0": 1.5522
+            "0.1": 0.4,
+            "0.3": 0.69,
+            "0.5": 0.97,
+            "1.0": 1.54
           },
           "14k": {
-            "0.1": 0.4799,
-            "0.3": 0.8201,
-            "0.5": 1.1498,
-            "1.0": 1.8202
+            "0.1": 0.48,
+            "0.3": 0.82,
+            "0.5": 1.15,
+            "1.0": 1.82
           },
           "18k": {
-            "0.1": 0.5545,
-            "0.3": 0.9476,
-            "0.5": 1.3287,
-            "1.0": 2.1033
+            "0.1": 0.55,
+            "0.3": 0.92,
+            "0.5": 1.33,
+            "1.0": 2.11
           },
           "pt950": {
-            "0.1": 0.7425,
-            "0.3": 1.2688,
-            "0.5": 1.7791,
-            "1.0": 2.8162
+            "0.1": 0.72,
+            "0.3": 1.24,
+            "0.5": 1.75,
+            "1.0": 2.78
           },
           "s925": {
-            "0.1": 0.3679,
-            "0.3": 0.6287,
-            "0.5": 0.8815,
-            "1.0": 1.3955
+            "0.1": 0.36,
+            "0.3": 0.62,
+            "0.5": 0.88,
+            "1.0": 1.4
           }
         },
         "manualPrices": {},
@@ -459,33 +459,33 @@
         ],
         "images": {
           "white": [
-            "/static/images/shop/styles/earring-A.svg"
+            "../../images/shop/styles/earring-A.svg"
           ],
           "yellow": [
-            "/static/images/shop/styles/earring-A.svg"
+            "../../images/shop/styles/earring-A.svg"
           ],
           "rose": [
-            "/static/images/shop/styles/earring-A.svg"
+            "../../images/shop/styles/earring-A.svg"
           ]
         },
         "weights": {
           "9k": {
-            "0.1": 0.0853,
-            "0.3": 0.128,
-            "0.5": 0.1707,
-            "1.0": 0.2557
+            "0.1": 0.09,
+            "0.3": 0.14,
+            "0.5": 0.18,
+            "1.0": 0.27
           },
           "14k": {
-            "0.1": 0.1001,
-            "0.3": 0.1501,
-            "0.5": 0.2002,
-            "1.0": 0.2999
+            "0.1": 0.1,
+            "0.3": 0.15,
+            "0.5": 0.2,
+            "1.0": 0.3
           },
           "18k": {
-            "0.1": 0.1156,
-            "0.3": 0.1735,
-            "0.5": 0.2313,
-            "1.0": 0.3465
+            "0.1": 0.12,
+            "0.3": 0.18,
+            "0.5": 0.24,
+            "1.0": 0.36
           }
         },
         "manualPrices": {},
@@ -518,35 +518,35 @@
         ],
         "images": {
           "white": [
-            "/static/images/shop/styles/bracelet-A.svg"
+            "../../images/shop/styles/bracelet-A.svg"
           ],
           "yellow": [
-            "/static/images/shop/styles/bracelet-A.svg"
+            "../../images/shop/styles/bracelet-A.svg"
           ],
           "rose": [
-            "/static/images/shop/styles/bracelet-A.svg"
+            "../../images/shop/styles/bracelet-A.svg"
           ]
         },
         "weights": {
           "9k": {
-            "0.1": 0.6653,
-            "0.2": 0.7973
+            "0.1": 0.66,
+            "0.2": 0.77
           },
           "14k": {
-            "0.1": 0.7801,
-            "0.2": 0.9349
+            "0.1": 0.78,
+            "0.2": 0.935
           },
           "18k": {
-            "0.1": 0.9015,
-            "0.2": 1.0804
+            "0.1": 0.91,
+            "0.2": 1.06
           },
           "pt950": {
-            "0.1": 1.207,
-            "0.2": 1.4465
+            "0.1": 1.19,
+            "0.2": 1.39
           },
           "s925": {
-            "0.1": 0.5981,
-            "0.2": 0.7168
+            "0.1": 0.6,
+            "0.2": 0.715
           }
         },
         "manualPrices": {},
@@ -576,30 +576,30 @@
         ],
         "images": {
           "white": [
-            "/static/images/shop/styles/bracelet-B.svg"
+            "../../images/shop/styles/bracelet-B.svg"
           ],
           "yellow": [
-            "/static/images/shop/styles/bracelet-B.svg"
+            "../../images/shop/styles/bracelet-B.svg"
           ],
           "rose": [
-            "/static/images/shop/styles/bracelet-B.svg"
+            "../../images/shop/styles/bracelet-B.svg"
           ]
         },
         "weights": {
           "9k": {
-            "0.1": 0.4691
+            "0.1": 0.46
           },
           "14k": {
-            "0.1": 0.5501
+            "0.1": 0.55
           },
           "18k": {
-            "0.1": 0.6356
+            "0.1": 0.64
           },
           "pt950": {
-            "0.1": 0.8511
+            "0.1": 0.84
           },
           "s925": {
-            "0.1": 0.4217
+            "0.1": 0.77
           }
         },
         "manualPrices": {},
@@ -630,35 +630,35 @@
         ],
         "images": {
           "white": [
-            "/static/images/shop/styles/bracelet-C.svg"
+            "../../images/shop/styles/bracelet-C.svg"
           ],
           "yellow": [
-            "/static/images/shop/styles/bracelet-C.svg"
+            "../../images/shop/styles/bracelet-C.svg"
           ],
           "rose": [
-            "/static/images/shop/styles/bracelet-C.svg"
+            "../../images/shop/styles/bracelet-C.svg"
           ]
         },
         "weights": {
           "9k": {
-            "0.1": 0.307,
-            "0.2": 0.3666
+            "0.1": 0.3,
+            "0.2": 0.35
           },
           "14k": {
             "0.1": 0.36,
-            "0.2": 0.4298
+            "0.2": 0.43
           },
           "18k": {
-            "0.1": 0.416,
-            "0.2": 0.4967
+            "0.1": 0.42,
+            "0.2": 0.49
           },
           "pt950": {
-            "0.1": 0.557,
-            "0.2": 0.6651
+            "0.1": 0.55,
+            "0.2": 0.64
           },
           "s925": {
-            "0.1": 0.276,
-            "0.2": 0.3295
+            "0.1": 0.28,
+            "0.2": 0.335
           }
         },
         "manualPrices": {},
@@ -691,13 +691,13 @@
         ],
         "images": {
           "white": [
-            "/static/images/shop/styles/chain-A.svg"
+            "../../images/shop/styles/chain-A.svg"
           ],
           "yellow": [
-            "/static/images/shop/styles/chain-A.svg"
+            "../../images/shop/styles/chain-A.svg"
           ],
           "rose": [
-            "/static/images/shop/styles/chain-A.svg"
+            "../../images/shop/styles/chain-A.svg"
           ]
         },
         "weights": {
@@ -750,13 +750,13 @@
         ],
         "images": {
           "white": [
-            "/static/images/shop/styles/chain-B.svg"
+            "../../images/shop/styles/chain-B.svg"
           ],
           "yellow": [
-            "/static/images/shop/styles/chain-B.svg"
+            "../../images/shop/styles/chain-B.svg"
           ],
           "rose": [
-            "/static/images/shop/styles/chain-B.svg"
+            "../../images/shop/styles/chain-B.svg"
           ]
         },
         "weights": {
@@ -809,13 +809,13 @@
         ],
         "images": {
           "white": [
-            "/static/images/shop/styles/chain-C.svg"
+            "../../images/shop/styles/chain-C.svg"
           ],
           "yellow": [
-            "/static/images/shop/styles/chain-C.svg"
+            "../../images/shop/styles/chain-C.svg"
           ],
           "rose": [
-            "/static/images/shop/styles/chain-C.svg"
+            "../../images/shop/styles/chain-C.svg"
           ]
         },
         "weights": {

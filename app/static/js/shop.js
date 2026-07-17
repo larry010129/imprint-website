@@ -256,6 +256,19 @@ function categoryImageUrl(category) {
   return window.ShopAssets?.categoryThumb(category) || '';
 }
 
+function applyStaticCatalogFallback() {
+  if (!window.shopCatalogData?.categories) return false;
+  const cats = Object.keys(window.shopCatalogData.categories).filter(
+    (cat) => (window.shopCatalogData.categories[cat] || []).length > 0,
+  );
+  if (!cats.length) return false;
+  catalog = window.shopCatalogData.categories;
+  window._catalogCategoryOrder = window.shopCatalogData.categoryOrder || null;
+  catalogLoaded = true;
+  console.warn('shop: using bundled static catalog (API returned no products)');
+  return true;
+}
+
 async function loadCatalog() {
   const grid = document.querySelector('.catalog-grid');
   let errEl = document.getElementById('catalog-error');
@@ -277,6 +290,13 @@ async function loadCatalog() {
     if (!res.ok) throw new Error(`API ${res.status}`);
     catalog = data.categories || {};
     window._catalogCategoryOrder = data.categoryOrder || null;
+    if (!catalogCategories().length && applyStaticCatalogFallback()) {
+      grid?.classList.remove('is-loading');
+      grid?.setAttribute('aria-busy', 'false');
+      if (errEl) errEl.remove();
+      renderCatalogTiles();
+      return;
+    }
     catalogLoaded = true;
     grid?.classList.remove('is-loading');
     grid?.setAttribute('aria-busy', 'false');
@@ -286,6 +306,13 @@ async function loadCatalog() {
     }
     renderCatalogTiles();
   } catch (err) {
+    if (shopUsesApi() && applyStaticCatalogFallback()) {
+      grid?.classList.remove('is-loading');
+      grid?.setAttribute('aria-busy', 'false');
+      if (errEl) errEl.remove();
+      renderCatalogTiles();
+      return;
+    }
     catalogLoaded = false;
     catalog = {};
     window._catalogCategoryOrder = null;
