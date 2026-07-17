@@ -14,7 +14,7 @@ import bcrypt
 import jwt
 from fastapi import Request, Response
 
-from app.config import settings
+from config.settings import settings
 from app.database import get_connection
 
 COOKIE_NAME = "imprint_session"

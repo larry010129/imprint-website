@@ -1,0 +1,91 @@
+﻿{% extends "layouts/base.html" %}
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/gold-price.css?v=4">
+{% endblock %}
+{% block content %}
+<section class="price-detail" style="padding-top:70px;">
+  <div class="container">
+    <!-- @component partials/view-gold-price.html -->
+<section class="price-reference gold-price-reference" id="gold-price-page" aria-label="台銀黃金牌價">
+  <div class="price-reference-inner">
+    <div class="price-reference-head">
+      <p class="eyebrow">BOT GOLD QUOTE</p>
+      <h1 class="price-reference-title">台銀黃金條塊牌價</h1>
+      <p class="price-reference-lead">即時台銀黃金條塊本行賣出牌價，9K / 14K / 18K 成色金價換算，供戒台訂製試算參考。</p>
+      <p class="gold-price-source">
+        資料來源：<a id="gold-source-link" href="https://rate.bot.com.tw/gold/quote/recent" target="_blank" rel="noopener noreferrer">臺灣銀行「黃金條塊歷史牌價」</a>
+        <span>（依 100 公克條塊本行賣出換算／公克）</span>
+      </p>
+    </div>
+
+    <div class="gold-price-toolbar">
+      <div class="gold-unit-switch" role="group" aria-label="價格單位">
+        <span class="gold-unit-switch-label">單位</span>
+        <button type="button" class="gold-unit-btn active" data-unit="g">克</button>
+        <button type="button" class="gold-unit-btn" data-unit="chin">錢</button>
+        <button type="button" class="gold-unit-btn" data-unit="tael">兩</button>
+      </div>
+      <button type="button" id="gold-refresh-btn" class="btn btn-mint">重新抓取牌價</button>
+    </div>
+    <p id="gold-refresh-msg" class="gold-refresh-msg hidden" role="status"></p>
+    <p id="gold-live-hint" class="gold-live-hint hidden" role="status"></p>
+
+    <div id="gold-price-body">
+      <div class="gold-price-state gold-price-state--loading" id="gold-price-loading">
+        <p>讀取台銀牌價中…</p>
+      </div>
+
+      <div class="gold-price-state hidden" id="gold-price-live">
+        <div class="gold-price-badge-wrap" id="gold-source-badge"></div>
+
+        <div class="price-ref-snapshot gold-price-snapshot">
+          <div class="price-ref-row price-ref-row--hl">
+            <div class="price-ref-row__ct">
+              <strong id="gold-sell-label">本行賣出</strong>
+              <small id="gold-sell-unit">/ 公克</small>
+            </div>
+            <div class="price-ref-row__amt gold-price-sell-amt" id="gold-sell-val">NT$ —</div>
+          </div>
+        </div>
+
+        <p class="gold-price-meta hidden" id="gold-updated-line"></p>
+        <p class="gold-price-meta hidden" id="gold-fetched-line"></p>
+        <p class="gold-price-stale hidden" id="gold-stale-warning" role="alert">目前牌價超過 24 小時未更新或正在使用備援價格，試算前請先確認最新金價。</p>
+        <p class="price-ref-note gold-price-note">計算機以黃金條塊「本行賣出」換算之公克金價為基準，再依 9K / 14K / 18K 成色係數計價。</p>
+
+        <details class="price-ref-panel" id="gold-alloy-panel" open>
+          <summary id="gold-alloy-heading">試算用成色金價（NT$ / 公克）</summary>
+          <div class="price-ref-tabs">
+            <div class="price-ref-scroll">
+              <table class="gold-alloy-table" id="gold-alloy-table">
+                <thead>
+                  <tr>
+                    <th>成色</th>
+                    <th>金價</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </details>
+      </div>
+
+      <div class="gold-price-state gold-price-state--empty hidden" id="gold-price-empty">
+        <p>目前無法取得台銀牌價。請稍後再試，或前往台銀官網查看。</p>
+      </div>
+    </div>
+
+    <div class="price-reference-foot gold-price-foot">
+      <a class="btn btn-mint" href="/shop/calculator/">品項訂製試算</a>
+    </div>
+  </div>
+</section>
+
+  </div>
+</section>
+{% endblock %}
+{% block extra_scripts %}
+<script src="/static/js/gold-quote-data.js"></script>
+<script src="/static/js/gold-price.js?v=11"></script>
+{% endblock %}

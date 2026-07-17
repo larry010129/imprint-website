@@ -14,7 +14,7 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: "../app/static/react",
+    outDir: "../public/react",
     emptyOutDir: false,
     rollupOptions: {
       input: path.resolve(__dirname, "src/main.tsx"),

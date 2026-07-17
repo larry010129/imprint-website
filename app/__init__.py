@@ -6,8 +6,16 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.config import settings
-from app.routers import admin_router, api_router, auth_router, notifications_router, shop_router, web_router
+from config.settings import settings
+
+from app.controllers import (
+    admin_controller,
+    api_controller,
+    auth_controller,
+    notifications_controller,
+    shop_controller,
+    web_controller,
+)
 
 
 def _startup_banner() -> None:
@@ -37,11 +45,11 @@ def create_app() -> FastAPI:
         redoc_url=settings.redoc_url,
         lifespan=lifespan,
     )
-    application.include_router(api_router.router, prefix="/api")
-    application.include_router(auth_router.router, prefix="/api")
-    application.include_router(notifications_router.router, prefix="/api")
-    application.include_router(shop_router.router, prefix="/api")
-    application.include_router(admin_router.router, prefix="/api")
-    web_router.register_pages(application)
-    web_router.mount_static(application)
+    application.include_router(api_controller.router, prefix="/api")
+    application.include_router(auth_controller.router, prefix="/api")
+    application.include_router(notifications_controller.router, prefix="/api")
+    application.include_router(shop_controller.router, prefix="/api")
+    application.include_router(admin_controller.router, prefix="/api")
+    web_controller.register_pages(application)
+    web_controller.mount_static(application)
     return application

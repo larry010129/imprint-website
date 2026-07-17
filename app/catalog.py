@@ -14,6 +14,15 @@ def _sort_golds(golds: set[str]) -> list[str]:
 from app.image_urls import resolve_product_image_url
 
 
+def legacy_style_key(product: dict) -> str | None:
+    """Map seeded sort_order 0→A, 1→B… to shop-product asset ids (pendant-A, ring-B, …)."""
+    category = (product.get("category") or "").strip().lower()
+    order = int(product.get("sort_order") or 0)
+    if category and 0 <= order <= 25:
+        return f"{category}-{chr(ord('A') + order)}"
+    return None
+
+
 def build_catalog_product(product: dict, variants: list[dict], images: list[dict]) -> dict:
     golds = _sort_golds({v["gold"] for v in variants})
     carats = sorted({v["carat"] for v in variants})
@@ -33,6 +42,7 @@ def build_catalog_product(product: dict, variants: list[dict], images: list[dict
 
     return {
         "id": str(product["id"]),
+        "styleKey": legacy_style_key(product),
         "nameZh": product["name_zh"],
         "nameEn": product["name_en"],
         "descriptionZh": product["description_zh"],

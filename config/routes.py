@@ -1,0 +1,946 @@
+"""Route registry — maps each page URL to its Jinja view and SEO metadata.
+
+Used by app/controllers/web_controller.py to register FastAPI page routes.
+Hand-edit for pages added after the initial migration from static HTML.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+
+
+@dataclass
+class PageMeta:
+    route: str
+    template: str
+    title: str
+    description: str
+    canonical_path: str
+    og_title: str | None = None
+    og_description: str | None = None
+    og_image: str | None = None
+    breadcrumbs: list[tuple[str, str | None]] = field(default_factory=list)
+    nav_active: str | None = None
+    mvc_page: str | None = None
+    extra_body_class: str | None = None
+    content_fragment: str | None = None
+    extra_head_blocks: list[str] = field(default_factory=list)
+
+
+HOME = PageMeta(
+    route='/',
+    template='pages/index.html',
+    title='銘印鑽石 IMPRINT DIAMOND｜台灣在地 DNA 紀念鑽石訂製',
+    description='銘印鑽石｜全台唯一擁有在地DNA鑽石培育實驗室的紀念鑽石品牌。萃取毛髮、骨灰中的元素，於台灣在地培育成專屬於您的紀念鑽石(骨灰鑽石,毛髮鑽石,生命鑽石,寵物鑽石,寶寶鑽石)，附鑑定保障與專屬影音紀念盒，預約制一對一顧問服務。',
+    canonical_path='',
+    og_title='銘印鑽石 IMPRINT DIAMOND｜台灣在地 DNA 紀念鑽石訂製',
+    og_description='全台唯一擁有在地DNA鑽石培育實驗室的紀念鑽石品牌。萃取毛髮、骨灰中的元素，於台灣在地培育成專屬於您的紀念鑽石，附鑑定保障與專屬影音紀念盒，預約制一對一顧問服務。',
+    og_image='images/hero/imprint-diamond-family-memorial.jpg',
+    breadcrumbs=[],
+    nav_active=None,
+    mvc_page=None,
+    extra_body_class='page-home',
+    content_fragment=None,
+    extra_head_blocks=['{\n  "@context": "https://schema.org",\n  "@type": "JewelryStore",\n  "name": "銘印鑽石 IMPRINT DIAMOND",\n  "alternateName": "心之銘印鑽石有限公司",\n  "url": "https://www.imprint-diamond.com/",\n  "image": "https://www.imprint-diamond.com/images/hero/imprint-diamond-family-memorial.jpg",\n  "telephone": "+886-2-2977-0268",\n  "priceRange": "NT$24,000–NT$250,000+",\n  "description": "全台唯一擁有在地DNA鑽石培育實驗室的紀念鑽石品牌，萃取毛髮、骨灰中的元素，於台灣在地培育成專屬紀念DNA鑽石(毛髮鑽石,骨灰鑽石,寵物鑽石,生命鑽石)。",\n  "address": {\n    "@type": "PostalAddress",\n    "streetAddress": "福德南路43號1樓",\n    "addressLocality": "三重區",\n    "addressRegion": "新北市",\n    "addressCountry": "TW"\n  },\n  "hasMap": "https://www.google.com/maps/search/?api=1&query=%E6%96%B0%E5%8C%97%E5%B8%82%E4%B8%89%E9%87%8D%E5%8D%80%E7%A6%8F%E5%BE%B7%E5%8D%97%E8%B7%AF43%E8%99%9F1%E6%A8%93",\n  "sameAs": [\n    "https://www.facebook.com/Imprintdiamond/"\n  ]\n}', '{\n  "@context": "https://schema.org",\n  "@type": "WebSite",\n  "name": "銘印鑽石 IMPRINT DIAMOND",\n  "url": "https://www.imprint-diamond.com/",\n  "inLanguage": "zh-Hant-TW"\n}', '{\n  "@context": "https://schema.org",\n  "@type": "FAQPage",\n  "mainEntity": [\n    {\n      "@type": "Question",\n      "name": "需要準備多少毛髮或骨灰？",\n      "acceptedAnswer": {\n        "@type": "Answer",\n        "text": "毛髮約需一顆雞蛋的大小；骨灰約需 3 至 5 公克。若不確定份量是否足夠，請先透過官方 LINE 與顧問確認——不需要先寄送樣本。每一份樣本都以單一客戶、單一培育流程處理。"\n      }\n    },\n    {\n      "@type": "Question",\n      "name": "製作一顆紀念鑽石需要多久？",\n      "acceptedAnswer": {\n        "@type": "Answer",\n        "text": "約 3 個月（70–90 天）。培育鑽石需要時間讓晶體自然生長，每一顆的培育過程都獨立進行。完工後，會連同銘印保證卡與專屬影音紀念盒一併交付。"\n      }\n    },\n    {\n      "@type": "Question",\n      "name": "樣本會送到國外處理嗎？",\n      "acceptedAnswer": {\n        "@type": "Answer",\n        "text": "全程在台灣完成。銘印鑽石是全台唯一擁有在地 DNA 鑽石培育實驗室的紀念鑽石品牌，從萃取、培育到成品，您珍視的毛髮與骨灰無需經歷國際運送。"\n      }\n    },\n    {\n      "@type": "Question",\n      "name": "完成的鑽石有鑑定證書嗎？",\n      "acceptedAnswer": {\n        "@type": "Answer",\n        "text": "每顆鑽石皆附銘印保證卡；0.20 克拉以上的鑽石，可代送 GIA 或 IGI 國際鑑定機構出具證書（費用另計），讓這顆鑽石在未來傳承時，有正式的身分證明。"\n      }\n    },\n    {\n      "@type": "Question",\n      "name": "鑽石可以鑲嵌成戒指或項鍊嗎？",\n      "acceptedAnswer": {\n        "@type": "Answer",\n        "text": "可以。鑽石完成後，可鑲嵌為戒指、項鍊、耳環或手鍊，材質可選 18K 金、14K 金、9K 金或 PT950 鉑金，由專屬顧問與您討論設計與預算。"\n      }\n    },\n    {\n      "@type": "Question",\n      "name": "如何開始訂製？",\n      "acceptedAnswer": {\n        "@type": "Answer",\n        "text": "銘印鑽石採預約制。請透過官方 LINE 預約，由專屬顧問一對一討論需求、確認樣本份量與報價，再進行採樣與培育。門市：新北市三重區福德南路 43 號 1 樓。"\n      }\n    }\n  ]\n}'],
+)
+
+PAGE_404 = PageMeta(
+    route='/404.html',
+    template='pages/404.html',
+    title='找不到頁面｜銘印鑽石 IMPRINT DIAMOND',
+    description='',
+    canonical_path='',
+    og_title=None,
+    og_description=None,
+    og_image=None,
+    breadcrumbs=[],
+    nav_active='about',
+    mvc_page='error-404',
+    extra_body_class='page-404',
+    content_fragment=None,
+    extra_head_blocks=[],
+)
+
+PAGE_ABOUT = PageMeta(
+    route='/about.html',
+    template='pages/about.html',
+    title='品牌故事｜全台唯一在地DNA鑽石培育實驗室－銘印鑽石 IMPRINT DIAMOND',
+    description='銘印鑽石品牌故事：全台唯一擁有在地DNA鑽石培育實驗室，把毛髮或骨灰中的元素培育成專屬紀念鑽石。我們相信思念可以有具體的形狀，也理解每一段考慮期都值得被尊重。',
+    canonical_path='about.html',
+    og_title='品牌故事－銘印鑽石 IMPRINT DIAMOND',
+    og_description='全台唯一在地DNA鑽石培育實驗室，把最深的情感，銘印成永恆。',
+    og_image='images/hero/imprint-diamond-family-memorial.jpg',
+    breadcrumbs=[('首頁', '/'), ('關於我們', '/about.html'), ('品牌故事', None)],
+    nav_active='about',
+    mvc_page=None,
+    extra_body_class=None,
+    content_fragment=None,
+    extra_head_blocks=[],
+)
+
+PAGE_ACCOUNT = PageMeta(
+    route='/account.html',
+    template='pages/account.html',
+    title='會員專區｜銘印鑽石 IMPRINT DIAMOND',
+    description='',
+    canonical_path='',
+    og_title=None,
+    og_description=None,
+    og_image=None,
+    breadcrumbs=[],
+    nav_active='account',
+    mvc_page='account',
+    extra_body_class=None,
+    content_fragment=None,
+    extra_head_blocks=[],
+)
+
+PAGE_CART = PageMeta(
+    route='/cart.html',
+    template='pages/cart.html',
+    title='購物車｜銘印鑽石 IMPRINT DIAMOND',
+    description='',
+    canonical_path='',
+    og_title=None,
+    og_description=None,
+    og_image=None,
+    breadcrumbs=[],
+    nav_active='shop',
+    mvc_page='cart',
+    extra_body_class=None,
+    content_fragment=None,
+    extra_head_blocks=[],
+)
+
+PAGE_CHECKOUT = PageMeta(
+    route='/checkout.html',
+    template='pages/checkout.html',
+    title='確認訂單｜銘印鑽石 IMPRINT DIAMOND',
+    description='',
+    canonical_path='',
+    og_title=None,
+    og_description=None,
+    og_image=None,
+    breadcrumbs=[],
+    nav_active='shop',
+    mvc_page=None,
+    extra_body_class=None,
+    content_fragment=None,
+    extra_head_blocks=[],
+)
+
+PAGE_CONTACT = PageMeta(
+    route='/contact.html',
+    template='pages/contact.html',
+    title='聯絡我們｜門市地址與預約方式－銘印鑽石 IMPRINT DIAMOND',
+    description='銘印鑽石聯絡資訊：新北市三重區福德南路43號1樓（預約制），電話02-2977-0268，官方LINE一對一顧問諮詢。全台唯一在地DNA鑽石培育實驗室，歡迎預約蒞臨。',
+    canonical_path='contact.html',
+    og_title='聯絡我們－銘印鑽石 IMPRINT DIAMOND',
+    og_description='新北市三重區福德南路43號1樓（預約制），電話02-2977-0268。',
+    og_image='images/hero/imprint-diamond-family-memorial.jpg',
+    breadcrumbs=[('首頁', '/'), ('關於我們', '/about.html'), ('聯絡我們', None)],
+    nav_active='about',
+    mvc_page='contact',
+    extra_body_class=None,
+    content_fragment=None,
+    extra_head_blocks=[],
+)
+
+PAGE_DIAMONDS = PageMeta(
+    route='/diamonds.html',
+    template='pages/diamonds.html',
+    title='DNA 鑽石｜五大訂製系列總覽－銘印鑽石 IMPRINT DIAMOND',
+    description='銘印鑽石 DNA 鑽石五大訂製系列總覽：滿月鑽石、寵物鑽石、結髮鑽石、全家福鑽石、生命鑽石。全台唯一在地培育實驗室，線上選擇克拉數、形狀與飾品款式，立即試算。',
+    canonical_path='diamonds.html',
+    og_title='DNA 鑽石｜五大訂製系列總覽－銘印鑽石',
+    og_description='滿月、寵物、結髮、全家福、生命五大訂製系列，全台唯一在地培育實驗室。',
+    og_image='images/hero/imprint-diamond-family-memorial.jpg',
+    breadcrumbs=[('首頁', '/'), ('DNA 鑽石', None)],
+    nav_active='diamonds',
+    mvc_page=None,
+    extra_body_class=None,
+    content_fragment=None,
+    extra_head_blocks=[],
+)
+
+PAGE_FAQ = PageMeta(
+    route='/faq.html',
+    template='pages/faq.html',
+    title='常見問題｜DNA紀念鑽石怎麼做？毛髮骨灰需要多少？－銘印鑽石',
+    description='DNA紀念鑽石常見問題一次解答：毛髮約一顆雞蛋大小、骨灰3至5公克即可訂製，製作約3個月，全程於台灣在地實驗室完成，0.20克拉以上可代送GIA/IGI鑑定。',
+    canonical_path='faq.html',
+    og_title='常見問題｜DNA紀念鑽石怎麼做？－銘印鑽石',
+    og_description='毛髮約一顆雞蛋大小、骨灰3至5公克即可訂製，製作約3個月，全程台灣在地完成。',
+    og_image='images/hero/imprint-diamond-family-memorial.jpg',
+    breadcrumbs=[('首頁', '/'), ('常見問題', None)],
+    nav_active='knowledge',
+    mvc_page=None,
+    extra_body_class=None,
+    content_fragment=None,
+    extra_head_blocks=['{\n  "@context": "https://schema.org",\n  "@type": "FAQPage",\n  "mainEntity": [\n    {\n      "@type": "Question",\n      "name": "需要準備多少毛髮或骨灰，才能製作 DNA 鑽石？",\n      "acceptedAnswer": {\n        "@type": "Answer",\n        "text": "毛髮約需一顆雞蛋的大小（或 100ml 養樂多瓶約 8 分滿）；骨灰約需 3 至 5 公克。若您手邊的份量不確定是否足夠，請先透過官方 LINE 與顧問確認——我們會依您的狀況評估，不需要先寄送樣本。每一份樣本我們都以單一客戶、單一培育流程處理，確保專屬與純粹。"\n      }\n    },\n    {\n      "@type": "Question",\n      "name": "DNA 鑽石是怎麼製作的？",\n      "acceptedAnswer": {\n        "@type": "Answer",\n        "text": "DNA 鑽石是萃取毛髮或骨灰中的元素，注入鑽石生長設備中，經晶化培育而成的專屬個人化鑽石。完整流程為：樣本萃取 → 元素注入生長設備 → 晶化培育 → 切割拋光 →（可選）鑲嵌為飾品。從萃取、培育到飾品設計，全程於台灣完成。"\n      }\n    },\n    {\n      "@type": "Question",\n      "name": "製作一顆紀念鑽石需要多久？",\n      "acceptedAnswer": {\n        "@type": "Answer",\n        "text": "約 3 個月（70–90 天）。培育鑽石需要時間讓晶體自然生長，每一顆的培育過程都獨立進行。完工後，我們會連同銘印保證卡與專屬影音紀念盒一併交付。"\n      }\n    },\n    {\n      "@type": "Question",\n      "name": "樣本會送到國外處理嗎？",\n      "acceptedAnswer": {\n        "@type": "Answer",\n        "text": "不會。銘印鑽石是全台唯一擁有在地 DNA 鑽石培育實驗室的紀念鑽石品牌，從萃取、培育到成品，全程在台灣完成。您珍視的毛髮與骨灰不需要經歷國際運送，每一個環節都在您觸手可及的距離裡被安心對待。"\n      }\n    },\n    {\n      "@type": "Question",\n      "name": "完成的鑽石有鑑定證書嗎？",\n      "acceptedAnswer": {\n        "@type": "Answer",\n        "text": "有。每顆鑽石皆附銘印保證卡；0.20 克拉以上的鑽石，可代送 GIA 或 IGI 國際鑑定機構出具證書（費用另計）。第三方鑑定為您的珍藏提供客觀保障，也讓這顆鑽石在未來傳承時，有正式的身分證明。"\n      }\n    },\n    {\n      "@type": "Question",\n      "name": "DNA 紀念鑽石的價格怎麼計算？",\n      "acceptedAnswer": {\n        "@type": "Answer",\n        "text": "價格依克拉數計算：0.10 克拉 NT$24,000 起、0.50 克拉 NT$98,000、1.00 克拉 NT$250,000（圓形明亮式切工／白鑽）。非圓形切工（公主方、橢圓、梨形等）加價 10%，且需 0.30 克拉以上才能製作；彩鑽最低製作規格為 0.30 克拉，報價依顏色稀有度而定；3.00 克拉以上請洽官方 LINE 專屬報價。完整價目請見價格總覽。"\n      }\n    },\n    {\n      "@type": "Question",\n      "name": "寵物的毛髮也可以做成鑽石嗎？",\n      "acceptedAnswer": {\n        "@type": "Answer",\n        "text": "可以。寵物鑽石是我們的主要系列之一，許多飼主以毛孩的毛髮訂製鑽石，讓陪伴以另一種形式延續。毛髮份量同樣約需一顆雞蛋大小；若毛量不足，請先與顧問討論，我們會依實際狀況給您建議。"\n      }\n    },\n    {\n      "@type": "Question",\n      "name": "鑽石可以鑲嵌成戒指或項鍊嗎？",\n      "acceptedAnswer": {\n        "@type": "Answer",\n        "text": "可以。鑽石完成後，可鑲嵌為戒指、項鍊、耳環或手鍊，材質可選 18K 金、14K 金、9K 金或 PT950 鉑金。飾品戒台依款式與材質另計（例：9K 經典款項鍊 NT$10,000 起，不含鑽），由專屬顧問與您討論設計與預算，依您的故事量身打造。"\n      }\n    },\n    {\n      "@type": "Question",\n      "name": "完工後我會收到什麼？",\n      "acceptedAnswer": {\n        "@type": "Answer",\n        "text": "您會收到：專屬培育的 DNA 鑽石（或已鑲嵌完成的飾品）、銘印保證卡，以及專屬影音紀念盒——封存這顆鑽石從樣本到成品的珍貴過程。"\n      }\n    },\n    {\n      "@type": "Question",\n      "name": "如何開始訂製？",\n      "acceptedAnswer": {\n        "@type": "Answer",\n        "text": "銘印鑽石採預約制。請透過官方 LINE 預約，由專屬顧問與您一對一討論需求、確認樣本份量與報價，再進行採樣與培育。官方 LINE：點此加入；電話：02-2977-0268；門市：新北市三重區福德南路 43 號 1 樓（預約制）。"\n      }\n    }\n  ]\n}'],
+)
+
+PAGE_FAVORITES = PageMeta(
+    route='/favorites.html',
+    template='pages/favorites.html',
+    title='收藏款式｜銘印鑽石 IMPRINT DIAMOND',
+    description='',
+    canonical_path='',
+    og_title=None,
+    og_description=None,
+    og_image=None,
+    breadcrumbs=[],
+    nav_active='account',
+    mvc_page='favorites',
+    extra_body_class=None,
+    content_fragment=None,
+    extra_head_blocks=[],
+)
+
+PAGE_GOLD_PRICE = PageMeta(
+    route='/gold-price.html',
+    template='pages/gold-price.html',
+    title='台銀金價｜黃金條塊牌價－銘印鑽石',
+    description='即時台銀黃金條塊本行賣出牌價，9K/14K/18K 成色金價換算，供戒台訂製試算參考。',
+    canonical_path='gold-price.html',
+    og_title=None,
+    og_description=None,
+    og_image=None,
+    breadcrumbs=[],
+    nav_active='shop',
+    mvc_page=None,
+    extra_body_class=None,
+    content_fragment=None,
+    extra_head_blocks=[],
+)
+
+PAGE_HISTORY = PageMeta(
+    route='/history.html',
+    template='pages/history.html',
+    title='訂購紀錄｜銘印鑽石 IMPRINT DIAMOND',
+    description='',
+    canonical_path='',
+    og_title=None,
+    og_description=None,
+    og_image=None,
+    breadcrumbs=[],
+    nav_active='account',
+    mvc_page='history',
+    extra_body_class=None,
+    content_fragment=None,
+    extra_head_blocks=[],
+)
+
+PAGE_LOGIN = PageMeta(
+    route='/login.html',
+    template='pages/login.html',
+    title='會員登入｜銘印鑽石 IMPRINT DIAMOND',
+    description='',
+    canonical_path='',
+    og_title=None,
+    og_description=None,
+    og_image=None,
+    breadcrumbs=[],
+    nav_active='account',
+    mvc_page='login',
+    extra_body_class='page-login',
+    content_fragment=None,
+    extra_head_blocks=[],
+)
+
+PAGE_NOTIFICATIONS = PageMeta(
+    route='/notifications.html',
+    template='pages/notifications.html',
+    title='通知｜銘印鑽石 IMPRINT DIAMOND',
+    description='',
+    canonical_path='',
+    og_title=None,
+    og_description=None,
+    og_image=None,
+    breadcrumbs=[],
+    nav_active='account',
+    mvc_page='notifications',
+    extra_body_class=None,
+    content_fragment=None,
+    extra_head_blocks=[],
+)
+
+PAGE_PRICE = PageMeta(
+    route='/price.html',
+    template='pages/price.html',
+    title='價格試算｜DNA 紀念鑽石價格表－銘印鑽石 IMPRINT DIAMOND',
+    description='DNA 紀念鑽石價格試算：0.10 克拉 NT$24,000 起，依克拉數、切工、彩鑽透明報價。線上試算戒台訂製，或查閱完整價格表。',
+    canonical_path='price.html',
+    og_title='價格試算｜DNA 紀念鑽石價格表－銘印鑽石',
+    og_description='0.10 克拉 NT$24,000 起，依克拉數透明報價。線上試算或查閱完整價格表。',
+    og_image='images/hero/imprint-diamond-family-memorial.jpg',
+    breadcrumbs=[('首頁', '/'), ('價格試算', None)],
+    nav_active='shop',
+    mvc_page=None,
+    extra_body_class=None,
+    content_fragment=None,
+    extra_head_blocks=[],
+)
+
+PAGE_PROFILE = PageMeta(
+    route='/profile.html',
+    template='pages/profile.html',
+    title='帳戶設定｜銘印鑽石 IMPRINT DIAMOND',
+    description='',
+    canonical_path='',
+    og_title=None,
+    og_description=None,
+    og_image=None,
+    breadcrumbs=[],
+    nav_active='account',
+    mvc_page='profile',
+    extra_body_class=None,
+    content_fragment=None,
+    extra_head_blocks=[],
+)
+
+PAGE_REGISTER = PageMeta(
+    route='/register.html',
+    template='pages/register.html',
+    title='加入會員｜銘印鑽石 IMPRINT DIAMOND',
+    description='',
+    canonical_path='',
+    og_title=None,
+    og_description=None,
+    og_image=None,
+    breadcrumbs=[],
+    nav_active='account',
+    mvc_page='register',
+    extra_body_class=None,
+    content_fragment=None,
+    extra_head_blocks=[],
+)
+
+PAGE_RESET_PASSWORD = PageMeta(
+    route='/reset-password.html',
+    template='pages/reset-password.html',
+    title='重設密碼｜銘印鑽石 IMPRINT DIAMOND',
+    description='',
+    canonical_path='',
+    og_title=None,
+    og_description=None,
+    og_image=None,
+    breadcrumbs=[],
+    nav_active='account',
+    mvc_page='reset-password',
+    extra_body_class=None,
+    content_fragment=None,
+    extra_head_blocks=[],
+)
+
+PAGE_STORIES = PageMeta(
+    route='/stories.html',
+    template='pages/stories.html',
+    title='客戶見證｜真實的紀念鑽石故事－銘印鑽石 IMPRINT DIAMOND',
+    description='銘印鑽石客戶見證：寵物鑽石、生命鑽石、結髮鑽石、滿月鑽石的真實訂製故事。每一顆銘印鑽石背後，都是一段值得被記住的情感。',
+    canonical_path='stories.html',
+    og_title='客戶見證－銘印鑽石 IMPRINT DIAMOND',
+    og_description='思念，在他們手中發著光。每一顆銘印鑽石背後，都是一段真實的故事。',
+    og_image='images/hero/imprint-diamond-family-memorial.jpg',
+    breadcrumbs=[('首頁', '/'), ('關於我們', '/about.html'), ('客戶見證', None)],
+    nav_active='about',
+    mvc_page=None,
+    extra_body_class=None,
+    content_fragment=None,
+    extra_head_blocks=[],
+)
+
+PAGE_SUCCESS = PageMeta(
+    route='/success.html',
+    template='pages/success.html',
+    title='訂單送出｜銘印鑽石 IMPRINT DIAMOND',
+    description='',
+    canonical_path='',
+    og_title=None,
+    og_description=None,
+    og_image=None,
+    breadcrumbs=[],
+    nav_active='shop',
+    mvc_page='success',
+    extra_body_class=None,
+    content_fragment=None,
+    extra_head_blocks=[],
+)
+
+PAGE_TRACK_ORDER = PageMeta(
+    route='/track-order.html',
+    template='pages/track-order.html',
+    title='查詢訂製進度｜銘印鑽石 IMPRINT DIAMOND',
+    description='',
+    canonical_path='',
+    og_title=None,
+    og_description=None,
+    og_image=None,
+    breadcrumbs=[],
+    nav_active='track-order',
+    mvc_page='track-order',
+    extra_body_class=None,
+    content_fragment=None,
+    extra_head_blocks=[],
+)
+
+PAGE_WHAT_IS_DNA_DIAMOND = PageMeta(
+    route='/what-is-dna-diamond.html',
+    template='pages/what-is-dna-diamond.html',
+    title='什麼是 DNA 鑽石｜製作流程與鑑定保障－銘印鑽石 IMPRINT DIAMOND',
+    description='DNA 鑽石是萃取毛髮或骨灰中的元素，於台灣在地實驗室培育而成的專屬鑽石。完整說明製作流程、所需樣本份量、70–90 天培育週期與 GIA／IGI 鑑定保障。',
+    canonical_path='what-is-dna-diamond.html',
+    og_title='DNA 鑽石的誕生｜製作流程與鑑定保障－銘印鑽石',
+    og_description='從一縷髮絲，到一顆會發光的鑽石——完整的製作過程與品質保障說明。',
+    og_image='images/hero/imprint-diamond-family-memorial.jpg',
+    breadcrumbs=[('首頁', '/'), ('DNA 鑽石', '/diamonds.html'), ('什麼是 DNA 鑽石', None)],
+    nav_active='knowledge',
+    mvc_page=None,
+    extra_body_class=None,
+    content_fragment=None,
+    extra_head_blocks=[],
+)
+
+JEWELRY_INDEX = PageMeta(
+    route='/jewelry/',
+    template='pages/jewelry/index.html',
+    title='時尚珠寶｜戒指・項鍊・耳環・手鍊 DNA紀念鑽石訂製－銘印鑽石 IMPRINT DIAMOND',
+    description='銘印鑽石時尚珠寶系列，提供戒指、項鍊、耳環、手鍊四大分類，以胎髮、髮絲、寵物毛髮或紀念物培育專屬 DNA 鑽石，搭配 18K/14K/9K 金與 PT950 鉑金材質，線上客製與試算，全程台灣在地實驗室培育。',
+    canonical_path='jewelry/',
+    og_title='時尚珠寶｜戒指・項鍊・耳環・手鍊 DNA紀念鑽石訂製－銘印鑽石 IMPRINT DIAMOND',
+    og_description='銘印鑽石時尚珠寶系列，提供戒指、項鍊、耳環、手鍊四大分類，以胎髮、髮絲、寵物毛髮或紀念物培育專屬 DNA 鑽石，搭配 18K/14K/9K 金與 PT950 鉑金材質，線上客製與試算，全程台灣在地實驗室培育。',
+    og_image='images/products/category-ring.jpg',
+    breadcrumbs=[('首頁', '/'), ('時尚珠寶', '/jewelry/')],
+    nav_active='jewelry',
+    mvc_page=None,
+    extra_body_class=None,
+    content_fragment=None,
+    extra_head_blocks=[],
+)
+
+SHOP_CALCULATOR = PageMeta(
+    route='/shop/calculator/',
+    template='pages/shop/calculator.html',
+    title='品項訂製｜鑽石戒台選購試算－銘印鑽石 IMPRINT DIAMOND',
+    description='線上選擇戒指、項墜、耳飾、手鍊與鍊條款式，配置克拉數、鑽石顏色、金屬成色與戒圍，即時試算參考價格並下單。',
+    canonical_path='shop/calculator/',
+    og_title=None,
+    og_description=None,
+    og_image=None,
+    breadcrumbs=[],
+    nav_active='shop',
+    mvc_page=None,
+    extra_body_class=None,
+    content_fragment=None,
+    extra_head_blocks=[],
+)
+
+JEWELRY_CATEGORY_BRACELETS = PageMeta(
+    route='/jewelry/bracelets/',
+    template='pages/jewelry_category.html',
+    title='手鍊系列｜DNA紀念鑽石手鍊訂製－銘印鑽石 IMPRINT DIAMOND',
+    description='銘印鑽石手鍊系列：以胎髮、髮絲、寵物毛髮或紀念物培育專屬 DNA 鑽石，打造獨一無二的手鍊。線上選擇克拉數、顏色、形狀與材質，立即試算參考價格，全程台灣在地實驗室培育。',
+    canonical_path='jewelry/bracelets/',
+    og_title='手鍊系列｜DNA紀念鑽石手鍊訂製－銘印鑽石 IMPRINT DIAMOND',
+    og_description='銘印鑽石手鍊系列：以胎髮、髮絲、寵物毛髮或紀念物培育專屬 DNA 鑽石，打造獨一無二的手鍊。線上選擇克拉數、顏色、形狀與材質，立即試算參考價格，全程台灣在地實驗室培育。',
+    og_image='images/products/category-bracelet.jpg',
+    breadcrumbs=[('首頁', '/'), ('時尚珠寶', '/jewelry/'), ('手鍊', '/jewelry/bracelets/')],
+    nav_active='jewelry',
+    mvc_page=None,
+    extra_body_class=None,
+    content_fragment='jewelry_category/bracelets.html',
+    extra_head_blocks=['{\n  "@context": "https://schema.org",\n  "@type": "ItemList",\n  "itemListElement": [\n    {\n      "@type": "ListItem",\n      "position": 1,\n      "name": "網球手鍊",\n      "url": "https://www.imprint-diamond.com/jewelry/bracelets/tennis/"\n    },\n    {\n      "@type": "ListItem",\n      "position": 2,\n      "name": "鎖鏈手鍊",\n      "url": "https://www.imprint-diamond.com/jewelry/bracelets/chain/"\n    },\n    {\n      "@type": "ListItem",\n      "position": 3,\n      "name": "墜飾手鍊",\n      "url": "https://www.imprint-diamond.com/jewelry/bracelets/charm/"\n    },\n    {\n      "@type": "ListItem",\n      "position": 4,\n      "name": "手環",\n      "url": "https://www.imprint-diamond.com/jewelry/bracelets/bangle/"\n    }\n  ]\n}'],
+)
+
+JEWELRY_CATEGORY_EARRINGS = PageMeta(
+    route='/jewelry/earrings/',
+    template='pages/jewelry_category.html',
+    title='耳環系列｜DNA紀念鑽石耳環訂製－銘印鑽石 IMPRINT DIAMOND',
+    description='銘印鑽石耳環系列：以胎髮、髮絲、寵物毛髮或紀念物培育專屬 DNA 鑽石，打造獨一無二的耳環。線上選擇克拉數、顏色、形狀與材質，立即試算參考價格，全程台灣在地實驗室培育。',
+    canonical_path='jewelry/earrings/',
+    og_title='耳環系列｜DNA紀念鑽石耳環訂製－銘印鑽石 IMPRINT DIAMOND',
+    og_description='銘印鑽石耳環系列：以胎髮、髮絲、寵物毛髮或紀念物培育專屬 DNA 鑽石，打造獨一無二的耳環。線上選擇克拉數、顏色、形狀與材質，立即試算參考價格，全程台灣在地實驗室培育。',
+    og_image='images/products/category-earring.jpg',
+    breadcrumbs=[('首頁', '/'), ('時尚珠寶', '/jewelry/'), ('耳環', '/jewelry/earrings/')],
+    nav_active='jewelry',
+    mvc_page=None,
+    extra_body_class=None,
+    content_fragment='jewelry_category/earrings.html',
+    extra_head_blocks=['{\n  "@context": "https://schema.org",\n  "@type": "ItemList",\n  "itemListElement": [\n    {\n      "@type": "ListItem",\n      "position": 1,\n      "name": "經典耳針",\n      "url": "https://www.imprint-diamond.com/jewelry/earrings/stud/"\n    },\n    {\n      "@type": "ListItem",\n      "position": 2,\n      "name": "垂墜耳環",\n      "url": "https://www.imprint-diamond.com/jewelry/earrings/drop/"\n    },\n    {\n      "@type": "ListItem",\n      "position": 3,\n      "name": "圈式耳環",\n      "url": "https://www.imprint-diamond.com/jewelry/earrings/hoop/"\n    },\n    {\n      "@type": "ListItem",\n      "position": 4,\n      "name": "耳骨夾",\n      "url": "https://www.imprint-diamond.com/jewelry/earrings/ear-cuff/"\n    }\n  ]\n}'],
+)
+
+JEWELRY_CATEGORY_NECKLACES = PageMeta(
+    route='/jewelry/necklaces/',
+    template='pages/jewelry_category.html',
+    title='項鍊系列｜DNA紀念鑽石項鍊訂製－銘印鑽石 IMPRINT DIAMOND',
+    description='銘印鑽石項鍊系列：以胎髮、髮絲、寵物毛髮或紀念物培育專屬 DNA 鑽石，打造獨一無二的項鍊。線上選擇克拉數、顏色、形狀與材質，立即試算參考價格，全程台灣在地實驗室培育。',
+    canonical_path='jewelry/necklaces/',
+    og_title='項鍊系列｜DNA紀念鑽石項鍊訂製－銘印鑽石 IMPRINT DIAMOND',
+    og_description='銘印鑽石項鍊系列：以胎髮、髮絲、寵物毛髮或紀念物培育專屬 DNA 鑽石，打造獨一無二的項鍊。線上選擇克拉數、顏色、形狀與材質，立即試算參考價格，全程台灣在地實驗室培育。',
+    og_image='images/products/category-necklace.jpg',
+    breadcrumbs=[('首頁', '/'), ('時尚珠寶', '/jewelry/'), ('項鍊', '/jewelry/necklaces/')],
+    nav_active='jewelry',
+    mvc_page=None,
+    extra_body_class=None,
+    content_fragment='jewelry_category/necklaces.html',
+    extra_head_blocks=['{\n  "@context": "https://schema.org",\n  "@type": "ItemList",\n  "itemListElement": [\n    {\n      "@type": "ListItem",\n      "position": 1,\n      "name": "經典單鑽項鍊",\n      "url": "https://www.imprint-diamond.com/jewelry/necklaces/classic-pendant/"\n    },\n    {\n      "@type": "ListItem",\n      "position": 2,\n      "name": "光環墜飾項鍊",\n      "url": "https://www.imprint-diamond.com/jewelry/necklaces/halo-pendant/"\n    },\n    {\n      "@type": "ListItem",\n      "position": 3,\n      "name": "一字項鍊",\n      "url": "https://www.imprint-diamond.com/jewelry/necklaces/bar/"\n    },\n    {\n      "@type": "ListItem",\n      "position": 4,\n      "name": "雙層項鍊",\n      "url": "https://www.imprint-diamond.com/jewelry/necklaces/double-layer/"\n    }\n  ]\n}'],
+)
+
+JEWELRY_CATEGORY_RINGS = PageMeta(
+    route='/jewelry/rings/',
+    template='pages/jewelry_category.html',
+    title='戒指系列｜DNA紀念鑽石戒指訂製－銘印鑽石 IMPRINT DIAMOND',
+    description='銘印鑽石戒指系列：以胎髮、髮絲、寵物毛髮或紀念物培育專屬 DNA 鑽石，打造獨一無二的戒指。線上選擇克拉數、顏色、形狀與材質，立即試算參考價格，全程台灣在地實驗室培育。',
+    canonical_path='jewelry/rings/',
+    og_title='戒指系列｜DNA紀念鑽石戒指訂製－銘印鑽石 IMPRINT DIAMOND',
+    og_description='銘印鑽石戒指系列：以胎髮、髮絲、寵物毛髮或紀念物培育專屬 DNA 鑽石，打造獨一無二的戒指。線上選擇克拉數、顏色、形狀與材質，立即試算參考價格，全程台灣在地實驗室培育。',
+    og_image='images/products/category-ring.jpg',
+    breadcrumbs=[('首頁', '/'), ('時尚珠寶', '/jewelry/'), ('戒指', '/jewelry/rings/')],
+    nav_active='jewelry',
+    mvc_page=None,
+    extra_body_class=None,
+    content_fragment='jewelry_category/rings.html',
+    extra_head_blocks=['{\n  "@context": "https://schema.org",\n  "@type": "ItemList",\n  "itemListElement": [\n    {\n      "@type": "ListItem",\n      "position": 1,\n      "name": "經典單鑽戒指",\n      "url": "https://www.imprint-diamond.com/jewelry/rings/classic-solitaire/"\n    },\n    {\n      "@type": "ListItem",\n      "position": 2,\n      "name": "華麗排鑽戒指",\n      "url": "https://www.imprint-diamond.com/jewelry/rings/pave-halo/"\n    },\n    {\n      "@type": "ListItem",\n      "position": 3,\n      "name": "復古藤蔓戒指",\n      "url": "https://www.imprint-diamond.com/jewelry/rings/vintage-vine/"\n    },\n    {\n      "@type": "ListItem",\n      "position": 4,\n      "name": "極簡線戒",\n      "url": "https://www.imprint-diamond.com/jewelry/rings/modern-band/"\n    }\n  ]\n}'],
+)
+
+JEWELRY_STYLE_BRACELETS_BANGLE = PageMeta(
+    route='/jewelry/bracelets/bangle/',
+    template='pages/jewelry_style.html',
+    title='手環｜手鍊客製鑽石－銘印鑽石 IMPRINT DIAMOND',
+    description='硬版手環設計，鑽石鑲嵌其中，線條俐落有型，適合喜歡簡約俐落風格的您。。手環可線上選擇克拉數、鑽石顏色、形狀與材質成色，系統即時試算參考價格，全程台灣在地 DNA 鑽石實驗室培育，打造獨一無二的紀念珍藏。',
+    canonical_path='jewelry/bracelets/bangle/',
+    og_title='手環｜手鍊客製鑽石－銘印鑽石 IMPRINT DIAMOND',
+    og_description='硬版手環設計，鑽石鑲嵌其中，線條俐落有型，適合喜歡簡約俐落風格的您。。手環可線上選擇克拉數、鑽石顏色、形狀與材質成色，系統即時試算參考價格，全程台灣在地 DNA 鑽石實驗室培育，打造獨一無二的紀念珍藏。',
+    og_image='images/products/bracelet-bangle-1.jpg',
+    breadcrumbs=[('首頁', '/'), ('時尚珠寶', '/jewelry/'), ('手鍊', '/jewelry/bracelets/'), ('手環', '/jewelry/bracelets/bangle/')],
+    nav_active='jewelry',
+    mvc_page=None,
+    extra_body_class=None,
+    content_fragment='jewelry_style/bracelets-bangle.html',
+    extra_head_blocks=['{\n  "@context": "https://schema.org",\n  "@type": "Product",\n  "name": "手環",\n  "description": "硬版手環設計，鑽石鑲嵌其中，線條俐落有型，適合喜歡簡約俐落風格的您。",\n  "category": "Jewelry > 手鍊",\n  "brand": {\n    "@type": "Brand",\n    "name": "銘印鑽石 IMPRINT DIAMOND"\n  },\n  "offers": {\n    "@type": "Offer",\n    "priceCurrency": "TWD",\n    "price": "40000",\n    "availability": "https://schema.org/InStock",\n    "url": "https://www.imprint-diamond.com/jewelry/bracelets/bangle/"\n  }\n}'],
+)
+
+JEWELRY_STYLE_BRACELETS_CHAIN = PageMeta(
+    route='/jewelry/bracelets/chain/',
+    template='pages/jewelry_style.html',
+    title='鎖鏈手鍊｜手鍊客製鑽石－銘印鑽石 IMPRINT DIAMOND',
+    description='鍊節式設計搭配鑽石墜飾，適合與其他手鍊或手環疊戴，打造層次豐富的手部造型。。鎖鏈手鍊可線上選擇克拉數、鑽石顏色、形狀與材質成色，系統即時試算參考價格，全程台灣在地 DNA 鑽石實驗室培育，打造獨一無二的紀念珍藏。',
+    canonical_path='jewelry/bracelets/chain/',
+    og_title='鎖鏈手鍊｜手鍊客製鑽石－銘印鑽石 IMPRINT DIAMOND',
+    og_description='鍊節式設計搭配鑽石墜飾，適合與其他手鍊或手環疊戴，打造層次豐富的手部造型。。鎖鏈手鍊可線上選擇克拉數、鑽石顏色、形狀與材質成色，系統即時試算參考價格，全程台灣在地 DNA 鑽石實驗室培育，打造獨一無二的紀念珍藏。',
+    og_image='images/products/bracelet-chain-1.jpg',
+    breadcrumbs=[('首頁', '/'), ('時尚珠寶', '/jewelry/'), ('手鍊', '/jewelry/bracelets/'), ('鎖鏈手鍊', '/jewelry/bracelets/chain/')],
+    nav_active='jewelry',
+    mvc_page=None,
+    extra_body_class=None,
+    content_fragment='jewelry_style/bracelets-chain.html',
+    extra_head_blocks=['{\n  "@context": "https://schema.org",\n  "@type": "Product",\n  "name": "鎖鏈手鍊",\n  "description": "鍊節式設計搭配鑽石墜飾，適合與其他手鍊或手環疊戴，打造層次豐富的手部造型。",\n  "category": "Jewelry > 手鍊",\n  "brand": {\n    "@type": "Brand",\n    "name": "銘印鑽石 IMPRINT DIAMOND"\n  },\n  "offers": {\n    "@type": "Offer",\n    "priceCurrency": "TWD",\n    "price": "40000",\n    "availability": "https://schema.org/InStock",\n    "url": "https://www.imprint-diamond.com/jewelry/bracelets/chain/"\n  }\n}'],
+)
+
+JEWELRY_STYLE_BRACELETS_CHARM = PageMeta(
+    route='/jewelry/bracelets/charm/',
+    template='pages/jewelry_style.html',
+    title='墜飾手鍊｜手鍊客製鑽石－銘印鑽石 IMPRINT DIAMOND',
+    description='單顆鑽石墜飾垂墜於鍊身之上，隨手腕擺動輕輕搖曳，溫柔而不張揚。。墜飾手鍊可線上選擇克拉數、鑽石顏色、形狀與材質成色，系統即時試算參考價格，全程台灣在地 DNA 鑽石實驗室培育，打造獨一無二的紀念珍藏。',
+    canonical_path='jewelry/bracelets/charm/',
+    og_title='墜飾手鍊｜手鍊客製鑽石－銘印鑽石 IMPRINT DIAMOND',
+    og_description='單顆鑽石墜飾垂墜於鍊身之上，隨手腕擺動輕輕搖曳，溫柔而不張揚。。墜飾手鍊可線上選擇克拉數、鑽石顏色、形狀與材質成色，系統即時試算參考價格，全程台灣在地 DNA 鑽石實驗室培育，打造獨一無二的紀念珍藏。',
+    og_image='images/products/bracelet-charm-1.jpg',
+    breadcrumbs=[('首頁', '/'), ('時尚珠寶', '/jewelry/'), ('手鍊', '/jewelry/bracelets/'), ('墜飾手鍊', '/jewelry/bracelets/charm/')],
+    nav_active='jewelry',
+    mvc_page=None,
+    extra_body_class=None,
+    content_fragment='jewelry_style/bracelets-charm.html',
+    extra_head_blocks=['{\n  "@context": "https://schema.org",\n  "@type": "Product",\n  "name": "墜飾手鍊",\n  "description": "單顆鑽石墜飾垂墜於鍊身之上，隨手腕擺動輕輕搖曳，溫柔而不張揚。",\n  "category": "Jewelry > 手鍊",\n  "brand": {\n    "@type": "Brand",\n    "name": "銘印鑽石 IMPRINT DIAMOND"\n  },\n  "offers": {\n    "@type": "Offer",\n    "priceCurrency": "TWD",\n    "price": "40000",\n    "availability": "https://schema.org/InStock",\n    "url": "https://www.imprint-diamond.com/jewelry/bracelets/charm/"\n  }\n}'],
+)
+
+JEWELRY_STYLE_BRACELETS_TENNIS = PageMeta(
+    route='/jewelry/bracelets/tennis/',
+    template='pages/jewelry_style.html',
+    title='網球手鍊｜手鍊客製鑽石－銘印鑽石 IMPRINT DIAMOND',
+    description='鑽石以鍊狀方式排列環繞手腕一圈，光芒連續不間斷，是經典不敗的手鍊款式。。網球手鍊可線上選擇克拉數、鑽石顏色、形狀與材質成色，系統即時試算參考價格，全程台灣在地 DNA 鑽石實驗室培育，打造獨一無二的紀念珍藏。',
+    canonical_path='jewelry/bracelets/tennis/',
+    og_title='網球手鍊｜手鍊客製鑽石－銘印鑽石 IMPRINT DIAMOND',
+    og_description='鑽石以鍊狀方式排列環繞手腕一圈，光芒連續不間斷，是經典不敗的手鍊款式。。網球手鍊可線上選擇克拉數、鑽石顏色、形狀與材質成色，系統即時試算參考價格，全程台灣在地 DNA 鑽石實驗室培育，打造獨一無二的紀念珍藏。',
+    og_image='images/products/bracelet-tennis-1.jpg',
+    breadcrumbs=[('首頁', '/'), ('時尚珠寶', '/jewelry/'), ('手鍊', '/jewelry/bracelets/'), ('網球手鍊', '/jewelry/bracelets/tennis/')],
+    nav_active='jewelry',
+    mvc_page=None,
+    extra_body_class=None,
+    content_fragment='jewelry_style/bracelets-tennis.html',
+    extra_head_blocks=['{\n  "@context": "https://schema.org",\n  "@type": "Product",\n  "name": "網球手鍊",\n  "description": "鑽石以鍊狀方式排列環繞手腕一圈，光芒連續不間斷，是經典不敗的手鍊款式。",\n  "category": "Jewelry > 手鍊",\n  "brand": {\n    "@type": "Brand",\n    "name": "銘印鑽石 IMPRINT DIAMOND"\n  },\n  "offers": {\n    "@type": "Offer",\n    "priceCurrency": "TWD",\n    "price": "40000",\n    "availability": "https://schema.org/InStock",\n    "url": "https://www.imprint-diamond.com/jewelry/bracelets/tennis/"\n  }\n}'],
+)
+
+JEWELRY_STYLE_EARRINGS_DROP = PageMeta(
+    route='/jewelry/earrings/drop/',
+    template='pages/jewelry_style.html',
+    title='垂墜耳環｜耳環客製鑽石－銘印鑽石 IMPRINT DIAMOND',
+    description='鑽石垂墜於耳下，隨著步伐輕輕搖曳，為整體造型增添柔美與動態感。。垂墜耳環可線上選擇克拉數、鑽石顏色、形狀與材質成色，系統即時試算參考價格，全程台灣在地 DNA 鑽石實驗室培育，打造獨一無二的紀念珍藏。',
+    canonical_path='jewelry/earrings/drop/',
+    og_title='垂墜耳環｜耳環客製鑽石－銘印鑽石 IMPRINT DIAMOND',
+    og_description='鑽石垂墜於耳下，隨著步伐輕輕搖曳，為整體造型增添柔美與動態感。。垂墜耳環可線上選擇克拉數、鑽石顏色、形狀與材質成色，系統即時試算參考價格，全程台灣在地 DNA 鑽石實驗室培育，打造獨一無二的紀念珍藏。',
+    og_image='images/products/earring-drop-1.jpg',
+    breadcrumbs=[('首頁', '/'), ('時尚珠寶', '/jewelry/'), ('耳環', '/jewelry/earrings/'), ('垂墜耳環', '/jewelry/earrings/drop/')],
+    nav_active='jewelry',
+    mvc_page=None,
+    extra_body_class=None,
+    content_fragment='jewelry_style/earrings-drop.html',
+    extra_head_blocks=['{\n  "@context": "https://schema.org",\n  "@type": "Product",\n  "name": "垂墜耳環",\n  "description": "鑽石垂墜於耳下，隨著步伐輕輕搖曳，為整體造型增添柔美與動態感。",\n  "category": "Jewelry > 耳環",\n  "brand": {\n    "@type": "Brand",\n    "name": "銘印鑽石 IMPRINT DIAMOND"\n  },\n  "offers": {\n    "@type": "Offer",\n    "priceCurrency": "TWD",\n    "price": "62000",\n    "availability": "https://schema.org/InStock",\n    "url": "https://www.imprint-diamond.com/jewelry/earrings/drop/"\n  }\n}'],
+)
+
+JEWELRY_STYLE_EARRINGS_EAR_CUFF = PageMeta(
+    route='/jewelry/earrings/ear-cuff/',
+    template='pages/jewelry_style.html',
+    title='耳骨夾｜耳環客製鑽石－銘印鑽石 IMPRINT DIAMOND',
+    description='無需穿耳洞即可配戴的耳骨夾設計，鑽石鑲嵌於夾式耳骨環上，個性又百搭。。耳骨夾可線上選擇克拉數、鑽石顏色、形狀與材質成色，系統即時試算參考價格，全程台灣在地 DNA 鑽石實驗室培育，打造獨一無二的紀念珍藏。',
+    canonical_path='jewelry/earrings/ear-cuff/',
+    og_title='耳骨夾｜耳環客製鑽石－銘印鑽石 IMPRINT DIAMOND',
+    og_description='無需穿耳洞即可配戴的耳骨夾設計，鑽石鑲嵌於夾式耳骨環上，個性又百搭。。耳骨夾可線上選擇克拉數、鑽石顏色、形狀與材質成色，系統即時試算參考價格，全程台灣在地 DNA 鑽石實驗室培育，打造獨一無二的紀念珍藏。',
+    og_image='images/products/earring-ear-cuff-1.jpg',
+    breadcrumbs=[('首頁', '/'), ('時尚珠寶', '/jewelry/'), ('耳環', '/jewelry/earrings/'), ('耳骨夾', '/jewelry/earrings/ear-cuff/')],
+    nav_active='jewelry',
+    mvc_page=None,
+    extra_body_class=None,
+    content_fragment='jewelry_style/earrings-ear-cuff.html',
+    extra_head_blocks=['{\n  "@context": "https://schema.org",\n  "@type": "Product",\n  "name": "耳骨夾",\n  "description": "無需穿耳洞即可配戴的耳骨夾設計，鑽石鑲嵌於夾式耳骨環上，個性又百搭。",\n  "category": "Jewelry > 耳環",\n  "brand": {\n    "@type": "Brand",\n    "name": "銘印鑽石 IMPRINT DIAMOND"\n  },\n  "offers": {\n    "@type": "Offer",\n    "priceCurrency": "TWD",\n    "price": "62000",\n    "availability": "https://schema.org/InStock",\n    "url": "https://www.imprint-diamond.com/jewelry/earrings/ear-cuff/"\n  }\n}'],
+)
+
+JEWELRY_STYLE_EARRINGS_HOOP = PageMeta(
+    route='/jewelry/earrings/hoop/',
+    template='pages/jewelry_style.html',
+    title='圈式耳環｜耳環客製鑽石－銘印鑽石 IMPRINT DIAMOND',
+    description='鑽石鑲嵌於俐落的圈環之上，線條簡潔有型，適合喜歡俐落風格的您。。圈式耳環可線上選擇克拉數、鑽石顏色、形狀與材質成色，系統即時試算參考價格，全程台灣在地 DNA 鑽石實驗室培育，打造獨一無二的紀念珍藏。',
+    canonical_path='jewelry/earrings/hoop/',
+    og_title='圈式耳環｜耳環客製鑽石－銘印鑽石 IMPRINT DIAMOND',
+    og_description='鑽石鑲嵌於俐落的圈環之上，線條簡潔有型，適合喜歡俐落風格的您。。圈式耳環可線上選擇克拉數、鑽石顏色、形狀與材質成色，系統即時試算參考價格，全程台灣在地 DNA 鑽石實驗室培育，打造獨一無二的紀念珍藏。',
+    og_image='images/products/earring-hoop-1.jpg',
+    breadcrumbs=[('首頁', '/'), ('時尚珠寶', '/jewelry/'), ('耳環', '/jewelry/earrings/'), ('圈式耳環', '/jewelry/earrings/hoop/')],
+    nav_active='jewelry',
+    mvc_page=None,
+    extra_body_class=None,
+    content_fragment='jewelry_style/earrings-hoop.html',
+    extra_head_blocks=['{\n  "@context": "https://schema.org",\n  "@type": "Product",\n  "name": "圈式耳環",\n  "description": "鑽石鑲嵌於俐落的圈環之上，線條簡潔有型，適合喜歡俐落風格的您。",\n  "category": "Jewelry > 耳環",\n  "brand": {\n    "@type": "Brand",\n    "name": "銘印鑽石 IMPRINT DIAMOND"\n  },\n  "offers": {\n    "@type": "Offer",\n    "priceCurrency": "TWD",\n    "price": "62000",\n    "availability": "https://schema.org/InStock",\n    "url": "https://www.imprint-diamond.com/jewelry/earrings/hoop/"\n  }\n}'],
+)
+
+JEWELRY_STYLE_EARRINGS_STUD = PageMeta(
+    route='/jewelry/earrings/stud/',
+    template='pages/jewelry_style.html',
+    title='經典耳針｜耳環客製鑽石－銘印鑽石 IMPRINT DIAMOND',
+    description='鑽石緊貼耳垂配戴，款式簡約百搭，是最適合日常配戴的耳環款式。。經典耳針可線上選擇克拉數、鑽石顏色、形狀與材質成色，系統即時試算參考價格，全程台灣在地 DNA 鑽石實驗室培育，打造獨一無二的紀念珍藏。',
+    canonical_path='jewelry/earrings/stud/',
+    og_title='經典耳針｜耳環客製鑽石－銘印鑽石 IMPRINT DIAMOND',
+    og_description='鑽石緊貼耳垂配戴，款式簡約百搭，是最適合日常配戴的耳環款式。。經典耳針可線上選擇克拉數、鑽石顏色、形狀與材質成色，系統即時試算參考價格，全程台灣在地 DNA 鑽石實驗室培育，打造獨一無二的紀念珍藏。',
+    og_image='images/products/earring-stud-1.jpg',
+    breadcrumbs=[('首頁', '/'), ('時尚珠寶', '/jewelry/'), ('耳環', '/jewelry/earrings/'), ('經典耳針', '/jewelry/earrings/stud/')],
+    nav_active='jewelry',
+    mvc_page=None,
+    extra_body_class=None,
+    content_fragment='jewelry_style/earrings-stud.html',
+    extra_head_blocks=['{\n  "@context": "https://schema.org",\n  "@type": "Product",\n  "name": "經典耳針",\n  "description": "鑽石緊貼耳垂配戴，款式簡約百搭，是最適合日常配戴的耳環款式。",\n  "category": "Jewelry > 耳環",\n  "brand": {\n    "@type": "Brand",\n    "name": "銘印鑽石 IMPRINT DIAMOND"\n  },\n  "offers": {\n    "@type": "Offer",\n    "priceCurrency": "TWD",\n    "price": "62000",\n    "availability": "https://schema.org/InStock",\n    "url": "https://www.imprint-diamond.com/jewelry/earrings/stud/"\n  }\n}'],
+)
+
+JEWELRY_STYLE_NECKLACES_BAR = PageMeta(
+    route='/jewelry/necklaces/bar/',
+    template='pages/jewelry_style.html',
+    title='一字項鍊｜項鍊客製鑽石－銘印鑽石 IMPRINT DIAMOND',
+    description='細長墜飾如一字排開，適合刻上重要的日期或文字，是紀念意義濃厚的簡約款式。。一字項鍊可線上選擇克拉數、鑽石顏色、形狀與材質成色，系統即時試算參考價格，全程台灣在地 DNA 鑽石實驗室培育，打造獨一無二的紀念珍藏。',
+    canonical_path='jewelry/necklaces/bar/',
+    og_title='一字項鍊｜項鍊客製鑽石－銘印鑽石 IMPRINT DIAMOND',
+    og_description='細長墜飾如一字排開，適合刻上重要的日期或文字，是紀念意義濃厚的簡約款式。。一字項鍊可線上選擇克拉數、鑽石顏色、形狀與材質成色，系統即時試算參考價格，全程台灣在地 DNA 鑽石實驗室培育，打造獨一無二的紀念珍藏。',
+    og_image='images/products/necklace-bar-1.jpg',
+    breadcrumbs=[('首頁', '/'), ('時尚珠寶', '/jewelry/'), ('項鍊', '/jewelry/necklaces/'), ('一字項鍊', '/jewelry/necklaces/bar/')],
+    nav_active='jewelry',
+    mvc_page=None,
+    extra_body_class=None,
+    content_fragment='jewelry_style/necklaces-bar.html',
+    extra_head_blocks=['{\n  "@context": "https://schema.org",\n  "@type": "Product",\n  "name": "一字項鍊",\n  "description": "細長墜飾如一字排開，適合刻上重要的日期或文字，是紀念意義濃厚的簡約款式。",\n  "category": "Jewelry > 項鍊",\n  "brand": {\n    "@type": "Brand",\n    "name": "銘印鑽石 IMPRINT DIAMOND"\n  },\n  "offers": {\n    "@type": "Offer",\n    "priceCurrency": "TWD",\n    "price": "34000",\n    "availability": "https://schema.org/InStock",\n    "url": "https://www.imprint-diamond.com/jewelry/necklaces/bar/"\n  }\n}'],
+)
+
+JEWELRY_STYLE_NECKLACES_CLASSIC_PENDANT = PageMeta(
+    route='/jewelry/necklaces/classic-pendant/',
+    template='pages/jewelry_style.html',
+    title='經典單鑽項鍊｜項鍊客製鑽石－銘印鑽石 IMPRINT DIAMOND',
+    description='單顆主石垂墜於鍊身正中央，簡單卻最能凸顯鑽石本身的光芒，適合單獨配戴或作為紀念送禮首選。。經典單鑽項鍊可線上選擇克拉數、鑽石顏色、形狀與材質成色，系統即時試算參考價格，全程台灣在地 DNA 鑽石實驗室培育，打造獨一無二的紀念珍藏。',
+    canonical_path='jewelry/necklaces/classic-pendant/',
+    og_title='經典單鑽項鍊｜項鍊客製鑽石－銘印鑽石 IMPRINT DIAMOND',
+    og_description='單顆主石垂墜於鍊身正中央，簡單卻最能凸顯鑽石本身的光芒，適合單獨配戴或作為紀念送禮首選。。經典單鑽項鍊可線上選擇克拉數、鑽石顏色、形狀與材質成色，系統即時試算參考價格，全程台灣在地 DNA 鑽石實驗室培育，打造獨一無二的紀念珍藏。',
+    og_image='images/products/necklace-classic-pendant-1.jpg',
+    breadcrumbs=[('首頁', '/'), ('時尚珠寶', '/jewelry/'), ('項鍊', '/jewelry/necklaces/'), ('經典單鑽項鍊', '/jewelry/necklaces/classic-pendant/')],
+    nav_active='jewelry',
+    mvc_page=None,
+    extra_body_class=None,
+    content_fragment='jewelry_style/necklaces-classic-pendant.html',
+    extra_head_blocks=['{\n  "@context": "https://schema.org",\n  "@type": "Product",\n  "name": "經典單鑽項鍊",\n  "description": "單顆主石垂墜於鍊身正中央，簡單卻最能凸顯鑽石本身的光芒，適合單獨配戴或作為紀念送禮首選。",\n  "category": "Jewelry > 項鍊",\n  "brand": {\n    "@type": "Brand",\n    "name": "銘印鑽石 IMPRINT DIAMOND"\n  },\n  "offers": {\n    "@type": "Offer",\n    "priceCurrency": "TWD",\n    "price": "34000",\n    "availability": "https://schema.org/InStock",\n    "url": "https://www.imprint-diamond.com/jewelry/necklaces/classic-pendant/"\n  }\n}'],
+)
+
+JEWELRY_STYLE_NECKLACES_DOUBLE_LAYER = PageMeta(
+    route='/jewelry/necklaces/double-layer/',
+    template='pages/jewelry_style.html',
+    title='雙層項鍊｜項鍊客製鑽石－銘印鑽石 IMPRINT DIAMOND',
+    description='雙層鍊身設計，可分別鑲嵌兩顆鑽石，適合同時紀念兩位重要的人，或紀念不同階段的重要時刻。。雙層項鍊可線上選擇克拉數、鑽石顏色、形狀與材質成色，系統即時試算參考價格，全程台灣在地 DNA 鑽石實驗室培育，打造獨一無二的紀念珍藏。',
+    canonical_path='jewelry/necklaces/double-layer/',
+    og_title='雙層項鍊｜項鍊客製鑽石－銘印鑽石 IMPRINT DIAMOND',
+    og_description='雙層鍊身設計，可分別鑲嵌兩顆鑽石，適合同時紀念兩位重要的人，或紀念不同階段的重要時刻。。雙層項鍊可線上選擇克拉數、鑽石顏色、形狀與材質成色，系統即時試算參考價格，全程台灣在地 DNA 鑽石實驗室培育，打造獨一無二的紀念珍藏。',
+    og_image='images/products/necklace-double-layer-1.jpg',
+    breadcrumbs=[('首頁', '/'), ('時尚珠寶', '/jewelry/'), ('項鍊', '/jewelry/necklaces/'), ('雙層項鍊', '/jewelry/necklaces/double-layer/')],
+    nav_active='jewelry',
+    mvc_page=None,
+    extra_body_class=None,
+    content_fragment='jewelry_style/necklaces-double-layer.html',
+    extra_head_blocks=['{\n  "@context": "https://schema.org",\n  "@type": "Product",\n  "name": "雙層項鍊",\n  "description": "雙層鍊身設計，可分別鑲嵌兩顆鑽石，適合同時紀念兩位重要的人，或紀念不同階段的重要時刻。",\n  "category": "Jewelry > 項鍊",\n  "brand": {\n    "@type": "Brand",\n    "name": "銘印鑽石 IMPRINT DIAMOND"\n  },\n  "offers": {\n    "@type": "Offer",\n    "priceCurrency": "TWD",\n    "price": "34000",\n    "availability": "https://schema.org/InStock",\n    "url": "https://www.imprint-diamond.com/jewelry/necklaces/double-layer/"\n  }\n}'],
+)
+
+JEWELRY_STYLE_NECKLACES_HALO_PENDANT = PageMeta(
+    route='/jewelry/necklaces/halo-pendant/',
+    template='pages/jewelry_style.html',
+    title='光環墜飾項鍊｜項鍊客製鑽石－銘印鑽石 IMPRINT DIAMOND',
+    description='主石周圍鑲嵌一圈小鑽，讓墜飾視覺份量更飽滿，光芒層次也更豐富。。光環墜飾項鍊可線上選擇克拉數、鑽石顏色、形狀與材質成色，系統即時試算參考價格，全程台灣在地 DNA 鑽石實驗室培育，打造獨一無二的紀念珍藏。',
+    canonical_path='jewelry/necklaces/halo-pendant/',
+    og_title='光環墜飾項鍊｜項鍊客製鑽石－銘印鑽石 IMPRINT DIAMOND',
+    og_description='主石周圍鑲嵌一圈小鑽，讓墜飾視覺份量更飽滿，光芒層次也更豐富。。光環墜飾項鍊可線上選擇克拉數、鑽石顏色、形狀與材質成色，系統即時試算參考價格，全程台灣在地 DNA 鑽石實驗室培育，打造獨一無二的紀念珍藏。',
+    og_image='images/products/necklace-halo-pendant-1.jpg',
+    breadcrumbs=[('首頁', '/'), ('時尚珠寶', '/jewelry/'), ('項鍊', '/jewelry/necklaces/'), ('光環墜飾項鍊', '/jewelry/necklaces/halo-pendant/')],
+    nav_active='jewelry',
+    mvc_page=None,
+    extra_body_class=None,
+    content_fragment='jewelry_style/necklaces-halo-pendant.html',
+    extra_head_blocks=['{\n  "@context": "https://schema.org",\n  "@type": "Product",\n  "name": "光環墜飾項鍊",\n  "description": "主石周圍鑲嵌一圈小鑽，讓墜飾視覺份量更飽滿，光芒層次也更豐富。",\n  "category": "Jewelry > 項鍊",\n  "brand": {\n    "@type": "Brand",\n    "name": "銘印鑽石 IMPRINT DIAMOND"\n  },\n  "offers": {\n    "@type": "Offer",\n    "priceCurrency": "TWD",\n    "price": "34000",\n    "availability": "https://schema.org/InStock",\n    "url": "https://www.imprint-diamond.com/jewelry/necklaces/halo-pendant/"\n  }\n}'],
+)
+
+JEWELRY_STYLE_RINGS_CLASSIC_SOLITAIRE = PageMeta(
+    route='/jewelry/rings/classic-solitaire/',
+    template='pages/jewelry_style.html',
+    title='經典單鑽戒指｜戒指客製鑽石－銘印鑽石 IMPRINT DIAMOND',
+    description='單一主石鑲嵌於簡約戒台之上，線條乾淨俐落，適合各種手型與風格，是最經典也最百搭的款式。。經典單鑽戒指可線上選擇克拉數、鑽石顏色、形狀與材質成色，系統即時試算參考價格，全程台灣在地 DNA 鑽石實驗室培育，打造獨一無二的紀念珍藏。',
+    canonical_path='jewelry/rings/classic-solitaire/',
+    og_title='經典單鑽戒指｜戒指客製鑽石－銘印鑽石 IMPRINT DIAMOND',
+    og_description='單一主石鑲嵌於簡約戒台之上，線條乾淨俐落，適合各種手型與風格，是最經典也最百搭的款式。。經典單鑽戒指可線上選擇克拉數、鑽石顏色、形狀與材質成色，系統即時試算參考價格，全程台灣在地 DNA 鑽石實驗室培育，打造獨一無二的紀念珍藏。',
+    og_image='images/products/ring-classic-solitaire-1.jpg',
+    breadcrumbs=[('首頁', '/'), ('時尚珠寶', '/jewelry/'), ('戒指', '/jewelry/rings/'), ('經典單鑽戒指', '/jewelry/rings/classic-solitaire/')],
+    nav_active='jewelry',
+    mvc_page=None,
+    extra_body_class=None,
+    content_fragment='jewelry_style/rings-classic-solitaire.html',
+    extra_head_blocks=['{\n  "@context": "https://schema.org",\n  "@type": "Product",\n  "name": "經典單鑽戒指",\n  "description": "單一主石鑲嵌於簡約戒台之上，線條乾淨俐落，適合各種手型與風格，是最經典也最百搭的款式。",\n  "category": "Jewelry > 戒指",\n  "brand": {\n    "@type": "Brand",\n    "name": "銘印鑽石 IMPRINT DIAMOND"\n  },\n  "offers": {\n    "@type": "Offer",\n    "priceCurrency": "TWD",\n    "price": "36000",\n    "availability": "https://schema.org/InStock",\n    "url": "https://www.imprint-diamond.com/jewelry/rings/classic-solitaire/"\n  }\n}'],
+)
+
+JEWELRY_STYLE_RINGS_MODERN_BAND = PageMeta(
+    route='/jewelry/rings/modern-band/',
+    template='pages/jewelry_style.html',
+    title='極簡線戒｜戒指客製鑽石－銘印鑽石 IMPRINT DIAMOND',
+    description='極簡戒環設計，鑽石鑲嵌方式低調內斂，適合疊戴，也適合作為日常配戴的第一枚紀念戒指。。極簡線戒可線上選擇克拉數、鑽石顏色、形狀與材質成色，系統即時試算參考價格，全程台灣在地 DNA 鑽石實驗室培育，打造獨一無二的紀念珍藏。',
+    canonical_path='jewelry/rings/modern-band/',
+    og_title='極簡線戒｜戒指客製鑽石－銘印鑽石 IMPRINT DIAMOND',
+    og_description='極簡戒環設計，鑽石鑲嵌方式低調內斂，適合疊戴，也適合作為日常配戴的第一枚紀念戒指。。極簡線戒可線上選擇克拉數、鑽石顏色、形狀與材質成色，系統即時試算參考價格，全程台灣在地 DNA 鑽石實驗室培育，打造獨一無二的紀念珍藏。',
+    og_image='images/products/ring-modern-band-1.jpg',
+    breadcrumbs=[('首頁', '/'), ('時尚珠寶', '/jewelry/'), ('戒指', '/jewelry/rings/'), ('極簡線戒', '/jewelry/rings/modern-band/')],
+    nav_active=None,
+    mvc_page=None,
+    extra_body_class=None,
+    content_fragment='jewelry_style/rings-modern-band.html',
+    extra_head_blocks=['{\n  "@context": "https://schema.org",\n  "@type": "Product",\n  "name": "極簡線戒",\n  "description": "極簡戒環設計，鑽石鑲嵌方式低調內斂，適合疊戴，也適合作為日常配戴的第一枚紀念戒指。",\n  "category": "Jewelry > 戒指",\n  "brand": {\n    "@type": "Brand",\n    "name": "銘印鑽石 IMPRINT DIAMOND"\n  },\n  "offers": {\n    "@type": "Offer",\n    "priceCurrency": "TWD",\n    "price": "36000",\n    "availability": "https://schema.org/InStock",\n    "url": "https://www.imprint-diamond.com/jewelry/rings/modern-band/"\n  }\n}'],
+)
+
+JEWELRY_STYLE_RINGS_PAVE_HALO = PageMeta(
+    route='/jewelry/rings/pave-halo/',
+    template='pages/jewelry_style.html',
+    title='華麗排鑽戒指｜戒指客製鑽石－銘印鑽石 IMPRINT DIAMOND',
+    description='主石周圍以一圈小鑽環繞鑲嵌，讓整體視覺份量感更足，光芒也更為集中閃耀，適合重要場合配戴。。華麗排鑽戒指可線上選擇克拉數、鑽石顏色、形狀與材質成色，系統即時試算參考價格，全程台灣在地 DNA 鑽石實驗室培育，打造獨一無二的紀念珍藏。',
+    canonical_path='jewelry/rings/pave-halo/',
+    og_title='華麗排鑽戒指｜戒指客製鑽石－銘印鑽石 IMPRINT DIAMOND',
+    og_description='主石周圍以一圈小鑽環繞鑲嵌，讓整體視覺份量感更足，光芒也更為集中閃耀，適合重要場合配戴。。華麗排鑽戒指可線上選擇克拉數、鑽石顏色、形狀與材質成色，系統即時試算參考價格，全程台灣在地 DNA 鑽石實驗室培育，打造獨一無二的紀念珍藏。',
+    og_image='images/products/ring-pave-halo-1.jpg',
+    breadcrumbs=[('首頁', '/'), ('時尚珠寶', '/jewelry/'), ('戒指', '/jewelry/rings/'), ('華麗排鑽戒指', '/jewelry/rings/pave-halo/')],
+    nav_active=None,
+    mvc_page=None,
+    extra_body_class=None,
+    content_fragment='jewelry_style/rings-pave-halo.html',
+    extra_head_blocks=['{\n  "@context": "https://schema.org",\n  "@type": "Product",\n  "name": "華麗排鑽戒指",\n  "description": "主石周圍以一圈小鑽環繞鑲嵌，讓整體視覺份量感更足，光芒也更為集中閃耀，適合重要場合配戴。",\n  "category": "Jewelry > 戒指",\n  "brand": {\n    "@type": "Brand",\n    "name": "銘印鑽石 IMPRINT DIAMOND"\n  },\n  "offers": {\n    "@type": "Offer",\n    "priceCurrency": "TWD",\n    "price": "36000",\n    "availability": "https://schema.org/InStock",\n    "url": "https://www.imprint-diamond.com/jewelry/rings/pave-halo/"\n  }\n}'],
+)
+
+JEWELRY_STYLE_RINGS_VINTAGE_VINE = PageMeta(
+    route='/jewelry/rings/vintage-vine/',
+    template='pages/jewelry_style.html',
+    title='復古藤蔓戒指｜戒指客製鑽石－銘印鑽石 IMPRINT DIAMOND',
+    description='戒台線條如藤蔓般蜿蜒纏繞，帶有復古細節與溫潤手感，適合喜歡低調精緻風格的您。。復古藤蔓戒指可線上選擇克拉數、鑽石顏色、形狀與材質成色，系統即時試算參考價格，全程台灣在地 DNA 鑽石實驗室培育，打造獨一無二的紀念珍藏。',
+    canonical_path='jewelry/rings/vintage-vine/',
+    og_title='復古藤蔓戒指｜戒指客製鑽石－銘印鑽石 IMPRINT DIAMOND',
+    og_description='戒台線條如藤蔓般蜿蜒纏繞，帶有復古細節與溫潤手感，適合喜歡低調精緻風格的您。。復古藤蔓戒指可線上選擇克拉數、鑽石顏色、形狀與材質成色，系統即時試算參考價格，全程台灣在地 DNA 鑽石實驗室培育，打造獨一無二的紀念珍藏。',
+    og_image='images/products/ring-vintage-vine-1.jpg',
+    breadcrumbs=[('首頁', '/'), ('時尚珠寶', '/jewelry/'), ('戒指', '/jewelry/rings/'), ('復古藤蔓戒指', '/jewelry/rings/vintage-vine/')],
+    nav_active=None,
+    mvc_page=None,
+    extra_body_class=None,
+    content_fragment='jewelry_style/rings-vintage-vine.html',
+    extra_head_blocks=['{\n  "@context": "https://schema.org",\n  "@type": "Product",\n  "name": "復古藤蔓戒指",\n  "description": "戒台線條如藤蔓般蜿蜒纏繞，帶有復古細節與溫潤手感，適合喜歡低調精緻風格的您。",\n  "category": "Jewelry > 戒指",\n  "brand": {\n    "@type": "Brand",\n    "name": "銘印鑽石 IMPRINT DIAMOND"\n  },\n  "offers": {\n    "@type": "Offer",\n    "priceCurrency": "TWD",\n    "price": "36000",\n    "availability": "https://schema.org/InStock",\n    "url": "https://www.imprint-diamond.com/jewelry/rings/vintage-vine/"\n  }\n}'],
+)
+
+SERIES_FAMILY = PageMeta(
+    route='/series/family/',
+    template='pages/series_detail.html',
+    title='全家福鑽石｜全家人髮絲紀念鑽石訂製－銘印鑽石 IMPRINT DIAMOND',
+    description='全家福鑽石｜集合全家人的髮絲，培育成一顆象徵家族連結的鑽石。全程台灣在地培育，讓家的記憶成為可以傳承的珍藏。線上選擇克拉數、形狀與飾品款式，立即試算。',
+    canonical_path='series/family/',
+    og_title='全家福鑽石｜全家人髮絲紀念鑽石訂製－銘印鑽石',
+    og_description='集合全家人的髮絲，凝成一顆象徵家族連結的鑽石，讓家的記憶可以傳承。',
+    og_image='images/hero/imprint-diamond-family-portrait-jewelry.jpg',
+    breadcrumbs=[('首頁', '/'), ('DNA 鑽石', '/diamonds.html'), ('寵物鑽石', '/series/family/')],
+    nav_active='diamonds',
+    mvc_page=None,
+    extra_body_class=None,
+    content_fragment='series/family.html',
+    extra_head_blocks=[],
+)
+
+SERIES_FIRST_LOVE = PageMeta(
+    route='/series/first-love/',
+    template='pages/series_detail.html',
+    title='滿月鑽石｜寶寶胎髮紀念鑽石訂製－銘印鑽石 IMPRINT DIAMOND',
+    description='滿月鑽石｜以寶寶的胎髮培育專屬紀念鑽石，珍藏生命最初的印記。全程台灣在地培育，可鑲嵌為項鍊、戒指，成為陪伴孩子一生的傳家珍藏。線上選擇克拉數、形狀與飾品款式，立即試算。',
+    canonical_path='series/first-love/',
+    og_title='滿月鑽石｜寶寶胎髮紀念鑽石訂製－銘印鑽石',
+    og_description='以寶寶的胎髮培育專屬紀念鑽石，珍藏生命最初的印記，成為陪伴孩子一生的傳家珍藏。',
+    og_image='images/hero/imprint-diamond-newborn-baby-necklace.jpg',
+    breadcrumbs=[('首頁', '/'), ('DNA 鑽石', '/diamonds.html'), ('滿月鑽石', '/series/first-love/')],
+    nav_active='diamonds',
+    mvc_page=None,
+    extra_body_class=None,
+    content_fragment='series/first-love.html',
+    extra_head_blocks=[],
+)
+
+SERIES_HEIRLOOM = PageMeta(
+    route='/series/heirloom/',
+    template='pages/series_detail.html',
+    title='生命鑽石｜親人毛髮骨灰紀念鑽石訂製－銘印鑽石 IMPRINT DIAMOND',
+    description='生命鑽石｜以摯愛親人的毛髮或骨灰（3至5公克）培育紀念鑽石，讓思念有永恆的形狀。全台唯一在地實驗室，樣本不送海外。線上選擇克拉數、形狀與飾品款式，立即試算。',
+    canonical_path='series/heirloom/',
+    og_title='生命鑽石｜親人毛髮骨灰紀念鑽石訂製－銘印鑽石',
+    og_description='以摯愛親人的毛髮或骨灰，讓思念有永恆的形狀，靜靜陪在您身邊。',
+    og_image='images/hero/imprint-diamond-heirloom-memorial.jpg',
+    breadcrumbs=[('首頁', '/'), ('DNA 鑽石', '/diamonds.html'), ('寵物鑽石', '/series/heirloom/')],
+    nav_active='diamonds',
+    mvc_page=None,
+    extra_body_class=None,
+    content_fragment='series/heirloom.html',
+    extra_head_blocks=[],
+)
+
+SERIES_LOVE = PageMeta(
+    route='/series/love/',
+    template='pages/series_detail.html',
+    title='結髮鑽石｜夫妻髮絲紀念鑽石訂製－銘印鑽石 IMPRINT DIAMOND',
+    description='結髮鑽石｜結髮為夫妻，以兩人的髮絲共同培育一顆鑽石，見證愛情的誓約。全程台灣在地製作，可鑲嵌為求婚戒、結婚對戒。線上選擇克拉數、形狀與飾品款式，立即試算。',
+    canonical_path='series/love/',
+    og_title='結髮鑽石｜夫妻髮絲紀念鑽石訂製－銘印鑽石',
+    og_description='結髮為夫妻，以兩人的髮絲共同培育一顆鑽石，見證一輩子只有一次的誓約。',
+    og_image='images/hero/imprint-diamond-wedding-couple-ring.jpg',
+    breadcrumbs=[('首頁', '/'), ('DNA 鑽石', '/diamonds.html'), ('寵物鑽石', '/series/love/')],
+    nav_active='diamonds',
+    mvc_page=None,
+    extra_body_class=None,
+    content_fragment='series/love.html',
+    extra_head_blocks=[],
+)
+
+SERIES_PET = PageMeta(
+    route='/series/pet/',
+    template='pages/series_detail.html',
+    title='寵物鑽石｜毛孩毛髮紀念鑽石訂製－銘印鑽石 IMPRINT DIAMOND',
+    description='寵物鑽石｜以毛孩的毛髮培育專屬紀念鑽石，讓陪伴以另一種形式延續。全程台灣在地製作，毛髮約一顆雞蛋大小即可訂製。線上選擇克拉數、形狀與飾品款式，立即試算。',
+    canonical_path='series/pet/',
+    og_title='寵物鑽石｜毛孩毛髮紀念鑽石訂製－銘印鑽石',
+    og_description='以毛孩的毛髮培育專屬紀念鑽石，讓那份無條件的陪伴，以另一種形式延續。',
+    og_image='images/hero/imprint-diamond-pet-memorial-cat.jpg',
+    breadcrumbs=[('首頁', '/'), ('DNA 鑽石', '/diamonds.html'), ('寵物鑽石', '/series/pet/')],
+    nav_active='diamonds',
+    mvc_page=None,
+    extra_body_class=None,
+    content_fragment='series/pet.html',
+    extra_head_blocks=[],
+)
+
+
+STANDALONE_QUOTE_SHEET = PageMeta(
+    route='/shop/quote-sheet.html',
+    template='pages/shop/quote-sheet.html',
+    title='珠寶報價單｜銘印鑽石',
+    description='',
+    canonical_path='',
+)
+
+STANDALONE_QUOTE_SHEET_SHORT = PageMeta(
+    route='/quote-sheet',
+    template='pages/shop/quote-sheet.html',
+    title='珠寶報價單｜銘印鑽石',
+    description='',
+    canonical_path='',
+)
+
+STANDALONE_SHARE_SUMMARY = PageMeta(
+    route='/share/summary.html',
+    template='pages/share/summary.html',
+    title='分享試算｜銘印鑽石',
+    description='',
+    canonical_path='',
+)
+
+
+ALL_PAGES: list[PageMeta] = [
+    HOME,
+    PAGE_404,
+    PAGE_ABOUT,
+    PAGE_ACCOUNT,
+    PAGE_CART,
+    PAGE_CHECKOUT,
+    PAGE_CONTACT,
+    PAGE_DIAMONDS,
+    PAGE_FAQ,
+    PAGE_FAVORITES,
+    PAGE_GOLD_PRICE,
+    PAGE_HISTORY,
+    PAGE_LOGIN,
+    PAGE_NOTIFICATIONS,
+    PAGE_PRICE,
+    PAGE_PROFILE,
+    PAGE_REGISTER,
+    PAGE_RESET_PASSWORD,
+    PAGE_STORIES,
+    PAGE_SUCCESS,
+    PAGE_TRACK_ORDER,
+    PAGE_WHAT_IS_DNA_DIAMOND,
+    JEWELRY_INDEX,
+    SHOP_CALCULATOR,
+    JEWELRY_CATEGORY_BRACELETS,
+    JEWELRY_CATEGORY_EARRINGS,
+    JEWELRY_CATEGORY_NECKLACES,
+    JEWELRY_CATEGORY_RINGS,
+    JEWELRY_STYLE_BRACELETS_BANGLE,
+    JEWELRY_STYLE_BRACELETS_CHAIN,
+    JEWELRY_STYLE_BRACELETS_CHARM,
+    JEWELRY_STYLE_BRACELETS_TENNIS,
+    JEWELRY_STYLE_EARRINGS_DROP,
+    JEWELRY_STYLE_EARRINGS_EAR_CUFF,
+    JEWELRY_STYLE_EARRINGS_HOOP,
+    JEWELRY_STYLE_EARRINGS_STUD,
+    JEWELRY_STYLE_NECKLACES_BAR,
+    JEWELRY_STYLE_NECKLACES_CLASSIC_PENDANT,
+    JEWELRY_STYLE_NECKLACES_DOUBLE_LAYER,
+    JEWELRY_STYLE_NECKLACES_HALO_PENDANT,
+    JEWELRY_STYLE_RINGS_CLASSIC_SOLITAIRE,
+    JEWELRY_STYLE_RINGS_MODERN_BAND,
+    JEWELRY_STYLE_RINGS_PAVE_HALO,
+    JEWELRY_STYLE_RINGS_VINTAGE_VINE,
+    SERIES_FAMILY,
+    SERIES_FIRST_LOVE,
+    SERIES_HEIRLOOM,
+    SERIES_LOVE,
+    SERIES_PET,
+]
+
+
+STANDALONE_PAGES: list[PageMeta] = [
+    STANDALONE_QUOTE_SHEET,
+    STANDALONE_QUOTE_SHEET_SHORT,
+    STANDALONE_SHARE_SUMMARY,
+]

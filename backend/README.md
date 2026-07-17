@@ -4,7 +4,7 @@
 
 Auth + data API for the Diamond v3 site, on Supabase Postgres.
 
-Most routes now live under `app/routers/` (`auth_router`, `admin_router`, `api_router`, `shop_router`). Prefer extending the Python app, not this folder.
+Most routes now live under `app/controllers/` (`auth_controller`, `admin_controller`, `api_controller`, `shop_controller`). Prefer extending the Python app, not this folder.
 
 ## If you still run it locally
 
@@ -27,7 +27,7 @@ Point a test site's `window.IMPRINT_API_BASE` at wherever you host it. Productio
 | POST | /api/auth/reset-password | — | consumes the token from that email |
 | GET | /api/orders | customer | the logged-in user's own orders |
 | POST | /api/track-order | — | public lookup by order number + phone |
-| … | … | … | See `app/routers/` for the current surface |
+| … | … | … | See `app/controllers/` for the current surface |
 
 ## What's simplified vs. real Supabase Auth
 

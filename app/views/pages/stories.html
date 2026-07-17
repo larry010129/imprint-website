@@ -1,0 +1,10 @@
+﻿{% extends "layouts/base.html" %}
+{% block extra_css %}
+{% include "partials/stories-react-css.html" %}
+{% endblock %}
+{% block extra_scripts %}
+{% include "partials/stories-react-js.html" %}
+{% endblock %}
+{% block content %}
+<div data-stories-root></div>
+{% endblock %}

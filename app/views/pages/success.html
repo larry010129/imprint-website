@@ -1,0 +1,22 @@
+﻿{% extends "layouts/base.html" %}
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/member-app.css?v=1">
+{% endblock %}
+{% block content %}
+<!-- @component partials/view-success.html -->
+<section class="page-section member-app" id="mvc-success" aria-label="訂單送出">
+  <div class="container">
+    <div class="price-reference member-panel">
+      <div class="member-success">
+        <div class="member-success__icon" aria-hidden="true">✓</div>
+        <h1 class="price-reference-title">訂單已送出</h1>
+        <p class="price-reference-lead">您的訂單已經成功記錄。</p>
+        <div class="member-success__actions price-reference-foot">
+          <a href="/shop/calculator/" class="btn btn-line">新增另一筆</a>
+          <a href="/history.html" class="btn btn-dark">查看訂購紀錄</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
