@@ -54,7 +54,7 @@ const METAL_SYMBOL = {
   '9k': 'XAU', '14k': 'XAU', '18k': 'XAU', pt950: 'XPT', s925: 'XAG',
   '999': 'XAU', pt: 'XPT', silver925: 'XAG',
 };
-const LABOR_FEE = { pendant: 5000, ring: 5000, bracelet: 5000, earring: 5000, chain: 5000 };
+const LABOR_FEE = { pendant: 5000, ring: 5000, bracelet: 5000, earring: 3000, chain: 5000 };
 
 const TAX_RATE = 0.05;
 const CHIN_TO_GRAMS = 3.75;

@@ -110,9 +110,12 @@ def weight_columns_from_table(table: Tag) -> dict[int, int]:
     return {}
 
 
+PREFERRED_GRAM_ORDER = (100, 250, 500, 1000)
+
+
 def per_gram_from_bar_sell_row(row: Tag, weight_cols: dict[int, int]) -> float | None:
     cells = row.find_all(["td", "th"])
-    candidates: list[tuple[float, int]] = []
+    candidates: dict[int, float] = {}
     for idx, grams in weight_cols.items():
         if idx >= len(cells):
             continue
@@ -121,11 +124,11 @@ def per_gram_from_bar_sell_row(row: Tag, weight_cols: dict[int, int]) -> float |
             continue
         per_gram = amount / grams
         if is_bar_derived_gram_price(per_gram):
-            candidates.append((per_gram, grams))
-    if not candidates:
-        return None
-    candidates.sort(key=lambda item: item[1], reverse=True)
-    return candidates[0][0]
+            candidates[grams] = per_gram
+    for grams in PREFERRED_GRAM_ORDER:
+        if grams in candidates:
+            return candidates[grams]
+    return None
 
 
 def is_gold_bar_table(soup: BeautifulSoup, table: Tag) -> bool:

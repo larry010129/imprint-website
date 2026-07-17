@@ -66,11 +66,39 @@ def _profile(cur, user_id: str) -> dict[str, Any] | None:
     return cur.fetchone()
 
 
-def _insert_order(cur, user_id: str, profile: dict[str, Any] | None, config: dict[str, Any]) -> str:
+def _validate_customer(body: dict[str, Any], profile: dict[str, Any] | None) -> tuple[dict[str, Any], str | None]:
+    name = str(body.get("customerName") or (profile or {}).get("full_name") or "").strip()
+    phone = str(body.get("customerPhone") or (profile or {}).get("phone") or "").strip()
+    email = str(body.get("customerEmail") or (profile or {}).get("email") or "").strip() or None
+    method = str(body.get("fulfillmentMethod") or "pickup").strip()
+    if method not in ("pickup", "delivery"):
+        method = "pickup"
+    address = str(body.get("shippingAddress") or "").strip() or None
+    city = str(body.get("shippingCity") or "").strip() or None
+    postal = str(body.get("shippingPostal") or "").strip() or None
+    note = str(body.get("orderNote") or "").strip() or None
+
+    if not name:
+        return {}, "請填寫收件人姓名"
+    if not phone:
+        return {}, "請填寫聯絡電話"
+    if method == "delivery" and not (address and city and postal):
+        return {}, "請填寫完整的收件地址"
+
+    return {
+        "name": name,
+        "phone": phone,
+        "email": email,
+        "fulfillmentMethod": method,
+        "shippingAddress": address,
+        "shippingCity": city,
+        "shippingPostal": postal,
+        "orderNote": note,
+    }, None
+
+
+def _insert_order(cur, user_id: str, customer: dict[str, Any], config: dict[str, Any]) -> str:
     pricing = _pricing(config)
-    pname = (profile or {}).get("full_name") or ""
-    phone = (profile or {}).get("phone") or ""
-    email = (profile or {}).get("email")
     product_type = config.get("type")
     product_id = product_type if is_uuid(product_type) else None
 
@@ -83,7 +111,9 @@ def _insert_order(cur, user_id: str, profile: dict[str, Any] | None, config: dic
           weight_grams, ring_size, engraving_band, engraving_girdle,
           include_chain, chain_gold, chain_color, chain_length_cm,
           diamond_price_twd, taijin_price_twd, labor_price_twd, tax_amount_twd,
-          total_price, gold_rate_per_gram, price_source, status
+          total_price, gold_rate_per_gram, price_source,
+          fulfillment_method, shipping_address, shipping_city, shipping_postal, order_note,
+          status
         ) values (
           %s, %s, %s, %s, %s,
           %s, %s, %s, %s, %s,
@@ -91,16 +121,18 @@ def _insert_order(cur, user_id: str, profile: dict[str, Any] | None, config: dic
           %s, %s, %s, %s,
           %s, %s, %s, %s,
           %s, %s, %s, %s,
-          %s, %s, %s, 'received'
+          %s, %s, %s,
+          %s, %s, %s, %s, %s,
+          'received'
         )
         returning order_number
         """,
         (
             user_id,
             product_id,
-            pname,
-            phone,
-            email,
+            customer["name"],
+            customer["phone"],
+            customer["email"],
             product_type,
             config.get("category"),
             config.get("carat"),
@@ -125,6 +157,11 @@ def _insert_order(cur, user_id: str, profile: dict[str, Any] | None, config: dic
             pricing.get("total"),
             pricing.get("goldRatePerGram"),
             pricing.get("priceSource") or "client",
+            customer["fulfillmentMethod"],
+            customer["shippingAddress"],
+            customer["shippingCity"],
+            customer["shippingPostal"],
+            customer["orderNote"],
         ),
     )
     row = cur.fetchone()
@@ -214,7 +251,9 @@ async def cart_item(request: Request) -> dict:
 async def cart_checkout(request: Request) -> dict:
     user_id = _user_id(request)
     body = await request.json()
-    item_ids = (body or {}).get("itemIds") if isinstance(body, dict) else None
+    if not isinstance(body, dict):
+        body = {}
+    item_ids = body.get("itemIds")
 
     with get_connection() as conn, conn.cursor() as cur:
         if item_ids:
@@ -235,6 +274,10 @@ async def cart_checkout(request: Request) -> dict:
             return _err(400, "invalid item selection")
 
         profile = _profile(cur, user_id)
+        customer, customer_err = _validate_customer(body, profile)
+        if customer_err:
+            return _err(400, customer_err)
+
         order_numbers: list[str] = []
         for item in items:
             config = item.get("config_json") or {}
@@ -243,7 +286,7 @@ async def cart_checkout(request: Request) -> dict:
             err = _validate_config(config)
             if err:
                 return _err(400, err)
-            order_numbers.append(_insert_order(cur, user_id, profile, config))
+            order_numbers.append(_insert_order(cur, user_id, customer, config))
 
         checked_out = [str(i["id"]) for i in items]
         cur.execute(

@@ -503,9 +503,13 @@ body.shop-mobile-bar {
 }
 
 .product-image-lightbox {
-  width: min(96vw, 920px);
-  max-width: 96vw;
+  position: fixed;
+  inset: 0;
+  width: fit-content;
+  height: fit-content;
+  max-width: min(96vw, 1100px);
   max-height: 92vh;
+  margin: auto;
   padding: 0;
   border: none;
   border-radius: 12px;
@@ -519,8 +523,11 @@ body.shop-mobile-bar {
 
 .product-image-lightbox img {
   display: block;
-  width: 100%;
+  width: auto;
+  max-width: min(96vw, 1100px);
   max-height: 88vh;
+  height: auto;
+  margin: 0 auto;
   object-fit: contain;
   border-radius: 10px;
   background: var(--color-surface);
@@ -912,12 +919,107 @@ body.dark-theme .ring-size-guide-inline__table thead th {
   margin-top: 14px;
 }
 
+.ring-size-guide-inline--static {
+  margin-top: 0;
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+
 .ring-size-guide-inline--product .ring-size-guide-inline__scroll {
   max-height: 220px;
 }
 
+.ring-size-guide-inline--static.ring-size-guide-inline--product .ring-size-guide-inline__scroll {
+  max-height: none;
+  overflow: visible;
+  border: none;
+}
+
+.variant-group--size-guide {
+  margin-top: 4px;
+  margin-bottom: 28px;
+}
+
+.shop-fit .variant-group--size-guide {
+  margin-top: 0.5rem;
+  margin-bottom: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-border);
+}
+
 .shop-page.shop-wizard .ring-size-guide-inline--product {
   margin-top: 12px;
+}
+
+/* Static variant: no <details>/<summary> collapse, always fully shown. */
+.ring-size-guide-inline__title {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  margin: 0;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.ring-size-guide-inline--large {
+  font-size: 16px;
+}
+
+.ring-size-guide-inline--large .ring-size-guide-inline__title {
+  font-size: 19px;
+  min-height: 52px;
+}
+
+.ring-size-guide-inline--large .ring-size-guide-inline__content {
+  padding: 8px 0 18px;
+}
+
+.ring-size-guide-inline--large .ring-size-guide-inline__steps {
+  gap: 12px;
+}
+
+.ring-size-guide-inline--large .ring-size-guide-inline__steps li {
+  gap: 14px;
+  padding: 16px 18px;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.ring-size-guide-inline--large .ring-size-guide-inline__steps li::before {
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  font-size: 15px;
+  line-height: 30px;
+}
+
+.ring-size-guide-inline--large .ring-size-guide-inline__scroll {
+  max-height: 340px;
+}
+
+.ring-size-guide-inline--static.ring-size-guide-inline--large .ring-size-guide-inline__scroll {
+  max-height: none;
+}
+
+.ring-size-guide-inline--large .ring-size-guide-inline__table {
+  font-size: 15px;
+}
+
+.ring-size-guide-inline--large .ring-size-guide-inline__table th,
+.ring-size-guide-inline--large .ring-size-guide-inline__table td {
+  padding: 12px 16px;
+}
+
+.ring-size-guide-inline--large .ring-size-guide-inline__table thead th {
+  font-size: 14px;
+}
+
+.ring-size-guide-inline--large .ring-size-guide-inline__note {
+  font-size: 14px;
+}
+
+.ring-size-guide-inline--large .ring-size-guide-inline__more {
+  font-size: 15px;
 }
 
 .chain-length-guide-inline__intro,
@@ -940,6 +1042,15 @@ body.dark-theme .ring-size-guide-inline__table thead th {
   font-weight: 600;
   text-align: left;
   white-space: nowrap;
+}
+
+.ring-size-guide-inline--large .chain-length-guide-inline__intro,
+.ring-size-guide-inline--large .chain-length-guide-inline__method {
+  font-size: 15px;
+}
+
+.ring-size-guide-inline--large .chain-length-guide-inline__subtitle {
+  font-size: 16px;
 }
 
 .ring-size-guide-dialog {
@@ -1194,6 +1305,11 @@ body.dark-theme .ring-size-guide-table thead th {
   margin: 0 0 12px;
   border: 1px solid var(--color-border);
   border-radius: 4px;
+  cursor: zoom-in;
+}
+
+.guide-image:hover {
+  border-color: color-mix(in srgb, var(--color-brand) 45%, var(--color-border));
 }
 
 .guide-image.hidden {
@@ -1560,9 +1676,13 @@ body.dark-theme .ring-size-guide-table thead th {
   justify-content: space-between;
   gap: 16px;
   padding: 12px 20px;
-  background: var(--color-surface);
-  border-top: 1px solid var(--color-border);
-  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(20px) saturate(1.35);
+  -webkit-backdrop-filter: blur(20px) saturate(1.35);
+  border-top: 1px solid rgba(255, 255, 255, 0.65);
+  box-shadow:
+    0 -8px 28px rgba(43, 35, 32, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
 .mobile-buy-price {
@@ -1582,6 +1702,7 @@ body.dark-theme .ring-size-guide-table thead th {
   font-family: var(--font-heading);
   font-size: 20px;
   font-weight: 700;
+  color: var(--color-text);
 }
 
 .shop-cta-compact {
@@ -1614,6 +1735,26 @@ body.dark-theme .ring-size-guide-table thead th {
 
   .shop-price-panel.is-mobile-open {
     display: block;
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+    z-index: 99;
+    max-height: min(52vh, 440px);
+    overflow-y: auto;
+    background: rgba(255, 255, 255, 0.88);
+    backdrop-filter: blur(22px) saturate(1.4);
+    -webkit-backdrop-filter: blur(22px) saturate(1.4);
+    border: 1px solid rgba(255, 255, 255, 0.72);
+    border-radius: 16px;
+    box-shadow:
+      0 12px 40px rgba(43, 35, 32, 0.14),
+      0 0 0 1px rgba(94, 207, 207, 0.14);
+  }
+
+  .shop-price-panel.is-mobile-open .hero-price-amount,
+  .shop-price-panel.is-mobile-open .breakdown-rows .summary-row .val {
+    color: var(--color-text);
   }
 
   .product-layout {
@@ -2191,9 +2332,12 @@ body.app-shell:not(.dark-theme) .shop-fit {
 
 .shop-fit #stone-count-step.hidden,
 .shop-fit #chain-length-step.hidden,
+.shop-fit #chain-length-guide-step.hidden,
+.shop-fit #pendant-chain-guide-step.hidden,
 .shop-fit #color-step.hidden,
 .shop-fit #pendant-chain-step.hidden,
 .shop-fit #ringsize-step.hidden,
+.shop-fit #ringsize-guide-step.hidden,
 .shop-fit #engraving-band-step.hidden,
 .shop-fit #engraving-girdle-step.hidden,
 .shop-fit #fancy-diamond-step.hidden,
@@ -2206,9 +2350,12 @@ body.app-shell:not(.dark-theme) .shop-fit {
 .shop-fit #diamond-shape-step,
 .shop-fit #pendant-chain-step,
 .shop-fit #ringsize-step,
+.shop-fit #ringsize-guide-step,
 .shop-fit #engraving-band-step,
 .shop-fit #engraving-girdle-step,
 .shop-fit #chain-length-step,
+.shop-fit #chain-length-guide-step,
+.shop-fit #pendant-chain-guide-step,
 .shop-fit .variant-group:has(.diamond-carousel-wrap) {
   grid-column: 1 / -1;
 }
@@ -2480,6 +2627,21 @@ body.app-shell:not(.dark-theme) .shop-fit {
 
   .shop-fit .shop-price-panel.is-mobile-open {
     display: flex;
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+    z-index: 99;
+    max-height: min(52vh, 440px);
+    overflow-y: auto;
+    background: rgba(255, 255, 255, 0.88);
+    backdrop-filter: blur(22px) saturate(1.4);
+    -webkit-backdrop-filter: blur(22px) saturate(1.4);
+    border: 1px solid rgba(255, 255, 255, 0.72);
+    border-radius: 16px;
+    box-shadow:
+      0 12px 40px rgba(43, 35, 32, 0.14),
+      0 0 0 1px rgba(26, 168, 173, 0.16);
   }
 
   .mobile-buy-bar {

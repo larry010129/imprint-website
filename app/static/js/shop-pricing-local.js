@@ -37,7 +37,7 @@
   var METAL_SYMBOL = {
     '9k': 'XAU', '14k': 'XAU', '18k': 'XAU', pt950: 'XPT', s925: 'XAG',
   };
-  var LABOR_FEE = { pendant: 5000, ring: 5000, bracelet: 5000, earring: 5000, chain: 5000 };
+  var LABOR_FEE = { pendant: 5000, ring: 5000, bracelet: 5000, earring: 3000, chain: 5000 };
   var TAX_RATE = 0.05;
   var CHIN_TO_GRAMS = 3.75;
   var CHAIN_REFERENCE_LENGTH_CM = 45;
@@ -46,6 +46,19 @@
   var NON_ROUND_SHAPE_SURCHARGE = 0.10;
 
   var FALLBACK_METAL_RAW = { XAU: 4300, XPT: 1050, XAG: 30 };
+
+  // Per-purity TWD/gram rates from the live BOT scrape (/api/bot-gold's
+  // alloyRates), set once fetched. Falls back to FALLBACK_METAL_RAW until then.
+  var liveAlloyRates = null;
+
+  function setLiveGoldRates(rates) {
+    liveAlloyRates = rates && typeof rates === 'object' ? rates : null;
+  }
+
+  function perGramFor(gold) {
+    if (liveAlloyRates && liveAlloyRates[gold] != null) return liveAlloyRates[gold];
+    return FALLBACK_METAL_RAW[METAL_SYMBOL[gold]] * PURITY_MULTIPLIER[gold];
+  }
 
   function isShapeCaratAllowed(carat, diamondShape) {
     if ((diamondShape || 'round') === 'round') return true;
@@ -121,8 +134,7 @@
   function getPerGramPrices() {
     var perGram = {};
     ['9k', '14k', '18k', 'pt950', 's925'].forEach(function (gold) {
-      var symbol = METAL_SYMBOL[gold];
-      perGram[gold] = FALLBACK_METAL_RAW[symbol] * PURITY_MULTIPLIER[gold];
+      perGram[gold] = perGramFor(gold);
     });
     return perGram;
   }
@@ -155,13 +167,13 @@
     return weight;
   }
 
-  function metalPreTax(goldPrices, gold, weightGrams, category) {
-    var perGram = goldPrices[METAL_SYMBOL[gold]] * PURITY_MULTIPLIER[gold];
+  function metalPreTax(gold, weightGrams, category) {
+    var perGram = perGramFor(gold);
     var multiplier = category === 'chain' ? 2 : 1;
     return { amount: perGram * weightGrams * multiplier, perGram: perGram };
   }
 
-  function computeChainAddon(catalog, goldPrices, chainProductId, chainGold, chainLengthCm) {
+  function computeChainAddon(catalog, chainProductId, chainGold, chainLengthCm) {
     var chainProduct = findProduct(catalog, 'chain', chainProductId);
     if (!chainProduct) throw new Error('invalid chain');
     var weightChin = lookupWeight(chainProduct, 'chain', chainGold, '3fen', chainLengthCm);
@@ -169,7 +181,7 @@
     var manual = chainProduct.manualPrices && chainProduct.manualPrices[chainGold]
       && chainProduct.manualPrices[chainGold]['3fen'];
     if (manual != null) return { chainPreTax: Number(manual), chainWeightChin: weightChin };
-    var metal = metalPreTax(goldPrices, chainGold, weightGrams, 'chain');
+    var metal = metalPreTax(chainGold, weightGrams, 'chain');
     return { chainPreTax: metal.amount + (LABOR_FEE.chain || 5000), chainWeightChin: weightChin };
   }
 
@@ -208,8 +220,7 @@
 
     var weightGrams = weightChin * CHIN_TO_GRAMS;
     var laborPreTax = LABOR_FEE[category] || 5000;
-    var goldPrices = FALLBACK_METAL_RAW;
-    var metal = metalPreTax(goldPrices, gold, weightGrams, category);
+    var metal = metalPreTax(gold, weightGrams, category);
     var taijinDisplay = Math.round(metal.amount * (1 + TAX_RATE));
     var laborDisplay = Math.round(laborPreTax * (1 + TAX_RATE));
 
@@ -230,7 +241,7 @@
 
     if (category === 'pendant' && includeChain && chainProductId && chainGold && chainLength) {
       try {
-        var addon = computeChainAddon(catalog, goldPrices, chainProductId, chainGold, chainLength);
+        var addon = computeChainAddon(catalog, chainProductId, chainGold, chainLength);
         chainDisplay = Math.round(addon.chainPreTax * (1 + TAX_RATE));
         total += chainDisplay;
       } catch (e) {
@@ -244,6 +255,7 @@
       diamondPrice: diamondPrice,
       taijinPrice: taijinDisplay,
       laborPrice: laborDisplay,
+      metalworkPrice: taijinDisplay + laborDisplay,
       chainPrice: chainDisplay,
       total: Math.round(total),
     };
@@ -309,5 +321,6 @@
   global.ShopPricingLocal = {
     computeOrderPricing: computeOrderPricing,
     pricesPayload: pricesPayload,
+    setLiveGoldRates: setLiveGoldRates,
   };
 })(window);

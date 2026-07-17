@@ -852,6 +852,20 @@ async function loadMetalPrices() {
   }
 }
 
+/** Swaps the static per-gram estimate for the live BOT scrape once it's back;
+ * re-renders the summary so an already-selected config picks up the real rate. */
+async function loadLiveGoldRates() {
+  try {
+    const { res, data } = await shopApiFetch('/api/bot-gold');
+    if (!res.ok || !data?.alloyRates) return;
+    window.ShopPricingLocal?.setLiveGoldRates?.(data.alloyRates);
+    Object.assign(pricePerGram, data.alloyRates);
+    updateSummary();
+  } catch (err) {
+    console.error('failed to load live gold rates', err);
+  }
+}
+
 // ── Render helpers ────────────────────────────────────────────────────────
 
 function applyTypeGridLayout(grid, count) {
@@ -1256,8 +1270,7 @@ async function refreshQuotePrices() {
     if (diamondRow) diamondRow.style.display = state.category === 'chain' ? 'none' : '';
     chainRow?.classList.add('hidden');
     document.getElementById('sum-diamond-price').textContent = state.carat ? '-' : '0';
-    document.getElementById('sum-taijin-price').textContent = '-';
-    document.getElementById('sum-labor-price').textContent = '-';
+    document.getElementById('sum-metalwork-price').textContent = '-';
     if (totalEl) totalEl.textContent = '—';
     if (mobileTotal) mobileTotal.textContent = '—';
     updatePriceHint(null);
@@ -1268,18 +1281,17 @@ async function refreshQuotePrices() {
   if (quote.manualOverride) {
     if (diamondRow) diamondRow.style.display = 'none';
     chainRow?.classList.add('hidden');
-    document.getElementById('sum-taijin-price').textContent = '—';
-    document.getElementById('sum-labor-price').textContent = '—';
+    document.getElementById('sum-metalwork-price').textContent = '—';
   } else {
     if (diamondRow) diamondRow.style.display = state.category === 'chain' ? 'none' : '';
     if (quote.diamondPrice != null) {
       document.getElementById('sum-diamond-price').textContent = Math.round(quote.diamondPrice).toLocaleString();
     }
-    if (quote.taijinPrice != null) {
-      document.getElementById('sum-taijin-price').textContent = Math.round(quote.taijinPrice).toLocaleString();
-    }
-    if (quote.laborPrice != null) {
-      document.getElementById('sum-labor-price').textContent = Math.round(quote.laborPrice).toLocaleString();
+    const metalwork = quote.metalworkPrice != null
+      ? quote.metalworkPrice
+      : (quote.taijinPrice != null && quote.laborPrice != null ? quote.taijinPrice + quote.laborPrice : null);
+    if (metalwork != null) {
+      document.getElementById('sum-metalwork-price').textContent = Math.round(metalwork).toLocaleString();
     }
     const showChain = state.category === 'pendant' && state.includeChain && quote.chainPrice != null;
     chainRow?.classList.toggle('hidden', !showChain);
@@ -1303,10 +1315,13 @@ async function refreshQuotePrices() {
 
 function updateRingSizeStep() {
   const step = document.getElementById("ringsize-step");
+  const guideStep = document.getElementById("ringsize-guide-step");
   if (state.category === 'ring') {
     step?.classList.remove("hidden");
+    guideStep?.classList.remove("hidden");
   } else {
     step?.classList.add("hidden");
+    guideStep?.classList.add("hidden");
     state.ringSize = null;
   }
 }
@@ -1344,6 +1359,7 @@ function renderLengthButtons(containerId, options, selected, onSelect) {
 
 function updateLengthStep() {
   const step = document.getElementById('chain-length-step');
+  const guideStep = document.getElementById('chain-length-guide-step');
   const row = document.getElementById('chain-length-btn-row');
   const label = step?.querySelector('.variant-label');
   const necklaceGuide = document.getElementById('chain-length-guide-necklace-inline');
@@ -1352,6 +1368,7 @@ function updateLengthStep() {
   const isBracelet = state.category === 'bracelet';
   const show = isChain || isBracelet;
   step?.classList.toggle('hidden', !show);
+  guideStep?.classList.toggle('hidden', !show);
   if (label) {
     const key = isBracelet ? 'step_bracelet_length' : 'step_chain_length';
     label.setAttribute('data-i18n', key);
@@ -1380,9 +1397,11 @@ function updateLengthStep() {
 
 function updateChainOptions() {
   const pendantStep = document.getElementById('pendant-chain-step');
+  const pendantGuideStep = document.getElementById('pendant-chain-guide-step');
   const isPendant = state.category === 'pendant';
   updateLengthStep();
   pendantStep?.classList.toggle('hidden', !isPendant);
+  pendantGuideStep?.classList.toggle('hidden', !isPendant || !state.includeChain);
 
   if (!isPendant) {
     state.includeChain = false;
@@ -1534,6 +1553,19 @@ function syncLightboxImage() {
   if (nextBtn) nextBtn.hidden = !multi;
 }
 
+function openStaticImageLightbox(src, alt) {
+  const lb = document.getElementById("product-image-lightbox");
+  const lbImg = document.getElementById("product-lightbox-img");
+  const prevBtn = document.getElementById("product-lightbox-prev");
+  const nextBtn = document.getElementById("product-lightbox-next");
+  if (!lb || !lbImg || !src) return;
+  lbImg.src = src;
+  lbImg.alt = alt || "";
+  if (prevBtn) prevBtn.hidden = true;
+  if (nextBtn) nextBtn.hidden = true;
+  if (typeof lb.showModal === "function") lb.showModal();
+}
+
 function openProductImageLightbox() {
   const src = document.getElementById("large-image")?.src;
   if (!src || src.endsWith('/')) return;
@@ -1569,6 +1601,25 @@ function initProductImageLightbox() {
     if (e.target.id === 'product-image-lightbox') {
       e.target.close();
     }
+  });
+
+  const zoomHint = typeof tr === "function" ? tr("shop_zoom_image") : "放大圖片";
+  document.querySelectorAll(".guide-image").forEach(img => {
+    img.title = zoomHint;
+    img.setAttribute("role", "button");
+    img.tabIndex = 0;
+  });
+  document.querySelector(".shop-wizard")?.addEventListener("click", e => {
+    const img = e.target.closest(".guide-image");
+    if (!img || img.classList.contains("hidden") || !img.src) return;
+    e.preventDefault();
+    openStaticImageLightbox(img.currentSrc || img.src, img.alt);
+  });
+  document.querySelector(".shop-wizard")?.addEventListener("keydown", e => {
+    const img = e.target.closest(".guide-image");
+    if (!img || (e.key !== "Enter" && e.key !== " ")) return;
+    e.preventDefault();
+    openStaticImageLightbox(img.currentSrc || img.src, img.alt);
   });
 }
 
@@ -1931,6 +1982,7 @@ function buildSubmitPayload() {
       diamondPrice: pricing.diamondPrice,
       taijinPrice: pricing.taijinPrice,
       laborPrice: pricing.laborPrice,
+      metalworkPrice: pricing.metalworkPrice,
       chainPrice: pricing.chainPrice,
       taxAmount: pricing.taxAmount,
       weightGrams: pricing.weightGrams,
@@ -2190,19 +2242,8 @@ async function handleSubmit() {
       return;
     }
 
-    const checkoutResult = await shopApiFetch('/api/cart-checkout', {
-      method: 'POST',
-      body: { itemIds: [addResult.data.item.id] },
-    });
-    if (checkoutResult.res.status === 401) { window.location.href = guestLoginUrl(); return; }
-    if (checkoutResult.res.ok && checkoutResult.data.ok) {
-      const orderNo = (checkoutResult.data.orderNumbers || [])[0];
-      const successUrl = window.shopConfig?.successUrl || '/success.html';
-      window.location.href = orderNo ? successUrl + '?order=' + encodeURIComponent(orderNo) : successUrl;
-    } else {
-      resetButtons();
-      toast(tr('save_failed') + shopApiErrorMessage(checkoutResult.data, checkoutResult.res));
-    }
+    const checkoutUrl = window.shopConfig?.checkoutUrl || '/checkout.html';
+    window.location.href = checkoutUrl + '?item=' + encodeURIComponent(addResult.data.item.id);
   } catch (err) {
     console.error(err);
     resetButtons();
@@ -2300,6 +2341,7 @@ async function init() {
   updateWizardGuide();
   populateRingSizeSelect();
   loadMetalPrices();
+  loadLiveGoldRates();
 
   const urlCategory = new URLSearchParams(window.location.search).get('category');
   if (urlCategory && productsFor(urlCategory).length && !window.editData && !window.cartEditData && !window.prefillData) {

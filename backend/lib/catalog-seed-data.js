@@ -15,14 +15,6 @@ const STYLE_LABELS = {
 
 const CHAIN_COLORS = { A: 'white', B: 'rose', C: 'yellow' };
 
-const DENSITY_CHIN_PER_CM3 = {
-  '9k': 3.07,
-  '14k': 3.6,
-  '18k': 4.16,
-  pt950: 5.57,
-  s925: 2.76,
-};
-
 const LEGACY_WEIGHT_TABLE = {
   pendant: {
     A: {
@@ -124,39 +116,15 @@ function applyBraceletCaratRules(table) {
   }
 }
 
+// ponytail: LEGACY_WEIGHT_TABLE already holds the literal per-metal chin
+// figure from the official price-structure sheet for every gold/carat cell
+// that's offered — no need to re-derive 9K/18K/Pt950/S925 from the 14K
+// column via a density ratio (that round-trip was the source of ~2-8%
+// drift from the sheet). Use the literal values as-is.
 function buildWeightTable() {
   const legacy = JSON.parse(JSON.stringify(LEGACY_WEIGHT_TABLE));
   applyBraceletCaratRules(legacy);
-
-  const volumeTable = {};
-  for (const [category, types] of Object.entries(legacy)) {
-    volumeTable[category] = {};
-    for (const [style, styles] of Object.entries(types)) {
-      volumeTable[category][style] = {};
-      const chin14k = styles['14k'] || styles['18k'] || Object.values(styles)[0];
-      for (const [carat, weightChin] of Object.entries(chin14k)) {
-        volumeTable[category][style][carat] =
-          Math.round((weightChin / DENSITY_CHIN_PER_CM3['14k']) * 10000) / 10000;
-      }
-    }
-  }
-
-  const weightTable = {};
-  for (const [category, types] of Object.entries(volumeTable)) {
-    weightTable[category] = {};
-    for (const [style, carats] of Object.entries(types)) {
-      weightTable[category][style] = {};
-      const legacyGolds = legacy[category][style];
-      for (const gold of Object.keys(legacyGolds)) {
-        weightTable[category][style][gold] = {};
-        for (const [carat, volume] of Object.entries(carats)) {
-          weightTable[category][style][gold][carat] =
-            Math.round(volume * DENSITY_CHIN_PER_CM3[gold] * 10000) / 10000;
-        }
-      }
-    }
-  }
-  return weightTable;
+  return legacy;
 }
 
 /** Relative URL served from the static site (shop/calculator uses ../../images/shop/). */
@@ -229,3 +197,20 @@ module.exports = {
   buildSeedRows,
   imagePath,
 };
+
+// ponytail: self-check — weight_chin feeds directly into order pricing, so
+// pin a few cells against the literal price-structure sheet. Run directly:
+// `node backend/lib/catalog-seed-data.js`.
+if (require.main === module) {
+  const assert = require('assert');
+  const rows = buildSeedRows();
+  const cell = (category, style, gold, carat) => {
+    const row = rows.find((r) => r.category === category && r.style === style);
+    const v = row.variants.find((x) => x.gold === gold && x.carat === carat);
+    return v && v.weightChin;
+  };
+  assert.strictEqual(cell('ring', 'A', 'pt950', '0.1'), 0.7, 'ring A pt950 0.1ct should be the sheet\'s literal 0.7, not a density-derived value');
+  assert.strictEqual(cell('pendant', 'A', '9k', '0.1'), 0.09);
+  assert.strictEqual(cell('earring', 'A', 'pt950', '0.1'), undefined, 'earring has no pt950 row in the sheet');
+  console.log('catalog-seed-data self-check OK');
+}

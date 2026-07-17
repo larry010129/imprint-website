@@ -103,20 +103,24 @@
     return {};
   }
 
+  var PREFERRED_GRAM_ORDER = [100, 250, 500, 1000];
+
   function perGramFromBarSellRow(row, weightCols) {
     var cells = row.querySelectorAll('td, th');
-    var candidates = [];
+    var candidates = {};
     Object.keys(weightCols).forEach(function (idxStr) {
       var idx = Number(idxStr);
       if (idx >= cells.length) return;
       var amount = cellAmount(cells[idx]);
       if (amount == null || amount < 10000) return;
       var perGram = amount / weightCols[idxStr];
-      if (isBarDerivedGramPrice(perGram)) candidates.push([perGram, weightCols[idxStr]]);
+      if (isBarDerivedGramPrice(perGram)) candidates[weightCols[idxStr]] = perGram;
     });
-    if (!candidates.length) return null;
-    candidates.sort(function (a, b) { return b[1] - a[1]; });
-    return candidates[0][0];
+    for (var i = 0; i < PREFERRED_GRAM_ORDER.length; i++) {
+      var grams = PREFERRED_GRAM_ORDER[i];
+      if (candidates[grams] != null) return candidates[grams];
+    }
+    return null;
   }
 
   function isGoldBarTable(table) {

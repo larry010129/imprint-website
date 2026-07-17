@@ -23,43 +23,22 @@
   /* backdrop-filter 會讓 fixed 子元素(手機抽屜選單)相對導覽列定位,
      手機版改用不透明背景 */
   .nav{ backdrop-filter:none; background:var(--paper); }
-  .site-nav-mobile .nav-menu,
-  .nav-inner > nav:not(.site-nav-desktop) .nav-menu{
-    position:fixed; top:76px; left:0; right:0; bottom:0;
-    background:var(--paper); flex-direction:column; gap:0;
-    padding:20px 8vw 40px; overflow-y:auto;
-    transform:translateX(100%); transition:transform .45s var(--ease);
-    border-top:1px solid var(--mint-line);
+  .mobile-menu-toggle,
+  .nav-burger.mobile-menu-toggle{ display:flex; align-items:center; justify-content:center; }
+  /* Drawer open: hide header CTAs so they don't stack over the menu */
+  .nav.is-mobile-menu-open .nav-cta .nav-calc-moving,
+  .nav.is-mobile-menu-open .nav-cta .btn-dark{
+    visibility:hidden;
+    pointer-events:none;
   }
-  .site-nav-mobile .nav-menu.is-open,
-  .nav-inner > nav:not(.site-nav-desktop) .nav-menu.is-open{ transform:none; }
-  /* 主選單文字＝連結，點了直接跳轉；子選單靠旁邊獨立的展開鈕收合，兩者互不干擾 */
-  .site-nav-mobile .nav-item,
-  .nav-inner > nav:not(.site-nav-desktop) .nav-item{ display:flex; flex-wrap:wrap; align-items:center; border-bottom:1px solid #F0EBE5; }
-  .site-nav-mobile .nav-item > a,
-  .nav-inner > nav:not(.site-nav-desktop) .nav-item > a{ flex:1; padding:18px 0; font-size:17px; }
-  .site-nav-mobile .dd-toggle,
-  .nav-inner > nav:not(.site-nav-desktop) .dd-toggle{
-    display:flex; align-items:center; justify-content:center;
-    width:44px; height:44px; flex:none; color:var(--ink-soft);
-    transition:transform .3s var(--ease), color .3s;
+  .nav.is-mobile-menu-open .mobile-menu-toggle{
+    position:relative;
+    z-index:111;
   }
-  .site-nav-mobile .nav-item.is-open .dd-toggle,
-  .nav-inner > nav:not(.site-nav-desktop) .nav-item.is-open .dd-toggle{ transform:rotate(180deg); color:var(--mint-deep); }
-  .site-nav-mobile .dropdown,
-  .nav-inner > nav:not(.site-nav-desktop) .dropdown{
-    position:static; transform:none; opacity:1; visibility:visible;
-    box-shadow:none; border:none; padding:0 0 10px 14px; display:none;
-    width:100%;
+  .nav.is-mobile-menu-open .nav-cta > .account-menu{
+    position:relative;
+    z-index:112;
   }
-  .site-nav-mobile .nav-item.is-open .dropdown,
-  .nav-inner > nav:not(.site-nav-desktop) .nav-item.is-open .dropdown{ display:block; }
-  /* 蓋掉桌機版 hover 時的置中位移,避免手機觸控觸發 :hover 讓子選單被推出畫面外 */
-  .site-nav-mobile .nav-item:hover .dropdown,
-  .site-nav-mobile .nav-item:focus-within .dropdown,
-  .nav-inner > nav:not(.site-nav-desktop) .nav-item:hover .dropdown,
-  .nav-inner > nav:not(.site-nav-desktop) .nav-item:focus-within .dropdown{ transform:none; }
-  .nav-burger{ display:block; }
   .nav-cta .btn-line{ display:none; }
   .nav-cta .btn-calc,
   .nav-cta .btn-contact{ display:none; } /* 手機版靠選單第一項「珠寶試算」，header 空間留給預約按鈕 */

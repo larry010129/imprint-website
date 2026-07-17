@@ -133,10 +133,6 @@
   display: none;
 }
 
-[data-site-nav-root] .site-nav-mobile {
-  display: block;
-}
-
 @media (width >= 861px) {
   [data-site-nav-root] .site-nav-desktop {
     display: flex;
@@ -145,8 +141,192 @@
     max-width: 100%;
   }
 
-  [data-site-nav-root] .site-nav-mobile {
+  [data-site-nav-root] .mobile-animated-nav {
     display: none;
+  }
+}
+
+@media (width <= 860px) {
+  [data-site-nav-root] .mobile-menu-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    background: transparent;
+    color: var(--ink, #2b2320);
+  }
+
+  [data-site-nav-root].is-nav-hero .mobile-menu-toggle {
+    color: #fff;
+  }
+
+  [data-site-nav-root] .nav.is-mobile-menu-open .mobile-menu-toggle {
+    position: relative;
+    z-index: 112;
+    color: var(--ink, #2b2320);
+  }
+
+  .mobile-animated-nav {
+    position: fixed;
+    inset: 0;
+    z-index: 110;
+  }
+
+  .mobile-animated-nav__panel {
+    position: absolute;
+    inset: 0;
+    background: var(--paper, #fdfcfa);
+  }
+
+  .mobile-animated-nav__list {
+    position: absolute;
+    top: 88px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    margin: 0;
+    padding: 12px 8vw 180px;
+    list-style: none;
+    overflow-y: auto;
+  }
+
+  .mobile-animated-nav__item {
+    border-bottom: 1px solid #f0ebe5;
+  }
+
+  .mobile-animated-nav__row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .mobile-animated-nav__link {
+    flex: 1;
+    display: block;
+    padding: 18px 0;
+    font-size: 17px;
+    letter-spacing: 0.08em;
+    color: var(--ink, #2b2320);
+  }
+
+  .mobile-animated-nav__link:hover {
+    color: var(--mint-deep, #1aa8ad);
+  }
+
+  .mobile-animated-nav__expand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border: 0;
+    background: transparent;
+    color: var(--ink-soft, #8a817b);
+    cursor: pointer;
+  }
+
+  .mobile-animated-nav__sublist {
+    margin: 0;
+    padding: 0 0 12px 14px;
+    list-style: none;
+  }
+
+  .mobile-animated-nav__sublink {
+    display: block;
+    padding: 10px 0;
+    font-size: 15px;
+    letter-spacing: 0.06em;
+    color: var(--ink-soft, #8a817b);
+  }
+
+  .mobile-animated-nav__sublink:hover {
+    color: var(--mint-deep, #1aa8ad);
+  }
+
+  .mobile-animated-nav__account {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 20px 8vw calc(24px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid #f0ebe5;
+    background: var(--paper, #fdfcfa);
+  }
+
+  .account-menu--drawer .account-menu-drawer-label {
+    margin: 0 0 12px;
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    color: var(--ink-soft, #8a817b);
+  }
+
+  .account-menu-drawer-login {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .account-menu-drawer-links {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .account-menu--drawer .account-menu-item {
+    padding: 12px 0;
+    font-size: 15px;
+    border-radius: 0;
+  }
+
+  .nav-calc-moving {
+    display: none;
+  }
+
+  .nav-cta > .account-menu {
+    display: block;
+    margin-left: 0;
+    position: relative;
+    z-index: 112;
+  }
+
+  .nav-cta > .account-menu .account-menu-text {
+    display: none;
+  }
+
+  .nav-cta > .account-menu .account-menu-trigger {
+    padding: 2px;
+    max-width: none;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+
+  .nav-cta > .account-menu .account-menu-trigger:hover {
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .nav-cta > .account-menu .account-menu-avatar {
+    width: 38px;
+    height: 38px;
+  }
+
+  [data-site-nav-root].is-nav-hero .nav-cta > .account-menu .account-menu-trigger {
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+  }
+
+  .account-menu-panel {
+    right: 0;
+    left: auto;
+  }
+}
+
+@media (width >= 861px) {
+  [data-site-nav-root] .mobile-menu-toggle {
+    display: none !important;
   }
 }
 
@@ -175,30 +355,63 @@
   color: #0485f7;
 }
 
+[data-checkout-root] {
+  --background: #fdfcfa;
+  --foreground: #2b2320;
+  --card: #ffffff;
+  --card-foreground: #2b2320;
+  --border: #dcf2f2;
+  --input: #dcf2f2;
+  --muted: #f7f4f1;
+  --muted-foreground: #8a817b;
+  --primary: #5ecfcf;
+  --primary-foreground: #ffffff;
+  --secondary: #f7f4f1;
+  --secondary-foreground: #2b2320;
+  --accent: #eafcfc;
+  --accent-foreground: #2b2320;
+  --ring: #5ecfcf;
+  --destructive: #e2554a;
+  --destructive-foreground: #ffffff;
+  font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+  letter-spacing: 0.05em;
+  color: var(--foreground);
+}
+
+[data-checkout-root] a {
+  color: #5ecfcf;
+}
+
+[data-checkout-root] a:hover {
+  color: #0485f7;
+}
+
 .account-menu {
   position: relative;
+  margin-left: 4px;
 }
 
 .account-menu-trigger {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 6px 10px 6px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.42);
+  padding: 5px 8px 5px 12px;
+  border: 1px solid rgba(94, 207, 207, 0.28);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.52);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   box-shadow: 0 4px 18px rgba(43, 35, 32, 0.08);
   cursor: pointer;
-  max-width: 220px;
+  max-width: 168px;
+  min-width: 0;
   transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
 }
 
 .account-menu-trigger:hover {
-  border-color: rgba(94, 207, 207, 0.55);
-  background: rgba(255, 255, 255, 0.68);
-  box-shadow: 0 6px 22px rgba(43, 35, 32, 0.1);
+  border-color: rgba(94, 207, 207, 0.5);
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 6px 22px rgba(43, 35, 32, 0.12);
 }
 
 a.account-menu-trigger {
@@ -207,9 +420,47 @@ a.account-menu-trigger {
 }
 
 .account-menu-trigger--guest .account-menu-avatar--guest {
-  background: rgba(255, 255, 255, 0.22);
-  border: 1px solid rgba(94, 207, 207, 0.35);
-  color: var(--ink, #2b2320);
+  background: linear-gradient(145deg, #5ecfcf 0%, #a78bfa 100%);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  color: #fff;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
+}
+
+.nav-calc-moving {
+  display: inline-flex;
+  text-decoration: none;
+  color: inherit;
+}
+
+.nav-calc-moving-inner {
+  transition: background 0.2s, filter 0.2s;
+}
+
+.nav-calc-moving:hover .nav-calc-moving-inner {
+  background: #b7f4f4;
+  filter: brightness(1.02);
+}
+
+/* Dark hero (home page only, before scroll) is the one place a real photo
+   sits behind the nav — swap back to the translucent glass-on-dark look. */
+[data-site-nav-root].is-nav-hero .account-menu-trigger {
+  background: rgba(28, 22, 20, 0.42);
+  border-color: rgba(255, 255, 255, 0.38);
+  box-shadow: 0 4px 20px rgba(42, 24, 69, 0.2);
+}
+
+[data-site-nav-root].is-nav-hero .account-menu-trigger:hover {
+  border-color: rgba(94, 207, 207, 0.65);
+  background: rgba(38, 30, 28, 0.52);
+  box-shadow: 0 6px 24px rgba(42, 24, 69, 0.28);
+}
+
+[data-site-nav-root].is-nav-hero .account-menu-name {
+  color: #fff;
+}
+
+[data-site-nav-root].is-nav-hero .account-menu-email {
+  color: rgba(255, 255, 255, 0.72);
 }
 
 .account-menu-text {
@@ -217,7 +468,10 @@ a.account-menu-trigger {
   flex-direction: column;
   align-items: flex-start;
   min-width: 0;
+  max-width: 96px;
+  flex: 1 1 auto;
   text-align: left;
+  overflow: hidden;
 }
 
 .account-menu-name {
@@ -228,7 +482,7 @@ a.account-menu-trigger {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 120px;
+  max-width: 100%;
 }
 
 .account-menu-email {
@@ -238,20 +492,23 @@ a.account-menu-trigger {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 120px;
+  max-width: 100%;
 }
 
 .account-menu-avatar {
   display: grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #5ecfcf, #9c8fd9);
+  background: linear-gradient(145deg, #5ecfcf 0%, #67e8f9 42%, #a78bfa 100%);
   color: #fff;
   font-size: 11px;
   font-weight: 700;
   flex-shrink: 0;
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.28),
+    0 6px 16px rgba(94, 207, 207, 0.35);
 }
 
 .account-menu-panel {
@@ -302,11 +559,5 @@ a.account-menu-trigger {
 
 .account-menu-admin:hover {
   background: rgba(94, 207, 207, 0.18);
-}
-
-@media (max-width: 860px) {
-  .account-menu {
-    display: none;
-  }
 }
 

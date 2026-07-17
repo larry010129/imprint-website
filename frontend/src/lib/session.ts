@@ -51,6 +51,12 @@ export async function logoutSession(): Promise<boolean> {
   return !!data?.ok
 }
 
+export function truncateNavLabel(text: string, maxLen = 12): string {
+  const t = text.trim()
+  if (t.length <= maxLen) return t
+  return `${t.slice(0, maxLen)}...`
+}
+
 export function displayName(session: Session): string {
   const name = session.profile?.full_name?.trim()
   if (name) return name

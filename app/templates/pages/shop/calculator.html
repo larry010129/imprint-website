@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block main_class %} class="main-content shop-calculator-page"{% endblock %}
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/shop.css?v=2.2">
+<link rel="stylesheet" href="/static/css/shop.css?v=2.9">
 <link rel="stylesheet" href="/static/css/shop-wizard.css?v=8">
 {% endblock %}
 {% block content %}
@@ -179,14 +179,32 @@
               <select id="ring-size-select" class="ring-size-select" aria-label="Ring size">
                 <option value="" data-i18n="ring_size_placeholder">請選擇國際戒圍</option>
               </select>
-              <details class="ring-size-guide-inline ring-size-guide-inline--product" open>
-                <summary data-i18n="ring_size_inline_title">戒圍量測方式</summary>
+            </div>
+
+            <div class="variant-group hidden" id="engraving-band-step">
+              <h3 class="variant-label" data-i18n="step_engraving_band">戒圈刻字</h3>
+              <input id="engraving-band-input" class="engraving-input" type="text" maxlength="10"
+                     data-i18n-placeholder="engraving_placeholder" placeholder="選填，最多 10 個字">
+            </div>
+
+            <div class="variant-group hidden" id="engraving-girdle-step">
+              <h3 class="variant-label" data-i18n="step_engraving_girdle">腰圍刻字</h3>
+              <input id="engraving-girdle-input" class="engraving-input" type="text" maxlength="10"
+                     pattern="[A-Za-z0-9]*" inputmode="text" autocomplete="off"
+                     data-i18n-placeholder="engraving_placeholder" placeholder="選填，最多 10 個字">
+              <p class="engraving-hint" data-i18n="engraving_girdle_hint">僅限英數字，最多 10 字</p>
+            </div>
+
+            <div class="variant-group variant-group--size-guide hidden" id="ringsize-guide-step">
+              <div class="ring-size-guide-inline ring-size-guide-inline--product ring-size-guide-inline--static ring-size-guide-inline--large">
+                <p class="ring-size-guide-inline__title" data-i18n="ring_size_inline_title">戒圍量測方式</p>
                 <div class="ring-size-guide-inline__content">
                   <ol class="ring-size-guide-inline__steps">
                     <li data-i18n="ring_size_inline_step_1">用細紙條繞過手指最寬處。</li>
                     <li data-i18n="ring_size_inline_step_2">在紙條交會處做記號，勿過緊或過鬆。</li>
                     <li data-i18n="ring_size_inline_step_3">攤平量出長度，依內周長對照戒圍。</li>
                   </ol>
+                  <img class="guide-image" src="/static/images/shop/guides/ring-size-chart.png" alt="戒圍尺寸對照表" loading="lazy">
                   <div class="ring-size-guide-inline__scroll" role="region" aria-label="戒圍尺寸表" tabindex="0">
                     <table class="ring-size-guide-inline__table">
                       <thead>
@@ -222,32 +240,22 @@
                   <p class="ring-size-guide-inline__note" data-i18n="ring_size_inline_note">建議測量 2 至 3 次取平均值。寬版戒指可預留較鬆尺寸。</p>
                   <button type="button" class="ring-size-guide-inline__more" id="ring-size-guide-open" data-i18n="ring_size_guide_open">完整戒圍對照表</button>
                 </div>
-              </details>
-            </div>
-
-            <div class="variant-group hidden" id="engraving-band-step">
-              <h3 class="variant-label" data-i18n="step_engraving_band">戒圈刻字</h3>
-              <input id="engraving-band-input" class="engraving-input" type="text" maxlength="10"
-                     data-i18n-placeholder="engraving_placeholder" placeholder="選填，最多 10 個字">
-            </div>
-
-            <div class="variant-group hidden" id="engraving-girdle-step">
-              <h3 class="variant-label" data-i18n="step_engraving_girdle">腰圍刻字</h3>
-              <input id="engraving-girdle-input" class="engraving-input" type="text" maxlength="10"
-                     pattern="[A-Za-z0-9]*" inputmode="text" autocomplete="off"
-                     data-i18n-placeholder="engraving_placeholder" placeholder="選填，最多 10 個字">
-              <p class="engraving-hint" data-i18n="engraving_girdle_hint">僅限英數字，最多 10 字</p>
+              </div>
             </div>
 
             <div class="variant-group hidden" id="chain-length-step">
               <h3 class="variant-label" data-i18n="step_chain_length">選擇鏈條長度</h3>
               <div class="variant-chips" id="chain-length-btn-row"></div>
-              <details class="ring-size-guide-inline ring-size-guide-inline--product chain-length-guide-inline" id="chain-length-guide-necklace-inline" open>
-                <summary data-i18n="chain_length_guide_open">長度參考</summary>
+            </div>
+
+            <div class="variant-group variant-group--size-guide hidden" id="chain-length-guide-step">
+              <div class="ring-size-guide-inline ring-size-guide-inline--product ring-size-guide-inline--static ring-size-guide-inline--large chain-length-guide-inline" id="chain-length-guide-necklace-inline">
+                <p class="ring-size-guide-inline__title" data-i18n="chain_length_guide_open">長度參考</p>
                 <div class="ring-size-guide-inline__content">
                   <p class="chain-length-guide-inline__intro" data-i18n="chain_length_guide_intro">選擇適合您的項鍊長度；實際配戴效果可能因身形而異。</p>
                   <p class="chain-length-guide-inline__subtitle" data-i18n="chain_length_guide_necklace_title">項鍊／鏈條長度</p>
                   <p class="chain-length-guide-inline__method" data-i18n="chain_length_guide_necklace_method">將鏈條平量總長度，或比對現有項鍊從扣環到墜子連接處的長度。</p>
+                  <img class="guide-image" src="/static/images/shop/guides/necklace-length-guide.png" alt="項鍊尺寸示意圖" loading="lazy">
                   <div class="ring-size-guide-inline__scroll" role="region" aria-label="項鍊鏈條長度表" tabindex="0">
                     <table class="ring-size-guide-inline__table chain-length-guide-inline__table">
                       <thead>
@@ -267,9 +275,9 @@
                     </table>
                   </div>
                 </div>
-              </details>
-              <details class="ring-size-guide-inline ring-size-guide-inline--product chain-length-guide-inline hidden" id="chain-length-guide-bracelet-inline" open>
-                <summary data-i18n="chain_length_guide_open">長度參考</summary>
+              </div>
+              <div class="ring-size-guide-inline ring-size-guide-inline--product ring-size-guide-inline--static ring-size-guide-inline--large chain-length-guide-inline hidden" id="chain-length-guide-bracelet-inline">
+                <p class="ring-size-guide-inline__title" data-i18n="chain_length_guide_open">長度參考</p>
                 <div class="ring-size-guide-inline__content">
                   <p class="chain-length-guide-inline__intro" data-i18n="bracelet_length_guide_intro">選擇適合您的手鍊長度；實際配戴效果可能因腕圍而異。</p>
                   <p class="chain-length-guide-inline__subtitle" data-i18n="chain_length_guide_bracelet_title">手鍊長度</p>
@@ -294,7 +302,7 @@
                     </table>
                   </div>
                 </div>
-              </details>
+              </div>
             </div>
 
             <div class="variant-group hidden" id="pendant-chain-step">
@@ -316,32 +324,36 @@
                 <div class="variant-group pendant-chain-length">
                   <h3 class="variant-label" data-i18n="step_chain_length">選擇鏈條長度</h3>
                   <div class="variant-chips" id="pendant-chain-length-row"></div>
-                  <details class="ring-size-guide-inline ring-size-guide-inline--product chain-length-guide-inline" open>
-                    <summary data-i18n="chain_length_guide_open">長度參考</summary>
-                    <div class="ring-size-guide-inline__content">
-                      <p class="chain-length-guide-inline__intro" data-i18n="chain_length_guide_intro">選擇適合您的項鍊長度；實際配戴效果可能因身形而異。</p>
-                      <p class="chain-length-guide-inline__subtitle" data-i18n="chain_length_guide_necklace_title">項鍊／鏈條長度</p>
-                      <p class="chain-length-guide-inline__method" data-i18n="chain_length_guide_necklace_method">將鏈條平量總長度，或比對現有項鍊從扣環到墜子連接處的長度。</p>
-                      <div class="ring-size-guide-inline__scroll" role="region" aria-label="項鍊鏈條長度表" tabindex="0">
-                        <table class="ring-size-guide-inline__table chain-length-guide-inline__table">
-                          <thead>
-                            <tr>
-                              <th scope="col" data-i18n="chain_length_col_cm">長度</th>
-                              <th scope="col" data-i18n="chain_length_col_position">配戴位置</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <tr><th scope="row">35 cm</th><td data-i18n="chain_length_35">貼頸／鎖骨上方（短項鍊）</td></tr>
-                            <tr><th scope="row">40 cm</th><td data-i18n="chain_length_40">鎖骨位置</td></tr>
-                            <tr><th scope="row">45 cm</th><td data-i18n="chain_length_45">鎖骨下方至胸前（最常見）</td></tr>
-                            <tr><th scope="row">50 cm</th><td data-i18n="chain_length_50">胸前</td></tr>
-                            <tr><th scope="row">55 cm</th><td data-i18n="chain_length_55">胸前偏下</td></tr>
-                            <tr><th scope="row">60 cm</th><td data-i18n="chain_length_60">長項鍊／可雙圈</td></tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  </details>
+                </div>
+              </div>
+            </div>
+
+            <div class="variant-group variant-group--size-guide hidden" id="pendant-chain-guide-step">
+              <div class="ring-size-guide-inline ring-size-guide-inline--product ring-size-guide-inline--static ring-size-guide-inline--large chain-length-guide-inline">
+                <p class="ring-size-guide-inline__title" data-i18n="chain_length_guide_open">長度參考</p>
+                <div class="ring-size-guide-inline__content">
+                  <p class="chain-length-guide-inline__intro" data-i18n="chain_length_guide_intro">選擇適合您的項鍊長度；實際配戴效果可能因身形而異。</p>
+                  <p class="chain-length-guide-inline__subtitle" data-i18n="chain_length_guide_necklace_title">項鍊／鏈條長度</p>
+                  <p class="chain-length-guide-inline__method" data-i18n="chain_length_guide_necklace_method">將鏈條平量總長度，或比對現有項鍊從扣環到墜子連接處的長度。</p>
+                  <img class="guide-image" src="/static/images/shop/guides/necklace-length-guide.png" alt="項鍊尺寸示意圖" loading="lazy">
+                  <div class="ring-size-guide-inline__scroll" role="region" aria-label="項鍊鏈條長度表" tabindex="0">
+                    <table class="ring-size-guide-inline__table chain-length-guide-inline__table">
+                      <thead>
+                        <tr>
+                          <th scope="col" data-i18n="chain_length_col_cm">長度</th>
+                          <th scope="col" data-i18n="chain_length_col_position">配戴位置</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr><th scope="row">35 cm</th><td data-i18n="chain_length_35">貼頸／鎖骨上方（短項鍊）</td></tr>
+                        <tr><th scope="row">40 cm</th><td data-i18n="chain_length_40">鎖骨位置</td></tr>
+                        <tr><th scope="row">45 cm</th><td data-i18n="chain_length_45">鎖骨下方至胸前（最常見）</td></tr>
+                        <tr><th scope="row">50 cm</th><td data-i18n="chain_length_50">胸前</td></tr>
+                        <tr><th scope="row">55 cm</th><td data-i18n="chain_length_55">胸前偏下</td></tr>
+                        <tr><th scope="row">60 cm</th><td data-i18n="chain_length_60">長項鍊／可雙圈</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             </div>
@@ -374,8 +386,7 @@
             <div class="summary-row"><span class="lbl" data-i18n="sum_carat">克拉</span><span class="colon">：</span><span class="val" id="sum-carat">-</span></div>
             <hr>
             <div class="summary-row" id="sum-diamond-row"><span class="lbl" data-i18n="sum_diamond">鑽石價格</span><span class="colon">：</span><span class="val">NT$ <span id="sum-diamond-price">0</span></span></div>
-            <div class="summary-row"><span class="lbl" data-i18n="sum_taijin_price">台金價格</span><span class="colon">：</span><span class="val">NT$ <span id="sum-taijin-price">-</span></span></div>
-            <div class="summary-row"><span class="lbl" data-i18n="sum_labor_fee">金工費</span><span class="colon">：</span><span class="val">NT$ <span id="sum-labor-price">-</span></span></div>
+            <div class="summary-row"><span class="lbl" data-i18n="sum_metalwork_price">金工價格</span><span class="colon">：</span><span class="val">NT$ <span id="sum-metalwork-price">-</span></span></div>
             <div class="summary-row hidden" id="sum-chain-row"><span class="lbl" data-i18n="sum_chain_price">搭配鏈條</span><span class="colon">：</span><span class="val">NT$ <span id="sum-chain-price">-</span></span></div>
           </div>
         </div>
@@ -419,6 +430,7 @@
   </div>
   <section class="guide-section guide-section--chart">
     <h3 class="guide-section-title" data-i18n="ring_size_guide_chart_title">各國戒圍對照</h3>
+    <img class="guide-image" src="/static/images/shop/guides/ring-size-chart.png" alt="戒圍尺寸對照表" loading="lazy">
   </section>
   <section class="guide-section guide-section--precautions">
     <h3 class="guide-section-title" data-i18n="ring_size_guide_precautions_title">注意事項</h3>
@@ -462,6 +474,7 @@
   <section class="guide-section" id="chain-length-guide-necklace">
     <h3 class="guide-section-title" data-i18n="chain_length_guide_necklace_title">項鍊／鏈條長度</h3>
     <p class="guide-section-text" data-i18n="chain_length_guide_necklace_method">將鏈條平量總長度，或比對現有項鍊從扣環到墜子連接處的長度。</p>
+    <img class="guide-image" src="/static/images/shop/guides/necklace-length-guide.png" alt="項鍊尺寸示意圖" loading="lazy">
     <div class="ring-size-guide-scroll">
       <table class="ring-size-guide-table chain-length-guide-table">
         <thead>
@@ -504,7 +517,6 @@
       </table>
     </div>
   </section>
-  <img id="chain-length-guide-image" class="guide-image hidden" alt="">
 </dialog>
 
 <div class="mobile-buy-bar hidden" id="mobile-buy-bar">
@@ -540,6 +552,7 @@
     useApi: true,
     loginUrl: '/login.html',
     cartUrl: '/cart.html',
+    checkoutUrl: '/checkout.html',
     successUrl: '/success.html',
     quoteSheetUrl: '/quote-sheet',
     shareBaseUrl: '/s/TOKEN',
@@ -549,5 +562,5 @@
 <script src="/static/js/shop-catalog-data.js"></script>
 <script src="/static/js/shop-pricing-local.js"></script>
 <script src="/static/js/shop-i18n.js"></script>
-<script src="/static/js/shop.js?v=11"></script>
+<script src="/static/js/shop.js?v=14"></script>
 {% endblock %}

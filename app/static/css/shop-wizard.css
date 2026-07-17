@@ -393,7 +393,7 @@
   overflow: visible;
 }
 
-/* Wizard: always show full breakdown (克拉、台金、金工費) */
+/* Wizard: always show full breakdown (克拉、金工價格) */
 .shop-page.shop-wizard .price-breakdown-details:not([open]) .price-breakdown-panel {
   display: block !important;
 }

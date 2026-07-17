@@ -23,11 +23,13 @@ const learnLinks = [
   { label: "時尚珠寶", href: "/jewelry/" },
 ];
 
+const MAPS_URL = "https://maps.app.goo.gl/3Fed2YEpWa8LxQoy9";
+
 const contactInfo = [
   {
     icon: <MapPin size={18} style={{ color: MINT }} />,
     text: "新北市三重區福德南路 43 號 1 樓（預約制）",
-    href: "https://www.google.com/maps/search/?api=1&query=%E6%96%B0%E5%8C%97%E5%B8%82%E4%B8%89%E9%87%8D%E5%8D%80%E7%A6%8F%E5%BE%B7%E5%8D%97%E8%B7%AF43%E8%99%9F1%E6%A8%93",
+    href: MAPS_URL,
     external: true,
   },
   {
@@ -59,8 +61,8 @@ export default function HoverFooter() {
   return (
     <footer className="relative m-0 h-fit overflow-hidden rounded-none bg-[#2B2320]/95">
       <div className="relative z-40 mx-auto max-w-7xl p-8 md:p-14">
-        <div className="grid grid-cols-1 gap-12 pb-6 md:grid-cols-2 md:gap-8 lg:grid-cols-4 lg:gap-12">
-          <div className="flex flex-col space-y-4">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-10 pb-6 md:grid-cols-2 md:gap-8 lg:grid-cols-4 lg:gap-12">
+          <div className="col-span-2 flex flex-col space-y-4 lg:col-span-1">
             <div className="flex flex-col space-y-1">
               <span className="text-2xl font-bold tracking-wide text-[#9CEFEF] md:text-3xl">
                 銘印鑽石
@@ -76,7 +78,7 @@ export default function HoverFooter() {
           </div>
 
           <div>
-            <h4 className="mb-6 text-lg font-semibold text-[#F7F4F1]">DNA 鑽石</h4>
+            <h4 className="mb-4 text-base font-semibold text-[#F7F4F1] md:mb-6 md:text-lg">DNA 鑽石</h4>
             <ul className="space-y-3 text-sm text-[#F7F4F1]/75">
               {dnaLinks.map((link) => (
                 <li key={link.href}>
@@ -92,7 +94,7 @@ export default function HoverFooter() {
           </div>
 
           <div>
-            <h4 className="mb-6 text-lg font-semibold text-[#F7F4F1]">瞭解更多</h4>
+            <h4 className="mb-4 text-base font-semibold text-[#F7F4F1] md:mb-6 md:text-lg">瞭解更多</h4>
             <ul className="space-y-3 text-sm text-[#F7F4F1]/75">
               {learnLinks.map((link) => (
                 <li key={link.href}>
@@ -107,8 +109,8 @@ export default function HoverFooter() {
             </ul>
           </div>
 
-          <div>
-            <h4 className="mb-6 text-lg font-semibold text-[#F7F4F1]">聯絡我們</h4>
+          <div className="col-span-2 lg:col-span-1">
+            <h4 className="mb-4 text-base font-semibold text-[#F7F4F1] md:mb-6 md:text-lg">聯絡我們</h4>
             <ul className="space-y-4 text-sm text-[#F7F4F1]/75">
               {contactInfo.map((item) => (
                 <li key={item.text} className="flex items-start space-x-3">

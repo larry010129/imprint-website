@@ -114,6 +114,23 @@ PAGE_CART = PageMeta(
     extra_head_blocks=[],
 )
 
+PAGE_CHECKOUT = PageMeta(
+    route='/checkout.html',
+    template='pages/checkout.html',
+    title='確認訂單｜銘印鑽石 IMPRINT DIAMOND',
+    description='',
+    canonical_path='',
+    og_title=None,
+    og_description=None,
+    og_image=None,
+    breadcrumbs=[],
+    nav_active='shop',
+    mvc_page=None,
+    extra_body_class=None,
+    content_fragment=None,
+    extra_head_blocks=[],
+)
+
 PAGE_CONTACT = PageMeta(
     route='/contact.html',
     template='pages/contact.html',
@@ -877,6 +894,7 @@ ALL_PAGES: list[PageMeta] = [
     PAGE_ABOUT,
     PAGE_ACCOUNT,
     PAGE_CART,
+    PAGE_CHECKOUT,
     PAGE_CONTACT,
     PAGE_DIAMONDS,
     PAGE_FAQ,

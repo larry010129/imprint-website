@@ -61,11 +61,7 @@
       e.checkoutBtn.addEventListener('click', function () {
         var ids = View.updateSelection();
         if (!ids.length) return;
-        e.checkoutBtn.disabled = true;
-        Model.checkout(ids).then(function (data) {
-          if (data.error) { alert(data.error); e.checkoutBtn.disabled = false; return; }
-          global.location.href = 'success.html';
-        });
+        global.location.href = 'checkout.html?items=' + ids.map(encodeURIComponent).join(',');
       });
     }
     if (e.dialogClose && e.dialog) e.dialogClose.addEventListener('click', function () { e.dialog.close(); });

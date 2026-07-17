@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/home-ghibli.css?v=9">
+<link rel="stylesheet" href="/static/css/home-ghibli.css?v=11">
 {% include "partials/faq-react-css.html" %}
 {% endblock %}
 {% block extra_head %}
@@ -491,10 +491,8 @@
 <section class="gh-section faq faq--teaser" id="faq">
   <p class="gh-script reveal">FAQ</p>
   <h2 class="gh-section__title reveal reveal-d1">常見問題</h2>
-  <div class="gh-faq-wrap reveal reveal-d2">
-    <div class="faq-list">
-      <div data-faq-root data-variant="teaser"></div>
-    </div>
+  <div class="faq-list reveal reveal-d2">
+    <div data-faq-root data-variant="teaser"></div>
   </div>
   <div class="faq-more reveal">
     <a class="btn btn-line" href="/faq.html">查看全部常見問題</a>

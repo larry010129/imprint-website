@@ -67,8 +67,10 @@
     if (pricing.diamondPrice != null && pricing.diamondPrice > 0) {
       rows.push({ label: '鑽石價格', value: 'NT$ ' + fmt(pricing.diamondPrice) });
     }
-    if (pricing.taijinPrice != null) rows.push({ label: '台金價格', value: 'NT$ ' + fmt(pricing.taijinPrice) });
-    if (pricing.laborPrice != null) rows.push({ label: '金工費', value: 'NT$ ' + fmt(pricing.laborPrice) });
+    var metalwork = pricing.metalworkPrice != null
+      ? pricing.metalworkPrice
+      : (pricing.taijinPrice != null && pricing.laborPrice != null ? pricing.taijinPrice + pricing.laborPrice : null);
+    if (metalwork != null) rows.push({ label: '金工價格', value: 'NT$ ' + fmt(metalwork) });
     if (pricing.chainPrice != null) rows.push({ label: '搭配鏈條', value: 'NT$ ' + fmt(pricing.chainPrice) });
     return rows;
   }

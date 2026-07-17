@@ -15,6 +15,5 @@
       return fetch(M.apiBase() + '/api/cart-item?id=' + encodeURIComponent(id), { credentials: 'include' })
         .then(function (r) { return r.json(); });
     },
-    checkout: function (itemIds) { return M.api().checkoutCart(itemIds); },
   };
 })(window);

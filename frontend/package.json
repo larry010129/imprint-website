@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build && vite build --config vite.footer.config.ts && vite build --config vite.nav.config.ts && vite build --config vite.stories.config.ts && vite build --config vite.price.config.ts",
+    "build": "tsc -b && vite build && vite build --config vite.footer.config.ts && vite build --config vite.nav.config.ts && vite build --config vite.stories.config.ts && vite build --config vite.price.config.ts && vite build --config vite.checkout.config.ts",
     "preview": "vite preview"
   },
   "dependencies": {
