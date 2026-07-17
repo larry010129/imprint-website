@@ -1106,7 +1106,7 @@ function diamondMetaLabel(item) {
 
 function diamondAssetUrl(relativePath) {
   if (!relativePath) return '';
-  return `/images/${relativePath}`;
+  return `/static/images/${relativePath}?v=3`;
 }
 
 function usesAutoStoneCount(category = state.category) {
@@ -1135,7 +1135,7 @@ function ensureStoneCountDefault() {
 function diamondColorOptions() {
   if (diamondOptions.diamondColors?.length) return diamondOptions.diamondColors;
   return [
-    { id: 'white', kind: 'white', labelZh: '白鑽', labelEn: 'White', swatch: '#e8e8e8', image: 'diamonds/shapes/round.svg' },
+    { id: 'white', kind: 'white', labelZh: '白鑽', labelEn: 'White', swatch: '#e8e8e8', image: 'diamonds/colors/white.png' },
     ...(diamondOptions.fancyColors || []),
   ];
 }

@@ -49,7 +49,6 @@ export const NAV_ITEMS: NavItem[] = [
     children: [
       { label: "品牌故事", href: "/about.html" },
       { label: "客戶見證", href: "/stories.html" },
-      { label: "聯絡我們", href: "/contact.html" },
     ],
   },
   { id: "track-order", label: "查詢訂製進度", href: "/track-order.html" },

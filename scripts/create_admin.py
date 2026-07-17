@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import secrets
 import sys
 from pathlib import Path
 
@@ -16,13 +17,18 @@ from app.database import get_connection
 def main() -> int:
     parser = argparse.ArgumentParser(description="Create or promote an admin account")
     parser.add_argument("--email", default="admin@imprint.local")
-    parser.add_argument("--password", default="Admin123!")
+    parser.add_argument(
+        "--password",
+        default=None,
+        help="Omit to auto-generate a random password (printed once on success).",
+    )
     parser.add_argument("--name", default="系統管理員")
     parser.add_argument("--phone", default="0900000000")
     args = parser.parse_args()
 
     email = args.email.strip().lower()
-    if len(args.password) < 6:
+    password = args.password or secrets.token_urlsafe(12)
+    if len(password) < 6:
         print("Password must be at least 6 characters", file=sys.stderr)
         return 1
 
@@ -40,7 +46,7 @@ def main() -> int:
             print(f"Promoted existing user to admin: {email}")
         else:
             created = True
-            password_hash = hash_password(args.password)
+            password_hash = hash_password(password)
             cur.execute(
                 """
                 insert into users (email, password_hash, email_verified)
@@ -63,7 +69,7 @@ def main() -> int:
 
     print("Login at /login.html then open /admin.html")
     if created:
-        print(f"Password: {args.password}")
+        print(f"Password: {password}")
     return 0
 
 

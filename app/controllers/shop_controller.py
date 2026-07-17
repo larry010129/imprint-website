@@ -1,7 +1,4 @@
-"""Shop cart + checkout for the FastAPI app.
-
-ponytail: prices come from client ShopPricingLocal until Node pricing is ported.
-"""
+"""Shop cart + checkout for the FastAPI app."""
 
 from __future__ import annotations
 
@@ -15,6 +12,7 @@ from psycopg.types.json import Jsonb
 from app.auth import get_user_id
 from app.database import get_connection
 from app.image_urls import is_uuid
+from app.pricing import compute_order_pricing
 
 router = APIRouter(tags=["shop"])
 
@@ -47,9 +45,6 @@ def _validate_config(body: dict[str, Any]) -> str | None:
     for key in ("category", "type", "gold", "carat"):
         if not body.get(key):
             return f"缺少欄位：{key}"
-    pricing = _pricing(body)
-    if pricing.get("total") is None:
-        return "無法計算價格，請重新整理後再試"
     return None
 
 
@@ -190,11 +185,15 @@ async def add_to_cart(request: Request) -> dict:
     if error:
         return _err(400, error)
 
-    pricing = _pricing(body)
     summary = _summary(body)
-    config_json = json.loads(json.dumps(body, default=str))
 
     with get_connection() as conn, conn.cursor() as cur:
+        pricing = compute_order_pricing(cur, body)
+        if not pricing.get("ready"):
+            return _err(400, "無法計算價格，請重新整理後再試")
+        body["clientPricing"] = pricing
+        config_json = json.loads(json.dumps(body, default=str))
+
         cur.execute(
             """
             insert into cart_items (user_id, category, style_type, config_json, summary_zh, total_price)

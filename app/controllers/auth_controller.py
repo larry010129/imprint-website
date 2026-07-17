@@ -106,7 +106,7 @@ async def signup(request: Request, response: Response) -> JSONResponse:
 
     token = sign_session(str(user["id"]))
     result = JSONResponse(content={"ok": True, "user": {"id": str(user["id"]), "email": user["email"]}})
-    set_session_cookie(result, token)
+    set_session_cookie(result, token, request)
     return result
 
 
@@ -140,7 +140,7 @@ async def login(request: Request) -> JSONResponse:
 
     token = sign_session(str(user["id"]))
     result = JSONResponse(content={"ok": True, "user": {"id": str(user["id"]), "email": user["email"]}})
-    set_session_cookie(result, token)
+    set_session_cookie(result, token, request)
     return result
 
 

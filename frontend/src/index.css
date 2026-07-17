@@ -185,7 +185,7 @@
     right: 0;
     bottom: 0;
     margin: 0;
-    padding: 12px 8vw 180px;
+    padding: 12px 8vw calc(24px + env(safe-area-inset-bottom, 0px));
     list-style: none;
     overflow-y: auto;
   }
@@ -243,39 +243,30 @@
     color: var(--mint-deep, #1aa8ad);
   }
 
-  .mobile-animated-nav__account {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    padding: 20px 8vw calc(24px + env(safe-area-inset-bottom, 0px));
-    border-top: 1px solid #f0ebe5;
-    background: var(--paper, #fdfcfa);
+  .mobile-animated-nav__item--account {
+    padding-bottom: 4px;
   }
 
-  .account-menu--drawer .account-menu-drawer-label {
-    margin: 0 0 12px;
+  .mobile-animated-nav__account-label {
+    margin: 0;
+    padding: 18px 0 4px;
     font-size: 13px;
     letter-spacing: 0.08em;
     color: var(--ink-soft, #8a817b);
   }
 
-  .account-menu-drawer-login {
-    display: flex;
-    align-items: center;
-    gap: 12px;
+  .mobile-animated-nav__sublist--account {
+    padding-top: 0;
+    padding-bottom: 8px;
   }
 
-  .account-menu-drawer-links {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-
-  .account-menu--drawer .account-menu-item {
-    padding: 12px 0;
-    font-size: 15px;
-    border-radius: 0;
+  .mobile-animated-nav__sublink--button {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+    font-family: inherit;
   }
 
   .nav-calc-moving {

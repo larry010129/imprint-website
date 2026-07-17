@@ -127,16 +127,13 @@ export function AccountMenu({
   if (!session) {
     if (isDrawer) {
       return (
-        <div className="account-menu account-menu--drawer">
-          <a
-            href={loginHref}
-            className="mobile-animated-nav__link account-menu-drawer-login"
-            onClick={onNavigate}
-          >
-            <User size={18} aria-hidden="true" />
-            會員登入
-          </a>
-        </div>
+        <a
+          href={loginHref}
+          className="mobile-animated-nav__link"
+          onClick={onNavigate}
+        >
+          會員登入
+        </a>
       )
     }
 
@@ -164,17 +161,58 @@ export function AccountMenu({
 
   if (isDrawer) {
     return (
-      <div className="account-menu account-menu--drawer">
-        <p className="account-menu-drawer-label">{name}</p>
-        <div className="account-menu-drawer-links" role="menu">
-          <AccountLinks
-            siteRoot={siteRoot}
-            session={session}
-            onNavigate={onNavigate}
-            onLogout={onLogout}
-          />
-        </div>
-      </div>
+      <>
+        <p className="mobile-animated-nav__account-label">{name}</p>
+        <ul className="mobile-animated-nav__sublist mobile-animated-nav__sublist--account">
+          <li>
+            <a
+              href={resolveHref("/account.html", siteRoot)}
+              className="mobile-animated-nav__sublink"
+              onClick={onNavigate}
+            >
+              我的帳戶
+            </a>
+          </li>
+          <li>
+            <a
+              href={resolveHref("/history.html", siteRoot)}
+              className="mobile-animated-nav__sublink"
+              onClick={onNavigate}
+            >
+              訂購紀錄
+            </a>
+          </li>
+          <li>
+            <a
+              href={resolveHref("/cart.html", siteRoot)}
+              className="mobile-animated-nav__sublink"
+              onClick={onNavigate}
+            >
+              購物車
+            </a>
+          </li>
+          {session.isAdmin ? (
+            <li>
+              <a
+                href={resolveHref("/admin.html", siteRoot)}
+                className="mobile-animated-nav__sublink"
+                onClick={onNavigate}
+              >
+                管理後台
+              </a>
+            </li>
+          ) : null}
+          <li>
+            <button
+              type="button"
+              className="mobile-animated-nav__sublink mobile-animated-nav__sublink--button"
+              onClick={onLogout}
+            >
+              登出
+            </button>
+          </li>
+        </ul>
+      </>
     )
   }
 

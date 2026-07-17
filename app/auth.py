@@ -58,14 +58,26 @@ def verify_session_token(token: str) -> str | None:
     return payload.get("sub")
 
 
-def set_session_cookie(response: Response, token: str) -> None:
+def _is_secure_request(request: Request) -> bool:
+    """True when the connection is actually HTTPS, not just when RENDER is set —
+    so a Secure cookie isn't silently downgraded on any non-Render deployment
+    that still terminates TLS. x-forwarded-proto is only trusted behind Render's
+    known edge proxy; elsewhere it could be forged by the client."""
+    if request.url.scheme == "https":
+        return True
+    if settings.is_render:
+        return request.headers.get("x-forwarded-proto", "").lower() == "https"
+    return False
+
+
+def set_session_cookie(response: Response, token: str, request: Request) -> None:
     response.set_cookie(
         key=COOKIE_NAME,
         value=token,
         max_age=SESSION_DAYS * 24 * 60 * 60,
         path="/",
         httponly=True,
-        secure=settings.is_render,
+        secure=_is_secure_request(request),
         samesite="lax",
     )
 
@@ -93,9 +105,13 @@ def is_admin(user_id: str | None) -> bool:
 # this app runs across multiple gunicorn worker processes) ─────────────────
 
 def client_ip(request: Request) -> str:
-    fwd = request.headers.get("x-forwarded-for")
-    if fwd:
-        return fwd.split(",")[0].strip()
+    """x-forwarded-for is only trusted behind Render's known edge proxy, which
+    sets/overwrites it itself — elsewhere a client could forge it to rotate
+    fake IPs and bypass login/register lockout."""
+    if settings.is_render:
+        fwd = request.headers.get("x-forwarded-for")
+        if fwd:
+            return fwd.split(",")[0].strip()
     return request.client.host if request.client else "unknown"
 
 

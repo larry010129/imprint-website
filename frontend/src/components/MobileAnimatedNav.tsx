@@ -186,10 +186,15 @@ export default function MobileAnimatedNav({
             </motion.li>
           )
         })}
+        {accountSlot ? (
+          <motion.li
+            className="mobile-animated-nav__item mobile-animated-nav__item--account"
+            variants={itemVariants}
+          >
+            {accountSlot}
+          </motion.li>
+        ) : null}
       </motion.ul>
-      {accountSlot ? (
-        <div className="mobile-animated-nav__account">{accountSlot}</div>
-      ) : null}
     </motion.nav>
   )
 }
