@@ -1,8 +1,53 @@
+# Python
 .venv/
+venv/
 __pycache__/
 *.py[cod]
+*$py.class
 *.egg-info/
+.eggs/
+dist/
+build/
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Node
 node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Vite (build output is committed under public/react/)
+frontend/dist/
+
+# Secrets — keep *.example templates tracked
 .env
-.env.local
+.env.*
+!.env.example
+!**/.env.example
+
+# Admin product uploads (runtime); seed images live under public/images/
+public/uploads/products/*
+!public/uploads/products/.gitkeep
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*~
+
+# Logs & temp
+*.log
+logs/
+tmp/
+temp/
+.cache/
