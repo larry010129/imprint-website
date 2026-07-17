@@ -24,9 +24,6 @@
 
 *{ margin:0; padding:0; box-sizing:border-box; }
 html{ scroll-behavior:smooth; }
-html.site-layout-loading .topbar,
-html.site-layout-loading .nav,
-html.site-layout-loading .footer{ opacity:0; }
 html.site-layout-ready .topbar,
 html.site-layout-ready .nav,
 html.site-layout-ready .footer{ opacity:1; transition:opacity .15s ease; }

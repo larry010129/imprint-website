@@ -1,6 +1,6 @@
 ﻿{% extends "layouts/base.html" %}
 {% block content %}
-<section class="page-hero" style="min-height:260px;">
+<section class="page-hero page-hero--short">
   <div class="page-hero-media"></div>
   <div class="page-hero-scrim"></div>
   <div class="container page-hero-inner">
@@ -21,10 +21,10 @@
         <li><span class="k">LINE</span><span class="v"><a href="https://lin.ee/ktVBtmx" target="_blank" rel="noopener">@imprintdiamond 官方帳號</a></span></li>
         <li><span class="k">Facebook</span><span class="v"><a href="https://www.facebook.com/Imprintdiamond/" target="_blank" rel="noopener">Imprint Diamond 銘印鑽石</a></span></li>
       </ul>
-      <p style="font-size:13px; color:var(--ink-faint); line-height:2; margin-top:20px;">
+      <p class="text-faint-lead">
         銘印鑽石全台唯一擁有在地 DNA 鑽石培育實驗室，歡迎預約蒞臨，親眼見證屬於您的鑽石正在生長。
       </p>
-      <div style="margin-top:24px;">
+      <div class="mt-lg">
         <a class="btn btn-dark" href="https://lin.ee/ktVBtmx" target="_blank" rel="noopener">加入官方 LINE 諮詢</a>
       </div>
     </div>
@@ -35,11 +35,11 @@
 </section>
 
 <!-- @component partials/view-contact-form.html -->
-<section class="contact-section" style="padding-top:0;" id="view-contact-form">
+<section class="contact-section contact-section--flush" id="view-contact-form">
   <div class="container">
-    <div class="contact-card contact-form-card" style="max-width:640px;margin:0 auto;">
+    <div class="contact-card contact-form-card contact-form-card--centered">
       <h3>線上留言諮詢</h3>
-      <p style="font-size:13px;color:var(--ink-faint);line-height:1.8;margin-bottom:22px;">
+      <p class="text-faint-sm">
         不方便打電話或加 LINE 也沒關係，留下您的聯絡方式與需求，顧問會盡快與您聯繫。
       </p>
       <form id="contactForm" novalidate>

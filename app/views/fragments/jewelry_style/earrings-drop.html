@@ -32,7 +32,7 @@
     </div>
     <div class="series-page-copy">
       <p class="eyebrow">PRODUCT・款式介紹</p>
-      <h2 class="section-title" style="margin-bottom:20px;">垂墜耳環</h2>
+      <h2 class="section-title section-title--mb-lg">垂墜耳環</h2>
       <p>鑽石垂墜於耳下，隨著步伐輕輕搖曳，為整體造型增添柔美與動態感。</p>
       <p>鑽石本身由您指定的胎髮、髮絲、寵物毛髮或紀念物於台灣在地實驗室培育而成，搭配此款耳環戒台／飾品，成為獨一無二的紀念珍藏。</p>
       <div class="series-related">
@@ -49,8 +49,8 @@
   <div class="container configurator-inner">
     <div>
       <p class="eyebrow reveal">CUSTOMIZE YOUR DIAMOND</p>
-      <h2 class="section-title reveal reveal-d1" style="margin-bottom:10px;">為垂墜耳環，選擇專屬規格</h2>
-      <p class="section-lead reveal reveal-d2" style="margin-bottom:10px;">
+      <h2 class="section-title reveal reveal-d1 section-title--mb-sm">為垂墜耳環，選擇專屬規格</h2>
+      <p class="section-lead reveal reveal-d2 section-lead--mb-sm">
         以下選項僅供您先行構思與試算，正式規格仍會由專屬顧問與您一對一確認。
       </p>
 
@@ -89,12 +89,12 @@
             <div class="cfg-opt"><input type="radio" name="shape" value="round" id="shapeRound" checked><label for="shapeRound"><span class="t">圓形明亮式</span><span class="s">基準價</span></label></div>
             <div class="cfg-opt"><input type="radio" name="shape" value="other" id="shapeOther"><label for="shapeOther"><span class="t">其它形狀</span><span class="s">+10%</span></label></div>
           </div>
-          <p class="cfg-note" id="cfgShapeWarning" style="display:none; color:#B5654C; margin-top:10px;">
+          <p class="cfg-note cfg-note--warning hidden" id="cfgShapeWarning">
             ※ 非圓形切工需 0.30 克拉以上才能製作，請調整克拉數或改選圓形明亮式。
           </p>
         </div>
 
-        <div class="cfg-group" style="display:none;">
+        <div class="cfg-group hidden">
           <div class="cfg-group-head"><h3>飾品選擇</h3></div>
           <div class="cfg-options">
             <div class="cfg-opt"><input type="radio" name="jewelry" value="earring" id="jwEarring" checked><label for="jwEarring"><span class="t">耳環</span></label></div>
@@ -113,11 +113,11 @@
         </div>
 
         <div class="cfg-group">
-          <div class="cfg-group-head"><h3>材質成色</h3><span class="cfg-note" id="cfgFinishNote" style="display:none;">此材質僅提供白色</span></div>
+          <div class="cfg-group-head"><h3>材質成色</h3><span class="cfg-note hidden" id="cfgFinishNote">此材質僅提供白色</span></div>
           <div class="cfg-options">
-            <div class="cfg-opt"><input type="radio" name="finish" value="yellow" id="finishYellow" checked><label for="finishYellow"><span class="cfg-swatch" style="background:#E4C77A;"></span><span class="t">黃 K 金</span></label></div>
-            <div class="cfg-opt"><input type="radio" name="finish" value="white" id="finishWhite"><label for="finishWhite"><span class="cfg-swatch" style="background:#E5E7EA;"></span><span class="t">白 K 金</span></label></div>
-            <div class="cfg-opt"><input type="radio" name="finish" value="rose" id="finishRose"><label for="finishRose"><span class="cfg-swatch" style="background:#E6B8AC;"></span><span class="t">玫瑰金</span></label></div>
+            <div class="cfg-opt"><input type="radio" name="finish" value="yellow" id="finishYellow" checked><label for="finishYellow"><span class="cfg-swatch cfg-swatch--yellow"></span><span class="t">黃 K 金</span></label></div>
+            <div class="cfg-opt"><input type="radio" name="finish" value="white" id="finishWhite"><label for="finishWhite"><span class="cfg-swatch cfg-swatch--white"></span><span class="t">白 K 金</span></label></div>
+            <div class="cfg-opt"><input type="radio" name="finish" value="rose" id="finishRose"><label for="finishRose"><span class="cfg-swatch cfg-swatch--rose"></span><span class="t">玫瑰金</span></label></div>
           </div>
         </div>
 
@@ -167,13 +167,13 @@
       <div class="cfg-summary-row"><span class="k">成色</span><span class="v" id="sumFinish">-</span></div>
       <div class="cfg-summary-row"><span class="k">腰圍刻字</span><span class="v" id="sumEngrave">無</span></div>
       <div class="cfg-summary-total"><span class="k">系統試算總額</span></div>
-      <p style="font-family:var(--serif); font-size:26px; font-weight:600; margin-bottom:14px;" id="sumDiamondPrice">-</p>
-      <div class="cfg-breakdown" id="sumBreakdown" style="display:none;">
+      <p class="sum-diamond-price" id="sumDiamondPrice">-</p>
+      <div class="cfg-breakdown hidden" id="sumBreakdown">
         <div class="cfg-summary-row"><span class="k">鑽石金額</span><span class="v" id="sumLineDiamond">-</span></div>
         <div class="cfg-summary-row"><span class="k">飾品戒台費用</span><span class="v" id="sumLineMounting">-</span></div>
         <div class="cfg-summary-row"><span class="k">刻字費用</span><span class="v" id="sumLineEngrave">-</span></div>
       </div>
-      <p class="cfg-note" id="sumMountingNote" style="margin:12px 0 16px;">-</p>
+      <p class="cfg-note sum-mounting-note" id="sumMountingNote">-</p>
       <p class="cfg-disclaimer">系統試算金額依目前選項自動加總（鑽石＋戒台＋刻字），僅供參考；因鑽石價格浮動、飾品戒台費用依實際款式與工藝報價，正式金額請以顧問確認為準。</p>
       <div class="cfg-actions">
         <a class="btn btn-dark" href="https://lin.ee/ktVBtmx" target="_blank" rel="noopener">加入官方 LINE 諮詢</a>

@@ -1,10 +1,4 @@
-"""Auth routes — /api/auth/*.
-
-Ported from backend/api/auth/*.js (legacy Node) so this
-FastAPI app can serve them itself against the same Supabase Postgres database, same-origin
-with the site — no CORS/cross-site cookie handling needed here, unlike the
-Node version.
-"""
+"""Auth routes — /api/auth/* (same-origin session cookies, Supabase Postgres)."""
 
 from __future__ import annotations
 

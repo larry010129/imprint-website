@@ -521,6 +521,67 @@
 }
 
 .hidden { display: none !important; }
+
+/* Jewelry fragment utilities (shared across app/views/fragments) */
+.section-title--mb-lg { margin-bottom: 20px; }
+.section-title--mb-sm { margin-bottom: 10px; }
+.section-lead--mb-sm { margin-bottom: 10px; }
+.cfg-note--warning { color: #B5654C; margin-top: 10px; }
+.cfg-swatch--yellow { background: #E4C77A; }
+.cfg-swatch--white { background: #E5E7EA; }
+.cfg-swatch--rose { background: #E6B8AC; }
+.sum-diamond-price {
+  font-family: var(--serif);
+  font-size: 26px;
+  font-weight: 600;
+  margin-bottom: 14px;
+}
+.sum-mounting-note { margin: 12px 0 16px; }
+.series-page-media--mint {
+  background: linear-gradient(160deg, #F4FBFB, #E1F4EC);
+}
+.series-page-media__icon {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.series-page-media__icon svg { width: 46%; max-width: 220px; }
+.series--compact { padding: 20px 0 110px; }
+.series-lead-narrow { max-width: 360px; font-size: 13px; color: var(--ink-soft); line-height: 1.9; }
+.price-detail--offset { padding-top: 70px; }
+.page-hero--short { min-height: 260px; }
+.about--flush-top { padding-top: 0; }
+.faq--offset { padding-top: 70px; }
+.series--offset-top { padding-top: 80px; }
+.series--hero-padding { padding: 80px 0 110px; }
+.flex-wrap-gap { display: flex; gap: 12px; flex-wrap: wrap; }
+.auth-card--narrow { max-width: 480px; }
+.contact-section--flush { padding-top: 0; }
+.contact-form-card--centered { max-width: 640px; margin: 0 auto; }
+.container--narrow-md { max-width: 840px; }
+.section-title--mb-xl { margin-bottom: 26px; }
+.prose-soft { font-size: 15px; color: var(--ink-soft); line-height: 2.15; }
+.prose-soft--mb { margin-bottom: 16px; }
+.text-faint-sm { font-size: 13px; color: var(--ink-faint); line-height: 1.8; margin-bottom: 22px; }
+.text-faint-lead { font-size: 13px; color: var(--ink-faint); line-height: 2; margin-top: 20px; }
+.mt-lg { margin-top: 24px; }
+.mt-xl { margin-top: 40px; }
+.member-link-sm { margin-top: 12px; font-size: 13px; }
+.member-text-soft { font-size: 13px; color: var(--ink-soft); }
+.link-mint { color: var(--mint-deep); }
+.link-underline { text-decoration: underline; }
+.cfg-actions--spaced { margin-top: 20px; }
+.account-title {
+  font-family: var(--serif);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  margin-bottom: 20px;
+}
+.text-loading { color: var(--ink-faint); font-size: 13px; }
+
 .cart-loading, .history-loading, .favorites-loading, .notifications-loading, .quote-sheet-loading {
   text-align: center;
   color: var(--ink-faint);

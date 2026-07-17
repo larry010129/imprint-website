@@ -32,7 +32,6 @@ def _context(request: Request, meta: PageMeta) -> dict:
         "og_description": meta.og_description,
         "og_image": meta.og_image,
         "breadcrumbs": meta.breadcrumbs,
-        "nav_active": meta.nav_active,
         "mvc_page": meta.mvc_page,
         "extra_body_class": meta.extra_body_class,
         "extra_head_blocks": meta.extra_head_blocks,

@@ -33,7 +33,7 @@ imprint-website/
 │   └── seed_catalog.py      # Auto-seed empty DB on startup
 ├── frontend/                # React source (Vite → public/react/)
 ├── scripts/                 # Build, deploy, gold quote fetch
-├── _legacy/static-export/   # Old static HTML (not served — see README there)
+├── backend/                 # schema.sql + catalog seed lib (build/DB setup only)
 ├── main.py                  # FastAPI entry
 └── server/main.py           # Gunicorn shim for Render
 ```
@@ -48,17 +48,9 @@ imprint-website/
 
 Member pages (cart, login, account) also use **client-side MVC** under `public/js/mvc/{models,views,controllers}/`.
 
-## Why HTML was scattered before
+## History (static export removed)
 
-Historically the repo had **two pipelines**:
-
-| Location | Role |
-|----------|------|
-| Root `*.html`, `jewelry/`, `series/` | Old **static export** for Netlify-style hosting |
-| `partials/` | Slots for `build-site-layout.mjs` to bake nav/footer into static HTML |
-| `app/templates/` (now `app/views/`) | **Production** Jinja templates served by FastAPI |
-
-Render deploys **Python only**, so root HTML was dead weight — duplicated content, wrong asset paths (`css/` vs `/static/css/`). Legacy files now live in `_legacy/static-export/`.
+The repo previously had root `*.html`, `partials/`, and Node bake scripts for Netlify-style hosting. That pipeline is gone; **only** `app/views/` + `config/routes.py` define pages now.
 
 ## Adding a new page
 

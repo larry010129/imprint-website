@@ -161,7 +161,7 @@
       if (whiteInput && !whiteInput.checked) { whiteInput.checked = true; }
     }
     if (els.finishNote) {
-      els.finishNote.style.display = onlyWhite ? 'inline' : 'none';
+      els.finishNote.classList.toggle('hidden', !onlyWhite);
     }
   }
 
@@ -189,7 +189,7 @@
     var isCustomCarat = caratVal === 'custom';
     var shapeInvalid = !isRound && caratVal && !isCustomCarat && caratNum < NON_ROUND_MIN_CARAT;
     if (els.shapeWarning) {
-      els.shapeWarning.style.display = shapeInvalid ? 'block' : 'none';
+      els.shapeWarning.classList.toggle('hidden', !shapeInvalid);
     }
 
     if (summary.series) summary.series.textContent = seriesName;
@@ -258,7 +258,7 @@
     }
 
     if (summary.breakdown) {
-      summary.breakdown.style.display = canCompute ? 'block' : 'none';
+      summary.breakdown.classList.toggle('hidden', !canCompute);
     }
     if (summary.diamondLine) {
       if (diamondPrice == null) {
