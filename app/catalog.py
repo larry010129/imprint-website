@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import re
+
 CATEGORY_DISPLAY_ORDER = ["pendant", "ring", "earring", "bracelet", "chain"]
 METAL_DISPLAY_ORDER = ["9k", "14k", "18k", "pt950", "s925"]
+
+_STYLE_FROM_PATH = re.compile(r"(?:^|/)([a-z]+)-([A-C])\.(?:svg|png|jpe?g)", re.I)
 
 
 def _sort_golds(golds: set[str]) -> list[str]:
@@ -14,8 +18,22 @@ def _sort_golds(golds: set[str]) -> list[str]:
 from app.image_urls import resolve_product_image_url
 
 
-def legacy_style_key(product: dict) -> str | None:
-    """Map seeded sort_order 0→A, 1→B… to shop-product asset ids (pendant-A, ring-B, …)."""
+def style_key_from_images(images: list[dict]) -> str | None:
+    """Read pendant-A / ring-B from stored image paths (stable when sort_order has gaps)."""
+    for image in images:
+        path = (image.get("file_path") or "").replace("\\", "/")
+        match = _STYLE_FROM_PATH.search(path)
+        if match:
+            return f"{match.group(1).lower()}-{match.group(2).upper()}"
+    return None
+
+
+def legacy_style_key(product: dict, images: list[dict] | None = None) -> str | None:
+    """Map to shop-product asset ids (pendant-A, ring-B, …)."""
+    if images:
+        from_images = style_key_from_images(images)
+        if from_images:
+            return from_images
     category = (product.get("category") or "").strip().lower()
     order = int(product.get("sort_order") or 0)
     if category and 0 <= order <= 25:
@@ -42,7 +60,7 @@ def build_catalog_product(product: dict, variants: list[dict], images: list[dict
 
     return {
         "id": str(product["id"]),
-        "styleKey": legacy_style_key(product),
+        "styleKey": legacy_style_key(product, images),
         "nameZh": product["name_zh"],
         "nameEn": product["name_en"],
         "descriptionZh": product["description_zh"],

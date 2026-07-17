@@ -13,7 +13,6 @@
   var bulkStatus = document.getElementById('ordersBulkStatus');
   var bulkApply = document.getElementById('ordersBulkApply');
   var bulkClear = document.getElementById('ordersBulkClear');
-  var selectAll = document.getElementById('ordersSelectAll');
   var cancelDialog = document.getElementById('orderCancelDialog');
   var cancelForm = document.getElementById('orderCancelForm');
   var cancelPreset = document.getElementById('orderCancelPreset');
@@ -98,16 +97,6 @@
     return o.status === 'cancelled' || o.status === 'canceled';
   }
 
-  function checkboxHtml(id, checked, disabled) {
-    return (
-      '<label class="adx-check">' +
-        '<input type="checkbox" class="adx-check-input order-row-check" data-order-id="' + esc(id) + '"' +
-          (checked ? ' checked' : '') + (disabled ? ' disabled' : '') + ' aria-label="選取訂單">' +
-        '<span class="adx-check-ui" aria-hidden="true"></span>' +
-      '</label>'
-    );
-  }
-
   function statusIndex(status) {
     var i = STATUS_OPTIONS.indexOf(status);
     return i < 0 ? 0 : i;
@@ -129,6 +118,13 @@
   function diamondLabel(o) {
     if (o.diamond_kind === 'fancy') return '彩鑽' + (o.fancy_color ? '（' + o.fancy_color + '）' : '');
     return '白鑽';
+  }
+
+  function styleNamePlain(o) {
+    if (o.product_type && o.series) return o.series + ' · ' + o.product_type;
+    if (o.product_type) return o.product_type;
+    if (o.series) return o.series;
+    return o.category ? (CATEGORY_LABELS[o.category] || o.category) : '-';
   }
 
   function subtotal(o) {
@@ -193,16 +189,6 @@
       '</span><span class="order-detail-value">' + esc(String(value)) + '</span></div>';
   }
 
-  function statusSelect(o) {
-    if (isCancelled(o)) {
-      return '<span class="order-status-badge order-status-badge--cancelled">' + statusLabel('cancelled') + '</span>';
-    }
-    var opts = STATUS_OPTIONS.map(function (s) {
-      return '<option value="' + s + '"' + (s === o.status ? ' selected' : '') + '>' + statusLabel(s) + '</option>';
-    }).join('');
-    return '<select class="status-select" data-status="' + esc(o.status) + '" data-order-id="' + esc(o.id) + '">' + opts + '</select>';
-  }
-
   function selectedIds() {
     return Array.from(tbody.querySelectorAll('.order-row-check:checked')).map(function (cb) {
       return cb.dataset.orderId;
@@ -214,6 +200,7 @@
     var n = ids.length;
     if (bulkBar) bulkBar.hidden = n === 0;
     if (bulkCount) bulkCount.textContent = '已選 ' + n + ' 筆';
+    var selectAll = tbody.querySelector('#ordersSelectAll');
     if (selectAll) {
       var checks = tbody.querySelectorAll('.order-row-check:not(:disabled)');
       selectAll.checked = checks.length > 0 && ids.length === checks.length;
@@ -319,54 +306,65 @@
     });
   }
 
+  function toOrderTableRow(o) {
+    return {
+      id: String(o.id),
+      orderNumber: String(o.order_number || o.id),
+      dateLabel: formatDateTime(o.created_at),
+      dateSort: o.created_at || '',
+      customerName: o.customer_name || '銘印',
+      categoryLabel: CATEGORY_LABELS[o.category] || o.category || '-',
+      imageUrl: orderImageUrl(o) || '',
+      imageAlt: o.order_number || '',
+      imageFallback: orderImageFallback(o) || '',
+      styleLabel: styleNamePlain(o),
+      totalLabel: formatMoney(o.total_price),
+      totalSort: o.total_price != null ? Number(o.total_price) : -Infinity,
+      status: o.status,
+      statusLabel: statusLabel(o.status),
+      isCancelled: isCancelled(o),
+      statusOptions: STATUS_OPTIONS.map(function (s) { return { value: s, label: statusLabel(s) }; }),
+      detailId: 'admin-detail-' + o.id,
+      detailHtml: detailPanel(o),
+    };
+  }
+
+  function unmountTable() {
+    if (window.AdminTables) window.AdminTables.unmount(tbody);
+  }
+
   function renderRows(orders) {
     if (!orders.length) {
-      tbody.innerHTML = '<tr><td colspan="11" class="orders-empty">目前沒有訂單</td></tr>';
+      unmountTable();
+      tbody.innerHTML = '<p class="orders-empty">目前沒有訂單</p>';
       updateBulkBar();
       return;
     }
-
-    var html = '';
-    orders.forEach(function (o) {
-      var detailId = 'admin-detail-' + o.id;
-      var img = orderImageUrl(o);
-      var imgFb = orderImageFallback(o);
-      var cat = CATEGORY_LABELS[o.category] || o.category || '-';
-      var cancelled = isCancelled(o);
-
-      html +=
-        '<tr id="admin-row-' + esc(o.id) + '" class="order-row-main' + (cancelled ? ' is-cancelled' : '') + '" data-id="' + esc(o.id) + '" data-status="' + esc(o.status) + '"' +
-          ' data-sort-number="' + esc(o.order_number || o.id) + '"' +
-          ' data-sort-created="' + esc(o.created_at || '') + '"' +
-          ' data-sort-customer="' + esc(o.customer_name || '') + '"' +
-          ' data-sort-category="' + esc(cat) + '"' +
-          ' data-sort-style="' + esc((o.series || '') + (o.product_type || '')) + '"' +
-          ' data-sort-total="' + esc(String(o.total_price != null ? o.total_price : '')) + '"' +
-          ' data-sort-status="' + esc(o.status || '') + '">' +
-          '<td class="col-check">' + checkboxHtml(o.id, false, cancelled) + '</td>' +
-          '<td>' + esc(o.order_number || o.id) + '</td>' +
-          '<td>' + formatDateTime(o.created_at) + '</td>' +
-          '<td><strong>' + esc(o.customer_name || '銘印') + '</strong></td>' +
-          '<td>' + esc(cat) + '</td>' +
-          '<td class="col-image">' + thumbHtml(img, o.order_number, imgFb) + '</td>' +
-          '<td>' + styleName(o) + '</td>' +
-          '<td class="col-price col-price--total">' + formatMoney(o.total_price) + '</td>' +
-          '<td class="col-status"><span class="order-status-badge order-status-badge--' + esc(o.status) + '">' + statusLabel(o.status) + '</span></td>' +
-          '<td class="col-actions admin-actions-cell"><div class="admin-actions-inner">' + statusSelect(o) +
-            (cancelled ? '' : '<button type="button" class="admin-delete-btn" data-cancel-order="' + esc(o.id) + '" title="取消訂單" aria-label="取消訂單">✕</button>') +
-          '</div></td>' +
-          '<td class="col-detail"><button type="button" class="order-detail-btn" data-target="' + detailId + '" aria-expanded="false">查看詳情</button></td>' +
-        '</tr>' +
-        '<tr class="order-detail-row" id="' + detailId + '" hidden><td colspan="11">' + detailPanel(o) + '</td></tr>';
+    if (!window.AdminTables) {
+      tbody.innerHTML = '<p class="orders-empty">載入失敗：表格元件未載入</p>';
+      return;
+    }
+    window.AdminTables.renderOrdersTable(tbody, {
+      rows: orders.map(toOrderTableRow),
+      onRendered: function () {
+        bindRowEvents();
+        updateBulkBar();
+      },
     });
-    tbody.innerHTML = html;
-    bindRowEvents();
-    updateBulkBar();
-    var table = tbody.closest('table');
-    if (table && window.AdminTableSort) window.AdminTableSort.bind(table);
   }
 
   function bindRowEvents() {
+    var selectAll = tbody.querySelector('#ordersSelectAll');
+    if (selectAll) {
+      selectAll.addEventListener('change', function () {
+        var on = selectAll.checked;
+        tbody.querySelectorAll('.order-row-check:not(:disabled)').forEach(function (cb) {
+          cb.checked = on;
+        });
+        updateBulkBar();
+      });
+    }
+
     tbody.querySelectorAll('.order-row-check').forEach(function (cb) {
       cb.addEventListener('change', updateBulkBar);
     });
@@ -399,13 +397,17 @@
 
   function load(query, silent, force) {
     if (!query && _loaded && !force) return;
-    if (!silent) tbody.innerHTML = '<tr><td colspan="11" class="orders-empty">載入中…</td></tr>';
+    if (!silent) {
+      unmountTable();
+      tbody.innerHTML = '<p class="orders-empty">載入中…</p>';
+    }
     var req = query
       ? fetch('/api/admin/orders?q=' + encodeURIComponent(query), { credentials: 'include' }).then(function (r) { return r.json(); })
       : api.admin.getOrders();
     req.then(function (res) {
       if (res.error) {
-        tbody.innerHTML = '<tr><td colspan="11" class="orders-empty">載入失敗</td></tr>';
+        unmountTable();
+        tbody.innerHTML = '<p class="orders-empty">載入失敗</p>';
         return;
       }
       renderRows(res.orders || []);
@@ -420,18 +422,9 @@
   fillBulkStatusSelect();
   fillCancelPresetSelect();
 
-  selectAll?.addEventListener('change', function () {
-    var on = selectAll.checked;
-    tbody.querySelectorAll('.order-row-check:not(:disabled)').forEach(function (cb) {
-      cb.checked = on;
-    });
-    updateBulkBar();
-  });
-
   bulkApply?.addEventListener('click', applyBulkStatus);
   bulkClear?.addEventListener('click', function () {
     tbody.querySelectorAll('.order-row-check').forEach(function (cb) { cb.checked = false; });
-    if (selectAll) { selectAll.checked = false; selectAll.indeterminate = false; }
     updateBulkBar();
   });
 

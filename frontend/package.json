@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build && vite build --config vite.footer.config.ts && vite build --config vite.nav.config.ts && vite build --config vite.stories.config.ts && vite build --config vite.price.config.ts && vite build --config vite.checkout.config.ts",
+    "build": "tsc -b && vite build && vite build --config vite.footer.config.ts && vite build --config vite.nav.config.ts && vite build --config vite.stories.config.ts && vite build --config vite.price.config.ts && vite build --config vite.checkout.config.ts && vite build --config vite.admin-tables.config.ts",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -17,6 +17,7 @@
     "@radix-ui/react-navigation-menu": "^1.2.18",
     "@radix-ui/react-slot": "^1.3.0",
     "@tailwindcss/vite": "^4.3.2",
+    "@tanstack/react-table": "^8.21.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.24.0",

@@ -152,6 +152,12 @@ create table if not exists orders (
   gold_rate_per_gram numeric,
   price_source text,
 
+  fulfillment_method text not null default 'pickup',
+  shipping_address text,
+  shipping_city text,
+  shipping_postal text,
+  order_note text,
+
   status text not null default 'received',
   status_note text,
   cancel_reason text,

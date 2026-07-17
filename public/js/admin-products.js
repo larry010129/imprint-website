@@ -88,12 +88,18 @@
     return state.products.filter(function (p) { return p.category === cat; });
   }
 
-  function setRoot(html, bindList) {
+  function setRoot(html) {
     root.innerHTML = html;
-    if (bindList !== false) bindRootEvents();
+  }
+
+  function unmountProductsTable() {
+    if (!window.AdminTables) return;
+    var el = document.getElementById('apProductsTableRoot');
+    if (el) window.AdminTables.unmount(el);
   }
 
   function renderShell() {
+    unmountProductsTable();
     state.view = 'list';
     var tabs = CATEGORY_ORDER.map(function (cat, i) {
       var label = state.categoryLabels[cat] || cat;
@@ -103,28 +109,11 @@
         esc(label) + '<span class="ap-tab-count">' + count + '</span></button>';
     }).join('');
 
-    var panels = CATEGORY_ORDER.map(function (cat) {
-      var rows = productsInCategory(cat);
-      var body = rows.length
-        ? rows.map(function (p) { return renderRow(p); }).join('')
-        : '<tr><td colspan="6" class="ap-empty">此品項尚無商品。</td></tr>';
-      var hidden = state.activeTab !== 'cat-' + cat ? ' hidden' : '';
-      return '<div class="ap-tab-panel" data-tab-panel="cat-' + cat + '"' + hidden + '>' +
-        '<table class="ap-table"><thead><tr>' +
-        '<th data-sortable="false" aria-label="排序"></th>' +
-        '<th data-sortable="false">縮圖</th>' +
-        '<th data-sort-key="category" data-sortable="text">品項</th>' +
-        '<th data-sort-key="name" data-sortable="text">名稱</th>' +
-        '<th data-sort-key="status" data-sortable="text">狀態</th>' +
-        '<th data-sortable="false">操作</th>' +
-        '</tr></thead><tbody data-category="' + cat + '">' + body + '</tbody></table></div>';
-    }).join('');
-
     setRoot(
       '<p class="note">管理商品款式、金屬選項與照片。上架後會顯示於客製試算頁；拖曳列可調整排序。</p>' +
       '<div class="ap-toolbar"><button type="button" class="btn-sm btn-primary" id="btnNewProduct">+ 新增商品</button></div>' +
       '<div class="ap-category-tabs" role="tablist">' + tabs + '</div>' +
-      panels +
+      '<div class="ap-table-root" id="apProductsTableRoot"></div>' +
       '<dialog id="apDeleteDialog" class="ap-delete-dialog"><form method="dialog" id="apDeleteForm">' +
         '<h3>刪除商品</h3><p id="apDeleteTarget"></p>' +
         '<p class="ap-hint">刪除後無法復原，若已有訂單引用建議改為下架。</p>' +
@@ -133,46 +122,57 @@
           '<button type="submit" class="btn-sm btn-primary">確認刪除</button>' +
         '</div></form></dialog>'
     );
-    if (window.AdminTableSort) {
-      root.querySelectorAll('.ap-table').forEach(function (t) { window.AdminTableSort.bind(t); });
-    }
+    bindShellEvents();
+    renderActiveCategoryTable();
   }
 
-  function renderRow(product) {
-    var thumb = productThumb(product);
+  function toProductTableRow(product) {
     var status = productStatus(product);
     var ready = publishReady(product);
-    var catLabel = state.categoryLabels[product.category] || product.category;
-    var thumbHtml = thumb
-      ? '<img class="ap-thumb" src="' + esc(thumb) + '" alt="" data-fallback="' + esc(window.AdminImageUrls ? window.AdminImageUrls.categoryFallback(product.category) : '') + '">'
-      : '<span class="ap-thumb ap-thumb--empty">-</span>';
-    var publishBtn = product.is_published
-      ? '<button type="button" class="btn-sm ap-action" data-action="unpublish" data-id="' + esc(product.id) + '">下架</button>'
-      : '<button type="button" class="btn-sm ap-action' + (ready.ok ? ' btn-primary' : '') + '" data-action="publish" data-id="' + esc(product.id) + '"' +
-        (ready.ok ? '' : ' disabled title="' + esc(ready.reason) + '"') + '>上架</button>';
-
-    return '<tr data-id="' + esc(product.id) + '" data-category="' + esc(product.category) + '" draggable="true"' +
-      ' data-sort-category="' + esc(catLabel) + '" data-sort-name="' + esc(product.name_zh) + '" data-sort-status="' + esc(status.label) + '">' +
-      '<td><button type="button" class="ap-drag-handle" aria-label="拖曳排序">⋮⋮</button></td>' +
-      '<td>' + thumbHtml + '</td>' +
-      '<td>' + esc(catLabel) + '</td>' +
-      '<td><span class="name">' + esc(product.name_zh) + '</span>' +
-        (product.name_en ? '<span class="sub">' + esc(product.name_en) + '</span>' : '') + '</td>' +
-      '<td><span class="ap-status-badge ' + status.cls + '">' + status.label + '</span></td>' +
-      '<td class="ap-actions">' +
-        '<button type="button" class="btn-sm ap-action" data-action="edit" data-id="' + esc(product.id) + '">編輯</button>' +
-        '<a class="btn-sm ap-action" href="' + esc(previewUrl(product)) + '" target="_blank" rel="noopener">預覽</a>' +
-        publishBtn +
-        '<button type="button" class="btn-sm ap-action" data-action="duplicate" data-id="' + esc(product.id) + '">複製</button>' +
-        '<button type="button" class="btn-sm ap-action ap-action--danger" data-action="delete" data-id="' + esc(product.id) + '" data-name="' + esc(product.name_zh) + '">刪除</button>' +
-      '</td></tr>';
+    return {
+      id: product.id,
+      category: product.category,
+      categoryLabel: state.categoryLabels[product.category] || product.category,
+      name: product.name_zh,
+      nameEn: product.name_en || '',
+      thumbUrl: productThumb(product) || '',
+      thumbFallback: window.AdminImageUrls ? window.AdminImageUrls.categoryFallback(product.category) : '',
+      statusLabel: status.label,
+      statusClass: status.cls,
+      previewUrl: previewUrl(product),
+      publishAction: product.is_published ? 'unpublish' : 'publish',
+      publishLabel: product.is_published ? '下架' : '上架',
+      publishDisabled: !product.is_published && !ready.ok,
+      publishDisabledReason: ready.reason,
+      publishPrimary: !product.is_published && ready.ok,
+    };
   }
 
-  function bindRootEvents() {
+  function renderActiveCategoryTable() {
+    var container = document.getElementById('apProductsTableRoot');
+    if (!container) return;
+    if (!window.AdminTables) {
+      container.innerHTML = '<p class="ap-empty">載入失敗：表格元件未載入</p>';
+      return;
+    }
+    var cat = state.activeTab.replace('cat-', '');
+    window.AdminTables.renderProductsTable(container, {
+      rows: productsInCategory(cat).map(toProductTableRow),
+      emptyLabel: '此品項尚無商品。',
+      onRendered: bindProductRowEvents,
+    });
+  }
+
+  function bindShellEvents() {
     root.querySelectorAll('.ap-tab-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {
         state.activeTab = btn.dataset.tab;
-        renderShell();
+        root.querySelectorAll('.ap-tab-btn').forEach(function (b) {
+          var active = b.dataset.tab === state.activeTab;
+          b.classList.toggle('is-active', active);
+          b.setAttribute('aria-selected', active ? 'true' : 'false');
+        });
+        renderActiveCategoryTable();
       });
     });
 
@@ -184,7 +184,13 @@
       });
     }
 
-    root.querySelectorAll('[data-action]').forEach(function (btn) {
+    bindDeleteDialog();
+  }
+
+  function bindProductRowEvents() {
+    var container = document.getElementById('apProductsTableRoot');
+    if (!container) return;
+    container.querySelectorAll('[data-action]').forEach(function (btn) {
       btn.addEventListener('click', function () {
         var action = btn.dataset.action;
         var id = btn.dataset.id;
@@ -201,8 +207,7 @@
       });
     });
 
-    bindDragReorder();
-    bindDeleteDialog();
+    bindDragReorder(container);
   }
 
   var deleteId = null;
@@ -229,9 +234,9 @@
     document.getElementById('apDeleteDialog')?.showModal();
   }
 
-  function bindDragReorder() {
+  function bindDragReorder(scope) {
     var dragged = null;
-    root.querySelectorAll('.ap-table tbody').forEach(function (tbody) {
+    (scope || root).querySelectorAll('.ap-table tbody').forEach(function (tbody) {
       tbody.querySelectorAll('tr[data-id]').forEach(function (row) {
         row.addEventListener('dragstart', function () {
           dragged = row;
@@ -613,6 +618,36 @@
     renderShell();
   }
 
+  function isSaveForLater(form) {
+    return !!form.querySelector('[name="saveForLater"]')?.checked;
+  }
+
+  function updateSaveButton(form, isEdit) {
+    var btn = document.getElementById('apSaveProduct');
+    if (!btn || !form) return;
+    if (isSaveForLater(form)) {
+      btn.classList.remove('btn-primary');
+      btn.textContent = '儲存草稿';
+    } else {
+      btn.classList.add('btn-primary');
+      btn.textContent = isEdit ? '儲存並上架' : '建立並上架';
+    }
+  }
+
+  function saveForLaterToggleHtml(product) {
+    var saveForLater = product ? !product.is_published : true;
+    var checked = saveForLater ? ' checked' : '';
+    return (
+      '<div class="ap-switch-wrap">' +
+        '<label class="ap-switch">' +
+          '<input type="checkbox" class="ap-switch-input" name="saveForLater"' + checked + '>' +
+          '<span class="ap-switch-track" aria-hidden="true"><span class="ap-switch-thumb"></span></span>' +
+          '<span class="ap-switch-label">稍後上架</span>' +
+        '</label>' +
+      '</div>'
+    );
+  }
+
   function editorFormHtml(product, defaultCategory) {
     var isEdit = !!product;
     var category = (product && product.category) || defaultCategory || 'ring';
@@ -644,11 +679,11 @@
             '<div class="ap-form-grid">' +
               '<label><span>品項</span><select name="category" id="apCategory">' + catOpts + '</select></label>' +
               '<label><span>預設顏色</span><select name="defaultColor">' + colorOpts + '</select></label>' +
-              '<label><span>中文名稱 <span class="ap-required" aria-hidden="true">*</span></span><input name="nameZh" required maxlength="150" autocomplete="off" value="' + esc(product && product.name_zh) + '"></label>' +
+              '<label><span>中文名稱 <span class="ap-required" aria-hidden="true">*</span></span><input name="nameZh" maxlength="150" autocomplete="off" value="' + esc(product && product.name_zh) + '"></label>' +
               '<label><span>英文名稱</span><input name="nameEn" maxlength="150" value="' + esc(product && product.name_en) + '"></label>' +
               '<label class="ap-field-wide"><span>中文描述</span><textarea class="ap-textarea" name="descriptionZh" rows="3" placeholder="商品中文說明…">' + esc(product && product.description_zh) + '</textarea></label>' +
               '<label class="ap-field-wide"><span>英文描述</span><textarea class="ap-textarea" name="descriptionEn" rows="3" placeholder="Product description…">' + esc(product && product.description_en) + '</textarea></label>' +
-              '<label class="ap-checkbox"><input type="checkbox" name="isPublished"' + (product && product.is_published ? ' checked' : '') + '> 立即上架</label>' +
+              saveForLaterToggleHtml(product) +
             '</div>' +
             '<h4 class="ap-section-title">款式選項</h4>' +
             '<div class="ap-variant-block">' +
@@ -662,7 +697,7 @@
             '<button type="button" class="btn-sm" id="apAddImageSlot">+ 新增圖片選項</button>' +
             '<div class="ap-form-actions ap-editor-actions">' +
               '<button type="button" class="btn-sm" id="apEditorCancel">取消</button>' +
-              '<button type="submit" class="btn-sm btn-primary" id="apSaveProduct">' + (isEdit ? '儲存變更' : '建立商品') + '</button>' +
+              '<button type="submit" class="btn-sm" id="apSaveProduct">儲存草稿</button>' +
             '</div>' +
           '</form>' +
         '</div>' +
@@ -721,11 +756,17 @@
       e.preventDefault();
       saveProduct(form, product);
     });
+
+    form.querySelector('[name="saveForLater"]')?.addEventListener('change', function () {
+      updateSaveButton(form, !!product);
+    });
+    updateSaveButton(form, !!product);
   }
 
   function renderEditor(product, defaultCategory) {
     _slotCounter = 0;
-    setRoot(editorFormHtml(product, defaultCategory), false);
+    unmountProductsTable();
+    setRoot(editorFormHtml(product, defaultCategory));
     bindEditorEvents(product);
     root.scrollIntoView({ block: 'start', behavior: 'smooth' });
   }
@@ -773,7 +814,7 @@
       descriptionZh: String(fd.get('descriptionZh') || '').trim(),
       descriptionEn: String(fd.get('descriptionEn') || '').trim(),
       defaultColor: fd.get('defaultColor') || 'white',
-      isPublished: !!form.querySelector('[name="isPublished"]')?.checked,
+      isPublished: !isSaveForLater(form),
       variants: variants,
       images: images,
     };
@@ -784,44 +825,48 @@
     if (product) payload.id = product.id;
     var btn = document.getElementById('apSaveProduct');
     var errEl = document.getElementById('apFormError');
+    var isDraft = isSaveForLater(form);
 
-    if (!payload.nameZh) {
-      if (errEl) {
-        errEl.textContent = '請填寫中文名稱（必填）';
-        errEl.hidden = false;
+    // 儲存草稿不要求任何欄位；只有正式上架才需要完整資料。
+    if (!isDraft) {
+      if (!payload.nameZh) {
+        if (errEl) {
+          errEl.textContent = '請填寫中文名稱（必填）';
+          errEl.hidden = false;
+        }
+        form.querySelector('[name="nameZh"]')?.focus();
+        return;
       }
-      form.querySelector('[name="nameZh"]')?.focus();
-      return;
-    }
 
-    var slotKeys = [];
-    var slotError = '';
-    form.querySelectorAll('.ap-image-slot').forEach(function (slot) {
-      var key = slotColorKey(slot);
-      if (!key) {
-        slotError = '請為每個圖片選項設定代碼';
+      var slotKeys = [];
+      var slotError = '';
+      form.querySelectorAll('.ap-image-slot').forEach(function (slot) {
+        var key = slotColorKey(slot);
+        if (!key) {
+          slotError = '請為每個圖片選項設定代碼';
+          return;
+        }
+        if (!isValidImageKey(key)) {
+          slotError = '圖片選項代碼僅能使用英文小寫、數字、底線或連字號';
+          return;
+        }
+        if (slotKeys.indexOf(key) >= 0) {
+          slotError = '圖片選項代碼不可重複：' + key;
+          return;
+        }
+        slotKeys.push(key);
+      });
+      if (slotError) {
+        if (errEl) { errEl.textContent = slotError; errEl.hidden = false; }
         return;
       }
-      if (!isValidImageKey(key)) {
-        slotError = '圖片選項代碼僅能使用英文小寫、數字、底線或連字號';
-        return;
-      }
-      if (slotKeys.indexOf(key) >= 0) {
-        slotError = '圖片選項代碼不可重複：' + key;
-        return;
-      }
-      slotKeys.push(key);
-    });
-    if (slotError) {
-      if (errEl) { errEl.textContent = slotError; errEl.hidden = false; }
-      return;
     }
 
     if (errEl) errEl.hidden = true;
     if (btn) { btn.disabled = true; btn.textContent = '儲存中…'; }
     var req = product ? api.admin.updateProduct(payload) : api.admin.saveProduct(payload);
     req.then(function (res) {
-      if (btn) { btn.disabled = false; btn.textContent = product ? '儲存變更' : '建立商品'; }
+      if (btn) { btn.disabled = false; updateSaveButton(form, !!product); }
       if (res.error) {
         if (errEl) {
           errEl.textContent = typeof res.error === 'string' ? res.error : (res.error.message || '儲存失敗');
@@ -840,9 +885,13 @@
   function load(silent, force) {
     if (_loaded && !force && state.view === 'editor') return;
     if (_loaded && !force) return;
-    if (!silent) root.innerHTML = '<p class="ap-loading">載入商品中…</p>';
+    if (!silent) {
+      unmountProductsTable();
+      root.innerHTML = '<p class="ap-loading">載入商品中…</p>';
+    }
     api.admin.getProducts().then(function (res) {
       if (res.error) {
+        unmountProductsTable();
         root.innerHTML = '<p class="note warn">載入失敗：' + esc(res.error) + '</p>';
         return;
       }

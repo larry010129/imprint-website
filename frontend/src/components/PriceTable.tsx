@@ -1,5 +1,4 @@
-import { useState, type ReactNode } from "react";
-import { motion } from "motion/react";
+import { type ReactNode, useState } from "react";
 import {
   Table,
   TableBody,
@@ -8,7 +7,8 @@ import {
   TableFooter,
   TableHead,
   TableHeader,
-} from "@/components/ui/animated-table";
+  TableRow,
+} from "@/components/ui/table";
 import {
   CARAT_RANGES,
   FANCY_DIAMOND_PRICES,
@@ -28,27 +28,23 @@ import { cn } from "@/lib/utils";
 
 type ColorTab = "white" | "fancy";
 
-function AnimatedRow({
-  index,
+const headClass = "h-9 py-2";
+const cellClass = "py-2";
+
+function DenseTable({
+  caption,
   children,
-  className,
 }: {
-  index: number;
+  caption?: string;
   children: ReactNode;
-  className?: string;
 }) {
   return (
-    <motion.tr
-      initial={{ opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.4, delay: index * 0.08 }}
-      className={cn(
-        "border-b transition-colors hover:bg-muted/50",
-        className
-      )}
-    >
-      {children}
-    </motion.tr>
+    <div className="overflow-hidden rounded-lg border border-border bg-background">
+      <Table>
+        {caption ? <TableCaption>{caption}</TableCaption> : null}
+        {children}
+      </Table>
+    </div>
   );
 }
 
@@ -60,7 +56,7 @@ function ColorTabs({
   onChange: (v: ColorTab) => void;
 }) {
   return (
-    <div className="flex gap-2 mb-4">
+    <div className="mb-4 flex gap-2">
       {(
         [
           ["white", "白鑽"],
@@ -72,10 +68,10 @@ function ColorTabs({
           type="button"
           onClick={() => onChange(id)}
           className={cn(
-            "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
+            "rounded-lg px-4 py-2 text-sm font-medium transition-colors",
             value === id
-              ? "bg-primary text-white"
-              : "bg-muted text-muted-foreground hover:bg-muted/80"
+              ? "bg-primary text-primary-foreground"
+              : "bg-muted text-muted-foreground hover:bg-muted/80",
           )}
         >
           {label}
@@ -95,16 +91,10 @@ function SectionHeading({
   lead?: string;
 }) {
   return (
-    <div className="mb-8 text-center max-w-2xl mx-auto">
-      <p className="text-xs tracking-[0.2em] text-primary uppercase mb-2">
-        {eyebrow}
-      </p>
-      <h2 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">
-        {title}
-      </h2>
-      {lead && (
-        <p className="mt-3 text-muted-foreground leading-relaxed">{lead}</p>
-      )}
+    <div className="mx-auto mb-8 max-w-2xl text-center">
+      <p className="mb-2 text-xs uppercase tracking-[0.2em] text-primary">{eyebrow}</p>
+      <h2 className="text-xl font-bold tracking-tight sm:text-2xl md:text-3xl">{title}</h2>
+      {lead ? <p className="mt-3 leading-relaxed text-muted-foreground">{lead}</p> : null}
     </div>
   );
 }
@@ -129,187 +119,174 @@ export default function PriceTable() {
       id="price-reference"
       aria-label="DNA 鑽石價格參考"
     >
-      <div className="container mx-auto px-4 max-w-5xl">
+      <div className="container mx-auto max-w-5xl px-4">
         <SectionHeading
           eyebrow="PRICE REFERENCE"
           title="DNA 鑽石價格參考"
           lead="圓形明亮式切工／白鑽基準價。實際規格請與顧問確認，或至各系列頁線上試算。"
         />
 
-        {/* Snapshot */}
         <div className="mb-12">
-          <h3 className="text-lg font-semibold mb-4">熱門克拉參考</h3>
-          <Table>
-            <TableCaption>
-              圓形明亮式切工／白鑽基準價，0.10 克拉 NT$24,000 起
-            </TableCaption>
+          <h3 className="mb-4 text-lg font-semibold">熱門克拉參考</h3>
+          <DenseTable caption="圓形明亮式切工／白鑽基準價，0.10 克拉 NT$24,000 起">
             <TableHeader>
-              <tr className="border-b">
-                <TableHead>克拉</TableHead>
-                <TableHead>說明</TableHead>
-                <TableHead className="text-right">價格</TableHead>
-              </tr>
+              <TableRow className="bg-muted/50">
+                <TableHead className={headClass}>克拉</TableHead>
+                <TableHead className={headClass}>說明</TableHead>
+                <TableHead className={cn(headClass, "text-right")}>價格</TableHead>
+              </TableRow>
             </TableHeader>
             <TableBody>
-              {SNAPSHOT_CARATS.map((c, i) => (
-                <AnimatedRow
-                  key={c}
-                  index={i}
-                  className={c === "0.50" ? "bg-primary/5" : undefined}
-                >
-                  <TableCell className="font-medium">{c} 克拉</TableCell>
-                  <TableCell className="text-muted-foreground">
+              {SNAPSHOT_CARATS.map((c) => (
+                <TableRow key={c} className={c === "0.50" ? "bg-primary/5" : undefined}>
+                  <TableCell className={cn(cellClass, "font-medium")}>{c} 克拉</TableCell>
+                  <TableCell className={cn(cellClass, "text-muted-foreground")}>
                     {SNAPSHOT_LABELS[c]}
                   </TableCell>
-                  <TableCell className="text-right font-medium">
+                  <TableCell className={cn(cellClass, "text-right font-medium")}>
                     {fmtPrice(WHITE_DIAMOND_PRICES[c])}
                   </TableCell>
-                </AnimatedRow>
+                </TableRow>
               ))}
             </TableBody>
-          </Table>
+          </DenseTable>
         </div>
 
-        {/* Single diamond */}
         <div className="mb-12">
-          <h3 className="text-lg font-semibold mb-2">單顆鑽石・完整克拉價格表</h3>
+          <h3 className="mb-2 text-lg font-semibold">單顆鑽石・完整克拉價格表</h3>
           <ColorTabs value={singleTab} onChange={setSingleTab} />
-          <Table>
-            <TableCaption>
-              {singleTab === "fancy"
+          <DenseTable
+            caption={
+              singleTab === "fancy"
                 ? "彩鑽最低 0.30 克拉；3.00 克拉以上請洽官方 LINE 專屬報價"
-                : "3.00 克拉以上請洽官方 LINE 專屬報價"}
-            </TableCaption>
+                : "3.00 克拉以上請洽官方 LINE 專屬報價"
+            }
+          >
             <TableHeader>
-              <tr className="border-b">
-                <TableHead>克拉</TableHead>
-                <TableHead>實際區間</TableHead>
-                <TableHead className="text-right">價格</TableHead>
-              </tr>
+              <TableRow className="bg-muted/50">
+                <TableHead className={headClass}>克拉</TableHead>
+                <TableHead className={headClass}>實際區間</TableHead>
+                <TableHead className={cn(headClass, "text-right")}>價格</TableHead>
+              </TableRow>
             </TableHeader>
             <TableBody>
-              {singleKeys.map((c, i) => {
+              {singleKeys.map((c) => {
                 const val = singleTable[c as keyof typeof singleTable];
                 return (
-                  <AnimatedRow key={c} index={i}>
-                    <TableCell className="font-medium">{c} 克拉</TableCell>
-                    <TableCell className="text-muted-foreground">
+                  <TableRow key={c}>
+                    <TableCell className={cn(cellClass, "font-medium")}>{c} 克拉</TableCell>
+                    <TableCell className={cn(cellClass, "text-muted-foreground")}>
                       {CARAT_RANGES[c] ?? "—"}
                     </TableCell>
-                    <TableCell className="text-right font-medium">
+                    <TableCell className={cn(cellClass, "text-right font-medium")}>
                       {val != null ? (
                         fmtPrice(val as number)
                       ) : (
                         <span className="text-muted-foreground">無法製作</span>
                       )}
                     </TableCell>
-                  </AnimatedRow>
+                  </TableRow>
                 );
               })}
             </TableBody>
-          </Table>
+          </DenseTable>
         </div>
 
-        {/* Multi stone */}
         <div className="mb-12">
-          <h3 className="text-lg font-semibold mb-2">多顆珍藏方案</h3>
-          <p className="text-sm text-muted-foreground mb-4">
+          <h3 className="mb-2 text-lg font-semibold">多顆珍藏方案</h3>
+          <p className="mb-4 text-sm text-muted-foreground">
             同一份樣本可培育 2～4 顆鑽石，適合結髮或全家福系列。顆數越多，平均單顆越划算。
           </p>
           <ColorTabs value={multiTab} onChange={setMultiTab} />
-          <Table>
-            <TableCaption>
-              0.30 克拉以上：沿用 0.30 整組價・2 顆 85 折、3 顆 8 折、4 顆 75 折
-            </TableCaption>
+          <DenseTable caption="0.30 克拉以上：沿用 0.30 整組價・2 顆 85 折、3 顆 8 折、4 顆 75 折">
             <TableHeader>
-              <tr className="border-b">
-                <TableHead>克拉</TableHead>
-                <TableHead className="text-right">2 顆</TableHead>
-                <TableHead className="text-right">3 顆</TableHead>
-                <TableHead className="text-right">4 顆</TableHead>
-              </tr>
+              <TableRow className="bg-muted/50">
+                <TableHead className={headClass}>克拉</TableHead>
+                <TableHead className={cn(headClass, "text-right")}>2 顆</TableHead>
+                <TableHead className={cn(headClass, "text-right")}>3 顆</TableHead>
+                <TableHead className={cn(headClass, "text-right")}>4 顆</TableHead>
+              </TableRow>
             </TableHeader>
             <TableBody>
-              {multiKeys.map((c, i) => {
+              {multiKeys.map((c) => {
                 const row = multiTable[c] ?? {};
                 return (
-                  <AnimatedRow key={c} index={i}>
-                    <TableCell className="font-medium">
+                  <TableRow key={c}>
+                    <TableCell className={cn(cellClass, "font-medium")}>
                       {c} 克拉
-                      <span className="block text-xs text-muted-foreground mt-0.5">
+                      <span className="mt-0.5 block text-xs text-muted-foreground">
                         {CARAT_RANGES[c]}
                       </span>
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className={cn(cellClass, "text-right")}>
                       {fmtPrice(row["2"])}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className={cn(cellClass, "text-right")}>
                       {fmtPrice(row["3"])}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className={cn(cellClass, "text-right")}>
                       {fmtPrice(row["4"])}
                     </TableCell>
-                  </AnimatedRow>
+                  </TableRow>
                 );
               })}
-              <AnimatedRow index={multiKeys.length} className="text-muted-foreground">
-                <TableCell>0.30 克拉以上</TableCell>
-                <TableCell className="text-right">沿用 0.30 整組價・85 折</TableCell>
-                <TableCell className="text-right">8 折</TableCell>
-                <TableCell className="text-right">75 折</TableCell>
-              </AnimatedRow>
+              <TableRow className="text-muted-foreground">
+                <TableCell className={cellClass}>0.30 克拉以上</TableCell>
+                <TableCell className={cn(cellClass, "text-right")}>
+                  沿用 0.30 整組價・85 折
+                </TableCell>
+                <TableCell className={cn(cellClass, "text-right")}>8 折</TableCell>
+                <TableCell className={cn(cellClass, "text-right")}>75 折</TableCell>
+              </TableRow>
             </TableBody>
-          </Table>
+          </DenseTable>
         </div>
 
-        {/* Mounting */}
         <div className="mb-12">
-          <h3 className="text-lg font-semibold mb-2">飾品戒台費用參考</h3>
-          <p className="text-sm text-muted-foreground mb-4">
+          <h3 className="mb-2 text-lg font-semibold">飾品戒台費用參考</h3>
+          <p className="mb-4 text-sm text-muted-foreground">
             鑽石價格不含飾品戒台；以下為未稅估算，9K 經典款項鍊 NT$10,000 起為官方公開價格。
           </p>
-          <Table>
-            <TableCaption>戒台依款式與材質另計，正式報價請洽顧問</TableCaption>
+          <DenseTable caption="戒台依款式與材質另計，正式報價請洽顧問">
             <TableHeader>
-              <tr className="border-b">
-                <TableHead>款式</TableHead>
+              <TableRow className="bg-muted/50">
+                <TableHead className={headClass}>款式</TableHead>
                 {metals.map((m) => (
-                  <TableHead key={m} className="text-right">
+                  <TableHead key={m} className={cn(headClass, "text-right")}>
                     {METAL_LABELS[m]}
                   </TableHead>
                 ))}
-              </tr>
+              </TableRow>
             </TableHeader>
             <TableBody>
-              {mountingStyles.map((style, i) => (
-                <AnimatedRow key={style} index={i}>
-                  <TableCell className="font-medium">
+              {mountingStyles.map((style) => (
+                <TableRow key={style}>
+                  <TableCell className={cn(cellClass, "font-medium")}>
                     {MOUNTING_LABELS[style]}
                   </TableCell>
                   {metals.map((m) => (
-                    <TableCell key={m} className="text-right">
+                    <TableCell key={m} className={cn(cellClass, "text-right")}>
                       {MOUNTING_PRICES[style][m] === 0
                         ? "—"
                         : fmtPrice(MOUNTING_PRICES[style][m])}
                     </TableCell>
                   ))}
-                </AnimatedRow>
+                </TableRow>
               ))}
             </TableBody>
             <TableFooter>
-              <tr>
-                <TableCell colSpan={6} className="text-muted-foreground text-sm">
+              <TableRow>
+                <TableCell colSpan={6} className={cn(cellClass, "text-sm text-muted-foreground")}>
                   戒台費用為未稅金額，顯示時另加 5% 稅金
                 </TableCell>
-              </tr>
+              </TableRow>
             </TableFooter>
-          </Table>
+          </DenseTable>
         </div>
 
-        {/* Rules */}
         <div className="mb-10 rounded-xl border border-border bg-muted/30 p-6">
-          <h3 className="text-lg font-semibold mb-4">切工與報價規則</h3>
-          <ul className="space-y-3 text-sm leading-relaxed text-muted-foreground list-disc pl-5">
+          <h3 className="mb-4 text-lg font-semibold">切工與報價規則</h3>
+          <ul className="list-disc space-y-3 pl-5 text-sm leading-relaxed text-muted-foreground">
             <li>
               圓形明亮式切工／白鑽為基準價；其餘切工加價{" "}
               <strong className="text-foreground">{SHAPE_SURCHARGE_PCT}%</strong>

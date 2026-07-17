@@ -76,7 +76,7 @@
           '</div>' +
         '</div>' +
         '<div class="adx-col-role">' + roleSelect(account) + '</div>' +
-        '<div class="adx-col-status"><span class="' + (active ? 'adx-status-text--on' : 'adx-status-text--off') + '">' + (active ? '啟用' : '停用') + '</span></div>' +
+        '<div class="adx-col-status"><span class="adx-chip ' + (active ? 'adx-chip--success' : 'adx-chip--default') + '">' + (active ? '啟用' : '停用') + '</span></div>' +
         '<div class="adx-col-joined adx-muted">' + esc(formatMonth(account.created_at)) + '</div>' +
         '<div class="adx-col-store adx-muted adx-truncate" title="' + esc(account.store_name || '') + '">' + esc(account.store_name || '—') + '</div>' +
         '<div class="adx-col-orders adx-muted">' + esc(String(account.order_count || 0)) + '</div>' +

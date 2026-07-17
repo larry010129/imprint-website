@@ -30,9 +30,14 @@ def valid_image_color(color: str) -> bool:
 
 
 def validate_product_fields(body: dict | None) -> tuple[dict | None, str | None]:
+    """A draft (isPublished=False) only needs a valid category — name, variants,
+    and images can all be filled in later. Publishing still requires all of them."""
     errors: list[str] = []
     cleaned: dict = {}
     body = body or {}
+
+    is_published = bool(body.get("isPublished"))
+    cleaned["isPublished"] = is_published
 
     category = str(body.get("category") or "").strip()
     if category not in VALID_CATEGORIES:
@@ -42,7 +47,9 @@ def validate_product_fields(body: dict | None) -> tuple[dict | None, str | None]
 
     name_zh = str(body.get("nameZh") or "").strip()
     if not name_zh:
-        errors.append("nameZh is required")
+        if is_published:
+            errors.append("nameZh is required")
+        cleaned["nameZh"] = "未命名商品（草稿）"
     elif len(name_zh) > PRODUCT_NAME_MAX:
         errors.append(f"nameZh must be at most {PRODUCT_NAME_MAX} characters")
     else:
@@ -65,8 +72,6 @@ def validate_product_fields(body: dict | None) -> tuple[dict | None, str | None]
         errors.append("invalid defaultColor")
     else:
         cleaned["defaultColor"] = default_color
-
-    cleaned["isPublished"] = bool(body.get("isPublished"))
 
     valid_carats = VALID_CARATS_CHAIN if category == "chain" else VALID_CARATS
     variants: list[dict] = []
@@ -107,7 +112,7 @@ def validate_product_fields(body: dict | None) -> tuple[dict | None, str | None]
             {"gold": gold, "carat": carat, "weightChin": weight_chin, "manualPriceTwd": manual_price}
         )
 
-    if not variants:
+    if not variants and is_published:
         errors.append("at least one variant is required")
     cleaned["variants"] = variants
 
@@ -127,8 +132,9 @@ def validate_product_fields(body: dict | None) -> tuple[dict | None, str | None]
         images.append({"color": color, "url": img["url"]})
     final_colors = {img["color"] for img in images}
     if not final_colors:
-        errors.append("at least one product image is required")
-    elif cleaned.get("defaultColor") and cleaned["defaultColor"] not in final_colors:
+        if is_published:
+            errors.append("at least one product image is required")
+    elif is_published and cleaned.get("defaultColor") and cleaned["defaultColor"] not in final_colors:
         errors.append("default color must have at least one image")
     cleaned["images"] = images
 
@@ -143,6 +149,9 @@ def serialize_product_row(row: dict) -> dict:
         out["id"] = str(out["id"])
     if out.get("created_by_id") is not None:
         out["created_by_id"] = str(out["created_by_id"])
+    for key, value in out.items():
+        if isinstance(value, datetime):
+            out[key] = value.isoformat()
     return out
 
 

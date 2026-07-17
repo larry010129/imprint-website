@@ -208,9 +208,23 @@ function renderColorButtons(rowId, gold, product, selectedColor, onSelect) {
 }
 
 /** Shop-product JPG/PNG id — legacy slug (pendant-A) or API styleKey when id is a UUID. */
+function styleKeyFromProductImages(product) {
+  if (!product?.images) return '';
+  for (const list of Object.values(product.images)) {
+    const url = (Array.isArray(list) ? list[0] : list) || '';
+    const match = String(url).match(/\/([a-z]+)-([A-C])\.(?:svg|png|jpe?g)/i);
+    if (match) return `${match[1].toLowerCase()}-${match[2].toUpperCase()}`;
+  }
+  return '';
+}
+
 function productAssetId(product) {
   if (!product) return '';
-  if (product.styleKey) return String(product.styleKey);
+  const fromImages = styleKeyFromProductImages(product);
+  if (fromImages) return fromImages;
+  if (product.styleKey && /^[a-z]+-[A-C]$/i.test(String(product.styleKey))) {
+    return String(product.styleKey);
+  }
   const id = String(product.id || '');
   if (/^[a-z]+-[A-C]$/i.test(id)) return id;
   return '';
@@ -258,7 +272,9 @@ function productImageUrl(product, color) {
     if (resolved) return resolved;
   }
   const fromCatalog = productImagesForColor(product, color)[0];
-  if (fromCatalog) return fromCatalog;
+  if (fromCatalog && !/\/images\/shop\/styles\/[a-z]+-[A-C]\.svg/i.test(fromCatalog)) {
+    return fromCatalog;
+  }
   if (assetId && window.ShopAssets) return window.ShopAssets.styleThumb(assetId);
   return '';
 }

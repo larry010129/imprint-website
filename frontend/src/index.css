@@ -377,6 +377,28 @@
   color: #0485f7;
 }
 
+[data-admin-root] {
+  --background: #ffffff;
+  --foreground: #2b2320;
+  --card: #ffffff;
+  --card-foreground: #2b2320;
+  --border: #ede7e0;
+  --input: #ede7e0;
+  --muted: #fafaf8;
+  --muted-foreground: #8a817b;
+  --primary: #2b2320;
+  --primary-foreground: #ffffff;
+  --secondary: #f3f0ec;
+  --secondary-foreground: #2b2320;
+  --accent: #f7f3ee;
+  --accent-foreground: #2b2320;
+  --destructive: #c0392b;
+  --destructive-foreground: #ffffff;
+  --ring: #5ecfcf;
+  font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+  color: var(--foreground);
+}
+
 .account-menu {
   position: relative;
   margin-left: 4px;

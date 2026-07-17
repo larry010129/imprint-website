@@ -51,3 +51,33 @@ logs/
 tmp/
 temp/
 .cache/
+
+# Ruflo / Claude Flow — local runtime (config.yaml + CAPABILITIES.md may stay tracked)
+.claude-flow/data/
+.claude-flow/logs/
+.claude-flow/sessions/
+.claude-flow/neural/
+.claude-flow/metrics/
+.claude-flow/agents/
+.claude-flow/swarm/
+.claude-flow/security/
+.claude-flow/learning/
+.claude-flow/workflows/
+.claude-flow/daemon-state.json
+.claude-flow/daemon.pid
+.claude-flow/harness-active-policy.json
+
+# Swarm memory (local SQLite); keep schema if present
+.swarm/
+!.swarm/schema.sql
+
+# Local Claude / MCP overrides
+CLAUDE.local.md
+.mcp.json
+
+# Dev artifacts
+scripts/_inspect-out/
+
+# TypeScript incremental build cache
+*.tsbuildinfo
+frontend/node_modules/.tmp/

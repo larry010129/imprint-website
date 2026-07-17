@@ -6,10 +6,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>銘印鑽石｜管理後台</title>
 <meta name="robots" content="noindex">
-<link rel="stylesheet" href="/css/admin-core.css?v=1">
+<link rel="stylesheet" href="/css/admin-core.css?v=5">
 <link rel="stylesheet" href="/css/admin-shell.css">
 <link rel="stylesheet" href="/css/admin-orders.css?v=8">
-<link rel="stylesheet" href="/css/admin-tables.css?v=4">
+<link rel="stylesheet" href="/css/admin-tables.css?v=7">
+<link rel="stylesheet" href="/static/react/admin-tables.css?v=1">
 <!-- 上線時建議打開 Google Fonts:
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -252,32 +253,8 @@
           <button type="button" class="btn-sm btn-primary" id="ordersBulkApply">套用</button>
           <button type="button" class="btn-sm" id="ordersBulkClear">清除選取</button>
         </div>
-        <div class="records-table-wrap">
-          <table class="admin-table records-table--compact">
-            <thead>
-              <tr>
-                <th data-sortable="false" class="col-check">
-                  <label class="adx-check adx-check--head" title="全選">
-                    <input type="checkbox" class="adx-check-input" id="ordersSelectAll" aria-label="全選訂單">
-                    <span class="adx-check-ui" aria-hidden="true"></span>
-                  </label>
-                </th>
-                <th data-sort-key="number" data-sortable="text">編號</th>
-                <th data-sort-key="created" data-sortable="date">日期</th>
-                <th data-sort-key="customer" data-sortable="text">客戶</th>
-                <th data-sort-key="category" data-sortable="text">品項</th>
-                <th data-sortable="false">商品圖</th>
-                <th data-sort-key="style" data-sortable="text">款式</th>
-                <th data-sort-key="total" data-sortable="number">含稅總計</th>
-                <th data-sort-key="status" data-sortable="text">狀態</th>
-                <th data-sortable="false">操作</th>
-                <th data-sortable="false">詳情</th>
-              </tr>
-            </thead>
-            <tbody id="ordersTableBody">
-              <tr><td colspan="11" class="orders-empty">載入中…</td></tr>
-            </tbody>
-          </table>
+        <div class="records-table-wrap" id="ordersTableBody">
+          <p class="orders-empty">載入中…</p>
         </div>
         <dialog id="orderCancelDialog" class="order-cancel-dialog">
           <form method="dialog" id="orderCancelForm" class="order-cancel-form">
@@ -431,6 +408,7 @@
   </main>
 </div>
 
+<script type="module" src="/static/react/admin-tables.js?v=1"></script>
 <script src="js/api-client.js"></script>
 <script src="js/order-status.js"></script>
 <script src="js/chart.umd.min.js"></script>
@@ -439,10 +417,10 @@
 <script src="js/admin-table-sort.js?v=1"></script>
 <script src="js/admin-image-urls.js?v=6"></script>
 <script src="js/admin.js?v=9"></script>
-<script src="js/admin-orders.js?v=9"></script>
+<script src="js/admin-orders.js?v=10"></script>
 <script src="js/order-detail.js"></script>
-<script src="js/admin-products.js?v=10"></script>
-<script src="js/admin-accounts.js?v=5"></script>
+<script src="js/admin-products.js?v=12"></script>
+<script src="js/admin-accounts.js?v=6"></script>
 <script src="js/admin-invites.js?v=10"></script>
 <script src="js/pricing-config.js?v=1.1"></script>
 <script>
