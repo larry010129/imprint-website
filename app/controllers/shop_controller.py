@@ -11,8 +11,7 @@ from psycopg.types.json import Jsonb
 
 from app.auth import get_user_id
 from app.database import get_connection, get_transaction
-from app.image_urls import is_uuid
-from app.orders import attach_order_display
+from app.orders import attach_order_display, attach_order_relations, pack_order_config
 from app.pricing import compute_order_pricing
 
 router = APIRouter(tags=["shop"])
@@ -94,65 +93,35 @@ def _validate_customer(body: dict[str, Any], profile: dict[str, Any] | None) -> 
 
 
 def _insert_order(cur, user_id: str, customer: dict[str, Any], config: dict[str, Any]) -> str:
-    pricing = _pricing(config)
-    product_type = config.get("summaryZh") or config.get("type")
-    product_id = config.get("type") if is_uuid(config.get("type")) else None
+    cfg, pricing, product_id, summary, total = pack_order_config(config)
+    cfg["clientPricing"] = pricing
+    config_payload = json.loads(json.dumps(cfg, default=str))
 
     cur.execute(
         """
-        insert into orders (
-          user_id, product_id, customer_name, customer_phone, customer_email,
-          product_type, category, carat, gold_purity, color,
-          diamond_kind, fancy_color, stone_count, diamond_shape,
-          weight_grams, ring_size, engraving_band, engraving_girdle,
-          include_chain, chain_gold, chain_color, chain_length_cm,
-          diamond_price_twd, taijin_price_twd, labor_price_twd, tax_amount_twd,
-          total_price, gold_rate_per_gram, price_source,
-          fulfillment_method, shipping_address, shipping_city, shipping_postal, order_note,
-          status
-        ) values (
-          %s, %s, %s, %s, %s,
-          %s, %s, %s, %s, %s,
-          %s, %s, %s, %s,
-          %s, %s, %s, %s,
-          %s, %s, %s, %s,
-          %s, %s, %s, %s,
-          %s, %s, %s,
-          %s, %s, %s, %s, %s,
-          'received'
-        )
-        returning order_number
+        insert into orders (user_id, summary_zh, total_price, status)
+        values (%s, %s, %s, 'received')
+        returning id, order_number
+        """,
+        (user_id, summary, total),
+    )
+    row = cur.fetchone()
+    oid = row["id"]
+    cur.execute(
+        """
+        insert into order_contacts (order_id, customer_name, customer_phone, customer_email)
+        values (%s, %s, %s, %s)
+        """,
+        (oid, customer["name"], customer["phone"], customer["email"]),
+    )
+    cur.execute(
+        """
+        insert into order_fulfillment (
+          order_id, fulfillment_method, shipping_address, shipping_city, shipping_postal, order_note
+        ) values (%s, %s, %s, %s, %s, %s)
         """,
         (
-            user_id,
-            product_id,
-            customer["name"],
-            customer["phone"],
-            customer["email"],
-            product_type,
-            config.get("category"),
-            config.get("carat"),
-            config.get("gold"),
-            config.get("color"),
-            config.get("diamondKind") or "white",
-            config.get("fancyColor"),
-            config.get("stoneCount"),
-            config.get("diamondShape") or "round",
-            pricing.get("weightGrams"),
-            config.get("ringSize"),
-            config.get("engravingBand"),
-            config.get("engravingGirdle"),
-            bool(config.get("includeChain")),
-            config.get("chainGold"),
-            config.get("chainColor"),
-            config.get("chainLength") if config.get("category") != "chain" else config.get("lengthCm"),
-            pricing.get("diamondPrice"),
-            pricing.get("taijinPrice"),
-            pricing.get("laborPrice"),
-            None,
-            pricing.get("total"),
-            pricing.get("goldRatePerGram"),
-            pricing.get("priceSource") or "client",
+            oid,
             customer["fulfillmentMethod"],
             customer["shippingAddress"],
             customer["shippingCity"],
@@ -160,7 +129,13 @@ def _insert_order(cur, user_id: str, customer: dict[str, Any], config: dict[str,
             customer["orderNote"],
         ),
     )
-    row = cur.fetchone()
+    cur.execute(
+        """
+        insert into order_items (order_id, product_id, config_json, pricing_json, summary_zh)
+        values (%s, %s, %s, %s, %s)
+        """,
+        (oid, product_id, Jsonb(config_payload), Jsonb(pricing), summary),
+    )
     return row["order_number"]
 
 
@@ -177,75 +152,46 @@ def _fetch_editable_order(cur, user_id: str, order_id: str | None, order_number:
         )
     else:
         return None
-    return cur.fetchone()
+    order = cur.fetchone()
+    if order:
+        attach_order_relations(cur, [order])
+    return order
 
 
 def _update_order_row(cur, order_id: str, config: dict[str, Any]) -> None:
-    pricing = _pricing(config)
-    product_type = config.get("summaryZh") or config.get("type")
-    product_id = config.get("type") if is_uuid(config.get("type")) else None
-    chain_len = config.get("chainLength") if config.get("category") != "chain" else config.get("lengthCm")
+    cfg, pricing, product_id, summary, total = pack_order_config(config)
+    cfg["clientPricing"] = pricing
+    config_payload = json.loads(json.dumps(cfg, default=str))
 
     cur.execute(
         """
         update orders set
-          product_id = %s,
-          product_type = %s,
-          category = %s,
-          carat = %s,
-          gold_purity = %s,
-          color = %s,
-          diamond_kind = %s,
-          fancy_color = %s,
-          stone_count = %s,
-          diamond_shape = %s,
-          weight_grams = %s,
-          ring_size = %s,
-          engraving_band = %s,
-          engraving_girdle = %s,
-          include_chain = %s,
-          chain_gold = %s,
-          chain_color = %s,
-          chain_length_cm = %s,
-          diamond_price_twd = %s,
-          taijin_price_twd = %s,
-          labor_price_twd = %s,
-          tax_amount_twd = %s,
+          summary_zh = %s,
           total_price = %s,
-          gold_rate_per_gram = %s,
-          price_source = %s,
           updated_at = now()
         where id = %s and status = 'received'
         """,
-        (
-            product_id,
-            product_type,
-            config.get("category"),
-            config.get("carat"),
-            config.get("gold"),
-            config.get("color"),
-            config.get("diamondKind") or "white",
-            config.get("fancyColor"),
-            config.get("stoneCount"),
-            config.get("diamondShape") or "round",
-            pricing.get("weightGrams"),
-            config.get("ringSize"),
-            config.get("engravingBand"),
-            config.get("engravingGirdle"),
-            bool(config.get("includeChain")),
-            config.get("chainGold"),
-            config.get("chainColor"),
-            chain_len,
-            pricing.get("diamondPrice"),
-            pricing.get("taijinPrice"),
-            pricing.get("laborPrice"),
-            None,
-            pricing.get("total"),
-            pricing.get("goldRatePerGram"),
-            pricing.get("priceSource") or "client",
-            order_id,
-        ),
+        (summary, total, order_id),
     )
+    cur.execute(
+        """
+        update order_items set
+          product_id = %s,
+          config_json = %s,
+          pricing_json = %s,
+          summary_zh = %s
+        where order_id = %s
+        """,
+        (product_id, Jsonb(config_payload), Jsonb(pricing), summary, order_id),
+    )
+    if cur.rowcount == 0:
+        cur.execute(
+            """
+            insert into order_items (order_id, product_id, config_json, pricing_json, summary_zh)
+            values (%s, %s, %s, %s, %s)
+            """,
+            (order_id, product_id, Jsonb(config_payload), Jsonb(pricing), summary),
+        )
 
 
 @router.get("/order")

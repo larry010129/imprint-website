@@ -49,12 +49,21 @@ Or via Node (legacy `backend/`):
 cd backend && npm install && npm run schema
 ```
 
-Or Supabase CLI:
+Or Supabase CLI (applies `supabase/migrations/` in order):
 
 ```bash
 supabase link --project-ref [PROJECT_REF]
 supabase db push
 ```
+
+**Existing Supabase project** (wide `orders` table with 40+ columns):
+
+1. **Supabase Dashboard → SQL Editor** → paste and run:
+   `supabase/run_in_sql_editor_orders_normalize.sql`
+2. Or CLI: `supabase db push`
+3. Or: `python scripts/migrate_orders_split.py` (uses `DATABASE_URL` in `.env`)
+
+After migration, `orders` has ~12 columns; data lives in `order_contacts`, `order_fulfillment`, `order_items`.
 
 ## 4. Migrate data from Neon (optional)
 

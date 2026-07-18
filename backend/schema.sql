@@ -108,55 +108,16 @@ create table if not exists product_images (
   sort_order int not null default 0
 );
 
--- ── orders (rich Submission-equivalent: diamond + metal + chain breakdown) ──
+-- ── orders (core header + workflow) ──
 create sequence if not exists order_number_seq start 100001;
 
 create table if not exists orders (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references users(id) on delete set null,
-  product_id uuid references products(id) on delete set null,
   order_number text unique not null default ('ID' || nextval('order_number_seq')),
 
-  customer_name text not null,
-  customer_phone text not null,
-  customer_email text,
-  series text,
-  product_type text,
-
-  category text,
-  carat text,
-  gold_purity text,
-  color text,
-  diamond_kind text not null default 'white',
-  fancy_color text,
-  stone_count int,
-  diamond_shape text not null default 'round',
-  weight_grams numeric,
-  ring_size numeric,
-  engraving_band text,
-  engraving_girdle text,
-
-  include_chain boolean not null default false,
-  chain_product_id uuid references products(id) on delete set null,
-  chain_gold text,
-  chain_color text,
-  chain_length_cm int,
-  chain_weight_chin numeric,
-  chain_total_twd numeric,
-
-  diamond_price_twd numeric,
-  taijin_price_twd numeric,
-  labor_price_twd numeric,
-  tax_amount_twd numeric,
+  summary_zh text,
   total_price numeric,
-  gold_rate_per_gram numeric,
-  price_source text,
-
-  fulfillment_method text not null default 'pickup',
-  shipping_address text,
-  shipping_city text,
-  shipping_postal text,
-  order_note text,
 
   status text not null default 'received',
   status_note text,
@@ -164,6 +125,36 @@ create table if not exists orders (
 
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
+);
+
+-- ── order_contacts (1:1 — customer at checkout) ──
+create table if not exists order_contacts (
+  order_id uuid primary key references orders(id) on delete cascade,
+  customer_name text not null,
+  customer_phone text not null,
+  customer_email text
+);
+
+-- ── order_fulfillment (1:1 — pickup / delivery) ──
+create table if not exists order_fulfillment (
+  order_id uuid primary key references orders(id) on delete cascade,
+  fulfillment_method text not null default 'pickup',
+  shipping_address text,
+  shipping_city text,
+  shipping_postal text,
+  order_note text
+);
+
+-- ── order_items (1:N — product spec + pricing snapshot) ──
+create table if not exists order_items (
+  id uuid primary key default gen_random_uuid(),
+  order_id uuid not null references orders(id) on delete cascade,
+  product_id uuid references products(id) on delete set null,
+  config_json jsonb not null default '{}',
+  pricing_json jsonb not null default '{}',
+  summary_zh text,
+  sort_order int not null default 0,
+  created_at timestamptz not null default now()
 );
 
 -- ── cart / favorites (saved shop configurations) ─────────────────────────
@@ -258,7 +249,11 @@ insert into gold_price_cache (id, xau_per_gram, xpt_per_gram, xag_per_gram, sour
 
 -- ── indexes ────────────────────────────────────────────────────────────────
 create index if not exists orders_user_id_idx on orders(user_id);
-create index if not exists orders_order_number_phone_idx on orders(order_number, customer_phone);
+create index if not exists orders_order_number_phone_idx on orders(order_number);
+create index if not exists orders_summary_zh_idx on orders(summary_zh);
+create index if not exists order_contacts_phone_idx on order_contacts(customer_phone);
+create index if not exists order_items_order_id_idx on order_items(order_id);
+create index if not exists order_items_product_id_idx on order_items(product_id);
 create index if not exists product_variants_product_id_idx on product_variants(product_id);
 create index if not exists product_images_product_id_idx on product_images(product_id);
 create index if not exists cart_items_user_id_idx on cart_items(user_id);

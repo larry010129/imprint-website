@@ -8,6 +8,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import JSONResponse, Response
+from psycopg.types.json import Jsonb
 
 from app.admin_dashboard import build_dashboard_csv, build_dashboard_payload, normalize_range
 from app.admin_products import (
@@ -29,7 +30,7 @@ from app.auth import (
 from app.catalog import build_catalog_response, fetch_catalog_rows, load_product_children
 from config.settings import settings
 from app.database import get_connection, get_transaction
-from app.orders import attach_order_display
+from app.orders import attach_order_display, attach_order_relations, hydrate_order
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -77,13 +78,16 @@ def _require_admin(request: Request) -> str:
 def _fetch_orders(cur) -> list[dict]:
     cur.execute(
         """
-        select order_number, customer_name, product_type, category, series,
-               total_price, created_at, status
+        select id, order_number, summary_zh, total_price, created_at, status
         from orders
         order by created_at asc
         """
     )
-    return cur.fetchall()
+    rows = cur.fetchall()
+    attach_order_relations(cur, rows)
+    for row in rows:
+        hydrate_order(row)
+    return rows
 
 
 def _lead_counts(cur) -> tuple[int, int, int, int]:
@@ -210,21 +214,21 @@ async def orders_list(request: Request, q: str | None = Query(None)) -> dict:
             like = f"%{search}%"
             cur.execute(
                 """
-                select * from orders
-                where order_number ilike %s
-                   or category ilike %s
-                   or status ilike %s
-                   or carat ilike %s
-                   or gold_purity ilike %s
-                   or color ilike %s
-                   or customer_name ilike %s
-                   or customer_phone ilike %s
-                   or series ilike %s
-                   or product_type ilike %s
-                order by created_at desc
+                select distinct o.*
+                from orders o
+                left join order_items oi on oi.order_id = o.id
+                left join order_contacts oc on oc.order_id = o.id
+                where o.order_number ilike %s
+                   or o.status ilike %s
+                   or o.summary_zh ilike %s
+                   or oc.customer_name ilike %s
+                   or oc.customer_phone ilike %s
+                   or oi.config_json::text ilike %s
+                   or oi.summary_zh ilike %s
+                order by o.created_at desc
                 limit 200
                 """,
-                (like, like, like, like, like, like, like, like, like, like),
+                (like, like, like, like, like, like, like),
             )
         else:
             cur.execute("select * from orders order by created_at desc limit 100")
@@ -248,15 +252,41 @@ async def orders_create(request: Request) -> JSONResponse:
         return JSONResponse(status_code=400, content={"error": "請填寫客戶姓名與電話"})
 
     with get_connection() as conn, conn.cursor() as cur:
+        config = {
+            "series": series,
+            "summaryZh": product_type or "訂製品項",
+            "type": product_type or "",
+        }
         cur.execute(
             """
-            insert into orders (customer_name, customer_phone, customer_email, series, product_type)
-            values (%s, %s, %s, %s, %s)
-            returning order_number
+            insert into orders (summary_zh)
+            values (%s)
+            returning id, order_number
             """,
-            (customer_name, customer_phone, customer_email, series, product_type),
+            (product_type or series or "訂製品項",),
         )
         order = cur.fetchone()
+        cur.execute(
+            """
+            insert into order_contacts (order_id, customer_name, customer_phone, customer_email)
+            values (%s, %s, %s, %s)
+            """,
+            (order["id"], customer_name, customer_phone, customer_email),
+        )
+        cur.execute(
+            """
+            insert into order_items (order_id, config_json, summary_zh)
+            values (%s, %s, %s)
+            """,
+            (order["id"], Jsonb(config), product_type or series or "訂製品項"),
+        )
+        cur.execute(
+            """
+            insert into order_fulfillment (order_id, fulfillment_method)
+            values (%s, 'pickup')
+            """,
+            (order["id"],),
+        )
 
     return JSONResponse(content={"orderNumber": order["order_number"]})
 
@@ -303,6 +333,8 @@ async def order_cancel(request: Request) -> JSONResponse:
         order = cur.fetchone()
         if not order:
             return JSONResponse(status_code=404, content={"error": "order not found"})
+        attach_order_relations(cur, [order])
+        hydrate_order(order)
         if order.get("status") == "cancelled":
             return JSONResponse(status_code=400, content={"error": "訂單已取消"})
 
@@ -347,6 +379,8 @@ async def orders_bulk_update(request: Request) -> JSONResponse:
             order = cur.fetchone()
             if not order:
                 continue
+            attach_order_relations(cur, [order])
+            hydrate_order(order)
             if order.get("status") == "cancelled" and status == "cancelled":
                 continue
             if status == "cancelled":

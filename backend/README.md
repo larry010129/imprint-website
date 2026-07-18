@@ -7,6 +7,7 @@ Schema, seed helpers, and catalog data used at **build time** and for DB setup. 
 | Path | Purpose |
 |------|---------|
 | `schema.sql` | Postgres tables — run once on Supabase/local (see `docs/SUPABASE.md`) |
+| `../scripts/migrate_orders_split.py` | Split wide `orders` → `orders` + `order_items` (uses Supabase migration SQL) |
 | `scripts/apply-schema.js` | Optional Node helper to apply schema |
 | `scripts/seed-catalog.js` | Optional Node catalog seed |
 | `lib/catalog-seed-data.js` | Catalog rows for `scripts/render-build.sh` → `app/data/catalog-seed-rows.json` |

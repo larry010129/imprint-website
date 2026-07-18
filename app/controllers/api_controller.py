@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 from app.auth import get_user_id, is_admin
 from app.bot_gold import fetch_bot_gold_quote
 from app.catalog import build_catalog_response, fetch_catalog_rows, load_product_children
-from app.orders import attach_order_display
+from app.orders import attach_order_display, attach_order_relations, hydrate_order
 from app.database import get_connection
 from app.schemas.gold_quote import GoldQuote
 
@@ -94,6 +94,36 @@ async def bot_gold() -> JSONResponse:
         content=GoldQuote.model_validate(payload).model_dump(),
         headers={"Cache-Control": "no-store"},
     )
+
+
+@router.post("/track-order")
+async def track_order(request: Request) -> dict:
+    body = await request.json()
+    if not isinstance(body, dict):
+        return _err(400, "invalid body")
+
+    order_number = str(body.get("orderNumber") or "").strip()
+    phone = str(body.get("phone") or "").strip()
+    if not order_number or not phone:
+        return _err(400, "請輸入訂單編號與電話")
+
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            select o.*
+            from orders o
+            join order_contacts oc on oc.order_id = o.id
+            where o.order_number = %s and oc.customer_phone = %s
+            limit 1
+            """,
+            (order_number, phone),
+        )
+        order = cur.fetchone()
+        if not order:
+            return {"rows": []}
+        attach_order_relations(cur, [order])
+        hydrate_order(order)
+    return {"rows": [order]}
 
 
 @router.get("/orders")
