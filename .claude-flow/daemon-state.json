@@ -1,76 +1,76 @@
 {
   "running": true,
-  "startedAt": "2026-07-17T07:06:04.912Z",
+  "startedAt": "2026-07-17T13:41:07.640Z",
   "workers": {
     "map": {
-      "runCount": 16,
-      "successCount": 16,
+      "runCount": 63,
+      "successCount": 63,
       "failureCount": 0,
-      "averageDurationMs": 5.75,
-      "isRunning": false,
-      "nextRun": "2026-07-17T11:06:05.187Z",
-      "lastStartedAt": "2026-07-17T10:51:05.179Z",
-      "lastRun": "2026-07-17T10:51:05.184Z"
+      "averageDurationMs": 34.682539682539705,
+      "lastRun": "2026-07-18T01:11:10.879Z",
+      "lastStartedAt": "2026-07-18T01:11:10.871Z",
+      "nextRun": "2026-07-18T01:26:10.883Z",
+      "isRunning": false
     },
     "audit": {
-      "runCount": 24,
-      "successCount": 24,
+      "runCount": 94,
+      "successCount": 94,
       "failureCount": 0,
-      "averageDurationMs": 5.25,
-      "isRunning": false,
-      "nextRun": "2026-07-17T10:58:05.314Z",
-      "lastStartedAt": "2026-07-17T10:58:05.322Z",
-      "lastRun": "2026-07-17T10:58:05.328Z"
+      "averageDurationMs": 15.063829787234045,
+      "lastRun": "2026-07-18T01:13:11.103Z",
+      "lastStartedAt": "2026-07-18T01:13:11.096Z",
+      "nextRun": "2026-07-18T01:23:11.106Z",
+      "isRunning": false
     },
     "optimize": {
-      "runCount": 16,
-      "successCount": 16,
+      "runCount": 63,
+      "successCount": 63,
       "failureCount": 0,
-      "averageDurationMs": 12.25,
-      "isRunning": false,
-      "nextRun": "2026-07-17T11:10:05.304Z",
-      "lastStartedAt": "2026-07-17T10:55:05.296Z",
-      "lastRun": "2026-07-17T10:55:05.301Z"
+      "averageDurationMs": 20.936507936507937,
+      "lastRun": "2026-07-18T01:15:10.307Z",
+      "lastStartedAt": "2026-07-18T01:15:10.295Z",
+      "nextRun": "2026-07-18T01:30:10.311Z",
+      "isRunning": false
     },
     "consolidate": {
-      "runCount": 8,
-      "successCount": 8,
+      "runCount": 32,
+      "successCount": 32,
       "failureCount": 0,
-      "averageDurationMs": 28.75,
-      "isRunning": false,
-      "nextRun": "2026-07-17T11:12:05.235Z",
-      "lastStartedAt": "2026-07-17T10:42:05.220Z",
-      "lastRun": "2026-07-17T10:42:05.232Z"
+      "averageDurationMs": 84.875,
+      "lastRun": "2026-07-18T01:17:10.469Z",
+      "lastStartedAt": "2026-07-18T01:17:10.426Z",
+      "nextRun": "2026-07-18T01:17:10.423Z",
+      "isRunning": false
     },
     "testgaps": {
-      "runCount": 12,
-      "successCount": 12,
+      "runCount": 47,
+      "successCount": 47,
       "failureCount": 0,
-      "averageDurationMs": 4.75,
-      "isRunning": false,
-      "nextRun": "2026-07-17T11:14:05.098Z",
-      "lastStartedAt": "2026-07-17T10:54:05.091Z",
-      "lastRun": "2026-07-17T10:54:05.095Z"
+      "averageDurationMs": 47.531914893617014,
+      "lastRun": "2026-07-18T01:09:10.752Z",
+      "lastStartedAt": "2026-07-18T01:09:10.740Z",
+      "nextRun": "2026-07-18T01:29:10.757Z",
+      "isRunning": false
     },
     "backup": {
       "runCount": 1,
       "successCount": 1,
       "failureCount": 0,
       "averageDurationMs": 18,
-      "isRunning": false,
-      "nextRun": "2026-07-18T07:16:04.938Z",
+      "lastRun": "2026-07-17T07:16:04.935Z",
       "lastStartedAt": "2026-07-17T07:16:04.917Z",
-      "lastRun": "2026-07-17T07:16:04.935Z"
+      "nextRun": "2026-07-18T07:16:04.935Z",
+      "isRunning": false
     },
     "harness": {
-      "runCount": 1,
-      "successCount": 1,
+      "runCount": 3,
+      "successCount": 3,
       "failureCount": 0,
-      "averageDurationMs": 40,
-      "isRunning": false,
-      "nextRun": "2026-07-17T13:18:04.970Z",
-      "lastStartedAt": "2026-07-17T07:18:04.928Z",
-      "lastRun": "2026-07-17T07:18:04.968Z"
+      "averageDurationMs": 40.333333333333336,
+      "lastRun": "2026-07-17T19:53:07.732Z",
+      "lastStartedAt": "2026-07-17T19:53:07.719Z",
+      "nextRun": "2026-07-18T01:53:07.736Z",
+      "isRunning": false
     },
     "predict": {
       "runCount": 0,
@@ -89,8 +89,8 @@
   },
   "config": {
     "autoStart": false,
-    "logDir": "C:\\Users\\user\\Documents\\Diamond web\\imprint-website\\.claude-flow\\logs",
-    "stateFile": "C:\\Users\\user\\Documents\\Diamond web\\imprint-website\\.claude-flow\\daemon-state.json",
+    "logDir": "C:\\Users\\yuzi0\\Documents\\Diamond web\\imprint-website\\.claude-flow\\logs",
+    "stateFile": "C:\\Users\\yuzi0\\Documents\\Diamond web\\imprint-website\\.claude-flow\\daemon-state.json",
     "maxConcurrent": 2,
     "workerTimeoutMs": 960000,
     "resourceThresholds": {
@@ -175,5 +175,5 @@
       }
     ]
   },
-  "savedAt": "2026-07-17T10:58:05.328Z"
+  "savedAt": "2026-07-18T01:17:10.470Z"
 }

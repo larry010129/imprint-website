@@ -51,15 +51,17 @@
     scrollToPageSection(id);
   }, true);
 
-  /* ---------- 導覽列:捲動陰影 ---------- */
-  var nav = document.querySelector('.nav');
-  function onNavScroll() {
-    if (!nav) return;
-    nav.classList.toggle('is-scrolled', window.scrollY > 10);
-  }
-  if (nav) {
-    window.addEventListener('scroll', onNavScroll, { passive: true });
-    onNavScroll();
+  /* ---------- 導覽列:捲動陰影（React SiteNav 已處理；略過有 data-site-nav-root 的頁面） ---------- */
+  if (!document.querySelector('[data-site-nav-root]')) {
+    var nav = document.querySelector('.nav');
+    function onNavScroll() {
+      if (!nav) return;
+      nav.classList.toggle('is-scrolled', window.scrollY > 10);
+    }
+    if (nav) {
+      window.addEventListener('scroll', onNavScroll, { passive: true });
+      onNavScroll();
+    }
   }
 
   /* ---------- 手機選單 ---------- */

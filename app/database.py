@@ -22,3 +22,15 @@ def get_connection() -> psycopg.Connection:
     if not dsn:
         raise RuntimeError("DATABASE_URL is not set (Supabase Postgres connection string)")
     return psycopg.connect(dsn, row_factory=dict_row, autocommit=True)
+
+
+def get_transaction() -> psycopg.Connection:
+    """Like get_connection, but for call sites that issue several dependent
+    writes that must all succeed or all fail together (e.g. checkout inserting
+    N orders then clearing the cart, or admin product saves that replace
+    variants/images). autocommit is off, so `with get_transaction() as conn:`
+    commits once on clean exit and rolls back everything on an exception."""
+    dsn = os.environ.get("DATABASE_URL")
+    if not dsn:
+        raise RuntimeError("DATABASE_URL is not set (Supabase Postgres connection string)")
+    return psycopg.connect(dsn, row_factory=dict_row, autocommit=False)

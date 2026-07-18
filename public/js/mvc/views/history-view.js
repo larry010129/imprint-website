@@ -24,7 +24,7 @@
         if (count) count.textContent = String(list.length);
         if (!tbody) return;
         if (!list.length) {
-          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--ink-faint);">目前沒有訂單</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--ink-faint);">目前沒有訂單。完成「確認訂購」後，訂單會顯示在此。</td></tr>';
           return;
         }
         tbody.innerHTML = list.map(function (o) {
@@ -37,6 +37,16 @@
             '<td>' + (price != null ? Math.round(price).toLocaleString('en-US') : '—') + '</td>' +
             '<td>' + M.escapeHtml(statusLabel(o.status) || '—') + '</td></tr>';
         }).join('');
+      });
+    },
+    renderError: function (message) {
+      var loading = document.getElementById('history-loading');
+      if (loading) loading.classList.add('hidden');
+      ['incomplete', 'complete', 'cancelled'].forEach(function (key) {
+        var tbody = document.getElementById('history-tbody-' + key);
+        if (tbody) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--ink-faint);">載入失敗：' + M.escapeHtml(message || '請稍後再試') + '</td></tr>';
+        }
       });
     },
     bindTabs: function () {

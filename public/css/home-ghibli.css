@@ -29,53 +29,63 @@
 }
 
 .page-home .topbar{
-  position:absolute; left:0; right:0; z-index:102;
+  position:fixed; left:0; right:0; top:0; z-index:102;
   background:linear-gradient(180deg, rgba(42,24,69,.55) 0%, transparent 100%);
   border:none; color:rgba(255,255,255,.82);
+  transition:transform .28s var(--ease), opacity .28s var(--ease), visibility .28s;
 }
 .page-home .topbar b{ color:var(--gh-mint-soft); }
 
+/* Landing nav: hero overlay at top; hide topbar + nav when scrolled */
 .page-home .nav{
-  position:absolute; left:0; right:0; top:36px; z-index:101;
-  background:transparent; border:none; backdrop-filter:none;
+  position:fixed; left:0; right:0; top:36px; z-index:101;
+  background:linear-gradient(180deg, rgba(42,24,69,.38) 0%, rgba(42,24,69,.08) 72%, transparent 100%);
+  border:none; backdrop-filter:none;
   box-shadow:none !important;
+  transition:transform .28s var(--ease), opacity .28s var(--ease), visibility .28s;
 }
-.page-home .nav.is-scrolled{
-  position:sticky; top:0;
-  background:rgba(251,246,237,.94);
-  backdrop-filter:blur(14px);
-  border-bottom:1px solid rgba(var(--gh-accent-rgb),.22);
+.page-home.is-nav-scrolled .topbar{
+  transform:translateY(-100%);
+  opacity:0;
+  visibility:hidden;
+  pointer-events:none;
 }
-.page-home .nav:not(.is-scrolled) .brand-name .zh,
-.page-home .nav:not(.is-scrolled) .brand-name .en,
-.page-home .nav:not(.is-scrolled) .site-nav-desktop .nav-item > a,
+.page-home.is-nav-scrolled .nav{
+  transform:translateY(calc(-100% - 40px));
+  opacity:0;
+  visibility:hidden;
+  pointer-events:none;
+}
+.page-home .nav .brand-name .zh,
+.page-home .nav .brand-name .en,
+.page-home .nav .site-nav-desktop .nav-item > a,
 .page-home [data-site-nav-root].is-nav-hero .brand-name .zh,
 .page-home [data-site-nav-root].is-nav-hero .brand-name .en,
 .page-home [data-site-nav-root].is-nav-hero .site-nav-desktop .nav-item > a{ color:#fff; }
-.page-home .nav:not(.is-scrolled) .brand-mark path{ fill:#F7F4F1; }
+.page-home .nav .brand-mark path{ fill:#F7F4F1; }
 .page-home [data-site-nav-root].is-nav-hero .brand-mark{ color:#F7F4F1; }
-.page-home .nav:not(.is-scrolled) .site-nav-desktop .nav-item > a:hover,
+.page-home .nav .site-nav-desktop .nav-item > a:hover,
 .page-home [data-site-nav-root].is-nav-hero .site-nav-desktop .nav-item > a:hover{ color:var(--gh-mint-soft); }
 .page-home [data-site-nav-root].is-nav-hero .nav-burger span{ background:#fff; }
-.page-home .nav:not(.is-scrolled) .btn-line,
+.page-home .nav .btn-line,
 .page-home [data-site-nav-root].is-nav-hero .nav-cta .btn-line{
   background:transparent !important;
   border-color:rgba(255,255,255,.55) !important;
   color:#fff !important;
   box-shadow:none !important;
 }
-.page-home .nav:not(.is-scrolled) .btn-line:hover,
+.page-home .nav .btn-line:hover,
 .page-home [data-site-nav-root].is-nav-hero .nav-cta .btn-line:hover{
   background:rgba(255,255,255,.12) !important; color:#fff !important;
 }
-.page-home .nav:not(.is-scrolled) .btn-mint,
+.page-home .nav .btn-mint,
 .page-home [data-site-nav-root].is-nav-hero .nav-cta .btn-mint{
   background:var(--gh-grad-deep) !important;
   color:var(--gh-twilight) !important;
   border-color:transparent !important;
   box-shadow:none !important;
 }
-.page-home .nav:not(.is-scrolled) .btn-dark,
+.page-home .nav .btn-dark,
 .page-home [data-site-nav-root].is-nav-hero .nav-cta .btn-dark{
   background:rgba(255,255,255,.15) !important;
   color:#fff !important;
@@ -87,7 +97,7 @@
 }
 
 /* Account menu — liquid glass on hero */
-.page-home .nav:not(.is-scrolled) .account-menu-trigger,
+.page-home .nav .account-menu-trigger,
 .page-home [data-site-nav-root].is-nav-hero .account-menu-trigger{
   background:rgba(255,255,255,.12);
   border-color:rgba(255,255,255,.38);
@@ -95,22 +105,22 @@
   -webkit-backdrop-filter:blur(10px);
   box-shadow:0 4px 20px rgba(42,24,69,.18);
 }
-.page-home .nav:not(.is-scrolled) .account-menu-trigger:hover,
+.page-home .nav .account-menu-trigger:hover,
 .page-home [data-site-nav-root].is-nav-hero .account-menu-trigger:hover{
   background:rgba(255,255,255,.2);
   border-color:rgba(255,255,255,.55);
 }
-.page-home .nav:not(.is-scrolled) .account-menu-name,
+.page-home .nav .account-menu-name,
 .page-home [data-site-nav-root].is-nav-hero .account-menu-name{ color:#fff; }
-.page-home .nav:not(.is-scrolled) .account-menu-email,
+.page-home .nav .account-menu-email,
 .page-home [data-site-nav-root].is-nav-hero .account-menu-email{ color:rgba(255,255,255,.78); }
-.page-home .nav:not(.is-scrolled) .account-menu-avatar--guest,
+.page-home .nav .account-menu-avatar--guest,
 .page-home [data-site-nav-root].is-nav-hero .account-menu-avatar--guest{
   background:rgba(255,255,255,.14);
   border-color:rgba(255,255,255,.42);
   color:#fff;
 }
-.page-home .nav:not(.is-scrolled) .account-menu-panel,
+.page-home .nav .account-menu-panel,
 .page-home [data-site-nav-root].is-nav-hero .account-menu-panel{
   background:rgba(42,24,69,.42);
   border-color:rgba(255,255,255,.22);
@@ -118,29 +128,17 @@
   -webkit-backdrop-filter:blur(14px);
   box-shadow:0 14px 36px rgba(42,24,69,.28);
 }
-.page-home .nav:not(.is-scrolled) .account-menu-item,
+.page-home .nav .account-menu-item,
 .page-home [data-site-nav-root].is-nav-hero .account-menu-item{ color:#fff; }
-.page-home .nav:not(.is-scrolled) .account-menu-item:hover,
+.page-home .nav .account-menu-item:hover,
 .page-home [data-site-nav-root].is-nav-hero .account-menu-item:hover{
   background:rgba(255,255,255,.14);
 }
-.page-home .nav:not(.is-scrolled) .account-menu-logout,
+.page-home .nav .account-menu-logout,
 .page-home [data-site-nav-root].is-nav-hero .account-menu-logout{ color:#ffb4ab; }
-.page-home .nav:not(.is-scrolled) .account-menu-logout:hover,
+.page-home .nav .account-menu-logout:hover,
 .page-home [data-site-nav-root].is-nav-hero .account-menu-logout:hover{
   background:rgba(255,120,110,.18);
-}
-
-/* Account menu — scrolled home nav */
-.page-home .nav.is-scrolled .account-menu-trigger{
-  background:rgba(255,255,255,.62);
-  border-color:rgba(var(--gh-accent-rgb),.28);
-  backdrop-filter:blur(12px);
-  -webkit-backdrop-filter:blur(12px);
-}
-.page-home .nav.is-scrolled .account-menu-trigger:hover{
-  background:rgba(255,255,255,.78);
-  border-color:rgba(var(--gh-accent-rgb),.42);
 }
 
 .page-home .nav .btn-mint,

@@ -159,41 +159,31 @@ export default function SiteNav() {
 
 
   React.useEffect(() => {
-
     const header = headerRef.current
-
     if (!header) return
-
     const root = header.parentElement
+    const isHome = document.body.classList.contains("page-home")
 
-
-
-    const onNavScroll = () => {
-
-      const scrolled = window.scrollY > 10
-
-      header.classList.toggle("is-scrolled", scrolled)
-
-      if (root?.matches("[data-site-nav-root]")) {
-
-        root.classList.toggle(
-
-          "is-nav-hero",
-
-          document.body.classList.contains("page-home") && !scrolled,
-
-        )
-
+    if (isHome) {
+      root?.classList.add("is-nav-hero")
+      let hidden = false
+      const onNavScroll = () => {
+        const y = window.scrollY
+        if (!hidden && y > 16) hidden = true
+        else if (hidden && y <= 2) hidden = false
+        document.body.classList.toggle("is-nav-scrolled", hidden)
       }
-
+      window.addEventListener("scroll", onNavScroll, { passive: true })
+      onNavScroll()
+      return () => window.removeEventListener("scroll", onNavScroll)
     }
 
+    const onNavScroll = () => {
+      header.classList.toggle("is-scrolled", window.scrollY > 10)
+    }
     window.addEventListener("scroll", onNavScroll, { passive: true })
-
     onNavScroll()
-
     return () => window.removeEventListener("scroll", onNavScroll)
-
   }, [])
 
 

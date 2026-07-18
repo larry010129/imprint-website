@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 from psycopg.types.json import Jsonb
 
 from app.auth import get_user_id
-from app.database import get_connection
+from app.database import get_connection, get_transaction
 from app.image_urls import is_uuid
 from app.pricing import compute_order_pricing
 
@@ -94,8 +94,8 @@ def _validate_customer(body: dict[str, Any], profile: dict[str, Any] | None) -> 
 
 def _insert_order(cur, user_id: str, customer: dict[str, Any], config: dict[str, Any]) -> str:
     pricing = _pricing(config)
-    product_type = config.get("type")
-    product_id = product_type if is_uuid(product_type) else None
+    product_type = config.get("summaryZh") or config.get("type")
+    product_id = config.get("type") if is_uuid(config.get("type")) else None
 
     cur.execute(
         """
@@ -277,7 +277,7 @@ async def cart_checkout(request: Request) -> dict:
         if customer_err:
             return _err(400, customer_err)
 
-        order_numbers: list[str] = []
+        configs: list[dict[str, Any]] = []
         for item in items:
             config = item.get("config_json") or {}
             if not isinstance(config, dict):
@@ -285,8 +285,14 @@ async def cart_checkout(request: Request) -> dict:
             err = _validate_config(config)
             if err:
                 return _err(400, err)
-            order_numbers.append(_insert_order(cur, user_id, customer, config))
+            configs.append(config)
 
+    # Validation is done — now write. get_transaction() (autocommit off) makes
+    # this all-or-nothing: if inserting order N of M raises, everything commits
+    # or nothing does, instead of leaving earlier orders committed with their
+    # cart items never cleared (which would duplicate orders on retry).
+    with get_transaction() as conn, conn.cursor() as cur:
+        order_numbers = [_insert_order(cur, user_id, customer, config) for config in configs]
         checked_out = [str(i["id"]) for i in items]
         cur.execute(
             "delete from cart_items where id = any(%s)",

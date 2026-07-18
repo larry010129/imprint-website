@@ -481,7 +481,8 @@ function setShopView(view, options) {
   updateSummary();
   updateShopProgress();
   updateWizardGuide();
-  if (!opts.skipScroll) {
+  const skipScroll = opts.skipScroll || document.documentElement.classList.contains('shop-tour-active');
+  if (!skipScroll) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }
@@ -499,12 +500,12 @@ const WIZARD_GUIDE = {
     desc: '戒指、項墜、耳飾、手鍊或鍊條——點選一個類別即可開始。',
   },
   styles: {
-    eyebrow: '步驟 2／3',
+    eyebrow: '線上訂製 · 三步完成',
     title: '挑選喜歡的款式',
     desc: '點選卡片進入配置；需要時可展開「篩選款式」。',
   },
   product: {
-    eyebrow: '步驟 3／3',
+    eyebrow: '線上訂製 · 三步完成',
     title: '配置您的專屬設計',
     desc: '選擇下方規格，右側會即時更新試算價格。',
   },
@@ -522,10 +523,8 @@ function updateWizardGuide() {
 
 function updateShopProgress() {
   const meta = SHOP_STEPS[shopView] || SHOP_STEPS.catalog;
-  const fill = document.getElementById('shop-progress-fill');
-  if (fill) fill.style.width = `${meta.progress}%`;
 
-  document.querySelectorAll('.shop-step-rail-item').forEach((btn) => {
+  document.querySelectorAll('.shop-stepper-step').forEach((btn) => {
     const step = btn.dataset.step;
     const stepNum = SHOP_STEPS[step]?.step || 0;
     const current = meta.step;
@@ -536,6 +535,15 @@ function updateShopProgress() {
     if (step === 'styles') btn.disabled = !state.category;
     if (step === 'product') btn.disabled = !state.category || !state.type;
   });
+
+  updateFavoriteButton();
+}
+
+function updateFavoriteButton() {
+  const button = document.getElementById('favorite-btn');
+  if (!button) return;
+  // Always clickable on product step — not gated on price or full options
+  button.disabled = shopView !== 'product';
 }
 
 function initWizardRail() {
@@ -766,10 +774,11 @@ function updateCtaState(total) {
 
   const confirmBtns = [document.getElementById('confirm-btn'), document.getElementById('confirm-btn-mobile')];
   const cartBtns = [document.getElementById('cart-btn'), document.getElementById('cart-btn-mobile')];
-  ['share-config-btn', 'quote-sheet-btn', 'favorite-btn'].forEach(id => {
+  ['share-config-btn', 'quote-sheet-btn'].forEach(id => {
     const button = document.getElementById(id);
     if (button) button.disabled = !ready;
   });
+  updateFavoriteButton();
 
   if (isGuestShop) {
     confirmBtns.forEach(btn => {
@@ -1851,7 +1860,7 @@ function selectType(typeId) {
   updateEngravingSteps();
   updateDiamondSteps();
   updateChainOptions();
-  setShopView('product');
+  setShopView('product', { skipScroll: true });
   updateSummary();
 }
 
@@ -1944,8 +1953,6 @@ document.getElementById('pendant-chain-product')?.addEventListener('change', (e)
 });
 
 const ringSizeGuideDialog = document.getElementById('ring-size-guide-dialog');
-document.getElementById('ring-size-guide-open')?.addEventListener('click', () =>
-  ringSizeGuideDialog?.showModal());
 document.getElementById('ring-size-guide-close')?.addEventListener('click', () =>
   ringSizeGuideDialog?.close());
 
@@ -2097,7 +2104,10 @@ function openContactForOrder() {
 
 async function addCurrentFavorite() {
   const button = document.getElementById('favorite-btn');
-  if (!button) return;
+  if (!button || button.disabled) return;
+  const toast = (msg, type) => window.showToast ? window.showToast(msg, type || 'info') : alert(msg);
+  if (!state.category) { toast(tr('alert_pick_category')); return; }
+  if (!state.type) { toast(tr('alert_pick_type')); return; }
   button.disabled = true;
   try {
     if (!shopUsesApi()) {
@@ -2127,7 +2137,7 @@ async function addCurrentFavorite() {
     console.error(error);
     (window.showToast || alert)(tr('generic_error'), 'error');
   } finally {
-    button.disabled = false;
+    updateFavoriteButton();
   }
 }
 
@@ -2262,6 +2272,26 @@ async function handleCartUpdate() {
   }
 }
 
+async function tryExpressCheckout(itemId) {
+  if (!window.imprintAPI?.getSession) return null;
+  const session = await window.imprintAPI.getSession();
+  if (session?.error || !session?.user) return null;
+  const name = (session.profile?.full_name || '').trim();
+  const phone = (session.profile?.phone || '').trim();
+  if (!name || !phone) return null;
+
+  return shopApiFetch('/api/cart-checkout', {
+    method: 'POST',
+    body: {
+      itemIds: [itemId],
+      customerName: name,
+      customerPhone: phone,
+      customerEmail: session.user.email || undefined,
+      fulfillmentMethod: 'pickup',
+    },
+  });
+}
+
 async function handleSubmit() {
   if (window.cartEditData) {
     return handleCartUpdate();
@@ -2296,8 +2326,19 @@ async function handleSubmit() {
       return;
     }
 
+    const itemId = addResult.data.item.id;
+    const express = await tryExpressCheckout(itemId);
+    if (express?.res.ok && express.data?.ok) {
+      const orderNo = express.data.orderNumbers?.[0];
+      const successUrl = window.shopConfig?.successUrl || '/success.html';
+      window.location.href = orderNo
+        ? successUrl + '?order=' + encodeURIComponent(orderNo)
+        : successUrl;
+      return;
+    }
+
     const checkoutUrl = window.shopConfig?.checkoutUrl || '/checkout.html';
-    window.location.href = checkoutUrl + '?item=' + encodeURIComponent(addResult.data.item.id);
+    window.location.href = checkoutUrl + '?item=' + encodeURIComponent(itemId);
   } catch (err) {
     console.error(err);
     resetButtons();
@@ -2459,5 +2500,118 @@ async function init() {
     }, 50);
   }
 }
+
+// ── Onboarding tour (React shop-tour) — navigate real shop views, no mock page ─
+
+function shopTourFirstCategory() {
+  const cats = catalogLoaded ? catalogCategories() : [];
+  return cats[0] || null;
+}
+
+function shopTourFirstTypeId() {
+  const products = filteredProductsForCurrentCategory();
+  const id = products[0]?.id;
+  return id != null ? String(id) : null;
+}
+
+function shopTourScrollTop() {
+  window.scrollTo(0, 0);
+  document.querySelector('.product-buy-col')?.scrollTo(0, 0);
+}
+
+function shopTourScrollToProductConfig() {
+  const run = () => {
+    const layout = document.getElementById('product-layout');
+    const buyCol = document.getElementById('product-buy-col');
+    const productSection = document.getElementById('shop-product');
+    if (!layout || !buyCol || productSection?.classList.contains('hidden')) return false;
+
+    const gallery = layout.querySelector('.product-gallery-col');
+    let scrollTop = buyCol.offsetTop;
+    if (gallery && buyCol.offsetParent === layout) {
+      scrollTop = buyCol.offsetTop;
+    } else if (gallery) {
+      scrollTop = gallery.offsetHeight + (parseFloat(getComputedStyle(layout).gap) || 0);
+    }
+
+    layout.scrollTop = Math.max(0, scrollTop - 4);
+
+    const section = document.getElementById('shop-product');
+    if (section && section.scrollHeight > section.clientHeight + 1) {
+      const top =
+        buyCol.getBoundingClientRect().top -
+        section.getBoundingClientRect().top +
+        section.scrollTop;
+      section.scrollTop = Math.max(0, top - 4);
+    }
+
+    buyCol.scrollTop = 0;
+    window.dispatchEvent(new Event('resize'));
+    return true;
+  };
+
+  run();
+  requestAnimationFrame(run);
+  [120, 350, 600, 900].forEach((ms) => window.setTimeout(run, ms));
+}
+
+function shopTourCloseMobilePrice() {
+  document.getElementById('shop-price-panel')?.classList.remove('is-mobile-open');
+  const toggle = document.getElementById('mobile-price-toggle');
+  if (toggle) toggle.setAttribute('aria-expanded', 'false');
+}
+
+function shopTourGoToStep(stepIndex) {
+  shopTourCloseMobilePrice();
+  if (stepIndex <= 1) {
+    setShopView('catalog', { skipScroll: true });
+    shopTourScrollTop();
+    return;
+  }
+  if (stepIndex === 2) {
+    const cat = state.category || shopTourFirstCategory();
+    if (!cat) {
+      setShopView('catalog', { skipScroll: true });
+      shopTourScrollTop();
+      return;
+    }
+    if (shopView !== 'styles' || state.category !== cat) selectCategory(cat);
+    else setShopView('styles', { skipScroll: true });
+    shopTourScrollTop();
+    return;
+  }
+  const cat = state.category || shopTourFirstCategory();
+  if (!cat) {
+    setShopView('catalog', { skipScroll: true });
+    shopTourScrollTop();
+    return;
+  }
+  if (!state.category) selectCategory(cat);
+  const typeId = state.type || shopTourFirstTypeId();
+  if (typeId && (shopView !== 'product' || state.type !== typeId)) selectType(typeId);
+  else setShopView('product', { skipScroll: true });
+  if (stepIndex === 3) shopTourScrollToProductConfig();
+  else shopTourScrollTop();
+}
+
+function shopTourReset() {
+  state.category = null;
+  state.type = null;
+  document.querySelectorAll('.cat-btn.active, .type-card.active').forEach((el) => {
+    el.classList.remove('active');
+  });
+  setShopView('catalog', { skipScroll: true });
+  updateSummary();
+}
+
+window.shopTour = {
+  isReady() {
+    const grid = document.getElementById('catalog-grid');
+    return !!(grid && !grid.classList.contains('is-loading') && grid.querySelector('.catalog-tile'));
+  },
+  goToStep: shopTourGoToStep,
+  scrollToProductConfig: shopTourScrollToProductConfig,
+  reset: shopTourReset,
+};
 
 init();

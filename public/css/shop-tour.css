@@ -1,0 +1,257 @@
+/* Shop onboarding tour — one-screen flow; shop layout unchanged when tour off */
+
+html.shop-tour-active {
+  overflow: hidden;
+}
+
+html.shop-tour-active body {
+  overflow: hidden;
+}
+
+html.shop-tour-active .shop-tour-portal [class*="pointer-events-auto"] {
+  max-width: min(360px, calc(100vw - 24px));
+}
+
+/* Shared: compact header while tour runs */
+html.shop-tour-active .shop-wizard-guide {
+  display: none;
+}
+
+html.shop-tour-active .shop-wizard-header {
+  flex-shrink: 0;
+  margin-bottom: 12px;
+}
+
+/* Desktop landscape tour — not narrow phone / laptop portrait */
+@media (min-width: 901px) and (orientation: landscape), (min-width: 1281px) {
+  html.shop-tour-active #mobile-buy-bar {
+    display: none !important;
+  }
+
+  html.shop-tour-active body.shop-mobile-bar {
+    padding-bottom: 0 !important;
+  }
+
+  html.shop-tour-active .shop-calculator-page {
+    padding-bottom: 0;
+    overflow: hidden;
+  }
+
+  html.shop-tour-active .shop-calculator-wrap {
+    display: flex;
+    flex-direction: column;
+    height: calc(100dvh - 5.25rem - 16px);
+    min-height: 0;
+    max-height: calc(100dvh - 5.25rem - 16px);
+  }
+
+  html.shop-tour-active .shop-page.shop-wizard.shop-fit {
+    flex: 1;
+    min-height: 0;
+    height: auto;
+    max-height: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  html.shop-tour-active .shop-wizard-header {
+    padding: 16px 20px 12px;
+  }
+
+  html.shop-tour-active .shop-page.shop-wizard .shop-body {
+    flex: 1;
+    min-height: 0;
+    align-items: stretch;
+    overflow: hidden;
+  }
+
+  html.shop-tour-active .shop-page.shop-wizard .shop-main {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  html.shop-tour-active .shop-page.shop-wizard .shop-section:not(.hidden) {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    height: auto;
+  }
+
+  html.shop-tour-active .shop-page.shop-wizard #shop-product {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  html.shop-tour-active .shop-page.shop-wizard .product-layout--wizard {
+    flex: 1;
+    min-height: 0;
+    height: 100%;
+  }
+
+  html.shop-tour-active .shop-page.shop-wizard.shop-step-product .product-buy-col {
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+
+  html.shop-tour-active .shop-page.shop-wizard .shop-price-panel,
+  html.shop-tour-active .shop-page.shop-wizard .shop-price-panel--wizard {
+    max-height: 100%;
+    overflow: auto;
+    position: static;
+    top: auto;
+  }
+
+  html.shop-tour-active .shop-page.shop-wizard .shop-section-hint,
+  html.shop-tour-active .shop-page.shop-wizard .shop-back {
+    flex-shrink: 0;
+  }
+
+  html.shop-tour-active .shop-page.shop-wizard #shop-product .shop-back,
+  html.shop-tour-active .shop-page.shop-wizard #shop-product .shop-section-hint {
+    opacity: 0.55;
+  }
+}
+
+/* Phone + laptop portrait: same tour layout as mobile */
+@media (max-width: 900px), (orientation: portrait) and (max-width: 1280px) {
+  html.shop-tour-active:not(.shop-tour-step-4) #mobile-buy-bar {
+    display: none !important;
+  }
+
+  html.shop-tour-active:not(.shop-tour-step-4) body.shop-mobile-bar {
+    padding-bottom: 0 !important;
+  }
+
+  html.shop-tour-active.shop-tour-step-4 #mobile-buy-bar {
+    display: flex !important;
+    z-index: 650;
+  }
+
+  html.shop-tour-active .shop-calculator-page {
+    padding-top: 8px;
+    padding-bottom: 0;
+    overflow: hidden;
+  }
+
+  html.shop-tour-active .shop-calculator-wrap {
+    display: flex;
+    flex-direction: column;
+    height: calc(100dvh - 4.5rem);
+    min-height: 0;
+    max-height: calc(100dvh - 4.5rem);
+    overflow: hidden;
+  }
+
+  html.shop-tour-active .shop-page.shop-wizard.shop-fit {
+    flex: 1;
+    min-height: 0;
+    height: auto;
+    max-height: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  html.shop-tour-active .shop-wizard-header {
+    padding: 12px 14px 10px;
+    margin-bottom: 8px;
+  }
+
+  html.shop-tour-active .shop-wizard-guide {
+    display: none;
+  }
+
+  html.shop-tour-active .shop-stepper {
+    margin-bottom: 0;
+    gap: 8px;
+  }
+
+  html.shop-tour-active .shop-stepper-label {
+    font-size: 11px;
+  }
+
+  html.shop-tour-active .shop-page.shop-wizard .shop-body {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  /* Portrait tour: stack like phone even when width > 900px */
+  html.shop-tour-active .shop-page.shop-wizard.shop-step-product .shop-body {
+    grid-template-columns: 1fr;
+  }
+
+  html.shop-tour-active .shop-page.shop-wizard .shop-price-panel {
+    display: none !important;
+  }
+
+  html.shop-tour-active .shop-page.shop-wizard .shop-main {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  html.shop-tour-active .shop-page.shop-wizard .shop-section:not(.hidden) {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    height: auto;
+  }
+
+  html.shop-tour-active .shop-page.shop-wizard #shop-product {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  html.shop-tour-active .shop-page.shop-wizard .product-layout--wizard {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    grid-template-columns: 1fr;
+  }
+
+  html.shop-tour-active.shop-tour-step-3 #ringsize-guide-step {
+    display: none !important;
+  }
+
+  html.shop-tour-active.shop-tour-step-3 .product-gallery-col {
+    opacity: 0.45;
+    max-height: min(32vh, 220px);
+  }
+
+  html.shop-tour-active.shop-tour-step-3 .product-preview {
+    max-height: min(32vh, 220px);
+  }
+
+  html.shop-tour-active.shop-tour-step-3 .product-image-thumbs {
+    display: none;
+  }
+
+  html.shop-tour-active .shop-page.shop-wizard.shop-step-product .product-buy-col {
+    overflow: visible;
+  }
+
+  html.shop-tour-active .shop-page.shop-wizard .shop-section-title {
+    font-size: 0.9375rem;
+    margin-bottom: 0.5rem;
+  }
+
+  html.shop-tour-active .shop-page.shop-wizard .shop-back {
+    margin-bottom: 0.25rem;
+    font-size: 0.75rem;
+  }
+
+  html.shop-tour-active .shop-page.shop-wizard .catalog-filters-wrap {
+    margin-bottom: 0.5rem;
+  }
+
+  html.shop-tour-active.shop-tour-step-4 .shop-calculator-wrap {
+    height: calc(100dvh - 4.5rem);
+    padding-bottom: 0;
+  }
+
+  html.shop-tour-active .shop-tour-portal [class*="pointer-events-auto"] {
+    max-width: calc(100vw - 20px);
+  }
+}

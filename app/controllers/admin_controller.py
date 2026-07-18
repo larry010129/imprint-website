@@ -28,7 +28,7 @@ from app.auth import (
 )
 from app.catalog import build_catalog_response, fetch_catalog_rows, load_product_children
 from config.settings import settings
-from app.database import get_connection
+from app.database import get_connection, get_transaction
 from app.image_urls import (
     order_product_id,
     order_style_image_url,
@@ -376,7 +376,7 @@ async def orders_bulk_update(request: Request) -> JSONResponse:
         return JSONResponse(status_code=400, content={"error": "請選擇或填寫取消原因"})
 
     updated = 0
-    with get_connection() as conn, conn.cursor() as cur:
+    with get_transaction() as conn, conn.cursor() as cur:
         for order_id in ids:
             cur.execute("select * from orders where id = %s", (order_id,))
             order = cur.fetchone()
@@ -477,7 +477,7 @@ async def products_create(request: Request) -> JSONResponse:
         return JSONResponse(status_code=400, content={"error": error})
 
     first_published = first_published_at_value(None, cleaned["isPublished"])
-    with get_connection() as conn, conn.cursor() as cur:
+    with get_transaction() as conn, conn.cursor() as cur:
         cur.execute(
             """
             insert into products (
@@ -517,7 +517,7 @@ async def product_update(request: Request) -> JSONResponse:
     if error:
         return JSONResponse(status_code=400, content={"error": error})
 
-    with get_connection() as conn, conn.cursor() as cur:
+    with get_transaction() as conn, conn.cursor() as cur:
         cur.execute(
             "select id, is_published, first_published_at from products where id = %s",
             (product_id,),
@@ -562,7 +562,7 @@ async def product_action(request: Request) -> JSONResponse:
     if not product_id or action not in {"publish", "unpublish", "delete", "duplicate"}:
         return JSONResponse(status_code=400, content={"error": "invalid id/action"})
 
-    with get_connection() as conn, conn.cursor() as cur:
+    with get_transaction() as conn, conn.cursor() as cur:
         cur.execute("select * from products where id = %s", (product_id,))
         product = cur.fetchone()
         if not product:

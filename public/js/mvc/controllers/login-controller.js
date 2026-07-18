@@ -5,8 +5,19 @@
   var View = global.ImprintViews.Login;
 
   function redirectAfterLogin() {
-    var next = new URLSearchParams(global.location.search).get('next') || 'account.html';
-    global.location.href = next;
+    var next = new URLSearchParams(global.location.search).get('next');
+    var target = 'account.html';
+    if (next) {
+      try {
+        var url = new URL(next, global.location.origin);
+        if (url.origin === global.location.origin) {
+          target = url.pathname + url.search + url.hash;
+        }
+      } catch (e) {
+        // malformed `next` — fall back to the default target
+      }
+    }
+    global.location.href = target;
   }
 
   M.createController({

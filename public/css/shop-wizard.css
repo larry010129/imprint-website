@@ -17,71 +17,65 @@
   border-radius: 16px;
 }
 
-.shop-step-rail {
+.shop-stepper {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0;
+  align-items: flex-start;
+  gap: 14px;
+  width: 100%;
   margin-bottom: 24px;
-  flex-wrap: wrap;
 }
 
-.shop-step-rail-item {
-  display: inline-flex;
-  align-items: center;
+.shop-stepper-step {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
   gap: 10px;
-  padding: 10px 16px;
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  background: #fff;
+  padding: 0;
+  border: none;
+  background: none;
   color: var(--color-text-muted);
   font: inherit;
-  font-size: 14px;
-  letter-spacing: 0.04em;
+  text-align: left;
   cursor: pointer;
-  transition: border-color 0.2s, background 0.2s, color 0.2s, box-shadow 0.2s;
+  transition: color 0.2s;
 }
 
-.shop-step-rail-item:disabled {
-  opacity: 0.45;
+.shop-stepper-step:disabled {
   cursor: default;
 }
 
-.shop-step-rail-item.is-active {
-  border-color: var(--mint-deep);
-  background: var(--mint-soft);
-  color: var(--ink);
-  box-shadow: 0 4px 16px rgba(94, 207, 207, 0.18);
+.shop-stepper-step:disabled .shop-stepper-label {
+  opacity: 0.45;
 }
 
-.shop-step-rail-item.is-done:not(:disabled) {
-  border-color: var(--mint-deep);
-  color: var(--ink);
+.shop-stepper-bar {
+  display: block;
+  width: 100%;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--mint-line);
+  transition: background 0.3s cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
-.shop-step-num {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: var(--paper-warm);
-  font-size: 12px;
+.shop-stepper-step.is-active .shop-stepper-bar,
+.shop-stepper-step.is-done .shop-stepper-bar {
+  background: linear-gradient(90deg, var(--mint-deep), var(--mint));
+}
+
+.shop-stepper-label {
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  line-height: 1.4;
+}
+
+.shop-stepper-step.is-active .shop-stepper-label {
+  color: var(--ink);
   font-weight: 600;
 }
 
-.shop-step-rail-item.is-active .shop-step-num,
-.shop-step-rail-item.is-done .shop-step-num {
-  background: var(--mint-deep);
-  color: #fff;
-}
-
-.shop-step-rail-line {
-  width: 32px;
-  height: 2px;
-  background: var(--mint-line);
-  flex-shrink: 0;
+.shop-stepper-step.is-done:not(:disabled) .shop-stepper-label {
+  color: var(--ink);
 }
 
 .shop-wizard-eyebrow {
@@ -110,23 +104,6 @@
   font-size: 15px;
   color: var(--ink-soft);
   line-height: 1.8;
-}
-
-.shop-wizard-progress {
-  height: 4px;
-  margin-top: 22px;
-  background: var(--mint-line);
-  border-radius: 999px;
-  overflow: hidden;
-}
-
-.shop-wizard-progress-fill {
-  display: block;
-  height: 100%;
-  width: 8%;
-  background: linear-gradient(90deg, var(--mint-deep), var(--mint));
-  border-radius: inherit;
-  transition: width 0.35s cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
 .shop-breadcrumb--compact {
@@ -315,20 +292,12 @@
 
 
 @media (max-width: 900px) {
-  .shop-step-rail {
-    gap: 6px;
+  .shop-stepper {
+    gap: 10px;
   }
 
-  .shop-step-rail-line {
-    width: 16px;
-  }
-
-  .shop-step-label {
-    display: none;
-  }
-
-  .shop-step-rail-item {
-    padding: 8px 12px;
+  .shop-stepper-label {
+    font-size: 12px;
   }
 
   .shop-wizard-header {

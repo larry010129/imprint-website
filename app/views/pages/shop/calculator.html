@@ -1,28 +1,27 @@
 ﻿{% extends "layouts/base.html" %}
 {% block main_class %} class="main-content shop-calculator-page"{% endblock %}
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/shop.css?v=2.9">
-<link rel="stylesheet" href="/static/css/shop-wizard.css?v=8">
+<link rel="stylesheet" href="/static/css/shop.css?v=3.0">
+<link rel="stylesheet" href="/static/css/shop-wizard.css?v=9">
+{% include "partials/shop-tour-react-css.html" %}
 {% endblock %}
 {% block content %}
   <div class="container shop-calculator-wrap">
 <div class="shop-page shop-fit shop-wizard">
 
-  <header class="shop-wizard-header">
-    <nav class="shop-step-rail" id="shop-step-rail" aria-label="訂製步驟">
-      <button type="button" class="shop-step-rail-item is-active" data-step="catalog" id="wizard-step-catalog">
-        <span class="shop-step-num">1</span>
-        <span class="shop-step-label">選品項</span>
+  <header class="shop-wizard-header" id="shop-wizard-header">
+    <nav class="shop-stepper" id="shop-step-rail" aria-label="訂製步驟">
+      <button type="button" class="shop-stepper-step is-active" data-step="catalog" id="wizard-step-catalog">
+        <span class="shop-stepper-bar" aria-hidden="true"></span>
+        <span class="shop-stepper-label">選品項</span>
       </button>
-      <span class="shop-step-rail-line" aria-hidden="true"></span>
-      <button type="button" class="shop-step-rail-item" data-step="styles" id="wizard-step-styles" disabled>
-        <span class="shop-step-num">2</span>
-        <span class="shop-step-label">選款式</span>
+      <button type="button" class="shop-stepper-step" data-step="styles" id="wizard-step-styles" disabled>
+        <span class="shop-stepper-bar" aria-hidden="true"></span>
+        <span class="shop-stepper-label">選款式</span>
       </button>
-      <span class="shop-step-rail-line" aria-hidden="true"></span>
-      <button type="button" class="shop-step-rail-item" data-step="product" id="wizard-step-product" disabled>
-        <span class="shop-step-num">3</span>
-        <span class="shop-step-label">配置下單</span>
+      <button type="button" class="shop-stepper-step" data-step="product" id="wizard-step-product" disabled>
+        <span class="shop-stepper-bar" aria-hidden="true"></span>
+        <span class="shop-stepper-label">配置下單</span>
       </button>
     </nav>
 
@@ -32,9 +31,6 @@
       <p class="shop-wizard-desc" id="shop-wizard-desc">戒指、項墜、耳飾、手鍊或鍊條——點選一個類別即可開始。</p>
     </div>
 
-    <div class="shop-wizard-progress" aria-hidden="true">
-      <span class="shop-wizard-progress-fill" id="shop-progress-fill"></span>
-    </div>
   </header>
 
   <nav class="shop-breadcrumb shop-breadcrumb--compact hidden" id="shop-breadcrumb" aria-label="Breadcrumb">
@@ -92,7 +88,7 @@
         <button type="button" class="shop-back" id="back-to-styles" data-i18n="shop_back_styles">← 更換款式</button>
         <p class="shop-section-hint">選擇下方規格，右側會即時顯示試算價格</p>
 
-        <div class="product-layout product-layout--wizard">
+        <div class="product-layout product-layout--wizard" id="product-layout">
           <div class="product-gallery-col">
             <div id="large-image-container" class="product-preview">
               <img id="large-image" loading="lazy" src="" alt="">
@@ -111,13 +107,13 @@
             <div id="product-image-thumbs" class="product-image-thumbs" hidden></div>
           </div>
 
-          <div class="product-buy-col">
-            <header class="product-info-header">
+          <div class="product-buy-col" id="product-buy-col">
+            <header class="product-info-header" id="product-info-header">
               <p class="product-subtitle" id="product-subtitle"></p>
               <div class="product-title-row">
                 <h2 class="product-title" id="product-title">?</h2>
                 
-                <button type="button" class="favorite-toggle" id="favorite-btn" disabled aria-label="收藏此配置" title="收藏此配置">♡</button>
+                <button type="button" class="favorite-toggle" id="favorite-btn" aria-label="收藏此配置" title="收藏此配置">♡</button>
                 
               </div>
               <div class="config-chips" id="config-chips"></div>
@@ -238,7 +234,6 @@
                     </table>
                   </div>
                   <p class="ring-size-guide-inline__note" data-i18n="ring_size_inline_note">建議測量 2 至 3 次取平均值。寬版戒指可預留較鬆尺寸。</p>
-                  <button type="button" class="ring-size-guide-inline__more" id="ring-size-guide-open" data-i18n="ring_size_guide_open">完整戒圍對照表</button>
                 </div>
               </div>
             </div>
@@ -543,8 +538,10 @@
 </dialog>
 
   </div><!-- /.shop-calculator-wrap -->
+<div data-shop-tour-root></div>
 {% endblock %}
 {% block extra_scripts %}
+{% include "partials/shop-tour-react-js.html" %}
 <script src="/static/js/api-client.js"></script>
 <script>
   window.shopConfig = Object.assign({
@@ -562,5 +559,5 @@
 <script src="/static/js/shop-catalog-data.js"></script>
 <script src="/static/js/shop-pricing-local.js?v=3"></script>
 <script src="/static/js/shop-i18n.js"></script>
-<script src="/static/js/shop.js?v=19"></script>
+<script src="/static/js/shop.js?v=29"></script>
 {% endblock %}

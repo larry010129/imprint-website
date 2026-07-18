@@ -2945,6 +2945,7 @@ body.app-shell .mobile-buy-actions .shop-cta--secondary:hover:not(:disabled) {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  position: relative;
 }
 
 .favorite-toggle {
@@ -2953,16 +2954,19 @@ body.app-shell .mobile-buy-actions .shop-cta--secondary:hover:not(:disabled) {
   flex: 0 0 40px;
   width: 40px;
   height: 40px;
-  border: 1px solid var(--color-border);
+  position: relative;
+  z-index: 2;
+  border: 1px solid var(--mint-deep);
   border-radius: 8px;
   background: var(--color-surface);
-  color: var(--color-brand);
+  color: var(--mint-deep);
   font-size: 24px;
   cursor: pointer;
+  pointer-events: auto;
 }
 
-.favorite-toggle.is-saved { background: color-mix(in srgb, var(--color-brand) 14%, var(--color-surface)); }
-.favorite-toggle:disabled { opacity: 0.45; cursor: not-allowed; }
+.favorite-toggle.is-saved { background: color-mix(in srgb, var(--mint-deep) 14%, var(--color-surface)); }
+.favorite-toggle:disabled { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
 
 .shop-secondary-actions {
   display: grid;

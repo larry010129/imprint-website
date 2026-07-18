@@ -377,6 +377,29 @@
   color: #0485f7;
 }
 
+[data-shop-tour-root] {
+  --background: #fdfcfa;
+  --foreground: #2b2320;
+  --card: #ffffff;
+  --card-foreground: #2b2320;
+  --border: #dcf2f2;
+  --input: #dcf2f2;
+  --muted: #f7f4f1;
+  --muted-foreground: #8a817b;
+  --primary: #5ecfcf;
+  --primary-foreground: #ffffff;
+  --secondary: #f7f4f1;
+  --secondary-foreground: #2b2320;
+  --accent: #eafcfc;
+  --accent-foreground: #2b2320;
+  --ring: #5ecfcf;
+  --destructive: #e2554a;
+  --destructive-foreground: #ffffff;
+  font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+  letter-spacing: 0.05em;
+  color: var(--foreground);
+}
+
 [data-admin-root] {
   --background: #ffffff;
   --foreground: #2b2320;

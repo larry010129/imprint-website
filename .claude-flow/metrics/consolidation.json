@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-07-17T10:42:05.231Z",
+  "timestamp": "2026-07-18T01:17:10.468Z",
   "distillationEnabled": true,
   "patternsConsolidated": 0,
   "memoryCleaned": 0,
@@ -9,8 +9,9 @@
   "causalEdges": 0,
   "promoted": 0,
   "byProvenance": {},
-  "namespaces": [],
+  "namespaces": [
+    "session"
+  ],
   "dryRun": false,
-  "corrupt": false,
-  "skipped": "target table episodes missing (agentdb schema not initialised)"
+  "corrupt": false
 }

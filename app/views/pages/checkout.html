@@ -1,24 +1,36 @@
 ﻿{% extends "layouts/base.html" %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="/static/css/member-app.css?v=1">
+<link rel="stylesheet" href="/static/css/checkout-page.css?v=2">
 {% include "partials/checkout-react-css.html" %}
 {% endblock %}
 
 {% block content %}
 
-<section class="page-hero">
-  <div class="page-hero-media"></div>
-  <div class="page-hero-scrim"></div>
-  <div class="container page-hero-inner">
-    <p class="breadcrumb"><a href="/">首頁</a><span class="sep">/</span><a href="/cart.html">購物車</a><span class="sep">/</span><span class="current">確認訂單</span></p>
-    <p class="eyebrow">CHECKOUT</p>
-    <h1>確認訂單資訊</h1>
-    <p>請填寫收件人資訊與取貨方式，確認無誤後送出訂單。</p>
-  </div>
-</section>
+<section class="page-section member-app checkout-page" aria-label="確認訂單">
+  <div class="container checkout-container">
 
-<section class="price-detail price-detail--offset">
-  <div class="container">
+    <nav class="checkout-stepper" aria-label="結帳步驟">
+      <div class="checkout-stepper-step is-done">
+        <span class="checkout-stepper-bar" aria-hidden="true"></span>
+        <a class="checkout-stepper-label" href="/cart.html">購物車</a>
+      </div>
+      <div class="checkout-stepper-step is-active">
+        <span class="checkout-stepper-bar" aria-hidden="true"></span>
+        <span class="checkout-stepper-label">確認訂單</span>
+      </div>
+      <div class="checkout-stepper-step">
+        <span class="checkout-stepper-bar" aria-hidden="true"></span>
+        <span class="checkout-stepper-label">完成</span>
+      </div>
+    </nav>
+
+    <header class="checkout-head">
+      <h1 class="checkout-title">確認訂單資訊</h1>
+      <p class="checkout-lead">請填寫收件人資訊與取貨方式，確認無誤後送出訂單。</p>
+    </header>
+
     <div data-checkout-root></div>
   </div>
 </section>

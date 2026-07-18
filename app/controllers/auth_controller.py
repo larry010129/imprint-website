@@ -102,7 +102,11 @@ async def signup(request: Request, response: Response) -> JSONResponse:
         with get_connection() as conn, conn.cursor() as cur:
             cur.execute("update profiles set is_partner = true where id = %s", (user["id"],))
 
-    record_success(lockout_key)
+    # Unlike login, a successful signup still counts against the per-IP
+    # register throttle (not cleared via record_success) — otherwise an
+    # attacker using unique emails could mass-create accounts forever, since
+    # every attempt would reset the counter back to zero right after it.
+    record_failure(lockout_key, REGISTER_MAX_ATTEMPTS, REGISTER_LOCKOUT_SECONDS)
 
     token = sign_session(str(user["id"]))
     result = JSONResponse(content={"ok": True, "user": {"id": str(user["id"]), "email": user["email"]}})
