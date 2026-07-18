@@ -8,6 +8,8 @@
     run: function () {
       if (!M.isPage('history')) return;
       View.bindTabs();
+      View.bindSearch();
+      View.bindEdit();
       M.requireSession('history.html').then(function (s) {
         if (!s) return;
         return Model.load();

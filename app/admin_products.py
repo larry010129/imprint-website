@@ -117,7 +117,6 @@ def validate_product_fields(body: dict | None) -> tuple[dict | None, str | None]
     cleaned["variants"] = variants
 
     images: list[dict] = []
-    seen_colors: set[str] = set()
     for img in body.get("images") or []:
         if not img or not img.get("url"):
             continue
@@ -125,10 +124,6 @@ def validate_product_fields(body: dict | None) -> tuple[dict | None, str | None]
         if not valid_image_color(color):
             errors.append(f"invalid image option: {color or '(empty)'}")
             continue
-        if color in seen_colors:
-            errors.append(f"duplicate image option: {color}")
-            continue
-        seen_colors.add(color)
         images.append({"color": color, "url": img["url"]})
     final_colors = {img["color"] for img in images}
     if not final_colors:
@@ -139,8 +134,53 @@ def validate_product_fields(body: dict | None) -> tuple[dict | None, str | None]
     cleaned["images"] = images
 
     if errors:
-        return None, "; ".join(errors)
+        return None, _format_product_errors(errors)
     return cleaned, None
+
+
+def _format_product_errors(errors: list[str]) -> str:
+    zh = {
+        "invalid category": "品項無效",
+        "nameZh is required": "請填寫中文名稱",
+        "invalid defaultColor": "預設顏色無效",
+        "at least one variant is required": "請至少新增一個款式選項（金屬／克拉／金重）",
+        "at least one product image is required": "請至少上傳一張商品照片",
+        "default color must have at least one image": "預設顏色必須至少有一張商品照片",
+    }
+    parts: list[str] = []
+    for err in errors:
+        if err in zh:
+            parts.append(zh[err])
+            continue
+        if err.startswith("nameZh must be at most"):
+            parts.append("中文名稱過長")
+            continue
+        if err.startswith("nameEn must be at most"):
+            parts.append("英文名稱過長")
+            continue
+        if err.startswith("description must be at most"):
+            parts.append("描述文字過長")
+            continue
+        if err.startswith("invalid variant metal"):
+            parts.append("款式選項：金屬成色無效")
+            continue
+        if err.startswith("invalid variant carat"):
+            parts.append("款式選項：克拉／分數無效")
+            continue
+        if err.startswith("invalid weight for"):
+            parts.append("款式選項：金重無效")
+            continue
+        if err.startswith("invalid manual price for"):
+            parts.append("款式選項：手動定價無效")
+            continue
+        if err.startswith("duplicate variant"):
+            parts.append("款式選項重複：" + err.split(": ", 1)[-1])
+            continue
+        if err.startswith("invalid image option"):
+            parts.append("圖片選項代碼無效")
+            continue
+        parts.append(err)
+    return "；".join(parts)
 
 
 def serialize_product_row(row: dict) -> dict:

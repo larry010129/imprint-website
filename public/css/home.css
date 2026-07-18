@@ -373,7 +373,7 @@ table.price-full-table tr.is-note td{ background:#FBF7F2; font-size:12.5px; colo
 
 /* ---------- FAQ ---------- */
 .faq{ padding:110px 0 130px; background:var(--paper-warm); }
-.faq-list{ margin-top:54px; max-width:820px; }
+.faq-list{ margin:54px auto 0; max-width:820px; }
 .faq-item{ border-bottom:1px solid #E8E1DA; }
 .faq-q{
   width:100%; text-align:left; display:flex; justify-content:space-between; align-items:center;

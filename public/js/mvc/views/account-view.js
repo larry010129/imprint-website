@@ -33,7 +33,7 @@
           '<div class="order-row">' +
             '<div class="num">' + M.escapeHtml(o.order_number) + '</div>' +
             '<div class="status">目前狀態：' + M.escapeHtml(statusLabel(o.status)) + '</div>' +
-            (o.product_type ? '<div style="font-size:13px;color:var(--ink-soft);margin-top:6px;">' + M.escapeHtml((o.series ? o.series + '・' : '') + o.product_type) + '</div>' : '') +
+            (o.product_name || o.product_type ? '<div style="font-size:13px;color:var(--ink-soft);margin-top:6px;">' + M.escapeHtml((o.series ? o.series + '・' : '') + (o.product_name || o.product_type)) + '</div>' : '') +
             (o.status_note ? '<div style="font-size:12.5px;color:var(--ink-faint);margin-top:6px;">' + M.escapeHtml(o.status_note) + '</div>' : '') +
           '</div>'
         );

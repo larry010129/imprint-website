@@ -38,6 +38,15 @@ function guestLoginUrl() {
   return (window.shopConfig && window.shopConfig.loginUrl) || '/login.html';
 }
 
+function orderSuccessUrl(orderNumber, options) {
+  const base = (window.shopConfig && window.shopConfig.successUrl) || '/success.html';
+  const params = new URLSearchParams();
+  if (orderNumber) params.set('order', String(orderNumber));
+  if (options && options.updated) params.set('updated', '1');
+  const qs = params.toString();
+  return qs ? base + '?' + qs : base;
+}
+
 function redirectGuestToLogin() {
   window.location.href = guestLoginUrl();
 }
@@ -2045,7 +2054,6 @@ function buildSubmitPayload() {
       laborPrice: pricing.laborPrice,
       metalworkPrice: pricing.metalworkPrice,
       chainPrice: pricing.chainPrice,
-      taxAmount: pricing.taxAmount,
       weightGrams: pricing.weightGrams,
       goldRatePerGram: pricing.goldRatePerGram,
       priceSource: 'client',
@@ -2272,29 +2280,54 @@ async function handleCartUpdate() {
   }
 }
 
-async function tryExpressCheckout(itemId) {
-  if (!window.imprintAPI?.getSession) return null;
-  const session = await window.imprintAPI.getSession();
-  if (session?.error || !session?.user) return null;
-  const name = (session.profile?.full_name || '').trim();
-  const phone = (session.profile?.phone || '').trim();
-  if (!name || !phone) return null;
+async function handleOrderUpdate() {
+  const toast = (msg, type) => window.showToast ? window.showToast(msg, type || 'error') : alert(msg);
+  if (!validateBeforeSubmit(toast)) return;
 
-  return shopApiFetch('/api/cart-checkout', {
-    method: 'POST',
-    body: {
-      itemIds: [itemId],
-      customerName: name,
-      customerPhone: phone,
-      customerEmail: session.user.email || undefined,
-      fulfillmentMethod: 'pickup',
-    },
-  });
+  const edit = window.editData;
+  if (!edit?.orderId && !edit?.orderNumber) {
+    toast(tr('generic_error'));
+    return;
+  }
+
+  const btns = [document.getElementById('confirm-btn'), document.getElementById('confirm-btn-mobile')];
+  const originalLabels = btns.map(b => b?.textContent);
+  btns.forEach(b => { if (b) { b.disabled = true; b.textContent = tr('btn_submitting'); b.classList.add('is-loading'); } });
+
+  try {
+    const body = Object.assign({}, buildSubmitPayload(), {
+      orderId: edit.orderId,
+      orderNumber: edit.orderNumber,
+    });
+    const { res, data } = await shopApiFetch('/api/order', { method: 'PUT', body });
+    if (res.status === 401) { window.location.href = guestLoginUrl(); return; }
+    if (res.ok && data.ok) {
+      toast(tr('order_updated'), 'success');
+      window.location.href = orderSuccessUrl(data.orderNumber || edit.orderNumber, { updated: true });
+      return;
+    }
+    toast(tr('save_failed') + shopApiErrorMessage(data, res));
+  } catch (err) {
+    console.error(err);
+    toast(tr('generic_error'));
+  } finally {
+    btns.forEach((b, i) => {
+      if (b) {
+        b.disabled = false;
+        b.textContent = originalLabels[i];
+        b.classList.remove('is-loading');
+      }
+    });
+    updateSummary();
+  }
 }
 
 async function handleSubmit() {
   if (window.cartEditData) {
     return handleCartUpdate();
+  }
+  if (window.editData) {
+    return handleOrderUpdate();
   }
 
   const toast = (msg) => window.showToast ? window.showToast(msg, 'error') : alert(msg);
@@ -2327,16 +2360,6 @@ async function handleSubmit() {
     }
 
     const itemId = addResult.data.item.id;
-    const express = await tryExpressCheckout(itemId);
-    if (express?.res.ok && express.data?.ok) {
-      const orderNo = express.data.orderNumbers?.[0];
-      const successUrl = window.shopConfig?.successUrl || '/success.html';
-      window.location.href = orderNo
-        ? successUrl + '?order=' + encodeURIComponent(orderNo)
-        : successUrl;
-      return;
-    }
-
     const checkoutUrl = window.shopConfig?.checkoutUrl || '/checkout.html';
     window.location.href = checkoutUrl + '?item=' + encodeURIComponent(itemId);
   } catch (err) {
@@ -2426,8 +2449,84 @@ document.addEventListener('langchange', () => {
 // ── Bootstrap: load the catalog first (type cards/images depend on it),
 //    then wire up the initial view + optional deep-link/edit-mode restore. ─
 
+function orderApiRowToEditConfig(o) {
+  const type = o.product_id || o.product_type;
+  const cfg = {
+    orderId: o.id,
+    orderNumber: o.order_number,
+    category: o.category,
+    type,
+    gold: o.gold_purity,
+    color: o.color,
+    carat: o.carat,
+    ringSize: o.ring_size,
+    engravingBand: o.engraving_band || '',
+    engravingGirdle: o.engraving_girdle || '',
+    diamondKind: o.diamond_kind || 'white',
+    fancyColor: o.fancy_color,
+    stoneCount: o.stone_count,
+    diamondShape: o.diamond_shape || 'round',
+    includeChain: !!o.include_chain,
+    chainGold: o.chain_gold,
+    chainColor: o.chain_color,
+  };
+  if (o.category === 'chain') cfg.lengthCm = o.chain_length_cm;
+  else cfg.chainLength = o.chain_length_cm;
+  if (o.product_name) cfg.summaryZh = o.product_name;
+  return cfg;
+}
+
+async function initOrderEdit() {
+  const editOrderNo = new URLSearchParams(window.location.search).get('editOrder');
+  if (!editOrderNo) return;
+
+  const toast = (msg, type) => window.showToast ? window.showToast(msg, type || 'error') : alert(msg);
+  if (!shopUsesApi()) {
+    toast('此頁面需登入後才能修改訂單');
+    return;
+  }
+  if (isGuestShop) {
+    redirectGuestToLogin();
+    return;
+  }
+
+  let cfg = null;
+  try {
+    const raw = sessionStorage.getItem('imprint_order_edit');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (!parsed.orderNumber || parsed.orderNumber === editOrderNo) cfg = parsed;
+    }
+  } catch (_) {}
+
+  if (!cfg) {
+    try {
+      const { res, data } = await shopApiFetch('/api/order?orderNumber=' + encodeURIComponent(editOrderNo));
+      if (res.status === 401) { window.location.href = guestLoginUrl(); return; }
+      if (!res.ok || !data.order) {
+        toast(data.message || data.error || '無法載入訂單');
+        return;
+      }
+      const o = data.order;
+      if ((o.status || '').toLowerCase() !== 'received') {
+        toast('僅「已收到申請」狀態的訂單可修改');
+        return;
+      }
+      cfg = window.ImprintOrderDisplay?.orderToShopConfig?.(o) || orderApiRowToEditConfig(o);
+    } catch (err) {
+      console.error(err);
+      toast(tr('generic_error'));
+      return;
+    }
+  }
+
+  window.editData = cfg;
+  try { sessionStorage.removeItem('imprint_order_edit'); } catch (_) {}
+}
+
 async function init() {
   initWizardRail();
+  await initOrderEdit();
   await loadCatalog();
   initProductImageLightbox();
   initProductTabs();

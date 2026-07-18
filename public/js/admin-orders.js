@@ -127,9 +127,20 @@
     return o.category ? (CATEGORY_LABELS[o.category] || o.category) : '-';
   }
 
-  function subtotal(o) {
-    if (o.total_price == null) return null;
-    return Number(o.total_price) - Number(o.tax_amount_twd || 0);
+  function priceBreakdownLines(o) {
+    var lines = '';
+    if (o.diamond_price_twd != null && Number(o.diamond_price_twd) > 0) {
+      lines += specItem('鑽石價格 (NT$)', formatMoney(o.diamond_price_twd));
+    }
+    var metalwork = Number(o.taijin_price_twd || 0) + Number(o.labor_price_twd || 0);
+    if (metalwork > 0) {
+      lines += specItem('金工價格 (NT$)', formatMoney(metalwork));
+    }
+    if (o.chain_total_twd != null && Number(o.chain_total_twd) > 0) {
+      lines += specItem('搭配鏈條 (NT$)', formatMoney(o.chain_total_twd));
+    }
+    lines += specItem('總計 (NT$)', formatMoney(o.total_price));
+    return lines;
   }
 
   function progressHtml(status) {
@@ -176,8 +187,8 @@
               specItem('鑽石顏色', diamondLabel(o)) + specItem('計價金價', formatMoney(o.gold_rate_per_gram)) +
               specItem('重量 (克)', o.weight_grams != null ? Number(o.weight_grams).toFixed(3) : '-') +
               specItem('戒圍', o.ring_size || '-') + specItem('戒圈刻字', o.engraving_band || '-') +
-              specItem('腰圍刻字', o.engraving_girdle || '-') + specItem('總價 (NT$)', formatMoney(subtotal(o))) +
-              specItem('稅金 5% (NT$)', formatMoney(o.tax_amount_twd)) +
+              specItem('腰圍刻字', o.engraving_girdle || '-') +
+              priceBreakdownLines(o) +
               specItem('客戶', (o.customer_name || '-') + ' · ' + (o.customer_phone || '')) +
             '</div>' + progressHtml(o.status) +
           '</div></div></div>'

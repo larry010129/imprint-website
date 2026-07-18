@@ -179,7 +179,7 @@ export default function AdminProductsTable({
 
   useEffect(() => {
     onRendered?.();
-  });
+  }, [onRendered, rows]);
 
   const visibleRows = table.getRowModel().rows;
   const showPager = table.getPageCount() > 1;

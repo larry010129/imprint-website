@@ -12,6 +12,7 @@ from psycopg.types.json import Jsonb
 from app.auth import get_user_id
 from app.database import get_connection, get_transaction
 from app.image_urls import is_uuid
+from app.orders import attach_order_display
 from app.pricing import compute_order_pricing
 
 router = APIRouter(tags=["shop"])
@@ -148,7 +149,7 @@ def _insert_order(cur, user_id: str, customer: dict[str, Any], config: dict[str,
             pricing.get("diamondPrice"),
             pricing.get("taijinPrice"),
             pricing.get("laborPrice"),
-            pricing.get("taxAmount"),
+            None,
             pricing.get("total"),
             pricing.get("goldRatePerGram"),
             pricing.get("priceSource") or "client",
@@ -161,6 +162,142 @@ def _insert_order(cur, user_id: str, customer: dict[str, Any], config: dict[str,
     )
     row = cur.fetchone()
     return row["order_number"]
+
+
+def _fetch_editable_order(cur, user_id: str, order_id: str | None, order_number: str | None) -> dict | None:
+    if order_id:
+        cur.execute(
+            "select * from orders where id = %s and user_id = %s",
+            (order_id, user_id),
+        )
+    elif order_number:
+        cur.execute(
+            "select * from orders where order_number = %s and user_id = %s",
+            (order_number, user_id),
+        )
+    else:
+        return None
+    return cur.fetchone()
+
+
+def _update_order_row(cur, order_id: str, config: dict[str, Any]) -> None:
+    pricing = _pricing(config)
+    product_type = config.get("summaryZh") or config.get("type")
+    product_id = config.get("type") if is_uuid(config.get("type")) else None
+    chain_len = config.get("chainLength") if config.get("category") != "chain" else config.get("lengthCm")
+
+    cur.execute(
+        """
+        update orders set
+          product_id = %s,
+          product_type = %s,
+          category = %s,
+          carat = %s,
+          gold_purity = %s,
+          color = %s,
+          diamond_kind = %s,
+          fancy_color = %s,
+          stone_count = %s,
+          diamond_shape = %s,
+          weight_grams = %s,
+          ring_size = %s,
+          engraving_band = %s,
+          engraving_girdle = %s,
+          include_chain = %s,
+          chain_gold = %s,
+          chain_color = %s,
+          chain_length_cm = %s,
+          diamond_price_twd = %s,
+          taijin_price_twd = %s,
+          labor_price_twd = %s,
+          tax_amount_twd = %s,
+          total_price = %s,
+          gold_rate_per_gram = %s,
+          price_source = %s,
+          updated_at = now()
+        where id = %s and status = 'received'
+        """,
+        (
+            product_id,
+            product_type,
+            config.get("category"),
+            config.get("carat"),
+            config.get("gold"),
+            config.get("color"),
+            config.get("diamondKind") or "white",
+            config.get("fancyColor"),
+            config.get("stoneCount"),
+            config.get("diamondShape") or "round",
+            pricing.get("weightGrams"),
+            config.get("ringSize"),
+            config.get("engravingBand"),
+            config.get("engravingGirdle"),
+            bool(config.get("includeChain")),
+            config.get("chainGold"),
+            config.get("chainColor"),
+            chain_len,
+            pricing.get("diamondPrice"),
+            pricing.get("taijinPrice"),
+            pricing.get("laborPrice"),
+            None,
+            pricing.get("total"),
+            pricing.get("goldRatePerGram"),
+            pricing.get("priceSource") or "client",
+            order_id,
+        ),
+    )
+
+
+@router.get("/order")
+async def get_my_order(request: Request) -> dict:
+    user_id = _user_id(request)
+    order_number = (request.query_params.get("orderNumber") or "").strip()
+    order_id = (request.query_params.get("id") or "").strip()
+    if not order_number and not order_id:
+        return _err(400, "missing orderNumber or id")
+
+    with get_connection() as conn, conn.cursor() as cur:
+        order = _fetch_editable_order(cur, user_id, order_id or None, order_number or None)
+        if not order:
+            return _err(404, "not found")
+        attach_order_display(cur, [order])
+    return {"order": order}
+
+
+@router.put("/order")
+async def update_my_order(request: Request) -> dict:
+    user_id = _user_id(request)
+    body = await request.json()
+    if not isinstance(body, dict):
+        return _err(400, "invalid body")
+
+    order_id = str(body.get("orderId") or body.get("id") or "").strip()
+    order_number = str(body.get("orderNumber") or "").strip()
+    if not order_id and not order_number:
+        return _err(400, "missing order id")
+
+    config = {k: v for k, v in body.items() if k not in ("orderId", "id", "orderNumber")}
+    err = _validate_config(config)
+    if err:
+        return _err(400, err)
+
+    with get_transaction() as conn, conn.cursor() as cur:
+        order = _fetch_editable_order(cur, user_id, order_id or None, order_number or None)
+        if not order:
+            return _err(404, "not found")
+        if order.get("status") != "received":
+            return _err(400, "僅「已收到申請」狀態的訂單可修改")
+
+        pricing = compute_order_pricing(cur, config)
+        if not pricing.get("ready"):
+            return _err(400, "無法計算價格，請重新整理後再試")
+        config["clientPricing"] = pricing
+
+        _update_order_row(cur, str(order["id"]), config)
+        if cur.rowcount == 0:
+            return _err(400, "無法更新此訂單")
+
+    return {"ok": True, "orderNumber": order["order_number"]}
 
 
 @router.get("/cart")
@@ -239,11 +376,11 @@ async def cart_item(request: Request) -> dict:
         "diamondPrice": pricing.get("diamondPrice"),
         "taijinPrice": pricing.get("taijinPrice"),
         "laborPrice": pricing.get("laborPrice"),
+        "metalworkPrice": pricing.get("metalworkPrice"),
         "chainPrice": pricing.get("chainPrice"),
-        "taxAmount": pricing.get("taxAmount"),
         "total": pricing.get("total") or item.get("total_price"),
     }
-    return {"item": item, "breakdown": breakdown, "taxRate": 0.05}
+    return {"item": item, "breakdown": breakdown}
 
 
 @router.post("/cart-checkout")

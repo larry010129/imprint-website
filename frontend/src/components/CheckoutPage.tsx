@@ -66,6 +66,15 @@ function parseItemIds(): string[] {
   return single ? [single] : [];
 }
 
+function buildSuccessUrl(orderNumbers?: string[]): string {
+  const params = new URLSearchParams();
+  const list = (orderNumbers || []).map((s) => s.trim()).filter(Boolean);
+  if (list.length === 1) params.set("order", list[0]!);
+  else if (list.length > 1) params.set("orders", list.join(","));
+  const qs = params.toString();
+  return "/success.html" + (qs ? "?" + qs : "");
+}
+
 export default function CheckoutPage() {
   const itemIds = useMemo(parseItemIds, []);
 
@@ -159,8 +168,7 @@ export default function CheckoutPage() {
       return;
     }
     if (data?.ok) {
-      const orderNo = data.orderNumbers?.[0];
-      window.location.href = orderNo ? "/success.html?order=" + encodeURIComponent(orderNo) : "/success.html";
+      window.location.href = buildSuccessUrl(data.orderNumbers);
       return;
     }
     setSubmitting(false);

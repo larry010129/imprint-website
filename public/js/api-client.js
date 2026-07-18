@@ -23,7 +23,16 @@
     })
       .then(function (res) {
         return res.json().catch(function () { return {}; }).then(function (data) {
-          if (!res.ok && !data.error) data.error = 'HTTP ' + res.status;
+          if (!res.ok && !data.error) {
+            if (typeof data.detail === 'string') data.error = data.detail;
+            else if (Array.isArray(data.detail)) {
+              data.error = data.detail.map(function (d) {
+                return (d && d.msg) ? d.msg : String(d);
+              }).join('；');
+            }
+            else data.error = 'HTTP ' + res.status;
+          }
+          data._httpStatus = res.status;
           return data;
         });
       })
@@ -32,7 +41,16 @@
       });
   }
 
+  function apiErrorMessage(data) {
+    if (!data) return '未知錯誤';
+    if (typeof data.error === 'string') return data.error;
+    if (data.error && data.error.message) return data.error.message;
+    if (typeof data.detail === 'string') return data.detail;
+    return '未知錯誤';
+  }
+
   global.imprintAPI = {
+    apiErrorMessage: apiErrorMessage,
     // ---- auth ----
     signup: function (fields) { return request('/api/auth/signup', { method: 'POST', body: fields }); },
     login: function (email, password) { return request('/api/auth/login', { method: 'POST', body: { email: email, password: password } }); },
@@ -43,6 +61,10 @@
 
     // ---- customer ----
     getMyOrders: function () { return request('/api/orders'); },
+    getMyOrder: function (orderNumber) {
+      return request('/api/order?orderNumber=' + encodeURIComponent(orderNumber));
+    },
+    updateMyOrder: function (fields) { return request('/api/order', { method: 'PUT', body: fields }); },
     trackOrder: function (orderNumber, phone) { return request('/api/track-order', { method: 'POST', body: { orderNumber: orderNumber, phone: phone } }); },
     submitContact: function (fields) { return request('/api/contact', { method: 'POST', body: fields }); },
     submitQuoteRequest: function (fields) { return request('/api/quote-request', { method: 'POST', body: fields }); },

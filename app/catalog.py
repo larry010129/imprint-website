@@ -15,7 +15,7 @@ def _sort_golds(golds: set[str]) -> list[str]:
     return sorted(golds, key=lambda g: order.get(g, 99))
 
 
-from app.image_urls import resolve_product_image_url
+from app.image_urls import is_uuid, resolve_product_image_url
 
 
 def style_key_from_images(images: list[dict]) -> str | None:
@@ -25,6 +25,41 @@ def style_key_from_images(images: list[dict]) -> str | None:
         match = _STYLE_FROM_PATH.search(path)
         if match:
             return f"{match.group(1).lower()}-{match.group(2).upper()}"
+    return None
+
+
+_LEGACY_STYLE_RE = re.compile(r"^(pendant|ring|earring|bracelet|chain)-([A-C])$", re.I)
+
+
+def resolve_product_id(
+    cur,
+    *,
+    category: str,
+    type_ref: str,
+    require_published: bool = True,
+) -> str | None:
+    """Map API UUID or bundled style key (ring-A) to products.id."""
+    if not type_ref or not category:
+        return None
+    ref = str(type_ref).strip()
+    if is_uuid(ref):
+        return ref
+
+    match = _LEGACY_STYLE_RE.match(ref)
+    if match:
+        cat = match.group(1).lower()
+        letter = match.group(2).upper()
+        if cat != category.strip().lower():
+            return None
+        sort_order = ord(letter) - ord("A")
+        sql = "select id from products where category = %s and sort_order = %s"
+        params: list = [cat, sort_order]
+        if require_published:
+            sql += " and is_published = true"
+        cur.execute(sql, params)
+        row = cur.fetchone()
+        return str(row["id"]) if row else None
+
     return None
 
 

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.image_urls import is_uuid
+from app.catalog import resolve_product_id
 
 DIAMOND_PRICE = {
     "0.1": 24000, "0.2": 48000, "0.3": 79000, "0.5": 98000,
@@ -150,32 +150,56 @@ def get_metal_prices(cur) -> dict[str, float]:
     }
 
 
+def _carat_lookup_keys(carat: str) -> list[str]:
+    if carat in ("3fen", "4fen"):
+        return [carat]
+    keys: list[str] = []
+    for key in (carat, str(carat).strip()):
+        if key and key not in keys:
+            keys.append(key)
+    try:
+        n = float(carat)
+        for alt in (f"{n:.1f}", f"{int(n)}.0", str(int(n)) if n == int(n) else None):
+            if alt and alt not in keys:
+                keys.append(alt)
+    except (TypeError, ValueError):
+        pass
+    return keys
+
+
 def get_product_variant(
     cur, *, category: str, product_id: str, gold: str, carat: str, require_published: bool = True
 ) -> dict | None:
-    if not is_uuid(product_id):
+    resolved = resolve_product_id(
+        cur, category=category, type_ref=product_id, require_published=require_published,
+    )
+    if not resolved:
         return None
-    if require_published:
-        cur.execute(
-            """
-            select pv.* from product_variants pv
-            join products p on p.id = pv.product_id
-            where p.id = %s and p.category = %s
-              and pv.gold = %s and pv.carat = %s and p.is_published = true
-            """,
-            (product_id, category, gold, carat),
-        )
-    else:
-        cur.execute(
-            """
-            select pv.* from product_variants pv
-            join products p on p.id = pv.product_id
-            where p.id = %s and p.category = %s
-              and pv.gold = %s and pv.carat = %s
-            """,
-            (product_id, category, gold, carat),
-        )
-    return cur.fetchone()
+    for carat_key in _carat_lookup_keys(carat):
+        if require_published:
+            cur.execute(
+                """
+                select pv.* from product_variants pv
+                join products p on p.id = pv.product_id
+                where p.id = %s and p.category = %s
+                  and pv.gold = %s and pv.carat = %s and p.is_published = true
+                """,
+                (resolved, category, gold, carat_key),
+            )
+        else:
+            cur.execute(
+                """
+                select pv.* from product_variants pv
+                join products p on p.id = pv.product_id
+                where p.id = %s and p.category = %s
+                  and pv.gold = %s and pv.carat = %s
+                """,
+                (resolved, category, gold, carat_key),
+            )
+        row = cur.fetchone()
+        if row:
+            return row
+    return None
 
 
 def _lookup_weight(
@@ -270,7 +294,7 @@ def compute_order_pricing(cur, data: dict[str, Any], *, require_published: bool 
     taijin_pre_tax, rate_used = _metal_pre_tax(gold_prices, gold, weight_grams, category)
     taijin_display = round(taijin_pre_tax * (1 + TAX_RATE))
     labor_display = round(labor_pre_tax * (1 + TAX_RATE))
-    tax_amount = (taijin_display - taijin_pre_tax) + (labor_display - labor_pre_tax)
+    # Diamond list price is tax-inclusive; metal/labor/chain quotes include 5% at display time.
 
     diamond_price = None
     if category != "chain":
@@ -292,7 +316,6 @@ def compute_order_pricing(cur, data: dict[str, Any], *, require_published: bool 
         if not addon:
             return {"ready": False, "error": "invalid chain option"}
         chain_display = round(addon["chainPreTax"] * (1 + TAX_RATE))
-        tax_amount += chain_display - addon["chainPreTax"]
         total += chain_display
 
     return {
@@ -300,8 +323,8 @@ def compute_order_pricing(cur, data: dict[str, Any], *, require_published: bool 
         "diamondPrice": diamond_price,
         "taijinPrice": taijin_display,
         "laborPrice": labor_display,
+        "metalworkPrice": taijin_display + labor_display,
         "chainPrice": chain_display,
-        "taxAmount": round(tax_amount),
         "total": round(total),
         "weightGrams": weight_grams,
         "goldRatePerGram": rate_used,

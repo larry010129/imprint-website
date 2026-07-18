@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 from app.auth import get_user_id, is_admin
 from app.bot_gold import fetch_bot_gold_quote
 from app.catalog import build_catalog_response, fetch_catalog_rows, load_product_children
+from app.orders import attach_order_display
 from app.database import get_connection
 from app.schemas.gold_quote import GoldQuote
 
@@ -104,8 +105,7 @@ async def my_orders(request: Request) -> dict:
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute(
             """
-            select order_number, product_type, series, category, status, status_note,
-                   total_price, created_at, updated_at
+            select *
             from orders
             where user_id = %s
             order by created_at desc
@@ -113,11 +113,7 @@ async def my_orders(request: Request) -> dict:
             (user_id,),
         )
         orders = cur.fetchall()
-    for row in orders:
-        row["summary"] = row.get("product_type") or row.get("category") or "訂製品項"
-        created = row.get("created_at")
-        if created is not None:
-            row["created_at_display"] = created.strftime("%Y/%m/%d")
+        attach_order_display(cur, orders)
     return {"orders": orders}
 
 

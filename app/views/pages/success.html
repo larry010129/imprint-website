@@ -1,16 +1,32 @@
 ﻿{% extends "layouts/base.html" %}
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/member-app.css?v=1">
+<link rel="stylesheet" href="/static/css/member-app.css?v=5">
+<link rel="stylesheet" href="/static/css/checkout-page.css?v=2">
 {% endblock %}
 {% block content %}
-<!-- @component partials/view-success.html -->
-<section class="page-section member-app" id="mvc-success" aria-label="訂單送出">
-  <div class="container">
+<section class="page-section member-app checkout-page" id="mvc-success" aria-label="訂單送出">
+  <div class="container checkout-container">
+    <nav class="checkout-stepper" aria-label="結帳步驟">
+      <div class="checkout-stepper-step is-done">
+        <span class="checkout-stepper-bar" aria-hidden="true"></span>
+        <span class="checkout-stepper-label">購物車</span>
+      </div>
+      <div class="checkout-stepper-step is-done">
+        <span class="checkout-stepper-bar" aria-hidden="true"></span>
+        <span class="checkout-stepper-label">確認訂單</span>
+      </div>
+      <div class="checkout-stepper-step is-active">
+        <span class="checkout-stepper-bar" aria-hidden="true"></span>
+        <span class="checkout-stepper-label">完成</span>
+      </div>
+    </nav>
+
     <div class="price-reference member-panel">
       <div class="member-success">
         <div class="member-success__icon" aria-hidden="true">✓</div>
-        <h1 class="price-reference-title">訂單已送出</h1>
-        <p class="price-reference-lead">您的訂單已經成功記錄。</p>
+        <h1 class="price-reference-title" id="success-title">訂單已送出</h1>
+        <p class="price-reference-lead" id="success-lead">您的訂單已經成功記錄，我們會盡快與您聯繫確認細節。</p>
+        <p class="member-success__order-no" id="success-order-no" hidden></p>
         <div class="member-success__actions price-reference-foot">
           <a href="/shop/calculator/" class="btn btn-line">新增另一筆</a>
           <a href="/history.html" class="btn btn-dark">查看訂購紀錄</a>
@@ -19,4 +35,7 @@
     </div>
   </div>
 </section>
+{% endblock %}
+{% block extra_scripts %}
+<script src="/static/js/order-success.js?v=1"></script>
 {% endblock %}

@@ -277,7 +277,7 @@ export default function PriceTable() {
             <TableFooter>
               <TableRow>
                 <TableCell colSpan={6} className={cn(cellClass, "text-sm text-muted-foreground")}>
-                  戒台費用為未稅金額，顯示時另加 5% 稅金
+                  金工價格已含 5% 營業稅；鑽石牌價已含稅
                 </TableCell>
               </TableRow>
             </TableFooter>

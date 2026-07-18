@@ -148,18 +148,36 @@
     };
   }
 
+  function apiError(data) {
+    return (api && api.apiErrorMessage) ? api.apiErrorMessage(data) : (data && data.error) || '未知錯誤';
+  }
+
+  function whenAdminTablesReady(fn, tries) {
+    tries = tries == null ? 40 : tries;
+    if (window.AdminTables) {
+      fn();
+      return;
+    }
+    if (tries <= 0) {
+      var container = document.getElementById('apProductsTableRoot');
+      if (container) {
+        container.innerHTML = '<p class="ap-empty">載入失敗：表格元件未載入，請重新整理頁面</p>';
+      }
+      return;
+    }
+    setTimeout(function () { whenAdminTablesReady(fn, tries - 1); }, 50);
+  }
+
   function renderActiveCategoryTable() {
     var container = document.getElementById('apProductsTableRoot');
     if (!container) return;
-    if (!window.AdminTables) {
-      container.innerHTML = '<p class="ap-empty">載入失敗：表格元件未載入</p>';
-      return;
-    }
-    var cat = state.activeTab.replace('cat-', '');
-    window.AdminTables.renderProductsTable(container, {
-      rows: productsInCategory(cat).map(toProductTableRow),
-      emptyLabel: '此品項尚無商品。',
-      onRendered: bindProductRowEvents,
+    whenAdminTablesReady(function () {
+      var cat = state.activeTab.replace('cat-', '');
+      window.AdminTables.renderProductsTable(container, {
+        rows: productsInCategory(cat).map(toProductTableRow),
+        emptyLabel: '此品項尚無商品。',
+        onRendered: bindProductRowEvents,
+      });
     });
   }
 
@@ -249,7 +267,7 @@
           if (!ids.length) return;
           api.admin.reorderProducts(ids).then(function (res) {
             if (res.error) {
-              alert('排序失敗：' + res.error);
+              alert('排序失敗：' + apiError(res));
               load(true, true);
             }
           });
@@ -267,7 +285,7 @@
   function runAction(id, action) {
     return api.admin.productAction(id, action).then(function (res) {
       if (res.error) {
-        alert(res.error.message || res.error);
+        alert(apiError(res));
         return;
       }
       load(true, true);
@@ -495,6 +513,10 @@
         xhr.onload = function () {
           var res = {};
           try { res = JSON.parse(xhr.responseText); } catch (e) { res = { error: 'parse' }; }
+          if (!res.error && xhr.status >= 400) {
+            if (typeof res.detail === 'string') res.error = res.detail;
+            else res.error = (api && api.apiErrorMessage) ? api.apiErrorMessage(res) : ('HTTP ' + xhr.status);
+          }
           progressByIndex[index] = 100;
           updateProgress();
           resolve(res);
@@ -869,10 +891,10 @@
       if (btn) { btn.disabled = false; updateSaveButton(form, !!product); }
       if (res.error) {
         if (errEl) {
-          errEl.textContent = typeof res.error === 'string' ? res.error : (res.error.message || '儲存失敗');
+          errEl.textContent = apiError(res);
           errEl.hidden = false;
         } else {
-          alert(res.error);
+          alert(apiError(res));
         }
         return;
       }
@@ -892,7 +914,7 @@
     api.admin.getProducts().then(function (res) {
       if (res.error) {
         unmountProductsTable();
-        root.innerHTML = '<p class="note warn">載入失敗：' + esc(res.error) + '</p>';
+        root.innerHTML = '<p class="note warn">載入失敗：' + esc(apiError(res)) + '</p>';
         return;
       }
       state.products = res.products || [];

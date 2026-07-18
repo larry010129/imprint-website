@@ -29,11 +29,7 @@ from app.auth import (
 from app.catalog import build_catalog_response, fetch_catalog_rows, load_product_children
 from config.settings import settings
 from app.database import get_connection, get_transaction
-from app.image_urls import (
-    order_product_id,
-    order_style_image_url,
-    resolve_product_image_url,
-)
+from app.orders import attach_order_display
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -103,35 +99,7 @@ def _lead_counts(cur) -> tuple[int, int, int, int]:
 
 
 def _attach_order_images(cur, orders: list[dict]) -> None:
-    product_ids = []
-    for order in orders:
-        pid = order_product_id(order)
-        if pid:
-            product_ids.append(pid)
-
-    images_by_product: dict = {}
-    if product_ids:
-        cur.execute(
-            "select * from product_images where product_id = any(%s) order by sort_order",
-            (product_ids,),
-        )
-        for image in cur.fetchall():
-            images_by_product.setdefault(str(image["product_id"]), []).append(image)
-
-    for order in orders:
-        url = ""
-        pid = order_product_id(order)
-        if pid and pid in images_by_product:
-            imgs = images_by_product[pid]
-            color = order.get("color") or "white"
-            match = next((i for i in imgs if i["color"] == color), None)
-            if not match and imgs:
-                match = imgs[0]
-            if match:
-                url = resolve_product_image_url(match["file_path"])
-        if not url:
-            url = order_style_image_url(order.get("category"), order.get("product_type"))
-        order["image_url"] = url
+    attach_order_display(cur, orders)
 
 
 def _dashboard_query_params(
@@ -261,11 +229,8 @@ async def orders_list(request: Request, q: str | None = Query(None)) -> dict:
         else:
             cur.execute("select * from orders order by created_at desc limit 100")
         orders = cur.fetchall()
-        _attach_order_images(cur, orders)
+        attach_order_display(cur, orders)
 
-    for row in orders:
-        if row.get("id") is not None:
-            row["id"] = str(row["id"])
     return {"orders": orders}
 
 

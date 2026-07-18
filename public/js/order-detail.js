@@ -72,6 +72,15 @@
     if (detailBtn) toggleDetail(detailBtn);
   });
 
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const row = e.target.closest('tr.order-row-main');
+    if (!row) return;
+    e.preventDefault();
+    const detailBtn = row.querySelector('.order-detail-btn');
+    if (detailBtn) toggleDetail(detailBtn);
+  });
+
   document.addEventListener('langchange', () => {
     document.querySelectorAll('.order-detail-btn').forEach(btn => {
       const expanded = btn.getAttribute('aria-expanded') === 'true';
