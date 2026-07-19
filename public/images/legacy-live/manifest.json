@@ -1,0 +1,253 @@
+{
+  "source": "https://www.imprint-diamond.com/",
+  "cdnBase": "https://cdn.soeasy.tw/storages/100098",
+  "downloaded": 30,
+  "failed": 0,
+  "assets": {
+    "styles/8043fee85b29bf151aaa4f9e321f6223e54e.jpg": {
+      "cdnUrl": "https://cdn.soeasy.tw/storages/100098/styles/8043fee85b29bf151aaa4f9e321f6223e54e.jpg",
+      "local": "legacy-live/styles/what-is-dna-diamond-bg.jpg",
+      "staticPath": "/static/images/legacy-live/styles/what-is-dna-diamond-bg.jpg",
+      "liveSection": "什麼是DNA鑽石",
+      "dnaPageSection": "intro",
+      "bytes": 194902,
+      "status": "ok"
+    },
+    "styles/58181251452d850c8d7a929b22a2174461ea.jpg": {
+      "cdnUrl": "https://cdn.soeasy.tw/storages/100098/styles/58181251452d850c8d7a929b22a2174461ea.jpg",
+      "local": "legacy-live/styles/eternal-memorial.jpg",
+      "staticPath": "/static/images/legacy-live/styles/eternal-memorial.jpg",
+      "liveSection": "一段思念，如何成為永恆",
+      "dnaPageSection": "process",
+      "bytes": 164771,
+      "status": "ok"
+    },
+    "styles/5208ece088d276c28f8e9737be5ca676e598.jpg": {
+      "cdnUrl": "https://cdn.soeasy.tw/storages/100098/styles/5208ece088d276c28f8e9737be5ca676e598.jpg",
+      "local": "legacy-live/styles/taiwan-local-lab.jpg",
+      "staticPath": "/static/images/legacy-live/styles/taiwan-local-lab.jpg",
+      "liveSection": "無需漂洋過海",
+      "dnaPageSection": "local",
+      "bytes": 64688,
+      "status": "ok"
+    },
+    "styles/4043bb1b5f1b7ed3618a810bfda96eb9d8bf.jpg": {
+      "cdnUrl": "https://cdn.soeasy.tw/storages/100098/styles/4043bb1b5f1b7ed3618a810bfda96eb9d8bf.jpg",
+      "local": "legacy-live/styles/jewelry-making.jpg",
+      "staticPath": "/static/images/legacy-live/styles/jewelry-making.jpg",
+      "liveSection": "製作成飾品",
+      "dnaPageSection": "promise-jewelry",
+      "bytes": 132065,
+      "status": "ok"
+    },
+    "features/533597552e504a3bdc105142d3a8dc1a0974.jpg": {
+      "cdnUrl": "https://cdn.soeasy.tw/storages/100098/features/533597552e504a3bdc105142d3a8dc1a0974.jpg",
+      "local": "legacy-live/features/first-love.jpg",
+      "staticPath": "/static/images/legacy-live/features/first-love.jpg",
+      "liveSection": "First Love｜滿月紀念",
+      "bytes": 80200,
+      "status": "ok"
+    },
+    "features/758711f910377d881d497eb7d5f9f4a1c15a.jpg": {
+      "cdnUrl": "https://cdn.soeasy.tw/storages/100098/features/758711f910377d881d497eb7d5f9f4a1c15a.jpg",
+      "local": "legacy-live/features/pet-companion.jpg",
+      "staticPath": "/static/images/legacy-live/features/pet-companion.jpg",
+      "liveSection": "Companion｜毛孩陪伴",
+      "bytes": 85597,
+      "status": "ok"
+    },
+    "features/44746e03559d44a19702d0982876b1731aa9.jpg": {
+      "cdnUrl": "https://cdn.soeasy.tw/storages/100098/features/44746e03559d44a19702d0982876b1731aa9.jpg",
+      "local": "legacy-live/features/love-couple.jpg",
+      "staticPath": "/static/images/legacy-live/features/love-couple.jpg",
+      "liveSection": "Love｜愛情紀念",
+      "bytes": 75723,
+      "status": "ok"
+    },
+    "features/742514b811a75a04ffd84865eb4430ad7e71.jpg": {
+      "cdnUrl": "https://cdn.soeasy.tw/storages/100098/features/742514b811a75a04ffd84865eb4430ad7e71.jpg",
+      "local": "legacy-live/features/family.jpg",
+      "staticPath": "/static/images/legacy-live/features/family.jpg",
+      "liveSection": "Family｜家族傳承",
+      "bytes": 99400,
+      "status": "ok"
+    },
+    "features/2917d0e5a7fa4de1b83d46f181cb964e7c95.jpg": {
+      "cdnUrl": "https://cdn.soeasy.tw/storages/100098/features/2917d0e5a7fa4de1b83d46f181cb964e7c95.jpg",
+      "local": "legacy-live/features/heirloom-life.jpg",
+      "staticPath": "/static/images/legacy-live/features/heirloom-life.jpg",
+      "liveSection": "Heirloom｜生命鑽石",
+      "dnaPageSection": "process-step-6",
+      "bytes": 136725,
+      "status": "ok"
+    },
+    "features/6450d833777790eaad794b63fcda6bf94cec.jpg": {
+      "cdnUrl": "https://cdn.soeasy.tw/storages/100098/features/6450d833777790eaad794b63fcda6bf94cec.jpg",
+      "local": "legacy-live/features/signature-custom.jpg",
+      "staticPath": "/static/images/legacy-live/features/signature-custom.jpg",
+      "liveSection": "Signature｜專屬訂製",
+      "bytes": 75084,
+      "status": "ok"
+    },
+    "sliders/16515db4292568cbc53c432de0a70b4970d7.jpg": {
+      "cdnUrl": "https://cdn.soeasy.tw/storages/100098/sliders/16515db4292568cbc53c432de0a70b4970d7.jpg",
+      "local": "legacy-live/sliders/slider-01.jpg",
+      "staticPath": "/static/images/legacy-live/sliders/slider-01.jpg",
+      "liveSection": "carousel",
+      "bytes": 152398,
+      "status": "ok"
+    },
+    "sliders/57128463f4a4628cf00931f0bf0de30fe092.jpg": {
+      "cdnUrl": "https://cdn.soeasy.tw/storages/100098/sliders/57128463f4a4628cf00931f0bf0de30fe092.jpg",
+      "local": "legacy-live/sliders/slider-02.jpg",
+      "staticPath": "/static/images/legacy-live/sliders/slider-02.jpg",
+      "liveSection": "carousel",
+      "bytes": 118198,
+      "status": "ok"
+    },
+    "sliders/857511f910377d881d497eb7d5f9f4a1c15a.jpg": {
+      "cdnUrl": "https://cdn.soeasy.tw/storages/100098/sliders/857511f910377d881d497eb7d5f9f4a1c15a.jpg",
+      "local": "legacy-live/sliders/slider-03.jpg",
+      "staticPath": "/static/images/legacy-live/sliders/slider-03.jpg",
+      "liveSection": "carousel (OG)",
+      "bytes": 148351,
+      "status": "ok"
+    },
+    "sliders/8272e74372bd70ca4e6c9c08b41849820b18.jpg": {
+      "cdnUrl": "https://cdn.soeasy.tw/storages/100098/sliders/8272e74372bd70ca4e6c9c08b41849820b18.jpg",
+      "local": "legacy-live/sliders/slider-04.jpg",
+      "staticPath": "/static/images/legacy-live/sliders/slider-04.jpg",
+      "liveSection": "carousel",
+      "bytes": 141405,
+      "status": "ok"
+    },
+    "sliders/536421234b2cd7d6c429f7c76e1bea613be4.jpg": {
+      "cdnUrl": "https://cdn.soeasy.tw/storages/100098/sliders/536421234b2cd7d6c429f7c76e1bea613be4.jpg",
+      "local": "legacy-live/sliders/slider-05.jpg",
+      "staticPath": "/static/images/legacy-live/sliders/slider-05.jpg",
+      "liveSection": "carousel",
+      "bytes": 174742,
+      "status": "ok"
+    },
+    "sliders/1071d0e5a7fa4de1b83d46f181cb964e7c95.jpg": {
+      "cdnUrl": "https://cdn.soeasy.tw/storages/100098/sliders/1071d0e5a7fa4de1b83d46f181cb964e7c95.jpg",
+      "local": "legacy-live/sliders/slider-06.jpg",
+      "staticPath": "/static/images/legacy-live/sliders/slider-06.jpg",
+      "liveSection": "carousel",
+      "bytes": 172795,
+      "status": "ok"
+    },
+    "sliders/458626eaf005419c8d2c3501230d38aca3f1.jpg": {
+      "cdnUrl": "https://cdn.soeasy.tw/storages/100098/sliders/458626eaf005419c8d2c3501230d38aca3f1.jpg",
+      "local": "legacy-live/sliders/slider-07.jpg",
+      "staticPath": "/static/images/legacy-live/sliders/slider-07.jpg",
+      "liveSection": "carousel",
+      "bytes": 172841,
+      "status": "ok"
+    },
+    "sliders/5681d13aed5c6c5f42dbb7fb63e3f6f4b77c.jpg": {
+      "cdnUrl": "https://cdn.soeasy.tw/storages/100098/sliders/5681d13aed5c6c5f42dbb7fb63e3f6f4b77c.jpg",
+      "local": "legacy-live/sliders/slider-08.jpg",
+      "staticPath": "/static/images/legacy-live/sliders/slider-08.jpg",
+      "liveSection": "carousel",
+      "bytes": 137569,
+      "status": "ok"
+    },
+    "sliders/4191a0a52f8f24e09bd04261efdca7224dc9.jpg": {
+      "cdnUrl": "https://cdn.soeasy.tw/storages/100098/sliders/4191a0a52f8f24e09bd04261efdca7224dc9.jpg",
+      "local": "legacy-live/sliders/slider-09.jpg",
+      "staticPath": "/static/images/legacy-live/sliders/slider-09.jpg",
+      "liveSection": "carousel",
+      "bytes": 182166,
+      "status": "ok"
+    },
+    "sliders/3261980281fff6a37d355f07267a5e9b41c0.jpg": {
+      "cdnUrl": "https://cdn.soeasy.tw/storages/100098/sliders/3261980281fff6a37d355f07267a5e9b41c0.jpg",
+      "local": "legacy-live/sliders/slider-10.jpg",
+      "staticPath": "/static/images/legacy-live/sliders/slider-10.jpg",
+      "liveSection": "carousel",
+      "bytes": 187655,
+      "status": "ok"
+    },
+    "sliders/7395181009704214fd77af3e77c95d7eb37c.jpg": {
+      "cdnUrl": "https://cdn.soeasy.tw/storages/100098/sliders/7395181009704214fd77af3e77c95d7eb37c.jpg",
+      "local": "legacy-live/sliders/slider-11.jpg",
+      "staticPath": "/static/images/legacy-live/sliders/slider-11.jpg",
+      "liveSection": "carousel",
+      "bytes": 219949,
+      "status": "ok"
+    },
+    "sliders/3911bfd0f013e24f4633d94a6eaca0f31006.jpg": {
+      "cdnUrl": "https://cdn.soeasy.tw/storages/100098/sliders/3911bfd0f013e24f4633d94a6eaca0f31006.jpg",
+      "local": "legacy-live/sliders/slider-12.jpg",
+      "staticPath": "/static/images/legacy-live/sliders/slider-12.jpg",
+      "liveSection": "carousel",
+      "bytes": 205682,
+      "status": "ok"
+    },
+    "testimons/7582fe5df232cafa4c4e0f1a0294418e5660.jpg": {
+      "cdnUrl": "https://cdn.soeasy.tw/storages/100098/testimons/7582fe5df232cafa4c4e0f1a0294418e5660.jpg",
+      "local": "legacy-live/testimons/testimonial-01.jpg",
+      "staticPath": "/static/images/legacy-live/testimons/testimonial-01.jpg",
+      "liveSection": "客戶見證",
+      "bytes": 21072,
+      "status": "ok"
+    },
+    "testimons/38698cda81fc7ad906927144235dda5fdf15.jpg": {
+      "cdnUrl": "https://cdn.soeasy.tw/storages/100098/testimons/38698cda81fc7ad906927144235dda5fdf15.jpg",
+      "local": "legacy-live/testimons/testimonial-02.jpg",
+      "staticPath": "/static/images/legacy-live/testimons/testimonial-02.jpg",
+      "liveSection": "客戶見證",
+      "bytes": 21335,
+      "status": "ok"
+    },
+    "testimons/391818e2999891374a475d0687ca9f989d83.jpg": {
+      "cdnUrl": "https://cdn.soeasy.tw/storages/100098/testimons/391818e2999891374a475d0687ca9f989d83.jpg",
+      "local": "legacy-live/testimons/testimonial-03.jpg",
+      "staticPath": "/static/images/legacy-live/testimons/testimonial-03.jpg",
+      "liveSection": "客戶見證",
+      "bytes": 16802,
+      "status": "ok"
+    },
+    "testimons/4681f3ccdd27d2000e3f9255a7e3e2c48800.jpg": {
+      "cdnUrl": "https://cdn.soeasy.tw/storages/100098/testimons/4681f3ccdd27d2000e3f9255a7e3e2c48800.jpg",
+      "local": "legacy-live/testimons/testimonial-04.jpg",
+      "staticPath": "/static/images/legacy-live/testimons/testimonial-04.jpg",
+      "liveSection": "客戶見證",
+      "bytes": 18631,
+      "status": "ok"
+    },
+    "testimons/4822d0096ec6c83575373e3a21d129ff8fef.jpg": {
+      "cdnUrl": "https://cdn.soeasy.tw/storages/100098/testimons/4822d0096ec6c83575373e3a21d129ff8fef.jpg",
+      "local": "legacy-live/testimons/testimonial-05.jpg",
+      "staticPath": "/static/images/legacy-live/testimons/testimonial-05.jpg",
+      "liveSection": "客戶見證",
+      "bytes": 22347,
+      "status": "ok"
+    },
+    "testimons/5535156005c5baf40ff51a327f1c34f2975b.jpg": {
+      "cdnUrl": "https://cdn.soeasy.tw/storages/100098/testimons/5535156005c5baf40ff51a327f1c34f2975b.jpg",
+      "local": "legacy-live/testimons/testimonial-06.jpg",
+      "staticPath": "/static/images/legacy-live/testimons/testimonial-06.jpg",
+      "liveSection": "客戶見證",
+      "bytes": 27041,
+      "status": "ok"
+    },
+    "testimons/1815032b2cc936860b03048302d991c3498f.jpg": {
+      "cdnUrl": "https://cdn.soeasy.tw/storages/100098/testimons/1815032b2cc936860b03048302d991c3498f.jpg",
+      "local": "legacy-live/testimons/testimonial-07.jpg",
+      "staticPath": "/static/images/legacy-live/testimons/testimonial-07.jpg",
+      "liveSection": "客戶見證",
+      "bytes": 35516,
+      "status": "ok"
+    },
+    "testimons/7940799bad5a3b514f096e69bbc4a7896cd9.jpg": {
+      "cdnUrl": "https://cdn.soeasy.tw/storages/100098/testimons/7940799bad5a3b514f096e69bbc4a7896cd9.jpg",
+      "local": "legacy-live/testimons/testimonial-08.jpg",
+      "staticPath": "/static/images/legacy-live/testimons/testimonial-08.jpg",
+      "liveSection": "客戶見證",
+      "bytes": 18129,
+      "status": "ok"
+    }
+  }
+}

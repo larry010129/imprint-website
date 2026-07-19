@@ -10,7 +10,7 @@ import MobileAnimatedNav, {
 
 } from "@/components/MobileAnimatedNav"
 
-import { MovingBorderButton } from "@/components/ui/moving-border"
+import { GradientButton } from "@/components/ui/gradient-button"
 
 import { NAV_ITEMS, resolveHref } from "@/lib/nav-items"
 
@@ -270,23 +270,14 @@ export default function SiteNav() {
 
         <div className="nav-cta nav-cta-col">
 
-          <MovingBorderButton
-
-            as="a"
-
+          <GradientButton
             href={resolveHref("/shop/calculator/", siteRoot)}
-
-            borderRadius="0.45rem"
-
-            containerClassName="nav-calc-moving shrink-0"
-
-            className="nav-calc-moving-inner whitespace-nowrap"
-
+            size="nav"
+            variant="animated"
+            className="shrink-0"
           >
-
-            開始訂製
-
-          </MovingBorderButton>
+            價格試算
+          </GradientButton>
 
           <a
 

@@ -2,7 +2,7 @@
 @media (max-width: 1100px){
   .site-nav-desktop .nav-item > a,
   .site-nav-mobile .nav-item > a,
-  .nav-inner > nav:not(.site-nav-desktop) .nav-item > a{ padding:12px 10px; font-size:14px; }
+  .nav-inner > nav:not(.site-nav-desktop) .nav-item > a{ padding:12px 10px; font-size:15px; }
 }
 
 /* ---------- 手機版 ---------- */
@@ -26,7 +26,7 @@
   .mobile-menu-toggle,
   .nav-burger.mobile-menu-toggle{ display:flex; align-items:center; justify-content:center; }
   /* Drawer open: hide header CTAs so they don't stack over the menu */
-  .nav.is-mobile-menu-open .nav-cta .nav-calc-moving,
+  .nav.is-mobile-menu-open .nav-cta .gradient-button,
   .nav.is-mobile-menu-open .nav-cta .btn-dark{
     visibility:hidden;
     pointer-events:none;

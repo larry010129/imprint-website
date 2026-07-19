@@ -26,6 +26,10 @@
 
 .nav-inner > nav{ flex-shrink:0; }
 
+@media (min-width: 861px){
+  .nav-inner > nav.site-nav-desktop.nav-menu-col{ flex-shrink:1; min-width:0; }
+}
+
 
 
 /* Desktop: isolated columns — logo | menu | CTAs never share the same space */
@@ -40,9 +44,11 @@
 
     grid-template-areas:"nav-brand nav-menu nav-cta";
 
-    grid-template-columns:minmax(148px, 17%) minmax(0, 1fr) auto;
+    /* Logo + CTAs keep their width; menu fills only the gap between them */
 
-    column-gap:28px;
+    grid-template-columns:auto minmax(0, 1fr) auto;
+
+    column-gap:16px;
 
     align-items:center;
 
@@ -52,11 +58,11 @@
 
     grid-area:nav-brand;
 
-    z-index:3;
+    justify-self:start;
 
     min-width:0;
 
-    max-width:100%;
+    max-width:min(240px, 38vw);
 
   }
 
@@ -64,19 +70,19 @@
 
     grid-area:nav-menu;
 
-    z-index:1;
+    justify-self:stretch;
+
+    align-self:center;
 
     min-width:0;
 
     width:100%;
 
-    max-width:100%;
-
     display:flex;
 
     justify-content:center;
 
-    justify-self:stretch;
+    align-items:center;
 
   }
 
@@ -84,11 +90,11 @@
 
     grid-area:nav-cta;
 
-    z-index:3;
-
     justify-self:end;
 
     flex-shrink:0;
+
+    min-width:0;
 
   }
 
@@ -116,9 +122,21 @@
 
 
 
+  .site-nav-desktop.nav-menu-col{
+
+    width:100%;
+
+    min-width:0;
+
+    max-width:100%;
+
+  }
+
   .site-nav-desktop .nav-menu{
 
     justify-content:center;
+
+    align-items:center;
 
     gap:0;
 
@@ -128,12 +146,16 @@
 
     min-width:0;
 
+    margin:0;
+
+    padding:0;
+
   }
 
   .site-nav-desktop .nav-item > a{
     display:block;
-    padding:10px 7px;
-    font-size:13px;
+    padding:10px 9px;
+    font-size:15px;
     letter-spacing:.05em;
     white-space:nowrap;
     transition:color .25s;
@@ -173,7 +195,7 @@
 
 .nav-inner > nav:not(.site-nav-desktop) .nav-item > a{
 
-  display:block; padding:12px 14px; font-size:14.5px; letter-spacing:.12em;
+  display:block; padding:12px 14px; font-size:16px; letter-spacing:.12em;
 
   white-space:nowrap;
 
@@ -289,17 +311,15 @@
 
   .site-nav-desktop .nav-item > a{
 
-    padding:10px 5px;
+    padding:10px 6px;
 
-    font-size:12.5px;
+    font-size:14px;
 
   }
 
   .nav-inner.container{
 
-    grid-template-columns:minmax(132px, 15%) minmax(0, 1fr) auto;
-
-    column-gap:16px;
+    column-gap:14px;
 
   }
 

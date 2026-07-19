@@ -4,11 +4,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build && vite build --config vite.footer.config.ts && vite build --config vite.nav.config.ts && vite build --config vite.stories.config.ts && vite build --config vite.price.config.ts && vite build --config vite.checkout.config.ts && vite build --config vite.admin-tables.config.ts",
+    "build": "tsc -b && vite build && vite build --config vite.footer.config.ts && vite build --config vite.nav.config.ts && vite build --config vite.stories.config.ts && vite build --config vite.price.config.ts && vite build --config vite.checkout.config.ts && vite build --config vite.dna-diamond.config.ts && vite build --config vite.admin-tables.config.ts",
     "preview": "vite preview"
   },
   "dependencies": {
     "@ark-ui/react": "^5.37.2",
+    "@heroui/react": "^3.2.2",
+    "@heroui/styles": "^3.2.2",
     "@radix-ui/react-accordion": "^1.2.16",
     "@radix-ui/react-avatar": "^1.2.2",
     "@radix-ui/react-dialog": "^1.1.19",

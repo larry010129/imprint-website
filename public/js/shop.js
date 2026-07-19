@@ -2261,6 +2261,13 @@ async function handleCartUpdate() {
     if (res.ok && data.item) {
       toast(tr('cart_updated'), 'success');
       if (typeof window.updateCartBadge === 'function') window.updateCartBadge(data.count);
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('returnTo') === 'checkout') {
+        const items = params.get('items') || window.cartEditData.id;
+        const base = window.shopConfig?.checkoutUrl || '/checkout.html';
+        window.location.href = base + '?items=' + encodeURIComponent(items);
+        return;
+      }
       window.location.href = window.shopConfig?.cartUrl || '/cart.html';
     } else {
       toast(tr('save_failed') + shopApiErrorMessage(data, res));
@@ -2476,6 +2483,95 @@ function orderApiRowToEditConfig(o) {
   return cfg;
 }
 
+function restoreShopConfig(cfg) {
+  if (!cfg?.category || !cfg?.type) return;
+
+  const typeId = String(cfg.type);
+  state.category = cfg.category;
+  state.type = typeId;
+
+  document.querySelectorAll('.cat-btn').forEach((btn) =>
+    btn.classList.toggle('active', btn.dataset.cat === cfg.category));
+
+  const titleEl = document.getElementById('shop-category-title');
+  if (titleEl) titleEl.textContent = tr('cat_' + cfg.category);
+
+  renderTypeCards();
+  document.querySelectorAll('.type-card').forEach((card) =>
+    card.classList.toggle('active', card.dataset.type === typeId));
+
+  updateCaratButtons();
+  updateMetalButtons();
+
+  if (cfg.carat) selectCarat(cfg.carat);
+  if (cfg.gold) selectMetal(cfg.gold);
+  if (cfg.color && needsColorSelection(cfg.gold, getSelectedProduct())) {
+    selectColor(cfg.color);
+  }
+
+  state.engravingBand = cfg.engravingBand || '';
+  state.engravingGirdle = cfg.engravingGirdle || '';
+  state.lengthCm = cfg.lengthCm != null ? cfg.lengthCm : null;
+  state.includeChain = !!cfg.includeChain;
+  state.chainProductId = cfg.chainProductId || null;
+  state.chainGold = cfg.chainGold || null;
+  state.chainColor = cfg.chainColor || null;
+  state.chainLength = cfg.chainLength != null ? cfg.chainLength : null;
+  state.diamondKind = cfg.diamondKind || 'white';
+  state.fancyColor = cfg.fancyColor || null;
+  state.stoneCount = cfg.stoneCount || null;
+  ensureStoneCountDefault();
+  state.diamondShape = cfg.diamondShape || 'round';
+
+  if (cfg.ringSize != null && cfg.ringSize !== '') {
+    setRingSizeActive(cfg.ringSize);
+  }
+
+  updateRingSizeStep();
+  updateDiamondSteps();
+  updateEngravingSteps();
+  updateChainOptions();
+  updateLengthStep();
+  syncVariantChipActiveStates();
+  productImageIndex = 0;
+  updateLargeImage();
+  setShopView('product', { skipScroll: true });
+  updateSummary();
+}
+
+async function initCartEdit() {
+  const cartId = new URLSearchParams(window.location.search).get('cart_edit');
+  if (!cartId || window.editData) return;
+
+  const toast = (msg, type) => window.showToast ? window.showToast(msg, type || 'error') : alert(msg);
+  if (!shopUsesApi()) {
+    toast('此頁面需登入後才能編輯購物車品項');
+    return;
+  }
+  if (isGuestShop) {
+    redirectGuestToLogin();
+    return;
+  }
+
+  try {
+    const { res, data } = await shopApiFetch('/api/cart-item?id=' + encodeURIComponent(cartId));
+    if (res.status === 401) { window.location.href = guestLoginUrl(); return; }
+    if (!res.ok || !data.item) {
+      toast(data?.error || data?.message || '無法載入購物車品項');
+      return;
+    }
+    const item = data.item;
+    const cfg = Object.assign({}, item.config_json || {}, {
+      category: item.category || item.config_json?.category,
+      type: item.style_type || item.config_json?.type,
+    });
+    window.cartEditData = Object.assign({ id: String(item.id) }, cfg);
+  } catch (err) {
+    console.error(err);
+    toast(tr('generic_error'));
+  }
+}
+
 async function initOrderEdit() {
   const editOrderNo = new URLSearchParams(window.location.search).get('editOrder');
   if (!editOrderNo) return;
@@ -2527,75 +2623,34 @@ async function initOrderEdit() {
 async function init() {
   initWizardRail();
   await initOrderEdit();
+  await initCartEdit();
   await loadCatalog();
   initProductImageLightbox();
   initProductTabs();
 
-  setShopView('catalog');
-  updateWizardGuide();
   populateRingSizeSelect();
   loadMetalPrices();
   loadLiveGoldRates();
 
+  const prefillData = window.cartEditData || window.editData || window.prefillData;
+  if (prefillData) {
+    restoreShopConfig(prefillData);
+  } else {
+    setShopView('catalog');
+    updateWizardGuide();
+  }
+
   const urlCategory = new URLSearchParams(window.location.search).get('category');
-  if (urlCategory && productsFor(urlCategory).length && !window.editData && !window.cartEditData && !window.prefillData) {
+  if (urlCategory && productsFor(urlCategory).length && !prefillData) {
     requestAnimationFrame(() => {
       document.querySelector(`.cat-btn[data-cat="${urlCategory}"]`)?.click();
     });
   }
 
   const previewProduct = new URLSearchParams(window.location.search).get('product');
-  if (window.shopConfig?.preview && previewProduct && urlCategory) {
+  if (window.shopConfig?.preview && previewProduct && urlCategory && !prefillData) {
     setTimeout(() => {
       document.querySelector(`.type-card[data-type="${previewProduct}"]`)?.click();
-    }, 50);
-  }
-
-  const prefillData = window.cartEditData || window.editData || window.prefillData;
-  if (prefillData) {
-    const catBtn = document.querySelector(`.cat-btn[data-cat="${prefillData.category}"]`);
-    if (catBtn) { catBtn.click(); }
-
-    // Delay subsequent steps so DOM updates cascade
-    // Order: category → type → carat → metal → color → ringSize
-    setTimeout(() => {
-      const card = document.querySelector(`.type-card[data-type="${prefillData.type}"]`);
-      if (card) { card.click(); }
-
-      setTimeout(() => {
-        const caratBtn = document.querySelector(`.carat-btn[data-carat="${prefillData.carat}"]`);
-        if (caratBtn) { caratBtn.click(); }
-
-        setTimeout(() => {
-          selectMetal(prefillData.gold);
-          if (prefillData.color && needsColorSelection(prefillData.gold, getSelectedProduct())) {
-            selectColor(prefillData.color);
-          }
-
-          setTimeout(() => {
-            if (prefillData.ringSize) {
-              setTimeout(() => setRingSizeActive(prefillData.ringSize), 50);
-            }
-            state.engravingBand = prefillData.engravingBand || '';
-            state.engravingGirdle = prefillData.engravingGirdle || '';
-            state.lengthCm = prefillData.lengthCm || null;
-            state.includeChain = !!prefillData.includeChain;
-            state.chainProductId = prefillData.chainProductId || null;
-            state.chainGold = prefillData.chainGold || null;
-            state.chainColor = prefillData.chainColor || null;
-            state.chainLength = prefillData.chainLength || null;
-            state.diamondKind = prefillData.diamondKind || 'white';
-            state.fancyColor = prefillData.fancyColor || null;
-            state.stoneCount = prefillData.stoneCount || null;
-            ensureStoneCountDefault();
-            state.diamondShape = prefillData.diamondShape || 'round';
-            updateDiamondSteps();
-            updateEngravingSteps();
-            updateChainOptions();
-            updateSummary();
-          }, 50);
-        }, 50);
-      }, 50);
     }, 50);
   }
 }

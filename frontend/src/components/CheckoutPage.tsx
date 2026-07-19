@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { CircleCheck } from "lucide-react";
+import { Alert } from "@/components/ui/heroui-alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import CheckoutItemDetail from "@/components/CheckoutItemDetail";
+import { itemMetaLine, type PriceBreakdown, type ShopConfig } from "@/lib/checkout-item-display";
 import { fetchSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
 
@@ -10,11 +13,13 @@ type CartItem = {
   id: string;
   summary_zh?: string | null;
   total_price?: number | null;
+  config_json?: ShopConfig | null;
+  style_type?: string | null;
+  category?: string | null;
+  image_url?: string | null;
 };
 
-type Breakdown = {
-  total?: number | null;
-};
+type Breakdown = PriceBreakdown;
 
 type ItemDetail = { item: CartItem; breakdown: Breakdown };
 
@@ -25,6 +30,26 @@ const trustPoints = [
   "銘印保證卡・GIA／IGI 鑑定保障",
   "封存培育全程的專屬影音紀念盒",
 ];
+
+function CheckoutHeader() {
+  return (
+    <header className="checkout-head">
+      <h1 className="checkout-title">確認訂單資訊</h1>
+      <div className="checkout-notice">
+        <Alert status="warning">
+          <Alert.Indicator />
+          <Alert.Content>
+            <Alert.Title>送出後仍需專人確認</Alert.Title>
+            <Alert.Description>
+              線上送出僅代表收到您的訂製申請，並非已下單定案。銘印顧問將與您聯繫，確認規格、交期與報價後，才會進入付款與製作流程。
+            </Alert.Description>
+          </Alert.Content>
+        </Alert>
+      </div>
+      <p className="checkout-lead">請填寫收件人資訊與取貨方式，確認無誤後送出訂單。</p>
+    </header>
+  );
+}
 
 function apiBase(): string {
   const base = (window as Window & { IMPRINT_API_BASE?: string }).IMPRINT_API_BASE;
@@ -176,7 +201,12 @@ export default function CheckoutPage() {
   }
 
   if (loading) {
-    return <p className="py-12 text-center text-muted-foreground">載入中…</p>;
+    return (
+      <>
+        <CheckoutHeader />
+        <p className="py-12 text-center text-muted-foreground">載入中…</p>
+      </>
+    );
   }
 
   if (!items.length) {
@@ -195,8 +225,13 @@ export default function CheckoutPage() {
       <h2 className="checkout-summary-title">訂單摘要</h2>
       <ul className="checkout-summary-list">
         {items.map(({ item, breakdown }) => (
-          <li key={item.id} className="checkout-summary-item">
-            <span className="truncate">{item.summary_zh || "訂製品項"}</span>
+          <li key={item.id} className="checkout-summary-item checkout-summary-item--stacked">
+            <div className="checkout-summary-item-copy">
+              <span className="checkout-summary-item-title">{item.summary_zh || "訂製品項"}</span>
+              <span className="checkout-summary-item-meta">
+                {itemMetaLine(item.config_json, item.summary_zh)}
+              </span>
+            </div>
             <span>{formatTwd(breakdown.total ?? item.total_price)}</span>
           </li>
         ))}
@@ -226,8 +261,17 @@ export default function CheckoutPage() {
 
   return (
     <form onSubmit={handleSubmit}>
+      <CheckoutHeader />
+
       <div className="checkout-layout">
         <div className="checkout-main">
+          <section className="checkout-block">
+            <h2 className="checkout-block-title">訂製明細</h2>
+            {items.map(({ item, breakdown }) => (
+              <CheckoutItemDetail key={item.id} item={item} breakdown={breakdown} />
+            ))}
+          </section>
+
           <section className="checkout-block">
             <h2 className="checkout-block-title">聯絡資訊</h2>
             <div className="checkout-fields">

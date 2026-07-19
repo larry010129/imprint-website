@@ -11,6 +11,7 @@ from psycopg.types.json import Jsonb
 
 from app.auth import get_user_id
 from app.database import get_connection, get_transaction
+from app.image_urls import config_image_url
 from app.orders import attach_order_display, attach_order_relations, pack_order_config
 from app.pricing import compute_order_pricing
 
@@ -255,6 +256,14 @@ async def get_cart(request: Request) -> dict:
             (user_id,),
         )
         items = cur.fetchall()
+        for item in items:
+            config = item.get("config_json") or {}
+            item["image_url"] = config_image_url(
+                cur,
+                config,
+                style_type=item.get("style_type"),
+                category=item.get("category"),
+            )
     return {"items": items}
 
 
@@ -296,7 +305,7 @@ async def add_to_cart(request: Request) -> dict:
     return {"item": item}
 
 
-@router.api_route("/cart-item", methods=["GET", "DELETE"])
+@router.api_route("/cart-item", methods=["GET", "PUT", "DELETE"])
 async def cart_item(request: Request) -> dict:
     user_id = _user_id(request)
     item_id = request.query_params.get("id")
@@ -316,17 +325,65 @@ async def cart_item(request: Request) -> dict:
             cur.execute("delete from cart_items where id = %s and user_id = %s", (item_id, user_id))
             return {"ok": True}
 
-    config = item.get("config_json") or {}
-    pricing = _pricing(config)
-    breakdown = {
-        "diamondPrice": pricing.get("diamondPrice"),
-        "taijinPrice": pricing.get("taijinPrice"),
-        "laborPrice": pricing.get("laborPrice"),
-        "metalworkPrice": pricing.get("metalworkPrice"),
-        "chainPrice": pricing.get("chainPrice"),
-        "total": pricing.get("total") or item.get("total_price"),
-    }
-    return {"item": item, "breakdown": breakdown}
+        if request.method == "PUT":
+            body = await request.json()
+            if not isinstance(body, dict):
+                return _err(400, "invalid body")
+            error = _validate_config(body)
+            if error:
+                return _err(400, error)
+            pricing = compute_order_pricing(cur, body)
+            if not pricing.get("ready"):
+                return _err(400, "無法計算價格，請重新整理後再試")
+            body["clientPricing"] = pricing
+            config_json = json.loads(json.dumps(body, default=str))
+            summary = _summary(body)
+            cur.execute(
+                """
+                update cart_items set
+                  category = %s,
+                  style_type = %s,
+                  config_json = %s,
+                  summary_zh = %s,
+                  total_price = %s
+                where id = %s and user_id = %s
+                returning *
+                """,
+                (
+                    body["category"],
+                    body["type"],
+                    Jsonb(config_json),
+                    summary,
+                    pricing.get("total"),
+                    item_id,
+                    user_id,
+                ),
+            )
+            updated = cur.fetchone()
+            cur.execute(
+                "select count(*) as count from cart_items where user_id = %s",
+                (user_id,),
+            )
+            count_row = cur.fetchone()
+            return {"item": updated, "count": count_row["count"] if count_row else None}
+
+        config = item.get("config_json") or {}
+        pricing = _pricing(config)
+        breakdown = {
+            "diamondPrice": pricing.get("diamondPrice"),
+            "taijinPrice": pricing.get("taijinPrice"),
+            "laborPrice": pricing.get("laborPrice"),
+            "metalworkPrice": pricing.get("metalworkPrice"),
+            "chainPrice": pricing.get("chainPrice"),
+            "total": pricing.get("total") or item.get("total_price"),
+        }
+        item["image_url"] = config_image_url(
+            cur,
+            config,
+            style_type=item.get("style_type"),
+            category=item.get("category"),
+        )
+        return {"item": item, "breakdown": breakdown}
 
 
 @router.post("/cart-checkout")

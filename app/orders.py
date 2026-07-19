@@ -6,7 +6,7 @@ import json
 from typing import Any
 
 from app.admin_products import CATEGORY_LABELS
-from app.image_urls import is_uuid, order_product_id, order_style_image_url, resolve_product_image_url
+from app.image_urls import config_image_url, is_uuid, order_product_id, resolve_product_image_url
 
 
 def _as_dict(value: Any) -> dict:
@@ -252,9 +252,22 @@ def attach_order_display(cur, orders: list[dict]) -> None:
                 match = imgs[0]
             if match:
                 url = resolve_product_image_url(match["file_path"])
-        if not url:
-            url = order_style_image_url(order.get("category"), order.get("product_type"))
-        order["image_url"] = url
+
+        config = _as_dict(order.get("config_json"))
+        if not config:
+            config = {
+                "category": order.get("category"),
+                "type": order.get("product_type") or order.get("product_id"),
+                "color": order.get("color") or "white",
+            }
+        order["image_url"] = config_image_url(
+            cur,
+            config,
+            style_type=order.get("product_type"),
+            category=order.get("category"),
+            product_id=pid,
+            images=images_by_product.get(pid or "", []) if pid else None,
+        ) or url
 
         created = order.get("created_at")
         if created is not None:

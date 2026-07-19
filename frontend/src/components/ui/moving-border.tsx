@@ -55,7 +55,7 @@ export function MovingBorderButton({
 
       <div
         className={cn(
-          "relative flex h-full w-full items-center justify-center border border-[#5ECFCF]/35 bg-[#91d6d9] px-4 py-2.5 text-[12.5px] font-medium text-[#2b2320] antialiased",
+          "nav-glass-btn relative flex h-full w-full items-center justify-center px-4 py-2.5 text-[12.5px] font-medium antialiased",
           className,
         )}
         style={{ borderRadius: `calc(${borderRadius} * 0.96)` }}

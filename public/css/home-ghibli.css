@@ -146,14 +146,6 @@
   background:var(--gh-grad-deep);
   color:var(--gh-twilight);
 }
-.page-home .nav-calc-moving-inner{
-  background:var(--gh-grad-deep) !important;
-  color:var(--gh-twilight) !important;
-  border-color:transparent !important;
-}
-.page-home .nav-calc-moving:hover .nav-calc-moving-inner{
-  filter:brightness(1.05);
-}
 .page-home .nav .btn-mint:hover{
   filter:brightness(1.05);
 }
@@ -210,6 +202,31 @@
 .gh-hc-scrim{
   background:linear-gradient(180deg, rgba(42,24,69,.55) 0%, rgba(42,24,69,.12) 45%, rgba(42,24,69,.42) 100%) !important;
 }
+/* Per-slide scrim — tuned for photo brightness while keeping light hero text */
+.hc-slide[data-tone="warm"] .gh-hc-scrim{
+  background:linear-gradient(
+    180deg,
+    rgba(42,24,69,.5) 0%,
+    rgba(42,24,69,.22) 42%,
+    rgba(42,24,69,.48) 100%
+  ) !important;
+}
+.hc-slide[data-tone="light"] .gh-hc-scrim{
+  background:linear-gradient(
+    180deg,
+    rgba(42,24,69,.38) 0%,
+    rgba(42,24,69,.34) 38%,
+    rgba(42,24,69,.44) 100%
+  ) !important;
+}
+.hc-slide[data-tone="soft"] .gh-hc-scrim{
+  background:linear-gradient(
+    180deg,
+    rgba(42,24,69,.58) 0%,
+    rgba(42,24,69,.16) 45%,
+    rgba(42,24,69,.46) 100%
+  ) !important;
+}
 .hc-slide[data-align="center"] .hc-copy{
   align-items:center; text-align:center;
 }
@@ -218,7 +235,6 @@
   padding:120px 16px 88px; max-width:760px; margin:0 auto;
 }
 .gh-hc-copy .gh-hero__title{ margin-bottom:18px; }
-.gh-hc-copy .gh-hero__lead{ margin-bottom:28px; }
 .gh-hc-arrow{
   background:rgba(255,255,255,.22); border-color:rgba(255,255,255,.55); color:#fff;
 }
@@ -269,8 +285,15 @@
   -webkit-background-clip:text; background-clip:text; color:transparent;
 }
 .gh-hero__lead{
-  font-size:clamp(14px, 1.8vw, 16px); line-height:2.1;
-  color:rgba(255,255,255,.88); max-width:520px; margin:0 auto 34px;
+  font-size:clamp(14px, 1.8vw, 16px);
+  line-height:2.1;
+  color:#F1ECE6;
+  max-width:520px;
+  margin:0 auto 34px;
+  text-shadow:0 2px 18px rgba(42, 24, 69, 0.45);
+}
+.gh-hc-copy .gh-hero__lead{
+  margin-bottom:28px;
 }
 .gh-hero__actions{
   display:flex; flex-wrap:wrap; gap:14px; justify-content:center; margin-bottom:48px;

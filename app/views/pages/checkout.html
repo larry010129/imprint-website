@@ -1,9 +1,9 @@
-﻿{% extends "layouts/base.html" %}
+{% extends "layouts/base.html" %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="/static/css/member-app.css?v=1">
-<link rel="stylesheet" href="/static/css/checkout-page.css?v=2">
 {% include "partials/checkout-react-css.html" %}
+<link rel="stylesheet" href="/static/css/checkout-page.css?v=8">
 {% endblock %}
 
 {% block content %}
@@ -25,11 +25,6 @@
         <span class="checkout-stepper-label">完成</span>
       </div>
     </nav>
-
-    <header class="checkout-head">
-      <h1 class="checkout-title">確認訂單資訊</h1>
-      <p class="checkout-lead">請填寫收件人資訊與取貨方式，確認無誤後送出訂單。</p>
-    </header>
 
     <div data-checkout-root></div>
   </div>
