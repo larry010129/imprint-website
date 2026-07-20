@@ -1067,7 +1067,7 @@
     "style": "B",
     "nameZh": "斗圓鍊 K玫瑰",
     "defaultColor": "rose",
-    "sortOrder": 1,
+    "sortOrder": 2,
     "variants": [
       {
         "gold": "9k",
@@ -1140,7 +1140,7 @@
     "style": "C",
     "nameZh": "斗圓鍊 K黃",
     "defaultColor": "yellow",
-    "sortOrder": 2,
+    "sortOrder": 1,
     "variants": [
       {
         "gold": "9k",

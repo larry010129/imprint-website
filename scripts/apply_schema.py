@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -17,7 +18,9 @@ load_dotenv(ROOT / ".env")
 
 
 def parse_statements(text: str) -> list[str]:
-    lines = [ln for ln in text.splitlines() if not ln.strip().startswith("--")]
+    # Strip `--` comments (including trailing inline ones) before splitting on
+    # `;` — a `;` inside a comment must not be treated as a statement terminator.
+    lines = [re.sub(r"--.*$", "", ln) for ln in text.splitlines()]
     body = "\n".join(lines)
     return [s.strip() for s in body.split(";") if s.strip()]
 

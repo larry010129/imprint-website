@@ -2354,13 +2354,22 @@ body.app-shell:not(.dark-theme) .shop-fit {
   background: color-mix(in srgb, var(--shop-cyan) 45%, transparent);
 }
 
-.shop-fit .shop-body {
+/* Scroll parent for options+summary AND length guide — sticky panel stops at .shop-body end */
+.shop-fit .shop-scroll {
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.shop-fit .shop-body {
+  flex: none;
   min-height: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 260px;
   gap: 0.875rem;
-  align-items: stretch;
+  align-items: start;
+  position: relative;
 }
 
 .shop-fit .shop-main {
@@ -2371,11 +2380,11 @@ body.app-shell:not(.dark-theme) .shop-fit {
 }
 
 .shop-fit .shop-section:not(.hidden) {
-  flex: 1;
+  flex: none;
   min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .shop-fit .shop-section-title {
@@ -2505,7 +2514,12 @@ body.app-shell:not(.dark-theme) .shop-fit {
 }
 
 .shop-fit #shop-product {
-  overflow: hidden;
+  overflow: visible;
+}
+
+.shop-fit .shop-main {
+  min-height: 0;
+  overflow: visible;
 }
 
 .shop-fit .product-layout {
@@ -2514,8 +2528,8 @@ body.app-shell:not(.dark-theme) .shop-fit {
   display: grid;
   grid-template-columns: minmax(180px, 38%) minmax(0, 1fr);
   gap: 0.875rem;
-  align-items: stretch;
-  height: 100%;
+  align-items: start;
+  height: auto;
 }
 
 .shop-fit .product-gallery-col {
@@ -2548,8 +2562,7 @@ body.app-shell:not(.dark-theme) .shop-fit {
 
 .shop-fit .product-buy-col {
   min-height: 0;
-  overflow-y: auto;
-  scrollbar-width: thin;
+  overflow: visible;
   padding-right: 0.25rem;
 }
 
@@ -2586,6 +2599,7 @@ body.app-shell:not(.dark-theme) .shop-fit {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   column-gap: 0.875rem;
   row-gap: 0.375rem;
+  overflow: visible;
 }
 
 .shop-fit .variant-group--nested {
@@ -2593,34 +2607,124 @@ body.app-shell:not(.dark-theme) .shop-fit {
   margin-bottom: 0;
 }
 
-.shop-fit #stone-count-step.hidden,
+.shop-fit #chain-length-end.hidden,
 .shop-fit #chain-length-step.hidden,
 .shop-fit #chain-length-guide-step.hidden,
+.shop-fit #stone-count-step.hidden,
 .shop-fit #pendant-chain-guide-step.hidden,
-.shop-fit #color-step.hidden,
 .shop-fit #pendant-chain-step.hidden,
 .shop-fit #ringsize-step.hidden,
 .shop-fit #ringsize-guide-step.hidden,
 .shop-fit #engraving-band-step.hidden,
 .shop-fit #engraving-girdle-step.hidden,
 .shop-fit #fancy-diamond-step.hidden,
-.shop-fit #diamond-shape-step.hidden {
+.shop-fit #diamond-shape-step.hidden,
+.shop-fit #carat-step.hidden {
   display: none;
 }
 
+/* Keep metal+color 2-col slot; hide color content without collapsing layout */
+.shop-fit #color-step.hidden {
+  visibility: hidden;
+  pointer-events: none;
+}
 
-.shop-fit #fancy-diamond-step,
+/* Chain styles lock color in step 2 — drop the empty color column */
+.shop-fit #color-step.hidden-collapse {
+  display: none;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+
 .shop-fit #diamond-shape-step,
 .shop-fit #pendant-chain-step,
-.shop-fit #ringsize-step,
-.shop-fit #ringsize-guide-step,
-.shop-fit #engraving-band-step,
-.shop-fit #engraving-girdle-step,
-.shop-fit #chain-length-step,
-.shop-fit #chain-length-guide-step,
-.shop-fit #pendant-chain-guide-step,
-.shop-fit .variant-group:has(.diamond-carousel-wrap) {
+.shop-fit #chain-length-step {
   grid-column: 1 / -1;
+}
+
+/* Full options row; stay inside column (no overflow into price panel) */
+.shop-fit #engraving-girdle-step {
+  grid-column: 1 / -1;
+  width: 100%;
+  max-width: 100%;
+  margin-left: 0;
+  justify-self: stretch;
+}
+
+.shop-fit #ringsize-guide-step,
+.shop-fit #chain-length-end {
+  margin-top: 0;
+  padding: 0.875rem 0 1rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.shop-fit #chain-length-end .variant-group {
+  margin-bottom: 0.5rem;
+}
+
+.shop-fit #chain-length-end .variant-group--size-guide {
+  margin-top: 0;
+  margin-bottom: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+.shop-fit .chain-length-guide-inline__layout,
+.shop-fit .ring-size-guide-inline__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.shop-fit .chain-length-guide-inline__aside .guide-image,
+.shop-fit .ring-size-guide-inline__aside .guide-image {
+  margin-bottom: 0;
+}
+
+.shop-fit .chain-length-guide-inline__table-col .ring-size-guide-inline__scroll,
+.shop-fit .ring-size-guide-inline__table-col .ring-size-guide-inline__scroll {
+  max-height: none;
+  overflow: visible;
+}
+
+.shop-fit #ringsize-guide-step .ring-size-guide-inline__steps {
+  margin-bottom: 0.5rem;
+  gap: 0.375rem;
+}
+
+.shop-fit #ringsize-guide-step .ring-size-guide-inline__steps li {
+  padding: 0.5rem 0.625rem;
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.shop-fit #ringsize-guide-step .ring-size-guide-inline__steps li::before {
+  flex: 0 0 1.25rem;
+  width: 1.25rem;
+  height: 1.25rem;
+  font-size: 0.6875rem;
+  line-height: 1.25rem;
+}
+
+.shop-fit #ringsize-guide-step .ring-size-guide-inline__note {
+  margin-top: 0.5rem;
+  font-size: 0.6875rem;
+}
+
+.shop-fit .chain-length-guide-inline__intro,
+.shop-fit .chain-length-guide-inline__method,
+.shop-fit .chain-length-guide-inline__subtitle {
+  margin-bottom: 0.375rem;
+  font-size: 0.6875rem;
+  line-height: 1.45;
+}
+
+.shop-fit .chain-length-guide-inline .ring-size-guide-inline__title {
+  min-height: 0;
+  margin-bottom: 0.375rem;
+  font-size: 0.75rem;
 }
 
 .shop-fit .variant-label {
@@ -2637,26 +2741,110 @@ body.app-shell:not(.dark-theme) .shop-fit {
   gap: 0.375rem;
 }
 
+.shop-fit .product-buy-col .variant-chips:not(.variant-chips--colors) {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.shop-fit .variant-chips--row {
+  overflow-x: visible;
+}
+
+.shop-fit .variant-chips--colors {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.shop-fit .product-buy-col .variant-chips:not(.variant-chips--colors) .variant-chip {
+  flex: 0 1 auto;
+}
+
+.shop-fit .variant-chips--colors .color-btn {
+  flex: 0 1 auto;
+}
+
 .shop-fit .variant-chip,
 .shop-fit .carat-btn,
 .shop-fit .metal-btn,
 .shop-fit .color-btn {
   padding: 0.3125rem 0.625rem;
   font-size: 0.6875rem;
+  font-weight: 500;
+  white-space: nowrap;
 }
 
 .shop-fit .variant-chips--row .variant-chip {
   min-width: 0;
-  flex: 1 1 auto;
+  width: auto;
 }
 
+/* Form on top, diamond below — same left edge, same column width */
 .shop-fit .shop-girdle-engrave {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 22rem;
+}
+
+.shop-fit .shop-girdle-engrave__form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.shop-fit .shop-girdle-engrave .cfg-emblems {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.shop-fit .shop-girdle-engrave .cfg-engrave-input {
+  min-height: 2.5rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.shop-fit .shop-girdle-engrave .cfg-count {
+  font-size: 0.6875rem;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.shop-fit .shop-girdle-engrave .cfg-engrave-hint {
+  white-space: nowrap;
+  margin: 0;
+}
+
+.shop-fit .shop-girdle-engrave .cfg-engrave-label {
+  margin: 0.5rem 0 0.25rem;
+  white-space: nowrap;
+}
+
+.shop-fit .shop-girdle-engrave__preview,
+.shop-fit .shop-girdle-engrave .cfg-engrave-preview {
+  margin-top: 0;
+  width: 100%;
   max-width: 100%;
+  min-width: 0;
+}
+
+.shop-fit .shop-girdle-engrave .cfg-engrave-gem {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: contain;
 }
 
 .shop-fit .ring-size-select,
 .shop-fit .engraving-input {
-  max-width: 100%;
+  max-width: 16rem;
   padding: 0.375rem 0.625rem;
   font-size: 0.8125rem;
 }
@@ -2669,15 +2857,25 @@ body.app-shell:not(.dark-theme) .shop-fit {
 .shop-fit .diamond-carousel-wrap {
   margin-bottom: 0.375rem;
   gap: 0.375rem;
+  display: block;
+}
+
+.shop-fit .diamond-carousel-wrap .diamond-carousel-nav {
+  display: none;
 }
 
 .shop-fit .diamond-carousel {
-  gap: 0.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
   padding: 0.25rem 0 0.375rem;
+  overflow: visible;
 }
 
 .shop-fit .diamond-carousel-item {
-  min-width: 56px;
+  flex: 0 0 auto;
+  min-width: 0;
+  width: auto;
   gap: 0.25rem;
 }
 
@@ -2687,12 +2885,19 @@ body.app-shell:not(.dark-theme) .shop-fit {
 }
 
 .shop-fit .diamond-carousel-item.active .gem-icon {
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
+  border-color: var(--shop-cyan);
 }
 
-.shop-fit .diamond-carousel-item span {
+.shop-fit .diamond-carousel-item .gem-label,
+.shop-fit .diamond-carousel-item.active .gem-label {
   font-size: 0.625rem;
+  font-weight: 500;
+}
+
+.shop-fit .diamond-carousel-item.active .gem-label {
+  color: var(--color-text);
 }
 
 .shop-fit .variant-chip.active,
@@ -2700,10 +2905,11 @@ body.app-shell:not(.dark-theme) .shop-fit {
 .shop-fit .metal-btn.active,
 .shop-fit .color-btn.active,
 .shop-fit .pendant-chain-toggle.active {
+  border-width: 1px;
   border-color: var(--shop-cyan);
   background: var(--shop-cyan-dim);
   color: var(--color-text);
-  font-weight: 600;
+  font-weight: 500;
   box-shadow: inset 0 -3px 0 var(--shop-cyan);
 }
 
@@ -2711,6 +2917,12 @@ body.app-shell:not(.dark-theme) .shop-fit {
   min-width: 48px;
   padding: 6px 8px !important;
   gap: 4px;
+  white-space: normal;
+}
+
+.shop-fit .color-swatch-labeled.active {
+  border-width: 1px !important;
+  font-weight: 500;
 }
 
 .shop-fit .color-swatch-dot {
@@ -2720,6 +2932,11 @@ body.app-shell:not(.dark-theme) .shop-fit {
 
 .shop-fit .color-swatch-label {
   font-size: 0.625rem;
+  font-weight: 500;
+}
+
+.shop-fit .color-swatch-labeled.active .color-swatch-label {
+  font-weight: 500;
 }
 
 .shop-fit .color-swatch-labeled.active .color-swatch-dot {
@@ -2733,9 +2950,14 @@ body.app-shell:not(.dark-theme) .shop-fit {
 }
 
 .shop-fit #pendant-chain-options .variant-chips--grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
+}
+
+.shop-fit #pendant-chain-options .variant-chips--grid .variant-chip {
+  flex: 0 1 auto;
+  white-space: nowrap;
 }
 
 .shop-fit #pendant-chain-options .variant-chip.active {
@@ -2747,17 +2969,20 @@ body.app-shell:not(.dark-theme) .shop-fit {
   gap: 0.625rem;
 }
 
-/* Price panel — compact sidebar */
+/* Price panel — compact sidebar, stops at content height */
 .shop-fit .shop-price-panel {
-  position: static;
-  top: auto;
-  height: 100%;
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: auto;
+  max-height: calc(100dvh - 5.25rem - 0.5rem);
   min-height: 0;
   display: flex;
   flex-direction: column;
   padding: 0.875rem;
   border-radius: 12px;
-  overflow: hidden;
+  overflow-y: auto;
+  scrollbar-width: thin;
 }
 
 .shop-fit .hero-price {
@@ -2783,12 +3008,12 @@ body.app-shell:not(.dark-theme) .shop-fit {
 }
 
 .shop-fit .price-breakdown-details {
-  flex: 1;
+  flex: 0 1 auto;
   min-height: 0;
   display: flex;
   flex-direction: column;
   margin-bottom: 0.625rem;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .shop-fit .price-breakdown-panel {
@@ -2823,6 +3048,11 @@ body.app-shell:not(.dark-theme) .shop-fit {
   .shop-fit {
     height: auto;
     min-height: 0;
+    overflow: visible;
+  }
+
+  .shop-fit .shop-scroll {
+    flex: none;
     overflow: visible;
   }
 
@@ -2882,6 +3112,31 @@ body.app-shell:not(.dark-theme) .shop-fit {
 
   .shop-fit .product-layout {
     grid-template-columns: 1fr;
+  }
+
+  .shop-fit .product-options-section {
+    grid-template-columns: 1fr;
+  }
+
+  .shop-fit #color-step.hidden {
+    display: none;
+  }
+
+  .shop-fit .chain-length-guide-inline__layout,
+  .shop-fit .ring-size-guide-inline__layout {
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .shop-fit #engraving-girdle-step,
+  .shop-fit .shop-girdle-engrave {
+    width: 100%;
+    max-width: 100%;
+    margin-left: 0;
+  }
+
+  .shop-fit .shop-girdle-engrave .cfg-engrave-hint {
+    white-space: normal;
   }
 
   .shop-fit .shop-price-panel {

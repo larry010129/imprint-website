@@ -13,6 +13,7 @@ from app.auth import (
     LOGIN_MAX_ATTEMPTS,
     REGISTER_LOCKOUT_SECONDS,
     REGISTER_MAX_ATTEMPTS,
+    bump_token_version,
     check_login_lockout,
     check_register_lockout,
     clear_session_cookie,
@@ -129,7 +130,7 @@ async def login(request: Request) -> JSONResponse:
 
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute(
-            "select id, email, password_hash from users where email = %s",
+            "select id, email, password_hash, token_version, is_active from users where email = %s",
             (normalized_email,),
         )
         user = cur.fetchone()
@@ -138,18 +139,24 @@ async def login(request: Request) -> JSONResponse:
         record_failure(lockout_key, LOGIN_MAX_ATTEMPTS, LOGIN_LOCKOUT_SECONDS)
         return _err(401, "Email 或密碼不正確")
 
+    if not user["is_active"]:
+        return _err(403, "此帳號已被停用，請聯絡客服。 (This account has been deactivated.)")
+
     record_success(lockout_key)
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute("update users set last_login_at = now() where id = %s", (user["id"],))
 
-    token = sign_session(str(user["id"]))
+    token = sign_session(str(user["id"]), user["token_version"])
     result = JSONResponse(content={"ok": True, "user": {"id": str(user["id"]), "email": user["email"]}})
     set_session_cookie(result, token, request)
     return result
 
 
 @router.post("/logout")
-async def logout() -> JSONResponse:
+async def logout(request: Request) -> JSONResponse:
+    user_id = get_user_id(request)
+    if user_id:
+        bump_token_version(user_id)
     result = JSONResponse(content={"ok": True})
     clear_session_cookie(result)
     return result

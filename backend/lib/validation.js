@@ -17,9 +17,10 @@ const RING_SIZE_MIN = 5;
 const RING_SIZE_MAX = 18;
 const ENGRAVING_MAX_LENGTH = 10;
 const GIRDLE_MAX_SLOTS = 12;
+const GIRDLE_EMBLEM_SLOT_COST = 2;
 const GIRDLE_EMBLEM_LABELS = new Set(['蝴蝶結', '幸運草', '無限', '愛心', '雙愛心', '肉球', '骨頭', '戒圈']);
 const GIRDLE_ENGRAVING_CATEGORIES = new Set(['pendant', 'ring', 'earring', 'bracelet']);
-const CHAIN_LENGTH_OPTIONS_CM = new Set([35, 40, 45, 50, 55, 60]);
+const CHAIN_LENGTH_OPTIONS_CM = new Set([35, 40, 46, 50, 56, 60, 66, 70, 76, 90, 102]);
 const BRACELET_LENGTH_OPTIONS_CM = new Set([15, 16, 17, 18, 19, 20, 21]);
 const VALID_DIAMOND_KINDS = new Set(['white', 'fancy']);
 const VALID_DIAMOND_SHAPES = new Set(['round']); // only round is offered today
@@ -111,7 +112,7 @@ function validateSubmissionFields(data, { partial = false } = {}) {
         if (end === -1) return -1;
         const label = s.slice(i + 1, end);
         if (!GIRDLE_EMBLEM_LABELS.has(label)) return -1;
-        slots += 1;
+        slots += GIRDLE_EMBLEM_SLOT_COST;
         i = end + 1;
       } else if (/[A-Za-z0-9]/.test(s[i])) {
         slots += 1;

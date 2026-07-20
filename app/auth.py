@@ -45,17 +45,30 @@ def verify_password(password: str, password_hash: str) -> bool:
 
 # ── session cookie ───────────────────────────────────────────────────────
 
-def sign_session(user_id: str) -> str:
-    payload = {"sub": user_id, "exp": datetime.now(timezone.utc) + timedelta(days=SESSION_DAYS)}
+def sign_session(user_id: str, token_version: int = 0) -> str:
+    payload = {
+        "sub": user_id,
+        "ver": token_version,
+        "exp": datetime.now(timezone.utc) + timedelta(days=SESSION_DAYS),
+    }
     return jwt.encode(payload, _jwt_secret(), algorithm="HS256")
 
 
-def verify_session_token(token: str) -> str | None:
+def verify_session_token(token: str) -> tuple[str, int] | None:
     try:
         payload = jwt.decode(token, _jwt_secret(), algorithms=["HS256"])
     except jwt.PyJWTError:
         return None
-    return payload.get("sub")
+    sub = payload.get("sub")
+    if not sub:
+        return None
+    return sub, int(payload.get("ver", 0))
+
+
+def bump_token_version(user_id: str) -> None:
+    """Invalidates every existing session for a user (logout, password reset)."""
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute("update users set token_version = token_version + 1 where id = %s", (user_id,))
 
 
 def _is_secure_request(request: Request) -> bool:
@@ -90,7 +103,16 @@ def get_user_id(request: Request) -> str | None:
     token = request.cookies.get(COOKIE_NAME)
     if not token:
         return None
-    return verify_session_token(token)
+    decoded = verify_session_token(token)
+    if not decoded:
+        return None
+    user_id, token_version = decoded
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute("select token_version, is_active from users where id = %s", (user_id,))
+        row = cur.fetchone()
+    if not row or row["token_version"] != token_version or not row["is_active"]:
+        return None
+    return user_id
 
 
 def is_admin(user_id: str | None) -> bool:

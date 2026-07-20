@@ -14,6 +14,9 @@ create table if not exists users (
   last_login_at timestamptz,
   created_at timestamptz not null default now()
 );
+-- Session revocation: bumped on logout / admin password reset to invalidate
+-- all existing JWTs for a user without a server-side session table.
+alter table users add column if not exists token_version integer not null default 0;
 
 create table if not exists profiles (
   id uuid primary key references users(id) on delete cascade,

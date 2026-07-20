@@ -69,14 +69,30 @@
     return '';
   }
 
+  function colorLabel(color) {
+    if (!color) return '';
+    return COLOR_ZH[color] || color;
+  }
+
+  function isGenericThumb(url) {
+    return /\/thumbs\//i.test(String(url || ''));
+  }
+
   function productImage(config) {
-    if (config.previewImage && config.previewChainImage) {
-      return { composite: true, pendant: config.previewImage, chain: config.previewChainImage };
+    var previewPrimary = config.previewImage || '';
+    var previewChain = config.previewChainImage || '';
+
+    /* Calculator captures the live preview — trust it over static thumb fallbacks */
+    if (previewPrimary && previewChain) {
+      return { composite: true, pendant: previewPrimary, chain: previewChain };
     }
-    if (config.previewImage) return { primary: config.previewImage, fallback: '' };
+    if (previewPrimary && !isGenericThumb(previewPrimary)) {
+      return { primary: previewPrimary, fallback: '' };
+    }
 
     var styleKey = resolveStyleKey(config);
     if (!global.ShopAssets || !styleKey) {
+      if (previewPrimary) return { primary: previewPrimary, fallback: '' };
       var catOnly = global.ShopAssets ? (global.ShopAssets.categoryThumb(config.category) || '') : '';
       return { primary: catOnly, fallback: '' };
     }
@@ -86,17 +102,14 @@
     var chainMetal = (withChain && config.chainColor) ? config.chainColor : pendantMetal;
     var defaultColor = config.defaultColor || pendantMetal;
     var diamond = diamondColorId(config) || 'white';
-    var splitPreview = withChain;
-    if (splitPreview) {
+    if (withChain) {
       var fullCombo = global.ShopAssets.productImage(styleKey, pendantMetal, defaultColor, diamond, { chainColor: chainMetal });
-      // Crop-layer files end in "_only.png" or bare "_chain.png"; full combo files
-      // use "_chain_{metal}[_diamond].png" and must NOT match here.
-      if (fullCombo && !/_(?:only|chain)\.[a-z0-9]+$/i.test(fullCombo) && fullCombo.indexOf('/thumbs/') < 0) {
+      if (fullCombo && !isGenericThumb(fullCombo) && !/_(?:only|chain)\.[a-z0-9]+$/i.test(fullCombo)) {
         return { primary: fullCombo, fallback: '' };
       }
       var pendantLayer = global.ShopAssets.productImage(styleKey, pendantMetal, defaultColor, diamond, { pendantOnly: true });
       var chainLayer = global.ShopAssets.productImage(styleKey, chainMetal, defaultColor, 'white', { chainOnly: true });
-      if (pendantLayer && chainLayer) {
+      if (pendantLayer && chainLayer && !isGenericThumb(pendantLayer) && !isGenericThumb(chainLayer)) {
         return { composite: true, pendant: pendantLayer, chain: chainLayer };
       }
     }
@@ -105,11 +118,12 @@
     var resolved = global.ShopAssets.productImageWithFallback
       ? global.ShopAssets.productImageWithFallback(styleKey, pendantMetal, defaultColor, diamond, fullOpts)
       : global.ShopAssets.productImage(styleKey, pendantMetal, defaultColor, diamond, fullOpts);
-    if (typeof resolved === 'object' && resolved && resolved.primary) {
+    if (typeof resolved === 'object' && resolved && resolved.primary && !isGenericThumb(resolved.primary)) {
       if (diamond !== 'white') resolved.fallback = '';
       return resolved;
     }
-    if (resolved) return { primary: resolved, fallback: '' };
+    if (resolved && !isGenericThumb(resolved)) return { primary: resolved, fallback: '' };
+    if (previewPrimary) return { primary: previewPrimary, fallback: '' };
     var thumb = global.ShopAssets.styleThumb(styleKey);
     if (thumb) return { primary: thumb, fallback: '' };
     var cat = global.ShopAssets.categoryThumb(config.category);
@@ -127,7 +141,16 @@
     if (diamondLabel) rows.push({ label: '鑽石顏色', value: diamondLabel });
     if (config.ringSize) rows.push({ label: '戒圍', value: String(config.ringSize) });
     if (config.lengthCm) rows.push({ label: '長度', value: config.lengthCm + ' cm' });
-    if (config.includeChain) rows.push({ label: '搭配鍊條', value: '是' });
+    if (config.category === 'pendant' && config.includeChain) {
+      var pendantColorVal = colorLabel(config.color || config.defaultColor)
+        || (config.gold === 'pt950' || config.gold === 's925' ? materialLabel(config.gold, config.color) : '');
+      var chainColorVal = materialLabel(config.chainGold, config.chainColor);
+      if (pendantColorVal) rows.push({ label: '項墜顏色', value: pendantColorVal });
+      if (chainColorVal) rows.push({ label: '鍊條顏色', value: chainColorVal });
+      if (config.chainLength) rows.push({ label: '鍊條長度', value: config.chainLength + ' cm' });
+    } else if (config.includeChain) {
+      rows.push({ label: '搭配鍊條', value: materialLabel(config.chainGold, config.chainColor) || '是' });
+    }
     return rows;
   }
 

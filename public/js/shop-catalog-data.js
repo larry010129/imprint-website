@@ -635,7 +635,6 @@
         "descriptionEn": null,
         "defaultColor": "rose",
         "golds": [
-          "9k",
           "14k",
           "18k",
           "pt950",
@@ -685,7 +684,6 @@
         "descriptionEn": null,
         "defaultColor": "yellow",
         "golds": [
-          "9k",
           "14k",
           "18k",
           "pt950",

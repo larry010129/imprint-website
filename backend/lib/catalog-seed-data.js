@@ -14,6 +14,8 @@ const STYLE_LABELS = {
 };
 
 const CHAIN_COLORS = { A: 'white', B: 'rose', C: 'yellow' };
+/** Display order in step 2: white → yellow → rose (not letter order) */
+const CHAIN_SORT_ORDER = { A: 0, C: 1, B: 2 };
 
 /** Official 蠟重(錢) per style × carat — same wax for all metals; pricing applies WAX×factor. */
 const WAX_WEIGHT_TABLE = {
@@ -214,7 +216,7 @@ function buildSeedRows() {
       style,
       nameZh: STYLE_LABELS.chain[style] || style,
       defaultColor,
-      sortOrder: styleSortOrder(style),
+      sortOrder: CHAIN_SORT_ORDER[style] ?? styleSortOrder(style),
       variants,
       images,
     });

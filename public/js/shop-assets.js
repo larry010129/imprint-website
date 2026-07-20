@@ -64,7 +64,8 @@
 
   /** Known filename quirks in shop/image */
   var FILE_OVERRIDES = {
-    'rose_gold|斗圓鍊K玫瑰|rose': '斗圓鍊K玫瑰_silver2.png',
+    // chain-B has no 斗圓鍊K玫瑰_rose.png — reuse the correct rose cable shot
+    'rose_gold|斗圓鍊K玫瑰|rose': '斗圓鍊_rose.png',
   };
 
   var CATEGORY_THUMB = {
@@ -172,12 +173,47 @@
   }
 
   function styleThumb(productId) {
+    var parsed = parseProductId(productId);
+    // Chain A/B/C are color-locked styles — prefer the matching metal PNG over stale JPG thumbs
+    if (parsed && parsed.category === 'chain') {
+      var chainColor = { A: 'white', B: 'rose', C: 'yellow' }[parsed.style] || 'white';
+      var chainPng = stylePngPath('chain', parsed.style, chainColor);
+      if (chainPng) return chainPng;
+    }
     var rel = styleThumbRel(productId);
     if (rel) return joinPath(rel);
-    var parsed = parseProductId(productId);
     if (!parsed) return categoryThumb('');
     return stylePngPath(parsed.category, parsed.style, 'white')
       || categoryThumb(parsed.category);
+  }
+
+  /** Ordered PNG candidates: metal+fancy → silver+fancy → metal+white → thumb */
+  function productImageResolve(productId, color, defaultColor, diamondColor, opts) {
+    opts = opts || {};
+    var parsed = parseProductId(productId);
+    if (!parsed) return { src: '', fallbacks: [] };
+    var resolved = resolveColor(color, defaultColor);
+    var d = diamondColor && DIAMOND_COLORS.indexOf(diamondColor) >= 0 ? diamondColor : 'white';
+    if (opts.chainOnly) d = 'white';
+    var chain = [];
+
+    function push(path) {
+      if (path && chain.indexOf(path) < 0) chain.push(path);
+    }
+
+    push(stylePngPath(parsed.category, parsed.style, resolved, d, opts));
+    if (d !== 'white') {
+      if (resolved !== 'white') {
+        // ponytail: rose/yellow metal fancy PNG missing (e.g. 耳飾) — show silver fancy until assets exist
+        push(stylePngPath(parsed.category, parsed.style, 'white', d, opts));
+      }
+      push(stylePngPath(parsed.category, parsed.style, resolved, 'white', opts));
+    }
+    if (!chain.length) {
+      var thumb = styleThumb(productId);
+      if (thumb) push(thumb);
+    }
+    return { src: chain[0] || '', fallbacks: chain.slice(1) };
   }
 
   function attachImageFallback(img, fallbackUrl) {
@@ -188,14 +224,30 @@
     }, { once: true });
   }
 
+  function attachImageFallbackChain(img, fallbackUrls) {
+    if (!img || !fallbackUrls || !fallbackUrls.length) return;
+    var queue = fallbackUrls.filter(Boolean);
+    if (!queue.length) return;
+    var idx = 0;
+    img.onerror = function onErr() {
+      if (idx >= queue.length) {
+        img.onerror = null;
+        return;
+      }
+      img.src = queue[idx++];
+    };
+  }
+
   global.ShopAssets = {
     imageRoot: IMAGE_ROOT,
     categoryThumb: categoryThumb,
     styleThumb: styleThumb,
     productImage: productImage,
+    productImageResolve: productImageResolve,
     productImageWithFallback: productImageWithFallback,
     productImages: productImages,
     attachImageFallback: attachImageFallback,
+    attachImageFallbackChain: attachImageFallbackChain,
     buildImageSlotKey: buildImageSlotKey,
     parseImageSlotKey: parseImageSlotKey,
     imageSlotKeysForLookup: imageSlotKeysForLookup,

@@ -19,6 +19,7 @@
   });
 
   var ZWS = '\u200B';
+  var EMBLEM_SLOT_COST = 2;
   // Typed text: A–Z / a–z / 0–9 only. Emblem tokens insert via buttons, not keys.
   var ALLOWED_CHAR = /^[A-Za-z0-9]$/;
   var DISALLOWED_CHARS = /[^A-Za-z0-9]/g;
@@ -48,12 +49,17 @@
     return changed;
   }
 
+  function nodeSlotCost(node) {
+    if (node.nodeType === 3) return stripZws(node.textContent).length;
+    if (node.nodeType === 1 && node.classList.contains('cfg-emblem-token')) return EMBLEM_SLOT_COST;
+    return 0;
+  }
+
   function slots(input) {
     if (!input) return 0;
     var count = 0;
     input.childNodes.forEach(function (node) {
-      if (node.nodeType === 3) count += stripZws(node.textContent).length;
-      else if (node.nodeType === 1 && node.classList.contains('cfg-emblem-token')) count += 1;
+      count += nodeSlotCost(node);
     });
     return count;
   }
@@ -207,7 +213,7 @@
     var nodes = Array.prototype.slice.call(input.childNodes);
     for (var i = 0; i < nodes.length; i++) {
       var node = nodes[i];
-      var nodeSlots = node.nodeType === 3 ? stripZws(node.textContent).length : 1;
+      var nodeSlots = nodeSlotCost(node);
       if (count + nodeSlots > max) {
         if (node.nodeType === 3) node.textContent = node.textContent.slice(0, max - count);
         else node.remove();
@@ -395,7 +401,7 @@
     if (!token || !input) return;
 
     var range = resolveInsertRange(input, store || {});
-    if (allowedInsertSlots(input, max, range) < 1) return;
+    if (allowedInsertSlots(input, max, range) < EMBLEM_SLOT_COST) return;
 
     range.deleteContents();
     range.insertNode(token);

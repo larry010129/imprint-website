@@ -865,7 +865,7 @@ async def account_action(request: Request) -> JSONResponse:
             if len(str(new_password)) < 6:
                 return JSONResponse(status_code=400, content={"error": "密碼至少需要 6 碼"})
             cur.execute(
-                "update users set password_hash = %s where id = %s",
+                "update users set password_hash = %s, token_version = token_version + 1 where id = %s",
                 (hash_password(str(new_password)), account_id),
             )
         elif action == "set-role":

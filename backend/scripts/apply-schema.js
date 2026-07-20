@@ -5,9 +5,11 @@ const path = require('path');
 const { sql } = require('../lib/db');
 
 function parseStatements(fileText) {
+  // Strip `--` comments (including trailing inline ones) before splitting on
+  // `;` — a `;` inside a comment must not be treated as a statement terminator.
   const withoutComments = fileText
     .split('\n')
-    .filter((line) => !line.trim().startsWith('--'))
+    .map((line) => line.replace(/--.*$/, ''))
     .join('\n');
   return withoutComments
     .split(';')
