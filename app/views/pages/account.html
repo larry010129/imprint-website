@@ -18,7 +18,10 @@
     <div>
       <h1 class="account-title">我的訂單進度</h1>
       <div class="orders-list" id="ordersList">
-        <p class="text-loading">載入中…</p>
+        <div class="skel-order-cards skel-panel" aria-busy="true" id="account-orders-skeleton">
+          <div class="skel-order-card"><span class="skel-line skel-line--long"></span><span class="skel-line skel-line--medium"></span></div>
+          <div class="skel-order-card"><span class="skel-line skel-line--long"></span><span class="skel-line skel-line--medium"></span></div>
+        </div>
       </div>
     </div>
   </div>

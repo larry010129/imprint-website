@@ -70,7 +70,9 @@
   function openDetail(id) {
     var e = View.els();
     if (!e.dialog) return;
-    e.dialogBody.innerHTML = '<p class="member-state">載入中…</p>';
+    e.dialogBody.innerHTML = window.SkeletonUI
+      ? '<div class="skel-panel" aria-busy="true">' + window.SkeletonUI.line('long') + window.SkeletonUI.line('medium') + '</div>'
+      : '<p class="member-state">載入中…</p>';
     e.dialog.showModal();
     Model.detail(id).then(function (data) {
       if (data.item) View.renderDetail(data.item);

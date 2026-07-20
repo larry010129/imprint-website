@@ -6,7 +6,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>銘印鑽石｜管理後台</title>
 <meta name="robots" content="noindex">
-<link rel="stylesheet" href="/css/admin-core.css?v=5">
+<link rel="stylesheet" href="/css/admin-core.css?v=8">
+<link rel="stylesheet" href="/css/skeleton.css?v=1">
 <link rel="stylesheet" href="/css/admin-shell.css">
 <link rel="stylesheet" href="/css/admin-orders.css?v=8">
 <link rel="stylesheet" href="/css/admin-tables.css?v=7">
@@ -61,14 +62,14 @@
   <main class="main">
     <div class="main-top">
       <h1 id="pageTitle">儀表板</h1>
-      <span class="meta" id="topMeta">載入中…</span>
+      <span class="meta" id="topMeta"><span class="skel-meta-line"></span></span>
     </div>
 
     <!-- 儀表板 -->
     <section class="panel is-active" id="panel-dash">
       <div class="dash-intro">
         <h2>營運儀表板</h2>
-        <p id="dashPeriodLabel">載入中…</p>
+        <p id="dashPeriodLabel"><span class="skel-line skel-line--medium"></span></p>
       </div>
 
       <div class="dash-toolbar">
@@ -99,7 +100,7 @@
             <p class="dash-metric-k">完成營收</p>
             <svg class="dash-metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
           </div>
-          <p class="dash-metric-v dash-metric-v--mint" id="statTotalRevenue">-</p>
+          <p class="dash-metric-v dash-metric-v--mint skel-metric" id="statTotalRevenue">&nbsp;</p>
           <p class="dash-metric-d" id="statRevenueHint">區間已完成訂單</p>
         </article>
         <article class="dash-metric">
@@ -107,7 +108,7 @@
             <p class="dash-metric-k">訂單總數</p>
             <svg class="dash-metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/></svg>
           </div>
-          <p class="dash-metric-v" id="statOrderCount">-</p>
+          <p class="dash-metric-v skel-metric" id="statOrderCount">&nbsp;</p>
           <p class="dash-metric-d" id="statOrdersHint">區間訂單</p>
         </article>
         <article class="dash-metric">
@@ -115,7 +116,7 @@
             <p class="dash-metric-k">平均完成訂單</p>
             <svg class="dash-metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg>
           </div>
-          <p class="dash-metric-v dash-metric-v--blue" id="statAverageSale">-</p>
+          <p class="dash-metric-v dash-metric-v--blue skel-metric" id="statAverageSale">&nbsp;</p>
           <p class="dash-metric-d">已完成訂單均值</p>
         </article>
         <article class="dash-metric dash-metric--live">
@@ -123,8 +124,8 @@
             <p class="dash-metric-k">待處理</p>
             <svg class="dash-metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           </div>
-          <p class="dash-metric-v dash-metric-v--live"><span class="dash-live-dot"></span><span id="statPendingTotal">-</span></p>
-          <p class="dash-metric-d">留言 <span id="statNewMessages">-</span>・估價 <span id="statPendingQuotes">-</span>・進行中 <span id="statActiveOrders">-</span></p>
+          <p class="dash-metric-v dash-metric-v--live skel-metric"><span class="dash-live-dot"></span><span id="statPendingTotal">&nbsp;</span></p>
+          <p class="dash-metric-d">留言 <span class="skel-metric" id="statNewMessages">&nbsp;</span>・估價 <span class="skel-metric" id="statPendingQuotes">&nbsp;</span>・進行中 <span class="skel-metric" id="statActiveOrders">&nbsp;</span></p>
         </article>
       </div>
 
@@ -163,9 +164,7 @@
             </div>
           </div>
         </div>
-        <div class="dash-status-cards" id="dashStatusList">
-          <p class="dash-recent-empty">載入中…</p>
-        </div>
+        <div class="dash-status-cards" id="dashStatusList" aria-busy="true"></div>
       </div>
 
       <div class="dash-grid">
@@ -178,9 +177,7 @@
               </div>
             </div>
           </div>
-          <div class="dash-rank-list" id="dashTopProducts">
-            <p class="dash-recent-empty">載入中…</p>
-          </div>
+          <div class="dash-rank-list" id="dashTopProducts" aria-busy="true"></div>
         </div>
         <div class="card">
           <div class="card-head">
@@ -191,9 +188,7 @@
               </div>
             </div>
           </div>
-          <div class="dash-rank-list" id="dashTopSeries">
-            <p class="dash-recent-empty">載入中…</p>
-          </div>
+          <div class="dash-rank-list" id="dashTopSeries" aria-busy="true"></div>
         </div>
       </div>
 
@@ -202,9 +197,7 @@
           <h2>最新訂單</h2>
           <span class="hint">最近 10 筆</span>
         </div>
-        <div class="dash-recent-list" id="dashRecentOrders">
-          <p class="dash-recent-empty">載入中…</p>
-        </div>
+        <div class="dash-recent-list" id="dashRecentOrders" aria-busy="true"></div>
       </div>
     </section>
 
@@ -229,7 +222,9 @@
             <th data-sortable="false"></th>
           </tr></thead>
           <tbody id="leadsTableBody">
-            <tr><td colspan="6" class="table-placeholder">載入中…</td></tr>
+            <tr class="skel-row"><td colspan="6"><span class="skel-line skel-line--short"></span></td></tr>
+            <tr class="skel-row"><td colspan="6"><span class="skel-line skel-line--short"></span></td></tr>
+            <tr class="skel-row"><td colspan="6"><span class="skel-line skel-line--short"></span></td></tr>
           </tbody>
         </table>
       </div>
@@ -253,8 +248,8 @@
           <button type="button" class="btn-sm btn-primary" id="ordersBulkApply">套用</button>
           <button type="button" class="btn-sm" id="ordersBulkClear">清除選取</button>
         </div>
-        <div class="records-table-wrap" id="ordersTableBody">
-          <p class="orders-empty">載入中…</p>
+        <div class="records-table-wrap" id="ordersTableBody" aria-busy="true">
+          <div class="skel-table-wrap skel-panel"><table class="skel-table"><thead><tr><th></th><th>縮圖</th><th>品項</th><th>客戶</th><th>金額</th><th>狀態</th><th>操作</th></tr></thead><tbody><tr class="skel-row"><td><span class="skel-block skel-block--xs"></span></td><td><span class="skel-block skel-block--thumb"></span></td><td><span class="skel-line skel-line--long"></span></td><td><span class="skel-line"></span></td><td><span class="skel-line"></span></td><td><span class="skel-block skel-block--badge"></span></td><td><span class="skel-actions"></span></td></tr><tr class="skel-row"><td><span class="skel-block skel-block--xs"></span></td><td><span class="skel-block skel-block--thumb"></span></td><td><span class="skel-line skel-line--long"></span></td><td><span class="skel-line"></span></td><td><span class="skel-line"></span></td><td><span class="skel-block skel-block--badge"></span></td><td><span class="skel-actions"></span></td></tr><tr class="skel-row"><td><span class="skel-block skel-block--xs"></span></td><td><span class="skel-block skel-block--thumb"></span></td><td><span class="skel-line skel-line--long"></span></td><td><span class="skel-line"></span></td><td><span class="skel-line"></span></td><td><span class="skel-block skel-block--badge"></span></td><td><span class="skel-actions"></span></td></tr></tbody></table></div>
         </div>
         <dialog id="orderCancelDialog" class="order-cancel-dialog">
           <form method="dialog" id="orderCancelForm" class="order-cancel-form">
@@ -281,23 +276,21 @@
 
     <!-- 帳戶管理 -->
     <section class="panel" id="panel-accounts">
-      <div id="accountsRoot">
-        <p class="adx-loading-inline">載入帳戶中…</p>
+      <div id="accountsRoot" class="skel-panel" aria-busy="true" aria-label="載入帳戶中">
+        <span class="skel-line skel-line--short"></span>
       </div>
     </section>
 
     <!-- 邀請碼 -->
     <section class="panel" id="panel-invites">
-      <div id="invitesRoot">
-        <p class="ai-loading">載入邀請碼中…</p>
+      <div id="invitesRoot" class="skel-panel" aria-busy="true" aria-label="載入邀請碼中">
+        <span class="skel-line skel-line--short"></span>
       </div>
     </section>
 
     <!-- 商品上架 -->
     <section class="panel" id="panel-products">
-      <div id="productsRoot">
-        <p class="ap-loading">載入商品中…</p>
-      </div>
+      <div id="productsRoot" class="ap-skeleton-shell skel-panel" aria-busy="true" aria-label="載入商品中"></div>
     </section>
 
     <!-- 價格設定 -->
@@ -410,18 +403,19 @@
 
 <script type="module" src="/static/react/admin-tables.js?v=3"></script>
 <script src="js/api-client.js?v=2"></script>
+<script src="js/skeleton-ui.js?v=1"></script>
 <script src="js/order-status.js"></script>
 <script src="js/chart.umd.min.js"></script>
 <script src="js/shop-assets.js"></script>
 <script src="js/admin-dashboard-chart.js"></script>
 <script src="js/admin-table-sort.js?v=1"></script>
 <script src="js/admin-image-urls.js?v=6"></script>
-<script src="js/admin.js?v=9"></script>
-<script src="js/admin-orders.js?v=10"></script>
+<script src="js/admin.js?v=11"></script>
+<script src="js/admin-orders.js?v=11"></script>
 <script src="js/order-detail.js"></script>
-<script src="js/admin-products.js?v=14"></script>
-<script src="js/admin-accounts.js?v=6"></script>
-<script src="js/admin-invites.js?v=10"></script>
+<script src="js/admin-products.js?v=17"></script>
+<script src="js/admin-accounts.js?v=7"></script>
+<script src="js/admin-invites.js?v=11"></script>
 <script src="js/pricing-config.js?v=1.1"></script>
 <script>
 /* 側邊欄分頁切換（純前端示意） */

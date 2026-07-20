@@ -1,6 +1,6 @@
 {% extends "layouts/base.html" %}
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/home-ghibli.css?v=19">
+<link rel="stylesheet" href="/static/css/home-ghibli.css?v=22">
 {% include "partials/faq-react-css.html" %}
 {% endblock %}
 {% block extra_head %}
@@ -44,42 +44,26 @@
   "mainEntity": [
     {
       "@type": "Question",
-      "name": "需要準備多少毛髮或骨灰？",
+      "name": "需要準備多少毛髮或骨灰，才能製作 DNA 鑽石？",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "毛髮約需一顆雞蛋的大小；骨灰約需 3 至 5 公克。若不確定份量是否足夠，請先透過官方 LINE 與顧問確認——不需要先寄送樣本。每一份樣本都以單一客戶、單一培育流程處理。"
+        "text": "毛髮約需一顆雞蛋的大小（或養樂多瓶約 8 分滿）；骨灰約需 3 至 5 公克。若您手邊的份量不確定是否足夠，請先透過官方 LINE 與顧問確認——我們會依您的狀況評估，不需要先寄送樣本。每一份樣本我們都以單一客戶、單一培育流程處理，確保專屬與純粹。"
       }
     },
     {
       "@type": "Question",
-      "name": "製作一顆紀念鑽石需要多久？",
+      "name": "DNA 紀念鑽石的價格怎麼計算？",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "約 3 個月（70–90 天）。培育鑽石需要時間讓晶體自然生長，每一顆的培育過程都獨立進行。完工後，會連同銘印保證卡與專屬影音紀念盒一併交付。"
+        "text": "價格依克拉數計算：0.10 克拉 NT$24,000 起、0.50 克拉 NT$98,000、1.00 克拉 NT$250,000（圓形明亮式切工／白鑽）。非圓形切工（公主方、橢圓、梨形等）加價 10%，且需 0.30 克拉以上才能製作；彩鑽最低製作規格為 0.30 克拉，報價依顏色稀有度而定；3.00 克拉以上請洽官方 LINE 專屬報價。完整價目請見價格試算・價格總覽。"
       }
     },
     {
       "@type": "Question",
-      "name": "樣本會送到國外處理嗎？",
+      "name": "完工後我會收到什麼？",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "全程在台灣完成。銘印鑽石是全台唯一擁有在地 DNA 鑽石培育實驗室的紀念鑽石品牌，從萃取、培育到成品，您珍視的毛髮與骨灰無需經歷國際運送。"
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "完成的鑽石有鑑定證書嗎？",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "每顆鑽石皆附銘印保證卡；0.20 克拉以上的鑽石，可代送 GIA 或 IGI 國際鑑定機構出具證書（費用另計），讓這顆鑽石在未來傳承時，有正式的身分證明。"
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "鑽石可以鑲嵌成戒指或項鍊嗎？",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "可以。鑽石完成後，可鑲嵌為戒指、項鍊、耳環或手鍊，材質可選 18K 金、14K 金、9K 金或 PT950 鉑金，由專屬顧問與您討論設計與預算。"
+        "text": "您會收到：專屬培育的 DNA 鑽石（或已鑲嵌完成的飾品）、銘印保證卡，以及專屬影音紀念盒——封存這顆鑽石從樣本到成品的珍貴過程。"
       }
     },
     {
@@ -87,7 +71,7 @@
       "name": "如何開始訂製？",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "銘印鑽石採預約制。請透過官方 LINE 預約，由專屬顧問一對一討論需求、確認樣本份量與報價，再進行採樣與培育。門市：新北市三重區福德南路 43 號 1 樓。"
+        "text": "您可以選擇以下任一方式開始訂製：線上客製試算 — 前往客製試算頁（/shop/calculator/），依步驟選擇品項、款式、金屬與鑽石規格，系統即時試算價格；確認後可加入購物車並送出訂單，我們會與您聯繫確認樣本與細節。預約顧問 — 也可透過官方 LINE 預約，由專屬顧問一對一討論需求、確認樣本份量與報價，再進行採樣與培育。官方 LINE：點此加入；電話：02-2977-0268；門市：新北市三重區福德南路 43 號 1 樓（預約制）。"
       }
     }
   ]
@@ -142,7 +126,7 @@
           <p class="gh-hero__lead reveal reveal-d2">以寶寶的胎髮，珍藏生命最初的印記，成為陪伴孩子一生的傳家珍藏。從滿月剃髮的那一刻，到孩子長大成人，這顆鑽石始終記得最初的模樣。</p>
           <div class="gh-hero__actions reveal reveal-d3">
             <a class="gh-btn gh-btn--primary" href="/series/first-love/">探索滿月鑽石</a>
-            <a class="gh-btn gh-btn--ghost" href="/diamonds.html#series">五大系列</a>
+            <a class="gh-btn gh-btn--ghost" href="/#series">五大系列</a>
           </div>
         </div>
       </li>
@@ -403,7 +387,7 @@
     </a>
   </div>
 
-  <a class="gh-btn gh-btn--primary reveal" href="/diamonds.html">查看系列總覽</a>
+  <a class="gh-btn gh-btn--primary reveal" href="/#series">查看系列總覽</a>
 </section>
 
 <div class="gh-scene">

@@ -10,6 +10,19 @@
     var api = window.imprintAPI;
     if (!api) return;
 
+    if (window.SkeletonUI) {
+      var dashHosts = {
+        dashStatusList: window.SkeletonUI.statusCards(4),
+        dashTopProducts: window.SkeletonUI.rankList(4),
+        dashTopSeries: window.SkeletonUI.rankList(4),
+        dashRecentOrders: window.SkeletonUI.recentList(5),
+      };
+      Object.keys(dashHosts).forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el && !el.innerHTML.trim()) el.innerHTML = dashHosts[id];
+      });
+    }
+
     var statusLabel = window.ImprintOrderStatus ? window.ImprintOrderStatus.label : function (s) { return s; };
     var mainEl = document.querySelector('.main');
     var topMeta = document.getElementById('topMeta');
@@ -68,7 +81,25 @@
 
     function setText(id, value) {
       var el = document.getElementById(id);
-      if (el) el.textContent = value;
+      if (el) {
+        el.classList.remove('skel-metric');
+        el.textContent = value;
+      }
+    }
+
+    function showDashboardListSkeletons() {
+      var S = window.SkeletonUI;
+      if (!S) return;
+      var hosts = {
+        dashStatusList: S.statusCards(4),
+        dashTopProducts: S.rankList(4),
+        dashTopSeries: S.rankList(4),
+        dashRecentOrders: S.recentList(5),
+      };
+      Object.keys(hosts).forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) el.innerHTML = hosts[id];
+      });
     }
 
     var dashParams = { granularity: 'month' };
@@ -336,6 +367,7 @@
 
     /* ---------- 儀表板 ---------- */
     function loadDashboardStats() {
+      showDashboardListSkeletons();
       api.admin.getDashboardStats(dashboardRequestParams()).then(function (stats) {
         if (stats.error) return;
         var pendingTotal = (stats.newMessages || 0) + (stats.pendingQuotes || 0) + (stats.activeOrders || 0);
@@ -371,7 +403,12 @@
       var tbody = document.getElementById('leadsTableBody');
       if (!tbody) return;
       if (leadsLoaded && !force) return;
-      if (!silent) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--ink-faint);">載入中…</td></tr>';
+      if (!silent) {
+        var S = window.SkeletonUI;
+        tbody.innerHTML = S
+          ? S.tableBodyRows(5, S.leadsTableRow)
+          : '<tr><td colspan="6" class="table-placeholder">載入中…</td></tr>';
+      }
 
       api.admin.getLeads().then(function (res) {
         if (res.error) {
@@ -531,6 +568,10 @@
           if (panel === 'accounts' && window.AdminAccountsPanel) window.AdminAccountsPanel.ensureLoaded();
         }
       };
+
+      if (window.AdminProductsPanel && window.AdminProductsPanel.prefetch) {
+        window.AdminProductsPanel.prefetch();
+      }
     });
   });
 })();

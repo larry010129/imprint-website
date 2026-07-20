@@ -185,7 +185,9 @@
 
   function load(silent, force) {
     if (_loaded && !force) return;
-    if (!silent) root.innerHTML = '<p class="adx-loading-inline">載入帳戶中…</p>';
+    if (!silent) {
+      root.innerHTML = window.SkeletonUI ? window.SkeletonUI.accountsShell() : '<p class="adx-loading-inline">載入帳戶中…</p>';
+    }
     api.admin.getAccounts().then(function (res) {
       if (res.error) {
         root.innerHTML = '<p class="note warn">載入失敗：' + esc(res.error) + '</p>';
@@ -201,4 +203,8 @@
   }
 
   window.AdminAccountsPanel = { load: load, ensureLoaded: ensureLoaded };
+
+  if (root && window.SkeletonUI && !_loaded && root.querySelector('.skel-line')) {
+    root.innerHTML = window.SkeletonUI.accountsShell();
+  }
 })();

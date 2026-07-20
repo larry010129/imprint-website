@@ -45,7 +45,7 @@ export default function StoriesTestimonials() {
           />
         </picture>
         <div className="absolute inset-0 bg-gradient-to-t from-[#14100d]/90 via-[#14100d]/55 to-[#14100d]/30" />
-        <div className="container relative z-10 mx-auto px-4 pb-10 pt-16 sm:pb-12">
+        <div className="relative z-10 mx-auto px-4 pb-10 pt-16 sm:pb-12">
           <p className="text-sm text-[#c9c0b8]">
             <a href={`${root}index.html`} className="hover:text-[#5ecfcf]">
               首頁
@@ -73,7 +73,7 @@ export default function StoriesTestimonials() {
       </section>
 
       <section className="border-b border-[#E3DCD3] bg-[#fdfcfa] py-8">
-        <div className="container mx-auto grid max-w-4xl grid-cols-1 gap-6 px-4 sm:grid-cols-3 sm:gap-8">
+        <div className="mx-auto grid max-w-4xl grid-cols-1 gap-6 px-4 sm:grid-cols-3 sm:gap-8">
           {[
             { value: `${TESTIMONIALS.length}+`, label: "則真實客戶見證" },
             { value: "全台唯一", label: "在地 DNA 鑽石培育實驗室" },
@@ -92,7 +92,7 @@ export default function StoriesTestimonials() {
       </section>
 
       <section className="overflow-hidden bg-background py-14 md:py-20">
-        <div className="container mx-auto px-4">
+        <div className="mx-auto px-4">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}

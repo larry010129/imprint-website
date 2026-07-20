@@ -36,28 +36,23 @@ _FILE_OVERRIDES = {
 }
 
 _CATEGORY_THUMB = {
-    "pendant": "墜子/項墜A.jpg",
-    "ring": "戒指/戒指A.jpg",
-    "earring": "耳飾/耳飾A.jpg",
-    "bracelet": "手鍊/手鍊A.jpg",
-    "chain": "鍊條/斗圓鍊.jpg",
+    "pendant": "thumbs/pendant/A.jpg",
+    "ring": "thumbs/ring/A.jpg",
+    "earring": "thumbs/earring/A.jpg",
+    "bracelet": "thumbs/bracelet/A.jpg",
+    "chain": "thumbs/chain/A.jpg",
 }
 
-_STYLE_THUMB = {
-    "pendant-A": "墜子/項墜A.jpg",
-    "pendant-B": "墜子/項墜B.jpg",
-    "pendant-C": "墜子/項墜C.jpg",
-    "ring-A": "戒指/戒指A.jpg",
-    "ring-B": "戒指/戒指B.jpg",
-    "ring-C": "戒指/戒指C.jpg",
-    "earring-A": "耳飾/耳飾A.jpg",
-    "bracelet-A": "手鍊/手鍊A.jpg",
-    "bracelet-B": "手鍊/手鍊B.jpg",
-    "bracelet-C": "手鍊/手鍊C.jpg",
-    "chain-A": "鍊條/斗圓鍊.jpg",
-    "chain-B": "鍊條/斗圓鍊K玫瑰_0.jpg",
-    "chain-C": "鍊條/斗圓鍊K黃_0.jpg",
-}
+
+def _style_thumb_rel(style_key: str) -> str:
+    match = _STYLE_ID.match(style_key)
+    if not match:
+        return ""
+    category = match.group(1).lower()
+    style = match.group(2).upper()
+    if category not in _VALID_CATEGORIES or style not in "ABC":
+        return ""
+    return f"thumbs/{category}/{style}.jpg"
 
 
 def is_uuid(value: str | None) -> bool:
@@ -161,7 +156,7 @@ def shop_product_image_url(style_key: str | None, color: str | None, *, default_
 def shop_style_thumb_url(style_key: str | None) -> str:
     if not style_key:
         return ""
-    rel = _STYLE_THUMB.get(style_key)
+    rel = _style_thumb_rel(style_key)
     if rel:
         return _join_shop_path(rel)
     match = _STYLE_ID.match(style_key)
@@ -266,7 +261,7 @@ def order_product_id(order: dict) -> str | None:
 
 if __name__ == "__main__":
     assert shop_product_image_url("ring-A", "white") == "/static/images/shop-product/silver/戒指A_silver.png"
-    assert shop_style_thumb_url("ring-A") == "/static/images/shop-product/戒指/戒指A.jpg"
+    assert shop_style_thumb_url("ring-A") == "/static/images/shop-product/thumbs/ring/A.jpg"
     assert resolve_product_image_url("images/products/white/pendant-A.png") == "/static/images/products/white/pendant-A.png"
     assert style_key_from_refs("ring", "A") == "ring-A"
     assert not order_style_image_url("ring", "A").endswith(".svg")

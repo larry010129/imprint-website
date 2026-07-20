@@ -1,4 +1,5 @@
 import type { ReactNode } from "react"
+import { FAQ_CATEGORIES, type FaqEntry } from "@/data/faq-content"
 
 export type FaqItem = {
   id: string
@@ -6,41 +7,15 @@ export type FaqItem = {
   answer: ReactNode
 }
 
-export const FAQ_ITEMS_FULL: FaqItem[] = [
-  {
-    id: "item-1",
-    question: "需要準備多少毛髮或骨灰，才能製作 DNA 鑽石？",
-    answer:
-      "毛髮約需一顆雞蛋的大小（或養樂多瓶約 8 分滿）；骨灰約需 3 至 5 公克。若您手邊的份量不確定是否足夠，請先透過官方 LINE 與顧問確認——我們會依您的狀況評估，不需要先寄送樣本。每一份樣本我們都以單一客戶、單一培育流程處理，確保專屬與純粹。",
-  },
-  {
-    id: "item-2",
-    question: "DNA 鑽石是怎麼製作的？",
-    answer:
-      "DNA 鑽石是萃取毛髮或骨灰中的元素，注入鑽石生長設備中，經晶化培育而成的專屬個人化鑽石。完整流程為：樣本萃取 → 元素注入生長設備 → 晶化培育 → 切割拋光 →（可選）鑲嵌為飾品。從萃取、培育到飾品設計，全程於台灣完成。",
-  },
-  {
-    id: "item-3",
-    question: "製作一顆紀念鑽石需要多久？",
-    answer:
-      "約 3 個月（70–90 天）。培育鑽石需要時間讓晶體自然生長，每一顆的培育過程都獨立進行。完工後，我們會連同銘印保證卡與專屬影音紀念盒一併交付。",
-  },
-  {
-    id: "item-4",
-    question: "樣本會送到國外處理嗎？",
-    answer:
-      "不會。銘印鑽石是全台唯一擁有在地 DNA 鑽石培育實驗室的紀念鑽石品牌，從萃取、培育到成品，全程在台灣完成。您珍視的毛髮與骨灰不需要經歷國際運送，每一個環節都在您觸手可及的距離裡被安心對待。",
-  },
-  {
-    id: "item-5",
-    question: "完成的鑽石有鑑定證書嗎？",
-    answer:
-      "有。每顆鑽石皆附銘印保證卡；0.20 克拉以上的鑽石，可代送 GIA 或 IGI 國際鑑定機構出具證書（費用另計）。第三方鑑定為您的珍藏提供客觀保障，也讓這顆鑽石在未來傳承時，有正式的身分證明。",
-  },
-  {
-    id: "item-6",
-    question: "DNA 紀念鑽石的價格怎麼計算？",
-    answer: (
+export type FaqCategory = {
+  id: string
+  title: string
+  items: FaqItem[]
+}
+
+function answerWithLinks(entry: FaqEntry): ReactNode {
+  if (entry.id === "item-6") {
+    return (
       <>
         價格依克拉數計算：0.10 克拉 NT$24,000 起、0.50 克拉 NT$98,000、1.00 克拉
         NT$250,000（圓形明亮式切工／白鑽）。非圓形切工（公主方、橢圓、梨形等）加價
@@ -48,32 +23,21 @@ export const FAQ_ITEMS_FULL: FaqItem[] = [
         克拉以上請洽官方 LINE 專屬報價。完整價目請見
         <a href="/price.html"> 價格試算・價格總覽</a>。
       </>
-    ),
-  },
-  {
-    id: "item-7",
-    question: "寵物的毛髮也可以做成鑽石嗎？",
-    answer:
-      "可以。寵物鑽石是我們的主要系列之一，許多飼主以毛孩的毛髮訂製鑽石，讓陪伴以另一種形式延續。毛髮份量同樣約需一顆雞蛋大小；若毛量不足，請先與顧問討論，我們會依實際狀況給您建議。",
-  },
-  {
-    id: "item-8",
-    question: "鑽石可以鑲嵌成戒指或項鍊嗎？",
-    answer:
-      "可以。鑽石完成後，可鑲嵌為戒指、項鍊、耳環或手鍊，材質可選 18K 金、14K 金、9K 金或 PT950 鉑金。飾品戒台依款式與材質另計（例：9K 經典款項鍊 NT$10,000 起，不含鑽），由專屬顧問與您討論設計與預算，依您的故事量身打造。",
-  },
-  {
-    id: "item-9",
-    question: "完工後我會收到什麼？",
-    answer:
-      "您會收到：專屬培育的 DNA 鑽石（或已鑲嵌完成的飾品）、銘印保證卡，以及專屬影音紀念盒——封存這顆鑽石從樣本到成品的珍貴過程。",
-  },
-  {
-    id: "item-10",
-    question: "如何開始訂製？",
-    answer: (
+    )
+  }
+
+  if (entry.id === "item-10") {
+    return (
       <>
-        銘印鑽石採預約制。請透過官方 LINE 預約，由專屬顧問與您一對一討論需求、確認樣本份量與報價，再進行採樣與培育。官方
+        您可以選擇以下任一方式開始訂製：
+        <br />
+        <br />
+        <strong>線上客製試算</strong> — 前往
+        <a href="/shop/calculator/"> 客製試算頁</a>
+        ，依步驟選擇品項、款式、金屬與鑽石規格，系統即時試算價格；確認後可加入購物車並送出訂單，我們會與您聯繫確認樣本與細節。
+        <br />
+        <br />
+        <strong>預約顧問</strong> — 也可透過官方 LINE 預約，由專屬顧問一對一討論需求、確認樣本份量與報價，再進行採樣與培育。官方
         LINE：
         <a href="https://lin.ee/ktVBtmx" target="_blank" rel="noopener">
           {" "}
@@ -81,8 +45,32 @@ export const FAQ_ITEMS_FULL: FaqItem[] = [
         </a>
         ；電話：02-2977-0268；門市：新北市三重區福德南路 43 號 1 樓（預約制）。
       </>
-    ),
-  },
-]
+    )
+  }
 
-export const FAQ_ITEMS_TEASER: FaqItem[] = FAQ_ITEMS_FULL.slice(0, 2)
+  return entry.answer
+}
+
+function toFaqItem(entry: FaqEntry): FaqItem {
+  return {
+    id: entry.id,
+    question: entry.question,
+    answer: answerWithLinks(entry),
+  }
+}
+
+export const FAQ_CATEGORY_LIST: FaqCategory[] = FAQ_CATEGORIES.map((cat) => ({
+  id: cat.id,
+  title: cat.title,
+  items: cat.items.map(toFaqItem),
+}))
+
+export const FAQ_ITEMS_FULL: FaqItem[] = FAQ_CATEGORY_LIST.flatMap(
+  (cat) => cat.items,
+)
+
+const TEASER_IDS = ["item-1", "item-6", "item-9", "item-10"] as const
+
+export const FAQ_ITEMS_TEASER: FaqItem[] = TEASER_IDS.map(
+  (id) => FAQ_ITEMS_FULL.find((item) => item.id === id)!,
+)

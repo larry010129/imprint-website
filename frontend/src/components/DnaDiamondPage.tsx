@@ -226,7 +226,7 @@ export default function DnaDiamondPage() {
             <SplitSection body={<Prose>{ASSURANCE_SECTION.body}</Prose>} image={ASSURANCE_SECTION.image} />
             <div className="mt-8 flex flex-wrap gap-3">
               <a
-                href={`${root}diamonds.html`}
+                href={`${root}#series`}
                 className="inline-flex items-center rounded-full bg-[#9cefef] px-6 py-3 text-sm tracking-wider text-[#2b2320] transition hover:bg-[#b7f4f4]"
               >
                 探索您的專屬紀念｜五大訂製系列

@@ -51,7 +51,7 @@ export const ProcessSection: React.FC<ProcessSectionProps> = ({
 }) => {
   return (
     <section id={id} className="w-full bg-background py-16 md:py-24">
-      <div className="container mx-auto grid grid-cols-1 gap-12 px-4 md:grid-cols-3 md:gap-8 lg:gap-16">
+      <div className="mx-auto grid grid-cols-1 gap-12 px-4 md:grid-cols-3 md:gap-8 lg:gap-16">
         <div className="flex flex-col items-start justify-center text-center md:col-span-1 md:text-left">
           <span className="mb-2 text-sm font-medium uppercase tracking-widest text-primary">{subtitle}</span>
           <h2

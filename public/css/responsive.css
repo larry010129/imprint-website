@@ -41,7 +41,7 @@
   }
   .nav-cta .btn-line{ display:none; }
   .nav-cta .btn-calc,
-  .nav-cta .btn-contact{ display:none; } /* 手機版靠選單第一項「珠寶試算」，header 空間留給預約按鈕 */
+  .nav-cta .btn-contact{ display:none; } /* 手機版 header 空間留給預約按鈕 */
   .hc-viewport{ height:78vh; min-height:520px; }
   .hc-copy{ padding:0 4px; }
   .hc-copy h1, .hc-copy h2{ max-width:100%; }

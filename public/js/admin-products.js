@@ -12,27 +12,57 @@
   var COLORS = ['white', 'yellow', 'rose'];
   var GOLD_LABELS = { '9k': '9K', '14k': '14K', '18k': '18K', 'pt950': 'PT950', 's925': 'S925' };
   var COLOR_LABELS = { white: '白金', yellow: '黃金', rose: '玫瑰金' };
-  var IMAGE_SLOT_OPTIONS = [
-    { value: 'white', label: '金屬 · 白金', group: 'metal' },
-    { value: 'yellow', label: '金屬 · 黃金', group: 'metal' },
-    { value: 'rose', label: '金屬 · 玫瑰金', group: 'metal' },
-    { value: 'diamond-d', label: '鑽石 · D 色', group: 'diamond' },
-    { value: 'diamond-e', label: '鑽石 · E 色', group: 'diamond' },
-    { value: 'diamond-f', label: '鑽石 · F 色', group: 'diamond' },
-    { value: 'diamond-g', label: '鑽石 · G 色', group: 'diamond' },
-    { value: 'diamond-h', label: '鑽石 · H 色', group: 'diamond' },
-    { value: '__custom__', label: '其他（自訂）', group: 'other' },
+  var METAL_SLOT_OPTIONS = [
+    { value: 'white', label: '白金' },
+    { value: 'yellow', label: '黃金' },
+    { value: 'rose', label: '玫瑰金' },
   ];
-  var IMAGE_SLOT_PRESET_VALUES = IMAGE_SLOT_OPTIONS
-    .filter(function (o) { return o.value !== '__custom__'; })
-    .map(function (o) { return o.value; });
+  var DIAMOND_SLOT_OPTIONS = [
+    { value: 'white', label: '白鑽' },
+    { value: 'yellow', label: '黃鑽' },
+    { value: 'blue', label: '藍鑽' },
+    { value: 'pink', label: '粉鑽' },
+  ];
+  var METAL_SLOT_VALUES = METAL_SLOT_OPTIONS.map(function (o) { return o.value; });
+  var DIAMOND_SLOT_VALUES = DIAMOND_SLOT_OPTIONS.map(function (o) { return o.value; });
+
+  function buildSlotKey(metal, diamond) {
+    return String(metal) + '-' + String(diamond);
+  }
+
+  function parseSlotKey(key) {
+    var parts = String(key || '').split('-');
+    if (parts.length >= 2 && METAL_SLOT_VALUES.indexOf(parts[0]) >= 0 && DIAMOND_SLOT_VALUES.indexOf(parts[1]) >= 0) {
+      return { metal: parts[0], diamond: parts[1] };
+    }
+    if (METAL_SLOT_VALUES.indexOf(key) >= 0) return { metal: key, diamond: 'white' };
+    return null;
+  }
+
+  function allPresetSlotKeys() {
+    var keys = [];
+    METAL_SLOT_VALUES.forEach(function (metal) {
+      DIAMOND_SLOT_VALUES.forEach(function (diamond) {
+        keys.push(buildSlotKey(metal, diamond));
+      });
+    });
+    return keys;
+  }
+
+  function slotSelectHtml(options, selected) {
+    return options.map(function (opt) {
+      return '<option value="' + opt.value + '"' + (opt.value === selected ? ' selected' : '') + '>' + esc(opt.label) + '</option>';
+    }).join('');
+  }
 
   var root = document.getElementById('productsRoot');
   if (!root) return;
 
   var state = { products: [], categoryLabels: {}, activeTab: 'cat-pendant', editingId: null, view: 'list' };
   var _loaded = false;
+  var _loading = false;
   var _slotCounter = 0;
+  var LOAD_TIMEOUT_MS = 25000;
 
   function esc(s) {
     return window.AdminPanel && window.AdminPanel.escapeHtml
@@ -90,6 +120,26 @@
 
   function setRoot(html) {
     root.innerHTML = html;
+    root.removeAttribute('aria-busy');
+    root.classList.remove('ap-skeleton-shell');
+  }
+
+  function loadingSkeletonHtml() {
+    return window.SkeletonUI ? window.SkeletonUI.productsShell() : '';
+  }
+
+  function tableAreaSkeletonHtml() {
+    return window.SkeletonUI
+      ? window.SkeletonUI.table({ headers: ['', '縮圖', '品項', '名稱', '狀態', '操作'], rows: 4, label: '載入表格中' })
+      : '';
+  }
+
+  function showLoadingSkeleton() {
+    unmountProductsTable();
+    root.classList.add('ap-skeleton-shell');
+    root.setAttribute('aria-busy', 'true');
+    root.setAttribute('aria-label', '載入商品中');
+    root.innerHTML = loadingSkeletonHtml();
   }
 
   function unmountProductsTable() {
@@ -113,7 +163,7 @@
       '<p class="note">管理商品款式、金屬選項與照片。上架後會顯示於客製試算頁；拖曳列可調整排序。</p>' +
       '<div class="ap-toolbar"><button type="button" class="btn-sm btn-primary" id="btnNewProduct">+ 新增商品</button></div>' +
       '<div class="ap-category-tabs" role="tablist">' + tabs + '</div>' +
-      '<div class="ap-table-root" id="apProductsTableRoot"></div>' +
+      '<div class="ap-table-root" id="apProductsTableRoot">' + tableAreaSkeletonHtml() + '</div>' +
       '<dialog id="apDeleteDialog" class="ap-delete-dialog"><form method="dialog" id="apDeleteForm">' +
         '<h3>刪除商品</h3><p id="apDeleteTarget"></p>' +
         '<p class="ap-hint">刪除後無法復原，若已有訂單引用建議改為下架。</p>' +
@@ -153,7 +203,7 @@
   }
 
   function whenAdminTablesReady(fn, tries) {
-    tries = tries == null ? 40 : tries;
+    tries = tries == null ? 120 : tries;
     if (window.AdminTables) {
       fn();
       return;
@@ -326,13 +376,19 @@
     );
   }
 
-  function slotKeySelectHtml(selected, usedKeys) {
-    var used = usedKeys || {};
-    return IMAGE_SLOT_OPTIONS.map(function (opt) {
-      var taken = opt.value !== '__custom__' && opt.value !== selected && used[opt.value];
-      var sel = (opt.value === selected || (selected && opt.value === '__custom__' && IMAGE_SLOT_PRESET_VALUES.indexOf(selected) < 0)) ? ' selected' : '';
-      return '<option value="' + opt.value + '"' + sel + (taken ? ' disabled' : '') + '>' + esc(opt.label) + '</option>';
-    }).join('');
+  function slotKeySelectHtml(selectedKey, used) {
+    var parsed = parseSlotKey(selectedKey) || { metal: 'white', diamond: 'white' };
+    var taken = used || {};
+    return (
+      '<label class="ap-image-slot-pair">' +
+        '<span>金屬</span>' +
+        '<select class="ap-image-slot-metal">' + slotSelectHtml(METAL_SLOT_OPTIONS, parsed.metal) + '</select>' +
+      '</label>' +
+      '<label class="ap-image-slot-pair">' +
+        '<span>鑽石</span>' +
+        '<select class="ap-image-slot-diamond">' + slotSelectHtml(DIAMOND_SLOT_OPTIONS, parsed.diamond) + '</select>' +
+      '</label>'
+    );
   }
 
   function groupImagesForSlots(images) {
@@ -351,24 +407,21 @@
 
   function imageSlotHtml(slot, usedKeys) {
     var slotId = 'slot-' + (++_slotCounter);
-    var color = slot.color || 'white';
-    var isCustom = IMAGE_SLOT_PRESET_VALUES.indexOf(color) < 0;
-    var selectValue = isCustom ? '__custom__' : color;
+    var color = slot.color || 'white-white';
+    var parsed = parseSlotKey(color) || { metal: 'white', diamond: 'white' };
     var slides = (slot.urls || []).map(function (url) {
       return imageSlideHtml(url, color);
     }).join('');
     var used = Object.assign({}, usedKeys || {});
-    if (!isCustom) used[color] = true;
+    used[color] = true;
 
     return (
       '<div class="ap-image-slot" data-slot-id="' + slotId + '">' +
         '<div class="ap-image-slot-head">' +
-          '<label class="ap-image-slot-label">' +
+          '<div class="ap-image-slot-label ap-image-slot-label--pair">' +
             '<span>圖片選項</span>' +
-            '<select class="ap-image-slot-key">' + slotKeySelectHtml(selectValue, used) + '</select>' +
-          '</label>' +
-          '<input type="text" class="ap-image-slot-custom" maxlength="32" placeholder="自訂代碼（例：side-view）" value="' +
-            esc(isCustom ? color : '') + '"' + (isCustom ? '' : ' hidden') + '>' +
+            slotKeySelectHtml(color, used) +
+          '</div>' +
           '<button type="button" class="ap-remove-slot" aria-label="移除此選項">✕</button>' +
         '</div>' +
         '<div class="ap-carousel" data-carousel>' +
@@ -405,9 +458,10 @@
   function imageSlotsHtml(images) {
     var slots = groupImagesForSlots(images);
     var used = {};
-    return slots.map(function (slot, i) {
+    return slots.map(function (slot) {
       var html = imageSlotHtml(slot, used);
-      if (IMAGE_SLOT_PRESET_VALUES.indexOf(slot.color) >= 0) used[slot.color] = true;
+      if (parseSlotKey(slot.color)) used[slot.color] = true;
+      else if (slot.color) used[slot.color] = true;
       return html;
     }).join('');
   }
@@ -450,13 +504,13 @@
   }
 
   function slotColorKey(slotEl) {
-    var sel = slotEl.querySelector('.ap-image-slot-key');
-    var custom = slotEl.querySelector('.ap-image-slot-custom');
-    if (!sel) return '';
-    if (sel.value === '__custom__') {
-      return String(custom && custom.value || '').trim().toLowerCase();
+    var metalSel = slotEl.querySelector('.ap-image-slot-metal');
+    var diamondSel = slotEl.querySelector('.ap-image-slot-diamond');
+    if (metalSel && diamondSel) {
+      return buildSlotKey(metalSel.value, diamondSel.value);
     }
-    return sel.value;
+    var legacy = slotEl.querySelector('.ap-image-slot-key');
+    return legacy ? legacy.value : '';
   }
 
   function usedSlotKeys(form, exceptSlot) {
@@ -471,14 +525,12 @@
 
   function syncSlotKeySelects(form) {
     form.querySelectorAll('.ap-image-slot').forEach(function (slot) {
-      var sel = slot.querySelector('.ap-image-slot-key');
-      if (!sel) return;
       var current = slotColorKey(slot);
-      var isCustom = sel.value === '__custom__' || IMAGE_SLOT_PRESET_VALUES.indexOf(current) < 0;
-      var used = usedSlotKeys(form, slot);
-      sel.innerHTML = slotKeySelectHtml(isCustom ? '__custom__' : current, used);
-      if (!isCustom && current) sel.value = current;
-      else if (isCustom) sel.value = '__custom__';
+      var parsed = parseSlotKey(current) || { metal: 'white', diamond: 'white' };
+      var metalSel = slot.querySelector('.ap-image-slot-metal');
+      var diamondSel = slot.querySelector('.ap-image-slot-diamond');
+      if (metalSel) metalSel.value = parsed.metal;
+      if (diamondSel) diamondSel.value = parsed.diamond;
     });
   }
 
@@ -564,22 +616,20 @@
     var carousel = slot.querySelector('[data-carousel]');
     if (carousel) initCarousel(carousel);
 
-    var sel = slot.querySelector('.ap-image-slot-key');
-      var custom = slot.querySelector('.ap-image-slot-custom');
-      var removeSlot = slot.querySelector('.ap-remove-slot');
+    var metalSel = slot.querySelector('.ap-image-slot-metal');
+    var diamondSel = slot.querySelector('.ap-image-slot-diamond');
+    var removeSlot = slot.querySelector('.ap-remove-slot');
 
-      sel?.addEventListener('change', function () {
-        var showCustom = sel.value === '__custom__';
-        if (custom) {
-          custom.hidden = !showCustom;
-          if (showCustom) custom.focus();
-        }
-        syncSlotKeySelects(form);
+    function onSlotKeyChange() {
+      var key = slotColorKey(slot);
+      slot.querySelectorAll('.ap-carousel-item[data-url]').forEach(function (item) {
+        item.dataset.color = key;
       });
+      syncSlotKeySelects(form);
+    }
 
-      custom?.addEventListener('input', function () {
-        syncSlotKeySelects(form);
-      });
+    metalSel?.addEventListener('change', onSlotKeyChange);
+    diamondSel?.addEventListener('change', onSlotKeyChange);
 
       removeSlot?.addEventListener('click', function () {
         if (form.querySelectorAll('.ap-image-slot').length <= 1) {
@@ -714,7 +764,7 @@
             '</div>' +
             '<button type="button" class="btn-sm" id="apAddVariant">+ 新增款式</button>' +
             '<h4 class="ap-section-title">商品照片</h4>' +
-            '<p class="ap-section-hint">每個選項可上傳多張圖片（金屬色、鑽石色或其他），前台試算頁依選項顯示。</p>' +
+            '<p class="ap-section-hint">每個選項可上傳多張圖片，請分別選擇「金屬」與「鑽石顏色」（例如：白金 + 黃鑽 → white-yellow）。前台試算頁會依選項切換商品圖。</p>' +
             '<div class="ap-image-slots" id="apImageSlots">' + imageSlotsHtml(product && product.images) + '</div>' +
             '<button type="button" class="btn-sm" id="apAddImageSlot">+ 新增圖片選項</button>' +
             '<div class="ap-form-actions ap-editor-actions">' +
@@ -753,14 +803,14 @@
       var host = document.getElementById('apImageSlots');
       if (!host) return;
       var used = usedSlotKeys(form);
-      var pick = IMAGE_SLOT_PRESET_VALUES.find(function (v) { return !used[v]; }) || '__custom__';
+      var pick = allPresetSlotKeys().find(function (v) { return !used[v]; }) || buildSlotKey('white', 'white');
       var wrap = document.createElement('div');
-      wrap.innerHTML = imageSlotHtml({ color: pick === '__custom__' ? '' : pick, urls: [] }, used);
+      wrap.innerHTML = imageSlotHtml({ color: pick, urls: [] }, used);
       var slot = wrap.firstElementChild;
       host.appendChild(slot);
       bindImageSlot(slot, form);
       syncSlotKeySelects(form);
-      slot.querySelector('.ap-image-slot-key')?.focus();
+      slot.querySelector('.ap-image-slot-metal')?.focus();
     });
 
     catSel?.addEventListener('change', function () {
@@ -904,17 +954,47 @@
     });
   }
 
+  function fetchProducts() {
+    return new Promise(function (resolve) {
+      var done = false;
+      var timer = setTimeout(function () {
+        if (done) return;
+        done = true;
+        resolve({ error: '載入逾時，請檢查網路後重試。', timeout: true });
+      }, LOAD_TIMEOUT_MS);
+      api.admin.getProducts().then(function (res) {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        resolve(res);
+      });
+    });
+  }
+
   function load(silent, force) {
-    if (_loaded && !force && state.view === 'editor') return;
-    if (_loaded && !force) return;
-    if (!silent) {
-      unmountProductsTable();
-      root.innerHTML = '<p class="ap-loading">載入商品中…</p>';
+    if (_loading && !force) {
+      if (!silent && state.view !== 'editor') showLoadingSkeleton();
+      return;
     }
-    api.admin.getProducts().then(function (res) {
+    if (_loaded && !force && state.view === 'editor') return;
+    if (_loaded && !force) {
+      if (state.view === 'list') renderShell();
+      return;
+    }
+
+    if (!silent && state.view !== 'editor') showLoadingSkeleton();
+
+    _loading = true;
+    fetchProducts().then(function (res) {
+      _loading = false;
       if (res.error) {
         unmountProductsTable();
-        root.innerHTML = '<p class="note warn">載入失敗：' + esc(apiError(res)) + '</p>';
+        var retry = res.timeout
+          ? ' <button type="button" class="btn-sm" id="apRetryLoad">重試</button>'
+          : '';
+        root.innerHTML = '<p class="note warn">載入失敗：' + esc(apiError(res)) + retry + '</p>';
+        var retryBtn = document.getElementById('apRetryLoad');
+        if (retryBtn) retryBtn.addEventListener('click', function () { load(false, true); });
         return;
       }
       state.products = res.products || [];
@@ -925,9 +1005,22 @@
     });
   }
 
-  function ensureLoaded() {
-    load(_loaded);
+  function prefetch() {
+    if (_loaded || _loading) return;
+    load(true, false);
   }
 
-  window.AdminProductsPanel = { load: load, ensureLoaded: ensureLoaded };
+  function ensureLoaded() {
+    if (_loaded) {
+      if (state.view === 'list') renderShell();
+      return;
+    }
+    load(false, false);
+  }
+
+  window.AdminProductsPanel = { load: load, ensureLoaded: ensureLoaded, prefetch: prefetch };
+
+  if (root && !root.innerHTML.trim() && window.SkeletonUI) {
+    showLoadingSkeleton();
+  }
 })();

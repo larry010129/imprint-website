@@ -12,7 +12,7 @@ import MobileAnimatedNav, {
 
 import { GradientButton } from "@/components/ui/gradient-button"
 
-import { NAV_ITEMS, resolveHref } from "@/lib/nav-items"
+import { NAV_ITEMS, navParentIsLink, resolveHref, type NavItem } from "@/lib/nav-items"
 
 import { fetchSession, type Session } from "@/lib/session"
 
@@ -62,17 +62,26 @@ function ChevronIcon() {
 
 
 
-function NavList({ siteRoot }: { siteRoot: string }) {
+function NavList({
+  siteRoot,
+  items,
+}: {
+  siteRoot: string
+  items: NavItem[]
+}) {
 
   return (
 
     <ul className="nav-menu" data-safe-triangle-menu>
 
-      {NAV_ITEMS.map((item) => (
-
+      {items.map((item) => (
         <li key={item.id} className="nav-item" data-nav-id={item.id}>
 
-          <a href={resolveHref(item.href, siteRoot)}>{item.label}</a>
+          {navParentIsLink(item) ? (
+            <a href={resolveHref(item.href, siteRoot)}>{item.label}</a>
+          ) : (
+            <span className="nav-label">{item.label}</span>
+          )}
 
           {item.children?.length ? (
 
@@ -131,6 +140,11 @@ export default function SiteNav() {
   const homeHref = resolveHref("/", siteRoot)
 
   const headerRef = React.useRef<HTMLElement>(null)
+
+  const isHome = React.useMemo(
+    () => document.body.classList.contains("page-home"),
+    [],
+  )
 
   const [session, setSession] = React.useState<Session | null>(null)
 
@@ -262,7 +276,7 @@ export default function SiteNav() {
 
         <nav className="site-nav-desktop nav-menu-col" aria-label="主選單">
 
-          <NavList siteRoot={siteRoot} />
+          <NavList siteRoot={siteRoot} items={NAV_ITEMS} />
 
         </nav>
 
@@ -334,6 +348,8 @@ export default function SiteNav() {
         isOpen={mobileOpen}
 
         siteRoot={siteRoot}
+
+        items={NAV_ITEMS}
 
         onNavigate={() => setMobileOpen(false)}
 

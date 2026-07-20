@@ -2,7 +2,9 @@
 
 .nav{
 
-  position:sticky; top:0; z-index:100;
+  position:relative;
+
+  z-index:100;
 
   background:rgba(253,252,250,.92);
 
@@ -152,7 +154,8 @@
 
   }
 
-  .site-nav-desktop .nav-item > a{
+  .site-nav-desktop .nav-item > a,
+  .site-nav-desktop .nav-item > .nav-label{
     display:block;
     padding:10px 9px;
     font-size:15px;
@@ -161,6 +164,7 @@
     transition:color .25s;
   }
   .site-nav-desktop .nav-item > a:hover{ color:var(--mint-deep); }
+  .site-nav-desktop .nav-item > .nav-label{ cursor:default; }
 }
 
 

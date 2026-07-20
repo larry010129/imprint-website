@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import {
   Table,
   TableBody,
@@ -15,7 +15,6 @@ import {
   FANCY_MULTI_PRICES,
   fmtPrice,
   MOUNTING_LABELS,
-  MOUNTING_PRICES,
   METAL_LABELS,
   SHAPE_SURCHARGE_PCT,
   SNAPSHOT_CARATS,
@@ -24,12 +23,19 @@ import {
   WHITE_DIAMOND_PRICES,
   WHITE_MULTI_PRICES,
 } from "@/data/pricing-data";
+import {
+  buildLiveMountingTable,
+  fetchGoldQuote,
+  type GoldQuotePayload,
+} from "@/lib/mounting-pricing";
 import { cn } from "@/lib/utils";
 
 type ColorTab = "white" | "fancy";
 
-const headClass = "h-9 py-2";
-const cellClass = "py-2";
+const headClass = "h-8 px-1.5 py-1.5";
+const cellClass = "px-1.5 py-1.5";
+const numHeadClass = cn(headClass, "w-0 whitespace-nowrap text-right");
+const numCellClass = cn(cellClass, "w-0 whitespace-nowrap text-right");
 
 function DenseTable({
   caption,
@@ -40,7 +46,7 @@ function DenseTable({
 }) {
   return (
     <div className="overflow-hidden rounded-lg border border-border bg-background">
-      <Table>
+      <Table className="[&_th]:px-1.5 [&_td]:px-1.5 [&_th]:py-1.5 [&_td]:py-1.5">
         {caption ? <TableCaption>{caption}</TableCaption> : null}
         {children}
       </Table>
@@ -99,19 +105,51 @@ function SectionHeading({
   );
 }
 
-export default function PriceTable() {
-  const [singleTab, setSingleTab] = useState<ColorTab>("white");
-  const [multiTab, setMultiTab] = useState<ColorTab>("white");
+function SingleDiamondPrice({
+  value,
+}: {
+  value: number | null | undefined;
+}) {
+  if (value != null) {
+    return <span className="font-medium">{fmtPrice(value)}</span>;
+  }
+  return <span className="text-muted-foreground">無法製作</span>;
+}
 
-  const singleTable =
-    singleTab === "white" ? WHITE_DIAMOND_PRICES : FANCY_DIAMOND_PRICES;
-  const singleKeys = sortedCaratKeys(singleTable);
+export default function PriceTable() {
+  const [multiTab, setMultiTab] = useState<ColorTab>("white");
+  const [goldQuote, setGoldQuote] = useState<GoldQuotePayload | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchGoldQuote().then((data) => {
+      if (!cancelled && data) setGoldQuote(data);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const singleCaratKeys = useMemo(
+    () =>
+      sortedCaratKeys({
+        ...WHITE_DIAMOND_PRICES,
+        ...FANCY_DIAMOND_PRICES,
+      }),
+    [],
+  );
   const multiTable =
     multiTab === "white" ? WHITE_MULTI_PRICES : FANCY_MULTI_PRICES;
   const multiKeys = sortedCaratKeys(multiTable);
 
-  const mountingStyles = Object.keys(MOUNTING_PRICES).filter((k) => k !== "loose");
+  const liveMounting = useMemo(
+    () => buildLiveMountingTable(goldQuote?.alloyRates),
+    [goldQuote],
+  );
+  const mountingStyles = Object.keys(liveMounting);
   const metals = ["9k", "14k", "18k", "pt950", "silver"] as const;
+  const goldAsOf = goldQuote?.quote?.fetched_at_display;
+  const necklace9k = liveMounting.necklace?.["9k"];
 
   return (
     <section
@@ -119,7 +157,7 @@ export default function PriceTable() {
       id="price-reference"
       aria-label="DNA 鑽石價格參考"
     >
-      <div className="container mx-auto max-w-5xl px-4">
+      <div className="mx-auto max-w-5xl px-4">
         <SectionHeading
           eyebrow="PRICE REFERENCE"
           title="DNA 鑽石價格參考"
@@ -133,7 +171,7 @@ export default function PriceTable() {
               <TableRow className="bg-muted/50">
                 <TableHead className={headClass}>克拉</TableHead>
                 <TableHead className={headClass}>說明</TableHead>
-                <TableHead className={cn(headClass, "text-right")}>價格</TableHead>
+                <TableHead className={numHeadClass}>價格</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -143,7 +181,7 @@ export default function PriceTable() {
                   <TableCell className={cn(cellClass, "text-muted-foreground")}>
                     {SNAPSHOT_LABELS[c]}
                   </TableCell>
-                  <TableCell className={cn(cellClass, "text-right font-medium")}>
+                  <TableCell className={cn(numCellClass, "font-medium")}>
                     {fmtPrice(WHITE_DIAMOND_PRICES[c])}
                   </TableCell>
                 </TableRow>
@@ -154,40 +192,33 @@ export default function PriceTable() {
 
         <div className="mb-12">
           <h3 className="mb-2 text-lg font-semibold">單顆鑽石・完整克拉價格表</h3>
-          <ColorTabs value={singleTab} onChange={setSingleTab} />
-          <DenseTable
-            caption={
-              singleTab === "fancy"
-                ? "彩鑽最低 0.30 克拉；3.00 克拉以上請洽官方 LINE 專屬報價"
-                : "3.00 克拉以上請洽官方 LINE 專屬報價"
-            }
-          >
+          <p className="mb-4 text-sm text-muted-foreground">
+            白鑽與彩鑽牌價並列對照；彩鑽最低 0.30 克拉。
+          </p>
+          <DenseTable caption="3.00 克拉以上請洽官方 LINE 專屬報價">
             <TableHeader>
               <TableRow className="bg-muted/50">
                 <TableHead className={headClass}>克拉</TableHead>
                 <TableHead className={headClass}>實際區間</TableHead>
-                <TableHead className={cn(headClass, "text-right")}>價格</TableHead>
+                <TableHead className={numHeadClass}>白鑽價格</TableHead>
+                <TableHead className={numHeadClass}>彩鑽價格</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {singleKeys.map((c) => {
-                const val = singleTable[c as keyof typeof singleTable];
-                return (
-                  <TableRow key={c}>
-                    <TableCell className={cn(cellClass, "font-medium")}>{c} 克拉</TableCell>
-                    <TableCell className={cn(cellClass, "text-muted-foreground")}>
-                      {CARAT_RANGES[c] ?? "—"}
-                    </TableCell>
-                    <TableCell className={cn(cellClass, "text-right font-medium")}>
-                      {val != null ? (
-                        fmtPrice(val as number)
-                      ) : (
-                        <span className="text-muted-foreground">無法製作</span>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
+              {singleCaratKeys.map((c) => (
+                <TableRow key={c}>
+                  <TableCell className={cn(cellClass, "font-medium")}>{c} 克拉</TableCell>
+                  <TableCell className={cn(cellClass, "text-muted-foreground")}>
+                    {CARAT_RANGES[c] ?? "—"}
+                  </TableCell>
+                  <TableCell className={numCellClass}>
+                    <SingleDiamondPrice value={WHITE_DIAMOND_PRICES[c]} />
+                  </TableCell>
+                  <TableCell className={numCellClass}>
+                    <SingleDiamondPrice value={FANCY_DIAMOND_PRICES[c]} />
+                  </TableCell>
+                </TableRow>
+              ))}
             </TableBody>
           </DenseTable>
         </div>
@@ -202,9 +233,9 @@ export default function PriceTable() {
             <TableHeader>
               <TableRow className="bg-muted/50">
                 <TableHead className={headClass}>克拉</TableHead>
-                <TableHead className={cn(headClass, "text-right")}>2 顆</TableHead>
-                <TableHead className={cn(headClass, "text-right")}>3 顆</TableHead>
-                <TableHead className={cn(headClass, "text-right")}>4 顆</TableHead>
+                <TableHead className={numHeadClass}>2 顆</TableHead>
+                <TableHead className={numHeadClass}>3 顆</TableHead>
+                <TableHead className={numHeadClass}>4 顆</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -218,13 +249,13 @@ export default function PriceTable() {
                         {CARAT_RANGES[c]}
                       </span>
                     </TableCell>
-                    <TableCell className={cn(cellClass, "text-right")}>
+                    <TableCell className={numCellClass}>
                       {fmtPrice(row["2"])}
                     </TableCell>
-                    <TableCell className={cn(cellClass, "text-right")}>
+                    <TableCell className={numCellClass}>
                       {fmtPrice(row["3"])}
                     </TableCell>
-                    <TableCell className={cn(cellClass, "text-right")}>
+                    <TableCell className={numCellClass}>
                       {fmtPrice(row["4"])}
                     </TableCell>
                   </TableRow>
@@ -232,11 +263,11 @@ export default function PriceTable() {
               })}
               <TableRow className="text-muted-foreground">
                 <TableCell className={cellClass}>0.30 克拉以上</TableCell>
-                <TableCell className={cn(cellClass, "text-right")}>
+                <TableCell className={numCellClass}>
                   沿用 0.30 整組價・85 折
                 </TableCell>
-                <TableCell className={cn(cellClass, "text-right")}>8 折</TableCell>
-                <TableCell className={cn(cellClass, "text-right")}>75 折</TableCell>
+                <TableCell className={numCellClass}>8 折</TableCell>
+                <TableCell className={numCellClass}>75 折</TableCell>
               </TableRow>
             </TableBody>
           </DenseTable>
@@ -245,14 +276,23 @@ export default function PriceTable() {
         <div className="mb-12">
           <h3 className="mb-2 text-lg font-semibold">飾品戒台費用參考</h3>
           <p className="mb-4 text-sm text-muted-foreground">
-            鑽石價格不含飾品戒台；以下為未稅估算，9K 經典款項鍊 NT$10,000 起為官方公開價格。
+            鑽石價格不含飾品戒台；以下為未稅估算，依台銀黃金條塊牌價浮動調整金屬成本
+            {necklace9k != null ? (
+              <>
+                （9K 經典款項鍊 {fmtPrice(necklace9k)} 起）
+              </>
+            ) : null}
+            。
+            {goldAsOf ? (
+              <span className="mt-1 block text-xs">牌價更新：{goldAsOf}</span>
+            ) : null}
           </p>
           <DenseTable caption="戒台依款式與材質另計，正式報價請洽顧問">
             <TableHeader>
               <TableRow className="bg-muted/50">
                 <TableHead className={headClass}>款式</TableHead>
                 {metals.map((m) => (
-                  <TableHead key={m} className={cn(headClass, "text-right")}>
+                  <TableHead key={m} className={numHeadClass}>
                     {METAL_LABELS[m]}
                   </TableHead>
                 ))}
@@ -264,13 +304,14 @@ export default function PriceTable() {
                   <TableCell className={cn(cellClass, "font-medium")}>
                     {MOUNTING_LABELS[style]}
                   </TableCell>
-                  {metals.map((m) => (
-                    <TableCell key={m} className={cn(cellClass, "text-right")}>
-                      {MOUNTING_PRICES[style][m] === 0
-                        ? "—"
-                        : fmtPrice(MOUNTING_PRICES[style][m])}
-                    </TableCell>
-                  ))}
+                  {metals.map((m) => {
+                    const price = liveMounting[style]?.[m];
+                    return (
+                      <TableCell key={m} className={numCellClass}>
+                        {price == null || price === 0 ? "—" : fmtPrice(price)}
+                      </TableCell>
+                    );
+                  })}
                 </TableRow>
               ))}
             </TableBody>

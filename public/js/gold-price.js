@@ -263,7 +263,7 @@
     var heading = document.getElementById('gold-alloy-heading');
     if (heading) {
       var suffix = { g: '/ 公克', chin: '/ 錢', tael: '/ 兩' }[unit];
-      heading.textContent = '試算用成色金價（NT$ ' + suffix.trim() + '）';
+      heading.textContent = '試算用成色金價（約 NT$ ' + suffix.trim() + '）';
     }
   }
 

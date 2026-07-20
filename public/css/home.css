@@ -133,7 +133,7 @@
 .about-step p{ font-size:14px; color:var(--ink-soft); }
 .about-visual{
   background:linear-gradient(160deg, #EAF9F9, #FDFCFA 70%);
-  border:1px solid var(--mint-line); border-radius:4px;
+  border:1px solid var(--mint-line); border-radius:var(--radius-ui);
   padding:52px 44px; box-shadow:var(--shadow-soft);
 }
 .usp-grid{ display:grid; grid-template-columns:1fr 1fr; gap:34px 30px; }
@@ -155,7 +155,7 @@
   display:grid; grid-template-columns:repeat(5, 1fr); gap:18px;
 }
 .series-card{
-  position:relative; border-radius:4px; overflow:hidden;
+  position:relative; border-radius:var(--radius-ui); overflow:hidden;
   background:#fff; border:1px solid #EFE9E3;
   transition:transform .45s var(--ease), box-shadow .45s var(--ease);
   display:flex; flex-direction:column;
@@ -228,7 +228,7 @@
 .stories-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:24px; margin-top:60px; }
 .story-card{
   background:rgba(255,255,255,.045); border:1px solid rgba(156,239,239,.14);
-  border-radius:4px; padding:38px 34px; display:flex; flex-direction:column;
+  border-radius:var(--radius-ui); padding:38px 34px; display:flex; flex-direction:column;
   transition:background .4s;
 }
 .story-card:hover{ background:rgba(255,255,255,.08); }
@@ -273,9 +273,11 @@
 
 /* ---------- 價格 ---------- */
 .pricing{ padding:120px 0; }
+.pricing--solo{ padding-top:80px; }
+.price-block--shapes{ margin-bottom:0; }
 .pricing-inner{ display:grid; grid-template-columns:1fr 1.1fr; gap:70px; align-items:center; }
 .price-table{
-  border:1px solid #EFE9E3; border-radius:4px; overflow:hidden;
+  border:1px solid #EFE9E3; border-radius:var(--radius-ui); overflow:hidden;
   box-shadow:var(--shadow-soft); background:#fff;
 }
 .price-row{
@@ -317,7 +319,7 @@
 .price-panel{ display:none; }
 
 /* 圓形切工鑽石圖示(取自官方 CUT.svg 的實際刻面線稿) */
-.dcut{ width:26px; height:26px; flex:none; display:block; }
+.dcut{ width:22px; height:22px; flex:none; display:block; }
 .price-tab .dcut-group{ display:flex; align-items:center; }
 .price-tab .dcut-group .dcut{ margin-left:-9px; }
 .price-tab .dcut-group .dcut:first-child{ margin-left:0; }
@@ -336,17 +338,64 @@
 .price-scroll{ overflow-x:auto; border:1px solid #EFE9E3; border-radius:6px; box-shadow:var(--shadow-soft); }
 table.price-full-table{ width:100%; border-collapse:collapse; min-width:480px; background:#fff; }
 table.price-full-table th{
-  text-align:left; font-size:11.5px; letter-spacing:.14em; color:var(--ink-faint); font-weight:500;
-  padding:14px 22px; background:#FBF7F2; border-bottom:1px solid #EFE9E3; white-space:nowrap;
+  text-align:left; font-size:11px; letter-spacing:.12em; color:var(--ink-faint); font-weight:500;
+  padding:8px 12px; background:#FBF7F2; border-bottom:1px solid #EFE9E3; white-space:nowrap;
 }
 table.price-full-table td{
-  padding:14px 22px; font-size:14px; border-bottom:1px solid #F3EEE8; white-space:nowrap;
+  padding:8px 12px; font-size:13px; border-bottom:1px solid #F3EEE8; white-space:nowrap;
 }
 table.price-full-table tr:last-child td{ border-bottom:none; }
 table.price-full-table tr:hover td{ background:var(--mint-soft); }
-table.price-full-table td.amt{ font-family:var(--serif); font-size:15.5px; letter-spacing:.04em; }
+table.price-full-table td.amt{ font-family:var(--serif); font-size:14px; letter-spacing:.03em; }
 table.price-full-table td.na{ color:var(--ink-faint); }
+table.price-full-table td.na--mark{
+  text-align:center; font-size:15px; letter-spacing:0; color:#C4BAB2;
+}
 table.price-full-table tr.is-note td{ background:#FBF7F2; font-size:12.5px; color:var(--ink-faint); }
+.price-col-label{
+  display:inline-flex; align-items:center; gap:6px;
+  font-size:11px; letter-spacing:.05em; font-weight:500; white-space:nowrap;
+}
+.price-col-label .dcut-group{ display:inline-flex; align-items:center; }
+.price-col-label .dcut-group .dcut{ margin-left:-6px; }
+.price-col-label .dcut-group .dcut:first-child{ margin-left:0; }
+table.price-full-table th.price-col-head{ text-align:left; vertical-align:bottom; }
+table.price-full-table--dual th:nth-child(n+3),
+table.price-full-table--dual td:nth-child(n+3){ text-align:right; }
+table.price-full-table--multi-xpose th,
+table.price-full-table--multi-xpose td{ text-align:center; }
+table.price-full-table--multi-xpose th.ct-range,
+table.price-full-table--multi-xpose .ct-range{
+  display:block; font-size:10.5px; font-weight:400; letter-spacing:.06em;
+  color:var(--ink-faint); margin-top:2px;
+}
+table.price-full-table--multi-xpose th.price-row-head,
+table.price-full-table--multi-xpose th.price-row-count{
+  padding:6px 8px;
+}
+table.price-full-table--multi-xpose th.price-row-head{
+  vertical-align:middle;
+  background:#FBF7F2; width:1%; min-width:max-content;
+  padding-top:8px; padding-right:6px;
+}
+table.price-full-table--multi-xpose th.price-row-head .price-col-label{
+  white-space:nowrap; line-height:1.25; gap:4px; font-size:10.5px;
+}
+table.price-full-table--multi-xpose th.price-row-head .dcut{ width:18px; height:18px; }
+table.price-full-table--multi-xpose th.price-row-head .dcut-group .dcut{ margin-left:-5px; }
+table.price-full-table--multi-xpose th.price-row-count{
+  font-weight:500; letter-spacing:.05em; white-space:nowrap;
+  background:#FBF7F2; font-size:11.5px; width:1%; min-width:2.4em;
+  padding-left:6px; padding-right:8px;
+}
+table.price-full-table--multi-xpose thead th[colspan="2"]{
+  width:1%; padding:6px 4px;
+}
+table.price-full-table--multi-xpose td.rule{
+  font-size:11.5px; color:var(--ink-faint); white-space:nowrap;
+}
+table.price-full-table--multi-xpose tbody tr:nth-child(3) td,
+table.price-full-table--multi-xpose tbody tr:nth-child(3) th{ border-bottom:2px solid #EFE9E3; }
 
 /* 切工形狀圖示 */
 .shape-grid{ display:grid; grid-template-columns:repeat(5, 1fr); gap:16px; }
@@ -360,16 +409,58 @@ table.price-full-table tr.is-note td{ background:#FBF7F2; font-size:12.5px; colo
   display:flex; align-items:center; justify-content:center;
 }
 .shape-card .icon svg{ width:28px; height:28px; }
-.shape-card .name{ font-size:13px; font-weight:500; letter-spacing:.05em; margin-bottom:8px; }
+.shape-card .name{ font-size:13px; font-weight:500; letter-spacing:.05em; margin-bottom:0; }
 .shape-card .name small{ display:block; font-size:10.5px; color:var(--ink-faint); font-weight:400; letter-spacing:.06em; }
 .shape-card .tag{
-  display:inline-block; font-size:11px; letter-spacing:.05em; color:var(--ink-faint);
+  display:block; font-size:11px; letter-spacing:.12em; color:var(--ink-faint);
+  margin-top:10px; padding-top:10px; border-top:1px solid #EDE6DE;
+}
+.shape-card .tag.is-base{
+  color:var(--mint-deep); font-weight:600; letter-spacing:.14em;
+  border-top-color:color-mix(in srgb, var(--mint-deep) 45%, #EDE6DE);
+}
+.shape-card--base{
+  border-color:var(--mint-deep);
+  background:color-mix(in srgb, var(--mint-soft) 38%, #fff);
 }
 .shape-card .tag.is-up{
-  font-family:var(--serif); font-size:18px; font-weight:700; letter-spacing:.02em;
-  color:#fff; background:linear-gradient(135deg, #E8896B, #D9684A);
-  padding:4px 14px; border-radius:20px; box-shadow:0 4px 12px rgba(217,104,74,.35);
+  font-family:var(--serif); font-size:15px; font-weight:600; letter-spacing:.05em;
+  color:#B85C42; line-height:1.2;
 }
+
+/* shape marquee (price page) */
+.shape-marquee-wrap{
+  margin:0 -20px;
+  -webkit-mask-image:linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  mask-image:linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+}
+.shape-marquee{
+  overflow:hidden; cursor:grab; user-select:none; touch-action:pan-y;
+  padding:8px 0 12px;
+}
+.shape-marquee.is-dragging{ cursor:grabbing; }
+.shape-marquee-inner{ display:flex; width:max-content; will-change:transform; }
+.shape-marquee-row{ display:flex; gap:14px; padding:0 20px; }
+.shape-marquee .shape-card{
+  flex:0 0 128px; min-height:152px; padding:18px 10px 14px;
+}
+.shape-marquee .shape-card .icon{ width:52px; height:52px; }
+.shape-marquee .shape-card .icon svg{ width:26px; height:26px; }
+
+.diamond-shapes{ padding:56px 0 72px; }
+.diamond-shapes--solo{ padding:80px 0 96px; min-height:calc(100vh - 120px); }
+.diamond-shapes-head{ margin-bottom:28px; }
+.diamond-shapes-head h1,
+.diamond-shapes-head h2{
+  font-family:var(--serif); font-size:clamp(20px, 2.8vw, 26px); font-weight:600;
+  letter-spacing:.08em; margin:8px 0 12px;
+}
+.diamond-shapes-head p{ font-size:14px; color:var(--ink-soft); line-height:1.95; max-width:640px; }
+.shape-pricing-legend{
+  margin-top:22px; font-size:12.5px; color:var(--ink-faint); text-align:center; line-height:1.8;
+}
+.shape-pricing-legend a{ color:var(--mint-deep); text-decoration:underline; text-underline-offset:2px; }
+.series--tail{ padding-top:0; padding-bottom:80px; }
 
 /* ---------- FAQ ---------- */
 .faq{ padding:110px 0 130px; background:var(--paper-warm); }
@@ -421,7 +512,7 @@ table.price-full-table tr.is-note td{ background:#FBF7F2; font-size:12.5px; colo
 }
 .home-trust-item{
   display:block; padding:22px 18px; background:#fff; border:1px solid #EFE9E3;
-  border-radius:4px; transition:transform .3s var(--ease), box-shadow .3s var(--ease);
+  border-radius:var(--radius-ui); transition:transform .3s var(--ease), box-shadow .3s var(--ease);
 }
 .home-trust-item:hover{
   transform:translateY(-4px); box-shadow:var(--shadow-soft);
@@ -450,7 +541,7 @@ table.price-full-table tr.is-note td{ background:#FBF7F2; font-size:12.5px; colo
 }
 .home-explore-card{
   display:flex; flex-direction:column; padding:28px 26px 24px;
-  background:var(--paper-warm); border:1px solid #EFE9E3; border-radius:4px;
+  background:var(--paper-warm); border:1px solid #EFE9E3; border-radius:var(--radius-ui);
   transition:transform .35s var(--ease), box-shadow .35s var(--ease);
 }
 .home-explore-card:hover{

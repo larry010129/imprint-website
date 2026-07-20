@@ -13,7 +13,9 @@
         <p class="price-reference-lead">系統訊息與訂單更新。</p>
         <span class="member-notify-pill hidden" id="notifications-unread-pill"></span>
       </div>
-      <div class="member-state" id="notifications-loading">載入中…</div>
+      <div class="skel-panel" id="notifications-loading" aria-busy="true">
+        <div class="skel-notify-list"><div class="skel-notify-item"><span class="skel-block skel-block--xs"></span><div><span class="skel-line skel-line--long"></span><span class="skel-line skel-line--full"></span></div><span class="skel-line"></span></div><div class="skel-notify-item"><span class="skel-block skel-block--xs"></span><div><span class="skel-line skel-line--long"></span><span class="skel-line skel-line--full"></span></div><span class="skel-line"></span></div></div>
+      </div>
       <div class="hidden" id="notifications-feed"></div>
       <div class="member-state member-state--empty hidden" id="notifications-empty">
         <p>目前沒有通知。</p>

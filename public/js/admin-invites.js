@@ -284,7 +284,9 @@
 
   function load(silent, force) {
     if (_loaded && !force) return;
-    if (!silent) root.innerHTML = '<p class="adx-loading-inline">載入邀請碼中…</p>';
+    if (!silent) {
+      root.innerHTML = window.SkeletonUI ? window.SkeletonUI.invitesShell() : '<p class="adx-loading-inline">載入邀請碼中…</p>';
+    }
     api.admin.getInvites().then(function (res) {
       if (res.error) {
         root.innerHTML = '<p class="note warn">載入失敗：' + esc(res.error) + '</p>';
@@ -300,4 +302,8 @@
   }
 
   window.AdminInvitesPanel = { load: load, ensureLoaded: ensureLoaded };
+
+  if (root && window.SkeletonUI && !_loaded && root.querySelector('.skel-line')) {
+    root.innerHTML = window.SkeletonUI.invitesShell();
+  }
 })();

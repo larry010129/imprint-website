@@ -16,7 +16,9 @@ const VALID_COLORS = new Set(['white', 'yellow', 'rose']);
 const RING_SIZE_MIN = 5;
 const RING_SIZE_MAX = 18;
 const ENGRAVING_MAX_LENGTH = 10;
-const GIRDLE_ENGRAVING_CATEGORIES = new Set(['ring']);
+const GIRDLE_MAX_SLOTS = 12;
+const GIRDLE_EMBLEM_LABELS = new Set(['蝴蝶結', '幸運草', '無限', '愛心', '雙愛心', '肉球', '骨頭', '戒圈']);
+const GIRDLE_ENGRAVING_CATEGORIES = new Set(['pendant', 'ring', 'earring', 'bracelet']);
 const CHAIN_LENGTH_OPTIONS_CM = new Set([35, 40, 45, 50, 55, 60]);
 const BRACELET_LENGTH_OPTIONS_CM = new Set([15, 16, 17, 18, 19, 20, 21]);
 const VALID_DIAMOND_KINDS = new Set(['white', 'fancy']);
@@ -99,16 +101,43 @@ function validateSubmissionFields(data, { partial = false } = {}) {
     errors.push('ringSize is required for rings');
   }
 
+  function girdleEngraveSlotCount(value) {
+    let i = 0;
+    let slots = 0;
+    const s = String(value);
+    while (i < s.length) {
+      if (s[i] === '〔') {
+        const end = s.indexOf('〕', i);
+        if (end === -1) return -1;
+        const label = s.slice(i + 1, end);
+        if (!GIRDLE_EMBLEM_LABELS.has(label)) return -1;
+        slots += 1;
+        i = end + 1;
+      } else {
+        slots += 1;
+        i += 1;
+      }
+    }
+    return slots;
+  }
+
   function cleanEngraving(key, permittedCategories) {
     const raw = data[key];
     if (raw == null) return;
-    const value = String(raw).trim().replace(/[^\x20-\x7E -￿]/g, '');
+    const value = key === 'engravingGirdle'
+      ? String(raw).trim()
+      : String(raw).trim().replace(/[^\x20-\x7E\u00A0-\uFFFF]/g, '');
     if (!permittedCategories.has(cleaned.category)) {
       if (value) errors.push(`${key} is not available for this category`);
-    } else if (value.length > ENGRAVING_MAX_LENGTH) {
+    } else if (key !== 'engravingGirdle' && value.length > ENGRAVING_MAX_LENGTH) {
       errors.push(`${key} must be at most ${ENGRAVING_MAX_LENGTH} characters`);
-    } else if (value && key === 'engravingGirdle' && !/^[A-Za-z0-9]{1,10}$/.test(value)) {
-      errors.push(`${key} must be 1-10 letters or digits`);
+    } else if (value && key === 'engravingGirdle') {
+      const slotCount = girdleEngraveSlotCount(value);
+      if (slotCount < 1 || slotCount > GIRDLE_MAX_SLOTS) {
+        errors.push(`${key} must be 1-${GIRDLE_MAX_SLOTS} letters, digits, or emblem tokens`);
+      } else {
+        cleaned[key] = value;
+      }
     } else if (value) {
       cleaned[key] = value;
     }

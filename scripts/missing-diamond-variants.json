@@ -1,0 +1,704 @@
+[
+  {
+    "productId": "ring-B",
+    "category": "ring",
+    "style": "B",
+    "metal": "yellow",
+    "diamond": "yellow",
+    "base": "public/images/shop-product/gold/戒指B_gold.png",
+    "out": "public/images/shop-product/gold/戒指B_gold_yellow.png"
+  },
+  {
+    "productId": "ring-B",
+    "category": "ring",
+    "style": "B",
+    "metal": "yellow",
+    "diamond": "blue",
+    "base": "public/images/shop-product/gold/戒指B_gold.png",
+    "out": "public/images/shop-product/gold/戒指B_gold_blue.png"
+  },
+  {
+    "productId": "ring-B",
+    "category": "ring",
+    "style": "B",
+    "metal": "yellow",
+    "diamond": "pink",
+    "base": "public/images/shop-product/gold/戒指B_gold.png",
+    "out": "public/images/shop-product/gold/戒指B_gold_pink.png"
+  },
+  {
+    "productId": "ring-B",
+    "category": "ring",
+    "style": "B",
+    "metal": "rose",
+    "diamond": "yellow",
+    "base": "public/images/shop-product/rose_gold/戒指B_rose.png",
+    "out": "public/images/shop-product/rose_gold/戒指B_rose_yellow.png"
+  },
+  {
+    "productId": "ring-B",
+    "category": "ring",
+    "style": "B",
+    "metal": "rose",
+    "diamond": "blue",
+    "base": "public/images/shop-product/rose_gold/戒指B_rose.png",
+    "out": "public/images/shop-product/rose_gold/戒指B_rose_blue.png"
+  },
+  {
+    "productId": "ring-B",
+    "category": "ring",
+    "style": "B",
+    "metal": "rose",
+    "diamond": "pink",
+    "base": "public/images/shop-product/rose_gold/戒指B_rose.png",
+    "out": "public/images/shop-product/rose_gold/戒指B_rose_pink.png"
+  },
+  {
+    "productId": "ring-C",
+    "category": "ring",
+    "style": "C",
+    "metal": "white",
+    "diamond": "yellow",
+    "base": "public/images/shop-product/silver/戒指C_silver.png",
+    "out": "public/images/shop-product/silver/戒指C_silver_yellow.png"
+  },
+  {
+    "productId": "ring-C",
+    "category": "ring",
+    "style": "C",
+    "metal": "white",
+    "diamond": "blue",
+    "base": "public/images/shop-product/silver/戒指C_silver.png",
+    "out": "public/images/shop-product/silver/戒指C_silver_blue.png"
+  },
+  {
+    "productId": "ring-C",
+    "category": "ring",
+    "style": "C",
+    "metal": "white",
+    "diamond": "pink",
+    "base": "public/images/shop-product/silver/戒指C_silver.png",
+    "out": "public/images/shop-product/silver/戒指C_silver_pink.png"
+  },
+  {
+    "productId": "ring-C",
+    "category": "ring",
+    "style": "C",
+    "metal": "yellow",
+    "diamond": "yellow",
+    "base": "public/images/shop-product/gold/戒指C_gold.png",
+    "out": "public/images/shop-product/gold/戒指C_gold_yellow.png"
+  },
+  {
+    "productId": "ring-C",
+    "category": "ring",
+    "style": "C",
+    "metal": "yellow",
+    "diamond": "blue",
+    "base": "public/images/shop-product/gold/戒指C_gold.png",
+    "out": "public/images/shop-product/gold/戒指C_gold_blue.png"
+  },
+  {
+    "productId": "ring-C",
+    "category": "ring",
+    "style": "C",
+    "metal": "yellow",
+    "diamond": "pink",
+    "base": "public/images/shop-product/gold/戒指C_gold.png",
+    "out": "public/images/shop-product/gold/戒指C_gold_pink.png"
+  },
+  {
+    "productId": "ring-C",
+    "category": "ring",
+    "style": "C",
+    "metal": "rose",
+    "diamond": "yellow",
+    "base": "public/images/shop-product/rose_gold/戒指C_rose.png",
+    "out": "public/images/shop-product/rose_gold/戒指C_rose_yellow.png"
+  },
+  {
+    "productId": "ring-C",
+    "category": "ring",
+    "style": "C",
+    "metal": "rose",
+    "diamond": "blue",
+    "base": "public/images/shop-product/rose_gold/戒指C_rose.png",
+    "out": "public/images/shop-product/rose_gold/戒指C_rose_blue.png"
+  },
+  {
+    "productId": "ring-C",
+    "category": "ring",
+    "style": "C",
+    "metal": "rose",
+    "diamond": "pink",
+    "base": "public/images/shop-product/rose_gold/戒指C_rose.png",
+    "out": "public/images/shop-product/rose_gold/戒指C_rose_pink.png"
+  },
+  {
+    "productId": "earring-A",
+    "category": "earring",
+    "style": "A",
+    "metal": "white",
+    "diamond": "yellow",
+    "base": "public/images/shop-product/silver/耳飾A_silver.png",
+    "out": "public/images/shop-product/silver/耳飾A_silver_yellow.png"
+  },
+  {
+    "productId": "earring-A",
+    "category": "earring",
+    "style": "A",
+    "metal": "white",
+    "diamond": "blue",
+    "base": "public/images/shop-product/silver/耳飾A_silver.png",
+    "out": "public/images/shop-product/silver/耳飾A_silver_blue.png"
+  },
+  {
+    "productId": "earring-A",
+    "category": "earring",
+    "style": "A",
+    "metal": "white",
+    "diamond": "pink",
+    "base": "public/images/shop-product/silver/耳飾A_silver.png",
+    "out": "public/images/shop-product/silver/耳飾A_silver_pink.png"
+  },
+  {
+    "productId": "earring-A",
+    "category": "earring",
+    "style": "A",
+    "metal": "yellow",
+    "diamond": "yellow",
+    "base": "public/images/shop-product/gold/耳飾A_gold.png",
+    "out": "public/images/shop-product/gold/耳飾A_gold_yellow.png"
+  },
+  {
+    "productId": "earring-A",
+    "category": "earring",
+    "style": "A",
+    "metal": "yellow",
+    "diamond": "blue",
+    "base": "public/images/shop-product/gold/耳飾A_gold.png",
+    "out": "public/images/shop-product/gold/耳飾A_gold_blue.png"
+  },
+  {
+    "productId": "earring-A",
+    "category": "earring",
+    "style": "A",
+    "metal": "yellow",
+    "diamond": "pink",
+    "base": "public/images/shop-product/gold/耳飾A_gold.png",
+    "out": "public/images/shop-product/gold/耳飾A_gold_pink.png"
+  },
+  {
+    "productId": "earring-A",
+    "category": "earring",
+    "style": "A",
+    "metal": "rose",
+    "diamond": "yellow",
+    "base": "public/images/shop-product/rose_gold/耳飾A_rose.png",
+    "out": "public/images/shop-product/rose_gold/耳飾A_rose_yellow.png"
+  },
+  {
+    "productId": "earring-A",
+    "category": "earring",
+    "style": "A",
+    "metal": "rose",
+    "diamond": "blue",
+    "base": "public/images/shop-product/rose_gold/耳飾A_rose.png",
+    "out": "public/images/shop-product/rose_gold/耳飾A_rose_blue.png"
+  },
+  {
+    "productId": "earring-A",
+    "category": "earring",
+    "style": "A",
+    "metal": "rose",
+    "diamond": "pink",
+    "base": "public/images/shop-product/rose_gold/耳飾A_rose.png",
+    "out": "public/images/shop-product/rose_gold/耳飾A_rose_pink.png"
+  },
+  {
+    "productId": "bracelet-A",
+    "category": "bracelet",
+    "style": "A",
+    "metal": "white",
+    "diamond": "yellow",
+    "base": "public/images/shop-product/silver/手鍊A_silver.png",
+    "out": "public/images/shop-product/silver/手鍊A_silver_yellow.png"
+  },
+  {
+    "productId": "bracelet-A",
+    "category": "bracelet",
+    "style": "A",
+    "metal": "white",
+    "diamond": "blue",
+    "base": "public/images/shop-product/silver/手鍊A_silver.png",
+    "out": "public/images/shop-product/silver/手鍊A_silver_blue.png"
+  },
+  {
+    "productId": "bracelet-A",
+    "category": "bracelet",
+    "style": "A",
+    "metal": "white",
+    "diamond": "pink",
+    "base": "public/images/shop-product/silver/手鍊A_silver.png",
+    "out": "public/images/shop-product/silver/手鍊A_silver_pink.png"
+  },
+  {
+    "productId": "bracelet-A",
+    "category": "bracelet",
+    "style": "A",
+    "metal": "yellow",
+    "diamond": "yellow",
+    "base": "public/images/shop-product/gold/手鍊A_gold.png",
+    "out": "public/images/shop-product/gold/手鍊A_gold_yellow.png"
+  },
+  {
+    "productId": "bracelet-A",
+    "category": "bracelet",
+    "style": "A",
+    "metal": "yellow",
+    "diamond": "blue",
+    "base": "public/images/shop-product/gold/手鍊A_gold.png",
+    "out": "public/images/shop-product/gold/手鍊A_gold_blue.png"
+  },
+  {
+    "productId": "bracelet-A",
+    "category": "bracelet",
+    "style": "A",
+    "metal": "yellow",
+    "diamond": "pink",
+    "base": "public/images/shop-product/gold/手鍊A_gold.png",
+    "out": "public/images/shop-product/gold/手鍊A_gold_pink.png"
+  },
+  {
+    "productId": "bracelet-A",
+    "category": "bracelet",
+    "style": "A",
+    "metal": "rose",
+    "diamond": "yellow",
+    "base": "public/images/shop-product/rose_gold/手鍊A_rose.png",
+    "out": "public/images/shop-product/rose_gold/手鍊A_rose_yellow.png"
+  },
+  {
+    "productId": "bracelet-A",
+    "category": "bracelet",
+    "style": "A",
+    "metal": "rose",
+    "diamond": "blue",
+    "base": "public/images/shop-product/rose_gold/手鍊A_rose.png",
+    "out": "public/images/shop-product/rose_gold/手鍊A_rose_blue.png"
+  },
+  {
+    "productId": "bracelet-A",
+    "category": "bracelet",
+    "style": "A",
+    "metal": "rose",
+    "diamond": "pink",
+    "base": "public/images/shop-product/rose_gold/手鍊A_rose.png",
+    "out": "public/images/shop-product/rose_gold/手鍊A_rose_pink.png"
+  },
+  {
+    "productId": "bracelet-B",
+    "category": "bracelet",
+    "style": "B",
+    "metal": "white",
+    "diamond": "yellow",
+    "base": "public/images/shop-product/silver/手鍊B_silver.png",
+    "out": "public/images/shop-product/silver/手鍊B_silver_yellow.png"
+  },
+  {
+    "productId": "bracelet-B",
+    "category": "bracelet",
+    "style": "B",
+    "metal": "white",
+    "diamond": "blue",
+    "base": "public/images/shop-product/silver/手鍊B_silver.png",
+    "out": "public/images/shop-product/silver/手鍊B_silver_blue.png"
+  },
+  {
+    "productId": "bracelet-B",
+    "category": "bracelet",
+    "style": "B",
+    "metal": "white",
+    "diamond": "pink",
+    "base": "public/images/shop-product/silver/手鍊B_silver.png",
+    "out": "public/images/shop-product/silver/手鍊B_silver_pink.png"
+  },
+  {
+    "productId": "bracelet-B",
+    "category": "bracelet",
+    "style": "B",
+    "metal": "yellow",
+    "diamond": "yellow",
+    "base": "public/images/shop-product/gold/手鍊B_gold.png",
+    "out": "public/images/shop-product/gold/手鍊B_gold_yellow.png"
+  },
+  {
+    "productId": "bracelet-B",
+    "category": "bracelet",
+    "style": "B",
+    "metal": "yellow",
+    "diamond": "blue",
+    "base": "public/images/shop-product/gold/手鍊B_gold.png",
+    "out": "public/images/shop-product/gold/手鍊B_gold_blue.png"
+  },
+  {
+    "productId": "bracelet-B",
+    "category": "bracelet",
+    "style": "B",
+    "metal": "yellow",
+    "diamond": "pink",
+    "base": "public/images/shop-product/gold/手鍊B_gold.png",
+    "out": "public/images/shop-product/gold/手鍊B_gold_pink.png"
+  },
+  {
+    "productId": "bracelet-B",
+    "category": "bracelet",
+    "style": "B",
+    "metal": "rose",
+    "diamond": "yellow",
+    "base": "public/images/shop-product/rose_gold/手鍊B_rose.png",
+    "out": "public/images/shop-product/rose_gold/手鍊B_rose_yellow.png"
+  },
+  {
+    "productId": "bracelet-B",
+    "category": "bracelet",
+    "style": "B",
+    "metal": "rose",
+    "diamond": "blue",
+    "base": "public/images/shop-product/rose_gold/手鍊B_rose.png",
+    "out": "public/images/shop-product/rose_gold/手鍊B_rose_blue.png"
+  },
+  {
+    "productId": "bracelet-B",
+    "category": "bracelet",
+    "style": "B",
+    "metal": "rose",
+    "diamond": "pink",
+    "base": "public/images/shop-product/rose_gold/手鍊B_rose.png",
+    "out": "public/images/shop-product/rose_gold/手鍊B_rose_pink.png"
+  },
+  {
+    "productId": "bracelet-C",
+    "category": "bracelet",
+    "style": "C",
+    "metal": "white",
+    "diamond": "yellow",
+    "base": "public/images/shop-product/silver/手鍊C_silver.png",
+    "out": "public/images/shop-product/silver/手鍊C_silver_yellow.png"
+  },
+  {
+    "productId": "bracelet-C",
+    "category": "bracelet",
+    "style": "C",
+    "metal": "white",
+    "diamond": "blue",
+    "base": "public/images/shop-product/silver/手鍊C_silver.png",
+    "out": "public/images/shop-product/silver/手鍊C_silver_blue.png"
+  },
+  {
+    "productId": "bracelet-C",
+    "category": "bracelet",
+    "style": "C",
+    "metal": "white",
+    "diamond": "pink",
+    "base": "public/images/shop-product/silver/手鍊C_silver.png",
+    "out": "public/images/shop-product/silver/手鍊C_silver_pink.png"
+  },
+  {
+    "productId": "bracelet-C",
+    "category": "bracelet",
+    "style": "C",
+    "metal": "yellow",
+    "diamond": "yellow",
+    "base": "public/images/shop-product/gold/手鍊C_gold.png",
+    "out": "public/images/shop-product/gold/手鍊C_gold_yellow.png"
+  },
+  {
+    "productId": "bracelet-C",
+    "category": "bracelet",
+    "style": "C",
+    "metal": "yellow",
+    "diamond": "blue",
+    "base": "public/images/shop-product/gold/手鍊C_gold.png",
+    "out": "public/images/shop-product/gold/手鍊C_gold_blue.png"
+  },
+  {
+    "productId": "bracelet-C",
+    "category": "bracelet",
+    "style": "C",
+    "metal": "yellow",
+    "diamond": "pink",
+    "base": "public/images/shop-product/gold/手鍊C_gold.png",
+    "out": "public/images/shop-product/gold/手鍊C_gold_pink.png"
+  },
+  {
+    "productId": "bracelet-C",
+    "category": "bracelet",
+    "style": "C",
+    "metal": "rose",
+    "diamond": "yellow",
+    "base": "public/images/shop-product/rose_gold/手鍊C_rose.png",
+    "out": "public/images/shop-product/rose_gold/手鍊C_rose_yellow.png"
+  },
+  {
+    "productId": "bracelet-C",
+    "category": "bracelet",
+    "style": "C",
+    "metal": "rose",
+    "diamond": "blue",
+    "base": "public/images/shop-product/rose_gold/手鍊C_rose.png",
+    "out": "public/images/shop-product/rose_gold/手鍊C_rose_blue.png"
+  },
+  {
+    "productId": "bracelet-C",
+    "category": "bracelet",
+    "style": "C",
+    "metal": "rose",
+    "diamond": "pink",
+    "base": "public/images/shop-product/rose_gold/手鍊C_rose.png",
+    "out": "public/images/shop-product/rose_gold/手鍊C_rose_pink.png"
+  },
+  {
+    "productId": "chain-A",
+    "category": "chain",
+    "style": "A",
+    "metal": "white",
+    "diamond": "yellow",
+    "base": "public/images/shop-product/silver/斗圓鍊_silver.png",
+    "out": "public/images/shop-product/silver/斗圓鍊_silver_yellow.png"
+  },
+  {
+    "productId": "chain-A",
+    "category": "chain",
+    "style": "A",
+    "metal": "white",
+    "diamond": "blue",
+    "base": "public/images/shop-product/silver/斗圓鍊_silver.png",
+    "out": "public/images/shop-product/silver/斗圓鍊_silver_blue.png"
+  },
+  {
+    "productId": "chain-A",
+    "category": "chain",
+    "style": "A",
+    "metal": "white",
+    "diamond": "pink",
+    "base": "public/images/shop-product/silver/斗圓鍊_silver.png",
+    "out": "public/images/shop-product/silver/斗圓鍊_silver_pink.png"
+  },
+  {
+    "productId": "chain-A",
+    "category": "chain",
+    "style": "A",
+    "metal": "yellow",
+    "diamond": "yellow",
+    "base": "public/images/shop-product/gold/斗圓鍊_gold.png",
+    "out": "public/images/shop-product/gold/斗圓鍊_gold_yellow.png"
+  },
+  {
+    "productId": "chain-A",
+    "category": "chain",
+    "style": "A",
+    "metal": "yellow",
+    "diamond": "blue",
+    "base": "public/images/shop-product/gold/斗圓鍊_gold.png",
+    "out": "public/images/shop-product/gold/斗圓鍊_gold_blue.png"
+  },
+  {
+    "productId": "chain-A",
+    "category": "chain",
+    "style": "A",
+    "metal": "yellow",
+    "diamond": "pink",
+    "base": "public/images/shop-product/gold/斗圓鍊_gold.png",
+    "out": "public/images/shop-product/gold/斗圓鍊_gold_pink.png"
+  },
+  {
+    "productId": "chain-A",
+    "category": "chain",
+    "style": "A",
+    "metal": "rose",
+    "diamond": "yellow",
+    "base": "public/images/shop-product/rose_gold/斗圓鍊_rose.png",
+    "out": "public/images/shop-product/rose_gold/斗圓鍊_rose_yellow.png"
+  },
+  {
+    "productId": "chain-A",
+    "category": "chain",
+    "style": "A",
+    "metal": "rose",
+    "diamond": "blue",
+    "base": "public/images/shop-product/rose_gold/斗圓鍊_rose.png",
+    "out": "public/images/shop-product/rose_gold/斗圓鍊_rose_blue.png"
+  },
+  {
+    "productId": "chain-A",
+    "category": "chain",
+    "style": "A",
+    "metal": "rose",
+    "diamond": "pink",
+    "base": "public/images/shop-product/rose_gold/斗圓鍊_rose.png",
+    "out": "public/images/shop-product/rose_gold/斗圓鍊_rose_pink.png"
+  },
+  {
+    "productId": "chain-B",
+    "category": "chain",
+    "style": "B",
+    "metal": "white",
+    "diamond": "yellow",
+    "base": "public/images/shop-product/silver/斗圓鍊K玫瑰_silver.png",
+    "out": "public/images/shop-product/silver/斗圓鍊K玫瑰_silver_yellow.png"
+  },
+  {
+    "productId": "chain-B",
+    "category": "chain",
+    "style": "B",
+    "metal": "white",
+    "diamond": "blue",
+    "base": "public/images/shop-product/silver/斗圓鍊K玫瑰_silver.png",
+    "out": "public/images/shop-product/silver/斗圓鍊K玫瑰_silver_blue.png"
+  },
+  {
+    "productId": "chain-B",
+    "category": "chain",
+    "style": "B",
+    "metal": "white",
+    "diamond": "pink",
+    "base": "public/images/shop-product/silver/斗圓鍊K玫瑰_silver.png",
+    "out": "public/images/shop-product/silver/斗圓鍊K玫瑰_silver_pink.png"
+  },
+  {
+    "productId": "chain-B",
+    "category": "chain",
+    "style": "B",
+    "metal": "yellow",
+    "diamond": "yellow",
+    "base": "public/images/shop-product/gold/斗圓鍊K玫瑰_gold.png",
+    "out": "public/images/shop-product/gold/斗圓鍊K玫瑰_gold_yellow.png"
+  },
+  {
+    "productId": "chain-B",
+    "category": "chain",
+    "style": "B",
+    "metal": "yellow",
+    "diamond": "blue",
+    "base": "public/images/shop-product/gold/斗圓鍊K玫瑰_gold.png",
+    "out": "public/images/shop-product/gold/斗圓鍊K玫瑰_gold_blue.png"
+  },
+  {
+    "productId": "chain-B",
+    "category": "chain",
+    "style": "B",
+    "metal": "yellow",
+    "diamond": "pink",
+    "base": "public/images/shop-product/gold/斗圓鍊K玫瑰_gold.png",
+    "out": "public/images/shop-product/gold/斗圓鍊K玫瑰_gold_pink.png"
+  },
+  {
+    "productId": "chain-B",
+    "category": "chain",
+    "style": "B",
+    "metal": "rose",
+    "diamond": "yellow",
+    "base": "public/images/shop-product/rose_gold/斗圓鍊K玫瑰_silver2.png",
+    "out": "public/images/shop-product/rose_gold/斗圓鍊K玫瑰_silver2_yellow.png"
+  },
+  {
+    "productId": "chain-B",
+    "category": "chain",
+    "style": "B",
+    "metal": "rose",
+    "diamond": "blue",
+    "base": "public/images/shop-product/rose_gold/斗圓鍊K玫瑰_silver2.png",
+    "out": "public/images/shop-product/rose_gold/斗圓鍊K玫瑰_silver2_blue.png"
+  },
+  {
+    "productId": "chain-B",
+    "category": "chain",
+    "style": "B",
+    "metal": "rose",
+    "diamond": "pink",
+    "base": "public/images/shop-product/rose_gold/斗圓鍊K玫瑰_silver2.png",
+    "out": "public/images/shop-product/rose_gold/斗圓鍊K玫瑰_silver2_pink.png"
+  },
+  {
+    "productId": "chain-C",
+    "category": "chain",
+    "style": "C",
+    "metal": "white",
+    "diamond": "yellow",
+    "base": "public/images/shop-product/silver/斗圓鍊K黃_silver.png",
+    "out": "public/images/shop-product/silver/斗圓鍊K黃_silver_yellow.png"
+  },
+  {
+    "productId": "chain-C",
+    "category": "chain",
+    "style": "C",
+    "metal": "white",
+    "diamond": "blue",
+    "base": "public/images/shop-product/silver/斗圓鍊K黃_silver.png",
+    "out": "public/images/shop-product/silver/斗圓鍊K黃_silver_blue.png"
+  },
+  {
+    "productId": "chain-C",
+    "category": "chain",
+    "style": "C",
+    "metal": "white",
+    "diamond": "pink",
+    "base": "public/images/shop-product/silver/斗圓鍊K黃_silver.png",
+    "out": "public/images/shop-product/silver/斗圓鍊K黃_silver_pink.png"
+  },
+  {
+    "productId": "chain-C",
+    "category": "chain",
+    "style": "C",
+    "metal": "yellow",
+    "diamond": "yellow",
+    "base": "public/images/shop-product/gold/斗圓鍊K黃_gold.png",
+    "out": "public/images/shop-product/gold/斗圓鍊K黃_gold_yellow.png"
+  },
+  {
+    "productId": "chain-C",
+    "category": "chain",
+    "style": "C",
+    "metal": "yellow",
+    "diamond": "blue",
+    "base": "public/images/shop-product/gold/斗圓鍊K黃_gold.png",
+    "out": "public/images/shop-product/gold/斗圓鍊K黃_gold_blue.png"
+  },
+  {
+    "productId": "chain-C",
+    "category": "chain",
+    "style": "C",
+    "metal": "yellow",
+    "diamond": "pink",
+    "base": "public/images/shop-product/gold/斗圓鍊K黃_gold.png",
+    "out": "public/images/shop-product/gold/斗圓鍊K黃_gold_pink.png"
+  },
+  {
+    "productId": "chain-C",
+    "category": "chain",
+    "style": "C",
+    "metal": "rose",
+    "diamond": "yellow",
+    "base": "public/images/shop-product/rose_gold/斗圓鍊K黃_rose.png",
+    "out": "public/images/shop-product/rose_gold/斗圓鍊K黃_rose_yellow.png"
+  },
+  {
+    "productId": "chain-C",
+    "category": "chain",
+    "style": "C",
+    "metal": "rose",
+    "diamond": "blue",
+    "base": "public/images/shop-product/rose_gold/斗圓鍊K黃_rose.png",
+    "out": "public/images/shop-product/rose_gold/斗圓鍊K黃_rose_blue.png"
+  },
+  {
+    "productId": "chain-C",
+    "category": "chain",
+    "style": "C",
+    "metal": "rose",
+    "diamond": "pink",
+    "base": "public/images/shop-product/rose_gold/斗圓鍊K黃_rose.png",
+    "out": "public/images/shop-product/rose_gold/斗圓鍊K黃_rose_pink.png"
+  }
+]

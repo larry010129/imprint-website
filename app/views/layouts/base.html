@@ -22,14 +22,19 @@
 <meta name="twitter:image" content="https://www.imprint-diamond.com/{{ og_image or 'images/hero/imprint-diamond-family-memorial.jpg' }}">
 {% endblock %}
 
-<link rel="stylesheet" href="/static/css/base.css?v=3.7">
-<link rel="stylesheet" href="/static/css/nav.css?v=4.1">
-<link rel="stylesheet" href="/static/css/home.css?v=3.8">
-<link rel="stylesheet" href="/static/css/pages.css?v=3.9">
+<link rel="stylesheet" href="/static/css/base.css?v=4.0">
+<link rel="stylesheet" href="/static/css/nav.css?v=4.3">
+<link rel="stylesheet" href="/static/css/home.css?v=5.4">
+<link rel="stylesheet" href="/static/css/pages.css?v=5.0">
+<link rel="stylesheet" href="/static/css/skeleton.css?v=1">
 <link rel="stylesheet" href="/static/css/responsive.css?v=3.13">
 {% include "partials/nav-react-css.html" %}
 {% include "partials/footer-react-css.html" %}
 {% block extra_css %}{% endblock %}
+
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"Organization","@id":"https://www.imprint-diamond.com/#organization","name":"銘印鑽石 IMPRINT DIAMOND","legalName":"心之銘印鑽石有限公司","url":"https://www.imprint-diamond.com/","telephone":"+886-2-2977-0268","address":{"@type":"PostalAddress","streetAddress":"福德南路43號1樓","addressLocality":"三重區","addressRegion":"新北市","addressCountry":"TW"},"contactPoint":[{"@type":"ContactPoint","telephone":"+886-2-2977-0268","contactType":"customer service","areaServed":"TW","availableLanguage":["zh-Hant"]}],"sameAs":["https://www.facebook.com/Imprintdiamond/"]}
+</script>
 
 {% if breadcrumbs %}
 <script type="application/ld+json">
@@ -39,8 +44,10 @@
 {% block extra_head %}{% endblock %}
 </head>
 <body class="site-layout{% if extra_body_class %} {{ extra_body_class }}{% endif %}"{% if mvc_page %} data-mvc="{{ mvc_page }}"{% endif %}>
+<div class="site-chrome">
 {% include "partials/topbar.html" %}
 {% include "partials/nav.html" %}
+</div>
 {% include "partials/nav-react-js.html" %}
 
 <main{% block main_class %}{% endblock %}>
@@ -49,9 +56,11 @@
 
 {% include "partials/footer.html" %}
 <script src="/static/js/nav-dropdown.js?v=1"></script>
+<script src="/static/js/skeleton-ui.js?v=1"></script>
 {% block extra_scripts %}{% endblock %}
 {% include "partials/footer-react-js.html" %}
 <script src="js/site-layout.js?v=2"></script>
 <script src="js/main.js?v=2.2"></script>
+{% include "partials/botpress-webchat.html" %}
 </body>
 </html>

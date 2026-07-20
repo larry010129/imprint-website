@@ -4,7 +4,7 @@ import {
   type Variants,
 } from "motion/react"
 
-import { NAV_ITEMS, resolveHref } from "@/lib/nav-items"
+import { navParentIsLink, resolveHref, type NavItem } from "@/lib/nav-items"
 
 const panelVariants: Variants = {
   open: {
@@ -38,6 +38,7 @@ const itemVariants: Variants = {
 type MobileAnimatedNavProps = {
   isOpen: boolean
   siteRoot: string
+  items: NavItem[]
   onNavigate: () => void
   accountSlot?: React.ReactNode
 }
@@ -97,6 +98,7 @@ export function MobileMenuToggle({
 export default function MobileAnimatedNav({
   isOpen,
   siteRoot,
+  items,
   onNavigate,
   accountSlot,
 }: MobileAnimatedNavProps) {
@@ -123,7 +125,7 @@ export default function MobileAnimatedNav({
         variants={navVariants}
         role="list"
       >
-        {NAV_ITEMS.map((item) => {
+        {items.map((item) => {
           const hasChildren = !!item.children?.length
           const expanded = expandedId === item.id
 
@@ -134,13 +136,25 @@ export default function MobileAnimatedNav({
               variants={itemVariants}
             >
               <div className="mobile-animated-nav__row">
-                <a
-                  href={resolveHref(item.href, siteRoot)}
-                  className="mobile-animated-nav__link"
-                  onClick={onNavigate}
-                >
-                  {item.label}
-                </a>
+                {navParentIsLink(item) ? (
+                  <a
+                    href={resolveHref(item.href, siteRoot)}
+                    className="mobile-animated-nav__link"
+                    onClick={onNavigate}
+                  >
+                    {item.label}
+                  </a>
+                ) : (
+                  <button
+                    type="button"
+                    className="mobile-animated-nav__link mobile-animated-nav__link--label"
+                    onClick={() =>
+                      setExpandedId(expanded ? null : item.id)
+                    }
+                  >
+                    {item.label}
+                  </button>
+                )}
                 {hasChildren ? (
                   <button
                     type="button"

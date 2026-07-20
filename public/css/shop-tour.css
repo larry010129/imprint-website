@@ -103,12 +103,14 @@ html.shop-tour-active .shop-wizard-header {
   }
 
   html.shop-tour-active .shop-page.shop-wizard .shop-section-hint,
+  html.shop-tour-active .shop-page.shop-wizard .shop-config-notices,
   html.shop-tour-active .shop-page.shop-wizard .shop-back {
     flex-shrink: 0;
   }
 
   html.shop-tour-active .shop-page.shop-wizard #shop-product .shop-back,
-  html.shop-tour-active .shop-page.shop-wizard #shop-product .shop-section-hint {
+  html.shop-tour-active .shop-page.shop-wizard #shop-product .shop-section-hint,
+  html.shop-tour-active .shop-page.shop-wizard #shop-product .shop-config-notices {
     opacity: 0.55;
   }
 }

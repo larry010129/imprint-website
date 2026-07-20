@@ -1,6 +1,6 @@
 ﻿{% extends "layouts/base.html" %}
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/gold-price.css?v=4">
+<link rel="stylesheet" href="/static/css/gold-price.css?v=8">
 {% endblock %}
 {% block content %}
 <section class="price-detail price-detail--offset">
@@ -51,11 +51,12 @@
         <p class="gold-price-meta hidden" id="gold-updated-line"></p>
         <p class="gold-price-meta hidden" id="gold-fetched-line"></p>
         <p class="gold-price-stale hidden" id="gold-stale-warning" role="alert">目前牌價超過 24 小時未更新或正在使用備援價格，試算前請先確認最新金價。</p>
-        <p class="price-ref-note gold-price-note">計算機以黃金條塊「本行賣出」換算之公克金價為基準，再依 9K / 14K / 18K 成色係數計價。</p>
+        <p class="price-ref-note gold-price-note">計算機以黃金條塊「本行賣出」換算之公克金價為基準，再依 9K / 14K / 18K 成色係數計價；以下為約略試算，實際成交價可能因牌價波動或訂製條件而有所不同。</p>
 
         <details class="price-ref-panel" id="gold-alloy-panel" open>
-          <summary id="gold-alloy-heading">試算用成色金價（NT$ / 公克）</summary>
+          <summary id="gold-alloy-heading">試算用成色金價（約 NT$ / 公克）</summary>
           <div class="price-ref-tabs">
+            <p class="gold-price-approx"><span class="gold-price-approx__mark" aria-hidden="true">*</span>價格僅供參考，與實際試算或下單金額可能略有差異。</p>
             <div class="price-ref-scroll">
               <table class="gold-alloy-table" id="gold-alloy-table">
                 <thead>
@@ -87,5 +88,5 @@
 {% endblock %}
 {% block extra_scripts %}
 <script src="/static/js/gold-quote-data.js"></script>
-<script src="/static/js/gold-price.js?v=11"></script>
+<script src="/static/js/gold-price.js?v=12"></script>
 {% endblock %}

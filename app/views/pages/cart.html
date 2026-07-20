@@ -13,7 +13,9 @@
         <p class="price-reference-lead">勾選品項後送出訂單，未勾選的品項會保留在購物車。</p>
       </div>
 
-      <div class="member-state hidden" id="cart-loading">載入中…</div>
+      <div class="skel-panel" id="cart-loading" aria-busy="true">
+        <ul class="skel-cart-list"><li class="skel-cart-item"><span class="skel-block skel-block--xs"></span><span class="skel-block skel-block--thumb"></span><div><span class="skel-line skel-line--long"></span><span class="skel-line skel-line--medium"></span></div><span class="skel-line skel-line--medium"></span></li><li class="skel-cart-item"><span class="skel-block skel-block--xs"></span><span class="skel-block skel-block--thumb"></span><div><span class="skel-line skel-line--long"></span><span class="skel-line skel-line--medium"></span></div><span class="skel-line skel-line--medium"></span></li></ul>
+      </div>
 
       <div class="hidden" id="cart-list-wrap">
         <div class="member-cart-toolbar">
@@ -44,7 +46,7 @@
       <h2 id="cart-detail-title">品項明細</h2>
       <button type="button" class="member-dialog__close" id="cart-detail-close" aria-label="關閉">&times;</button>
     </header>
-    <div id="cart-detail-body"><p class="member-state">載入中…</p></div>
+    <div id="cart-detail-body"><div class="skel-panel" aria-busy="true"><span class="skel-line skel-line--long"></span><span class="skel-line skel-line--medium"></span></div></div>
   </div>
 </dialog>
 {% endblock %}

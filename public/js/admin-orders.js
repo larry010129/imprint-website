@@ -410,7 +410,14 @@
     if (!query && _loaded && !force) return;
     if (!silent) {
       unmountTable();
-      tbody.innerHTML = '<p class="orders-empty">載入中…</p>';
+      tbody.innerHTML = window.SkeletonUI
+        ? window.SkeletonUI.table({
+          headers: ['', '縮圖', '品項', '客戶', '金額', '狀態', '操作'],
+          rows: 6,
+          rowFn: window.SkeletonUI.orderTableRow,
+          label: '載入訂單中',
+        })
+        : '<p class="orders-empty">載入中…</p>';
     }
     var req = query
       ? fetch('/api/admin/orders?q=' + encodeURIComponent(query), { credentials: 'include' }).then(function (r) { return r.json(); })

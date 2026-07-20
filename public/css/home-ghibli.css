@@ -28,6 +28,11 @@
   background:var(--gh-cream);
 }
 
+/* Landing nav: hero overlay at top; hide topbar + nav when scrolled */
+.page-home .site-chrome{
+  position:static;
+  z-index:auto;
+}
 .page-home .topbar{
   position:fixed; left:0; right:0; top:0; z-index:102;
   background:linear-gradient(180deg, rgba(42,24,69,.55) 0%, transparent 100%);
@@ -36,7 +41,6 @@
 }
 .page-home .topbar b{ color:var(--gh-mint-soft); }
 
-/* Landing nav: hero overlay at top; hide topbar + nav when scrolled */
 .page-home .nav{
   position:fixed; left:0; right:0; top:36px; z-index:101;
   background:linear-gradient(180deg, rgba(42,24,69,.38) 0%, rgba(42,24,69,.08) 72%, transparent 100%);
@@ -59,9 +63,11 @@
 .page-home .nav .brand-name .zh,
 .page-home .nav .brand-name .en,
 .page-home .nav .site-nav-desktop .nav-item > a,
+.page-home .nav .site-nav-desktop .nav-item > .nav-label,
 .page-home [data-site-nav-root].is-nav-hero .brand-name .zh,
 .page-home [data-site-nav-root].is-nav-hero .brand-name .en,
-.page-home [data-site-nav-root].is-nav-hero .site-nav-desktop .nav-item > a{ color:#fff; }
+.page-home [data-site-nav-root].is-nav-hero .site-nav-desktop .nav-item > a,
+.page-home [data-site-nav-root].is-nav-hero .site-nav-desktop .nav-item > .nav-label{ color:#fff; }
 .page-home .nav .brand-mark path{ fill:#F7F4F1; }
 .page-home [data-site-nav-root].is-nav-hero .brand-mark{ color:#F7F4F1; }
 .page-home .nav .site-nav-desktop .nav-item > a:hover,

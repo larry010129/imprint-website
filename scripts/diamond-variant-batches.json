@@ -1,0 +1,866 @@
+{
+  "model": "nano_banana_pro",
+  "aspect_ratio": "1:1",
+  "totalVariants": 117,
+  "totalBases": 39,
+  "groups": [
+    {
+      "base": "public/images/shop-product/silver/項墜A_silver.png",
+      "productId": "pendant-A",
+      "category": "pendant",
+      "variants": [
+        {
+          "diamond": "yellow",
+          "out": "public/images/shop-product/silver/項墜A_silver_yellow.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a vivid yellow fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "blue",
+          "out": "public/images/shop-product/silver/項墜A_silver_blue.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a light blue fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "pink",
+          "out": "public/images/shop-product/silver/項墜A_silver_pink.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a soft pink fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        }
+      ]
+    },
+    {
+      "base": "public/images/shop-product/gold/項墜A_gold.png",
+      "productId": "pendant-A",
+      "category": "pendant",
+      "variants": [
+        {
+          "diamond": "yellow",
+          "out": "public/images/shop-product/gold/項墜A_gold_yellow.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a vivid yellow fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "blue",
+          "out": "public/images/shop-product/gold/項墜A_gold_blue.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a light blue fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "pink",
+          "out": "public/images/shop-product/gold/項墜A_gold_pink.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a soft pink fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        }
+      ]
+    },
+    {
+      "base": "public/images/shop-product/rose_gold/項墜A_rose.png",
+      "productId": "pendant-A",
+      "category": "pendant",
+      "variants": [
+        {
+          "diamond": "yellow",
+          "out": "public/images/shop-product/rose_gold/項墜A_rose_yellow.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a vivid yellow fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "blue",
+          "out": "public/images/shop-product/rose_gold/項墜A_rose_blue.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a light blue fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "pink",
+          "out": "public/images/shop-product/rose_gold/項墜A_rose_pink.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a soft pink fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        }
+      ]
+    },
+    {
+      "base": "public/images/shop-product/silver/項墜B_silver.png",
+      "productId": "pendant-B",
+      "category": "pendant",
+      "variants": [
+        {
+          "diamond": "yellow",
+          "out": "public/images/shop-product/silver/項墜B_silver_yellow.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a vivid yellow fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "blue",
+          "out": "public/images/shop-product/silver/項墜B_silver_blue.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a light blue fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "pink",
+          "out": "public/images/shop-product/silver/項墜B_silver_pink.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a soft pink fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        }
+      ]
+    },
+    {
+      "base": "public/images/shop-product/gold/項墜B_gold.png",
+      "productId": "pendant-B",
+      "category": "pendant",
+      "variants": [
+        {
+          "diamond": "yellow",
+          "out": "public/images/shop-product/gold/項墜B_gold_yellow.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a vivid yellow fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "blue",
+          "out": "public/images/shop-product/gold/項墜B_gold_blue.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a light blue fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "pink",
+          "out": "public/images/shop-product/gold/項墜B_gold_pink.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a soft pink fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        }
+      ]
+    },
+    {
+      "base": "public/images/shop-product/rose_gold/項墜B_rose.png",
+      "productId": "pendant-B",
+      "category": "pendant",
+      "variants": [
+        {
+          "diamond": "yellow",
+          "out": "public/images/shop-product/rose_gold/項墜B_rose_yellow.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a vivid yellow fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "blue",
+          "out": "public/images/shop-product/rose_gold/項墜B_rose_blue.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a light blue fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "pink",
+          "out": "public/images/shop-product/rose_gold/項墜B_rose_pink.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a soft pink fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        }
+      ]
+    },
+    {
+      "base": "public/images/shop-product/silver/項墜C_silver.png",
+      "productId": "pendant-C",
+      "category": "pendant",
+      "variants": [
+        {
+          "diamond": "yellow",
+          "out": "public/images/shop-product/silver/項墜C_silver_yellow.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a vivid yellow fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "blue",
+          "out": "public/images/shop-product/silver/項墜C_silver_blue.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a light blue fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "pink",
+          "out": "public/images/shop-product/silver/項墜C_silver_pink.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a soft pink fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        }
+      ]
+    },
+    {
+      "base": "public/images/shop-product/gold/項墜C_gold.png",
+      "productId": "pendant-C",
+      "category": "pendant",
+      "variants": [
+        {
+          "diamond": "yellow",
+          "out": "public/images/shop-product/gold/項墜C_gold_yellow.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a vivid yellow fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "blue",
+          "out": "public/images/shop-product/gold/項墜C_gold_blue.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a light blue fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "pink",
+          "out": "public/images/shop-product/gold/項墜C_gold_pink.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a soft pink fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        }
+      ]
+    },
+    {
+      "base": "public/images/shop-product/rose_gold/項墜C_rose.png",
+      "productId": "pendant-C",
+      "category": "pendant",
+      "variants": [
+        {
+          "diamond": "yellow",
+          "out": "public/images/shop-product/rose_gold/項墜C_rose_yellow.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a vivid yellow fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "blue",
+          "out": "public/images/shop-product/rose_gold/項墜C_rose_blue.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a light blue fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "pink",
+          "out": "public/images/shop-product/rose_gold/項墜C_rose_pink.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a soft pink fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        }
+      ]
+    },
+    {
+      "base": "public/images/shop-product/silver/戒指A_silver.png",
+      "productId": "ring-A",
+      "category": "ring",
+      "variants": [
+        {
+          "diamond": "yellow",
+          "out": "public/images/shop-product/silver/戒指A_silver_yellow.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a vivid yellow fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "blue",
+          "out": "public/images/shop-product/silver/戒指A_silver_blue.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a light blue fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "pink",
+          "out": "public/images/shop-product/silver/戒指A_silver_pink.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a soft pink fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        }
+      ]
+    },
+    {
+      "base": "public/images/shop-product/gold/戒指A_gold.png",
+      "productId": "ring-A",
+      "category": "ring",
+      "variants": [
+        {
+          "diamond": "yellow",
+          "out": "public/images/shop-product/gold/戒指A_gold_yellow.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a vivid yellow fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "blue",
+          "out": "public/images/shop-product/gold/戒指A_gold_blue.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a light blue fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "pink",
+          "out": "public/images/shop-product/gold/戒指A_gold_pink.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a soft pink fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        }
+      ]
+    },
+    {
+      "base": "public/images/shop-product/rose_gold/戒指A_rose.png",
+      "productId": "ring-A",
+      "category": "ring",
+      "variants": [
+        {
+          "diamond": "yellow",
+          "out": "public/images/shop-product/rose_gold/戒指A_rose_yellow.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a vivid yellow fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "blue",
+          "out": "public/images/shop-product/rose_gold/戒指A_rose_blue.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a light blue fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "pink",
+          "out": "public/images/shop-product/rose_gold/戒指A_rose_pink.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a soft pink fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        }
+      ]
+    },
+    {
+      "base": "public/images/shop-product/silver/戒指B_silver.png",
+      "productId": "ring-B",
+      "category": "ring",
+      "variants": [
+        {
+          "diamond": "yellow",
+          "out": "public/images/shop-product/silver/戒指B_silver_yellow.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a vivid yellow fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "blue",
+          "out": "public/images/shop-product/silver/戒指B_silver_blue.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a light blue fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "pink",
+          "out": "public/images/shop-product/silver/戒指B_silver_pink.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a soft pink fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        }
+      ]
+    },
+    {
+      "base": "public/images/shop-product/gold/戒指B_gold.png",
+      "productId": "ring-B",
+      "category": "ring",
+      "variants": [
+        {
+          "diamond": "yellow",
+          "out": "public/images/shop-product/gold/戒指B_gold_yellow.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a vivid yellow fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "blue",
+          "out": "public/images/shop-product/gold/戒指B_gold_blue.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a light blue fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "pink",
+          "out": "public/images/shop-product/gold/戒指B_gold_pink.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a soft pink fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        }
+      ]
+    },
+    {
+      "base": "public/images/shop-product/rose_gold/戒指B_rose.png",
+      "productId": "ring-B",
+      "category": "ring",
+      "variants": [
+        {
+          "diamond": "yellow",
+          "out": "public/images/shop-product/rose_gold/戒指B_rose_yellow.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a vivid yellow fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "blue",
+          "out": "public/images/shop-product/rose_gold/戒指B_rose_blue.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a light blue fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "pink",
+          "out": "public/images/shop-product/rose_gold/戒指B_rose_pink.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a soft pink fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        }
+      ]
+    },
+    {
+      "base": "public/images/shop-product/silver/戒指C_silver.png",
+      "productId": "ring-C",
+      "category": "ring",
+      "variants": [
+        {
+          "diamond": "yellow",
+          "out": "public/images/shop-product/silver/戒指C_silver_yellow.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a vivid yellow fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "blue",
+          "out": "public/images/shop-product/silver/戒指C_silver_blue.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a light blue fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "pink",
+          "out": "public/images/shop-product/silver/戒指C_silver_pink.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a soft pink fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        }
+      ]
+    },
+    {
+      "base": "public/images/shop-product/gold/戒指C_gold.png",
+      "productId": "ring-C",
+      "category": "ring",
+      "variants": [
+        {
+          "diamond": "yellow",
+          "out": "public/images/shop-product/gold/戒指C_gold_yellow.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a vivid yellow fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "blue",
+          "out": "public/images/shop-product/gold/戒指C_gold_blue.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a light blue fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "pink",
+          "out": "public/images/shop-product/gold/戒指C_gold_pink.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a soft pink fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        }
+      ]
+    },
+    {
+      "base": "public/images/shop-product/rose_gold/戒指C_rose.png",
+      "productId": "ring-C",
+      "category": "ring",
+      "variants": [
+        {
+          "diamond": "yellow",
+          "out": "public/images/shop-product/rose_gold/戒指C_rose_yellow.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a vivid yellow fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "blue",
+          "out": "public/images/shop-product/rose_gold/戒指C_rose_blue.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a light blue fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "pink",
+          "out": "public/images/shop-product/rose_gold/戒指C_rose_pink.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a soft pink fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        }
+      ]
+    },
+    {
+      "base": "public/images/shop-product/silver/耳飾A_silver.png",
+      "productId": "earring-A",
+      "category": "earring",
+      "variants": [
+        {
+          "diamond": "yellow",
+          "out": "public/images/shop-product/silver/耳飾A_silver_yellow.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a vivid yellow fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "blue",
+          "out": "public/images/shop-product/silver/耳飾A_silver_blue.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a light blue fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "pink",
+          "out": "public/images/shop-product/silver/耳飾A_silver_pink.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a soft pink fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        }
+      ]
+    },
+    {
+      "base": "public/images/shop-product/gold/耳飾A_gold.png",
+      "productId": "earring-A",
+      "category": "earring",
+      "variants": [
+        {
+          "diamond": "yellow",
+          "out": "public/images/shop-product/gold/耳飾A_gold_yellow.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a vivid yellow fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "blue",
+          "out": "public/images/shop-product/gold/耳飾A_gold_blue.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a light blue fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "pink",
+          "out": "public/images/shop-product/gold/耳飾A_gold_pink.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a soft pink fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        }
+      ]
+    },
+    {
+      "base": "public/images/shop-product/rose_gold/耳飾A_rose.png",
+      "productId": "earring-A",
+      "category": "earring",
+      "variants": [
+        {
+          "diamond": "yellow",
+          "out": "public/images/shop-product/rose_gold/耳飾A_rose_yellow.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a vivid yellow fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "blue",
+          "out": "public/images/shop-product/rose_gold/耳飾A_rose_blue.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a light blue fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "pink",
+          "out": "public/images/shop-product/rose_gold/耳飾A_rose_pink.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a soft pink fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        }
+      ]
+    },
+    {
+      "base": "public/images/shop-product/silver/手鍊A_silver.png",
+      "productId": "bracelet-A",
+      "category": "bracelet",
+      "variants": [
+        {
+          "diamond": "yellow",
+          "out": "public/images/shop-product/silver/手鍊A_silver_yellow.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a vivid yellow fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "blue",
+          "out": "public/images/shop-product/silver/手鍊A_silver_blue.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a light blue fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "pink",
+          "out": "public/images/shop-product/silver/手鍊A_silver_pink.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a soft pink fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        }
+      ]
+    },
+    {
+      "base": "public/images/shop-product/gold/手鍊A_gold.png",
+      "productId": "bracelet-A",
+      "category": "bracelet",
+      "variants": [
+        {
+          "diamond": "yellow",
+          "out": "public/images/shop-product/gold/手鍊A_gold_yellow.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a vivid yellow fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "blue",
+          "out": "public/images/shop-product/gold/手鍊A_gold_blue.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a light blue fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "pink",
+          "out": "public/images/shop-product/gold/手鍊A_gold_pink.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a soft pink fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        }
+      ]
+    },
+    {
+      "base": "public/images/shop-product/rose_gold/手鍊A_rose.png",
+      "productId": "bracelet-A",
+      "category": "bracelet",
+      "variants": [
+        {
+          "diamond": "yellow",
+          "out": "public/images/shop-product/rose_gold/手鍊A_rose_yellow.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a vivid yellow fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "blue",
+          "out": "public/images/shop-product/rose_gold/手鍊A_rose_blue.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a light blue fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "pink",
+          "out": "public/images/shop-product/rose_gold/手鍊A_rose_pink.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a soft pink fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        }
+      ]
+    },
+    {
+      "base": "public/images/shop-product/silver/手鍊B_silver.png",
+      "productId": "bracelet-B",
+      "category": "bracelet",
+      "variants": [
+        {
+          "diamond": "yellow",
+          "out": "public/images/shop-product/silver/手鍊B_silver_yellow.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a vivid yellow fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "blue",
+          "out": "public/images/shop-product/silver/手鍊B_silver_blue.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a light blue fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "pink",
+          "out": "public/images/shop-product/silver/手鍊B_silver_pink.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a soft pink fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        }
+      ]
+    },
+    {
+      "base": "public/images/shop-product/gold/手鍊B_gold.png",
+      "productId": "bracelet-B",
+      "category": "bracelet",
+      "variants": [
+        {
+          "diamond": "yellow",
+          "out": "public/images/shop-product/gold/手鍊B_gold_yellow.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a vivid yellow fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "blue",
+          "out": "public/images/shop-product/gold/手鍊B_gold_blue.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a light blue fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "pink",
+          "out": "public/images/shop-product/gold/手鍊B_gold_pink.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a soft pink fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        }
+      ]
+    },
+    {
+      "base": "public/images/shop-product/rose_gold/手鍊B_rose.png",
+      "productId": "bracelet-B",
+      "category": "bracelet",
+      "variants": [
+        {
+          "diamond": "yellow",
+          "out": "public/images/shop-product/rose_gold/手鍊B_rose_yellow.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a vivid yellow fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "blue",
+          "out": "public/images/shop-product/rose_gold/手鍊B_rose_blue.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a light blue fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "pink",
+          "out": "public/images/shop-product/rose_gold/手鍊B_rose_pink.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a soft pink fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        }
+      ]
+    },
+    {
+      "base": "public/images/shop-product/silver/手鍊C_silver.png",
+      "productId": "bracelet-C",
+      "category": "bracelet",
+      "variants": [
+        {
+          "diamond": "yellow",
+          "out": "public/images/shop-product/silver/手鍊C_silver_yellow.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a vivid yellow fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "blue",
+          "out": "public/images/shop-product/silver/手鍊C_silver_blue.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a light blue fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "pink",
+          "out": "public/images/shop-product/silver/手鍊C_silver_pink.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a soft pink fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        }
+      ]
+    },
+    {
+      "base": "public/images/shop-product/gold/手鍊C_gold.png",
+      "productId": "bracelet-C",
+      "category": "bracelet",
+      "variants": [
+        {
+          "diamond": "yellow",
+          "out": "public/images/shop-product/gold/手鍊C_gold_yellow.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a vivid yellow fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "blue",
+          "out": "public/images/shop-product/gold/手鍊C_gold_blue.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a light blue fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "pink",
+          "out": "public/images/shop-product/gold/手鍊C_gold_pink.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a soft pink fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        }
+      ]
+    },
+    {
+      "base": "public/images/shop-product/rose_gold/手鍊C_rose.png",
+      "productId": "bracelet-C",
+      "category": "bracelet",
+      "variants": [
+        {
+          "diamond": "yellow",
+          "out": "public/images/shop-product/rose_gold/手鍊C_rose_yellow.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a vivid yellow fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "blue",
+          "out": "public/images/shop-product/rose_gold/手鍊C_rose_blue.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a light blue fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "pink",
+          "out": "public/images/shop-product/rose_gold/手鍊C_rose_pink.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a soft pink fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        }
+      ]
+    },
+    {
+      "base": "public/images/shop-product/silver/斗圓鍊_silver.png",
+      "productId": "chain-A",
+      "category": "chain",
+      "variants": [
+        {
+          "diamond": "yellow",
+          "out": "public/images/shop-product/silver/斗圓鍊_silver_yellow.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a vivid yellow fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "blue",
+          "out": "public/images/shop-product/silver/斗圓鍊_silver_blue.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a light blue fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "pink",
+          "out": "public/images/shop-product/silver/斗圓鍊_silver_pink.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a soft pink fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        }
+      ]
+    },
+    {
+      "base": "public/images/shop-product/gold/斗圓鍊_gold.png",
+      "productId": "chain-A",
+      "category": "chain",
+      "variants": [
+        {
+          "diamond": "yellow",
+          "out": "public/images/shop-product/gold/斗圓鍊_gold_yellow.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a vivid yellow fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "blue",
+          "out": "public/images/shop-product/gold/斗圓鍊_gold_blue.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a light blue fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "pink",
+          "out": "public/images/shop-product/gold/斗圓鍊_gold_pink.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a soft pink fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        }
+      ]
+    },
+    {
+      "base": "public/images/shop-product/rose_gold/斗圓鍊_rose.png",
+      "productId": "chain-A",
+      "category": "chain",
+      "variants": [
+        {
+          "diamond": "yellow",
+          "out": "public/images/shop-product/rose_gold/斗圓鍊_rose_yellow.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a vivid yellow fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "blue",
+          "out": "public/images/shop-product/rose_gold/斗圓鍊_rose_blue.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a light blue fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "pink",
+          "out": "public/images/shop-product/rose_gold/斗圓鍊_rose_pink.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a soft pink fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        }
+      ]
+    },
+    {
+      "base": "public/images/shop-product/silver/斗圓鍊K玫瑰_silver.png",
+      "productId": "chain-B",
+      "category": "chain",
+      "variants": [
+        {
+          "diamond": "yellow",
+          "out": "public/images/shop-product/silver/斗圓鍊K玫瑰_silver_yellow.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a vivid yellow fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "blue",
+          "out": "public/images/shop-product/silver/斗圓鍊K玫瑰_silver_blue.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a light blue fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "pink",
+          "out": "public/images/shop-product/silver/斗圓鍊K玫瑰_silver_pink.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a soft pink fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        }
+      ]
+    },
+    {
+      "base": "public/images/shop-product/gold/斗圓鍊K玫瑰_gold.png",
+      "productId": "chain-B",
+      "category": "chain",
+      "variants": [
+        {
+          "diamond": "yellow",
+          "out": "public/images/shop-product/gold/斗圓鍊K玫瑰_gold_yellow.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a vivid yellow fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "blue",
+          "out": "public/images/shop-product/gold/斗圓鍊K玫瑰_gold_blue.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a light blue fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "pink",
+          "out": "public/images/shop-product/gold/斗圓鍊K玫瑰_gold_pink.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a soft pink fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        }
+      ]
+    },
+    {
+      "base": "public/images/shop-product/rose_gold/斗圓鍊K玫瑰_silver2.png",
+      "productId": "chain-B",
+      "category": "chain",
+      "variants": [
+        {
+          "diamond": "yellow",
+          "out": "public/images/shop-product/rose_gold/斗圓鍊K玫瑰_silver2_yellow.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a vivid yellow fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "blue",
+          "out": "public/images/shop-product/rose_gold/斗圓鍊K玫瑰_silver2_blue.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a light blue fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "pink",
+          "out": "public/images/shop-product/rose_gold/斗圓鍊K玫瑰_silver2_pink.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a soft pink fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        }
+      ]
+    },
+    {
+      "base": "public/images/shop-product/silver/斗圓鍊K黃_silver.png",
+      "productId": "chain-C",
+      "category": "chain",
+      "variants": [
+        {
+          "diamond": "yellow",
+          "out": "public/images/shop-product/silver/斗圓鍊K黃_silver_yellow.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a vivid yellow fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "blue",
+          "out": "public/images/shop-product/silver/斗圓鍊K黃_silver_blue.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a light blue fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "pink",
+          "out": "public/images/shop-product/silver/斗圓鍊K黃_silver_pink.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a soft pink fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        }
+      ]
+    },
+    {
+      "base": "public/images/shop-product/gold/斗圓鍊K黃_gold.png",
+      "productId": "chain-C",
+      "category": "chain",
+      "variants": [
+        {
+          "diamond": "yellow",
+          "out": "public/images/shop-product/gold/斗圓鍊K黃_gold_yellow.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a vivid yellow fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "blue",
+          "out": "public/images/shop-product/gold/斗圓鍊K黃_gold_blue.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a light blue fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "pink",
+          "out": "public/images/shop-product/gold/斗圓鍊K黃_gold_pink.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a soft pink fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        }
+      ]
+    },
+    {
+      "base": "public/images/shop-product/rose_gold/斗圓鍊K黃_rose.png",
+      "productId": "chain-C",
+      "category": "chain",
+      "variants": [
+        {
+          "diamond": "yellow",
+          "out": "public/images/shop-product/rose_gold/斗圓鍊K黃_rose_yellow.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a vivid yellow fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "blue",
+          "out": "public/images/shop-product/rose_gold/斗圓鍊K黃_rose_blue.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a light blue fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        },
+        {
+          "diamond": "pink",
+          "out": "public/images/shop-product/rose_gold/斗圓鍊K黃_rose_pink.png",
+          "prompt": "Edit this exact jewelry product photo: keep the same design, metal, angle, lighting and pure white background unchanged. Only replace the center diamond or main gemstone with a soft pink fancy colored diamond. Do NOT add any text, red boxes, labels, product codes, carat annotations, or watermarks — jewelry only on a clean pure white background. Photorealistic e-commerce product shot."
+        }
+      ]
+    }
+  ]
+}

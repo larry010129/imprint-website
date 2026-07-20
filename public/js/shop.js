@@ -239,51 +239,81 @@ function productAssetId(product) {
   return '';
 }
 
-/** Image URLs for a product color, falling back through default/white/any. */
-function productImagesForColor(product, color) {
-  const assetId = productAssetId(product);
-  if (assetId && window.ShopAssets?.productImages) {
-    const list = window.ShopAssets.productImages(assetId, product.defaultColor);
-    if (list.length) {
-      const c = color || product.defaultColor || 'white';
-      const primary = window.ShopAssets.productImage(assetId, c, product.defaultColor);
-      if (primary) return [primary];
-      return list;
-    }
-  }
-  if (!product?.images) return [];
+/** Pick catalog image URLs for exact slot keys (no legacy metal-only fallback). */
+function catalogImagesForKeys(product, keys) {
+  if (!product?.images || !keys?.length) return [];
   const pick = (key) => {
     const val = product.images[key];
     if (Array.isArray(val)) return val.filter(Boolean);
     if (typeof val === 'string' && val) return [val];
     return [];
   };
-  for (const key of [color, product.defaultColor, 'white']) {
+  for (const key of keys) {
     const list = pick(key);
     if (list.length) return list;
-  }
-  for (const list of Object.values(product.images)) {
-    const normalized = Array.isArray(list) ? list.filter(Boolean) : (list ? [list] : []);
-    if (normalized.length) return normalized;
   }
   return [];
 }
 
-/** Best available image URL for a product (first of the color set). */
-function productImageUrl(product, color) {
+/** Image URLs for metal + diamond color, falling back through legacy keys. */
+function productImagesForColor(product, metalColor, diamondColor) {
+  const metal = metalColor || previewColor();
+  const diamond = diamondColor ?? selectedDiamondColorId() ?? 'white';
   const assetId = productAssetId(product);
+  const compoundKey = window.ShopAssets?.buildImageSlotKey
+    ? window.ShopAssets.buildImageSlotKey(metal, diamond)
+    : (diamond !== 'white' ? `${metal}-${diamond}` : `${metal}-white`);
+
+  // Admin-uploaded compound slot (e.g. white-yellow).
+  if (diamond !== 'white') {
+    const fromCompound = catalogImagesForKeys(product, [compoundKey]);
+    if (fromCompound.length) return fromCompound;
+  }
+
+  // Generated shop-product PNGs — must run before catalog metal-only keys or fancy color never changes.
   if (assetId && window.ShopAssets?.productImage) {
     const resolved = window.ShopAssets.productImage(
       assetId,
-      color,
-      product.defaultColor,
+      metal,
+      product?.defaultColor,
+      diamond,
     );
-    if (resolved) return resolved;
+    if (resolved) return [resolved];
   }
-  const fromCatalog = productImagesForColor(product, color)[0];
-  if (fromCatalog && !/\/images\/shop\/styles\/[a-z]+-[A-C]\.svg/i.test(fromCatalog)) {
-    return fromCatalog;
+
+  // White diamond: catalog metal slots, then any legacy upload.
+  if (diamond === 'white') {
+    const metalKeys = window.ShopAssets?.imageSlotKeysForLookup
+      ? window.ShopAssets.imageSlotKeysForLookup(metal, 'white')
+      : [metal, `${metal}-white`];
+    const fromMetal = catalogImagesForKeys(product, metalKeys);
+    if (fromMetal.length) return fromMetal;
+    for (const key of [product?.defaultColor, 'white']) {
+      const list = catalogImagesForKeys(product, [key]);
+      if (list.length) return list;
+    }
+    if (product?.images) {
+      for (const list of Object.values(product.images)) {
+        const normalized = Array.isArray(list) ? list.filter(Boolean) : (list ? [list] : []);
+        if (normalized.length) return normalized;
+      }
+    }
+    if (assetId && window.ShopAssets?.productImages) {
+      const list = window.ShopAssets.productImages(assetId, product?.defaultColor);
+      if (list.length) return list;
+    }
   }
+
+  return [];
+}
+
+/** Best available image URL for a product (first of the color set). */
+function productImageUrl(product, metalColor, diamondColor) {
+  const fromColor = productImagesForColor(product, metalColor, diamondColor)[0];
+  if (fromColor && !/\/images\/shop\/styles\/[a-z]+-[A-C]\.svg/i.test(fromColor)) {
+    return fromColor;
+  }
+  const assetId = productAssetId(product);
   if (assetId && window.ShopAssets) return window.ShopAssets.styleThumb(assetId);
   return '';
 }
@@ -305,8 +335,30 @@ function applyStaticCatalogFallback() {
   return true;
 }
 
+function renderCatalogSkeleton(count) {
+  const grid = document.getElementById('catalog-grid');
+  if (!grid || grid.querySelector('.cat-btn')) return;
+  const n = count || 5;
+  grid.classList.add('is-loading');
+  grid.setAttribute('aria-busy', 'true');
+  grid.innerHTML = '';
+  for (let i = 0; i < n; i++) {
+    const tile = document.createElement('div');
+    tile.className = 'catalog-tile catalog-tile--skeleton';
+    tile.setAttribute('aria-hidden', 'true');
+    tile.innerHTML = '<span class="catalog-tile-skeleton-img"></span><span class="catalog-tile-skeleton-label"></span>';
+    grid.appendChild(tile);
+  }
+}
+
+function finishShopBoot() {
+  document.getElementById('shop-page')?.classList.remove('shop-page--loading');
+  document.getElementById('shop-price-panel')?.classList.remove('is-loading-prices');
+}
+
 async function loadCatalog() {
   const grid = document.querySelector('.catalog-grid');
+  renderCatalogSkeleton();
   let errEl = document.getElementById('catalog-error');
   try {
     if (!shopUsesApi()) {
@@ -398,7 +450,7 @@ function renderCatalogTiles() {
     const img = document.createElement('img');
     img.loading = 'lazy';
     img.alt = '';
-    img.src = categoryImageUrl(cat) || (products[0] ? productImageUrl(products[0], products[0].defaultColor) : '');
+    img.src = categoryImageUrl(cat) || (products[0] ? styleGridImageUrl(products[0]) : '');
     window.ShopAssets?.attachImageFallback(img, categoryImageUrl(cat));
 
     const label = document.createElement('span');
@@ -490,6 +542,7 @@ function setShopView(view, options) {
   updateSummary();
   updateShopProgress();
   updateWizardGuide();
+  if (view === 'product') updateLargeImage();
   const skipScroll = opts.skipScroll || document.documentElement.classList.contains('shop-tour-active');
   if (!skipScroll) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -859,8 +912,17 @@ function previewColor() {
   return 'white';
 }
 
-function imageUrl(category, type, color) {
-  return productImageUrl(getProduct(category, type), color ?? previewColor());
+/** Step 2 style grid — always white-diamond preview; fancy color only on step 3 gallery. */
+function styleGridImageUrl(product) {
+  return productImageUrl(product, product?.defaultColor || 'white', 'white');
+}
+
+function imageUrl(category, type, metalColor, diamondColor) {
+  return productImageUrl(
+    getProduct(category, type),
+    metalColor ?? previewColor(),
+    diamondColor ?? selectedDiamondColorId(),
+  );
 }
 
 // ── Metal price fetch ─────────────────────────────────────────────────────
@@ -1032,7 +1094,7 @@ function renderTypeCards() {
     if (state.type === styleId) card.classList.add("active");
 
     const img = document.createElement("img");
-    const imgSrc = productImageUrl(product, product.defaultColor);
+    const imgSrc = styleGridImageUrl(product);
     img.src = imgSrc;
     img.alt = productName(product);
     img.loading = "lazy";
@@ -1252,6 +1314,7 @@ function updateDiamondSteps() {
   }
   renderDiamondColorCarousel();
   ensureStoneCountDefault();
+  updateGirdlePreviewColor();
 }
 
 function selectDiamondColor(colorId) {
@@ -1271,6 +1334,9 @@ function selectDiamondColor(colorId) {
   ensureStoneCountDefault();
   updateDiamondSteps();
   updateCaratButtons();
+  productImageIndex = 0;
+  if (shopView === 'product') updateLargeImage();
+  updateGirdlePreviewColor();
   updateSummary();
 }
 
@@ -1408,9 +1474,12 @@ function updateEngravingSteps() {
   if (!hasBand) state.engravingBand = '';
   if (!hasGirdle) state.engravingGirdle = '';
   const bandInput = document.getElementById('engraving-band-input');
-  const girdleInput = document.getElementById('engraving-girdle-input');
   if (bandInput) bandInput.value = state.engravingBand;
-  if (girdleInput) girdleInput.value = state.engravingGirdle;
+  const girdleCtrl = ensureGirdleEngrave();
+  if (girdleCtrl) {
+    girdleCtrl.setValue(state.engravingGirdle || '');
+    girdleCtrl.setPreviewColor(selectedDiamondColorId() || 'white');
+  }
 }
 
 function renderLengthButtons(containerId, options, selected, onSelect) {
@@ -1543,7 +1612,7 @@ function updateChainOptions() {
 function currentProductImages() {
   const product = getSelectedProduct();
   if (!product) return [];
-  return productImagesForColor(product, previewColor());
+  return productImagesForColor(product, previewColor(), selectedDiamondColorId());
 }
 
 function renderProductThumbnails(images) {
@@ -1599,13 +1668,20 @@ function stepProductImage(delta) {
 }
 
 function updateLargeImage() {
-  if (!state.category || !state.type) return;
+  if (shopView !== 'product' || !state.category || !state.type) return;
   const images = currentProductImages();
   if (productImageIndex >= images.length) productImageIndex = 0;
   const src = images[productImageIndex] || imageUrl(state.category, state.type);
   const img = document.getElementById("large-image");
   const zoomBtn = document.getElementById("product-zoom-btn");
-  if (img) img.src = src;
+  if (img) {
+    img.src = src;
+    if (window.ShopAssets?.attachImageFallback && selectedDiamondColorId() !== 'white') {
+      const product = getSelectedProduct();
+      const fallback = productImageUrl(product, previewColor(), 'white');
+      if (fallback && fallback !== src) window.ShopAssets.attachImageFallback(img, fallback);
+    }
+  }
   if (zoomBtn) zoomBtn.hidden = !(src && !src.endsWith('/'));
   renderProductThumbnails(images);
   updateGalleryNav(images);
@@ -1721,6 +1797,18 @@ function updateSummary() {
     ? `${caratBase} ${badge}`
     : caratBase;
   document.getElementById("sum-carat").textContent = caratDisplay;
+
+  const diamondColorRow = document.getElementById('sum-diamond-color-row');
+  const sumDiamondColor = document.getElementById('sum-diamond-color');
+  if (state.category === 'chain') {
+    if (diamondColorRow) diamondColorRow.style.display = 'none';
+  } else {
+    if (diamondColorRow) diamondColorRow.style.display = '';
+    const colorMeta = diamondColorOptions().find(c => c.id === selectedDiamondColorId());
+    if (sumDiamondColor) {
+      sumDiamondColor.textContent = colorMeta ? diamondMetaLabel(colorMeta) : '-';
+    }
+  }
 
   // Weight lookup (from the selected product's own variant data)
   const baseChin = (state.category && state.type && state.gold && state.carat)
@@ -1933,12 +2021,32 @@ document.getElementById('engraving-band-input')?.addEventListener('input', (e) =
   state.engravingBand = e.target.value;
   updateSummary();
 });
-document.getElementById('engraving-girdle-input')?.addEventListener('input', (e) => {
-  const cleaned = e.target.value.replace(/[^A-Za-z0-9]/g, '').slice(0, 10);
-  if (e.target.value !== cleaned) e.target.value = cleaned;
-  state.engravingGirdle = cleaned;
-  updateSummary();
-});
+
+function updateGirdlePreviewColor() {
+  const ctrl = ensureGirdleEngrave();
+  if (ctrl?.setPreviewColor) ctrl.setPreviewColor(selectedDiamondColorId() || 'white');
+}
+
+let girdleEngraveCtrl = null;
+function ensureGirdleEngrave() {
+  if (girdleEngraveCtrl) return girdleEngraveCtrl;
+  const input = document.getElementById('shop-girdle-engrave-input');
+  if (!input || !window.GirdleEngrave) return null;
+  girdleEngraveCtrl = window.GirdleEngrave.init({
+    input,
+    countEl: document.getElementById('shop-girdle-engrave-count'),
+    previewEl: document.getElementById('shop-girdle-engrave-preview'),
+    emblemsRoot: document.getElementById('engraving-girdle-step'),
+    previewColor: selectedDiamondColorId() || 'white',
+    max: 12,
+    onChange: (val) => {
+      state.engravingGirdle = val;
+      updateSummary();
+    },
+  });
+  return girdleEngraveCtrl;
+}
+ensureGirdleEngrave();
 document.querySelectorAll('.pendant-chain-toggle').forEach(btn =>
   btn.addEventListener('click', () => {
     state.includeChain = btn.dataset.includeChain === 'true';
@@ -2620,7 +2728,7 @@ async function initOrderEdit() {
   try { sessionStorage.removeItem('imprint_order_edit'); } catch (_) {}
 }
 
-async function init() {
+async function bootShopCore() {
   initWizardRail();
   await initOrderEdit();
   await initCartEdit();
@@ -2631,7 +2739,9 @@ async function init() {
   populateRingSizeSelect();
   loadMetalPrices();
   loadLiveGoldRates();
+}
 
+function applyInitialShopState() {
   const prefillData = window.cartEditData || window.editData || window.prefillData;
   if (prefillData) {
     restoreShopConfig(prefillData);
@@ -2653,6 +2763,19 @@ async function init() {
       document.querySelector(`.type-card[data-type="${previewProduct}"]`)?.click();
     }, 50);
   }
+}
+
+async function init() {
+  const bootPromise = bootShopCore();
+
+  if (window.ensureShopTermsAccepted) {
+    const termsOk = await window.ensureShopTermsAccepted();
+    if (!termsOk) return;
+  }
+
+  await bootPromise;
+  applyInitialShopState();
+  finishShopBoot();
 }
 
 // ── Onboarding tour (React shop-tour) — navigate real shop views, no mock page ─

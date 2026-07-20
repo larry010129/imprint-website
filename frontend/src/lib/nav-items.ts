@@ -12,16 +12,15 @@ export type NavItem = {
 
 export const NAV_ITEMS: NavItem[] = [
   {
-    id: "shop",
-    label: "珠寶試算",
-    href: "/shop/calculator/",
+    id: "diamonds",
+    label: "DNA 鑽石",
+    href: "/price.html",
     children: [
       { label: "戒台試算", href: "/shop/calculator/" },
       { label: "DNA 鑽石價格", href: "/price.html" },
       { label: "台銀金價", href: "/gold-price.html" },
     ],
   },
-  { id: "diamonds", label: "DNA 鑽石", href: "/diamonds.html" },
   {
     id: "jewelry",
     label: "時尚珠寶",
@@ -53,6 +52,10 @@ export const NAV_ITEMS: NavItem[] = [
   },
   { id: "track-order", label: "查詢訂製進度", href: "/track-order.html" },
 ]
+
+export function navParentIsLink(_item: NavItem): boolean {
+  return true
+}
 
 export function resolveHref(href: string, siteRoot: string): string {
   if (/^(https?:|tel:|mailto:)/.test(href)) return href
