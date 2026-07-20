@@ -57,7 +57,7 @@
       var thumb = global.ShopAssets.categoryThumb(o.category);
       if (thumb) return thumb;
     }
-    if (o.category) return '/static/images/shop/categories/' + o.category + '.svg';
+    if (o.category) return '/static/images/shop-product/thumbs/' + o.category + '/A.jpg';
     return '';
   }
 
@@ -131,13 +131,22 @@
     return '<img class="order-style-thumb" src="' + esc(url) + '" alt="' + esc(alt || '') + '" loading="lazy">';
   }
 
-  function specItem(label, value) {
+  function specItem(label, value, opts) {
+    var raw = opts && opts.html;
+    var valueHtml = raw ? String(value) : esc(String(value));
     return (
       '<div class="order-detail-item">' +
         '<span class="order-detail-label">' + esc(label) + '</span>' +
-        '<span class="order-detail-value">' + esc(String(value)) + '</span>' +
+        '<span class="order-detail-value">' + valueHtml + '</span>' +
       '</div>'
     );
+  }
+
+  function girdleDisplayHtml(str) {
+    if (global.GirdleEngrave && typeof global.GirdleEngrave.toDisplayHtml === 'function') {
+      return global.GirdleEngrave.toDisplayHtml(str);
+    }
+    return esc(str);
   }
 
   function progressHtml(status, statusLabel) {
@@ -207,7 +216,7 @@
               (o.diamond_shape ? specItem('形狀', o.diamond_shape) : '') +
               specItem('戒圍', o.ring_size != null ? o.ring_size : '—') +
               (o.engraving_band ? specItem('戒圈刻字', o.engraving_band) : '') +
-              (o.engraving_girdle ? specItem('腰圍刻字', o.engraving_girdle) : '') +
+              (o.engraving_girdle ? specItem('腰圍刻字', girdleDisplayHtml(o.engraving_girdle), { html: true }) : '') +
               specItem('取貨方式', fulfillment) +
               (shipping ? specItem('收件地址', shipping) : '') +
               priceBreakdownLines(o) +

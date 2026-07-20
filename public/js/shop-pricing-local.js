@@ -31,6 +31,10 @@
   var STONE_COUNT_CATEGORIES = { earring: 1 };
   var DEFAULT_STONE_COUNT_BY_CATEGORY = { earring: 2, ring: 2, pendant: 2 };
 
+  var WAX_TO_METAL_CHIN = {
+    '9k': 11.5, '14k': 14, '18k': 16, pt950: 24, s925: 11,
+  };
+
   var PURITY_MULTIPLIER = {
     '9k': 0.50, '14k': 0.75, '18k': 0.85, pt950: 1.10, s925: 0.925,
   };
@@ -158,19 +162,29 @@
     return productIndexFor(list)[String(productId)] || null;
   }
 
+  function waxToMetalChin(waxChin, gold) {
+    var factor = WAX_TO_METAL_CHIN[gold];
+    if (factor == null) throw new Error('unknown gold: ' + gold);
+    return waxChin * factor;
+  }
+
   function lookupWeight(product, category, gold, carat, lengthCm) {
-    var weight = product.weights && product.weights[gold] && product.weights[gold][carat];
-    if (weight == null) throw new Error('no weight');
-    weight = Number(weight);
+    var wax = product.weights && product.weights[gold] && product.weights[gold][carat];
+    if (wax == null) throw new Error('no weight');
+    var weight = waxToMetalChin(Number(wax), gold);
     if (category === 'chain' && lengthCm != null) weight *= Number(lengthCm) / CHAIN_REFERENCE_LENGTH_CM;
     else if (category === 'bracelet' && lengthCm != null) weight *= Number(lengthCm) / BRACELET_REFERENCE_LENGTH_CM;
     return weight;
   }
 
-  function metalPreTax(gold, weightGrams, category) {
-    var perGram = perGramFor(gold);
+  function perChinFor(gold) {
+    return perGramFor(gold) * CHIN_TO_GRAMS;
+  }
+
+  function metalPreTax(gold, weightChin, category) {
+    var perChin = perChinFor(gold);
     var multiplier = category === 'chain' ? 2 : 1;
-    return { amount: perGram * weightGrams * multiplier, perGram: perGram };
+    return { amount: perChin * weightChin * multiplier, perGram: perGramFor(gold) };
   }
 
   function computeChainAddon(catalog, chainProductId, chainGold, chainLengthCm) {
@@ -181,7 +195,7 @@
     var manual = chainProduct.manualPrices && chainProduct.manualPrices[chainGold]
       && chainProduct.manualPrices[chainGold]['3fen'];
     if (manual != null) return { chainPreTax: Number(manual), chainWeightChin: weightChin };
-    var metal = metalPreTax(chainGold, weightGrams, 'chain');
+    var metal = metalPreTax(chainGold, weightChin, 'chain');
     return { chainPreTax: metal.amount + (LABOR_FEE.chain || 5000), chainWeightChin: weightChin };
   }
 
@@ -220,7 +234,7 @@
 
     var weightGrams = weightChin * CHIN_TO_GRAMS;
     var laborPreTax = LABOR_FEE[category] || 5000;
-    var metal = metalPreTax(gold, weightGrams, category);
+    var metal = metalPreTax(gold, weightChin, category);
     var taijinDisplay = Math.round(metal.amount * (1 + TAX_RATE));
     var laborDisplay = Math.round(laborPreTax * (1 + TAX_RATE));
 
@@ -273,6 +287,7 @@
       laborFee: LABOR_FEE,
       chinToGrams: CHIN_TO_GRAMS,
       taxRate: TAX_RATE,
+      waxToMetalChin: WAX_TO_METAL_CHIN,
       ringSizeMin: 5,
       ringSizeMax: 18,
       ringSizeReference: {
@@ -322,5 +337,7 @@
     computeOrderPricing: computeOrderPricing,
     pricesPayload: pricesPayload,
     setLiveGoldRates: setLiveGoldRates,
+    WAX_TO_METAL_CHIN: WAX_TO_METAL_CHIN,
+    waxToMetalChin: waxToMetalChin,
   };
 })(window);

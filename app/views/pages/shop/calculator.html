@@ -1,13 +1,13 @@
 {% extends "layouts/base.html" %}
 {% block main_class %} class="main-content shop-calculator-page"{% endblock %}
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/shop.css?v=4.0">
+<link rel="stylesheet" href="/static/css/shop.css?v=4.6">
 <link rel="stylesheet" href="/static/css/shop-wizard.css?v=12">
 {% include "partials/shop-tour-react-css.html" %}
 {% endblock %}
 {% block content %}
   <div class="container shop-calculator-wrap">
-<div class="shop-page shop-fit shop-wizard shop-page--loading" id="shop-page">
+<div class="shop-page shop-fit shop-wizard" id="shop-page">
 
   <header class="shop-wizard-header" id="shop-wizard-header">
     <nav class="shop-stepper" id="shop-step-rail" aria-label="訂製步驟">
@@ -113,6 +113,10 @@
         <div class="product-layout product-layout--wizard" id="product-layout">
           <div class="product-gallery-col">
             <div id="large-image-container" class="product-preview">
+              <div id="product-preview-composite" class="product-preview-composite hidden" aria-hidden="true">
+                <img id="large-image-chain" class="product-preview-layer product-preview-layer--chain" loading="eager" decoding="async" src="" alt="">
+                <img id="large-image-pendant" class="product-preview-layer product-preview-layer--pendant" loading="eager" decoding="async" src="" alt="">
+              </div>
               <img id="large-image" loading="lazy" src="" alt="">
               <button type="button" class="product-gallery-nav product-gallery-prev" id="product-gallery-prev" aria-label="上一張" hidden>
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M11.03 3.97a.75.75 0 010 1.06l-6.22 6.22H21a.75.75 0 010 1.5H4.81l6.22 6.22a.75.75 0 11-1.06 1.06l-7.5-7.5a.75.75 0 010-1.06l7.5-7.5a.75.75 0 011.06 0z"/></svg>
@@ -209,8 +213,9 @@
               <h3 class="variant-label" data-i18n="step_engraving_girdle">鑽石腰圍刻字</h3>
               <div class="cfg-engrave shop-girdle-engrave">
                 <div class="cfg-engrave-input" id="shop-girdle-engrave-input" contenteditable="true"
-                     data-placeholder="例如：結婚紀念日或兩人姓名縮寫" role="textbox" aria-label="鑽石腰圍刻字內容"></div>
+                     data-placeholder="e.g. LOVE / 2024 / initials" role="textbox" aria-label="鑽石腰圍刻字內容"></div>
                 <span class="cfg-count" id="shop-girdle-engrave-count">0 / 12</span>
+                <p class="cfg-engrave-hint" data-i18n="engraving_girdle_hint">僅限英數字與圖騰，最多 12 字</p>
                 <p class="cfg-engrave-label">插入圖騰</p>
                 <div class="cfg-emblems">
                   <button type="button" class="cfg-emblem" data-emblem="bow" aria-label="插入蝴蝶結圖騰"><svg viewBox="0 0 24 24"><path d="M12 12L4 6v12l8-6z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 12l8-6v12l-8-6z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/></svg></button>
@@ -346,7 +351,6 @@
                 <button type="button" class="variant-chip pendant-chain-toggle" data-include-chain="true" data-i18n="pendant_with_chain">含鍊</button>
               </div>
               <div class="pendant-chain-options hidden" id="pendant-chain-options">
-                <select id="pendant-chain-product" class="ring-size-select"></select>
                 <div class="variant-group pendant-chain-metal">
                   <h3 class="variant-label" data-i18n="step_metal">選擇材質</h3>
                   <div class="variant-chips" id="pendant-chain-metal-row"></div>
@@ -645,11 +649,11 @@
     shareBaseUrl: '/s/TOKEN',
   }, window.shopConfig || {});
 </script>
-<script src="/static/js/shop-assets.js"></script>
+<script src="/static/js/shop-assets.js?v=3"></script>
 <script src="/static/js/shop-catalog-data.js"></script>
 <script src="/static/js/shop-pricing-local.js?v=3"></script>
 <script src="/static/js/shop-i18n.js"></script>
-<script src="/static/js/girdle-engrave.js?v=5"></script>
+<script src="/static/js/girdle-engrave.js?v=10"></script>
 <script src="/static/js/shop-terms.js?v=4"></script>
-<script src="/static/js/shop.js?v=41"></script>
+<script src="/static/js/shop.js?v=56"></script>
 {% endblock %}

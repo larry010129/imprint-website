@@ -94,10 +94,15 @@
   }
 
   function joinPath(relative) {
-    return IMAGE_ROOT + relative.replace(/^\//, '');
+    var rel = String(relative || '').replace(/^\//, '').replace(/\\/g, '/');
+    var slash = rel.lastIndexOf('/');
+    var dir = slash >= 0 ? rel.slice(0, slash + 1) : '';
+    var file = slash >= 0 ? rel.slice(slash + 1) : rel;
+    return IMAGE_ROOT + dir + encodeURIComponent(file);
   }
 
-  function stylePngPath(category, style, color, diamondColor) {
+  function stylePngPath(category, style, color, diamondColor, opts) {
+    opts = opts || {};
     var c = resolveColor(color);
     var dir = COLOR_DIR[c];
     var suffix = COLOR_SUFFIX[c];
@@ -118,28 +123,38 @@
     var zh = CATEGORY_ZH[category];
     if (!zh) return '';
     basename = zh + style;
-    var file = basename + '_' + suffix + (d !== 'white' ? '_' + d : '') + '.png';
+    var chainC = opts.chainColor ? resolveColor(opts.chainColor) : null;
+    var chainSuffix = chainC ? COLOR_SUFFIX[chainC] : null;
+    if (chainSuffix && chainC !== c && !opts.pendantOnly && !opts.chainOnly) {
+      var combo = basename + '_' + suffix + '_chain_' + chainSuffix + (d !== 'white' ? '_' + d : '') + '.png';
+      return joinPath(dir + '/' + combo);
+    }
+    var file = basename + '_' + suffix + (d !== 'white' ? '_' + d : '') + (opts.pendantOnly ? '_only' : '') + (opts.chainOnly ? '_chain' : '') + '.png';
     return joinPath(dir + '/' + file);
   }
 
-  function productImage(productId, color, defaultColor, diamondColor) {
+  function productImage(productId, color, defaultColor, diamondColor, opts) {
+    opts = opts || {};
     var parsed = parseProductId(productId);
     if (!parsed) return '';
-    var path = stylePngPath(
-      parsed.category,
-      parsed.style,
-      resolveColor(color, defaultColor),
-      diamondColor,
-    );
+    var resolved = resolveColor(color, defaultColor);
+    var d = diamondColor;
+    if (opts.chainOnly) d = 'white';
+    var path = stylePngPath(parsed.category, parsed.style, resolved, d, opts);
     if (path) return path;
+    if (opts.pendantOnly || opts.chainOnly) {
+      // ponytail: layer asset missing — fall back to full necklace PNG
+      path = stylePngPath(parsed.category, parsed.style, resolved, diamondColor, {});
+      if (path) return path;
+    }
     return styleThumb(productId);
   }
 
-  function productImageWithFallback(productId, color, defaultColor, diamondColor) {
+  function productImageWithFallback(productId, color, defaultColor, diamondColor, opts) {
     var d = diamondColor && DIAMOND_COLORS.indexOf(diamondColor) >= 0 ? diamondColor : 'white';
-    var primary = productImage(productId, color, defaultColor, d);
+    var primary = productImage(productId, color, defaultColor, d, opts);
     if (!primary || d === 'white') return primary;
-    var fallback = productImage(productId, color, defaultColor, 'white');
+    var fallback = productImage(productId, color, defaultColor, 'white', opts);
     return { primary: primary, fallback: fallback };
   }
 

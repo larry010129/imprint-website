@@ -43,6 +43,13 @@ NON_ROUND_SHAPE_SURCHARGE = 0.10
 DEFAULT_STONE_COUNT_BY_CATEGORY = {"earring": 2, "ring": 2, "pendant": 2}
 STONE_COUNT_CATEGORIES = {"earring"}
 
+# 蠟重(錢) × factor → 成品金屬重(錢)
+WAX_TO_METAL_CHIN = {
+    "9k": 11.5, "14k": 14.0, "18k": 16.0, "s925": 11.0, "pt950": 24.0,
+    "999": 11.5, "pt": 24.0, "silver925": 11.0,
+}
+WAX_REFERENCE_GOLD = "9k"
+
 PURITY_MULTIPLIER = {
     "9k": 0.50, "14k": 0.75, "18k": 0.85, "pt950": 1.10, "s925": 0.925,
     "999": 0.999, "pt": 1.0, "silver925": 0.925,
@@ -167,6 +174,13 @@ def _carat_lookup_keys(carat: str) -> list[str]:
     return keys
 
 
+def wax_to_metal_chin(wax_chin: float, gold: str) -> float:
+    factor = WAX_TO_METAL_CHIN.get(gold)
+    if factor is None:
+        raise ValueError(f"unknown gold: {gold}")
+    return wax_chin * factor
+
+
 def get_product_variant(
     cur, *, category: str, product_id: str, gold: str, carat: str, require_published: bool = True
 ) -> dict | None:
@@ -212,7 +226,7 @@ def _lookup_weight(
     )
     if not variant:
         return None
-    weight = float(variant["weight_chin"])
+    weight = wax_to_metal_chin(float(variant["weight_chin"]), gold)
     if category == "chain" and length_cm is not None:
         weight *= float(length_cm) / CHAIN_REFERENCE_LENGTH_CM
     elif category == "bracelet" and length_cm is not None:
@@ -220,10 +234,12 @@ def _lookup_weight(
     return variant, weight
 
 
-def _metal_pre_tax(gold_prices: dict, gold: str, weight_grams: float, category: str) -> tuple[float, float]:
+def _metal_pre_tax(gold_prices: dict, gold: str, weight_chin: float, category: str) -> tuple[float, float]:
+    """Metal cost pre-tax: 金屬重(錢) × 成色金價(元/錢). BOT cache is 元/公克."""
     per_gram = gold_prices[METAL_SYMBOL[gold]] * PURITY_MULTIPLIER[gold]
+    per_chin = per_gram * CHIN_TO_GRAMS
     multiplier = 2 if category == "chain" else 1
-    return per_gram * weight_grams * multiplier, per_gram
+    return per_chin * weight_chin * multiplier, per_gram
 
 
 def _compute_chain_addon(
@@ -237,12 +253,11 @@ def _compute_chain_addon(
     if not looked_up:
         return None
     variant, weight_chin = looked_up
-    weight_grams = weight_chin * CHIN_TO_GRAMS
 
     if variant.get("manual_price_twd") is not None:
         pre_tax = float(variant["manual_price_twd"])
     else:
-        amount, _ = _metal_pre_tax(gold_prices, chain_gold, weight_grams, "chain")
+        amount, _ = _metal_pre_tax(gold_prices, chain_gold, weight_chin, "chain")
         pre_tax = amount + LABOR_FEE.get("chain", 5000)
     return {"chainPreTax": pre_tax}
 
@@ -291,7 +306,7 @@ def compute_order_pricing(cur, data: dict[str, Any], *, require_published: bool 
         }
 
     gold_prices = get_metal_prices(cur)
-    taijin_pre_tax, rate_used = _metal_pre_tax(gold_prices, gold, weight_grams, category)
+    taijin_pre_tax, rate_used = _metal_pre_tax(gold_prices, gold, weight_chin, category)
     taijin_display = round(taijin_pre_tax * (1 + TAX_RATE))
     labor_display = round(labor_pre_tax * (1 + TAX_RATE))
     # Diamond list price is tax-inclusive; metal/labor/chain quotes include 5% at display time.
@@ -331,3 +346,16 @@ def compute_order_pricing(cur, data: dict[str, Any], *, require_published: bool 
         "priceSource": "server",
         "manualOverride": False,
     }
+
+
+if __name__ == "__main__":
+    # ponytail: self-check — official wax table (pendant A 0.1ct)
+    wax = 0.008
+    assert abs(wax_to_metal_chin(wax, "9k") - 0.092) < 1e-6
+    assert abs(wax_to_metal_chin(wax, "14k") - wax * 14) < 1e-6
+    metal_chin = wax_to_metal_chin(wax, "9k")
+    xau = 4300.0
+    per_chin = xau * 0.5 * CHIN_TO_GRAMS
+    gram_path = xau * 0.5 * metal_chin * CHIN_TO_GRAMS
+    assert abs(per_chin * metal_chin - gram_path) < 1e-6
+    print("pricing wax self-check OK")

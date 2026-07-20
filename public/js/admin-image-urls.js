@@ -21,7 +21,12 @@
 
   function categoryFallback(category) {
     var cat = String(category || '').toLowerCase();
-    return CATEGORIES[cat] ? '/static/images/shop/categories/' + cat + '.svg' : '';
+    if (global.ShopAssets) {
+      var thumb = global.ShopAssets.categoryThumb(cat);
+      if (thumb) return thumb;
+    }
+    // Real thumbs live under shop-product/; legacy shop/categories/*.svg removed
+    return CATEGORIES[cat] ? '/static/images/shop-product/thumbs/' + cat + '/A.jpg' : '';
   }
 
   function orderFallback(category, styleType) {

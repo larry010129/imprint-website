@@ -113,9 +113,11 @@ function validateSubmissionFields(data, { partial = false } = {}) {
         if (!GIRDLE_EMBLEM_LABELS.has(label)) return -1;
         slots += 1;
         i = end + 1;
-      } else {
+      } else if (/[A-Za-z0-9]/.test(s[i])) {
         slots += 1;
         i += 1;
+      } else {
+        return -1;
       }
     }
     return slots;
@@ -134,7 +136,7 @@ function validateSubmissionFields(data, { partial = false } = {}) {
     } else if (value && key === 'engravingGirdle') {
       const slotCount = girdleEngraveSlotCount(value);
       if (slotCount < 1 || slotCount > GIRDLE_MAX_SLOTS) {
-        errors.push(`${key} must be 1-${GIRDLE_MAX_SLOTS} letters, digits, or emblem tokens`);
+        errors.push(`${key} must be 1-${GIRDLE_MAX_SLOTS} A-Z/a-z/0-9 chars or emblem tokens only`);
       } else {
         cleaned[key] = value;
       }

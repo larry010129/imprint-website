@@ -237,6 +237,18 @@ tr.order-row-main.is-detail-open td { background: var(--mint-soft, #f4fbfb); }
   margin-bottom: 4px;
 }
 
+.order-detail-value .cfg-emblem-token {
+  display: inline-flex;
+  vertical-align: -0.12em;
+  width: 1.05em;
+  height: 1.05em;
+  margin: 0 1px;
+  color: inherit;
+}
+.order-detail-value .cfg-emblem-token svg {
+  width: 100%;
+  height: 100%;
+}
 .order-detail-value {
   font-size: 13px;
   color: var(--color-text);

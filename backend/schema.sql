@@ -95,7 +95,7 @@ create table if not exists product_variants (
   product_id uuid not null references products(id) on delete cascade,
   gold text not null, -- '18k' | '14k' | '9k' | 'pt950' | 'silver' | ...
   carat text not null, -- diamond carat, or '3fen' for plain chain/mounting-only variants
-  weight_chin numeric not null, -- 台錢(chin) — Taiwan's traditional gold-weight unit
+  weight_chin numeric not null, -- 蠟重(錢); metal = wax × WAX_TO_METAL[gold] at pricing time
   manual_price_twd numeric,
   unique (product_id, gold, carat)
 );

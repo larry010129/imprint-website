@@ -46,6 +46,11 @@ const NON_ROUND_SHAPE_SURCHARGE = 0.10;
 const DEFAULT_STONE_COUNT_BY_CATEGORY = { earring: 2, ring: 2, pendant: 2 };
 const STONE_COUNT_CATEGORIES = new Set(['earring']);
 
+const WAX_TO_METAL_CHIN = {
+  '9k': 11.5, '14k': 14, '18k': 16, s925: 11, pt950: 24,
+  '999': 11.5, pt: 24, silver925: 11,
+};
+
 const PURITY_MULTIPLIER = {
   '9k': 0.50, '14k': 0.75, '18k': 0.85, pt950: 1.10, s925: 0.925,
   '999': 0.999, pt: 1.0, silver925: 0.925,
@@ -156,19 +161,26 @@ async function getProductVariant(sql, { category, productId, gold, carat, requir
   return variant;
 }
 
+function waxToMetalChin(waxChin, gold) {
+  const factor = WAX_TO_METAL_CHIN[gold];
+  if (factor == null) throw new Error(`unknown gold: ${gold}`);
+  return waxChin * factor;
+}
+
 /** Weight in chin for a product's variant, scaled by length for chain/bracelet. */
 async function lookupWeight(sql, { category, productId, gold, carat, lengthCm, requirePublished = true }) {
   const variant = await getProductVariant(sql, { category, productId, gold, carat, requirePublished });
-  let weight = Number(variant.weight_chin);
+  let weight = waxToMetalChin(Number(variant.weight_chin), gold);
   if (category === 'chain' && lengthCm != null) weight *= Number(lengthCm) / CHAIN_REFERENCE_LENGTH_CM;
   else if (category === 'bracelet' && lengthCm != null) weight *= Number(lengthCm) / BRACELET_REFERENCE_LENGTH_CM;
   return weight;
 }
 
-async function metalPreTax(sql, goldPrices, gold, weightGrams, category) {
+async function metalPreTax(sql, goldPrices, gold, weightChin, category) {
   const perGram = goldPrices[METAL_SYMBOL[gold]] * PURITY_MULTIPLIER[gold];
+  const perChin = perGram * CHIN_TO_GRAMS;
   const multiplier = category === 'chain' ? 2 : 1;
-  return { amount: perGram * weightGrams * multiplier, perGram };
+  return { amount: perChin * weightChin * multiplier, perGram };
 }
 
 /** Pre-tax chain total (metal×2 + labor) for a pendant's optional chain add-on. */
@@ -181,7 +193,7 @@ async function computeChainAddon(sql, goldPrices, { chainProductId, chainGold, c
   if (variant.manual_price_twd != null) {
     prTax = Number(variant.manual_price_twd);
   } else {
-    const { amount } = await metalPreTax(sql, goldPrices, chainGold, weightGrams, 'chain');
+    const { amount } = await metalPreTax(sql, goldPrices, chainGold, weightChin, 'chain');
     prTax = amount + (LABOR_FEE.chain || 5000);
   }
   return { chainPreTax: prTax, chainWeightChin: weightChin, chainVariant: variant };
@@ -228,7 +240,7 @@ async function computeOrderPricing(sql, data, { requirePublished = true } = {}) 
   }
 
   const goldPrices = await getMetalPrices(sql);
-  const { amount: taijinPreTax, perGram: rateUsed } = await metalPreTax(sql, goldPrices, gold, weightGrams, category);
+  const { amount: taijinPreTax, perGram: rateUsed } = await metalPreTax(sql, goldPrices, gold, weightChin, category);
   const taijinDisplay = Math.round(taijinPreTax * (1 + TAX_RATE));
   const laborDisplay = Math.round(laborPreTax * (1 + TAX_RATE));
   let taxAmount = (taijinDisplay - taijinPreTax) + (laborDisplay - laborPreTax);
@@ -276,7 +288,7 @@ async function computeOrderPricing(sql, data, { requirePublished = true } = {}) 
 
 module.exports = {
   DIAMOND_PRICE, COLORED_SINGLE_DIAMOND_PRICE, WHITE_MULTI_DIAMOND_PRICE, COLORED_MULTI_DIAMOND_PRICE,
-  MULTI_STONE_ABOVE_03_MULTIPLIER, PURITY_MULTIPLIER, METAL_SYMBOL, LABOR_FEE,
+  MULTI_STONE_ABOVE_03_MULTIPLIER, WAX_TO_METAL_CHIN, PURITY_MULTIPLIER, METAL_SYMBOL, LABOR_FEE,
   TAX_RATE, CHIN_TO_GRAMS, CHAIN_REFERENCE_LENGTH_CM, BRACELET_REFERENCE_LENGTH_CM,
   computeDiamondListPrice, getMetalPrices, getProductVariant, lookupWeight,
   computeChainAddon, computeOrderPricing,

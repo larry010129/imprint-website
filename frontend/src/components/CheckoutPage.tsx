@@ -1,13 +1,17 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useId, useMemo, useState, type FormEvent } from "react";
 import { CircleCheck } from "lucide-react";
+import { useCharacterLimit } from "@/components/hooks/use-character-limit";
 import { Alert } from "@/components/ui/heroui-alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import CheckoutItemDetail from "@/components/CheckoutItemDetail";
 import { itemMetaLine, type PriceBreakdown, type ShopConfig } from "@/lib/checkout-item-display";
 import { fetchSession } from "@/lib/session";
 import { cn } from "@/lib/utils";
+
+const NOTE_MAX_LENGTH = 100;
 
 type CartItem = {
   id: string;
@@ -83,12 +87,64 @@ function formatTwd(n?: number | null): string {
   return "NT$" + Math.round(n).toLocaleString("zh-Hant-TW");
 }
 
+function isCartItemId(id: string): boolean {
+  // cart_items.id is uuid; reject Number() leftovers like "NaN"
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+}
+
 function parseItemIds(): string[] {
   const params = new URLSearchParams(window.location.search);
   const many = params.get("items");
-  if (many) return many.split(",").map((s) => s.trim()).filter(Boolean);
-  const single = params.get("item");
-  return single ? [single] : [];
+  const raw = many
+    ? many.split(",").map((s) => s.trim()).filter(Boolean)
+    : (() => {
+        const single = params.get("item");
+        return single ? [single.trim()] : [];
+      })();
+  return raw.filter(isCartItemId);
+}
+
+function CheckoutSkeleton() {
+  return (
+    <div className="checkout-skel" aria-busy="true" aria-label="載入中">
+      <CheckoutHeader />
+      <div className="checkout-layout">
+        <div className="checkout-main">
+          <section className="checkout-block">
+            <span className="skel-line skel-line--medium" style={{ marginBottom: 16 }} />
+            <div className="checkout-skel-item">
+              <span className="skel-block skel-block--thumb" />
+              <div className="checkout-skel-item-copy">
+                <span className="skel-line skel-line--short" />
+                <span className="skel-line skel-line--long" style={{ marginTop: 8 }} />
+                <span className="skel-line skel-line--medium" style={{ marginTop: 8 }} />
+              </div>
+            </div>
+          </section>
+          <section className="checkout-block">
+            <span className="skel-line skel-line--medium" style={{ marginBottom: 16 }} />
+            <div className="checkout-skel-fields">
+              <span className="skel-line skel-line--full" style={{ height: 40 }} />
+              <span className="skel-line skel-line--full" style={{ height: 40 }} />
+              <span className="skel-line skel-line--full" style={{ height: 40 }} />
+            </div>
+          </section>
+          <section className="checkout-block">
+            <span className="skel-line skel-line--medium" style={{ marginBottom: 16 }} />
+            <span className="skel-line skel-line--full" style={{ height: 56, marginBottom: 10 }} />
+            <span className="skel-line skel-line--full" style={{ height: 56 }} />
+          </section>
+        </div>
+        <aside className="checkout-summary">
+          <span className="skel-line skel-line--medium" style={{ marginBottom: 16 }} />
+          <span className="skel-line skel-line--full" style={{ marginBottom: 10 }} />
+          <span className="skel-line skel-line--full" style={{ marginBottom: 10 }} />
+          <span className="skel-line skel-line--short" style={{ marginTop: 16, height: 20 }} />
+          <span className="skel-block skel-block--btn" style={{ width: "100%", height: 40, marginTop: 20 }} />
+        </aside>
+      </div>
+    </div>
+  );
 }
 
 function buildSuccessUrl(orderNumbers?: string[]): string {
@@ -115,7 +171,13 @@ export default function CheckoutPage() {
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
   const [postal, setPostal] = useState("");
-  const [note, setNote] = useState("");
+  const noteId = useId();
+  const {
+    value: note,
+    characterCount: noteCharacterCount,
+    handleChange: handleNoteChange,
+    maxLength: noteLimit,
+  } = useCharacterLimit({ maxLength: NOTE_MAX_LENGTH });
 
   useEffect(() => {
     if (!itemIds.length) {
@@ -201,12 +263,7 @@ export default function CheckoutPage() {
   }
 
   if (loading) {
-    return (
-      <>
-        <CheckoutHeader />
-        <p className="py-12 text-center text-muted-foreground">載入中…</p>
-      </>
-    );
+    return <CheckoutSkeleton />;
   }
 
   if (!items.length) {
@@ -248,6 +305,9 @@ export default function CheckoutPage() {
           </li>
         ))}
       </ul>
+      <p className="checkout-pay-note" role="note">
+        此步驟尚未付款。送出後由專人確認規格與報價，確認後才會進行付款。
+      </p>
       <div className="checkout-actions checkout-actions--desktop">
         <Button type="submit" className="w-full" disabled={submitting}>
           {submitting ? "送出中…" : "確認送出訂單"}
@@ -351,17 +411,27 @@ export default function CheckoutPage() {
           </section>
 
           <section className="checkout-block">
-            <h2 className="checkout-block-title">備註</h2>
-            <div>
-              <Label htmlFor="checkout-note">給銘印鑽石的訊息（選填）</Label>
-              <textarea
-                id="checkout-note"
-                className="mt-2 flex min-h-24 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            <h2 className="checkout-block-title">給銘印鑽石的訊息</h2>
+            <div className="space-y-2">
+              <Label htmlFor={noteId}>給銘印鑽石的訊息（選填）</Label>
+              <Textarea
+                id={noteId}
+                className="mt-2 min-h-24"
                 placeholder="例如刻字內容、預約時段偏好等"
                 value={note}
-                onChange={(e) => setNote(e.target.value)}
+                maxLength={NOTE_MAX_LENGTH}
+                onChange={handleNoteChange}
                 rows={4}
+                aria-describedby={`${noteId}-description`}
               />
+              <p
+                id={`${noteId}-description`}
+                className="mt-2 text-right text-xs text-muted-foreground"
+                role="status"
+                aria-live="polite"
+              >
+                尚可輸入 <span className="tabular-nums">{noteLimit - noteCharacterCount}</span> 字
+              </p>
             </div>
           </section>
 

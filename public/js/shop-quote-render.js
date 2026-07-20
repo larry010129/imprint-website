@@ -5,6 +5,9 @@
   var CAT_ZH = { pendant: '項墜', ring: '戒指', earring: '耳飾', bracelet: '手鍊', chain: '鍊條' };
   var GOLD_ZH = { '9k': '9K', '14k': '14K', '18k': '18K', pt950: 'PT950', s925: '925銀' };
   var COLOR_ZH = { white: '白金', yellow: '黃金', rose: '玫瑰金' };
+  var DIAMOND_COLOR_ZH = { white: '白鑽', yellow: '黃鑽', blue: '藍鑽', pink: '粉鑽' };
+  var STYLE_ID = /^([a-z]+)-([A-C])$/i;
+  var UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
   function esc(text) {
     var el = document.createElement('span');
@@ -38,14 +41,79 @@
       + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
   }
 
-  function productImage(config) {
-    if (global.ShopAssets) {
-      var img = global.ShopAssets.productImage(config.type, config.color, config.color);
-      if (img) return img;
-      var thumb = global.ShopAssets.categoryThumb(config.category);
-      if (thumb) return thumb;
-    }
+  function urlAttr(url) {
+    return String(url || '').replace(/"/g, '%22');
+  }
+
+  function diamondColorId(config) {
+    if (!config || config.category === 'chain') return '';
+    if (config.diamondColor) return config.diamondColor;
+    if (config.diamondKind === 'white') return 'white';
+    return config.fancyColor || '';
+  }
+
+  function diamondColorLabel(config) {
+    var id = diamondColorId(config);
+    if (!id) return '';
+    return DIAMOND_COLOR_ZH[id] || id;
+  }
+
+  function resolveStyleKey(config) {
+    if (!config) return '';
+    if (config.styleKey && STYLE_ID.test(String(config.styleKey))) return String(config.styleKey);
+    var type = String(config.type || '').trim();
+    if (STYLE_ID.test(type)) return type;
+    var cat = String(config.category || '').toLowerCase();
+    if (cat && type.length === 1 && 'ABC'.indexOf(type) >= 0) return cat + '-' + type;
+    if (cat && UUID.test(type)) return config.styleKey || '';
     return '';
+  }
+
+  function productImage(config) {
+    if (config.previewImage && config.previewChainImage) {
+      return { composite: true, pendant: config.previewImage, chain: config.previewChainImage };
+    }
+    if (config.previewImage) return { primary: config.previewImage, fallback: '' };
+
+    var styleKey = resolveStyleKey(config);
+    if (!global.ShopAssets || !styleKey) {
+      var catOnly = global.ShopAssets ? (global.ShopAssets.categoryThumb(config.category) || '') : '';
+      return { primary: catOnly, fallback: '' };
+    }
+    var pendantOnly = config.category === 'pendant' && !config.includeChain;
+    var withChain = config.category === 'pendant' && config.includeChain;
+    var pendantMetal = config.color || config.defaultColor || 'white';
+    var chainMetal = (withChain && config.chainColor) ? config.chainColor : pendantMetal;
+    var defaultColor = config.defaultColor || pendantMetal;
+    var diamond = diamondColorId(config) || 'white';
+    var splitPreview = withChain;
+    if (splitPreview) {
+      var fullCombo = global.ShopAssets.productImage(styleKey, pendantMetal, defaultColor, diamond, { chainColor: chainMetal });
+      // Crop-layer files end in "_only.png" or bare "_chain.png"; full combo files
+      // use "_chain_{metal}[_diamond].png" and must NOT match here.
+      if (fullCombo && !/_(?:only|chain)\.[a-z0-9]+$/i.test(fullCombo) && fullCombo.indexOf('/thumbs/') < 0) {
+        return { primary: fullCombo, fallback: '' };
+      }
+      var pendantLayer = global.ShopAssets.productImage(styleKey, pendantMetal, defaultColor, diamond, { pendantOnly: true });
+      var chainLayer = global.ShopAssets.productImage(styleKey, chainMetal, defaultColor, 'white', { chainOnly: true });
+      if (pendantLayer && chainLayer) {
+        return { composite: true, pendant: pendantLayer, chain: chainLayer };
+      }
+    }
+    var fullOpts = { pendantOnly: withChain ? false : pendantOnly };
+    if (withChain) fullOpts.chainColor = chainMetal;
+    var resolved = global.ShopAssets.productImageWithFallback
+      ? global.ShopAssets.productImageWithFallback(styleKey, pendantMetal, defaultColor, diamond, fullOpts)
+      : global.ShopAssets.productImage(styleKey, pendantMetal, defaultColor, diamond, fullOpts);
+    if (typeof resolved === 'object' && resolved && resolved.primary) {
+      if (diamond !== 'white') resolved.fallback = '';
+      return resolved;
+    }
+    if (resolved) return { primary: resolved, fallback: '' };
+    var thumb = global.ShopAssets.styleThumb(styleKey);
+    if (thumb) return { primary: thumb, fallback: '' };
+    var cat = global.ShopAssets.categoryThumb(config.category);
+    return cat ? { primary: cat, fallback: '' } : { primary: '', fallback: '' };
   }
 
   function specRows(config) {
@@ -55,6 +123,8 @@
       { label: '金屬材質', value: materialLabel(config.gold, config.color) },
       { label: '克拉', value: caratLabel(config.carat) },
     ];
+    var diamondLabel = diamondColorLabel(config);
+    if (diamondLabel) rows.push({ label: '鑽石顏色', value: diamondLabel });
     if (config.ringSize) rows.push({ label: '戒圍', value: String(config.ringSize) });
     if (config.lengthCm) rows.push({ label: '長度', value: config.lengthCm + ' cm' });
     if (config.includeChain) rows.push({ label: '搭配鍊條', value: '是' });
@@ -80,7 +150,11 @@
     var mode = opts.mode || 'quote';
     var pricing = config.clientPricing || {};
     var total = pricing.total;
-    var img = productImage(config);
+    var imgInfo = productImage(config);
+    var imgComposite = imgInfo.composite && imgInfo.pendant && imgInfo.chain;
+    var imgSrc = imgInfo.primary || imgInfo.pendant || '';
+    var imgChain = imgInfo.chain || '';
+    var imgFallback = imgInfo.fallback || '';
     var now = formatDate(new Date());
     var title = mode === 'share' ? '試算分享' : '珠寶訂製報價單';
     var subtitle = mode === 'share'
@@ -113,7 +187,15 @@
       + '<time class="share-card-time" datetime="' + esc(new Date().toISOString()) + '">' + esc(now) + '</time>'
       + '</header>'
       + '<section class="share-hero">'
-      + (img ? '<img class="share-image" src="' + esc(img) + '" alt="">' : '')
+      + (imgComposite
+        ? '<div class="share-image-composite">'
+          + '<img class="share-image share-image--chain" src="' + urlAttr(imgChain) + '" alt="">'
+          + '<img class="share-image share-image--pendant" src="' + urlAttr(imgSrc) + '" alt="">'
+          + '</div>'
+        : (imgSrc
+          ? '<img class="share-image" src="' + urlAttr(imgSrc) + '" alt=""'
+            + (imgFallback ? ' data-fallback="' + urlAttr(imgFallback) + '"' : '') + '>'
+          : ''))
       + '<div class="share-hero-copy">'
       + '<p class="share-category">' + esc(CAT_ZH[config.category] || config.category || '') + '</p>'
       + '<h2>' + esc(config.summaryZh || '訂製品項') + '</h2>'
@@ -152,6 +234,10 @@
       return;
     }
     root.innerHTML = '<div class="share-page">' + renderCard(config, { mode: mode }) + '</div>';
+    root.querySelectorAll('.share-image[data-fallback]').forEach(function (img) {
+      var fb = img.getAttribute('data-fallback');
+      if (fb && global.ShopAssets) global.ShopAssets.attachImageFallback(img, fb);
+    });
     bindActions(root, mode);
   }
 

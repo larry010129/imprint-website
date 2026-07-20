@@ -99,12 +99,66 @@ function parseConfig(raw: unknown): ShopConfig {
   return raw as ShopConfig;
 }
 
+const COLOR_DIR: Record<string, string> = {
+  white: "silver",
+  yellow: "gold",
+  rose: "rose_gold",
+};
+const COLOR_SUFFIX: Record<string, string> = {
+  white: "silver",
+  yellow: "gold",
+  rose: "rose",
+};
+const DIAMOND_COLORS = new Set(["white", "yellow", "blue", "pink"]);
+
+function configDiamondColor(config: ShopConfig): string {
+  if (config.category === "chain") return "white";
+  if (config.diamondKind === "white") return "white";
+  const fancy = config.fancyColor || "";
+  if (DIAMOND_COLORS.has(fancy)) return fancy;
+  return "white";
+}
+
+function styleKeyFromConfig(config: ShopConfig, styleType?: string | null): string {
+  const type = String(styleType || config.type || "").trim();
+  if (/^[a-z]+-[A-C]$/i.test(type)) return type.toLowerCase().replace(/-([a-c])$/i, (_, s) => `-${s.toUpperCase()}`);
+  const cat = String(config.category || "").toLowerCase();
+  if (cat && type.length === 1 && "ABC".includes(type.toUpperCase())) return `${cat}-${type.toUpperCase()}`;
+  return "";
+}
+
+/** Mirror public/js/shop-assets.js naming for metal + diamond renders. */
+function shopProductImageFromConfig(config: ShopConfig, styleType?: string | null): string {
+  const styleKey = styleKeyFromConfig(config, styleType);
+  const m = styleKey.match(/^([a-z]+)-([A-C])$/i);
+  if (!m) return "";
+  const cat = m[1]!.toLowerCase();
+  const style = m[2]!.toUpperCase();
+  const zh = CAT_ZH[cat];
+  if (!zh || cat === "chain") return "";
+  const metal = COLOR_DIR[config.color || "white"] ? config.color || "white" : "white";
+  const dir = COLOR_DIR[metal]!;
+  const suffix = COLOR_SUFFIX[metal]!;
+  const diamond = configDiamondColor(config);
+  const diamondSuffix = diamond !== "white" ? `_${diamond}` : "";
+  let file = `${zh}${style}_${suffix}${diamondSuffix}.png`;
+  if (config.includeChain && config.chainColor && COLOR_DIR[config.chainColor] && config.chainColor !== metal) {
+    const chainSuffix = COLOR_SUFFIX[config.chainColor]!;
+    file = `${zh}${style}_${suffix}_chain_${chainSuffix}${diamondSuffix}.png`;
+  }
+  return `/static/images/shop-product/${dir}/${encodeURIComponent(file)}`;
+}
+
 export function itemImageUrl(
-  _config: ShopConfig,
-  _styleType?: string | null,
+  configInput: ShopConfig | unknown,
+  styleType?: string | null,
   apiImageUrl?: string | null
 ): string {
-  return apiImageUrl || "";
+  const config = parseConfig(configInput);
+  const computed = shopProductImageFromConfig(config, styleType);
+  // Fancy stone must win — API used to ignore diamond color and return white-stone PNGs
+  if (computed && configDiamondColor(config) !== "white") return computed;
+  return apiImageUrl || computed || "";
 }
 
 export function specRows(configInput: ShopConfig | unknown, summaryZh?: string | null): SpecRow[] {

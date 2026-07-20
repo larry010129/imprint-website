@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import re
+from pathlib import Path
 from typing import Any
+from urllib.parse import unquote
 
 _STYLE_ID = re.compile(r"^([a-z]+)-([A-C])$", re.I)
 _STYLE_FROM_PATH = re.compile(r"(?:^|/)([a-z]+)-([A-C])\.(?:svg|png|jpe?g|webp)", re.I)
@@ -12,6 +14,7 @@ _UUID = re.compile(
     re.I,
 )
 _VALID_CATEGORIES = frozenset({"pendant", "ring", "earring", "bracelet", "chain"})
+_DIAMOND_COLORS = frozenset({"white", "yellow", "blue", "pink"})
 
 _IMAGE_ROOT = "/static/images/shop-product/"
 
@@ -88,8 +91,48 @@ def _resolve_color(color: str | None) -> str:
     return c if c in _COLOR_DIR else "white"
 
 
+def _resolve_diamond(diamond: str | None) -> str:
+    d = (diamond or "white").strip().lower()
+    return d if d in _DIAMOND_COLORS else "white"
+
+
+def config_diamond_color(config: dict[str, Any] | None) -> str:
+    """Diamond color id for shop-product filenames (white|yellow|blue|pink)."""
+    if not config:
+        return "white"
+    cat = (config.get("category") or "").strip().lower()
+    if cat == "chain":
+        return "white"
+    dc = config.get("diamondColor")
+    if isinstance(dc, str) and dc.strip().lower() in _DIAMOND_COLORS:
+        return dc.strip().lower()
+    if config.get("diamondKind") == "white":
+        return "white"
+    fancy = config.get("fancyColor")
+    if isinstance(fancy, str) and fancy.strip().lower() in _DIAMOND_COLORS:
+        return fancy.strip().lower()
+    return "white"
+
+
 def _join_shop_path(relative: str) -> str:
     return _IMAGE_ROOT + relative.lstrip("/")
+
+
+_SHOP_ASSET_EXISTS_CACHE: dict[str, bool] = {}
+
+
+def _shop_asset_exists(url: str) -> bool:
+    if not url.startswith("/static/"):
+        return False
+    cached = _SHOP_ASSET_EXISTS_CACHE.get(url)
+    if cached is not None:
+        return cached
+    from config.settings import settings
+
+    rel = unquote(url[len("/static/") :])
+    exists = (settings.static_dir / Path(rel)).is_file()
+    _SHOP_ASSET_EXISTS_CACHE[url] = exists
+    return exists
 
 
 def style_key_from_path(path: str | None) -> str | None:
@@ -114,7 +157,14 @@ def style_key_from_refs(category: str | None, type_ref: str | None) -> str | Non
     return None
 
 
-def shop_style_png_url(category: str | None, style_letter: str, color: str | None) -> str:
+def shop_style_png_url(
+    category: str | None,
+    style_letter: str,
+    color: str | None,
+    diamond_color: str | None = None,
+    *,
+    chain_color: str | None = None,
+) -> str:
     cat = (category or "").strip().lower()
     style = (style_letter or "").strip().upper()
     if cat not in _VALID_CATEGORIES or style not in "ABC":
@@ -123,6 +173,8 @@ def shop_style_png_url(category: str | None, style_letter: str, color: str | Non
     resolved = _resolve_color(color)
     color_dir = _COLOR_DIR[resolved]
     suffix = _COLOR_SUFFIX[resolved]
+    diamond = _resolve_diamond(diamond_color)
+    diamond_suffix = f"_{diamond}" if diamond != "white" else ""
 
     if cat == "chain":
         basename = _CHAIN_BASENAME.get(style)
@@ -131,15 +183,31 @@ def shop_style_png_url(category: str | None, style_letter: str, color: str | Non
         override_key = f"{color_dir}|{basename}|{suffix}"
         if override_key in _FILE_OVERRIDES:
             return _join_shop_path(f"{color_dir}/{_FILE_OVERRIDES[override_key]}")
-        return _join_shop_path(f"{color_dir}/{basename}_{suffix}.png")
+        return _join_shop_path(f"{color_dir}/{basename}_{suffix}{diamond_suffix}.png")
 
     zh = _CATEGORY_ZH.get(cat)
     if not zh:
         return ""
-    return _join_shop_path(f"{color_dir}/{zh}{style}_{suffix}.png")
+
+    if chain_color:
+        chain_resolved = _resolve_color(chain_color)
+        if chain_resolved != resolved:
+            chain_suffix = _COLOR_SUFFIX[chain_resolved]
+            return _join_shop_path(
+                f"{color_dir}/{zh}{style}_{suffix}_chain_{chain_suffix}{diamond_suffix}.png"
+            )
+
+    return _join_shop_path(f"{color_dir}/{zh}{style}_{suffix}{diamond_suffix}.png")
 
 
-def shop_product_image_url(style_key: str | None, color: str | None, *, default_color: str | None = None) -> str:
+def shop_product_image_url(
+    style_key: str | None,
+    color: str | None,
+    *,
+    default_color: str | None = None,
+    diamond_color: str | None = None,
+    chain_color: str | None = None,
+) -> str:
     if not style_key:
         return ""
     match = _STYLE_ID.match(style_key)
@@ -149,7 +217,20 @@ def shop_product_image_url(style_key: str | None, color: str | None, *, default_
     category = match.group(1).lower()
     style = match.group(2).upper()
     resolved = _resolve_color(color or default_color)
-    png = shop_style_png_url(category, style, resolved)
+    png = shop_style_png_url(
+        category,
+        style,
+        resolved,
+        diamond_color,
+        chain_color=chain_color,
+    )
+    if png and (diamond_color in (None, "", "white") or _shop_asset_exists(png)):
+        return png
+    if png and _resolve_diamond(diamond_color) != "white":
+        # Fancy stone render missing — fall back to white-stone metal match
+        white = shop_style_png_url(category, style, resolved, "white", chain_color=chain_color)
+        if white:
+            return white
     return png or shop_style_thumb_url(style_key)
 
 
@@ -196,17 +277,30 @@ def config_image_url(
     category: str | None = None,
     product_id: str | None = None,
     images: list[dict] | None = None,
+    products_by_id: dict[str, dict] | None = None,
 ) -> str:
-    """Best product photo for a shop/cart config — DB upload first, then shop-product renders."""
+    """Best product photo for a shop/cart config — matches metal + diamond selection."""
     from app.catalog import legacy_style_key, resolve_product_id
 
     cat = (category or config.get("category") or "").strip().lower()
-    type_ref = style_type or config.get("type")
-    color = config.get("color") or "white"
+    # Prefer real style/uuid from config.type over display names passed as style_type
+    cfg_type = config.get("type")
+    type_ref = cfg_type or style_type
+    if style_type and cfg_type:
+        style_as_key = style_key_from_refs(cat, str(style_type)) or (
+            str(style_type) if is_uuid(str(style_type)) else None
+        )
+        if not style_as_key:
+            type_ref = cfg_type
+    color = _resolve_color(config.get("color") or "white")
+    diamond = config_diamond_color(config)
+    chain_color = config.get("chainColor") if config.get("includeChain") else None
 
     pid = product_id
     if not pid and type_ref and cat:
-        pid = resolve_product_id(cur, category=cat, type_ref=str(type_ref), require_published=False)
+        # Only resolve when type_ref looks like uuid / ring-A — skip display names
+        if is_uuid(str(type_ref)) or style_key_from_refs(cat, str(type_ref)):
+            pid = resolve_product_id(cur, category=cat, type_ref=str(type_ref), require_published=False)
 
     product_row: dict | None = None
     image_rows = images
@@ -218,35 +312,81 @@ def config_image_url(
             (pid,),
         )
         image_rows = cur.fetchall()
-    elif pid and not product_row:
-        cur.execute("select id, category, sort_order from products where id = %s", (pid,))
-        product_row = cur.fetchone()
+    elif pid and products_by_id and str(pid) in products_by_id:
+        product_row = products_by_id[str(pid)]
+
+    def _db_url_for(*slot_keys: str) -> str:
+        if not image_rows:
+            return ""
+        by_color = {row.get("color"): row for row in image_rows if row.get("color")}
+        for key in slot_keys:
+            row = by_color.get(key)
+            if not row:
+                continue
+            url = resolve_product_image_url(row.get("file_path"))
+            if url and _is_raster_url(url):
+                return url
+        return ""
 
     db_url = ""
     style_key = style_key_from_refs(cat, str(type_ref) if type_ref else None)
-    if image_rows:
-        match = next((row for row in image_rows if row.get("color") == color), None)
-        if not match:
-            match = image_rows[0]
-        if match:
-            db_url = resolve_product_image_url(match.get("file_path"))
-            if db_url and _is_raster_url(db_url):
-                return db_url
-            style_key = style_key or style_key_from_path(match.get("file_path"))
 
+    # Exact metal-diamond DB upload (admin slot key e.g. white-pink)
+    if diamond != "white":
+        exact = _db_url_for(f"{color}-{diamond}")
+        if exact:
+            return exact
+
+    # Shop-product render with diamond color (and pendant+chain combo when set)
     if not style_key and product_row:
         style_key = legacy_style_key(product_row, image_rows or [])
+    elif not style_key and pid and not product_row:
+        # Last resort only — avoid N+1 when batch products_by_id already provided
+        cur.execute("select id, category, sort_order from products where id = %s", (pid,))
+        product_row = cur.fetchone()
+        if product_row:
+            style_key = legacy_style_key(product_row, image_rows or [])
+    if not style_key and image_rows:
+        style_key = style_key_from_path(image_rows[0].get("file_path"))
+
+    if style_key and diamond != "white":
+        real = shop_product_image_url(
+            style_key,
+            color,
+            default_color=color,
+            diamond_color=diamond,
+            chain_color=chain_color,
+        )
+        if real and _shop_asset_exists(real):
+            return real
+
+    # Legacy metal-only DB upload / white-stone slot
+    db_url = _db_url_for(color, f"{color}-white")
+    if db_url and diamond == "white":
+        return db_url
+    if not db_url and image_rows:
+        first = resolve_product_image_url(image_rows[0].get("file_path"))
+        if first and _is_raster_url(first):
+            db_url = first
+            if diamond == "white":
+                return db_url
+            style_key = style_key or style_key_from_path(image_rows[0].get("file_path"))
 
     if style_key:
-        real = shop_product_image_url(style_key, color, default_color=color)
+        real = shop_product_image_url(
+            style_key,
+            color,
+            default_color=color,
+            diamond_color=diamond,
+            chain_color=chain_color,
+        )
         if real:
             return real
 
     if db_url:
         return db_url
 
-    thumb = shop_category_thumb_url(cat)
-    return thumb
+    return shop_category_thumb_url(cat)
 
 
 def order_product_id(order: dict) -> str | None:
@@ -261,6 +401,11 @@ def order_product_id(order: dict) -> str | None:
 
 if __name__ == "__main__":
     assert shop_product_image_url("ring-A", "white") == "/static/images/shop-product/silver/戒指A_silver.png"
+    assert (
+        shop_product_image_url("ring-A", "white", diamond_color="pink")
+        == "/static/images/shop-product/silver/戒指A_silver_pink.png"
+    )
+    assert config_diamond_color({"diamondKind": "fancy", "fancyColor": "pink"}) == "pink"
     assert shop_style_thumb_url("ring-A") == "/static/images/shop-product/thumbs/ring/A.jpg"
     assert resolve_product_image_url("images/products/white/pendant-A.png") == "/static/images/products/white/pendant-A.png"
     assert style_key_from_refs("ring", "A") == "ring-A"

@@ -1,0 +1,46 @@
+[
+  {
+    "style": "A",
+    "pendant": "white",
+    "chain": "yellow",
+    "diamond": "blue",
+    "dest": "images/shop-product/silver/項墜A_silver_chain_gold_blue.png",
+    "ref": "images/shop-product/silver/項墜A_silver_blue.png",
+    "prompt": "Professional e-commerce product photo on pure white background. Same style A pendant necklace design and pendant silhouette as the reference image. White gold (k white / platinum tone) pendant with yellow gold (K yellow) chain necklace. Center stone is a vivid blue diamond. Front-facing studio lighting, sharp focus, no text, no watermark, no hands, no model.",
+    "upload_name": "ref-0.png",
+    "upload_path": "scripts\\_hf_upload\\ref-0.png"
+  },
+  {
+    "style": "A",
+    "pendant": "white",
+    "chain": "yellow",
+    "diamond": "yellow",
+    "dest": "images/shop-product/silver/項墜A_silver_chain_gold_yellow.png",
+    "ref": "images/shop-product/silver/項墜A_silver_yellow.png",
+    "prompt": "Professional e-commerce product photo on pure white background. Same style A pendant necklace design and pendant silhouette as the reference image. White gold (k white / platinum tone) pendant with yellow gold (K yellow) chain necklace. Center stone is a fancy yellow diamond. Front-facing studio lighting, sharp focus, no text, no watermark, no hands, no model.",
+    "upload_name": "ref-1.png",
+    "upload_path": "scripts\\_hf_upload\\ref-1.png"
+  },
+  {
+    "style": "A",
+    "pendant": "white",
+    "chain": "yellow",
+    "diamond": "pink",
+    "dest": "images/shop-product/silver/項墜A_silver_chain_gold_pink.png",
+    "ref": "images/shop-product/silver/項墜A_silver_pink.png",
+    "prompt": "Professional e-commerce product photo on pure white background. Same style A pendant necklace design and pendant silhouette as the reference image. White gold (k white / platinum tone) pendant with yellow gold (K yellow) chain necklace. Center stone is a fancy pink diamond. Front-facing studio lighting, sharp focus, no text, no watermark, no hands, no model.",
+    "upload_name": "ref-2.png",
+    "upload_path": "scripts\\_hf_upload\\ref-2.png"
+  },
+  {
+    "style": "A",
+    "pendant": "white",
+    "chain": "rose",
+    "diamond": "white",
+    "dest": "images/shop-product/silver/項墜A_silver_chain_rose.png",
+    "ref": "images/shop-product/silver/項墜A_silver.png",
+    "prompt": "Professional e-commerce product photo on pure white background. Same style A pendant necklace design and pendant silhouette as the reference image. White gold (k white / platinum tone) pendant with rose gold (K rose) chain necklace. Center stone is a colorless white diamond. Front-facing studio lighting, sharp focus, no text, no watermark, no hands, no model.",
+    "upload_name": "ref-3.png",
+    "upload_path": "scripts\\_hf_upload\\ref-3.png"
+  }
+]

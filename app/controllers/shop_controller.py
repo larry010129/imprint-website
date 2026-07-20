@@ -73,6 +73,8 @@ def _validate_customer(body: dict[str, Any], profile: dict[str, Any] | None) -> 
     city = str(body.get("shippingCity") or "").strip() or None
     postal = str(body.get("shippingPostal") or "").strip() or None
     note = str(body.get("orderNote") or "").strip() or None
+    if note and len(note) > 100:
+        return {}, "備註最多 100 字"
 
     if not name:
         return {}, "請填寫收件人姓名"

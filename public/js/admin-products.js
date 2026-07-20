@@ -357,7 +357,7 @@
     return '<div class="ap-variant-row">' +
       '<select name="gold">' + goldOpts + '</select>' +
       '<select name="carat">' + caratOpts + '</select>' +
-      '<input type="number" name="weight" step="0.0001" min="0.0001" placeholder="金重（錢）" value="' + esc(weight) + '">' +
+      '<input type="number" name="weight" step="0.0001" min="0.0001" placeholder="蠟重（錢）" value="' + esc(weight) + '">' +
       '<input type="number" name="price" step="1" min="0" placeholder="手動定價" value="' + esc(price) + '">' +
       '<button type="button" class="ap-remove-row" aria-label="移除">✕</button></div>';
   }

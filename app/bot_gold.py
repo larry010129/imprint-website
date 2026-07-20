@@ -38,8 +38,13 @@ PURITY_MULTIPLIER = {"9k": 0.5, "14k": 0.75, "18k": 0.85, "pt950": 1.1, "s925": 
 METAL_BASE = {"9k": "XAU", "14k": "XAU", "18k": "XAU", "pt950": "XPT", "s925": "XAG"}
 FALLBACK_XPT = 1050.0
 FALLBACK_XAG = 30.0
+CHIN_TO_GRAMS = 3.75
 
 TAIPEI = ZoneInfo("Asia/Taipei")
+
+
+def build_alloy_rates_per_chin(alloy_per_gram: dict[str, float]) -> dict[str, float]:
+    return {gold: rate * CHIN_TO_GRAMS for gold, rate in alloy_per_gram.items()}
 
 
 def build_alloy_rates(raw: dict[str, float]) -> dict[str, float]:
@@ -59,11 +64,13 @@ def build_payload(parsed: dict[str, float | str | None], source_url: str) -> dic
     now = datetime.now(timezone.utc)
     per_gram = float(parsed["perGram"])
     raw = {"XAU": per_gram, "XPT": FALLBACK_XPT, "XAG": FALLBACK_XAG}
+    alloy_rates = build_alloy_rates(raw)
     return {
         "refreshed": True,
         "quote": {
             "available": True,
             "sell": per_gram,
+            "sellPerChin": per_gram * CHIN_TO_GRAMS,
             "source": "bot",
             "bot_posted_at": parsed.get("stamp"),
             "fetched_at": now.isoformat(),
@@ -71,7 +78,8 @@ def build_payload(parsed: dict[str, float | str | None], source_url: str) -> dic
             "is_stale": False,
             "source_url": source_url,
         },
-        "alloyRates": build_alloy_rates(raw),
+        "alloyRates": alloy_rates,
+        "alloyRatesPerChin": build_alloy_rates_per_chin(alloy_rates),
     }
 
 

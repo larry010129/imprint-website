@@ -187,7 +187,9 @@
               specItem('鑽石顏色', diamondLabel(o)) + specItem('計價金價', formatMoney(o.gold_rate_per_gram)) +
               specItem('重量 (克)', o.weight_grams != null ? Number(o.weight_grams).toFixed(3) : '-') +
               specItem('戒圍', o.ring_size || '-') + specItem('戒圈刻字', o.engraving_band || '-') +
-              specItem('腰圍刻字', o.engraving_girdle || '-') +
+              (o.engraving_girdle
+                ? specItemHtml('腰圍刻字', girdleDisplayHtml(o.engraving_girdle))
+                : specItem('腰圍刻字', '-')) +
               priceBreakdownLines(o) +
               specItem('客戶', (o.customer_name || '-') + ' · ' + (o.customer_phone || '')) +
             '</div>' + progressHtml(o.status) +
@@ -198,6 +200,18 @@
   function specItem(label, value) {
     return '<div class="order-detail-item"><span class="order-detail-label">' + esc(label) +
       '</span><span class="order-detail-value">' + esc(String(value)) + '</span></div>';
+  }
+
+  function specItemHtml(label, valueHtml) {
+    return '<div class="order-detail-item"><span class="order-detail-label">' + esc(label) +
+      '</span><span class="order-detail-value">' + valueHtml + '</span></div>';
+  }
+
+  function girdleDisplayHtml(str) {
+    if (window.GirdleEngrave && typeof window.GirdleEngrave.toDisplayHtml === 'function') {
+      return window.GirdleEngrave.toDisplayHtml(str);
+    }
+    return esc(str);
   }
 
   function selectedIds() {
@@ -434,7 +448,9 @@
   }
 
   function ensureLoaded() {
-    load(null, _loaded);
+    // Always allow first paint; refresh in background if already loaded
+    if (_loaded) load(null, true, true);
+    else load(null, false, false);
   }
 
   fillBulkStatusSelect();

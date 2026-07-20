@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Pencil } from "lucide-react";
 import {
   breakdownRows,
@@ -6,6 +7,7 @@ import {
   type PriceBreakdown,
   type ShopConfig,
 } from "@/lib/checkout-item-display";
+import { GirdleEngravingDisplay, looksLikeGirdleEngraving } from "@/lib/girdle-emblems";
 import { Button } from "@/components/ui/button";
 
 type CartItem = {
@@ -22,13 +24,20 @@ type Props = {
   breakdown: PriceBreakdown;
 };
 
+function renderSpecValue(label: string, value: string): ReactNode {
+  if (label === "腰圍刻字" || looksLikeGirdleEngraving(value)) {
+    return <GirdleEngravingDisplay value={value} />;
+  }
+  return value;
+}
+
 function SpecGrid({ rows }: { rows: { label: string; value: string }[] }) {
   return (
     <div className="order-detail-grid">
       {rows.map((row) => (
         <div key={row.label} className="order-detail-item">
           <span className="order-detail-label">{row.label}</span>
-          <span className="order-detail-value">{row.value}</span>
+          <span className="order-detail-value">{renderSpecValue(row.label, row.value)}</span>
         </div>
       ))}
     </div>

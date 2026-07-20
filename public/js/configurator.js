@@ -194,7 +194,11 @@
     }
     var engraveVal = els.engrave ? engraveReadable() : '';
     if (summary.engrave) {
-      summary.engrave.textContent = engraveVal ? engraveVal : '無';
+      if (engraveVal && window.GirdleEngrave && window.GirdleEngrave.fillDisplay) {
+        window.GirdleEngrave.fillDisplay(summary.engrave, engraveVal, '無');
+      } else {
+        summary.engrave.textContent = engraveVal ? engraveVal : '無';
+      }
     }
 
     var qtyVal = els.qty ? (parseInt(els.qty.value, 10) || 1) : 1;
@@ -350,7 +354,7 @@
       if (summary.jewelry) lines.push('飾品選擇：' + summary.jewelry.textContent);
       if (summary.metal) lines.push('材質：' + summary.metal.textContent);
       if (summary.finish) lines.push('成色：' + summary.finish.textContent);
-      lines.push('腰圍刻字：' + (summary.engrave ? summary.engrave.textContent : '無'));
+      lines.push('腰圍刻字：' + (engraveReadable() || '無'));
       lines.push('系統試算總額：' + (summary.diamondPrice ? summary.diamondPrice.textContent : '-') + '（僅供參考）');
       lines = lines.join('\n');
       var done = function () {

@@ -1,0 +1,46 @@
+{
+  "refs": [
+    "images/shop-product/gold/項墜C_gold.png",
+    "images/shop-product/gold/項墜C_gold_blue.png",
+    "images/shop-product/gold/項墜C_gold_pink.png",
+    "images/shop-product/gold/項墜C_gold_yellow.png",
+    "images/shop-product/rose_gold/項墜A_rose.png",
+    "images/shop-product/rose_gold/項墜A_rose_blue.png",
+    "images/shop-product/rose_gold/項墜A_rose_pink.png",
+    "images/shop-product/rose_gold/項墜A_rose_yellow.png"
+  ],
+  "files": [
+    {
+      "filename": "項墜C_gold.png",
+      "content_type": "image/png"
+    },
+    {
+      "filename": "項墜C_gold_blue.png",
+      "content_type": "image/png"
+    },
+    {
+      "filename": "項墜C_gold_pink.png",
+      "content_type": "image/png"
+    },
+    {
+      "filename": "項墜C_gold_yellow.png",
+      "content_type": "image/png"
+    },
+    {
+      "filename": "項墜A_rose.png",
+      "content_type": "image/png"
+    },
+    {
+      "filename": "項墜A_rose_blue.png",
+      "content_type": "image/png"
+    },
+    {
+      "filename": "項墜A_rose_pink.png",
+      "content_type": "image/png"
+    },
+    {
+      "filename": "項墜A_rose_yellow.png",
+      "content_type": "image/png"
+    }
+  ]
+}

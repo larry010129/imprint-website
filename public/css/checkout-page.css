@@ -328,6 +328,17 @@ a.checkout-stepper-label:hover {
   color: var(--mint-deep);
 }
 
+[data-checkout-root] .checkout-pay-note {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid #e8d5b5;
+  background: #fbf6ee;
+  font-size: 12px;
+  line-height: 1.65;
+  color: #6b5428;
+}
+
 [data-checkout-root] .checkout-actions {
   display: flex;
   flex-direction: column;

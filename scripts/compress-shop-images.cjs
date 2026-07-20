@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/** @deprecated Use `.venv/Scripts/python.exe scripts/compress_shop_images.py` (Pillow). Requires ImageMagick. */
 /** Compress shop-product images >700KB to ≤1000KB (≥50% reduction when possible). */
 const fs = require('fs');
 const path = require('path');

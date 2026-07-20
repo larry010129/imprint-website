@@ -214,7 +214,7 @@ def attach_order_display(cur, orders: list[dict]) -> None:
     products_by_id: dict[str, dict] = {}
     if product_ids:
         cur.execute(
-            "select id, name_zh, name_en, category from products where id = any(%s)",
+            "select id, name_zh, name_en, category, sort_order from products where id = any(%s)",
             (list(set(product_ids)),),
         )
         for row in cur.fetchall():
@@ -257,16 +257,22 @@ def attach_order_display(cur, orders: list[dict]) -> None:
         if not config:
             config = {
                 "category": order.get("category"),
-                "type": order.get("product_type") or order.get("product_id"),
+                # product_type may be display name (summaryZh) — prefer product_id / letter type
+                "type": order.get("product_id") or order.get("product_type"),
                 "color": order.get("color") or "white",
+                "diamondKind": order.get("diamond_kind"),
+                "fancyColor": order.get("fancy_color"),
             }
+        # Never pass hydrated product_type (often summaryZh) — breaks style_key lookup
+        style_ref = config.get("type") or order.get("product_id")
         order["image_url"] = config_image_url(
             cur,
             config,
-            style_type=order.get("product_type"),
-            category=order.get("category"),
+            style_type=str(style_ref) if style_ref else None,
+            category=order.get("category") or config.get("category"),
             product_id=pid,
             images=images_by_product.get(pid or "", []) if pid else None,
+            products_by_id=products_by_id,
         ) or url
 
         created = order.get("created_at")

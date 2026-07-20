@@ -15,6 +15,28 @@ const STYLE_LABELS = {
 
 const CHAIN_COLORS = { A: 'white', B: 'rose', C: 'yellow' };
 
+/** Official 蠟重(錢) per style × carat — same wax for all metals; pricing applies WAX×factor. */
+const WAX_WEIGHT_TABLE = {
+  pendant: {
+    A: { '0.1': 0.008, '0.3': 0.011, '0.5': 0.013, '1.0': 0.018 },
+    B: { '0.1': 0.009, '0.3': 0.013, '0.5': 0.016, '1.0': 0.024 },
+    C: { '0.1': 0.012, '0.3': 0.018, '0.5': 0.024, '1.0': 0.038 },
+  },
+  ring: {
+    A: { '0.1': 0.034, '0.3': 0.042, '0.5': 0.049, '1.0': 0.063 },
+    B: { '0.1': 0.034, '0.3': 0.055, '0.5': 0.076, '1.0': 0.13 },
+    C: { '0.1': 0.035, '0.3': 0.059, '0.5': 0.084, '1.0': 0.134 },
+  },
+  earring: {
+    A: { '0.1': 0.008, '0.3': 0.011, '0.5': 0.015, '1.0': 0.022 },
+  },
+  bracelet: {
+    A: { '0.1': 0.057 },
+    B: { '0.1': 0.041 },
+    C: { '0.1': 0.003 },
+  },
+};
+
 const LEGACY_WEIGHT_TABLE = {
   pendant: {
     A: {
@@ -107,7 +129,7 @@ function applyBraceletCaratRules(table) {
     for (const [gold, carats] of Object.entries(golds)) {
       const w01 = carats['0.1'];
       const w03 = carats['0.3'] ?? w01;
-      if (style === 'B') {
+      if (style === 'B' || style === 'C') {
         golds[gold] = { '0.1': w01 };
       } else {
         golds[gold] = { '0.1': w01, '0.2': carat02Weight(w01, w03) };
@@ -116,11 +138,19 @@ function applyBraceletCaratRules(table) {
   }
 }
 
-// ponytail: LEGACY_WEIGHT_TABLE already holds the literal per-metal chin
-// figure from the official price-structure sheet for every gold/carat cell
-// that's offered — no need to re-derive 9K/18K/Pt950/S925 from the 14K
-// column via a density ratio (that round-trip was the source of ~2-8%
-// drift from the sheet). Use the literal values as-is.
+// ponytail: WAX_WEIGHT_TABLE is authoritative; LEGACY_WEIGHT_TABLE only defines
+// which gold/carat combos exist and fills bracelet A 0.3+ until sheet provides wax.
+const WAX_TO_METAL_CHIN = { '9k': 11.5, '14k': 14, '18k': 16, pt950: 24, s925: 11 };
+
+function waxChinForCell(category, style, gold, carat, legacyGolds) {
+  const wax = WAX_WEIGHT_TABLE[category]?.[style]?.[carat];
+  if (wax != null) return wax;
+  const metal = legacyGolds['9k']?.[carat] ?? legacyGolds[gold]?.[carat];
+  const factor = WAX_TO_METAL_CHIN['9k'];
+  if (metal == null || !factor) return null;
+  return Math.round((metal / factor) * 1e6) / 1e6;
+}
+
 function buildWeightTable() {
   const legacy = JSON.parse(JSON.stringify(LEGACY_WEIGHT_TABLE));
   applyBraceletCaratRules(legacy);
@@ -145,7 +175,9 @@ function buildSeedRows() {
     for (const [style, golds] of Object.entries(styles)) {
       const variants = [];
       for (const [gold, carats] of Object.entries(golds)) {
-        for (const [carat, weightChin] of Object.entries(carats)) {
+        for (const [carat] of Object.entries(carats)) {
+          const weightChin = waxChinForCell(category, style, gold, carat, golds);
+          if (weightChin == null) continue;
           variants.push({ gold, carat, weightChin });
         }
       }
@@ -168,7 +200,8 @@ function buildSeedRows() {
   for (const [style, defaultColor] of Object.entries(CHAIN_COLORS)) {
     const variants = [];
     for (const gold of VALID_GOLDS) {
-      for (const [carat, weightChin] of Object.entries(CHAIN_WEIGHT_CHIN)) {
+      for (const [carat] of Object.entries(CHAIN_WEIGHT_CHIN)) {
+        const weightChin = CHAIN_WEIGHT_CHIN[carat] / WAX_TO_METAL_CHIN['9k'];
         variants.push({ gold, carat, weightChin });
       }
     }
@@ -209,8 +242,10 @@ if (require.main === module) {
     const v = row.variants.find((x) => x.gold === gold && x.carat === carat);
     return v && v.weightChin;
   };
-  assert.strictEqual(cell('ring', 'A', 'pt950', '0.1'), 0.7, 'ring A pt950 0.1ct should be the sheet\'s literal 0.7, not a density-derived value');
-  assert.strictEqual(cell('pendant', 'A', '9k', '0.1'), 0.09);
+  assert.strictEqual(cell('pendant', 'A', '9k', '0.1'), 0.008);
+  assert.strictEqual(cell('ring', 'A', '9k', '0.1'), 0.034);
+  assert.strictEqual(cell('bracelet', 'C', '9k', '0.1'), 0.003);
   assert.strictEqual(cell('earring', 'A', 'pt950', '0.1'), undefined, 'earring has no pt950 row in the sheet');
+  assert.ok(Math.abs(0.008 * WAX_TO_METAL_CHIN['9k'] - 0.092) < 0.001, 'pendant A 0.1 9K metal');
   console.log('catalog-seed-data self-check OK');
 }

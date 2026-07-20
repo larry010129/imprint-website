@@ -69,7 +69,7 @@
         e.selectAll.checked = boxes.length > 0 && selected.length === boxes.length;
         e.selectAll.indeterminate = selected.length > 0 && selected.length < boxes.length;
       }
-      return selected.map(function (cb) { return Number(cb.value); });
+      return selected.map(function (cb) { return String(cb.value); });
     },
     renderDetail: function (item) {
       var e = this.els();

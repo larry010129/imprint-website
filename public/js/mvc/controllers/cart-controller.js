@@ -61,7 +61,7 @@
       e.checkoutBtn.addEventListener('click', function () {
         var ids = View.updateSelection();
         if (!ids.length) return;
-        global.location.href = 'checkout.html?items=' + ids.map(encodeURIComponent).join(',');
+        global.location.href = '/checkout.html?items=' + ids.map(encodeURIComponent).join(',');
       });
     }
     if (e.dialogClose && e.dialog) e.dialogClose.addEventListener('click', function () { e.dialog.close(); });

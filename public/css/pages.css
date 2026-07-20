@@ -198,9 +198,18 @@
 }
 .cfg-engrave-input:focus{ border-color:var(--mint-deep); }
 .cfg-engrave-input:empty:before{ content:attr(data-placeholder); color:var(--ink-faint); }
-.cfg-emblem-token{ display:inline-flex; vertical-align:middle; width:16px; height:16px; flex:none; }
+.cfg-emblem-token{ display:inline-flex; vertical-align:middle; width:16px; height:16px; flex:none; color:inherit; }
 .cfg-emblem-token svg{ width:100%; height:100%; }
+/* Display surfaces (summary / chips / order specs) — same icons as typing */
+.config-chip .cfg-emblem-token,
+.cfg-summary-row .cfg-emblem-token,
+.order-detail-value .cfg-emblem-token,
+.girdle-engrave-display .cfg-emblem-token{
+  width:1.05em; height:1.05em; margin:0 1px; vertical-align:-0.12em;
+}
+.config-chip--engrave{ display:inline-flex; align-items:center; flex-wrap:wrap; gap:2px; }
 .cfg-engrave-label{ font-size:11.5px; color:var(--ink-faint); margin:14px 0 8px; letter-spacing:.06em; }
+.cfg-engrave-hint{ font-size:11px; color:var(--ink-faint); margin:6px 0 0; }
 .cfg-emblems{ display:flex; flex-wrap:wrap; gap:8px; }
 .cfg-emblem{
   width:36px; height:36px; border-radius:50%; border:1px solid #E4DCD2; background:#fff;
@@ -216,6 +225,8 @@
   display:flex; align-items:center; justify-content:center; gap:2px; flex-wrap:wrap; pointer-events:none;
   text-shadow:0 0 4px rgba(255,255,255,.9), 0 1px 2px rgba(255,255,255,.6);
 }
+/* ponytail: pink asset girdle sits lower in frame than white/yellow/blue — re-export pink to match others then drop override */
+.cfg-engrave-preview[data-girdle-color="pink"] .cfg-engrave-preview-text{ top:56%; }
 .cfg-engrave-preview-text .cfg-emblem-token{ width:14px; height:14px; }
 .cfg-engrave-preview-empty{ font-size:11.5px; color:var(--ink-faint); letter-spacing:.06em; margin-top:8px; }
 

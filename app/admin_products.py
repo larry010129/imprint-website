@@ -143,7 +143,7 @@ def _format_product_errors(errors: list[str]) -> str:
         "invalid category": "品項無效",
         "nameZh is required": "請填寫中文名稱",
         "invalid defaultColor": "預設顏色無效",
-        "at least one variant is required": "請至少新增一個款式選項（金屬／克拉／金重）",
+        "at least one variant is required": "請至少新增一個款式選項（金屬／克拉／蠟重）",
         "at least one product image is required": "請至少上傳一張商品照片",
         "default color must have at least one image": "預設顏色必須至少有一張商品照片",
     }
@@ -168,7 +168,7 @@ def _format_product_errors(errors: list[str]) -> str:
             parts.append("款式選項：克拉／分數無效")
             continue
         if err.startswith("invalid weight for"):
-            parts.append("款式選項：金重無效")
+            parts.append("款式選項：蠟重無效")
             continue
         if err.startswith("invalid manual price for"):
             parts.append("款式選項：手動定價無效")

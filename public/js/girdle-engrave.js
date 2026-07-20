@@ -18,11 +18,41 @@
     LABEL_TO_NAME[EMBLEMS[name].label] = name;
   });
 
+  var ZWS = '\u200B';
+  // Typed text: A–Z / a–z / 0–9 only. Emblem tokens insert via buttons, not keys.
+  var ALLOWED_CHAR = /^[A-Za-z0-9]$/;
+  var DISALLOWED_CHARS = /[^A-Za-z0-9]/g;
+
+  function stripZws(text) {
+    return (text || '').replace(/\u200B/g, '');
+  }
+
+  function sanitizePlainText(text) {
+    return stripZws(text).replace(DISALLOWED_CHARS, '');
+  }
+
+  function sanitizeTextNodes(input) {
+    if (!input) return false;
+    var changed = false;
+    input.childNodes.forEach(function (node) {
+      if (node.nodeType !== 3) return;
+      var raw = node.textContent || '';
+      var keptZws = raw.indexOf(ZWS) >= 0;
+      var clean = sanitizePlainText(raw);
+      var next = keptZws && clean ? ZWS + clean : (keptZws && !clean ? ZWS : clean);
+      if (next !== raw) {
+        node.textContent = next;
+        changed = true;
+      }
+    });
+    return changed;
+  }
+
   function slots(input) {
     if (!input) return 0;
     var count = 0;
     input.childNodes.forEach(function (node) {
-      if (node.nodeType === 3) count += node.textContent.length;
+      if (node.nodeType === 3) count += stripZws(node.textContent).length;
       else if (node.nodeType === 1 && node.classList.contains('cfg-emblem-token')) count += 1;
     });
     return count;
@@ -33,12 +63,130 @@
     var parts = [];
     input.childNodes.forEach(function (node) {
       if (node.nodeType === 3) {
-        if (node.textContent) parts.push(node.textContent);
+        var text = stripZws(node.textContent);
+        if (text) parts.push(text);
       } else if (node.nodeType === 1 && node.classList.contains('cfg-emblem-token')) {
         parts.push('〔' + (node.getAttribute('data-label') || '') + '〕');
       }
     });
     return parts.join('').trim();
+  }
+
+  function escapeHtml(str) {
+    return String(str == null ? '' : str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  /** Readable string → HTML with same SVG icons as typing buttons (safe to inject). */
+  function toDisplayHtml(str) {
+    if (!str) return '';
+    var re = /〔([^〕]+)〕|[^〔〕]+/g;
+    var match;
+    var out = '';
+    while ((match = re.exec(String(str)))) {
+      if (match[0].charAt(0) === '〔') {
+        var emblemName = LABEL_TO_NAME[match[1]];
+        var def = emblemName ? EMBLEMS[emblemName] : null;
+        if (def) {
+          out +=
+            '<span class="cfg-emblem-token" data-emblem="' + escapeHtml(emblemName) +
+            '" data-label="' + escapeHtml(def.label) + '" aria-label="' + escapeHtml(def.label) + '">' +
+            def.svg + '</span>';
+        } else {
+          out += escapeHtml(match[0]);
+        }
+      } else {
+        out += escapeHtml(match[0]);
+      }
+    }
+    return out;
+  }
+
+  function fillDisplay(el, str, emptyText) {
+    if (!el) return;
+    if (!str) {
+      el.textContent = emptyText == null ? '' : emptyText;
+      return;
+    }
+    el.innerHTML = toDisplayHtml(str);
+  }
+
+  function caretToken(input, range) {
+    if (!range || !input) return null;
+    var node = range.startContainer;
+    if (node.nodeType === 1 && node.classList.contains('cfg-emblem-token') && input.contains(node)) return node;
+    var el = node.nodeType === 3 ? node.parentElement : node;
+    if (!el || !input.contains(el)) return null;
+    var token = el.closest('.cfg-emblem-token');
+    return token && input.contains(token) ? token : null;
+  }
+
+  function removeToken(token) {
+    if (!token) return;
+    var next = token.nextSibling;
+    if (next && next.nodeType === 3) {
+      var rest = stripZws(next.textContent);
+      if (!rest) next.remove();
+      else next.textContent = rest;
+    }
+    token.remove();
+  }
+
+  function placeCaretIn(input, node, offset) {
+    var range = document.createRange();
+    range.setStart(node, offset);
+    range.collapse(true);
+    var sel = window.getSelection();
+    if (sel) { sel.removeAllRanges(); sel.addRange(range); }
+  }
+
+  function collapseToEnd(input) {
+    var range = document.createRange();
+    range.selectNodeContents(input);
+    range.collapse(false);
+    var sel = window.getSelection();
+    if (sel) { sel.removeAllRanges(); sel.addRange(range); }
+    return range;
+  }
+
+  function saveInputRange(input, store) {
+    var sel = window.getSelection();
+    if (!sel || !sel.rangeCount || !input.contains(sel.anchorNode)) return;
+    store.range = sel.getRangeAt(0).cloneRange();
+  }
+
+  function resolveInsertRange(input, store) {
+    var hadFocus = document.activeElement === input;
+    input.focus();
+    var sel = window.getSelection();
+    if (!hadFocus && store.range && input.contains(store.range.startContainer)) {
+      var restored = store.range.cloneRange();
+      if (sel) { sel.removeAllRanges(); sel.addRange(restored); }
+      return restored;
+    }
+    if (sel && sel.rangeCount && input.contains(sel.anchorNode)) {
+      return sel.getRangeAt(0);
+    }
+    if (store.range && input.contains(store.range.startContainer)) {
+      restored = store.range.cloneRange();
+      if (sel) { sel.removeAllRanges(); sel.addRange(restored); }
+      return restored;
+    }
+    return collapseToEnd(input);
+  }
+
+  function ensureZwsAfter(token) {
+    var next = token.nextSibling;
+    if (next && next.nodeType === 3) {
+      if (next.textContent.charAt(0) !== ZWS) next.textContent = ZWS + next.textContent;
+      return next;
+    }
+    var zws = document.createTextNode(ZWS);
+    token.parentNode.insertBefore(zws, token.nextSibling);
+    return zws;
   }
 
   function selectedSlotsInRange(range) {
@@ -59,7 +207,7 @@
     var nodes = Array.prototype.slice.call(input.childNodes);
     for (var i = 0; i < nodes.length; i++) {
       var node = nodes[i];
-      var nodeSlots = node.nodeType === 3 ? node.textContent.length : 1;
+      var nodeSlots = node.nodeType === 3 ? stripZws(node.textContent).length : 1;
       if (count + nodeSlots > max) {
         if (node.nodeType === 3) node.textContent = node.textContent.slice(0, max - count);
         else node.remove();
@@ -95,11 +243,18 @@
     var sel = window.getSelection();
     if (!sel || !sel.rangeCount) return null;
     var range = sel.getRangeAt(0);
+    var onToken = caretToken(input, range);
+    if (onToken && range.collapsed) return onToken;
     if (!range.collapsed) return null;
     var node = range.startContainer;
     var offset = range.startOffset;
     if (node.nodeType === 3) {
-      if (offset > 0) return null;
+      var plain = stripZws(node.textContent);
+      if (offset > 0 && plain.length > 0) return null;
+      if (offset > 0 && node.textContent.charAt(offset - 1) === ZWS) {
+        var prevZws = node.previousSibling;
+        return prevZws && prevZws.nodeType === 1 && prevZws.classList.contains('cfg-emblem-token') ? prevZws : null;
+      }
       var prevText = node.previousSibling;
       return prevText && prevText.nodeType === 1 && prevText.classList.contains('cfg-emblem-token') ? prevText : null;
     }
@@ -118,7 +273,8 @@
     var node = range.startContainer;
     var offset = range.startOffset;
     if (node.nodeType === 3) {
-      if (offset < node.textContent.length) return null;
+      var plainLen = stripZws(node.textContent).length;
+      if (offset < plainLen) return null;
       var nextText = node.nextSibling;
       return nextText && nextText.nodeType === 1 && nextText.classList.contains('cfg-emblem-token') ? nextText : null;
     }
@@ -154,14 +310,14 @@
     }
     var tokens = selectedTokens(input);
     if (tokens.length) {
-      tokens.forEach(function (t) { t.remove(); });
+      tokens.forEach(function (t) { removeToken(t); });
       afterChange();
       input.focus();
       return;
     }
     var token = tokenBeforeCaret(input);
     if (token) {
-      token.remove();
+      removeToken(token);
       afterChange();
       input.focus();
       return;
@@ -172,6 +328,8 @@
     if (last.nodeType === 3) {
       if (last.textContent.length > 1) last.textContent = last.textContent.slice(0, -1);
       else last.remove();
+    } else if (last.nodeType === 1 && last.classList.contains('cfg-emblem-token')) {
+      removeToken(last);
     } else {
       last.remove();
     }
@@ -232,27 +390,22 @@
     return syncActionState;
   }
 
-  function insertEmblem(input, name, max, afterChange) {
+  function insertEmblem(input, name, max, afterChange, store) {
     var token = createToken(name);
     if (!token || !input) return;
 
-    input.focus();
-    var sel = window.getSelection();
-    var range;
-    if (sel && sel.rangeCount && input.contains(sel.anchorNode)) {
-      range = sel.getRangeAt(0);
-    } else {
-      range = document.createRange();
-      range.selectNodeContents(input);
-      range.collapse(false);
-    }
+    var range = resolveInsertRange(input, store || {});
     if (allowedInsertSlots(input, max, range) < 1) return;
 
     range.deleteContents();
     range.insertNode(token);
-    range.setStartAfter(token);
-    range.setEndAfter(token);
+    var zwsNode = ensureZwsAfter(token);
+    var caretOffset = Math.min(zwsNode.textContent.length, 1);
+    range.setStart(zwsNode, caretOffset);
+    range.collapse(true);
+    var sel = window.getSelection();
     if (sel) { sel.removeAllRanges(); sel.addRange(range); }
+    if (store) saveInputRange(input, store);
     afterChange();
   }
 
@@ -269,9 +422,13 @@
       if (match[0].charAt(0) === '〔') {
         var emblemName = LABEL_TO_NAME[match[1]];
         var token = emblemName ? createToken(emblemName) : null;
-        if (token) input.appendChild(token);
+        if (token) {
+          input.appendChild(token);
+          ensureZwsAfter(token);
+        }
       } else {
-        input.appendChild(document.createTextNode(match[0]));
+        var plain = sanitizePlainText(match[0]);
+        if (plain) input.appendChild(document.createTextNode(plain));
       }
     }
     trimOverflow(input, max);
@@ -293,9 +450,11 @@
   function setGirdlePreviewColor(previewEl, colorId) {
     var wrap = previewEl && previewEl.parentElement;
     if (!wrap) return;
+    var color = colorId && GIRDLE_PREVIEW_BY_COLOR[colorId] ? colorId : 'white';
+    wrap.setAttribute('data-girdle-color', color);
     var img = wrap.querySelector('img.cfg-engrave-gem');
     if (!img) return;
-    var src = girdlePreviewSrc(colorId);
+    var src = girdlePreviewSrc(color);
     if (img.getAttribute('src') !== src) img.setAttribute('src', src);
   }
 
@@ -329,6 +488,7 @@
     var previewColor = opts.previewColor || 'white';
     useRealGirdlePreview(previewEl, previewColor);
     var lastValidHtml = input.innerHTML;
+    var rangeStore = { range: null };
 
     function rememberValid() {
       lastValidHtml = input.innerHTML;
@@ -345,6 +505,7 @@
     }
 
     function afterChange() {
+      sanitizeTextNodes(input);
       if (slots(input) > max) {
         restoreValid();
       } else {
@@ -355,6 +516,26 @@
       updatePreview(input, previewEl);
       if (typeof syncActionState === 'function') syncActionState();
       if (typeof opts.onChange === 'function') opts.onChange(readable(input));
+    }
+
+    function insertAllowedText(text) {
+      var clean = sanitizePlainText(text);
+      if (!clean) return;
+      var sel = window.getSelection();
+      var range = sel && sel.rangeCount && input.contains(sel.anchorNode)
+        ? sel.getRangeAt(0)
+        : resolveInsertRange(input, rangeStore);
+      var room = allowedInsertSlots(input, max, range);
+      if (room < 1) return;
+      if (clean.length > room) clean = clean.slice(0, room);
+      range.deleteContents();
+      var textNode = document.createTextNode(clean);
+      range.insertNode(textNode);
+      range.setStart(textNode, textNode.textContent.length);
+      range.collapse(true);
+      if (sel) { sel.removeAllRanges(); sel.addRange(range); }
+      saveInputRange(input, rangeStore);
+      afterChange();
     }
 
     function blockIfFull(e, addSlots) {
@@ -369,6 +550,12 @@
       : null;
 
     var composing = false;
+    input.addEventListener('keyup', function () { saveInputRange(input, rangeStore); });
+    input.addEventListener('mouseup', function () { saveInputRange(input, rangeStore); });
+    document.addEventListener('selectionchange', function () {
+      if (document.activeElement === input) saveInputRange(input, rangeStore);
+    });
+
     input.addEventListener('compositionstart', function () { composing = true; });
     input.addEventListener('compositionend', function () {
       composing = false;
@@ -377,60 +564,117 @@
 
     input.addEventListener('beforeinput', function (e) {
       if (composing || e.isComposing) return;
-      if (!e.inputType || e.inputType.indexOf('delete') === 0) return;
-      if (e.inputType === 'historyUndo' || e.inputType === 'historyRedo') return;
-      var add = 1;
-      if (e.inputType === 'insertText' || e.inputType === 'insertReplacementText') {
-        add = (e.data || '').length || 1;
+      if (e.inputType && e.inputType.indexOf('delete') === 0) {
+        var sel = window.getSelection();
+        if (!sel || !sel.rangeCount || !input.contains(sel.anchorNode)) return;
+        var range = sel.getRangeAt(0);
+        var tokens = selectedTokens(input);
+        if (tokens.length) {
+          e.preventDefault();
+          tokens.forEach(function (t) { removeToken(t); });
+          afterChange();
+          return;
+        }
+        var token = e.inputType === 'deleteContentForward'
+          ? tokenAfterCaret(input)
+          : (caretToken(input, range) || tokenBeforeCaret(input));
+        if (token) {
+          e.preventDefault();
+          removeToken(token);
+          afterChange();
+        }
+        return;
       }
-      blockIfFull(e, add);
+      if (e.inputType === 'historyUndo' || e.inputType === 'historyRedo') return;
+      if (e.inputType === 'insertText' || e.inputType === 'insertReplacementText') {
+        var raw = e.data || '';
+        var clean = sanitizePlainText(raw);
+        if (!clean || clean !== raw) {
+          e.preventDefault();
+          if (clean) insertAllowedText(clean);
+          return;
+        }
+        blockIfFull(e, clean.length || 1);
+        return;
+      }
+      if (e.inputType === 'insertFromPaste' || e.inputType === 'insertFromDrop') {
+        e.preventDefault();
+        return;
+      }
+      // Block other insert types (HTML, line break, etc.)
+      if (e.inputType && e.inputType.indexOf('insert') === 0) {
+        e.preventDefault();
+      }
     });
 
     input.addEventListener('input', afterChange);
 
     input.addEventListener('keydown', function (e) {
       if (e.key === 'Backspace' || e.key === 'Delete') {
+        var sel = window.getSelection();
+        var range = sel && sel.rangeCount ? sel.getRangeAt(0) : null;
         var tokens = selectedTokens(input);
         if (tokens.length) {
           e.preventDefault();
-          tokens.forEach(function (t) { t.remove(); });
+          tokens.forEach(function (t) { removeToken(t); });
           afterChange();
           return;
         }
-        var token = e.key === 'Backspace' ? tokenBeforeCaret(input) : tokenAfterCaret(input);
+        var token = e.key === 'Backspace'
+          ? (range && caretToken(input, range)) || tokenBeforeCaret(input)
+          : tokenAfterCaret(input);
         if (token) {
           e.preventDefault();
-          token.remove();
+          removeToken(token);
           afterChange();
         }
         return;
       }
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       if (e.key.length !== 1) return;
+      if (!ALLOWED_CHAR.test(e.key)) {
+        e.preventDefault();
+        return;
+      }
+      var selKey = window.getSelection();
+      if (selKey && selKey.rangeCount && input.contains(selKey.anchorNode)) {
+        var rangeKey = selKey.getRangeAt(0);
+        var onToken = caretToken(input, rangeKey);
+        if (onToken) {
+          e.preventDefault();
+          var zws = ensureZwsAfter(onToken);
+          placeCaretIn(input, zws, zws.textContent.length);
+          insertAllowedText(e.key);
+          return;
+        }
+      }
       blockIfFull(e, 1);
     });
 
     input.addEventListener('paste', function (e) {
+      e.preventDefault();
       var text = (e.clipboardData && e.clipboardData.getData('text')) || '';
-      if (!text) return;
-      blockIfFull(e, text.length);
+      insertAllowedText(text);
     });
 
     input.addEventListener('click', function (e) {
       var token = e.target.closest('.cfg-emblem-token');
       if (!token || !input.contains(token)) return;
-      var range = document.createRange();
-      range.selectNode(token);
-      var sel = window.getSelection();
-      if (sel) { sel.removeAllRanges(); sel.addRange(range); }
+      var zws = ensureZwsAfter(token);
+      placeCaretIn(input, zws, zws.textContent.length);
     });
 
     if (emblemsRoot) {
+      emblemsRoot.addEventListener('mousedown', function (e) {
+        var btn = e.target.closest('.cfg-emblem');
+        if (!btn || !emblemsRoot.contains(btn)) return;
+        e.preventDefault();
+      });
       emblemsRoot.addEventListener('click', function (e) {
         var btn = e.target.closest('.cfg-emblem');
         if (!btn || !emblemsRoot.contains(btn)) return;
         e.preventDefault();
-        insertEmblem(input, btn.getAttribute('data-emblem'), max, afterChange);
+        insertEmblem(input, btn.getAttribute('data-emblem'), max, afterChange, rangeStore);
       });
     }
 
@@ -451,6 +695,8 @@
     previewSrc: girdlePreviewSrc,
     init: init,
     readable: readable,
+    toDisplayHtml: toDisplayHtml,
+    fillDisplay: fillDisplay,
     slots: slots
   };
 })();
