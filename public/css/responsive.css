@@ -41,7 +41,14 @@
   }
   .nav-cta .btn-line{ display:none; }
   .nav-cta .btn-calc,
-  .nav-cta .btn-contact{ display:none; } /* 手機版 header 空間留給預約按鈕 */
+  .nav-cta .btn-contact{ display:none; }
+  /* Mobile header CTA: 價格試算 — !important beats stale page React CSS
+     (price.css/checkout.css/…) that still ship display:none after src.css. */
+  .nav-cta .gradient-button{
+    display:inline-flex !important;
+    flex-shrink:0;
+  }
+  .nav-cta .btn-dark{ display:none !important; }
   .hc-viewport{ height:78vh; min-height:520px; }
   .hc-copy{ padding:0 4px; }
   .hc-copy h1, .hc-copy h2{ max-width:100%; }

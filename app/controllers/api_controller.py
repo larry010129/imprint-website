@@ -45,6 +45,21 @@ async def submit_contact(request: Request) -> dict:
             """,
             (name, phone, email, message, source_page),
         )
+
+    # Best-effort staff email — never fail the form if mail fails.
+    try:
+        from app.mail import notify_contact_message
+
+        notify_contact_message(
+            name=name,
+            phone=phone,
+            email=email,
+            message=message,
+            source_page=source_page,
+        )
+    except Exception:
+        log.exception("contact notify email failed")
+
     return {"ok": True}
 
 

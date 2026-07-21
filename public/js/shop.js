@@ -414,6 +414,15 @@ function previewColor() {
   return 'white';
 }
 
+/** Attached-chain color: free swatch (ignore chain-A/B/C SKU lock). */
+function attachedChainColor(gold, preferred) {
+  if (!gold) return preferred || null;
+  const colors = availableColorsForGold(gold);
+  if (preferred && colors.includes(preferred)) return preferred;
+  if (state.color && colors.includes(state.color)) return state.color;
+  return colors[0] || null;
+}
+
 function previewChainMetalForImage() {
   return state.chainColor || (state.chainGold ? materialColor(state.chainGold) : null) || previewColor();
 }
@@ -428,9 +437,12 @@ function previewPendantOnlyMode() {
 }
 
 function pendantPreviewImageOpts() {
-  const pendantOnly = previewPendantOnlyMode();
-  const opts = { pendantOnly };
-  if (state.category === 'pendant' && state.includeChain && !pendantOnly) {
+  // 僅墜子: never attach chainColor / combo paths — only cropped `_only` PNG.
+  if (state.category === 'pendant' && !state.includeChain) {
+    return { pendantOnly: true };
+  }
+  const opts = { pendantOnly: false };
+  if (state.category === 'pendant' && state.includeChain) {
     opts.chainColor = previewChainMetalForImage();
   }
   return opts;
@@ -456,7 +468,18 @@ function isPendantLayerAssetUrl(url) {
 
 function pendantWithChainImageUrl(product, pendantMetal, chainMetal, diamond) {
   const assetId = productAssetId(product);
-  if (!assetId || !window.ShopAssets?.productImage) return '';
+  if (!assetId || !window.ShopAssets) return '';
+  if (window.ShopAssets.productImageResolve) {
+    const resolved = window.ShopAssets.productImageResolve(
+      assetId,
+      pendantMetal,
+      product?.defaultColor,
+      diamond,
+      { chainColor: chainMetal },
+    );
+    return resolved.src || '';
+  }
+  if (!window.ShopAssets.productImage) return '';
   return window.ShopAssets.productImage(
     assetId,
     pendantMetal,
@@ -517,23 +540,21 @@ function productImagesForColor(product, metalColor, diamondColor, opts) {
   opts = opts || {};
   const metal = metalColor ?? previewColor();
   const diamond = diamondColor ?? selectedDiamondColorId() ?? 'white';
-  const pendantOnly = opts.pendantOnly ?? previewPendantOnlyMode();
+  // Prefer explicit opts, else derive from 僅墜子 / 含鍊 so callers can't leak chainColor.
+  const pendantOnly = opts.pendantOnly != null
+    ? !!opts.pendantOnly
+    : previewPendantOnlyMode();
   const imageOpts = { pendantOnly };
-  if (state.category === 'pendant' && state.includeChain && !pendantOnly) {
-    imageOpts.chainColor = previewChainMetalForImage();
+  if (!pendantOnly && state.category === 'pendant' && state.includeChain) {
+    imageOpts.chainColor = opts.chainColor || previewChainMetalForImage();
   }
   const assetId = productAssetId(product);
   const compoundKey = window.ShopAssets?.buildImageSlotKey
     ? window.ShopAssets.buildImageSlotKey(metal, diamond)
     : (diamond !== 'white' ? `${metal}-${diamond}` : `${metal}-white`);
 
-  // Admin-uploaded compound slot (e.g. white-yellow) — skip for pendant-only preview.
-  if (!pendantOnly && diamond !== 'white') {
-    const fromCompound = catalogImagesForKeys(product, [compoundKey]);
-    if (fromCompound.length) return fromCompound;
-  }
-
-  // Generated shop-product PNGs — must run before catalog metal-only keys or fancy color never changes.
+  // Shop-product PNGs (incl. cross-metal chain combos) must win over admin
+  // catalog slots — those are often metal-only and hide rose-chain / fancy renders.
   if (assetId && window.ShopAssets?.productImageResolve) {
     const resolved = window.ShopAssets.productImageResolve(
       assetId,
@@ -542,7 +563,9 @@ function productImagesForColor(product, metalColor, diamondColor, opts) {
       diamond,
       imageOpts,
     );
-    if (resolved.src) return [resolved.src];
+    if (resolved.src) {
+      return [resolved.src];
+    }
   }
   if (assetId && window.ShopAssets?.productImage) {
     const resolved = window.ShopAssets.productImage(
@@ -553,6 +576,12 @@ function productImagesForColor(product, metalColor, diamondColor, opts) {
       imageOpts,
     );
     if (resolved) return [resolved];
+  }
+
+  // Admin-uploaded compound slot (e.g. white-pink) — only after shop-product miss.
+  if (!pendantOnly && diamond !== 'white') {
+    const fromCompound = catalogImagesForKeys(product, [compoundKey]);
+    if (fromCompound.length) return fromCompound;
   }
 
   // White diamond: catalog metal slots, then any legacy upload.
@@ -1949,8 +1978,6 @@ function updateChainOptions() {
   options?.classList.toggle('hidden', !state.includeChain);
   if (!state.includeChain) return;
 
-  if (!state.chainColor && state.color) state.chainColor = state.color;
-
   const chains = productsFor('chain');
   const chainIds = chains.map(p => String(p.id));
   if (!chainIds.includes(String(state.chainProductId))) {
@@ -1967,11 +1994,13 @@ function updateChainOptions() {
   }
   if (!state.chainGold && chainGolds.length) {
     state.chainGold = chainGolds[0];
-    state.chainColor = enforceMetalColor(state.chainGold, null, chainProduct);
   }
+  // Attached chain is NOT a color-locked SKU — never use enforceMetalColor(chainProduct)
+  // (that always returns chain-A/B/C defaultColor and wipes the swatch).
+  state.chainColor = attachedChainColor(state.chainGold, state.chainColor || state.color);
   renderMetalButtons('pendant-chain-metal-row', chainGolds, state.chainGold, gold => {
     state.chainGold = gold;
-    state.chainColor = enforceMetalColor(gold, state.chainColor, chainProduct);
+    state.chainColor = attachedChainColor(gold, state.chainColor || state.color);
     updateChainOptions();
     updateSummary();
     updateLargeImage('chain');
@@ -1988,16 +2017,15 @@ function updateChainOptions() {
   updateColorStepLabel('pendant-chain-color-label', state.chainGold);
   if (!showChainColor) {
     if (state.chainGold) {
-      const colors = availableColorsForGold(state.chainGold, chainProduct);
-      state.chainColor = colors.includes(state.chainColor) ? state.chainColor : (colors[0] || null);
+      state.chainColor = attachedChainColor(state.chainGold, state.chainColor || state.color);
     }
     if (chainColorRow) chainColorRow.innerHTML = '';
   } else {
-    const colors = availableColorsForGold(state.chainGold, chainProduct);
-    if (!colors.includes(state.chainColor)) state.chainColor = colors[0] || null;
+    state.chainColor = attachedChainColor(state.chainGold, state.chainColor || state.color);
     renderColorButtons('pendant-chain-color-row', state.chainGold, chainProduct, state.chainColor, color => {
-      const colors = availableColorsForGold(state.chainGold, chainProduct);
+      const colors = availableColorsForGold(state.chainGold);
       if (!colors.includes(color)) return;
+      // Chain color is independent of pendant color (mixed-metal combos allowed).
       state.chainColor = color;
       document.querySelectorAll('#pendant-chain-color-row .color-btn').forEach(b =>
         b.classList.toggle('active', b.dataset.color === color));
@@ -2136,14 +2164,15 @@ function updateLargeImage(layer) {
 
   const images = currentProductImages();
   if (productImageIndex >= images.length) productImageIndex = 0;
-  const src = preview.composite ? '' : (preview.src || images[productImageIndex] || imageUrl(state.category, state.type));
+  // pendantPreviewLayers already resolved the correct shop-product URL (incl. combo /
+  // pendant-only). Prefer that; only use productImageResolve for fallback chain.
+  let primarySrc = preview.composite ? '' : (preview.src || images[productImageIndex] || imageUrl(state.category, state.type) || '');
+  let fallbacks = [];
   const pendantOnly = !!preview.pendantOnly;
-  previewRoot?.classList.toggle('is-pendant-only', pendantOnly && !!src);
+  previewRoot?.classList.toggle('is-pendant-only', pendantOnly && !!primarySrc);
   if (img) {
     img.style.visibility = '';
     const imageOpts = pendantPreviewImageOpts();
-    let primarySrc = src || '';
-    let fallbacks = [];
     if (product && window.ShopAssets?.productImageResolve && !preview.composite) {
       const resolved = window.ShopAssets.productImageResolve(
         productAssetId(product),
@@ -2152,10 +2181,10 @@ function updateLargeImage(layer) {
         selectedDiamondColorId(),
         imageOpts,
       );
-      if (resolved.src) {
-        primarySrc = resolved.src;
-        fallbacks = resolved.fallbacks || [];
-      }
+      if (!primarySrc && resolved.src) primarySrc = resolved.src;
+      fallbacks = resolved.fallbacks || [];
+      // If layers picked a different URL than resolve, keep layers (it knows chain metal).
+      if (preview.src) primarySrc = preview.src;
     }
     img.onerror = null;
     if (fallbacks.length && window.ShopAssets?.attachImageFallbackChain) {
@@ -2169,7 +2198,12 @@ function updateLargeImage(layer) {
         };
       }
     }
-    img.src = primarySrc;
+    // Force browser to apply new metal asset even when cached aggressively.
+    const nextSrc = primarySrc || '';
+    if (img.getAttribute('src') === nextSrc && nextSrc) {
+      img.removeAttribute('src');
+    }
+    img.src = nextSrc;
     if (zoomBtn) zoomBtn.hidden = !(img.src && !img.src.endsWith('/'));
   }
   renderProductThumbnails(images);
@@ -2487,6 +2521,7 @@ function selectColor(color) {
   if (!needsColorSelection(state.gold, product)) return;
   const colors = availableColorsForGold(state.gold, product);
   if (!colors.includes(color)) return;
+  // Pendant color only — do not touch state.chainColor (mixed metal).
   state.color = color;
   document.querySelectorAll('#color-btn-row .color-btn').forEach(b =>
     b.classList.toggle('active', b.dataset.color === color));
@@ -2573,12 +2608,17 @@ document.querySelectorAll('.pendant-chain-toggle').forEach(btn =>
       state.chainLength = CHAIN_LENGTH_OPTIONS_CM[0];
     }
     if (state.includeChain && !state.chainColor) {
-      state.chainColor = previewColor();
+      // First time 含鍊 only — seed from pendant; later picks stay independent.
+      state.chainColor = attachedChainColor(state.chainGold || state.gold, previewColor());
+    } else if (!state.includeChain) {
+      // 僅墜子: drop chain metal so preview can't leak combo paths.
+      state.chainColor = null;
     }
     productImageIndex = 0;
     updateChainOptions();
     updateSummary();
-    updateLargeImage();
+    // Force pendant-only vs with-chain asset refresh (never keep prior combo src)
+    updateLargeImage(state.includeChain ? 'chain' : 'pendant');
   }));
 
 document.getElementById('fancy-color-prev')?.addEventListener('click', () => scrollCarousel('fancy-color-carousel', -1));

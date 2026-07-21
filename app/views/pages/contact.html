@@ -37,29 +37,45 @@
 <!-- @component partials/view-contact-form.html -->
 <section class="contact-section contact-section--flush" id="view-contact-form">
   <div class="container">
-    <div class="contact-card contact-form-card contact-form-card--centered">
-      <h3>線上留言諮詢</h3>
-      <p class="text-faint-sm">
+    <div class="contact-form-panel">
+      <h2 class="contact-form-panel__title">線上留言諮詢</h2>
+      <p class="contact-form-panel__lead">
         不方便打電話或加 LINE 也沒關係，留下您的聯絡方式與需求，顧問會盡快與您聯繫。
       </p>
-      <form id="contactForm" novalidate>
-        <div class="form-field">
-          <label for="cName">姓名 <span class="req">*</span></label>
-          <input type="text" id="cName" name="name" autocomplete="name" required>
+
+      <div class="contact-form-panel__reach">
+        <p class="contact-form-panel__muted">也可以直接聯繫</p>
+        <a class="contact-form-panel__email" href="tel:0229770268">02-2977-0268</a>
+        <div class="contact-form-panel__socials">
+          <span class="contact-form-panel__or">或</span>
+          <a class="contact-form-panel__social" href="https://lin.ee/ktVBtmx" target="_blank" rel="noopener" aria-label="官方 LINE">LINE</a>
+          <a class="contact-form-panel__social" href="https://www.facebook.com/Imprintdiamond/" target="_blank" rel="noopener" aria-label="Facebook">Facebook</a>
         </div>
-        <div class="form-field">
-          <label for="cPhone">電話 <span class="req">*</span></label>
-          <input type="tel" id="cPhone" name="phone" autocomplete="tel" required>
+      </div>
+
+      <hr class="contact-form-panel__rule" />
+
+      <form id="contactForm" class="contact-form-panel__form" novalidate>
+        <p class="contact-form-panel__muted">留下簡短訊息</p>
+        <div class="contact-form-panel__grid">
+          <div class="form-field">
+            <label for="cName">姓名 <span class="req">*</span></label>
+            <input type="text" id="cName" name="name" autocomplete="name" placeholder="您的姓名" required>
+          </div>
+          <div class="form-field">
+            <label for="cPhone">電話 <span class="req">*</span></label>
+            <input type="tel" id="cPhone" name="phone" autocomplete="tel" placeholder="09xxxxxxxx" required>
+          </div>
         </div>
         <div class="form-field">
           <label for="cEmail">Email</label>
-          <input type="email" id="cEmail" name="email" autocomplete="email">
+          <input type="email" id="cEmail" name="email" autocomplete="email" placeholder="name@example.com">
         </div>
         <div class="form-field">
           <label for="cMessage">您的需求 <span class="req">*</span></label>
-          <textarea id="cMessage" name="message" rows="4" required></textarea>
+          <textarea id="cMessage" name="message" rows="4" placeholder="簡述您想了解的克拉、系列或預約時間…" required></textarea>
         </div>
-        <button type="submit" class="btn btn-dark" id="contactSubmitBtn">送出留言</button>
+        <button type="submit" class="contact-form-panel__submit" id="contactSubmitBtn">送出留言</button>
         <p class="form-msg" id="contactFormMsg" role="status" aria-live="polite"></p>
       </form>
     </div>

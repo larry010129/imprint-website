@@ -143,7 +143,13 @@
     if (opts.chainOnly) d = 'white';
     var path = stylePngPath(parsed.category, parsed.style, resolved, d, opts);
     if (path) return path;
-    if (opts.pendantOnly || opts.chainOnly) {
+    if (opts.pendantOnly) {
+      // Missing `_only` — still prefer same-metal full PNG over wrong cross-metal combo
+      path = stylePngPath(parsed.category, parsed.style, resolved, diamondColor, {});
+      if (path) return path;
+      return styleThumb(productId);
+    }
+    if (opts.chainOnly) {
       // ponytail: layer asset missing — fall back to full necklace PNG
       path = stylePngPath(parsed.category, parsed.style, resolved, diamondColor, {});
       if (path) return path;
@@ -202,12 +208,26 @@
     }
 
     push(stylePngPath(parsed.category, parsed.style, resolved, d, opts));
+    if (opts.pendantOnly) {
+      if (d !== 'white') {
+        push(stylePngPath(parsed.category, parsed.style, resolved, 'white', { pendantOnly: true }));
+      }
+      // Do not fall back to full necklace / cross-metal combo for 「僅墜子」
+      return { src: chain[0] || '', fallbacks: chain.slice(1) };
+    }
     if (d !== 'white') {
       if (resolved !== 'white') {
         // ponytail: rose/yellow metal fancy PNG missing (e.g. 耳飾) — show silver fancy until assets exist
         push(stylePngPath(parsed.category, parsed.style, 'white', d, opts));
       }
       push(stylePngPath(parsed.category, parsed.style, resolved, 'white', opts));
+    }
+    // Cross-metal chain combo missing → same-metal full necklace, then thumb
+    if (opts.chainColor && resolveColor(opts.chainColor) !== resolved) {
+      push(stylePngPath(parsed.category, parsed.style, resolved, d, {}));
+      if (d !== 'white') {
+        push(stylePngPath(parsed.category, parsed.style, resolved, 'white', {}));
+      }
     }
     if (!chain.length) {
       var thumb = styleThumb(productId);

@@ -161,7 +161,7 @@ export default function PriceTable() {
         <SectionHeading
           eyebrow="PRICE REFERENCE"
           title="DNA 鑽石價格參考"
-          lead="圓形明亮式切工／白鑽基準價。實際規格請與顧問確認，或至各系列頁線上試算。"
+          lead="圓形明亮式切工／白鑽基準價。實際規格請與顧問確認，或使用線上 Calculator／聯絡我們。"
         />
 
         <div className="mb-12">

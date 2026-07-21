@@ -537,9 +537,8 @@
     font-family: inherit;
   }
 
-  .nav-cta .gradient-button {
-    display: none;
-  }
+  /* Mobile CTA visibility lives in public/css/responsive.css so page bundles
+     (price.css etc.) cannot override with a stale display:none. */
 
   .nav-cta > .account-menu {
     display: block;

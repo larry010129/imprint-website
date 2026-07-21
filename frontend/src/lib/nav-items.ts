@@ -22,17 +22,6 @@ export const NAV_ITEMS: NavItem[] = [
     ],
   },
   {
-    id: "jewelry",
-    label: "時尚珠寶",
-    href: "/jewelry/",
-    children: [
-      { label: "戒指", href: "/jewelry/rings/" },
-      { label: "項鍊", href: "/jewelry/necklaces/" },
-      { label: "耳環", href: "/jewelry/earrings/" },
-      { label: "手鍊", href: "/jewelry/bracelets/" },
-    ],
-  },
-  {
     id: "knowledge",
     label: "鑽石知識",
     href: "/what-is-dna-diamond.html",
