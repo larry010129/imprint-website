@@ -52,7 +52,18 @@
         Model.login(email, password).then(function (res) {
           if (res.error || !res.user) {
             View.setLoading(false);
-            View.setMsg('登入失敗：Email 或密碼不正確。', 'err');
+            var msg = (M.api() && global.imprintAPI && global.imprintAPI.apiErrorMessage)
+              ? global.imprintAPI.apiErrorMessage(res)
+              : '';
+            if (res._httpStatus === 429) {
+              View.setMsg('登入失敗：' + (msg || '嘗試次數過多，請稍後再試。'), 'err');
+            } else if (res._httpStatus && res._httpStatus >= 500) {
+              View.setMsg('登入失敗：伺服器錯誤，請稍後再試或聯絡管理員。', 'err');
+            } else if (res.networkError) {
+              View.setMsg('登入失敗：系統連線異常，請稍後再試。', 'err');
+            } else {
+              View.setMsg('登入失敗：' + (msg || 'Email 或密碼不正確。'), 'err');
+            }
             return;
           }
           return Model.getSession().then(function (sess) {

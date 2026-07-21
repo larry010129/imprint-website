@@ -936,6 +936,12 @@
 
     if (errEl) errEl.hidden = true;
     if (btn) { btn.disabled = true; btn.textContent = '儲存中…'; }
+    var toastId = window.Toast && window.Toast.create({
+      type: 'loading',
+      title: isDraft ? '草稿儲存中…' : '商品上架中…',
+      description: '正在將商品資料寫入後台，請稍候。',
+      duration: Infinity
+    });
     var req = product ? api.admin.updateProduct(payload) : api.admin.saveProduct(payload);
     req.then(function (res) {
       if (btn) { btn.disabled = false; updateSaveButton(form, !!product); }
@@ -946,7 +952,23 @@
         } else {
           alert(apiError(res));
         }
+        if (toastId && window.Toast) {
+          window.Toast.update(toastId, {
+            type: 'error',
+            title: isDraft ? '草稿儲存失敗' : '商品上架失敗',
+            description: apiError(res),
+            duration: 6000
+          });
+        }
         return;
+      }
+      if (toastId && window.Toast) {
+        window.Toast.update(toastId, {
+          type: 'success',
+          title: isDraft ? '草稿已儲存！' : '商品上架完成！',
+          description: payload.nameZh ? payload.nameZh : '',
+          duration: 4000
+        });
       }
       state.view = 'list';
       state.editingId = null;

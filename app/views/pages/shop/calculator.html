@@ -100,6 +100,7 @@
               <path d="M12 8v4M12 16h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
             </svg>
             <p class="ui-alert__description">選擇下方規格，右側會即時顯示試算價格。</p>
+            <button type="button" class="ui-alert__confirm" id="shop-config-hint-close" data-i18n="ui_alert_confirm">了解</button>
           </div>
           <div class="ui-alert ui-alert--warning" role="alert">
             <svg class="ui-alert__icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
@@ -108,6 +109,7 @@
             </svg>
             <p class="ui-alert__title" id="product-preview-color-title" data-i18n="shop_preview_color_title">鑽石色為示意</p>
             <p class="ui-alert__description" id="product-preview-color-desc" data-i18n="shop_preview_color_desc">畫面僅模擬色調類型，實際成品顏色可能不同。非真實鑽石大小。</p>
+            <button type="button" class="ui-alert__confirm ui-alert__confirm--warning" id="shop-config-warning-close" data-i18n="ui_alert_confirm">了解</button>
           </div>
         </div>
 
@@ -217,7 +219,7 @@
                   <div class="cfg-engrave-input" id="shop-girdle-engrave-input" contenteditable="true"
                        data-placeholder="e.g. LOVE / 2024 / initials" role="textbox" aria-label="鑽石腰圍刻字內容"></div>
                   <span class="cfg-count" id="shop-girdle-engrave-count">0 / 12</span>
-                  <p class="cfg-engrave-hint" data-i18n="engraving_girdle_hint">僅限英數字與圖騰，圖騰每個算 2 字，最多 12 字</p>
+                  <p class="cfg-engrave-hint" id="shop-girdle-engrave-hint" data-i18n="engraving_girdle_hint">僅限英數字與圖騰，圖騰每個算 2 字，最多 12 字（0.3 克拉以上尚可雕刻中文）</p>
                   <p class="cfg-engrave-label">插入圖騰</p>
                   <div class="cfg-emblems">
                     <button type="button" class="cfg-emblem" data-emblem="bow" aria-label="插入蝴蝶結圖騰"><svg viewBox="0 0 24 24"><path d="M12 12L4 6v12l8-6z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 12l8-6v12l-8-6z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/></svg></button>
@@ -297,6 +299,7 @@
             <div class="summary-row"><span class="lbl" data-i18n="sum_material">金屬材質</span><span class="colon">：</span><span class="val" id="sum-material">-</span></div>
             <div class="summary-row" id="sum-carat-row"><span class="lbl" data-i18n="sum_carat">克拉</span><span class="colon">：</span><span class="val" id="sum-carat">-</span></div>
             <div class="summary-row" id="sum-diamond-color-row"><span class="lbl" data-i18n="table_diamond_color">鑽石顏色</span><span class="colon">：</span><span class="val" id="sum-diamond-color">-</span></div>
+            <div class="summary-row hidden" id="sum-length-row"><span class="lbl" data-i18n="sum_length">長度</span><span class="colon">：</span><span class="val" id="sum-length">-</span></div>
             <hr>
             <div class="summary-row" id="sum-diamond-row"><span class="lbl" data-i18n="sum_diamond">鑽石價格</span><span class="colon">：</span><span class="val">NT$ <span id="sum-diamond-price">0</span></span></div>
             <div class="summary-row"><span class="lbl" data-i18n="sum_metalwork_price">金工價格</span><span class="colon">：</span><span class="val">NT$ <span id="sum-metalwork-price">-</span></span></div>

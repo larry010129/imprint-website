@@ -179,6 +179,7 @@
     if (els.shapeWarning) {
       els.shapeWarning.classList.toggle('hidden', !shapeInvalid);
     }
+    if (engraveCtrl) engraveCtrl.setAllowChinese(caratNum >= 0.3);
 
     if (summary.series) summary.series.textContent = seriesName;
     if (summary.carat) summary.carat.textContent = caratInput ? labelText(caratInput) : '未選擇';

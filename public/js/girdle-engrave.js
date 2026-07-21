@@ -20,26 +20,36 @@
 
   var ZWS = '\u200B';
   var EMBLEM_SLOT_COST = 2;
-  // Typed text: A–Z / a–z / 0–9 only. Emblem tokens insert via buttons, not keys.
-  var ALLOWED_CHAR = /^[A-Za-z0-9]$/;
-  var DISALLOWED_CHARS = /[^A-Za-z0-9]/g;
+  // Typed text: A-Z / a-z / 0-9 always; Chinese (CJK Unified Ideographs) only once
+  // the caller says the selected diamond is large enough to engrave it legibly
+  // (0.3ct+ -- see setAllowChinese). Emblem tokens insert via buttons, not keys.
+  var CHARSET_BASE = 'A-Za-z0-9';
+  var CHARSET_CJK = 'A-Za-z0-9一-鿿㐀-䶿';
+
+  function allowedCharRe(allowChinese) {
+    return new RegExp('^[' + (allowChinese ? CHARSET_CJK : CHARSET_BASE) + ']$');
+  }
+
+  function disallowedCharsRe(allowChinese) {
+    return new RegExp('[^' + (allowChinese ? CHARSET_CJK : CHARSET_BASE) + ']', 'g');
+  }
 
   function stripZws(text) {
     return (text || '').replace(/\u200B/g, '');
   }
 
-  function sanitizePlainText(text) {
-    return stripZws(text).replace(DISALLOWED_CHARS, '');
+  function sanitizePlainText(text, allowChinese) {
+    return stripZws(text).replace(disallowedCharsRe(allowChinese), '');
   }
 
-  function sanitizeTextNodes(input) {
+  function sanitizeTextNodes(input, allowChinese) {
     if (!input) return false;
     var changed = false;
     input.childNodes.forEach(function (node) {
       if (node.nodeType !== 3) return;
       var raw = node.textContent || '';
       var keptZws = raw.indexOf(ZWS) >= 0;
-      var clean = sanitizePlainText(raw);
+      var clean = sanitizePlainText(raw, allowChinese);
       var next = keptZws && clean ? ZWS + clean : (keptZws && !clean ? ZWS : clean);
       if (next !== raw) {
         node.textContent = next;
@@ -415,7 +425,7 @@
     afterChange();
   }
 
-  function setFromReadable(input, str, max, afterChange) {
+  function setFromReadable(input, str, max, allowChinese, afterChange) {
     if (!input) return;
     input.innerHTML = '';
     if (!str) {
@@ -433,7 +443,7 @@
           ensureZwsAfter(token);
         }
       } else {
-        var plain = sanitizePlainText(match[0]);
+        var plain = sanitizePlainText(match[0], allowChinese);
         if (plain) input.appendChild(document.createTextNode(plain));
       }
     }
@@ -492,6 +502,7 @@
     var previewEl = typeof opts.previewEl === 'string' ? document.getElementById(opts.previewEl) : opts.previewEl;
     var emblemsRoot = typeof opts.emblemsRoot === 'string' ? document.getElementById(opts.emblemsRoot) : opts.emblemsRoot;
     var previewColor = opts.previewColor || 'white';
+    var allowChinese = !!opts.allowChinese;
     useRealGirdlePreview(previewEl, previewColor);
     var lastValidHtml = input.innerHTML;
     var rangeStore = { range: null };
@@ -511,7 +522,7 @@
     }
 
     function afterChange() {
-      sanitizeTextNodes(input);
+      sanitizeTextNodes(input, allowChinese);
       if (slots(input) > max) {
         restoreValid();
       } else {
@@ -525,7 +536,7 @@
     }
 
     function insertAllowedText(text) {
-      var clean = sanitizePlainText(text);
+      var clean = sanitizePlainText(text, allowChinese);
       if (!clean) return;
       var sel = window.getSelection();
       var range = sel && sel.rangeCount && input.contains(sel.anchorNode)
@@ -592,9 +603,13 @@
         return;
       }
       if (e.inputType === 'historyUndo' || e.inputType === 'historyRedo') return;
+      // IME (Chinese) composition commit — some browsers fire this beforeinput
+      // after isComposing has already flipped back to false. Let it through as-is;
+      // compositionend -> afterChange() sanitizes/trims it right after.
+      if (e.inputType === 'insertFromComposition' || e.inputType === 'insertCompositionText') return;
       if (e.inputType === 'insertText' || e.inputType === 'insertReplacementText') {
         var raw = e.data || '';
-        var clean = sanitizePlainText(raw);
+        var clean = sanitizePlainText(raw, allowChinese);
         if (!clean || clean !== raw) {
           e.preventDefault();
           if (clean) insertAllowedText(clean);
@@ -638,7 +653,7 @@
       }
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       if (e.key.length !== 1) return;
-      if (!ALLOWED_CHAR.test(e.key)) {
+      if (!allowedCharRe(allowChinese).test(e.key)) {
         e.preventDefault();
         return;
       }
@@ -688,8 +703,19 @@
 
     return {
       readable: function () { return readable(input); },
-      setValue: function (str) { setFromReadable(input, str || '', max, afterChange); },
+      setValue: function (str) { setFromReadable(input, str || '', max, allowChinese, afterChange); },
       setPreviewColor: function (colorId) { setGirdlePreviewColor(previewEl, colorId); },
+      setAllowChinese: function (flag) {
+        flag = !!flag;
+        if (flag === allowChinese) return;
+        allowChinese = flag;
+        if (!allowChinese) {
+          // Downgrading (carat dropped below threshold) — strip any Chinese
+          // already typed instead of silently keeping now-disallowed content.
+          sanitizeTextNodes(input, false);
+          afterChange();
+        }
+      },
       focus: function () { input.focus(); }
     };
   }

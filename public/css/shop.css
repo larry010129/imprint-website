@@ -2636,6 +2636,17 @@ body.app-shell:not(.dark-theme) .shop-fit {
   pointer-events: auto;
 }
 
+/* ...and let metal-step take the full row instead of staying half-width */
+.shop-fit #metal-step:has(+ #color-step.hidden-collapse) {
+  grid-column: 1 / -1;
+}
+.shop-fit #metal-step:has(+ #color-step.hidden-collapse) #metal-btn-row {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
 
 .shop-fit #diamond-shape-step,
 .shop-fit #pendant-chain-step,

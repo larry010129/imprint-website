@@ -4,6 +4,19 @@ function shopLang() { return localStorage.getItem('appLang') || 'zh'; }
 const shopMode = (window.shopConfig && window.shopConfig.mode) || 'order';
 const isGuestShop = shopMode === 'guest';
 
+/* ponytail: shopConfig.mode is never actually set to 'guest' anywhere in the
+   app (checked — only calculator.html sets it, always to 'order'), so
+   isGuestShop above is permanently false. Real login state has to come from
+   the session endpoint instead. shopIsLoggedIn stays null (unknown) until
+   that resolves, so the UI doesn't flash a wrong state for logged-in users. */
+let shopIsLoggedIn = null;
+function refreshShopLoginState() {
+  shopApiFetch('/api/auth/session').then(({ data }) => {
+    shopIsLoggedIn = !!(data && data.user);
+    updateSummary();
+  }).catch(() => { shopIsLoggedIn = true; }); // fail open — don't block checkout on a network hiccup
+}
+
 if (new URLSearchParams(window.location.search).get('preview') === '1') {
   window.shopConfig = Object.assign({}, window.shopConfig || {}, { preview: true, useApi: true });
 }
@@ -34,8 +47,52 @@ function shopUsesLocalPricing() {
   return Boolean(window.ShopPricingLocal?.computeOrderPricing);
 }
 
+const SHOP_RESUME_KEY = 'imprint_shop_resume_v1';
+
+/** Snapshot the in-progress step-3 selections so login can hand them back via takeShopResumeSnapshot(). */
+function saveShopResumeSnapshot() {
+  if (!state.category || !state.type) return;
+  try {
+    ensureStoneCountDefault();
+    sessionStorage.setItem(SHOP_RESUME_KEY, JSON.stringify({
+      category: state.category,
+      type: state.type,
+      gold: state.gold,
+      color: effectiveColor() || state.color,
+      carat: state.carat,
+      ringSize: state.ringSize,
+      engravingBand: state.engravingBand,
+      engravingGirdle: state.engravingGirdle,
+      lengthCm: state.lengthCm,
+      includeChain: state.includeChain,
+      chainProductId: state.chainProductId,
+      chainGold: state.chainGold,
+      chainColor: state.chainColor,
+      chainLength: state.chainLength,
+      diamondKind: state.diamondKind,
+      fancyColor: state.fancyColor,
+      stoneCount: state.stoneCount,
+      diamondShape: state.diamondShape,
+    }));
+  } catch (_) { /* sessionStorage unavailable — resume just won't restore, no big deal */ }
+}
+
+/** One-time read: consumes (clears) the snapshot so a later unrelated visit doesn't resurrect it. */
+function takeShopResumeSnapshot() {
+  try {
+    const raw = sessionStorage.getItem(SHOP_RESUME_KEY);
+    if (!raw) return null;
+    sessionStorage.removeItem(SHOP_RESUME_KEY);
+    return JSON.parse(raw);
+  } catch (_) { return null; }
+}
+
 function guestLoginUrl() {
-  return (window.shopConfig && window.shopConfig.loginUrl) || '/login.html';
+  const base = (window.shopConfig && window.shopConfig.loginUrl) || '/login.html';
+  const returnTo = window.location.pathname + window.location.search + window.location.hash;
+  const sep = base.indexOf('?') === -1 ? '?' : '&';
+  saveShopResumeSnapshot();
+  return base + sep + 'next=' + encodeURIComponent(returnTo);
 }
 
 function orderSuccessUrl(orderNumber, options) {
@@ -754,6 +811,50 @@ const BRACELET_REFERENCE_LENGTH_CM = 18;
 
 // ── Shop view ─────────────────────────────────────────────────────────────
 
+const CONFIG_HINT_FADE_MS = 400; // must match .ui-alert transition duration in shop-wizard.css
+const configNoticeFadeTimers = new WeakMap();
+const CONFIG_NOTICE_STORAGE_KEYS = {
+  'ui-alert--default': 'imprint_shop_hint_dismissed_v1',
+  'ui-alert--warning': 'imprint_shop_warning_dismissed_v1',
+};
+function noticeStorageKey(alert) {
+  const cls = Object.keys(CONFIG_NOTICE_STORAGE_KEYS).find((cls) => alert.classList.contains(cls));
+  return cls ? CONFIG_NOTICE_STORAGE_KEYS[cls] : null;
+}
+function isNoticeDismissed(alert) {
+  const key = noticeStorageKey(alert);
+  if (!key) return false;
+  try { return localStorage.getItem(key) === '1'; } catch (_) { return false; }
+}
+function markNoticeDismissed(alert) {
+  const key = noticeStorageKey(alert);
+  if (!key) return;
+  try { localStorage.setItem(key, '1'); } catch (_) {}
+}
+function resetConfigNotices() {
+  document.querySelectorAll('.shop-config-notices .ui-alert').forEach((alert) => {
+    clearTimeout(configNoticeFadeTimers.get(alert));
+    if (isNoticeDismissed(alert)) {
+      alert.classList.add('ui-alert--dismissed');
+      alert.style.display = 'none';
+    } else {
+      alert.classList.remove('ui-alert--dismissed');
+      alert.style.display = '';
+    }
+  });
+}
+function dismissConfigNotice(alert) {
+  if (!alert) return;
+  clearTimeout(configNoticeFadeTimers.get(alert));
+  markNoticeDismissed(alert);
+  alert.classList.add('ui-alert--dismissed');
+  configNoticeFadeTimers.set(alert, setTimeout(() => { alert.style.display = 'none'; }, CONFIG_HINT_FADE_MS));
+}
+document.getElementById('shop-config-hint-close')?.addEventListener('click', () =>
+  dismissConfigNotice(document.querySelector('.shop-config-notices .ui-alert--default')));
+document.getElementById('shop-config-warning-close')?.addEventListener('click', () =>
+  dismissConfigNotice(document.querySelector('.shop-config-notices .ui-alert--warning')));
+
 function setShopView(view, options) {
   const opts = options || {};
   shopView = view;
@@ -774,7 +875,7 @@ function setShopView(view, options) {
   updateSummary();
   updateShopProgress();
   updateWizardGuide();
-  if (view === 'product') updateLargeImage();
+  if (view === 'product') { updateLargeImage(); resetConfigNotices(); }
   const skipScroll = opts.skipScroll || document.documentElement.classList.contains('shop-tour-active');
   if (!skipScroll) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1098,14 +1199,14 @@ function updateCtaState(total) {
   });
   updateFavoriteButton();
 
-  if (isGuestShop) {
+  if (isGuestShop || shopIsLoggedIn === false) {
     confirmBtns.forEach(btn => {
       if (!btn) return;
       btn.hidden = false;
       btn.disabled = !ready;
       btn.textContent = tr('shop_guest_login');
     });
-    cartBtns.forEach(btn => { if (btn) btn.hidden = false; });
+    cartBtns.forEach(btn => { if (btn) { btn.hidden = true; btn.disabled = true; } });
   } else if (window.cartEditData) {
     cartBtns.forEach(btn => {
       if (!btn) return;
@@ -1734,6 +1835,12 @@ function updateRingSizeStep() {
   if (!isRing) state.ringSize = null;
 }
 
+// 0.3ct+ diamonds have enough girdle surface to engrave legible Chinese strokes.
+function caratAllowsChineseEngraving() {
+  const n = parseFloat(state.carat);
+  return !Number.isNaN(n) && n >= 0.3;
+}
+
 function updateEngravingSteps() {
   const bandStep = document.getElementById('engraving-band-step');
   const girdleStep = document.getElementById('engraving-girdle-step');
@@ -1745,10 +1852,18 @@ function updateEngravingSteps() {
   if (!hasGirdle) state.engravingGirdle = '';
   const bandInput = document.getElementById('engraving-band-input');
   if (bandInput) bandInput.value = state.engravingBand;
+  const allowChinese = caratAllowsChineseEngraving();
   const girdleCtrl = ensureGirdleEngrave();
   if (girdleCtrl) {
+    girdleCtrl.setAllowChinese(allowChinese);
     girdleCtrl.setValue(state.engravingGirdle || '');
     girdleCtrl.setPreviewColor(selectedDiamondColorId() || 'white');
+  }
+  const hint = document.getElementById('shop-girdle-engrave-hint');
+  if (hint) {
+    const key = allowChinese ? 'engraving_girdle_hint_cjk' : 'engraving_girdle_hint';
+    hint.setAttribute('data-i18n', key);
+    hint.textContent = tr(key);
   }
 }
 
@@ -1864,16 +1979,22 @@ function updateChainOptions() {
 
   const chainColorStep = document.getElementById('pendant-chain-color-step');
   const chainColorRow = document.getElementById('pendant-chain-color-row');
-  const showChainColor = state.chainGold && needsColorSelection(state.chainGold, chainProduct);
+  // NOTE: intentionally not using needsColorSelection()/enforceMetalColor() here — those
+  // treat any "chain-" product as color-locked (correct for the standalone chain-only
+  // product page, where color is picked via SKU). Here the pendant's attached chain has
+  // no SKU switcher, only this swatch, so it must stay selectable like a normal metal.
+  const showChainColor = !!(state.chainGold && GOLD_COLOR_METALS.includes(state.chainGold));
   chainColorStep?.classList.toggle('hidden', !showChainColor);
   updateColorStepLabel('pendant-chain-color-label', state.chainGold);
   if (!showChainColor) {
     if (state.chainGold) {
-      state.chainColor = enforceMetalColor(state.chainGold, state.chainColor, chainProduct);
+      const colors = availableColorsForGold(state.chainGold, chainProduct);
+      state.chainColor = colors.includes(state.chainColor) ? state.chainColor : (colors[0] || null);
     }
     if (chainColorRow) chainColorRow.innerHTML = '';
   } else {
-    state.chainColor = enforceMetalColor(state.chainGold, state.chainColor, chainProduct);
+    const colors = availableColorsForGold(state.chainGold, chainProduct);
+    if (!colors.includes(state.chainColor)) state.chainColor = colors[0] || null;
     renderColorButtons('pendant-chain-color-row', state.chainGold, chainProduct, state.chainColor, color => {
       const colors = availableColorsForGold(state.chainGold, chainProduct);
       if (!colors.includes(color)) return;
@@ -2184,6 +2305,17 @@ function updateSummary() {
     }
   }
 
+  // Length — standalone chain/bracelet length, or the pendant's attached-chain length
+  const lengthRow = document.getElementById('sum-length-row');
+  const sumLength = document.getElementById('sum-length');
+  const lengthCm = (state.category === 'chain' || state.category === 'bracelet')
+    ? state.lengthCm
+    : (state.category === 'pendant' && state.includeChain) ? state.chainLength : null;
+  lengthRow?.classList.toggle('hidden', lengthCm == null);
+  if (lengthCm != null && sumLength) {
+    sumLength.textContent = `${lengthCm} cm`;
+  }
+
   // Weight lookup (from the selected product's own variant data)
   const baseChin = (state.category && state.type && state.gold && state.carat)
     ? lookupWeight(state.category, state.type, state.gold, state.carat)
@@ -2424,6 +2556,7 @@ function ensureGirdleEngrave() {
     previewEl: document.getElementById('shop-girdle-engrave-preview'),
     emblemsRoot: document.getElementById('engraving-girdle-step'),
     previewColor: selectedDiamondColorId() || 'white',
+    allowChinese: caratAllowsChineseEngraving(),
     max: 12,
     onChange: (val) => {
       state.engravingGirdle = val;
@@ -2748,7 +2881,7 @@ async function handleAddToCart() {
     return;
   }
   if (!validateBeforeSubmit(toast)) return;
-  if (isGuestShop) {
+  if (isGuestShop || shopIsLoggedIn === false) {
     redirectGuestToLogin();
     return;
   }
@@ -2883,7 +3016,7 @@ async function handleSubmit() {
     return;
   }
   if (!validateBeforeSubmit(toast)) return;
-  if (isGuestShop) {
+  if (isGuestShop || shopIsLoggedIn === false) {
     redirectGuestToLogin();
     return;
   }
@@ -3088,7 +3221,7 @@ async function initCartEdit() {
     toast('此頁面需登入後才能編輯購物車品項');
     return;
   }
-  if (isGuestShop) {
+  if (isGuestShop || shopIsLoggedIn === false) {
     redirectGuestToLogin();
     return;
   }
@@ -3121,7 +3254,7 @@ async function initOrderEdit() {
     toast('此頁面需登入後才能修改訂單');
     return;
   }
-  if (isGuestShop) {
+  if (isGuestShop || shopIsLoggedIn === false) {
     redirectGuestToLogin();
     return;
   }
@@ -3171,10 +3304,11 @@ async function bootShopCore() {
   populateRingSizeSelect();
   loadMetalPrices();
   loadLiveGoldRates();
+  refreshShopLoginState();
 }
 
 function applyInitialShopState() {
-  const prefillData = window.cartEditData || window.editData || window.prefillData;
+  const prefillData = window.cartEditData || window.editData || window.prefillData || takeShopResumeSnapshot();
   if (prefillData) {
     restoreShopConfig(prefillData);
   } else {
