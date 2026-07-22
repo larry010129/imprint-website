@@ -1,0 +1,26 @@
+{
+  "outputDir": "public/images/diamonds/matrix",
+  "model": "nano_banana_2",
+  "aspect_ratio": "1:1",
+  "referenceMediaId": "a1c8b130-99f1-475d-b11d-e5ecae90686f",
+  "stylePromptSuffix": "Photorealistic 3D CGI render of a single loose diamond gemstone, side profile view angled slightly from above showing crown table frosted matte girdle band and pavilion, sharp geometric facets with realistic internal light refraction and fire, soft diffused studio lighting, subtle soft shadow beneath culet, solid pure white background, luxury jewelry catalog product photography, no setting no ring no necklace, no text no watermark no logo, match reference rendering style exactly.",
+  "shapes": [
+    { "id": "round", "labelZh": "圓形", "cut": "round brilliant cut", "silhouette": "perfectly round circular brilliant silhouette, top-down table-up view with brilliant facet pattern" },
+    { "id": "marquise", "labelZh": "馬眼型", "cut": "marquise brilliant cut horse-eye", "silhouette": "horse-eye marquise navette silhouette elongated with sharp pointed ends, top-down table-up view with bow-tie facet pattern in center" },
+    { "id": "oval", "labelZh": "橢圓形", "cut": "oval brilliant cut", "silhouette": "elongated symmetrical elliptical oval silhouette horizontally oriented, top-down table-up view with brilliant triangular and kite-shaped facets" },
+    { "id": "princess", "labelZh": "公主方", "cut": "princess square brilliant cut", "silhouette": "perfectly square princess cut with sharp 90-degree corners, top-down table-up view with characteristic X-pattern facets radiating from center to four corners" },
+    { "id": "trilliant", "labelZh": "三角形", "cut": "trilliant triangular brilliant cut", "silhouette": "equilateral triangle silhouette point upward with slightly curved sides, top-down table-up view with brilliant facets radiating from center to three corners" },
+    { "id": "emerald", "labelZh": "祖母綠形", "cut": "emerald step cut rectangular", "silhouette": "rectangular emerald step cut with cropped corners, top-down table-up view with hall-of-mirrors step facets" },
+    { "id": "heart", "labelZh": "心形", "cut": "heart brilliant cut", "silhouette": "heart shape silhouette with cleft notch at top and point at bottom, top-down table-up view with brilliant facets" },
+    { "id": "radiant", "labelZh": "雷地恩形", "cut": "radiant cut rectangular brilliant", "silhouette": "radiant cut rectangular silhouette with cropped corners, top-down table-up view with brilliant cut facet pattern, NOT emerald step cut" },
+    { "id": "pear", "labelZh": "梨形", "cut": "pear teardrop brilliant cut", "silhouette": "classic pear teardrop silhouette with one wide rounded end and one narrow pointed tip, top-down table-up view with brilliant facets, NOT marquise NOT oval" },
+    { "id": "cushion", "labelZh": "枕形", "cut": "cushion modified brilliant cut", "silhouette": "cushion pillow shape square with softly rounded corners, top-down table-up view with brilliant facets" }
+  ],
+  "colors": [
+    { "id": "white", "labelZh": "白鑽", "prompt": "colorless white clear gemstone" },
+    { "id": "yellow", "labelZh": "黃鑽", "prompt": "fancy vivid yellow gemstone" },
+    { "id": "blue", "labelZh": "藍鑽", "prompt": "fancy vivid blue gemstone" },
+    { "id": "pink", "labelZh": "粉鑽", "prompt": "fancy vivid pink gemstone" }
+  ],
+  "total": 40
+}

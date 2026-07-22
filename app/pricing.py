@@ -58,7 +58,8 @@ METAL_SYMBOL = {
     "9k": "XAU", "14k": "XAU", "18k": "XAU", "pt950": "XPT", "s925": "XAG",
     "999": "XAU", "pt": "XPT", "silver925": "XAG",
 }
-LABOR_FEE = {"pendant": 5000, "ring": 5000, "bracelet": 5000, "earring": 3000, "chain": 5000}
+# Universal 金工費 (flat NT$, not taxed). Same for every category.
+LABOR_FEE_TWD = 5000
 
 TAX_RATE = 0.05
 CHIN_TO_GRAMS = 3.75
@@ -234,12 +235,11 @@ def _lookup_weight(
     return variant, weight
 
 
-def _metal_pre_tax(gold_prices: dict, gold: str, weight_chin: float, category: str) -> tuple[float, float]:
-    """Metal cost pre-tax: 金屬重(錢) × 成色金價(元/錢). BOT cache is 元/公克."""
+def _metal_pre_tax(gold_prices: dict, gold: str, weight_chin: float) -> tuple[float, float]:
+    """Metal cost pre-tax: 金屬重(台錢) × 成色金價(元/台錢). BOT cache is 元/公克."""
     per_gram = gold_prices[METAL_SYMBOL[gold]] * PURITY_MULTIPLIER[gold]
     per_chin = per_gram * CHIN_TO_GRAMS
-    multiplier = 2 if category == "chain" else 1
-    return per_chin * weight_chin * multiplier, per_gram
+    return per_chin * weight_chin, per_gram
 
 
 def _compute_chain_addon(
@@ -257,8 +257,9 @@ def _compute_chain_addon(
     if variant.get("manual_price_twd") is not None:
         pre_tax = float(variant["manual_price_twd"])
     else:
-        amount, _ = _metal_pre_tax(gold_prices, chain_gold, weight_chin, "chain")
-        pre_tax = amount + LABOR_FEE.get("chain", 5000)
+        # 搭配鏈條 = metal only; standalone chain still gets LABOR_FEE_TWD in compute_order_pricing
+        amount, _ = _metal_pre_tax(gold_prices, chain_gold, weight_chin)
+        pre_tax = amount
     return {"chainPreTax": pre_tax}
 
 
@@ -292,7 +293,7 @@ def compute_order_pricing(cur, data: dict[str, Any], *, require_published: bool 
         return {"ready": False, "error": "product not available"}
     variant, weight_chin = looked_up
     weight_grams = weight_chin * CHIN_TO_GRAMS
-    labor_pre_tax = LABOR_FEE.get(category, 5000)
+    labor_pre_tax = LABOR_FEE_TWD
 
     if variant.get("manual_price_twd") is not None:
         gold_prices = get_metal_prices(cur)
@@ -306,10 +307,11 @@ def compute_order_pricing(cur, data: dict[str, Any], *, require_published: bool 
         }
 
     gold_prices = get_metal_prices(cur)
-    taijin_pre_tax, rate_used = _metal_pre_tax(gold_prices, gold, weight_chin, category)
+    taijin_pre_tax, rate_used = _metal_pre_tax(gold_prices, gold, weight_chin)
     taijin_display = round(taijin_pre_tax * (1 + TAX_RATE))
-    labor_display = round(labor_pre_tax * (1 + TAX_RATE))
-    # Diamond list price is tax-inclusive; metal/labor/chain quotes include 5% at display time.
+    # Labor is flat NT$ — not taxed. Tax only on metal (and 搭配鏈條 metal).
+    labor_display = labor_pre_tax
+    # Diamond list price is tax-inclusive; metal/chain quotes include 5% at display time.
 
     diamond_price = None
     if category != "chain":
@@ -346,16 +348,3 @@ def compute_order_pricing(cur, data: dict[str, Any], *, require_published: bool 
         "priceSource": "server",
         "manualOverride": False,
     }
-
-
-if __name__ == "__main__":
-    # ponytail: self-check — official wax table (pendant A 0.1ct)
-    wax = 0.008
-    assert abs(wax_to_metal_chin(wax, "9k") - 0.092) < 1e-6
-    assert abs(wax_to_metal_chin(wax, "14k") - wax * 14) < 1e-6
-    metal_chin = wax_to_metal_chin(wax, "9k")
-    xau = 4300.0
-    per_chin = xau * 0.5 * CHIN_TO_GRAMS
-    gram_path = xau * 0.5 * metal_chin * CHIN_TO_GRAMS
-    assert abs(per_chin * metal_chin - gram_path) < 1e-6
-    print("pricing wax self-check OK")

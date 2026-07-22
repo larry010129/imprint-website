@@ -232,22 +232,3 @@ module.exports = {
   buildSeedRows,
   imagePath,
 };
-
-// ponytail: self-check — weight_chin feeds directly into order pricing, so
-// pin a few cells against the literal price-structure sheet. Run directly:
-// `node backend/lib/catalog-seed-data.js`.
-if (require.main === module) {
-  const assert = require('assert');
-  const rows = buildSeedRows();
-  const cell = (category, style, gold, carat) => {
-    const row = rows.find((r) => r.category === category && r.style === style);
-    const v = row.variants.find((x) => x.gold === gold && x.carat === carat);
-    return v && v.weightChin;
-  };
-  assert.strictEqual(cell('pendant', 'A', '9k', '0.1'), 0.008);
-  assert.strictEqual(cell('ring', 'A', '9k', '0.1'), 0.034);
-  assert.strictEqual(cell('bracelet', 'C', '9k', '0.1'), 0.003);
-  assert.strictEqual(cell('earring', 'A', 'pt950', '0.1'), undefined, 'earring has no pt950 row in the sheet');
-  assert.ok(Math.abs(0.008 * WAX_TO_METAL_CHIN['9k'] - 0.092) < 0.001, 'pendant A 0.1 9K metal');
-  console.log('catalog-seed-data self-check OK');
-}

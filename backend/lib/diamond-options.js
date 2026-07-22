@@ -29,8 +29,25 @@ const DIAMOND_KIND_META = [
   { id: 'fancy', labelZh: '彩鑽', labelEn: 'Fancy Color' },
 ];
 
+const DIAMOND_MATRIX_SHAPE_META = [
+  { id: 'round', labelZh: '圓形', labelEn: 'Round' },
+  { id: 'marquise', labelZh: '馬眼型', labelEn: 'Marquise' },
+  { id: 'oval', labelZh: '橢圓形', labelEn: 'Oval' },
+  { id: 'princess', labelZh: '公主方', labelEn: 'Princess' },
+  { id: 'trilliant', labelZh: '三角形', labelEn: 'Trilliant' },
+  { id: 'emerald', labelZh: '祖母綠形', labelEn: 'Emerald' },
+  { id: 'heart', labelZh: '心形', labelEn: 'Heart' },
+  { id: 'radiant', labelZh: '雷地恩形', labelEn: 'Radiant' },
+  { id: 'pear', labelZh: '梨形', labelEn: 'Pear' },
+  { id: 'cushion', labelZh: '枕形', labelEn: 'Cushion' },
+].map((shape) => ({
+  ...shape,
+  image: `diamonds/matrix/${shape.id}-white.png`,
+}));
+
 const DIAMOND_SHAPE_META = [
   { id: 'round', labelZh: '圓鑽', labelEn: 'Round', image: 'diamonds/shapes/round.svg' },
+  { id: 'other', labelZh: '其它形狀', labelEn: 'Other (+10%)', image: 'diamonds/shapes/round.svg' },
 ];
 
 function diamondOptionsPayload() {
@@ -38,6 +55,7 @@ function diamondOptionsPayload() {
     kinds: DIAMOND_KIND_META,
     diamondColors: DIAMOND_COLOR_META,
     fancyColors: FANCY_COLOR_META,
+    matrixShapes: DIAMOND_MATRIX_SHAPE_META,
     shapes: DIAMOND_SHAPE_META,
     stoneCounts: [...VALID_STONE_COUNTS].sort(),
     defaultStoneCountByCategory: DEFAULT_STONE_COUNT_BY_CATEGORY,

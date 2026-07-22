@@ -46,7 +46,7 @@
             '<div class="member-cart-item__price">' + M.formatPrice(price) + '</div>' +
             '<div class="member-cart-item__actions">' +
               '<button type="button" class="btn-text cart-detail-btn" data-id="' + id + '">明細</button>' +
-              '<a href="shop/calculator/index.html?cart_edit=' + encodeURIComponent(id) + '" class="btn-text">編輯</a>' +
+              '<a href="/shop/calculator/?cart_edit=' + encodeURIComponent(id) + '" class="btn-text">編輯</a>' +
               '<button type="button" class="btn-text cart-item-remove" data-id="' + id + '">移除</button>' +
             '</div></li>'
         );

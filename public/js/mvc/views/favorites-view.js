@@ -10,11 +10,11 @@
       if (!grid) return;
       if (!favorites.length) {
         grid.classList.remove('hidden');
-        grid.innerHTML = '<div class="member-state member-state--empty" style="grid-column:1/-1;"><p>尚未收藏任何款式。</p><a href="shop/calculator/index.html" class="btn btn-mint">前往選擇</a></div>';
+        grid.innerHTML = '<div class="member-state member-state--empty" style="grid-column:1/-1;"><p>尚未收藏任何款式。</p><a href="/shop/calculator/" class="btn btn-mint">前往選擇</a></div>';
         return;
       }
       grid.innerHTML = favorites.map(function (fav) {
-        var url = fav.load_url || fav.loadUrl || ('shop/calculator/index.html?prefill=' + encodeURIComponent(fav.id || ''));
+        var url = fav.load_url || fav.loadUrl || ('/shop/calculator/?prefill=' + encodeURIComponent(fav.id || ''));
         return (
           '<article class="member-favorite-card" data-id="' + M.escapeHtml(fav.id) + '">' +
             (fav.image_url ? '<img src="' + M.escapeHtml(fav.image_url) + '" alt="" loading="lazy">' : '') +

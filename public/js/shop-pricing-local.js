@@ -29,7 +29,7 @@
   var VALID_FANCY_COLORS = { yellow: 1, pink: 1, blue: 1 };
   var VALID_STONE_COUNTS = { 2: 1, 3: 1, 4: 1 };
   var STONE_COUNT_CATEGORIES = { earring: 1 };
-  var DEFAULT_STONE_COUNT_BY_CATEGORY = { earring: 2, ring: 2, pendant: 2 };
+  var DEFAULT_STONE_COUNT_BY_CATEGORY = { earring: 2, ring: 2, pendant: 2, diamond: 1 };
 
   var WAX_TO_METAL_CHIN = {
     '9k': 11.5, '14k': 14, '18k': 16, pt950: 24, s925: 11,
@@ -41,7 +41,8 @@
   var METAL_SYMBOL = {
     '9k': 'XAU', '14k': 'XAU', '18k': 'XAU', pt950: 'XPT', s925: 'XAG',
   };
-  var LABOR_FEE = { pendant: 5000, ring: 5000, bracelet: 5000, earring: 3000, chain: 5000 };
+  /** Universal 金工費 (flat NT$, not taxed). Same for every category. */
+  var LABOR_FEE_TWD = 5000;
   var TAX_RATE = 0.05;
   var CHIN_TO_GRAMS = 3.75;
   var CHAIN_REFERENCE_LENGTH_CM = 45;
@@ -95,13 +96,15 @@
     if (!caratKey || category === 'chain') return null;
     var caratNum = parseFloat(caratKey);
     if (Number.isNaN(caratNum)) return null;
-    var multiStone = !!STONE_COUNT_CATEGORIES[category];
+    var stoneCount = opts.stoneCount;
+    // Memorial loose diamonds: multi-stone package only when qty ≥ 2
+    var multiStone = !!STONE_COUNT_CATEGORIES[category]
+      || (category === 'diamond' && VALID_STONE_COUNTS[stoneCount]);
     if (!isShapeCaratAllowed(caratNum, opts.diamondShape)) return null;
 
     var base = null;
     var diamondKind = opts.diamondKind || 'white';
     var fancyColor = opts.fancyColor;
-    var stoneCount = opts.stoneCount;
     var diamondShape = opts.diamondShape || 'round';
 
     if (diamondKind === 'white') {
@@ -181,10 +184,9 @@
     return perGramFor(gold) * CHIN_TO_GRAMS;
   }
 
-  function metalPreTax(gold, weightChin, category) {
+  function metalPreTax(gold, weightChin) {
     var perChin = perChinFor(gold);
-    var multiplier = category === 'chain' ? 2 : 1;
-    return { amount: perChin * weightChin * multiplier, perGram: perGramFor(gold) };
+    return { amount: perChin * weightChin, perGram: perGramFor(gold) };
   }
 
   function computeChainAddon(catalog, chainProductId, chainGold, chainLengthCm) {
@@ -195,8 +197,9 @@
     var manual = chainProduct.manualPrices && chainProduct.manualPrices[chainGold]
       && chainProduct.manualPrices[chainGold]['3fen'];
     if (manual != null) return { chainPreTax: Number(manual), chainWeightChin: weightChin };
-    var metal = metalPreTax(chainGold, weightChin, 'chain');
-    return { chainPreTax: metal.amount + (LABOR_FEE.chain || 5000), chainWeightChin: weightChin };
+    // 搭配鏈條 = metal only; standalone chain still gets LABOR_FEE_TWD in computeOrderPricing
+    var metal = metalPreTax(chainGold, weightChin);
+    return { chainPreTax: metal.amount, chainWeightChin: weightChin };
   }
 
   function computeOrderPricing(data, catalog) {
@@ -214,11 +217,34 @@
     var chainGold = data.chainGold;
     var chainLength = data.chainLength;
 
-    if (!category || !carat || !gold || !productId) return { ready: false };
+    if (!category || !carat || !productId) return { ready: false };
+    if (category !== 'diamond' && !gold) return { ready: false };
     if ((category === 'chain' || category === 'bracelet') && lengthCm == null) return { ready: false };
 
     var product = findProduct(catalog, category, productId);
     if (!product) return { ready: false, error: 'product not available' };
+
+    // Diamonds-only memorial series: list price only (no metal / labor)
+    if (category === 'diamond') {
+      var looseDiamond = computeDiamondListPrice(carat, {
+        diamondKind: diamondKind,
+        fancyColor: fancyColor,
+        stoneCount: stoneCount,
+        diamondShape: diamondShape,
+        category: category,
+      });
+      if (looseDiamond == null) return { ready: false };
+      return {
+        ready: true,
+        manualOverride: false,
+        diamondPrice: looseDiamond,
+        taijinPrice: 0,
+        laborPrice: 0,
+        metalworkPrice: 0,
+        chainPrice: null,
+        total: Math.round(looseDiamond),
+      };
+    }
 
     var manual = product.manualPrices && product.manualPrices[gold] && product.manualPrices[gold][carat];
     if (manual != null) {
@@ -233,10 +259,11 @@
     }
 
     var weightGrams = weightChin * CHIN_TO_GRAMS;
-    var laborPreTax = LABOR_FEE[category] || 5000;
-    var metal = metalPreTax(gold, weightChin, category);
+    var laborPreTax = LABOR_FEE_TWD;
+    var metal = metalPreTax(gold, weightChin);
     var taijinDisplay = Math.round(metal.amount * (1 + TAX_RATE));
-    var laborDisplay = Math.round(laborPreTax * (1 + TAX_RATE));
+    // Labor is flat NT$ — not taxed. Tax only on metal (and 搭配鏈條 metal).
+    var laborDisplay = laborPreTax;
 
     var diamondPrice = null;
     if (category !== 'chain') {
@@ -284,7 +311,7 @@
         '1.0': DIAMOND_PRICE['1.0'],
       },
       perGram: getPerGramPrices(),
-      laborFee: LABOR_FEE,
+      laborFeeTwd: LABOR_FEE_TWD,
       chinToGrams: CHIN_TO_GRAMS,
       taxRate: TAX_RATE,
       waxToMetalChin: WAX_TO_METAL_CHIN,
@@ -320,10 +347,23 @@
           { id: 'blue', kind: 'fancy', labelZh: '藍鑽', labelEn: 'Blue', swatch: '#7ec8e3', image: 'diamonds/colors/blue.png' },
           { id: 'pink', kind: 'fancy', labelZh: '粉鑽', labelEn: 'Pink', swatch: '#f4a6c8', image: 'diamonds/colors/pink.png' },
         ],
-        shapes: [
-          { id: 'round', labelZh: '圓鑽', labelEn: 'Round', image: 'diamonds/shapes/round.svg' },
+        matrixShapes: [
+          { id: 'round', labelZh: '圓形', labelEn: 'Round' },
+          { id: 'marquise', labelZh: '馬眼型', labelEn: 'Marquise' },
+          { id: 'oval', labelZh: '橢圓形', labelEn: 'Oval' },
+          { id: 'princess', labelZh: '公主方', labelEn: 'Princess' },
+          { id: 'trilliant', labelZh: '三角形', labelEn: 'Trilliant' },
+          { id: 'emerald', labelZh: '祖母綠形', labelEn: 'Emerald' },
+          { id: 'heart', labelZh: '心形', labelEn: 'Heart' },
+          { id: 'radiant', labelZh: '雷地恩形', labelEn: 'Radiant' },
+          { id: 'pear', labelZh: '梨形', labelEn: 'Pear' },
+          { id: 'cushion', labelZh: '枕形', labelEn: 'Cushion' },
         ],
-        stoneCounts: [2, 3, 4],
+        shapes: [
+          { id: 'round', labelZh: '圓形明亮式', labelEn: 'Round', image: 'diamonds/shapes/round.svg' },
+          { id: 'other', labelZh: '其它形狀', labelEn: 'Other (+10%)', image: 'diamonds/shapes/round.svg' },
+        ],
+        stoneCounts: [1, 2, 3, 4],
         stoneCountCategories: ['earring'],
         fancyMinCarat: '0.3',
         nonRoundShapeMinCarat: '0.3',
@@ -339,5 +379,6 @@
     setLiveGoldRates: setLiveGoldRates,
     WAX_TO_METAL_CHIN: WAX_TO_METAL_CHIN,
     waxToMetalChin: waxToMetalChin,
+    LABOR_FEE_TWD: LABOR_FEE_TWD,
   };
 })(window);

@@ -1,5 +1,5 @@
 /* Build gold quote + alloy rates for the public gold-price page. */
-const { PURITY_MULTIPLIER, METAL_SYMBOL, LABOR_FEE, TAX_RATE, CHIN_TO_GRAMS } = require('./pricing');
+const { PURITY_MULTIPLIER, METAL_SYMBOL, LABOR_FEE_TWD, TAX_RATE, CHIN_TO_GRAMS } = require('./pricing');
 
 const BOT_SOURCE_URL = 'https://rate.bot.com.tw/gold/quote/recent';
 const STALE_HOURS = 24;
@@ -75,14 +75,13 @@ function formulaMeta() {
   return {
     taxRate: TAX_RATE,
     chinToGrams: CHIN_TO_GRAMS,
-    laborFee: LABOR_FEE,
+    laborFeeTwd: LABOR_FEE_TWD,
     purityMultiplier: PURITY_MULTIPLIER,
     metalSymbol: METAL_SYMBOL,
     notes: [
-      '台金（含稅）= 金屬重（錢）× 成色金價（元/錢）× 5% 營業稅',
-      '金工費（含稅）= 品項金工費 × 5% 營業稅',
-      '鍊條品項：金屬成本 × 2（雙股）',
-      '總價 = 鑽石牌價 + 台金 + 金工費（鑽石牌價已含稅，不再加稅）',
+      '台金（含稅）= 金屬重（台錢）× 成色金價（元/台錢）× 5% 營業稅',
+      '金工費 = 品項金工費（不加稅）',
+      '總價 = 鑽石牌價 + 台金（含稅）+ 金工費（鑽石牌價已含稅；搭配鏈條僅計金屬含稅、不加金工費）',
     ],
   };
 }

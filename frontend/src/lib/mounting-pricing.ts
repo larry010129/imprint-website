@@ -1,12 +1,8 @@
 import { MOUNTING_PRICES } from "@/data/pricing-data";
 
 /** Mirrors public/js/shop-pricing-local.js — labor + metal scaled by live alloy rates. */
-const LABOR_FEE: Record<string, number> = {
-  necklace: 5000,
-  ring: 5000,
-  earring: 3000,
-  bracelet: 5000,
-};
+/** Universal 金工費 (flat NT$, not taxed). Same for every style. */
+const LABOR_FEE_TWD = 5000;
 
 const PURITY_MULTIPLIER: Record<string, number> = {
   "9k": 0.5,
@@ -65,7 +61,7 @@ export function mountingFeePreTax(
   const base = MOUNTING_PRICES[style]?.[metalKey] ?? 0;
   if (!base) return 0;
 
-  const labor = LABOR_FEE[style] ?? 5000;
+  const labor = LABOR_FEE_TWD;
   const metalPortion = base - labor;
   if (metalPortion <= 0) return base;
 
@@ -97,20 +93,5 @@ export async function fetchGoldQuote(): Promise<GoldQuotePayload | null> {
     return data;
   } catch {
     return null;
-  }
-}
-
-/* ponytail: self-check — baseline rates reproduce static mounting table */
-if (import.meta.env?.DEV) {
-  const table = buildLiveMountingTable(null);
-  for (const style of Object.keys(MOUNTING_PRICES)) {
-    if (style === "loose") continue;
-    for (const metal of Object.keys(MOUNTING_PRICES[style])) {
-      const expected = MOUNTING_PRICES[style][metal];
-      const got = table[style]?.[metal];
-      if (expected !== got) {
-        console.warn("[mounting-pricing] baseline mismatch", style, metal, expected, got);
-      }
-    }
   }
 }

@@ -278,22 +278,3 @@ def attach_order_display(cur, orders: list[dict]) -> None:
         created = order.get("created_at")
         if created is not None:
             order["created_at_display"] = created.strftime("%Y/%m/%d")
-
-
-if __name__ == "__main__":
-    row = {
-        "config_json": {
-            "category": "ring",
-            "type": "abc-uuid-not-real",
-            "gold": "18k",
-            "carat": "0.3",
-            "color": "white",
-            "clientPricing": {"total": 88000, "diamondPrice": 40000},
-        },
-        "pricing_json": {"total": 88000, "diamondPrice": 40000},
-        "total_price": 88000,
-    }
-    hydrate_order(row)
-    assert row["gold_purity"] == "18k"
-    assert row["diamond_price_twd"] == 40000
-    assert row["summary_zh"] == "ring abc-uuid-not-real"

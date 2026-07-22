@@ -177,13 +177,11 @@ function isColorLockedChainProduct(product) {
 
 function productGolds(category, product) {
   if (!product) return [];
-  const golds = new Set(product.golds || []);
-  Object.keys(product.weights || {}).forEach((g) => golds.add(g));
-  const staticProduct = findStaticCatalogProduct(category, product);
-  if (staticProduct) {
-    (staticProduct.golds || []).forEach((g) => golds.add(g));
-    Object.keys(staticProduct.weights || {}).forEach((g) => golds.add(g));
-  }
+  // Only metals that have weight rows — never advertise a gold the lookup can't price.
+  const golds = new Set(Object.keys(product.weights || {}));
+  (product.golds || []).forEach((g) => {
+    if (product.weights?.[g] && Object.keys(product.weights[g]).length) golds.add(g);
+  });
   let list = sortGolds([...golds]);
   // Chain A/B/C color is fixed in step 2; 9K is white-only — drop it for rose/yellow styles
   if (isColorLockedChainProduct(product)) {
@@ -195,14 +193,19 @@ function productGolds(category, product) {
   return list;
 }
 
-function mergeProductWeights(product, staticProduct) {
+function mergeProductWeights(product, staticProduct, category) {
   if (!staticProduct?.weights) return;
-  product.weights = product.weights || {};
+  // ponytail: DB may still store legacy 金重; static catalog is 蠟重. Prefer static until migrate_wax_weights runs.
+  // upgrade: migrate DB weight_chin to wax, then fill-only-null merge is enough.
+  void category;
+  product.weights = {};
   for (const [gold, carats] of Object.entries(staticProduct.weights)) {
-    product.weights[gold] = product.weights[gold] || {};
-    for (const [carat, weight] of Object.entries(carats)) {
-      if (product.weights[gold][carat] == null) product.weights[gold][carat] = weight;
-    }
+    product.weights[gold] = { ...carats };
+  }
+  if (Array.isArray(staticProduct.golds) && staticProduct.golds.length) {
+    product.golds = [...staticProduct.golds];
+  } else {
+    product.golds = sortGolds(Object.keys(product.weights));
   }
 }
 
@@ -216,7 +219,7 @@ function enrichCatalogFromStatic() {
       const staticProduct = findStaticCatalogProduct(category, product);
       if (!staticProduct) continue;
       product.golds = productGolds(category, product);
-      mergeProductWeights(product, staticProduct);
+      mergeProductWeights(product, staticProduct, category);
     }
   }
   if (staticCats.chain) {
@@ -233,6 +236,17 @@ function enrichCatalogFromStatic() {
     }
     catalog.chain.sort(compareChainStyleOrder);
   }
+  injectDiamondCatalog();
+}
+
+function injectDiamondCatalog() {
+  const staticDiamond = window.shopCatalogData?.categories?.diamond;
+  if (!staticDiamond?.length) return;
+  catalog.diamond = staticDiamond.map((p) => ({ ...p, images: { ...(p.images || {}) } }));
+  const order = (window._catalogCategoryOrder && window._catalogCategoryOrder.length)
+    ? [...window._catalogCategoryOrder]
+    : [...CATEGORY_DISPLAY_ORDER];
+  window._catalogCategoryOrder = ['diamond', ...order.filter((c) => c !== 'diamond')];
 }
 
 /** Step 2 chain cards: white → yellow gold → rose (not A/B/C letter order) */
@@ -251,9 +265,9 @@ function compareChainStyleOrder(a, b) {
 // display/UI hint; the actual selectable set per listing comes from the
 // catalog (a listing only offers the carats it has variants for).
 const CATEGORY_CARAT_UNIT = {
-  pendant: 'ct', ring: 'ct', earring: 'ct', bracelet: 'ct', chain: 'fen',
+  diamond: 'ct', pendant: 'ct', ring: 'ct', earring: 'ct', bracelet: 'ct', chain: 'fen',
 };
-const CATEGORY_DISPLAY_ORDER = ['pendant', 'ring', 'earring', 'bracelet', 'chain'];
+const CATEGORY_DISPLAY_ORDER = ['diamond', 'pendant', 'ring', 'earring', 'bracelet', 'chain'];
 
 // ── Live catalog data (from /api/catalog) — replaces the old hardcoded
 //    CATEGORY_STYLES / STYLE_NAMES / CATEGORY_METALS / WEIGHT_TABLE. ───────
@@ -633,6 +647,7 @@ function applyStaticCatalogFallback() {
   if (!cats.length) return false;
   catalog = window.shopCatalogData.categories;
   window._catalogCategoryOrder = window.shopCatalogData.categoryOrder || null;
+  injectDiamondCatalog();
   catalogLoaded = true;
   console.warn('shop: using bundled static catalog (API returned no products)');
   return true;
@@ -668,6 +683,7 @@ async function loadCatalog() {
       if (!window.shopCatalogData) throw new Error('STATIC_CATALOG_MISSING');
       catalog = window.shopCatalogData.categories || {};
       window._catalogCategoryOrder = window.shopCatalogData.categoryOrder || null;
+      injectDiamondCatalog();
       catalogLoaded = true;
       if (errEl) errEl.remove();
       requestAnimationFrame(() => renderCatalogTiles());
@@ -781,7 +797,7 @@ function renderCatalogTiles() {
 }
 
 // Weight/pricing constants loaded from /api/prices (server is source of truth)
-let laborFee = {};
+let laborFeeTwd = 5000;
 let chinToGrams = 3.75;
 let taxRate = 0.05;
 let ringSizeMin = 5;
@@ -831,6 +847,10 @@ let state = {
   stoneCount: null,
   diamondShape: 'round',
 };
+
+function isDiamondOnlyCategory(category = state.category) {
+  return category === 'diamond';
+}
 
 let shopView = 'catalog';
 const CHAIN_LENGTH_OPTIONS_CM = [35, 40, 46, 50, 56, 60, 66, 70, 76, 90, 102];
@@ -904,6 +924,7 @@ function setShopView(view, options) {
   updateSummary();
   updateShopProgress();
   updateWizardGuide();
+  updateDiamondWizardChrome();
   if (view === 'product') { updateLargeImage(); resetConfigNotices(); }
   const skipScroll = opts.skipScroll || document.documentElement.classList.contains('shop-tour-active');
   if (!skipScroll) {
@@ -916,6 +937,47 @@ const SHOP_STEPS = {
   styles: { step: 2, progress: 50 },
   product: { step: 3, progress: 100 },
 };
+
+// ponytail: diamond category skips step 2 (style grid); upgrade = separate memorial-series picker if needed
+const DIAMOND_SHOP_STEPS = {
+  catalog: { step: 1, progress: 50 },
+  styles: { step: 1, progress: 50 },
+  product: { step: 2, progress: 100 },
+};
+
+const DIAMOND_LOOSE_PRODUCT_ID = 'diamond-loose';
+const DIAMOND_WHITE_PREVIEW_PATH = 'diamonds/colors/white.png';
+
+function activeShopSteps() {
+  return isDiamondOnlyCategory() ? DIAMOND_SHOP_STEPS : SHOP_STEPS;
+}
+
+function diamondLooseProductId() {
+  const list = productsFor('diamond');
+  if (list.some((p) => p.id === DIAMOND_LOOSE_PRODUCT_ID)) return DIAMOND_LOOSE_PRODUCT_ID;
+  return list[0]?.id || null;
+}
+
+function updateDiamondWizardChrome() {
+  const isDiamond = state.category === 'diamond';
+  const stylesStep = document.getElementById('wizard-step-styles');
+  const backBtn = document.getElementById('back-to-styles');
+  if (stylesStep) stylesStep.hidden = isDiamond;
+  if (backBtn) {
+    backBtn.textContent = isDiamond ? tr('shop_back_catalog') : tr('shop_back_styles');
+  }
+}
+
+function enterDiamondLooseProduct() {
+  const typeId = diamondLooseProductId();
+  if (!typeId) {
+    setShopView('styles');
+    renderTypeCards();
+    updateSummary();
+    return;
+  }
+  selectType(typeId);
+}
 
 const WIZARD_GUIDE = {
   catalog: {
@@ -946,17 +1008,19 @@ function updateWizardGuide() {
 }
 
 function updateShopProgress() {
-  const meta = SHOP_STEPS[shopView] || SHOP_STEPS.catalog;
+  const steps = activeShopSteps();
+  const meta = steps[shopView] || steps.catalog;
 
   document.querySelectorAll('.shop-stepper-step').forEach((btn) => {
     const step = btn.dataset.step;
-    const stepNum = SHOP_STEPS[step]?.step || 0;
+    if (step === 'styles' && state.category === 'diamond') return;
+    const stepNum = steps[step]?.step || 0;
     const current = meta.step;
     btn.classList.toggle('is-active', step === shopView);
     btn.classList.toggle('is-done', stepNum < current);
     btn.disabled = stepNum > current;
     if (step === 'catalog') btn.disabled = false;
-    if (step === 'styles') btn.disabled = !state.category;
+    if (step === 'styles') btn.disabled = !state.category || state.category === 'diamond';
     if (step === 'product') btn.disabled = !state.category || !state.type;
   });
 
@@ -975,7 +1039,7 @@ function initWizardRail() {
     if (shopView !== 'catalog') document.getElementById('back-to-catalog')?.click();
   });
   document.getElementById('wizard-step-styles')?.addEventListener('click', () => {
-    if (!state.category) return;
+    if (!state.category || state.category === 'diamond') return;
     if (shopView === 'product') document.getElementById('back-to-styles')?.click();
     else if (shopView === 'catalog') selectCategory(state.category);
   });
@@ -1023,7 +1087,11 @@ function updateBreadcrumb() {
     } else if (shopView === 'product') {
       if (state.category) {
         addLink(tr('cat_' + state.category), () => {
-          document.getElementById('back-to-styles')?.click();
+          if (isDiamondOnlyCategory()) {
+            document.getElementById('back-to-catalog')?.click();
+          } else {
+            document.getElementById('back-to-styles')?.click();
+          }
         });
       }
       const product = getSelectedProduct();
@@ -1120,8 +1188,8 @@ function updateConfigChips() {
     if (stoneBadge) chips.push(stoneBadge);
   }
   if (state.category !== 'chain' && state.diamondShape && state.diamondShape !== 'round') {
-    const shape = diamondOptions.shapes.find(s => s.id === state.diamondShape);
-    if (shape) chips.push(shopLang() === 'en' ? shape.labelEn : shape.labelZh);
+    const shape = diamondShapeOptions().find(s => s.id === state.diamondShape);
+    if (shape) chips.push(diamondMetaLabel(shape));
   }
   if (state.ringSize) chips.push('#' + state.ringSize);
   if (state.engravingBand) chips.push(`${tr('step_engraving_band')}: ${state.engravingBand}`);
@@ -1156,9 +1224,10 @@ function effectiveColor() {
 }
 
 function isReadyToSubmit() {
-  if (!state.category || !state.type || !state.gold || !state.carat) return false;
+  if (!state.category || !state.type || !state.carat) return false;
+  if (!isDiamondOnlyCategory() && !state.gold) return false;
   const product = getSelectedProduct();
-  if (state.gold && needsColorSelection(state.gold, product) && !state.color) return false;
+  if (!isDiamondOnlyCategory() && state.gold && needsColorSelection(state.gold, product) && !state.color) return false;
   if (state.category === 'ring' && !state.ringSize) return false;
   if (state.category === 'chain' && !state.lengthCm) return false;
   if (state.category === 'bracelet' && !state.lengthCm) return false;
@@ -1166,8 +1235,8 @@ function isReadyToSubmit() {
   if (state.category === 'pendant' && state.includeChain
     && (!state.chainProductId || !state.chainGold || !state.chainColor || !state.chainLength)) return false;
   if (state.category === 'chain' && state.gold === '9k') {
-    const product = getSelectedProduct();
-    if (product && product.defaultColor !== 'white') return false;
+    const chainProduct = getSelectedProduct();
+    if (chainProduct && chainProduct.defaultColor !== 'white') return false;
   }
   return true;
 }
@@ -1176,10 +1245,12 @@ function missingSubmitLabels() {
   const missing = [];
   if (!state.category) missing.push(tr('step_category'));
   if (!state.type) missing.push(tr('sum_style'));
-  if (!state.gold) missing.push(tr('step_metal'));
-  else {
-    const product = getSelectedProduct();
-    if (needsColorSelection(state.gold, product) && !state.color) missing.push(tr('step_color'));
+  if (!isDiamondOnlyCategory()) {
+    if (!state.gold) missing.push(tr('step_metal'));
+    else {
+      const product = getSelectedProduct();
+      if (needsColorSelection(state.gold, product) && !state.color) missing.push(tr('step_color'));
+    }
   }
   if (!state.carat) missing.push(tr('step_carat'));
   if (state.category === 'ring' && !state.ringSize) missing.push(tr('step_ring_size'));
@@ -1248,6 +1319,19 @@ function updateCtaState(total) {
       btn.disabled = !ready;
       btn.textContent = btn.id === 'confirm-btn-mobile' ? tr('cart_update_short') : tr('cart_update');
     });
+  } else if (isDiamondOnlyCategory()) {
+    // Memorial loose diamonds: LINE consult (no API product variants yet)
+    cartBtns.forEach(btn => {
+      if (!btn) return;
+      btn.hidden = true;
+      btn.disabled = true;
+    });
+    confirmBtns.forEach(btn => {
+      if (!btn) return;
+      btn.hidden = false;
+      btn.disabled = !ready;
+      btn.textContent = tr('btn_line_consult');
+    });
   } else {
     confirmBtns.forEach(btn => {
       if (!btn) return;
@@ -1314,7 +1398,8 @@ async function loadMetalPrices() {
     if (localPayload && (shopUsesLocalPricing() || !shopUsesApi())) {
       Object.assign(pricePerGram, localPayload.perGram);
       Object.assign(diamondPrice, localPayload.diamond);
-      Object.assign(laborFee, localPayload.laborFee || {});
+      if (localPayload.laborFeeTwd != null) laborFeeTwd = Number(localPayload.laborFeeTwd);
+      else if (typeof localPayload.laborFee === 'number') laborFeeTwd = localPayload.laborFee;
       if (localPayload.chinToGrams != null) chinToGrams = localPayload.chinToGrams;
       if (localPayload.taxRate != null) taxRate = localPayload.taxRate;
       if (localPayload.ringSizeMin != null) ringSizeMin = localPayload.ringSizeMin;
@@ -1340,7 +1425,8 @@ async function loadMetalPrices() {
     if (!res.ok) throw new Error(`API ${res.status}`);
     Object.assign(pricePerGram, data.perGram);
     Object.assign(diamondPrice, data.diamond);
-    Object.assign(laborFee, data.laborFee || {});
+    if (data.laborFeeTwd != null) laborFeeTwd = Number(data.laborFeeTwd);
+    else if (typeof data.laborFee === 'number') laborFeeTwd = data.laborFee;
     if (data.chinToGrams != null) chinToGrams = data.chinToGrams;
     if (data.taxRate != null) taxRate = data.taxRate;
     if (data.ringSizeMin != null) ringSizeMin = data.ringSizeMin;
@@ -1427,6 +1513,14 @@ function estimatedProductPrice(product) {
     .map(Number);
   if (manual.length) return Math.min(...manual);
 
+  // Loose memorial diamonds — diamond list price only
+  if (!(product.golds || []).length && (product.carats || []).length) {
+    const loose = (product.carats || [])
+      .map((c) => Number(diamondPrice[c]))
+      .filter((n) => Number.isFinite(n) && n > 0);
+    if (loose.length) return Math.min(...loose);
+  }
+
   const estimates = [];
   Object.entries(product.weights || {}).forEach(([gold, byCarat]) => {
     const rate = pricePerGram[gold];
@@ -1437,7 +1531,7 @@ function estimatedProductPrice(product) {
       const perChin = rate * chinToGrams;
       const metalChin = waxFactor * Number(waxChin);
       const metal = metalChin * perChin;
-      estimates.push((diamond + metal + Number(laborFee[state.category] || 0)) * (1 + taxRate));
+      estimates.push(diamond + metal * (1 + taxRate) + laborFeeTwd);
     });
   });
   return estimates.length ? Math.min(...estimates) : null;
@@ -1450,7 +1544,8 @@ function filteredProductsForCurrentCategory() {
   return productsFor(state.category).filter(product => {
     const names = `${product.nameZh || ''} ${product.nameEn || ''}`.toLowerCase();
     if (query && !names.includes(query)) return false;
-    if (metal && !(product.golds || []).includes(metal)) return false;
+    const golds = product.golds || [];
+    if (metal && golds.length && !golds.includes(metal)) return false;
     if (priceBand) {
       const price = estimatedProductPrice(product);
       if (price == null) return false;
@@ -1513,6 +1608,17 @@ function syncVariantChipActiveStates() {
 }
 
 function updateMetalButtons() {
+  const metalStep = document.getElementById('metal-step');
+  if (isDiamondOnlyCategory()) {
+    metalStep?.classList.add('hidden');
+    state.gold = null;
+    state.color = null;
+    const row = document.getElementById('metal-btn-row');
+    if (row) row.innerHTML = '';
+    updateColorStep();
+    return;
+  }
+  metalStep?.classList.remove('hidden');
   const product = getSelectedProduct();
   const golds = productGolds(state.category, product);
   renderMetalButtons('metal-btn-row', golds, state.gold, selectMetal);
@@ -1579,13 +1685,27 @@ function updateCaratButtons() {
   const validCarats = product ? product.carats : [];
   const isChain = state.category === 'chain';
   document.getElementById('carat-step')?.classList.toggle('hidden', isChain);
-  if (isChain) ensureChainCaratDefault();
-  document.querySelectorAll(".carat-btn").forEach(btn => {
-    const v = btn.dataset.carat;
-    const visible = !isChain && validCarats.includes(v) && !isCaratHiddenForShop(v);
+  if (isChain) {
+    ensureChainCaratDefault();
+    updateDiamondSteps();
+    return;
+  }
+  const row = document.getElementById('carat-btn-row');
+  if (!row) return;
+  row.innerHTML = '';
+  validCarats.forEach((v) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'carat-btn variant-chip';
+    btn.dataset.carat = v;
+    const n = parseFloat(v);
+    btn.textContent = Number.isNaN(n) ? v : `${n.toFixed(2)} ct`;
+    const visible = !isCaratHiddenForShop(v);
     btn.style.display = visible ? '' : 'none';
-    btn.classList.toggle('active', v === state.carat);
     btn.disabled = !visible;
+    btn.classList.toggle('active', v === state.carat);
+    btn.addEventListener('click', () => selectCarat(v));
+    row.appendChild(btn);
   });
   updateDiamondSteps();
 }
@@ -1604,7 +1724,40 @@ function diamondMetaLabel(item) {
 
 function diamondAssetUrl(relativePath) {
   if (!relativePath) return '';
-  return `/static/images/${relativePath}?v=3`;
+  return `/static/images/${relativePath}?v=19`;
+}
+
+function diamondMatrixImagePath(shapeId, colorId) {
+  const shape = shapeId || 'round';
+  const color = colorId || 'white';
+  return `diamonds/matrix/${shape}-${color}.png`;
+}
+
+function diamondMatrixImageUrl(shapeId, colorId) {
+  return diamondAssetUrl(diamondMatrixImagePath(shapeId, colorId));
+}
+
+function diamondShapeOptions() {
+  if (isDiamondOnlyCategory()) {
+    if (diamondOptions.matrixShapes?.length) return diamondOptions.matrixShapes;
+    return [
+      { id: 'round', labelZh: '圓形', labelEn: 'Round' },
+      { id: 'marquise', labelZh: '馬眼型', labelEn: 'Marquise' },
+      { id: 'oval', labelZh: '橢圓形', labelEn: 'Oval' },
+      { id: 'princess', labelZh: '公主方', labelEn: 'Princess' },
+      { id: 'trilliant', labelZh: '三角形', labelEn: 'Trilliant' },
+      { id: 'emerald', labelZh: '祖母綠形', labelEn: 'Emerald' },
+      { id: 'heart', labelZh: '心形', labelEn: 'Heart' },
+      { id: 'radiant', labelZh: '雷地恩形', labelEn: 'Radiant' },
+      { id: 'pear', labelZh: '梨形', labelEn: 'Pear' },
+      { id: 'cushion', labelZh: '枕形', labelEn: 'Cushion' },
+    ];
+  }
+  if (diamondOptions.shapes?.length) return diamondOptions.shapes;
+  return [
+    { id: 'round', labelZh: '圓形明亮式', labelEn: 'Round' },
+    { id: 'other', labelZh: '其它形狀', labelEn: 'Other (+10%)' },
+  ];
 }
 
 function usesAutoStoneCount(category = state.category) {
@@ -1612,17 +1765,29 @@ function usesAutoStoneCount(category = state.category) {
   return cats.includes(category);
 }
 
+function usesStoneCountPicker(category = state.category) {
+  return category === 'diamond';
+}
+
 function defaultStoneCountForCategory(category = state.category) {
   if (category === 'earring') return 2;
+  if (category === 'diamond') return 1;
   return diamondOptions.defaultStoneCountByCategory?.[category] || 2;
 }
 
 function stoneCountBadgeText() {
+  if (usesStoneCountPicker() && state.stoneCount && state.stoneCount > 1) {
+    return tr('stone_count_badge').replace('{n}', String(state.stoneCount));
+  }
   if (!usesAutoStoneCount() || !state.stoneCount) return null;
   return tr('stone_count_badge').replace('{n}', String(state.stoneCount));
 }
 
 function ensureStoneCountDefault() {
+  if (usesStoneCountPicker()) {
+    if (!state.stoneCount) state.stoneCount = 1;
+    return;
+  }
   if (!usesAutoStoneCount()) {
     state.stoneCount = null;
     return;
@@ -1679,9 +1844,10 @@ function renderDiamondColorCarousel() {
     btn.classList.toggle('active', activeId === color.id);
     const icon = document.createElement('span');
     icon.className = 'gem-icon';
-    if (color.image) {
+    const imagePath = color.image || DIAMOND_WHITE_PREVIEW_PATH;
+    if (imagePath) {
       const img = document.createElement('img');
-      img.src = diamondAssetUrl(color.image);
+      img.src = diamondAssetUrl(imagePath);
       img.alt = diamondMetaLabel(color);
       img.loading = 'lazy';
       icon.appendChild(img);
@@ -1708,15 +1874,103 @@ function scrollCarousel(carouselId, direction) {
 
 function updateDiamondSteps() {
   const isChain = state.category === 'chain';
+  const isDiamond = isDiamondOnlyCategory();
   const fancyStep = document.getElementById('fancy-diamond-step');
+  const shapeStep = document.getElementById('diamond-shape-step');
+  const stoneStep = document.getElementById('stone-count-step');
   fancyStep?.classList.toggle('hidden', isChain);
+  shapeStep?.classList.toggle('hidden', isChain);
+  stoneStep?.classList.toggle('hidden', !isDiamond);
   if (isChain) {
     resetDiamondOptions();
     return;
   }
   renderDiamondColorCarousel();
+  renderDiamondShapeButtons();
+  renderStoneCountButtons();
   ensureStoneCountDefault();
-  updateGirdlePreviewColor();
+  updateGirdlePreview();
+}
+
+function renderDiamondShapeButtons() {
+  const row = document.getElementById('diamond-shape-row');
+  if (!row) return;
+  const shapes = diamondShapeOptions();
+  const useMatrix = isDiamondOnlyCategory();
+  row.classList.toggle('variant-chips--matrix-shapes', useMatrix);
+  row.innerHTML = '';
+  shapes.forEach((shape) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.dataset.shape = shape.id;
+    btn.classList.toggle('active', (state.diamondShape || 'round') === shape.id);
+    if (useMatrix) {
+      btn.className = 'diamond-carousel-item shape-item diamond-shape-btn';
+      const icon = document.createElement('span');
+      icon.className = 'gem-icon';
+      const img = document.createElement('img');
+      img.src = diamondMatrixImageUrl(shape.id, selectedDiamondColorId());
+      img.alt = diamondMetaLabel(shape);
+      img.loading = 'lazy';
+      icon.appendChild(img);
+      const label = document.createElement('span');
+      label.className = 'gem-label';
+      label.textContent = diamondMetaLabel(shape);
+      btn.appendChild(icon);
+      btn.appendChild(label);
+    } else {
+      btn.className = 'variant-chip diamond-shape-btn';
+      btn.textContent = diamondMetaLabel(shape);
+      if (shape.id === 'other') btn.textContent = shopLang() === 'en' ? 'Other (+10%)' : '其它形狀 +10%';
+    }
+    btn.addEventListener('click', () => selectDiamondShape(shape.id));
+    row.appendChild(btn);
+  });
+}
+
+function selectDiamondShape(shapeId) {
+  state.diamondShape = shapeId || 'round';
+  if (state.carat && isCaratHiddenForShop(state.carat)) {
+    state.carat = null;
+  }
+  updateCaratButtons();
+  renderDiamondShapeButtons();
+  if (isDiamondOnlyCategory()) {
+    renderDiamondColorCarousel();
+    productImageIndex = 0;
+    if (shopView === 'product') updateLargeImage();
+  }
+  updateGirdlePreview();
+  updateSummary();
+}
+
+function renderStoneCountButtons() {
+  const row = document.getElementById('stone-count-row');
+  if (!row) return;
+  if (!usesStoneCountPicker()) {
+    row.innerHTML = '';
+    return;
+  }
+  const counts = diamondOptions.stoneCounts?.length
+    ? diamondOptions.stoneCounts
+    : [1, 2, 3, 4];
+  row.innerHTML = '';
+  counts.forEach((n) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'variant-chip stone-count-btn';
+    btn.dataset.count = String(n);
+    btn.textContent = `${n} 顆`;
+    btn.classList.toggle('active', Number(state.stoneCount || 1) === Number(n));
+    btn.addEventListener('click', () => selectStoneCount(Number(n)));
+    row.appendChild(btn);
+  });
+}
+
+function selectStoneCount(count) {
+  state.stoneCount = count;
+  renderStoneCountButtons();
+  updateSummary();
 }
 
 function selectDiamondColor(colorId) {
@@ -1738,7 +1992,7 @@ function selectDiamondColor(colorId) {
   updateCaratButtons();
   productImageIndex = 0;
   if (shopView === 'product') updateLargeImage(usesPendantCompositePreview() ? 'pendant' : undefined);
-  updateGirdlePreviewColor();
+  updateGirdlePreview();
   updateSummary();
 }
 
@@ -1801,7 +2055,7 @@ async function refreshQuotePrices() {
   const mobileTotal = document.getElementById('sum-total-mobile');
   const hint = document.getElementById('price-hint');
 
-  if (!quote || !quote.ready) {
+    if (!quote || !quote.ready) {
     if (quote && quote.error && window.showToast) {
       window.showToast(tr('price_unavailable'), 'error');
     } else if (isReadyToSubmit() && window.showToast) {
@@ -1811,6 +2065,8 @@ async function refreshQuotePrices() {
     chainRow?.classList.add('hidden');
     document.getElementById('sum-diamond-price').textContent = state.carat ? '-' : '0';
     document.getElementById('sum-metalwork-price').textContent = '-';
+    const chainPriceEl = document.getElementById('sum-chain-price');
+    if (chainPriceEl) chainPriceEl.textContent = '-';
     if (totalEl) totalEl.textContent = '—';
     if (mobileTotal) mobileTotal.textContent = '—';
     updatePriceHint(null);
@@ -1827,11 +2083,18 @@ async function refreshQuotePrices() {
     if (quote.diamondPrice != null) {
       document.getElementById('sum-diamond-price').textContent = Math.round(quote.diamondPrice).toLocaleString();
     }
-    const metalwork = quote.metalworkPrice != null
-      ? quote.metalworkPrice
-      : (quote.taijinPrice != null && quote.laborPrice != null ? quote.taijinPrice + quote.laborPrice : null);
-    if (metalwork != null) {
-      document.getElementById('sum-metalwork-price').textContent = Math.round(metalwork).toLocaleString();
+    const metalworkRow = document.getElementById('sum-metalwork-price')?.closest('.summary-row');
+    if (isDiamondOnlyCategory()) {
+      metalworkRow?.classList.add('hidden');
+      document.getElementById('sum-metalwork-price').textContent = '0';
+    } else {
+      metalworkRow?.classList.remove('hidden');
+      const metalwork = quote.metalworkPrice != null
+        ? quote.metalworkPrice
+        : (quote.taijinPrice != null && quote.laborPrice != null ? quote.taijinPrice + quote.laborPrice : null);
+      if (metalwork != null) {
+        document.getElementById('sum-metalwork-price').textContent = Math.round(metalwork).toLocaleString();
+      }
     }
     const showChain = state.category === 'pendant' && state.includeChain && quote.chainPrice != null;
     chainRow?.classList.toggle('hidden', !showChain);
@@ -1886,7 +2149,7 @@ function updateEngravingSteps() {
   if (girdleCtrl) {
     girdleCtrl.setAllowChinese(allowChinese);
     girdleCtrl.setValue(state.engravingGirdle || '');
-    girdleCtrl.setPreviewColor(selectedDiamondColorId() || 'white');
+    girdleCtrl.setPreviewShapeAndColor(state.diamondShape || 'round', selectedDiamondColorId() || 'white');
   }
   const hint = document.getElementById('shop-girdle-engrave-hint');
   if (hint) {
@@ -2042,6 +2305,9 @@ function updateChainOptions() {
 function currentProductImages() {
   const product = getSelectedProduct();
   if (!product || usesPendantCompositePreview()) return [];
+  if (isDiamondOnlyCategory()) {
+    return [diamondMatrixImageUrl(state.diamondShape, selectedDiamondColorId())];
+  }
   return productImagesForColor(product, previewColor(), selectedDiamondColorId());
 }
 
@@ -2164,6 +2430,26 @@ function updateLargeImage(layer) {
 
   const images = currentProductImages();
   if (productImageIndex >= images.length) productImageIndex = 0;
+
+  // Catalog product.images (e.g. diamond-loose white.png) must not override matrix previews.
+  if (isDiamondOnlyCategory()) {
+    previewRoot?.classList.remove('is-pendant-only');
+    const nextSrc = images[productImageIndex]
+      || diamondMatrixImageUrl(state.diamondShape, selectedDiamondColorId());
+    if (img) {
+      img.style.visibility = '';
+      img.onerror = null;
+      if (img.getAttribute('src') === nextSrc && nextSrc) {
+        img.removeAttribute('src');
+      }
+      img.src = nextSrc;
+      if (zoomBtn) zoomBtn.hidden = !(img.src && !img.src.endsWith('/'));
+    }
+    renderProductThumbnails(images);
+    updateGalleryNav(images);
+    return;
+  }
+
   // pendantPreviewLayers already resolved the correct shop-product URL (incl. combo /
   // pendant-only). Prefer that; only use productImageResolve for fallback chain.
   let primarySrc = preview.composite ? '' : (preview.src || images[productImageIndex] || imageUrl(state.category, state.type) || '');
@@ -2307,7 +2593,9 @@ function updateSummary() {
     selectedProduct ? productName(selectedProduct) : '-';
 
   document.getElementById("sum-material").textContent =
-    state.gold ? materialLabel(state.gold, state.color) : '-';
+    isDiamondOnlyCategory()
+      ? tr('sum_loose_diamond')
+      : (state.gold ? materialLabel(state.gold, state.color) : '-');
 
   // Carat — hidden for chain-only (no diamond / no fen picker)
   const caratRow = document.getElementById('sum-carat-row');
@@ -2459,6 +2747,12 @@ function selectCategory(cat) {
   document.querySelectorAll(".cat-btn").forEach(b =>
     b.classList.toggle("active", b.dataset.cat === cat));
 
+  const metalFilter = document.getElementById('catalog-metal-filter');
+  if (metalFilter) {
+    metalFilter.hidden = cat === 'diamond';
+    if (cat === 'diamond') metalFilter.value = '';
+  }
+
   renderTypeCards();
   const titleEl = document.getElementById("shop-category-title");
   if (titleEl) titleEl.textContent = tr('cat_' + cat);
@@ -2468,6 +2762,13 @@ function selectCategory(cat) {
   updateMetalButtons();
   updateCaratButtons();
   updateChainOptions();
+  updateDiamondWizardChrome();
+
+  if (cat === 'diamond') {
+    enterDiamondLooseProduct();
+    return;
+  }
+
   setShopView('styles');
   updateSummary();
 }
@@ -2575,9 +2876,15 @@ document.getElementById('engraving-band-input')?.addEventListener('input', (e) =
   updateSummary();
 });
 
-function updateGirdlePreviewColor() {
+function updateGirdlePreview() {
   const ctrl = ensureGirdleEngrave();
-  if (ctrl?.setPreviewColor) ctrl.setPreviewColor(selectedDiamondColorId() || 'white');
+  const shapeId = state.diamondShape || 'round';
+  const colorId = selectedDiamondColorId() || 'white';
+  if (ctrl?.setPreviewShapeAndColor) {
+    ctrl.setPreviewShapeAndColor(shapeId, colorId);
+  } else if (ctrl?.setPreviewColor) {
+    ctrl.setPreviewColor(colorId);
+  }
 }
 
 let girdleEngraveCtrl = null;
@@ -2590,6 +2897,7 @@ function ensureGirdleEngrave() {
     countEl: document.getElementById('shop-girdle-engrave-count'),
     previewEl: document.getElementById('shop-girdle-engrave-preview'),
     emblemsRoot: document.getElementById('engraving-girdle-step'),
+    previewShape: state.diamondShape || 'round',
     previewColor: selectedDiamondColorId() || 'white',
     allowChinese: caratAllowsChineseEngraving(),
     max: 12,
@@ -2677,6 +2985,10 @@ document.getElementById('back-to-catalog')?.addEventListener('click', () => {
 
 document.getElementById('back-to-styles')?.addEventListener('click', () => {
   if (!state.category) return;
+  if (isDiamondOnlyCategory()) {
+    document.getElementById('back-to-catalog')?.click();
+    return;
+  }
   setShopView('styles');
   renderTypeCards();
   updateSummary();
@@ -2865,13 +3177,14 @@ async function addCurrentFavorite() {
 function validateBeforeSubmit(toast) {
   if (!state.category) { toast(tr('alert_pick_category')); return false; }
   if (!state.type)     { toast(tr('alert_pick_type'));     return false; }
-  if (!state.gold)     { toast(tr('alert_pick_gold'));     return false; }
-
-  const submitColor = effectiveColor();
-  if (!submitColor) {
-    const product = getSelectedProduct();
-    toast(needsColorSelection(state.gold, product) ? tr('alert_pick_color') : tr('alert_pick_material'));
-    return false;
+  if (!isDiamondOnlyCategory()) {
+    if (!state.gold) { toast(tr('alert_pick_gold')); return false; }
+    const submitColor = effectiveColor();
+    if (!submitColor) {
+      const product = getSelectedProduct();
+      toast(needsColorSelection(state.gold, product) ? tr('alert_pick_color') : tr('alert_pick_material'));
+      return false;
+    }
   }
 
   if (!state.carat) { toast(tr('alert_pick_carat')); return false; }
@@ -3051,6 +3364,14 @@ async function handleSubmit() {
   }
 
   const toast = (msg) => window.showToast ? window.showToast(msg, 'error') : alert(msg);
+  if (isDiamondOnlyCategory()) {
+    if (!validateBeforeSubmit(toast)) return;
+    try {
+      sessionStorage.setItem('shopInquiryDraft', buildInquirySummaryLines().join('\n'));
+    } catch (_) { /* ignore */ }
+    window.open('https://lin.ee/ktVBtmx', '_blank', 'noopener');
+    return;
+  }
   if (!shopUsesApi()) {
     openContactForOrder();
     return;
@@ -3345,6 +3666,7 @@ async function bootShopCore() {
   loadMetalPrices();
   loadLiveGoldRates();
   refreshShopLoginState();
+  updateDiamondWizardChrome();
 }
 
 function applyInitialShopState() {
@@ -3357,14 +3679,25 @@ function applyInitialShopState() {
   }
 
   const urlCategory = new URLSearchParams(window.location.search).get('category');
+  const urlType = new URLSearchParams(window.location.search).get('type')
+    || new URLSearchParams(window.location.search).get('product')
+    || new URLSearchParams(window.location.search).get('series');
   if (urlCategory && productsFor(urlCategory).length && !prefillData) {
     requestAnimationFrame(() => {
       document.querySelector(`.cat-btn[data-cat="${urlCategory}"]`)?.click();
+      if (urlType && urlCategory !== 'diamond') {
+        setTimeout(() => {
+          const typeId = urlType.startsWith('diamond-') || urlCategory !== 'diamond'
+            ? urlType
+            : `diamond-${urlType}`;
+          document.querySelector(`.type-card[data-type="${typeId}"]`)?.click();
+        }, 60);
+      }
     });
   }
 
   const previewProduct = new URLSearchParams(window.location.search).get('product');
-  if (window.shopConfig?.preview && previewProduct && urlCategory && !prefillData) {
+  if (window.shopConfig?.preview && previewProduct && urlCategory && !prefillData && !urlType) {
     setTimeout(() => {
       document.querySelector(`.type-card[data-type="${previewProduct}"]`)?.click();
     }, 50);
@@ -3458,6 +3791,12 @@ function shopTourGoToStep(stepIndex) {
     if (!cat) {
       setShopView('catalog', { skipScroll: true });
       shopTourScrollTop();
+      return;
+    }
+    if (cat === 'diamond') {
+      if (shopView !== 'product') selectCategory(cat);
+      else setShopView('product', { skipScroll: true });
+      shopTourScrollToProductConfig();
       return;
     }
     if (shopView !== 'styles' || state.category !== cat) selectCategory(cat);

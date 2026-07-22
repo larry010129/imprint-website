@@ -2226,6 +2226,28 @@ body.dark-theme .ring-size-guide-table thead th {
   background: #fff;
 }
 
+.variant-chips--matrix-shapes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.variant-chips--matrix-shapes .diamond-carousel-item {
+  flex: 0 0 calc(20% - 8px);
+  min-width: 72px;
+  max-width: 96px;
+}
+
+@media (max-width: 640px) {
+  .variant-chips--matrix-shapes .diamond-carousel-item {
+    flex: 0 0 calc(25% - 8px);
+    min-width: 64px;
+  }
+}
+
 .fancy-stone-label {
   margin-top: 8px;
 }

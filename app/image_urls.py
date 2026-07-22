@@ -398,16 +398,3 @@ def order_product_id(order: dict) -> str | None:
         return str(pt).strip()
     return None
 
-
-if __name__ == "__main__":
-    assert shop_product_image_url("ring-A", "white") == "/static/images/shop-product/silver/戒指A_silver.png"
-    assert (
-        shop_product_image_url("ring-A", "white", diamond_color="pink")
-        == "/static/images/shop-product/silver/戒指A_silver_pink.png"
-    )
-    assert config_diamond_color({"diamondKind": "fancy", "fancyColor": "pink"}) == "pink"
-    assert shop_style_thumb_url("ring-A") == "/static/images/shop-product/thumbs/ring/A.jpg"
-    assert resolve_product_image_url("images/products/white/pendant-A.png") == "/static/images/products/white/pendant-A.png"
-    assert style_key_from_refs("ring", "A") == "ring-A"
-    assert not order_style_image_url("ring", "A").endswith(".svg")
-

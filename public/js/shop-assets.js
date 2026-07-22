@@ -69,12 +69,20 @@
   };
 
   var CATEGORY_THUMB = {
+    diamond: '/static/images/diamonds/colors/white.png',
     pendant: 'thumbs/pendant/A.jpg',
     ring: 'thumbs/ring/A.jpg',
     earring: 'thumbs/earring/A.jpg',
     bracelet: 'thumbs/bracelet/A.jpg',
     chain: 'thumbs/chain/A.jpg',
   };
+
+  function categoryThumb(category) {
+    var rel = CATEGORY_THUMB[category];
+    if (!rel) return '';
+    if (/^https?:\/\//i.test(rel) || rel.charAt(0) === '/') return rel;
+    return joinPath(rel);
+  }
 
   function styleThumbRel(productId) {
     var parsed = parseProductId(productId);
@@ -171,11 +179,6 @@
     return ['white', 'yellow', 'rose']
       .map(function (c) { return stylePngPath(parsed.category, parsed.style, c); })
       .filter(Boolean);
-  }
-
-  function categoryThumb(category) {
-    var rel = CATEGORY_THUMB[category];
-    return rel ? joinPath(rel) : '';
   }
 
   function styleThumb(productId) {

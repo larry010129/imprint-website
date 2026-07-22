@@ -28,7 +28,7 @@
     <div class="shop-wizard-guide" id="shop-wizard-guide">
       <p class="shop-wizard-eyebrow" id="shop-wizard-eyebrow">線上訂製 · 三步完成</p>
       <h1 class="shop-wizard-title" id="shop-wizard-title">先選擇您要的品項</h1>
-      <p class="shop-wizard-desc" id="shop-wizard-desc">戒指、項墜、耳飾、手鍊或鍊條——點選一個類別即可開始。</p>
+      <p class="shop-wizard-desc" id="shop-wizard-desc">紀念鑽石、戒指、項墜、耳飾、手鍊或鍊條——點選一個類別即可開始。</p>
     </div>
 
   </header>
@@ -189,6 +189,17 @@
               </div>
             </div>
 
+            <div class="variant-group hidden" id="diamond-shape-step">
+              <h3 class="variant-label" data-i18n="step_diamond_shape">選擇鑽石形狀</h3>
+              <div class="variant-chips" id="diamond-shape-row"></div>
+            </div>
+
+            <div class="variant-group hidden" id="stone-count-step">
+              <h3 class="variant-label" data-i18n="step_stone_count">選擇鑽石顆數</h3>
+              <div class="variant-chips" id="stone-count-row"></div>
+              <p class="cfg-note" data-i18n="stone_count_hint">多顆珍藏方案：2 顆約 85 折・3 顆約 8 折・4 顆約 75 折（僅供參考）</p>
+            </div>
+
             <div class="variant-group" id="metal-step">
               <h3 class="variant-label" data-i18n="step_metal">選擇材質</h3>
               <div class="variant-chips" id="metal-btn-row"></div>
@@ -233,7 +244,7 @@
                   </div>
                 </div>
                 <div class="cfg-engrave-preview shop-girdle-engrave__preview">
-                  <img class="cfg-engrave-gem" src="/static/images/shop/girdle-diamond-preview-white.png" alt=""
+                  <img class="cfg-engrave-gem" src="/static/images/diamonds/girdle-matrix/round-white.png?v=4" alt=""
                        width="640" height="360" loading="lazy" decoding="async" aria-hidden="true">
                   <div class="cfg-engrave-preview-text" id="shop-girdle-engrave-preview" aria-hidden="true"></div>
                 </div>
@@ -694,11 +705,11 @@
     shareBaseUrl: '/s/TOKEN',
   }, window.shopConfig || {});
 </script>
-<script src="/static/js/shop-assets.js?v=8"></script>
-<script src="/static/js/shop-catalog-data.js?v=3"></script>
-<script src="/static/js/shop-pricing-local.js?v=3"></script>
-<script src="/static/js/shop-i18n.js?v=3"></script>
-<script src="/static/js/girdle-engrave.js?v=11"></script>
+<script src="/static/js/shop-assets.js?v=9"></script>
+<script src="/static/js/shop-catalog-data.js?v=5"></script>
+<script src="/static/js/shop-pricing-local.js?v=9"></script>
+<script src="/static/js/shop-i18n.js?v=4"></script>
+<script src="/static/js/girdle-engrave.js?v=15"></script>
 <script src="/static/js/shop-terms.js?v=4"></script>
-<script src="/static/js/shop.js?v=77"></script>
+<script src="/static/js/shop.js?v=90"></script>
 {% endblock %}

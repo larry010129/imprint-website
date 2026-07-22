@@ -59,7 +59,8 @@ const METAL_SYMBOL = {
   '9k': 'XAU', '14k': 'XAU', '18k': 'XAU', pt950: 'XPT', s925: 'XAG',
   '999': 'XAU', pt: 'XPT', silver925: 'XAG',
 };
-const LABOR_FEE = { pendant: 5000, ring: 5000, bracelet: 5000, earring: 3000, chain: 5000 };
+/** Universal 金工費 (flat NT$, not taxed). Same for every category. */
+const LABOR_FEE_TWD = 5000;
 
 const TAX_RATE = 0.05;
 const CHIN_TO_GRAMS = 3.75;
@@ -176,14 +177,14 @@ async function lookupWeight(sql, { category, productId, gold, carat, lengthCm, r
   return weight;
 }
 
-async function metalPreTax(sql, goldPrices, gold, weightChin, category) {
+async function metalPreTax(sql, goldPrices, gold, weightChin) {
   const perGram = goldPrices[METAL_SYMBOL[gold]] * PURITY_MULTIPLIER[gold];
   const perChin = perGram * CHIN_TO_GRAMS;
-  const multiplier = category === 'chain' ? 2 : 1;
-  return { amount: perChin * weightChin * multiplier, perGram };
+  return { amount: perChin * weightChin, perGram };
 }
 
-/** Pre-tax chain total (metal×2 + labor) for a pendant's optional chain add-on. */
+/** Pre-tax chain total for a pendant's optional chain add-on (metal only — no labor).
+ * Standalone chain products still charge LABOR_FEE_TWD via computeOrderPricing. */
 async function computeChainAddon(sql, goldPrices, { chainProductId, chainGold, chainLengthCm, requirePublished = true }) {
   const variant = await getProductVariant(sql, { category: 'chain', productId: chainProductId, gold: chainGold, carat: '3fen', requirePublished });
   const weightChin = await lookupWeight(sql, { category: 'chain', productId: chainProductId, gold: chainGold, carat: '3fen', lengthCm: chainLengthCm, requirePublished });
@@ -193,8 +194,8 @@ async function computeChainAddon(sql, goldPrices, { chainProductId, chainGold, c
   if (variant.manual_price_twd != null) {
     prTax = Number(variant.manual_price_twd);
   } else {
-    const { amount } = await metalPreTax(sql, goldPrices, chainGold, weightChin, 'chain');
-    prTax = amount + (LABOR_FEE.chain || 5000);
+    const { amount } = await metalPreTax(sql, goldPrices, chainGold, weightChin);
+    prTax = amount;
   }
   return { chainPreTax: prTax, chainWeightChin: weightChin, chainVariant: variant };
 }
@@ -225,7 +226,7 @@ async function computeOrderPricing(sql, data, { requirePublished = true } = {}) 
   }
 
   const weightGrams = weightChin * CHIN_TO_GRAMS;
-  const laborPreTax = LABOR_FEE[category] || 5000;
+  const laborPreTax = LABOR_FEE_TWD;
 
   if (variant.manual_price_twd != null) {
     const goldPrices = await getMetalPrices(sql);
@@ -240,10 +241,11 @@ async function computeOrderPricing(sql, data, { requirePublished = true } = {}) 
   }
 
   const goldPrices = await getMetalPrices(sql);
-  const { amount: taijinPreTax, perGram: rateUsed } = await metalPreTax(sql, goldPrices, gold, weightChin, category);
+  const { amount: taijinPreTax, perGram: rateUsed } = await metalPreTax(sql, goldPrices, gold, weightChin);
   const taijinDisplay = Math.round(taijinPreTax * (1 + TAX_RATE));
-  const laborDisplay = Math.round(laborPreTax * (1 + TAX_RATE));
-  let taxAmount = (taijinDisplay - taijinPreTax) + (laborDisplay - laborPreTax);
+  // Labor is flat NT$ — not taxed. Tax only on metal (and 搭配鏈條 metal).
+  const laborDisplay = laborPreTax;
+  let taxAmount = taijinDisplay - taijinPreTax;
 
   let diamondPrice = null;
   if (category !== 'chain') {
@@ -288,7 +290,7 @@ async function computeOrderPricing(sql, data, { requirePublished = true } = {}) 
 
 module.exports = {
   DIAMOND_PRICE, COLORED_SINGLE_DIAMOND_PRICE, WHITE_MULTI_DIAMOND_PRICE, COLORED_MULTI_DIAMOND_PRICE,
-  MULTI_STONE_ABOVE_03_MULTIPLIER, WAX_TO_METAL_CHIN, PURITY_MULTIPLIER, METAL_SYMBOL, LABOR_FEE,
+  MULTI_STONE_ABOVE_03_MULTIPLIER, WAX_TO_METAL_CHIN, PURITY_MULTIPLIER, METAL_SYMBOL, LABOR_FEE_TWD,
   TAX_RATE, CHIN_TO_GRAMS, CHAIN_REFERENCE_LENGTH_CM, BRACELET_REFERENCE_LENGTH_CM,
   computeDiamondListPrice, getMetalPrices, getProductVariant, lookupWeight,
   computeChainAddon, computeOrderPricing,

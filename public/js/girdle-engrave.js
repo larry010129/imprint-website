@@ -452,6 +452,8 @@
   }
 
   var GIRDLE_PREVIEW_BASE = '/static/images/shop/girdle-diamond-preview';
+  var GIRDLE_MATRIX_BASE = '/static/images/diamonds/girdle-matrix';
+  var GIRDLE_MATRIX_VERSION = '4';
   var GIRDLE_PREVIEW_BY_COLOR = {
     white: GIRDLE_PREVIEW_BASE + '-white.png',
     yellow: GIRDLE_PREVIEW_BASE + '-yellow.png',
@@ -459,22 +461,43 @@
     pink: GIRDLE_PREVIEW_BASE + '-pink.png'
   };
 
+  function girdleMatrixSrc(shapeId, colorId) {
+    var shape = shapeId || 'round';
+    var color = colorId && GIRDLE_PREVIEW_BY_COLOR[colorId] ? colorId : 'white';
+    return GIRDLE_MATRIX_BASE + '/' + shape + '-' + color + '.png?v=' + GIRDLE_MATRIX_VERSION;
+  }
+
   function girdlePreviewSrc(colorId) {
     return GIRDLE_PREVIEW_BY_COLOR[colorId] || GIRDLE_PREVIEW_BY_COLOR.white;
   }
 
-  function setGirdlePreviewColor(previewEl, colorId) {
+  function setGirdlePreview(previewEl, shapeId, colorId) {
     var wrap = previewEl && previewEl.parentElement;
     if (!wrap) return;
     var color = colorId && GIRDLE_PREVIEW_BY_COLOR[colorId] ? colorId : 'white';
+    var shape = shapeId || 'round';
     wrap.setAttribute('data-girdle-color', color);
+    wrap.setAttribute('data-girdle-shape', shape);
     var img = wrap.querySelector('img.cfg-engrave-gem');
     if (!img) return;
-    var src = girdlePreviewSrc(color);
-    if (img.getAttribute('src') !== src) img.setAttribute('src', src);
+    var src = girdleMatrixSrc(shape, color);
+    img.onerror = null;
+    if (img.getAttribute('src') === src) {
+      img.removeAttribute('src');
+    }
+    img.setAttribute('src', src);
   }
 
-  function useRealGirdlePreview(previewEl, colorId) {
+  function setGirdlePreviewColor(previewEl, colorId) {
+    setGirdlePreview(previewEl, wrapShapeId(previewEl), colorId);
+  }
+
+  function wrapShapeId(previewEl) {
+    var wrap = previewEl && previewEl.parentElement;
+    return (wrap && wrap.getAttribute('data-girdle-shape')) || 'round';
+  }
+
+  function useRealGirdlePreview(previewEl, shapeId, colorId) {
     var wrap = previewEl && previewEl.parentElement;
     if (!wrap) return;
     var svg = wrap.querySelector('svg.cfg-engrave-gem');
@@ -491,7 +514,7 @@
       if (svg) svg.replaceWith(img);
       else wrap.insertBefore(img, previewEl);
     }
-    setGirdlePreviewColor(previewEl, colorId || 'white');
+    setGirdlePreview(previewEl, shapeId || 'round', colorId || 'white');
   }
 
   function init(opts) {
@@ -502,8 +525,9 @@
     var previewEl = typeof opts.previewEl === 'string' ? document.getElementById(opts.previewEl) : opts.previewEl;
     var emblemsRoot = typeof opts.emblemsRoot === 'string' ? document.getElementById(opts.emblemsRoot) : opts.emblemsRoot;
     var previewColor = opts.previewColor || 'white';
+    var previewShape = opts.previewShape || 'round';
     var allowChinese = !!opts.allowChinese;
-    useRealGirdlePreview(previewEl, previewColor);
+    useRealGirdlePreview(previewEl, previewShape, previewColor);
     var lastValidHtml = input.innerHTML;
     var rangeStore = { range: null };
 
@@ -704,7 +728,12 @@
     return {
       readable: function () { return readable(input); },
       setValue: function (str) { setFromReadable(input, str || '', max, allowChinese, afterChange); },
-      setPreviewColor: function (colorId) { setGirdlePreviewColor(previewEl, colorId); },
+      setPreviewColor: function (colorId) {
+        setGirdlePreview(previewEl, wrapShapeId(previewEl), colorId);
+      },
+      setPreviewShapeAndColor: function (shapeId, colorId) {
+        setGirdlePreview(previewEl, shapeId || 'round', colorId || 'white');
+      },
       setAllowChinese: function (flag) {
         flag = !!flag;
         if (flag === allowChinese) return;
@@ -724,6 +753,7 @@
     EMBLEMS: EMBLEMS,
     EMBLEM_LABELS: Object.keys(LABEL_TO_NAME).reduce(function (acc, label) { acc[label] = true; return acc; }, {}),
     PREVIEW_BY_COLOR: GIRDLE_PREVIEW_BY_COLOR,
+    matrixSrc: girdleMatrixSrc,
     previewSrc: girdlePreviewSrc,
     init: init,
     readable: readable,

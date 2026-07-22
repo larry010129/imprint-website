@@ -1,0 +1,26 @@
+{
+  "outputDir": "public/images/diamonds/girdle-matrix",
+  "model": "nano_banana_2",
+  "aspect_ratio": "16:9",
+  "referenceMediaId": "a1c8b130-99f1-475d-b11d-e5ecae90686f",
+  "stylePromptSuffix": "Photorealistic 3D CGI render of a single loose diamond gemstone, side profile view angled slightly from above showing crown table frosted matte girdle band and pavilion, sharp geometric facets with realistic internal light refraction and fire, soft diffused studio lighting, subtle soft shadow beneath culet, solid pure white background, luxury jewelry catalog product photography, no setting no ring no necklace, no text no watermark no logo, match reference rendering style exactly.",
+  "shapes": [
+    { "id": "marquise", "cut": "marquise brilliant cut", "silhouette": "marquise navette elongated with sharp pointed ends in side profile view" },
+    { "id": "oval", "cut": "oval brilliant cut", "silhouette": "symmetrical elongated oval brilliant silhouette in side profile view" },
+    { "id": "princess", "cut": "princess square brilliant cut", "silhouette": "square princess cut with sharp corners in side profile view" },
+    { "id": "trilliant", "cut": "trilliant triangular brilliant cut", "silhouette": "triangular trilliant silhouette in side profile view" },
+    { "id": "emerald", "cut": "emerald step cut rectangular", "silhouette": "rectangular emerald step cut with cropped corners in side profile view, hall-of-mirrors step facets" },
+    { "id": "heart", "cut": "heart brilliant cut", "silhouette": "heart shape with cleft notch and point in side profile view" },
+    { "id": "radiant", "cut": "radiant cut rectangular brilliant", "silhouette": "radiant cut rectangular with cropped corners brilliant facets in side profile view, NOT emerald step cut" },
+    { "id": "pear", "cut": "pear teardrop brilliant cut", "silhouette": "pear teardrop with one rounded end and one pointed tip in side profile view, NOT marquise" },
+    { "id": "cushion", "cut": "cushion modified brilliant cut", "silhouette": "cushion pillow shape with softly rounded corners in side profile view" }
+  ],
+  "colors": [
+    { "id": "white", "prompt": "colorless white clear gemstone" },
+    { "id": "yellow", "prompt": "fancy vivid yellow gemstone" },
+    { "id": "blue", "prompt": "fancy vivid blue gemstone" },
+    { "id": "pink", "prompt": "fancy vivid pink gemstone" }
+  ],
+  "skipExisting": ["round-white", "round-yellow", "round-blue", "round-pink"],
+  "total": 36
+}
