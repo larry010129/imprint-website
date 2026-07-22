@@ -1187,8 +1187,8 @@ function updateConfigChips() {
     const stoneBadge = stoneCountBadgeText();
     if (stoneBadge) chips.push(stoneBadge);
   }
-  if (state.category !== 'chain' && state.diamondShape && state.diamondShape !== 'round') {
-    const shape = diamondShapeOptions().find(s => s.id === state.diamondShape);
+  if (state.category !== 'chain' && isNonRoundShape()) {
+    const shape = diamondShapeDisplayMeta();
     if (shape) chips.push(diamondMetaLabel(shape));
   }
   if (state.ringSize) chips.push('#' + state.ringSize);
@@ -1737,6 +1737,41 @@ function diamondMatrixImageUrl(shapeId, colorId) {
   return diamondAssetUrl(diamondMatrixImagePath(shapeId, colorId));
 }
 
+function nonRoundMatrixShapes() {
+  const shapes = diamondOptions.matrixShapes?.length
+    ? diamondOptions.matrixShapes
+    : [
+      { id: 'marquise', labelZh: '馬眼型', labelEn: 'Marquise' },
+      { id: 'oval', labelZh: '橢圓形', labelEn: 'Oval' },
+      { id: 'princess', labelZh: '公主方', labelEn: 'Princess' },
+      { id: 'trilliant', labelZh: '三角形', labelEn: 'Trilliant' },
+      { id: 'emerald', labelZh: '祖母綠形', labelEn: 'Emerald' },
+      { id: 'heart', labelZh: '心形', labelEn: 'Heart' },
+      { id: 'radiant', labelZh: '雷地恩形', labelEn: 'Radiant' },
+      { id: 'pear', labelZh: '梨形', labelEn: 'Pear' },
+      { id: 'cushion', labelZh: '枕形', labelEn: 'Cushion' },
+    ];
+  return shapes.filter((s) => s.id !== 'round');
+}
+
+function isNonRoundShape(shapeId = state.diamondShape) {
+  return !!shapeId && shapeId !== 'round';
+}
+
+function isDiamondShapeChipActive(chipId) {
+  const current = state.diamondShape || 'round';
+  if (chipId === 'round') return current === 'round';
+  if (chipId === 'other') return isNonRoundShape(current);
+  return current === chipId;
+}
+
+function diamondShapeDisplayMeta(shapeId = state.diamondShape) {
+  if (!shapeId || shapeId === 'round') return null;
+  return nonRoundMatrixShapes().find((s) => s.id === shapeId)
+    || diamondShapeOptions().find((s) => s.id === shapeId)
+    || { id: shapeId, labelZh: shapeId, labelEn: shapeId };
+}
+
 function diamondShapeOptions() {
   if (isDiamondOnlyCategory()) {
     if (diamondOptions.matrixShapes?.length) return diamondOptions.matrixShapes;
@@ -1903,9 +1938,9 @@ function renderDiamondShapeButtons() {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.dataset.shape = shape.id;
-    btn.classList.toggle('active', (state.diamondShape || 'round') === shape.id);
+    const isActive = isDiamondShapeChipActive(shape.id);
     if (useMatrix) {
-      btn.className = 'diamond-carousel-item shape-item diamond-shape-btn';
+      btn.className = `diamond-carousel-item shape-item diamond-shape-btn${isActive ? ' active' : ''}`;
       const icon = document.createElement('span');
       icon.className = 'gem-icon';
       const img = document.createElement('img');
@@ -1919,17 +1954,69 @@ function renderDiamondShapeButtons() {
       btn.appendChild(icon);
       btn.appendChild(label);
     } else {
-      btn.className = 'variant-chip diamond-shape-btn';
+      btn.className = `variant-chip diamond-shape-btn${isActive ? ' active' : ''}`;
       btn.textContent = diamondMetaLabel(shape);
-      if (shape.id === 'other') btn.textContent = shopLang() === 'en' ? 'Other (+10%)' : '其它形狀 +10%';
+      if (shape.id === 'round') {
+        btn.textContent = shopLang() === 'en' ? 'Round Brilliant' : '圓形明亮式';
+      } else if (shape.id === 'other') {
+        btn.textContent = shopLang() === 'en' ? 'Other (+10%)' : '其它形狀 +10%';
+      }
     }
     btn.addEventListener('click', () => selectDiamondShape(shape.id));
     row.appendChild(btn);
   });
+  syncDiamondShapeOtherDropdown();
+}
+
+let diamondShapeOtherBound = false;
+
+function bindDiamondShapeOtherSelect() {
+  if (diamondShapeOtherBound) return;
+  const select = document.getElementById('diamond-shape-other-select');
+  if (!select) return;
+  diamondShapeOtherBound = true;
+  select.addEventListener('change', () => {
+    if (select.value) selectDiamondShape(select.value);
+  });
+}
+
+function syncDiamondShapeOtherDropdown() {
+  bindDiamondShapeOtherSelect();
+  const wrap = document.getElementById('diamond-shape-other-wrap');
+  const select = document.getElementById('diamond-shape-other-select');
+  if (!wrap || !select) return;
+
+  if (isDiamondOnlyCategory()) {
+    wrap.hidden = true;
+    return;
+  }
+
+  const options = nonRoundMatrixShapes();
+  const show = isNonRoundShape();
+  wrap.hidden = !show;
+  if (!show) return;
+
+  select.innerHTML = '';
+  options.forEach((shape) => {
+    const opt = document.createElement('option');
+    opt.value = shape.id;
+    opt.textContent = diamondMetaLabel(shape);
+    select.appendChild(opt);
+  });
+  const next = options.some((s) => s.id === state.diamondShape)
+    ? state.diamondShape
+    : (options[0]?.id || '');
+  if (next) select.value = next;
 }
 
 function selectDiamondShape(shapeId) {
-  state.diamondShape = shapeId || 'round';
+  if (shapeId === 'other') {
+    if (!isNonRoundShape()) {
+      state.diamondShape = nonRoundMatrixShapes()[0]?.id || 'oval';
+    }
+  } else {
+    state.diamondShape = shapeId || 'round';
+  }
   if (state.carat && isCaratHiddenForShop(state.carat)) {
     state.carat = null;
   }
@@ -1944,32 +2031,92 @@ function selectDiamondShape(shapeId) {
   updateSummary();
 }
 
-function renderStoneCountButtons() {
-  const row = document.getElementById('stone-count-row');
-  if (!row) return;
-  if (!usesStoneCountPicker()) {
-    row.innerHTML = '';
-    return;
-  }
+function stoneCountMin() {
+  return 1;
+}
+
+function stoneCountMax() {
   const counts = diamondOptions.stoneCounts?.length
-    ? diamondOptions.stoneCounts
-    : [1, 2, 3, 4];
-  row.innerHTML = '';
-  counts.forEach((n) => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'variant-chip stone-count-btn';
-    btn.dataset.count = String(n);
-    btn.textContent = `${n} 顆`;
-    btn.classList.toggle('active', Number(state.stoneCount || 1) === Number(n));
-    btn.addEventListener('click', () => selectStoneCount(Number(n)));
-    row.appendChild(btn);
+    ? diamondOptions.stoneCounts.map(Number)
+    : [2, 3, 4];
+  return Math.max(stoneCountMin(), ...counts);
+}
+
+function normalizeStoneCount(raw) {
+  const n = parseInt(String(raw), 10);
+  if (Number.isNaN(n)) return stoneCountMin();
+  return Math.min(stoneCountMax(), Math.max(stoneCountMin(), n));
+}
+
+let stoneCountStepperBound = false;
+
+function bindStoneCountStepper() {
+  if (stoneCountStepperBound) return;
+  const dec = document.getElementById('stone-count-dec');
+  const inc = document.getElementById('stone-count-inc');
+  const input = document.getElementById('stone-count-input');
+  if (!dec || !inc || !input) return;
+  stoneCountStepperBound = true;
+
+  dec.addEventListener('click', () => selectStoneCount(normalizeStoneCount((state.stoneCount || 1) - 1)));
+  inc.addEventListener('click', () => selectStoneCount(normalizeStoneCount((state.stoneCount || 1) + 1)));
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === '.' || e.key === ',' || e.key === 'e' || e.key === 'E' || e.key === '+' || e.key === '-') {
+      e.preventDefault();
+    }
+  });
+
+  input.addEventListener('input', () => {
+    const digits = input.value.replace(/[^\d]/g, '');
+    if (digits !== input.value) input.value = digits;
+    if (!digits) return;
+    const next = normalizeStoneCount(digits);
+    state.stoneCount = next;
+    input.value = String(next);
+    if (dec) dec.disabled = next <= stoneCountMin();
+    if (inc) inc.disabled = next >= stoneCountMax();
+    updateSummary();
+  });
+
+  input.addEventListener('blur', () => {
+    selectStoneCount(normalizeStoneCount(input.value || stoneCountMin()));
   });
 }
 
+function syncStoneCountStepper() {
+  bindStoneCountStepper();
+  const stepper = document.getElementById('stone-count-stepper');
+  const input = document.getElementById('stone-count-input');
+  const dec = document.getElementById('stone-count-dec');
+  const inc = document.getElementById('stone-count-inc');
+  if (!stepper || !input) return;
+
+  const show = usesStoneCountPicker();
+  stepper.hidden = !show;
+  if (!show) return;
+
+  const min = stoneCountMin();
+  const max = stoneCountMax();
+  const value = normalizeStoneCount(state.stoneCount || min);
+  if (state.stoneCount !== value) state.stoneCount = value;
+
+  input.min = String(min);
+  input.max = String(max);
+  input.step = '1';
+  input.value = String(value);
+
+  if (dec) dec.disabled = value <= min;
+  if (inc) inc.disabled = value >= max;
+}
+
+function renderStoneCountButtons() {
+  syncStoneCountStepper();
+}
+
 function selectStoneCount(count) {
-  state.stoneCount = count;
-  renderStoneCountButtons();
+  state.stoneCount = normalizeStoneCount(count);
+  syncStoneCountStepper();
   updateSummary();
 }
 
@@ -3479,6 +3626,7 @@ document.addEventListener('langchange', () => {
   updateColorStep();
   updateChainOptions();
   renderCatalogTiles();
+  renderDiamondShapeButtons();
   const titleEl = document.getElementById("shop-category-title");
   if (titleEl && state.category) titleEl.textContent = tr('cat_' + state.category);
   updateSummary();

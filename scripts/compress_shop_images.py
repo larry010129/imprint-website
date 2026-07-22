@@ -10,9 +10,10 @@ from pathlib import Path
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1] / "public" / "images" / "shop-product"
+IMAGES_ROOT = Path(__file__).resolve().parents[1] / "public" / "images"
 MAX_BYTES = 700 * 1024
 # ponytail: binary-search PNG resize to fit byte cap; upgrade path = WebP if quality complaints
-EXT = {".png", ".jpg", ".jpeg"}
+EXT = {".png", ".jpg", ".jpeg", ".webp"}
 
 
 def _save_png(im: Image.Image, scale: float) -> bytes:
@@ -32,6 +33,16 @@ def _save_jpeg(im: Image.Image, scale: float, quality: int) -> bytes:
         img = img.resize((max(1, int(w * scale)), max(1, int(h * scale))), Image.LANCZOS)
     buf = io.BytesIO()
     img.save(buf, format="JPEG", optimize=True, quality=quality)
+    return buf.getvalue()
+
+
+def _save_webp(im: Image.Image, scale: float, quality: int) -> bytes:
+    img = im.convert("RGBA") if im.mode not in ("RGB", "RGBA") else im
+    if scale < 1.0:
+        w, h = img.size
+        img = img.resize((max(1, int(w * scale)), max(1, int(h * scale))), Image.LANCZOS)
+    buf = io.BytesIO()
+    img.save(buf, format="WEBP", quality=quality, method=6)
     return buf.getvalue()
 
 
@@ -67,6 +78,29 @@ def compress_file(path: Path, max_bytes: int = MAX_BYTES) -> dict:
         path.write_bytes(best)
         return {"file": str(path), "before": before, "after": len(best)}
 
+    if suffix == ".webp":
+        best = None
+        for quality in (82, 75, 68, 60, 52):
+            lo, hi = 0.5, 1.0
+            best_q: bytes | None = None
+            while hi - lo > 0.005:
+                mid = (lo + hi) / 2
+                data = _save_webp(im, mid, quality)
+                if len(data) <= max_bytes:
+                    best_q = data
+                    lo = mid
+                else:
+                    hi = mid
+            if best_q and (best is None or len(best_q) > len(best)):
+                best = best_q
+            if best and len(best) <= max_bytes:
+                break
+        if best is None or len(best) > max_bytes:
+            raise RuntimeError(f"cannot compress {path} under {max_bytes} bytes")
+        path.write_bytes(best)
+        return {"file": str(path), "before": before, "after": len(best)}
+
+    best: bytes | None = None
     for quality in (85, 78, 72, 65, 58):
         lo, hi = 0.5, 1.0
         best_q: bytes | None = None
@@ -97,7 +131,7 @@ def compress_path(path: Path, max_bytes: int = MAX_BYTES) -> dict:
 def main() -> int:
     p = argparse.ArgumentParser()
     p.add_argument("--max-kb", type=int, default=700)
-    p.add_argument("--root", type=Path, default=ROOT)
+    p.add_argument("--root", type=Path, default=IMAGES_ROOT)
     args = p.parse_args()
     max_bytes = args.max_kb * 1024
 

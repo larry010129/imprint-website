@@ -64,6 +64,15 @@ const FANCY_COLOR_ZH: Record<string, string> = {
 
 const SHAPE_ZH: Record<string, string> = {
   round: "圓形",
+  marquise: "馬眼型",
+  oval: "橢圓形",
+  princess: "公主方",
+  trilliant: "三角形",
+  emerald: "祖母綠形",
+  heart: "心形",
+  radiant: "雷地恩形",
+  pear: "梨形",
+  cushion: "枕形",
 };
 
 export function formatTwdAmount(n?: number | null): string {

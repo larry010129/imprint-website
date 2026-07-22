@@ -23,7 +23,9 @@ const GIRDLE_ENGRAVING_CATEGORIES = new Set(['pendant', 'ring', 'earring', 'brac
 const CHAIN_LENGTH_OPTIONS_CM = new Set([35, 40, 46, 50, 56, 60, 66, 70, 76, 90, 102]);
 const BRACELET_LENGTH_OPTIONS_CM = new Set([15, 16, 17, 18, 19, 20, 21]);
 const VALID_DIAMOND_KINDS = new Set(['white', 'fancy']);
-const VALID_DIAMOND_SHAPES = new Set(['round']); // only round is offered today
+const VALID_DIAMOND_SHAPES = new Set([
+  'round', 'marquise', 'oval', 'princess', 'trilliant', 'emerald', 'heart', 'radiant', 'pear', 'cushion',
+]);
 const VALID_FANCY_COLORS = new Set(['yellow', 'pink', 'blue']);
 const VALID_STONE_COUNTS = new Set([2, 3, 4]);
 const DEFAULT_STONE_COUNT_BY_CATEGORY = { earring: 2, ring: 2, pendant: 2 };

@@ -69,7 +69,7 @@
   };
 
   var CATEGORY_THUMB = {
-    diamond: '/static/images/diamonds/colors/white.png',
+    diamond: '/static/images/diamonds/colors/catalog-cluster.png',
     pendant: 'thumbs/pendant/A.jpg',
     ring: 'thumbs/ring/A.jpg',
     earring: 'thumbs/earring/A.jpg',
