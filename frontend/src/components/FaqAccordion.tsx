@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react"
 import {
   Accordion,
   AccordionContent,
@@ -7,10 +8,12 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   FAQ_CATEGORY_LIST,
-  FAQ_ITEMS_FULL,
   FAQ_ITEMS_TEASER,
+  toFaqItem,
+  type FaqCategory,
   type FaqItem,
 } from "@/data/faq-items"
+import { fetchFaqApi } from "@/lib/content-api"
 
 const LINE_URL = "https://lin.ee/ktVBtmx"
 
@@ -53,25 +56,50 @@ export function FaqAccordion({
   items,
   className = "",
 }: FaqAccordionProps) {
-  const list = items ?? (variant === "teaser" ? FAQ_ITEMS_TEASER : FAQ_ITEMS_FULL)
+  const [categories, setCategories] = useState<FaqCategory[]>(FAQ_CATEGORY_LIST)
+  const [teaser, setTeaser] = useState<FaqItem[]>(FAQ_ITEMS_TEASER)
+
+  useEffect(() => {
+    if (items) return
+    let cancelled = false
+    ;(async () => {
+      const data = await fetchFaqApi()
+      if (cancelled || !data) return
+      setCategories(
+        data.categories.map((cat) => ({
+          id: cat.id,
+          title: cat.title,
+          items: cat.items.map((entry) => toFaqItem(entry)),
+        })),
+      )
+      if (data.teaser.length) {
+        setTeaser(data.teaser.map((entry) => toFaqItem(entry)))
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [items])
+
+  const list = items ?? (variant === "teaser" ? teaser : undefined)
 
   if (variant === "teaser") {
     return (
       <div className="mx-auto w-full max-w-xl">
-        <FaqAccordionPanel list={list} />
+        <FaqAccordionPanel list={list || teaser} />
       </div>
     )
   }
 
-  const defaultTab = FAQ_CATEGORY_LIST[0]?.id ?? "about"
+  const defaultTab = categories[0]?.id ?? "about"
 
   return (
     <section className={`py-16 md:py-24 ${className}`.trim()}>
       <div className="mx-auto max-w-5xl px-4 md:px-6">
         <div className="mx-auto max-w-xl">
-          <Tabs defaultValue={defaultTab}>
+          <Tabs defaultValue={defaultTab} key={defaultTab}>
             <TabsList className="h-auto w-full flex-wrap justify-start gap-2 rounded-none border-b border-border bg-transparent px-0 py-1 text-foreground">
-              {FAQ_CATEGORY_LIST.map((cat) => (
+              {categories.map((cat) => (
                 <TabsTrigger
                   key={cat.id}
                   value={cat.id}
@@ -82,7 +110,7 @@ export function FaqAccordion({
               ))}
             </TabsList>
 
-            {FAQ_CATEGORY_LIST.map((cat) => (
+            {categories.map((cat) => (
               <TabsContent key={cat.id} value={cat.id} className="mt-6">
                 <FaqAccordionPanel list={cat.items} />
               </TabsContent>

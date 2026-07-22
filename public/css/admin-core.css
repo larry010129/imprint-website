@@ -244,6 +244,10 @@ button:not(.btn-sm){border:none;background:none;}
 .ap-form-error{color:#B5523D;font-size:13px;margin-bottom:12px;}
 .ap-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;}
 .ap-form-grid label{display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:var(--ink-soft);}
+.ap-form-grid label.ap-field--full{grid-column:1 / -1;}
+.ap-form-grid label.ap-field--check{flex-direction:row;align-items:center;gap:8px;margin-top:8px;}
+.ac-code-row{display:flex;gap:8px;align-items:center;}
+.ac-code-row input{flex:1;min-width:0;}
 .ap-form-grid input,.ap-form-grid select{
   font-family:inherit;font-size:13.5px;padding:8px 10px;border:1px solid #DDD5CC;border-radius:6px;color:var(--ink);
 }
@@ -259,6 +263,9 @@ button:not(.btn-sm){border:none;background:none;}
   box-shadow:0 0 0 3px rgba(108,155,209,.22);
 }
 .ap-field-wide{grid-column:1/-1;}
+.ap-field-row{display:flex;gap:8px;align-items:center;}
+.ap-field-row input{flex:1;min-width:0;}
+.adx-thumb{display:block;width:56px;height:36px;object-fit:cover;border-radius:4px;background:#eee;}
 .ap-checkbox{flex-direction:row!important;align-items:center;gap:8px;}
 .ap-switch-wrap{
   grid-column:1/-1;justify-self:start;margin-top:4px;
@@ -467,6 +474,20 @@ tr:last-child td{border-bottom:none;}
 tr:hover td{background:#FDFCFA;}
 .name{font-weight:500;}
 .sub{font-size:11.5px;color:var(--ink-faint);display:block;}
+.lead-detail{display:flex;flex-direction:column;gap:10px;margin-top:8px;}
+.lead-detail__row{display:grid;grid-template-columns:88px 1fr;gap:8px;align-items:start;font-size:13.5px;}
+.lead-detail__label{color:var(--ink-soft);font-size:12.5px;}
+.lead-detail__value{color:var(--ink);word-break:break-word;}
+.lead-detail__block{margin-top:4px;}
+.lead-detail__message{
+  margin:8px 0 0;padding:12px 14px;border-radius:8px;background:#f7f4f1;
+  color:var(--ink);font-size:13.5px;line-height:1.7;white-space:pre-wrap;word-break:break-word;
+}
+.lead-detail-modal{max-width:480px;}
+.lead-email-link{color:var(--ink);text-decoration:underline;text-underline-offset:2px;word-break:break-all;}
+.lead-email-link:hover{color:#4A7FB5;}
+#panel-leads .card{overflow-x:auto;}
+#panel-leads table{min-width:960px;}
 
 /* 狀態籤 */
 .chip{

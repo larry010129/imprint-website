@@ -139,6 +139,15 @@
     if (o.chain_total_twd != null && Number(o.chain_total_twd) > 0) {
       lines += specItem('搭配鏈條 (NT$)', formatMoney(o.chain_total_twd));
     }
+    var discount = Number(o.discount_amount || 0);
+    var subtotal = o.subtotal_before_discount != null ? Number(o.subtotal_before_discount) : null;
+    if (discount > 0) {
+      if (subtotal != null) {
+        lines += specItem('小計 (NT$)', formatMoney(subtotal));
+      }
+      var couponLabel = o.coupon_code ? '優惠折抵 (' + o.coupon_code + ')' : '優惠折抵';
+      lines += specItem(couponLabel + ' (NT$)', '−' + formatMoney(discount));
+    }
     lines += specItem('總計 (NT$)', formatMoney(o.total_price));
     return lines;
   }

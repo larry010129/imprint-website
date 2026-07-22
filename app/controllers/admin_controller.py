@@ -173,11 +173,27 @@ async def dashboard_export(
 @router.get("/leads")
 async def leads_get(request: Request) -> dict:
     _require_admin(request)
+
+    def _ser_lead(row: dict) -> dict:
+        out = dict(row)
+        if out.get("id") is not None:
+            out["id"] = str(out["id"])
+        created = out.get("created_at")
+        if hasattr(created, "isoformat"):
+            out["created_at"] = created.isoformat()
+        price = out.get("estimated_price")
+        if price is not None:
+            try:
+                out["estimated_price"] = float(price)
+            except (TypeError, ValueError):
+                pass
+        return out
+
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute("select * from contact_messages order by created_at desc limit 50")
-        messages = cur.fetchall()
+        messages = [_ser_lead(r) for r in cur.fetchall()]
         cur.execute("select * from quote_requests order by created_at desc limit 50")
-        quotes = cur.fetchall()
+        quotes = [_ser_lead(r) for r in cur.fetchall()]
     return {"messages": messages, "quotes": quotes}
 
 
@@ -408,6 +424,8 @@ async def orders_bulk_update(request: Request) -> JSONResponse:
 
 
 _PRODUCT_UPLOAD_DIR = settings.static_dir / "uploads" / "products"
+_BANNER_UPLOAD_DIR = settings.static_dir / "uploads" / "banners"
+_TESTIMONIAL_UPLOAD_DIR = settings.static_dir / "uploads" / "testimonials"
 _ALLOWED_IMAGE_EXT = {".png", ".jpg", ".jpeg", ".webp"}
 _MAX_IMAGE_BYTES = 5 * 1024 * 1024
 
@@ -913,4 +931,820 @@ async def account_action(request: Request) -> JSONResponse:
         f"account_{action}",
         {"userId": str(account_id), "email": user["email"]},
     )
+    return JSONResponse(content={"ok": True})
+
+
+def _serialize_coupon(row: dict) -> dict:
+    out = dict(row)
+    for key in ("id", "created_by_id"):
+        if out.get(key) is not None:
+            out[key] = str(out[key])
+    for key in ("created_at", "updated_at", "starts_at", "expires_at"):
+        val = out.get(key)
+        if isinstance(val, datetime):
+            out[key] = val.isoformat()
+    for key in ("discount_value", "min_order_amount"):
+        if out.get(key) is not None:
+            out[key] = float(out[key])
+    for key in ("max_uses", "max_uses_per_user", "used_count"):
+        if out.get(key) is not None:
+            out[key] = int(out[key])
+    if "is_active" in out:
+        out["is_active"] = bool(out["is_active"])
+    return out
+
+
+def _parse_optional_int(value, *, field: str, min_value: int = 1):
+    if value in (None, ""):
+        return None, None
+    try:
+        n = int(value)
+    except (TypeError, ValueError):
+        return None, JSONResponse(status_code=400, content={"error": f"{field}必須為正整數"})
+    if n < min_value:
+        return None, JSONResponse(status_code=400, content={"error": f"{field}至少為 {min_value}"})
+    return n, None
+
+
+def _parse_optional_amount(value, *, field: str):
+    if value in (None, ""):
+        return None, None
+    try:
+        n = float(value)
+    except (TypeError, ValueError):
+        return None, JSONResponse(status_code=400, content={"error": f"{field}必須為數字"})
+    if n < 0:
+        return None, JSONResponse(status_code=400, content={"error": f"{field}不可為負數"})
+    return n, None
+
+
+def _parse_optional_datetime(value, *, field: str):
+    if value in (None, ""):
+        return None, None
+    raw = str(value).strip()
+    try:
+        if len(raw) == 10 and raw[4] == "-" and raw[7] == "-":
+            dt = datetime.fromisoformat(raw).replace(tzinfo=timezone.utc)
+        else:
+            dt = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None, JSONResponse(status_code=400, content={"error": f"{field}格式無效"})
+    return dt, None
+
+
+def _parse_coupon_fields(body: dict):
+    """Validate coupon create/update body. Returns (fields, error_response)."""
+    discount_type = str(body.get("discountType") or body.get("discount_type") or "").strip().lower()
+    if discount_type not in ("percent", "fixed"):
+        return None, JSONResponse(status_code=400, content={"error": "請選擇折扣類型：百分比或固定金額"})
+
+    try:
+        discount_value = float(body.get("discountValue") or body.get("discount_value") or 0)
+    except (TypeError, ValueError):
+        return None, JSONResponse(status_code=400, content={"error": "折扣數值無效"})
+    if discount_type == "percent":
+        if discount_value < 1 or discount_value > 100:
+            return None, JSONResponse(status_code=400, content={"error": "百分比須介於 1–100"})
+    elif discount_value < 1:
+        return None, JSONResponse(status_code=400, content={"error": "固定金額至少 NT$1"})
+
+    label = str(body.get("label") or "").strip() or None
+    min_order, err = _parse_optional_amount(
+        body.get("minOrderAmount") or body.get("min_order_amount"), field="最低消費"
+    )
+    if err:
+        return None, err
+    max_uses, err = _parse_optional_int(body.get("maxUses") or body.get("max_uses"), field="總使用上限")
+    if err:
+        return None, err
+    max_per_user, err = _parse_optional_int(
+        body.get("maxUsesPerUser") or body.get("max_uses_per_user"), field="每人上限"
+    )
+    if err:
+        return None, err
+    starts_at, err = _parse_optional_datetime(body.get("startsAt") or body.get("starts_at"), field="開始時間")
+    if err:
+        return None, err
+    expires_at, err = _parse_optional_datetime(body.get("expiresAt") or body.get("expires_at"), field="到期時間")
+    if err:
+        return None, err
+    if starts_at and expires_at and expires_at <= starts_at:
+        return None, JSONResponse(status_code=400, content={"error": "到期時間須晚於開始時間"})
+
+    is_active = body.get("isActive")
+    if is_active is None:
+        is_active = body.get("is_active", True)
+    is_active = bool(is_active)
+
+    return {
+        "label": label,
+        "discount_type": discount_type,
+        "discount_value": discount_value,
+        "min_order_amount": min_order,
+        "max_uses": max_uses,
+        "max_uses_per_user": max_per_user,
+        "starts_at": starts_at,
+        "expires_at": expires_at,
+        "is_active": is_active,
+    }, None
+
+
+@router.get("/coupons")
+async def coupons_list(request: Request) -> dict:
+    _require_admin(request)
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute("select * from coupons order by created_at desc")
+        coupons = [_serialize_coupon(row) for row in cur.fetchall()]
+    return {"coupons": coupons}
+
+
+@router.post("/coupons")
+async def coupons_create(request: Request) -> JSONResponse:
+    user_id = _require_admin(request)
+    body = await request.json()
+    if not isinstance(body, dict):
+        body = {}
+
+    from app.coupons import generate_coupon_code, normalize_code
+
+    code_raw = body.get("code")
+    if body.get("generate") or not str(code_raw or "").strip():
+        code = generate_coupon_code()
+    else:
+        code = normalize_code(str(code_raw))
+    if not code or len(code) < 3:
+        return JSONResponse(status_code=400, content={"error": "優惠碼至少 3 個字元"})
+    if len(code) > 32:
+        return JSONResponse(status_code=400, content={"error": "優惠碼過長"})
+
+    fields, err = _parse_coupon_fields(body)
+    if err:
+        return err
+
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute("select id from coupons where code = %s", (code,))
+        if cur.fetchone():
+            return JSONResponse(status_code=400, content={"error": "優惠碼已存在"})
+        cur.execute(
+            """
+            insert into coupons (
+              code, label, discount_type, discount_value,
+              min_order_amount, max_uses, max_uses_per_user,
+              is_active, starts_at, expires_at, created_by_id
+            ) values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            returning *
+            """,
+            (
+                code,
+                fields["label"],
+                fields["discount_type"],
+                fields["discount_value"],
+                fields["min_order_amount"],
+                fields["max_uses"],
+                fields["max_uses_per_user"],
+                fields["is_active"],
+                fields["starts_at"],
+                fields["expires_at"],
+                user_id,
+            ),
+        )
+        coupon = _serialize_coupon(cur.fetchone())
+
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute("select email from users where id = %s", (user_id,))
+        actor = cur.fetchone()
+    log_admin_action(
+        actor["email"] if actor else None,
+        "coupon_created",
+        {
+            "code": code,
+            "discountType": fields["discount_type"],
+            "discountValue": fields["discount_value"],
+        },
+    )
+    return JSONResponse(content={"coupon": coupon})
+
+
+@router.post("/coupon-update")
+async def coupons_update(request: Request) -> JSONResponse:
+    user_id = _require_admin(request)
+    body = await request.json()
+    if not isinstance(body, dict):
+        body = {}
+
+    from app.coupons import normalize_code
+
+    coupon_id = body.get("id")
+    if not coupon_id:
+        return JSONResponse(status_code=400, content={"error": "缺少優惠券 id"})
+
+    code = normalize_code(str(body.get("code") or ""))
+    if not code or len(code) < 3:
+        return JSONResponse(status_code=400, content={"error": "優惠碼至少 3 個字元"})
+    if len(code) > 32:
+        return JSONResponse(status_code=400, content={"error": "優惠碼過長"})
+
+    fields, err = _parse_coupon_fields(body)
+    if err:
+        return err
+
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute("select id from coupons where code = %s and id <> %s", (code, coupon_id))
+        if cur.fetchone():
+            return JSONResponse(status_code=400, content={"error": "優惠碼已存在"})
+        cur.execute(
+            """
+            update coupons set
+              code = %s,
+              label = %s,
+              discount_type = %s,
+              discount_value = %s,
+              min_order_amount = %s,
+              max_uses = %s,
+              max_uses_per_user = %s,
+              is_active = %s,
+              starts_at = %s,
+              expires_at = %s,
+              updated_at = now()
+            where id = %s
+            returning *
+            """,
+            (
+                code,
+                fields["label"],
+                fields["discount_type"],
+                fields["discount_value"],
+                fields["min_order_amount"],
+                fields["max_uses"],
+                fields["max_uses_per_user"],
+                fields["is_active"],
+                fields["starts_at"],
+                fields["expires_at"],
+                coupon_id,
+            ),
+        )
+        row = cur.fetchone()
+        if not row:
+            return JSONResponse(status_code=404, content={"error": "coupon not found"})
+        coupon = _serialize_coupon(row)
+
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute("select email from users where id = %s", (user_id,))
+        actor = cur.fetchone()
+    log_admin_action(
+        actor["email"] if actor else None,
+        "coupon_updated",
+        {"couponId": str(coupon_id), "code": code},
+    )
+    return JSONResponse(content={"coupon": coupon})
+
+
+@router.post("/coupon-action")
+async def coupon_action(request: Request) -> JSONResponse:
+    user_id = _require_admin(request)
+    body = await request.json()
+    coupon_id = body.get("id")
+    action = body.get("action")
+
+    if not coupon_id or action not in {"deactivate", "activate", "delete"}:
+        return JSONResponse(status_code=400, content={"error": "invalid id/action"})
+
+    with get_connection() as conn, conn.cursor() as cur:
+        if action == "deactivate":
+            cur.execute(
+                "update coupons set is_active = false, updated_at = now() where id = %s returning code",
+                (coupon_id,),
+            )
+        elif action == "activate":
+            cur.execute(
+                "update coupons set is_active = true, updated_at = now() where id = %s returning code",
+                (coupon_id,),
+            )
+        else:
+            cur.execute("delete from coupons where id = %s returning code", (coupon_id,))
+        row = cur.fetchone()
+        if not row:
+            return JSONResponse(status_code=404, content={"error": "coupon not found"})
+
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute("select email from users where id = %s", (user_id,))
+        actor = cur.fetchone()
+    log_admin_action(
+        actor["email"] if actor else None,
+        f"coupon_{action}",
+        {"couponId": str(coupon_id), "code": row["code"]},
+    )
+    return JSONResponse(content={"ok": True})
+
+
+# ── Content CMS: testimonials + FAQ ──────────────────────────────────────────
+
+
+@router.get("/testimonials")
+async def admin_testimonials_list(request: Request) -> dict:
+    _require_admin(request)
+    from app.content import fetch_all_testimonials
+
+    with get_connection() as conn, conn.cursor() as cur:
+        return {"testimonials": fetch_all_testimonials(cur)}
+
+
+@router.post("/testimonials")
+async def admin_testimonials_create(request: Request) -> JSONResponse:
+    user_id = _require_admin(request)
+    body = await request.json()
+    if not isinstance(body, dict):
+        body = {}
+
+    from app.content import serialize_testimonial
+
+    name = str(body.get("name") or "").strip()
+    text = str(body.get("text") or "").strip()
+    if not name or not text:
+        return JSONResponse(status_code=400, content={"error": "請填寫姓名與見證內容"})
+    role = str(body.get("role") or "").strip()
+    category = str(body.get("category") or "").strip()
+    city = str(body.get("city") or "").strip()
+    try:
+        rating = int(body.get("rating") or 5)
+    except (TypeError, ValueError):
+        return JSONResponse(status_code=400, content={"error": "評分無效"})
+    if rating < 1 or rating > 5:
+        return JSONResponse(status_code=400, content={"error": "評分須為 1–5"})
+    try:
+        sort_order = int(body.get("sortOrder") if body.get("sortOrder") not in (None, "") else 0)
+    except (TypeError, ValueError):
+        return JSONResponse(status_code=400, content={"error": "排序無效"})
+    is_published = bool(body.get("isPublished") if body.get("isPublished") is not None else True)
+    image_url = str(body.get("imageUrl") or body.get("image_url") or "").strip()
+
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            insert into testimonials (
+              name, role, category, city, text, image_url, rating, sort_order, is_published
+            ) values (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            returning *
+            """,
+            (name, role, category, city, text, image_url, rating, sort_order, is_published),
+        )
+        row = serialize_testimonial(cur.fetchone())
+
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute("select email from users where id = %s", (user_id,))
+        actor = cur.fetchone()
+    log_admin_action(actor["email"] if actor else None, "testimonial_created", {"id": row["id"]})
+    return JSONResponse(content={"testimonial": row})
+
+
+@router.post("/testimonial-upload")
+async def testimonial_upload(request: Request, file: UploadFile = File(...)) -> JSONResponse:
+    _require_admin(request)
+    if not file.filename:
+        return JSONResponse(status_code=400, content={"error": "missing file"})
+    ext = Path(file.filename).suffix.lower()
+    if ext not in _ALLOWED_IMAGE_EXT:
+        return JSONResponse(status_code=400, content={"error": "僅支援 PNG / JPG / JPEG / WEBP"})
+    data = await file.read()
+    if not data:
+        return JSONResponse(status_code=400, content={"error": "empty file"})
+    if len(data) > _MAX_IMAGE_BYTES:
+        return JSONResponse(status_code=400, content={"error": "圖片需小於 5MB"})
+    _TESTIMONIAL_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    name = f"{uuid.uuid4().hex}{ext}"
+    (_TESTIMONIAL_UPLOAD_DIR / name).write_bytes(data)
+    return JSONResponse(content={"url": f"/static/uploads/testimonials/{name}"})
+
+
+@router.post("/testimonial-update")
+async def admin_testimonials_update(request: Request) -> JSONResponse:
+    user_id = _require_admin(request)
+    body = await request.json()
+    if not isinstance(body, dict):
+        body = {}
+
+    from app.content import serialize_testimonial
+
+    tid = body.get("id")
+    if not tid:
+        return JSONResponse(status_code=400, content={"error": "缺少 id"})
+    name = str(body.get("name") or "").strip()
+    text = str(body.get("text") or "").strip()
+    if not name or not text:
+        return JSONResponse(status_code=400, content={"error": "請填寫姓名與見證內容"})
+    role = str(body.get("role") or "").strip()
+    category = str(body.get("category") or "").strip()
+    city = str(body.get("city") or "").strip()
+    image_url = str(body.get("imageUrl") or body.get("image_url") or "").strip()
+    try:
+        rating = int(body.get("rating") or 5)
+    except (TypeError, ValueError):
+        return JSONResponse(status_code=400, content={"error": "評分無效"})
+    if rating < 1 or rating > 5:
+        return JSONResponse(status_code=400, content={"error": "評分須為 1–5"})
+    try:
+        sort_order = int(body.get("sortOrder") if body.get("sortOrder") not in (None, "") else 0)
+    except (TypeError, ValueError):
+        return JSONResponse(status_code=400, content={"error": "排序無效"})
+    is_published = bool(body.get("isPublished") if body.get("isPublished") is not None else True)
+
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            update testimonials set
+              name = %s, role = %s, category = %s, city = %s, text = %s,
+              image_url = %s, rating = %s, sort_order = %s, is_published = %s, updated_at = now()
+            where id = %s
+            returning *
+            """,
+            (name, role, category, city, text, image_url, rating, sort_order, is_published, tid),
+        )
+        row = cur.fetchone()
+        if not row:
+            return JSONResponse(status_code=404, content={"error": "找不到見證"})
+        out = serialize_testimonial(row)
+
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute("select email from users where id = %s", (user_id,))
+        actor = cur.fetchone()
+    log_admin_action(actor["email"] if actor else None, "testimonial_updated", {"id": str(tid)})
+    return JSONResponse(content={"testimonial": out})
+
+
+@router.post("/testimonial-action")
+async def admin_testimonial_action(request: Request) -> JSONResponse:
+    user_id = _require_admin(request)
+    body = await request.json()
+    tid = body.get("id")
+    action = body.get("action")
+    if not tid or action not in {"publish", "unpublish", "delete"}:
+        return JSONResponse(status_code=400, content={"error": "invalid id/action"})
+
+    with get_connection() as conn, conn.cursor() as cur:
+        if action == "publish":
+            cur.execute(
+                "update testimonials set is_published = true, updated_at = now() where id = %s returning id",
+                (tid,),
+            )
+        elif action == "unpublish":
+            cur.execute(
+                "update testimonials set is_published = false, updated_at = now() where id = %s returning id",
+                (tid,),
+            )
+        else:
+            cur.execute("delete from testimonials where id = %s returning id", (tid,))
+        row = cur.fetchone()
+        if not row:
+            return JSONResponse(status_code=404, content={"error": "找不到見證"})
+
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute("select email from users where id = %s", (user_id,))
+        actor = cur.fetchone()
+    log_admin_action(
+        actor["email"] if actor else None,
+        f"testimonial_{action}",
+        {"id": str(tid)},
+    )
+    return JSONResponse(content={"ok": True})
+
+
+@router.get("/faq-categories")
+async def admin_faq_categories(request: Request) -> dict:
+    _require_admin(request)
+    from app.content import serialize_faq_category
+
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute("select * from faq_categories order by sort_order asc, id asc")
+        return {"categories": [serialize_faq_category(r) for r in cur.fetchall()]}
+
+
+@router.get("/faq-items")
+async def admin_faq_items_list(request: Request) -> dict:
+    _require_admin(request)
+    from app.content import fetch_faq_admin
+
+    with get_connection() as conn, conn.cursor() as cur:
+        return fetch_faq_admin(cur)
+
+
+@router.post("/faq-items")
+async def admin_faq_items_create(request: Request) -> JSONResponse:
+    user_id = _require_admin(request)
+    body = await request.json()
+    if not isinstance(body, dict):
+        body = {}
+
+    from app.content import new_faq_id, serialize_faq_item
+
+    category_id = str(body.get("categoryId") or body.get("category_id") or "").strip()
+    question = str(body.get("question") or "").strip()
+    answer = str(body.get("answer") or "").strip()
+    if not category_id or not question or not answer:
+        return JSONResponse(status_code=400, content={"error": "請填寫分類、問題與回答"})
+    item_id = str(body.get("id") or "").strip() or new_faq_id()
+    try:
+        sort_order = int(body.get("sortOrder") if body.get("sortOrder") not in (None, "") else 0)
+    except (TypeError, ValueError):
+        return JSONResponse(status_code=400, content={"error": "排序無效"})
+    is_published = bool(body.get("isPublished") if body.get("isPublished") is not None else True)
+    show_in_teaser = bool(body.get("showInTeaser") or body.get("show_in_teaser"))
+
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute("select id from faq_categories where id = %s", (category_id,))
+        if not cur.fetchone():
+            return JSONResponse(status_code=400, content={"error": "分類不存在"})
+        cur.execute("select id from faq_items where id = %s", (item_id,))
+        if cur.fetchone():
+            return JSONResponse(status_code=400, content={"error": "FAQ id 已存在"})
+        cur.execute(
+            """
+            insert into faq_items (
+              id, category_id, question, answer, sort_order, is_published, show_in_teaser
+            ) values (%s, %s, %s, %s, %s, %s, %s)
+            returning *
+            """,
+            (item_id, category_id, question, answer, sort_order, is_published, show_in_teaser),
+        )
+        row = serialize_faq_item(cur.fetchone())
+
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute("select email from users where id = %s", (user_id,))
+        actor = cur.fetchone()
+    log_admin_action(actor["email"] if actor else None, "faq_created", {"id": item_id})
+    return JSONResponse(content={"item": row})
+
+
+@router.post("/faq-update")
+async def admin_faq_update(request: Request) -> JSONResponse:
+    user_id = _require_admin(request)
+    body = await request.json()
+    if not isinstance(body, dict):
+        body = {}
+
+    from app.content import serialize_faq_item
+
+    item_id = str(body.get("id") or "").strip()
+    if not item_id:
+        return JSONResponse(status_code=400, content={"error": "缺少 id"})
+    category_id = str(body.get("categoryId") or body.get("category_id") or "").strip()
+    question = str(body.get("question") or "").strip()
+    answer = str(body.get("answer") or "").strip()
+    if not category_id or not question or not answer:
+        return JSONResponse(status_code=400, content={"error": "請填寫分類、問題與回答"})
+    try:
+        sort_order = int(body.get("sortOrder") if body.get("sortOrder") not in (None, "") else 0)
+    except (TypeError, ValueError):
+        return JSONResponse(status_code=400, content={"error": "排序無效"})
+    is_published = bool(body.get("isPublished") if body.get("isPublished") is not None else True)
+    show_in_teaser = bool(body.get("showInTeaser") or body.get("show_in_teaser"))
+
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute("select id from faq_categories where id = %s", (category_id,))
+        if not cur.fetchone():
+            return JSONResponse(status_code=400, content={"error": "分類不存在"})
+        cur.execute(
+            """
+            update faq_items set
+              category_id = %s, question = %s, answer = %s, sort_order = %s,
+              is_published = %s, show_in_teaser = %s, updated_at = now()
+            where id = %s
+            returning *
+            """,
+            (category_id, question, answer, sort_order, is_published, show_in_teaser, item_id),
+        )
+        row = cur.fetchone()
+        if not row:
+            return JSONResponse(status_code=404, content={"error": "找不到 FAQ"})
+        out = serialize_faq_item(row)
+
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute("select email from users where id = %s", (user_id,))
+        actor = cur.fetchone()
+    log_admin_action(actor["email"] if actor else None, "faq_updated", {"id": item_id})
+    return JSONResponse(content={"item": out})
+
+
+@router.post("/faq-action")
+async def admin_faq_action(request: Request) -> JSONResponse:
+    user_id = _require_admin(request)
+    body = await request.json()
+    item_id = body.get("id")
+    action = body.get("action")
+    if not item_id or action not in {"publish", "unpublish", "delete"}:
+        return JSONResponse(status_code=400, content={"error": "invalid id/action"})
+
+    with get_connection() as conn, conn.cursor() as cur:
+        if action == "publish":
+            cur.execute(
+                "update faq_items set is_published = true, updated_at = now() where id = %s returning id",
+                (item_id,),
+            )
+        elif action == "unpublish":
+            cur.execute(
+                "update faq_items set is_published = false, updated_at = now() where id = %s returning id",
+                (item_id,),
+            )
+        else:
+            cur.execute("delete from faq_items where id = %s returning id", (item_id,))
+        row = cur.fetchone()
+        if not row:
+            return JSONResponse(status_code=404, content={"error": "找不到 FAQ"})
+
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute("select email from users where id = %s", (user_id,))
+        actor = cur.fetchone()
+    log_admin_action(actor["email"] if actor else None, f"faq_{action}", {"id": str(item_id)})
+    return JSONResponse(content={"ok": True})
+
+
+# ── Home banners ─────────────────────────────────────────────────────────────
+
+
+def _parse_banner_fields(body: dict):
+    title = str(body.get("title") or "").strip()
+    image_url = str(body.get("imageUrl") or body.get("image_url") or "").strip()
+    if not title or not image_url:
+        return None, JSONResponse(status_code=400, content={"error": "請填寫標題與圖片"})
+    try:
+        sort_order = int(body.get("sortOrder") if body.get("sortOrder") not in (None, "") else 0)
+    except (TypeError, ValueError):
+        return None, JSONResponse(status_code=400, content={"error": "排序無效"})
+    tone = str(body.get("tone") or "warm").strip() or "warm"
+    if tone not in {"warm", "light", "soft"}:
+        tone = "warm"
+    is_published = bool(body.get("isPublished") if body.get("isPublished") is not None else True)
+    return {
+        "eyebrow": str(body.get("eyebrow") or "").strip(),
+        "title": title,
+        "lead": str(body.get("lead") or "").strip(),
+        "image_url": image_url,
+        "image_webp": str(body.get("imageWebp") or body.get("image_webp") or "").strip() or None,
+        "image_alt": str(body.get("imageAlt") or body.get("image_alt") or "").strip(),
+        "cta_primary_label": str(body.get("ctaPrimaryLabel") or body.get("cta_primary_label") or "").strip(),
+        "cta_primary_href": str(body.get("ctaPrimaryHref") or body.get("cta_primary_href") or "").strip(),
+        "cta_secondary_label": str(body.get("ctaSecondaryLabel") or body.get("cta_secondary_label") or "").strip(),
+        "cta_secondary_href": str(body.get("ctaSecondaryHref") or body.get("cta_secondary_href") or "").strip(),
+        "tone": tone,
+        "sort_order": sort_order,
+        "is_published": is_published,
+    }, None
+
+
+@router.get("/banners")
+async def admin_banners_list(request: Request) -> dict:
+    _require_admin(request)
+    from app.content import fetch_all_banners
+
+    with get_connection() as conn, conn.cursor() as cur:
+        return {"banners": fetch_all_banners(cur)}
+
+
+@router.post("/banner-upload")
+async def banner_upload(request: Request, file: UploadFile = File(...)) -> JSONResponse:
+    _require_admin(request)
+    if not file.filename:
+        return JSONResponse(status_code=400, content={"error": "missing file"})
+    ext = Path(file.filename).suffix.lower()
+    if ext not in _ALLOWED_IMAGE_EXT:
+        return JSONResponse(status_code=400, content={"error": "僅支援 PNG / JPG / JPEG / WEBP"})
+    data = await file.read()
+    if not data:
+        return JSONResponse(status_code=400, content={"error": "empty file"})
+    if len(data) > _MAX_IMAGE_BYTES:
+        return JSONResponse(status_code=400, content={"error": "圖片需小於 5MB"})
+    _BANNER_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    name = f"{uuid.uuid4().hex}{ext}"
+    (_BANNER_UPLOAD_DIR / name).write_bytes(data)
+    return JSONResponse(content={"url": f"/static/uploads/banners/{name}"})
+
+
+@router.post("/banners")
+async def admin_banners_create(request: Request) -> JSONResponse:
+    user_id = _require_admin(request)
+    body = await request.json()
+    if not isinstance(body, dict):
+        body = {}
+    from app.content import serialize_banner
+
+    fields, err = _parse_banner_fields(body)
+    if err:
+        return err
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            insert into home_banners (
+              eyebrow, title, lead, image_url, image_webp, image_alt,
+              cta_primary_label, cta_primary_href,
+              cta_secondary_label, cta_secondary_href,
+              tone, sort_order, is_published
+            ) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            returning *
+            """,
+            (
+                fields["eyebrow"],
+                fields["title"],
+                fields["lead"],
+                fields["image_url"],
+                fields["image_webp"],
+                fields["image_alt"],
+                fields["cta_primary_label"],
+                fields["cta_primary_href"],
+                fields["cta_secondary_label"],
+                fields["cta_secondary_href"],
+                fields["tone"],
+                fields["sort_order"],
+                fields["is_published"],
+            ),
+        )
+        row = serialize_banner(cur.fetchone())
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute("select email from users where id = %s", (user_id,))
+        actor = cur.fetchone()
+    log_admin_action(actor["email"] if actor else None, "banner_created", {"id": row["id"]})
+    return JSONResponse(content={"banner": row})
+
+
+@router.post("/banner-update")
+async def admin_banners_update(request: Request) -> JSONResponse:
+    user_id = _require_admin(request)
+    body = await request.json()
+    if not isinstance(body, dict):
+        body = {}
+    from app.content import serialize_banner
+
+    bid = body.get("id")
+    if not bid:
+        return JSONResponse(status_code=400, content={"error": "缺少 id"})
+    fields, err = _parse_banner_fields(body)
+    if err:
+        return err
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            update home_banners set
+              eyebrow = %s, title = %s, lead = %s, image_url = %s, image_webp = %s,
+              image_alt = %s, cta_primary_label = %s, cta_primary_href = %s,
+              cta_secondary_label = %s, cta_secondary_href = %s,
+              tone = %s, sort_order = %s, is_published = %s, updated_at = now()
+            where id = %s
+            returning *
+            """,
+            (
+                fields["eyebrow"],
+                fields["title"],
+                fields["lead"],
+                fields["image_url"],
+                fields["image_webp"],
+                fields["image_alt"],
+                fields["cta_primary_label"],
+                fields["cta_primary_href"],
+                fields["cta_secondary_label"],
+                fields["cta_secondary_href"],
+                fields["tone"],
+                fields["sort_order"],
+                fields["is_published"],
+                bid,
+            ),
+        )
+        row = cur.fetchone()
+        if not row:
+            return JSONResponse(status_code=404, content={"error": "找不到 banner"})
+        out = serialize_banner(row)
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute("select email from users where id = %s", (user_id,))
+        actor = cur.fetchone()
+    log_admin_action(actor["email"] if actor else None, "banner_updated", {"id": str(bid)})
+    return JSONResponse(content={"banner": out})
+
+
+@router.post("/banner-action")
+async def admin_banner_action(request: Request) -> JSONResponse:
+    user_id = _require_admin(request)
+    body = await request.json()
+    bid = body.get("id")
+    action = body.get("action")
+    if not bid or action not in {"publish", "unpublish", "delete"}:
+        return JSONResponse(status_code=400, content={"error": "invalid id/action"})
+    with get_connection() as conn, conn.cursor() as cur:
+        if action == "publish":
+            cur.execute(
+                "update home_banners set is_published = true, updated_at = now() where id = %s returning id",
+                (bid,),
+            )
+        elif action == "unpublish":
+            cur.execute(
+                "update home_banners set is_published = false, updated_at = now() where id = %s returning id",
+                (bid,),
+            )
+        else:
+            cur.execute("delete from home_banners where id = %s returning id", (bid,))
+        row = cur.fetchone()
+        if not row:
+            return JSONResponse(status_code=404, content={"error": "找不到 banner"})
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute("select email from users where id = %s", (user_id,))
+        actor = cur.fetchone()
+    log_admin_action(actor["email"] if actor else None, f"banner_{action}", {"id": str(bid)})
     return JSONResponse(content={"ok": True})

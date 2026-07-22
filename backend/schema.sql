@@ -126,6 +126,10 @@ create table if not exists orders (
   status_note text,
   cancel_reason text,
 
+  coupon_code text,
+  discount_amount numeric not null default 0,
+  subtotal_before_discount numeric,
+
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -249,6 +253,107 @@ create table if not exists gold_price_cache (
 insert into gold_price_cache (id, xau_per_gram, xpt_per_gram, xag_per_gram, source)
   values (1, 4300, 1050, 30, 'fallback')
   on conflict (id) do nothing;
+
+-- ── coupons (checkout discounts) ──
+create table if not exists coupons (
+  id uuid primary key default gen_random_uuid(),
+  code text unique not null,
+  label text,
+  discount_type text not null check (discount_type in ('percent', 'fixed')),
+  discount_value numeric not null check (discount_value > 0),
+  min_order_amount numeric,
+  max_uses int,
+  max_uses_per_user int,
+  used_count int not null default 0,
+  is_active boolean not null default true,
+  starts_at timestamptz,
+  expires_at timestamptz,
+  created_by_id uuid references users(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists coupon_redemptions (
+  id uuid primary key default gen_random_uuid(),
+  coupon_id uuid not null references coupons(id) on delete cascade,
+  user_id uuid not null references users(id) on delete cascade,
+  order_id uuid not null references orders(id) on delete cascade,
+  checkout_batch_id uuid not null,
+  code text not null,
+  discount_amount numeric not null default 0,
+  order_subtotal numeric not null default 0,
+  order_total numeric not null default 0,
+  created_at timestamptz not null default now(),
+  unique (coupon_id, order_id)
+);
+
+create index if not exists coupon_redemptions_coupon_user_idx
+  on coupon_redemptions (coupon_id, user_id);
+create index if not exists coupon_redemptions_batch_idx
+  on coupon_redemptions (checkout_batch_id);
+create index if not exists coupons_code_idx on coupons (code);
+
+-- ── content CMS (FAQ + testimonials) ──
+create table if not exists testimonials (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  role text not null default '',
+  category text not null default '',
+  city text not null default '',
+  text text not null,
+  image_url text not null default '',
+  rating int not null default 5 check (rating >= 1 and rating <= 5),
+  sort_order int not null default 0,
+  is_published boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists faq_categories (
+  id text primary key,
+  title text not null,
+  sort_order int not null default 0
+);
+
+create table if not exists faq_items (
+  id text primary key,
+  category_id text not null references faq_categories(id) on delete cascade,
+  question text not null,
+  answer text not null,
+  sort_order int not null default 0,
+  is_published boolean not null default true,
+  show_in_teaser boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists testimonials_published_sort_idx
+  on testimonials (is_published, sort_order, created_at);
+create index if not exists faq_items_category_idx on faq_items (category_id);
+create index if not exists faq_items_published_idx on faq_items (is_published, sort_order);
+
+-- ── home hero banners ──
+create table if not exists home_banners (
+  id uuid primary key default gen_random_uuid(),
+  eyebrow text not null default '',
+  title text not null,
+  lead text not null default '',
+  image_url text not null,
+  image_webp text,
+  image_alt text not null default '',
+  cta_primary_label text not null default '',
+  cta_primary_href text not null default '',
+  cta_secondary_label text not null default '',
+  cta_secondary_href text not null default '',
+  tone text not null default 'warm',
+  sort_order int not null default 0,
+  is_published boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists home_banners_published_sort_idx
+  on home_banners (is_published, sort_order, created_at);
 
 -- ── indexes ────────────────────────────────────────────────────────────────
 create index if not exists orders_user_id_idx on orders(user_id);

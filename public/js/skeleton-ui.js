@@ -41,6 +41,8 @@
 
   function leadsTableRow() {
     return tableRowCells([
+      line(),
+      line(),
       line('long'),
       line(),
       line('full'),

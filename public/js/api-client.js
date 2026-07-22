@@ -145,6 +145,63 @@
       getInvites: function () { return request('/api/admin/invites'); },
       createInvite: function (fields) { return request('/api/admin/invites', { method: 'POST', body: fields }); },
       inviteAction: function (id, action) { return request('/api/admin/invite-action', { method: 'POST', body: { id: id, action: action } }); },
+      getCoupons: function () { return request('/api/admin/coupons'); },
+      createCoupon: function (fields) { return request('/api/admin/coupons', { method: 'POST', body: fields }); },
+      updateCoupon: function (fields) { return request('/api/admin/coupon-update', { method: 'POST', body: fields }); },
+      couponAction: function (id, action) { return request('/api/admin/coupon-action', { method: 'POST', body: { id: id, action: action } }); },
+      getTestimonials: function () { return request('/api/admin/testimonials'); },
+      createTestimonial: function (fields) { return request('/api/admin/testimonials', { method: 'POST', body: fields }); },
+      updateTestimonial: function (fields) { return request('/api/admin/testimonial-update', { method: 'POST', body: fields }); },
+      testimonialAction: function (id, action) { return request('/api/admin/testimonial-action', { method: 'POST', body: { id: id, action: action } }); },
+      uploadTestimonial: function (file) {
+        var fd = new FormData();
+        fd.append('file', file);
+        return fetch(API_BASE + '/api/admin/testimonial-upload', {
+          method: 'POST',
+          credentials: 'include',
+          body: fd,
+        }).then(function (res) {
+          return res.json().catch(function () { return {}; }).then(function (data) {
+            if (!res.ok && !data.error) {
+              if (typeof data.detail === 'string') data.error = data.detail;
+              else data.error = 'HTTP ' + res.status;
+            }
+            data._httpStatus = res.status;
+            return data;
+          });
+        }).catch(function () {
+          return { error: '系統連線異常，請稍後再試。' };
+        });
+      },
+      getFaqItems: function () { return request('/api/admin/faq-items'); },
+      getFaqCategories: function () { return request('/api/admin/faq-categories'); },
+      createFaqItem: function (fields) { return request('/api/admin/faq-items', { method: 'POST', body: fields }); },
+      updateFaqItem: function (fields) { return request('/api/admin/faq-update', { method: 'POST', body: fields }); },
+      faqAction: function (id, action) { return request('/api/admin/faq-action', { method: 'POST', body: { id: id, action: action } }); },
+      getBanners: function () { return request('/api/admin/banners'); },
+      createBanner: function (fields) { return request('/api/admin/banners', { method: 'POST', body: fields }); },
+      updateBanner: function (fields) { return request('/api/admin/banner-update', { method: 'POST', body: fields }); },
+      bannerAction: function (id, action) { return request('/api/admin/banner-action', { method: 'POST', body: { id: id, action: action } }); },
+      uploadBanner: function (file) {
+        var fd = new FormData();
+        fd.append('file', file);
+        return fetch(API_BASE + '/api/admin/banner-upload', {
+          method: 'POST',
+          credentials: 'include',
+          body: fd,
+        }).then(function (res) {
+          return res.json().catch(function () { return {}; }).then(function (data) {
+            if (!res.ok && !data.error) {
+              if (typeof data.detail === 'string') data.error = data.detail;
+              else data.error = 'HTTP ' + res.status;
+            }
+            data._httpStatus = res.status;
+            return data;
+          });
+        }).catch(function () {
+          return { error: '系統連線異常，請稍後再試。' };
+        });
+      },
       getAccounts: function () { return request('/api/admin/accounts'); },
       accountAction: function (id, action, extra) {
         var body = { id: id, action: action };

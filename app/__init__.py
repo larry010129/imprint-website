@@ -32,9 +32,11 @@ def _startup_banner() -> None:
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     from app.seed_catalog import seed_catalog_if_empty
+    from app.seed_content import seed_content_if_empty
 
     _startup_banner()
     seed_catalog_if_empty()
+    seed_content_if_empty()
     yield
 
 

@@ -171,6 +171,14 @@ export default function CheckoutPage() {
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
   const [postal, setPostal] = useState("");
+  const [couponInput, setCouponInput] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    code: string;
+    discountAmount: number;
+    total: number;
+  } | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [couponApplying, setCouponApplying] = useState(false);
   const noteId = useId();
   const {
     value: note,
@@ -208,6 +216,8 @@ export default function CheckoutPage() {
         .map((r) => r.data as ItemDetail);
       if (!found.length) setError("找不到訂購項目，請重新選購。");
       setItems(found);
+      setAppliedCoupon(null);
+      setCouponError(null);
       setLoading(false);
     })();
 
@@ -216,7 +226,51 @@ export default function CheckoutPage() {
     };
   }, [itemIds]);
 
-  const total = items.reduce((sum, { item, breakdown }) => sum + (breakdown.total ?? item.total_price ?? 0), 0);
+  const subtotal = items.reduce((sum, { item, breakdown }) => sum + (breakdown.total ?? item.total_price ?? 0), 0);
+  const discountAmount = appliedCoupon?.discountAmount ?? 0;
+  const total = appliedCoupon ? appliedCoupon.total : subtotal;
+
+  async function handleApplyCoupon() {
+    setCouponError(null);
+    const code = couponInput.trim();
+    if (!code) {
+      setCouponError("請輸入優惠碼");
+      return;
+    }
+    setCouponApplying(true);
+    const { status, data } = await apiFetch<{
+      ok?: boolean;
+      code?: string;
+      discountAmount?: number;
+      total?: number;
+      error?: string;
+    }>("/api/coupon/validate", {
+      method: "POST",
+      body: JSON.stringify({ code, itemIds }),
+    });
+    setCouponApplying(false);
+    if (status === 401) {
+      window.location.href = "/login.html";
+      return;
+    }
+    if (!data?.ok || data.discountAmount == null || data.total == null || !data.code) {
+      setAppliedCoupon(null);
+      setCouponError(data?.error || "優惠碼無效");
+      return;
+    }
+    setAppliedCoupon({
+      code: data.code,
+      discountAmount: data.discountAmount,
+      total: data.total,
+    });
+    setCouponInput(data.code);
+  }
+
+  function clearCoupon() {
+    setAppliedCoupon(null);
+    setCouponError(null);
+    setCouponInput("");
+  }
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -246,6 +300,7 @@ export default function CheckoutPage() {
           shippingCity: method === "delivery" ? city.trim() : undefined,
           shippingPostal: method === "delivery" ? postal.trim() : undefined,
           orderNote: note.trim() || undefined,
+          couponCode: appliedCoupon?.code || undefined,
         }),
       }
     );
@@ -293,6 +348,50 @@ export default function CheckoutPage() {
           </li>
         ))}
       </ul>
+      <div className="checkout-coupon">
+        <Label htmlFor="checkout-coupon">優惠碼</Label>
+        <div className="checkout-coupon-row">
+          <Input
+            id="checkout-coupon"
+            value={couponInput}
+            onChange={(e) => {
+              setCouponInput(e.target.value);
+              if (appliedCoupon) {
+                setAppliedCoupon(null);
+                setCouponError(null);
+              }
+            }}
+            placeholder="輸入優惠碼"
+            disabled={couponApplying || submitting}
+            autoComplete="off"
+          />
+          {appliedCoupon ? (
+            <Button type="button" variant="ghost" onClick={clearCoupon} disabled={submitting}>
+              清除
+            </Button>
+          ) : (
+            <Button type="button" variant="secondary" onClick={handleApplyCoupon} disabled={couponApplying || submitting}>
+              {couponApplying ? "套用中…" : "套用"}
+            </Button>
+          )}
+        </div>
+        {couponError && <p className="checkout-coupon-error">{couponError}</p>}
+        {appliedCoupon && !couponError && (
+          <p className="checkout-coupon-ok">已套用 {appliedCoupon.code}</p>
+        )}
+      </div>
+      {discountAmount > 0 && (
+        <div className="checkout-summary-line">
+          <span>小計</span>
+          <span>{formatTwd(subtotal)}</span>
+        </div>
+      )}
+      {discountAmount > 0 && (
+        <div className="checkout-summary-line checkout-summary-line--discount">
+          <span>優惠折抵{appliedCoupon ? `（${appliedCoupon.code}）` : ""}</span>
+          <span>−{formatTwd(discountAmount)}</span>
+        </div>
+      )}
       <div className="checkout-summary-total">
         <span>總計</span>
         <span>{formatTwd(total)}</span>

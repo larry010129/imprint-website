@@ -179,3 +179,27 @@ async def catalog(
         product_ids = [row["id"] for row in products]
         variants_by_product, images_by_product = load_product_children(cur, product_ids)
     return build_catalog_response(products, variants_by_product, images_by_product)
+
+
+@router.get("/testimonials")
+async def public_testimonials() -> dict:
+    from app.content import fetch_published_testimonials
+
+    with get_connection() as conn, conn.cursor() as cur:
+        return {"testimonials": fetch_published_testimonials(cur)}
+
+
+@router.get("/faq")
+async def public_faq() -> dict:
+    from app.content import fetch_faq_public
+
+    with get_connection() as conn, conn.cursor() as cur:
+        return fetch_faq_public(cur)
+
+
+@router.get("/banners")
+async def public_banners() -> dict:
+    from app.content import fetch_published_banners
+
+    with get_connection() as conn, conn.cursor() as cur:
+        return {"banners": fetch_published_banners(cur)}

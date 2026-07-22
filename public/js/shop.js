@@ -477,34 +477,46 @@ function productLayerImage(product, metal, diamond, layerOpts) {
 function isPendantLayerAssetUrl(url) {
   // Crop-layer files end in "_only.png" or bare "_chain.png"; full combo files
   // use "_chain_{metal}[_diamond].png" and must NOT match here.
-  return /_(?:only|chain)\.[a-z0-9]+$/i.test(String(url || '')) || /\/thumbs\//.test(String(url || ''));
+  const s = String(url || '');
+  if (/\/thumbs\//i.test(s)) return true;
+  // Explicit allow: pre-rendered mixed-metal necklaces
+  if (/_chain_(?:silver|gold|rose)(?:_(?:white|yellow|blue|pink))?\.(?:png|jpe?g|webp)(?:\?|$)/i.test(s)) {
+    return false;
+  }
+  return /_(?:only|chain)\.(?:png|jpe?g|webp)(?:\?|$)/i.test(s);
 }
 
 function pendantWithChainImageUrl(product, pendantMetal, chainMetal, diamond) {
   const assetId = productAssetId(product);
   if (!assetId || !window.ShopAssets) return '';
+  const d = diamond || 'white';
+  // Prefer direct productImage so white-diamond combos are not lost to resolve quirks.
+  if (window.ShopAssets.productImage) {
+    const direct = window.ShopAssets.productImage(
+      assetId,
+      pendantMetal,
+      product?.defaultColor,
+      d,
+      { chainColor: chainMetal },
+    );
+    if (direct && !isPendantLayerAssetUrl(direct)) return direct;
+  }
   if (window.ShopAssets.productImageResolve) {
     const resolved = window.ShopAssets.productImageResolve(
       assetId,
       pendantMetal,
       product?.defaultColor,
-      diamond,
+      d,
       { chainColor: chainMetal },
     );
-    return resolved.src || '';
+    const src = resolved.src || '';
+    if (src && !isPendantLayerAssetUrl(src)) return src;
   }
-  if (!window.ShopAssets.productImage) return '';
-  return window.ShopAssets.productImage(
-    assetId,
-    pendantMetal,
-    product?.defaultColor,
-    diamond,
-    { chainColor: chainMetal },
-  ) || '';
+  return '';
 }
 
 function pendantPreviewLayers(product) {
-  const diamond = selectedDiamondColorId();
+  const diamond = selectedDiamondColorId() || 'white';
   const metal = previewColor();
   const opts = pendantPreviewImageOpts();
 
@@ -514,8 +526,23 @@ function pendantPreviewLayers(product) {
     if (combo && !isPendantLayerAssetUrl(combo)) {
       return { composite: false, src: combo, pendantOnly: false };
     }
-    const composite = pendantCompositeFallback(product);
-    if (composite) return composite;
+    // 含鍊 + white diamond: never show _only+chain composite (reads as 僅墜子 when
+    // the chain layer fails). Fall back to same-metal full necklace instead.
+    if (diamond === 'white') {
+      const sameMetal = window.ShopAssets?.productImage?.(
+        productAssetId(product),
+        metal,
+        product?.defaultColor,
+        'white',
+        {},
+      ) || '';
+      if (sameMetal && !isPendantLayerAssetUrl(sameMetal)) {
+        return { composite: false, src: sameMetal, pendantOnly: false };
+      }
+    } else {
+      const composite = pendantCompositeFallback(product);
+      if (composite) return composite;
+    }
   }
 
   const src = productImagesForColor(product, metal, diamond, opts)[0]
@@ -2620,6 +2647,13 @@ function updateLargeImage(layer) {
       if (preview.src) primarySrc = preview.src;
     }
     img.onerror = null;
+    // Force browser to apply new metal asset even when cached aggressively.
+    // Use cache-buster — do NOT removeAttribute(src) after attaching onerror
+    // (that races and can swap in a fallback / look like 僅墜子).
+    let nextSrc = primarySrc || '';
+    if (nextSrc && img.getAttribute('src') === nextSrc) {
+      nextSrc += (nextSrc.includes('?') ? '&' : '?') + '_=' + Date.now();
+    }
     if (fallbacks.length && window.ShopAssets?.attachImageFallbackChain) {
       window.ShopAssets.attachImageFallbackChain(img, fallbacks);
     } else if (usesPendantCompositePreview() && product) {
@@ -2630,11 +2664,6 @@ function updateLargeImage(layer) {
           showSingleProductPreview(img, previewRoot, fullFallback, false);
         };
       }
-    }
-    // Force browser to apply new metal asset even when cached aggressively.
-    const nextSrc = primarySrc || '';
-    if (img.getAttribute('src') === nextSrc && nextSrc) {
-      img.removeAttribute('src');
     }
     img.src = nextSrc;
     if (zoomBtn) zoomBtn.hidden = !(img.src && !img.src.endsWith('/'));

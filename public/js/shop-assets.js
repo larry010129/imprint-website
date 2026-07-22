@@ -225,7 +225,8 @@
       }
       push(stylePngPath(parsed.category, parsed.style, resolved, 'white', opts));
     }
-    // Cross-metal chain combo missing → same-metal full necklace, then thumb
+    // Cross-metal chain combo missing → same-metal full necklace, then thumb.
+    // Never fall back to bare "_chain.png" / "_only.png" layer crops here.
     if (opts.chainColor && resolveColor(opts.chainColor) !== resolved) {
       push(stylePngPath(parsed.category, parsed.style, resolved, d, {}));
       if (d !== 'white') {

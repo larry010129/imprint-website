@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 from psycopg.types.json import Jsonb
 
 from app.auth import get_user_id
+from app.coupons import apply_discount_split, record_redemptions, validate_coupon
 from app.database import get_connection, get_transaction
 from app.image_urls import config_image_url
 from app.orders import attach_order_display, attach_order_relations, pack_order_config
@@ -95,18 +96,41 @@ def _validate_customer(body: dict[str, Any], profile: dict[str, Any] | None) -> 
     }, None
 
 
-def _insert_order(cur, user_id: str, customer: dict[str, Any], config: dict[str, Any]) -> str:
+def _insert_order(
+    cur,
+    user_id: str,
+    customer: dict[str, Any],
+    config: dict[str, Any],
+    *,
+    coupon_code: str | None = None,
+    discount_amount: float = 0,
+) -> dict[str, Any]:
     cfg, pricing, product_id, summary, total = pack_order_config(config)
     cfg["clientPricing"] = pricing
     config_payload = json.loads(json.dumps(cfg, default=str))
+    subtotal = float(total or 0)
+    discount = max(0.0, float(discount_amount or 0))
+    if discount > subtotal:
+        discount = subtotal
+    final_total = subtotal - discount
 
     cur.execute(
         """
-        insert into orders (user_id, summary_zh, total_price, status)
-        values (%s, %s, %s, 'received')
+        insert into orders (
+          user_id, summary_zh, total_price, status,
+          coupon_code, discount_amount, subtotal_before_discount
+        )
+        values (%s, %s, %s, 'received', %s, %s, %s)
         returning id, order_number
         """,
-        (user_id, summary, total),
+        (
+            user_id,
+            summary,
+            final_total,
+            coupon_code,
+            discount,
+            subtotal,
+        ),
     )
     row = cur.fetchone()
     oid = row["id"]
@@ -139,7 +163,13 @@ def _insert_order(cur, user_id: str, customer: dict[str, Any], config: dict[str,
         """,
         (oid, product_id, Jsonb(config_payload), Jsonb(pricing), summary),
     )
-    return row["order_number"]
+    return {
+        "order_id": oid,
+        "order_number": row["order_number"],
+        "order_subtotal": subtotal,
+        "discount_amount": discount,
+        "order_total": final_total,
+    }
 
 
 def _fetch_editable_order(cur, user_id: str, order_id: str | None, order_number: str | None) -> dict | None:
@@ -388,6 +418,56 @@ async def cart_item(request: Request) -> dict:
         return {"item": item, "breakdown": breakdown}
 
 
+@router.post("/coupon/validate")
+async def coupon_validate(request: Request) -> dict:
+    user_id = _user_id(request)
+    body = await request.json()
+    if not isinstance(body, dict):
+        body = {}
+    code = body.get("code") or body.get("couponCode") or ""
+    item_ids = body.get("itemIds")
+
+    with get_connection() as conn, conn.cursor() as cur:
+        if item_ids:
+            cur.execute(
+                "select * from cart_items where user_id = %s and id = any(%s) order by created_at asc",
+                (user_id, item_ids),
+            )
+        else:
+            cur.execute(
+                "select * from cart_items where user_id = %s order by created_at asc",
+                (user_id,),
+            )
+        items = cur.fetchall()
+        if not items:
+            return _err(400, "購物車是空的")
+        if item_ids and len(items) != len(set(item_ids)):
+            return _err(400, "無效的商品選取")
+
+        subtotal = 0.0
+        for item in items:
+            config = item.get("config_json") or {}
+            if not isinstance(config, dict):
+                config = {}
+            _cfg, _pricing, _pid, _summary, total = pack_order_config(config)
+            subtotal += float(total or item.get("total_price") or 0)
+
+        result, err = validate_coupon(cur, code=str(code), user_id=user_id, subtotal=subtotal)
+        if err:
+            return _err(400, err)
+        assert result is not None
+        return {
+            "ok": True,
+            "code": result["code"],
+            "label": result.get("label"),
+            "discountType": result["discountType"],
+            "discountValue": result["discountValue"],
+            "discountAmount": result["discountAmount"],
+            "subtotal": result["subtotal"],
+            "total": result["total"],
+        }
+
+
 @router.post("/cart-checkout")
 async def cart_checkout(request: Request) -> dict:
     user_id = _user_id(request)
@@ -395,6 +475,7 @@ async def cart_checkout(request: Request) -> dict:
     if not isinstance(body, dict):
         body = {}
     item_ids = body.get("itemIds")
+    coupon_code_raw = body.get("couponCode") or body.get("code") or ""
 
     with get_connection() as conn, conn.cursor() as cur:
         if item_ids:
@@ -420,6 +501,7 @@ async def cart_checkout(request: Request) -> dict:
             return _err(400, customer_err)
 
         configs: list[dict[str, Any]] = []
+        item_totals: list[float] = []
         for item in items:
             config = item.get("config_json") or {}
             if not isinstance(config, dict):
@@ -428,13 +510,50 @@ async def cart_checkout(request: Request) -> dict:
             if err:
                 return _err(400, err)
             configs.append(config)
+            _cfg, _pricing, _pid, _summary, total = pack_order_config(config)
+            item_totals.append(float(total or item.get("total_price") or 0))
 
     # Validation is done — now write. get_transaction() (autocommit off) makes
     # this all-or-nothing: if inserting order N of M raises, everything commits
     # or nothing does, instead of leaving earlier orders committed with their
     # cart items never cleared (which would duplicate orders on retry).
+    # Coupon is re-validated inside the write transaction to avoid race on caps.
     with get_transaction() as conn, conn.cursor() as cur:
-        order_numbers = [_insert_order(cur, user_id, customer, config) for config in configs]
+        coupon_result = None
+        discount_shares = [0] * len(configs)
+        if str(coupon_code_raw).strip():
+            subtotal = sum(item_totals)
+            coupon_result, coupon_err = validate_coupon(
+                cur, code=str(coupon_code_raw), user_id=user_id, subtotal=subtotal
+            )
+            if coupon_err:
+                return _err(400, coupon_err)
+            assert coupon_result is not None
+            discount_shares = apply_discount_split(item_totals, int(coupon_result["discountAmount"]))
+
+        order_numbers: list[str] = []
+        redemption_rows: list[dict[str, Any]] = []
+        coupon_code = coupon_result["code"] if coupon_result else None
+        for i, config in enumerate(configs):
+            inserted = _insert_order(
+                cur,
+                user_id,
+                customer,
+                config,
+                coupon_code=coupon_code,
+                discount_amount=float(discount_shares[i]),
+            )
+            order_numbers.append(inserted["order_number"])
+            if coupon_result:
+                redemption_rows.append(inserted)
+        if coupon_result and redemption_rows:
+            record_redemptions(
+                cur,
+                coupon_id=coupon_result["coupon"]["id"],
+                user_id=user_id,
+                code=coupon_result["code"],
+                order_rows=redemption_rows,
+            )
         checked_out = [str(i["id"]) for i in items]
         cur.execute(
             "delete from cart_items where id = any(%s)",

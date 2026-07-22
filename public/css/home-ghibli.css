@@ -548,6 +548,9 @@ button.gh-btn--primary{ border:none; }
   background:var(--gh-grad-deep); color:var(--gh-twilight);
   font-family:var(--serif); font-weight:600; font-size:14px;
 }
+.gh-wall__avatar--img{
+  object-fit:cover; padding:0; background:#eee;
+}
 .gh-wall__who{ display:flex; flex-direction:column; line-height:1.4; }
 .gh-wall__who strong{ font-size:13px; font-weight:600; color:var(--gh-ink); }
 .gh-wall__who em{ font-style:normal; font-size:11.5px; color:var(--gh-muted); }

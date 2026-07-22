@@ -132,125 +132,146 @@
   }
 
   /* ---------- Hero 輪播:箭頭/圓點/拖曳滑動/自動播放 ---------- */
-  var hcViewport = document.getElementById('hcViewport');
-  if (hcViewport) {
-    var hcTrack = document.getElementById('hcTrack');
-    var hcSlides = Array.prototype.slice.call(hcTrack.children);
-    var hcDots = Array.prototype.slice.call(document.querySelectorAll('.hc-dot'));
-    var hcPrev = document.getElementById('hcPrev');
-    var hcNext = document.getElementById('hcNext');
-    var hcCount = hcSlides.length;
-    var hcIndex = 0;
+  /* CMS 可動態替換 #hcTrack 後呼叫 ImprintHeroCarousel.reinit() */
+  window.ImprintHeroCarousel = (function () {
+    var abortCtrl = null;
     var hcTimer = null;
-    var hcAutoplayMs = 6500;
-    var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    function hcRender(withTransition) {
-      hcSlides.forEach(function (s, i) {
-        var wasActive = s.classList.contains('is-active');
-        var willBeActive = i === hcIndex;
-        var img = s.querySelector('.hc-media img');
-        if (withTransition === false) { s.classList.add('no-anim'); }
-        s.classList.toggle('is-active', willBeActive);
+    function destroy() {
+      if (hcTimer) { clearInterval(hcTimer); hcTimer = null; }
+      if (abortCtrl) { abortCtrl.abort(); abortCtrl = null; }
+    }
 
-        /* 文字進場動畫(.reveal/.is-in)每次「變成中央那張」都要重新播一次，
-           不是只在頁面第一次載入時播過就沒了，才會有一直輪播都很有質感的感覺。
-           第一張投影片的 is-active 是寫死在 HTML 裡的(沒有 JS 時的優雅降級)，所以第一次
-           執行 hcRender 時 wasActive 一定是 true，若只看 !wasActive 會誤判成「本來就是
-           使用中」而跳過進場動畫和 Ken Burns 啟動；withTransition === false 只有頁面剛
-           載入這一次會是 false，用它來補這個判斷。 */
-        var isFirstRender = withTransition === false;
-        var reveals = s.querySelectorAll('.reveal');
-        if (willBeActive && (!wasActive || isFirstRender)) {
-          reveals.forEach(function (el) { el.classList.remove('is-in'); });
-          void s.offsetWidth;
-          reveals.forEach(function (el) { el.classList.add('is-in'); });
+    function init() {
+      var hcViewport = document.getElementById('hcViewport');
+      var hcTrack = document.getElementById('hcTrack');
+      if (!hcViewport || !hcTrack) return;
 
-          /* Ken Burns 縮放：每次「變成中央那張」才把圖片瞬間歸零重新放大，
-             不然一直輪播下去，圖片會停在上一輪已經放大過的大小，越轉越大。 */
-          if (img) {
-            img.classList.add('kb-reset');
-            img.style.transform = 'scale(1)';
-            void img.offsetWidth;
-            img.classList.remove('kb-reset');
-            img.style.transform = 'scale(1.09)';
-          }
-        } else if (!willBeActive && wasActive) {
-          reveals.forEach(function (el) { el.classList.remove('is-in'); });
-          /* 圖片刻意「不」重置 transform：讓它維持淡出當下已經放大到的大小繼續淡出，
-             不然一失去 is-active 就會瞬間跳回原始尺寸，變成「先跳回原圖才淡出」。 */
-        }
-      });
-      if (withTransition === false) {
-        void hcTrack.offsetWidth;
-        hcSlides.forEach(function (s) { s.classList.remove('no-anim'); });
+      destroy();
+      abortCtrl = new AbortController();
+      var signal = abortCtrl.signal;
+
+      var hcSlides = Array.prototype.slice.call(hcTrack.children);
+      var dotsWrap = hcViewport.querySelector('.hc-dots');
+      var hcPrev = document.getElementById('hcPrev');
+      var hcNext = document.getElementById('hcNext');
+      var hcCount = hcSlides.length;
+      var hcIndex = 0;
+      var hcAutoplayMs = 6500;
+      var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      if (!hcCount) return;
+
+      if (dotsWrap) {
+        dotsWrap.innerHTML = hcSlides.map(function (s, i) {
+          var label = (s.querySelector('.gh-hero__title') || {}).textContent || ('投影片 ' + (i + 1));
+          label = String(label).replace(/\s+/g, ' ').trim() || ('投影片 ' + (i + 1));
+          return '<button type="button" class="hc-dot' + (i === 0 ? ' is-active' : '') +
+            '" data-index="' + i + '" role="tab" aria-label="' + label.replace(/"/g, '') +
+            '" aria-selected="' + (i === 0 ? 'true' : 'false') + '"></button>';
+        }).join('');
       }
-      hcDots.forEach(function (d, i) {
-        d.classList.toggle('is-active', i === hcIndex);
-        d.setAttribute('aria-selected', i === hcIndex ? 'true' : 'false');
-      });
-    }
+      var hcDots = Array.prototype.slice.call(hcViewport.querySelectorAll('.hc-dot'));
 
-    function hcGoTo(i) {
-      hcIndex = (i + hcCount) % hcCount;
-      hcRender();
-    }
-    function hcNextSlide() { hcGoTo(hcIndex + 1); }
-    function hcPrevSlide() { hcGoTo(hcIndex - 1); }
+      function hcRender(withTransition) {
+        hcSlides.forEach(function (s, i) {
+          var wasActive = s.classList.contains('is-active');
+          var willBeActive = i === hcIndex;
+          var img = s.querySelector('.hc-media img');
+          if (withTransition === false) { s.classList.add('no-anim'); }
+          s.classList.toggle('is-active', willBeActive);
 
-    function hcStopAuto() { if (hcTimer) { clearInterval(hcTimer); hcTimer = null; } }
-    function hcStartAuto() {
-      if (reduceMotion) return;
-      hcStopAuto();
-      hcTimer = setInterval(hcNextSlide, hcAutoplayMs);
-    }
+          var isFirstRender = withTransition === false;
+          var reveals = s.querySelectorAll('.reveal');
+          if (willBeActive && (!wasActive || isFirstRender)) {
+            reveals.forEach(function (el) { el.classList.remove('is-in'); });
+            void s.offsetWidth;
+            reveals.forEach(function (el) { el.classList.add('is-in'); });
+            if (img) {
+              img.classList.add('kb-reset');
+              img.style.transform = 'scale(1)';
+              void img.offsetWidth;
+              img.classList.remove('kb-reset');
+              img.style.transform = 'scale(1.09)';
+            }
+          } else if (!willBeActive && wasActive) {
+            reveals.forEach(function (el) { el.classList.remove('is-in'); });
+          }
+        });
+        if (withTransition === false) {
+          void hcTrack.offsetWidth;
+          hcSlides.forEach(function (s) { s.classList.remove('no-anim'); });
+        }
+        hcDots.forEach(function (d, i) {
+          d.classList.toggle('is-active', i === hcIndex);
+          d.setAttribute('aria-selected', i === hcIndex ? 'true' : 'false');
+        });
+      }
 
-    hcPrev.addEventListener('click', function () { hcPrevSlide(); hcStartAuto(); });
-    hcNext.addEventListener('click', function () { hcNextSlide(); hcStartAuto(); });
-    hcDots.forEach(function (d) {
-      d.addEventListener('click', function () { hcGoTo(parseInt(d.dataset.index, 10)); hcStartAuto(); });
-    });
-    hcViewport.addEventListener('keydown', function (e) {
-      if (e.key === 'ArrowLeft') { hcPrevSlide(); hcStartAuto(); }
-      if (e.key === 'ArrowRight') { hcNextSlide(); hcStartAuto(); }
-    });
-    hcViewport.addEventListener('mouseenter', hcStopAuto);
-    hcViewport.addEventListener('mouseleave', hcStartAuto);
-
-    // 拖曳/觸控左右滑動：疊圖淡入淡出不適合跟手即時預覽位移，只偵測滑動距離達門檻就切換
-    var dragging = false, dragStartX = 0, dragDeltaX = 0, dragSuppressClick = false;
-    hcTrack.addEventListener('pointerdown', function (e) {
-      if (e.target.closest('a, button, input, select, textarea, label, [data-scroll-to]')) return;
-      dragging = true; dragStartX = e.clientX; dragDeltaX = 0;
-      hcTrack.setPointerCapture(e.pointerId);
-      hcStopAuto();
-    });
-    hcTrack.addEventListener('pointermove', function (e) {
-      if (!dragging) return;
-      dragDeltaX = e.clientX - dragStartX;
-    });
-    function hcDragEnd() {
-      if (!dragging) return;
-      dragging = false;
-      var threshold = hcViewport.offsetWidth * 0.12;
-      if (Math.abs(dragDeltaX) > threshold) {
-        dragSuppressClick = true;
-        if (dragDeltaX < 0) { hcNextSlide(); } else { hcPrevSlide(); }
-      } else {
+      function hcGoTo(i) {
+        hcIndex = (i + hcCount) % hcCount;
         hcRender();
       }
+      function hcNextSlide() { hcGoTo(hcIndex + 1); }
+      function hcPrevSlide() { hcGoTo(hcIndex - 1); }
+
+      function hcStopAuto() { if (hcTimer) { clearInterval(hcTimer); hcTimer = null; } }
+      function hcStartAuto() {
+        if (reduceMotion) return;
+        hcStopAuto();
+        hcTimer = setInterval(hcNextSlide, hcAutoplayMs);
+      }
+
+      if (hcPrev) hcPrev.addEventListener('click', function () { hcPrevSlide(); hcStartAuto(); }, { signal: signal });
+      if (hcNext) hcNext.addEventListener('click', function () { hcNextSlide(); hcStartAuto(); }, { signal: signal });
+      hcDots.forEach(function (d) {
+        d.addEventListener('click', function () { hcGoTo(parseInt(d.dataset.index, 10)); hcStartAuto(); }, { signal: signal });
+      });
+      hcViewport.addEventListener('keydown', function (e) {
+        if (e.key === 'ArrowLeft') { hcPrevSlide(); hcStartAuto(); }
+        if (e.key === 'ArrowRight') { hcNextSlide(); hcStartAuto(); }
+      }, { signal: signal });
+      hcViewport.addEventListener('mouseenter', hcStopAuto, { signal: signal });
+      hcViewport.addEventListener('mouseleave', hcStartAuto, { signal: signal });
+
+      var dragging = false, dragStartX = 0, dragDeltaX = 0, dragSuppressClick = false;
+      hcTrack.addEventListener('pointerdown', function (e) {
+        if (e.target.closest('a, button, input, select, textarea, label, [data-scroll-to]')) return;
+        dragging = true; dragStartX = e.clientX; dragDeltaX = 0;
+        hcTrack.setPointerCapture(e.pointerId);
+        hcStopAuto();
+      }, { signal: signal });
+      hcTrack.addEventListener('pointermove', function (e) {
+        if (!dragging) return;
+        dragDeltaX = e.clientX - dragStartX;
+      }, { signal: signal });
+      function hcDragEnd() {
+        if (!dragging) return;
+        dragging = false;
+        var threshold = hcViewport.offsetWidth * 0.12;
+        if (Math.abs(dragDeltaX) > threshold) {
+          dragSuppressClick = true;
+          if (dragDeltaX < 0) { hcNextSlide(); } else { hcPrevSlide(); }
+        } else {
+          hcRender();
+        }
+        hcStartAuto();
+      }
+      hcTrack.addEventListener('pointerup', hcDragEnd, { signal: signal });
+      hcTrack.addEventListener('pointercancel', hcDragEnd, { signal: signal });
+      hcTrack.addEventListener('click', function (e) {
+        if (e.target.closest('a, button, input, select, textarea, label, [data-scroll-to]')) return;
+        if (dragSuppressClick) { e.preventDefault(); e.stopPropagation(); dragSuppressClick = false; }
+      }, { capture: true, signal: signal });
+
+      hcRender(false);
       hcStartAuto();
     }
-    hcTrack.addEventListener('pointerup', hcDragEnd);
-    hcTrack.addEventListener('pointercancel', hcDragEnd);
-    hcTrack.addEventListener('click', function (e) {
-      if (e.target.closest('a, button, input, select, textarea, label, [data-scroll-to]')) return;
-      if (dragSuppressClick) { e.preventDefault(); e.stopPropagation(); dragSuppressClick = false; }
-    }, true);
 
-    hcRender(false);
-    hcStartAuto();
-  }
+    return { init: init, reinit: init, destroy: destroy };
+  })();
+
+  window.ImprintHeroCarousel.init();
 
   /* ---------- 鑽戒滾動翻轉(兩幕精簡版) ---------- */
   var track = document.getElementById('rfTrack');

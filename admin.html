@@ -6,11 +6,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>銘印鑽石｜管理後台</title>
 <meta name="robots" content="noindex">
-<link rel="stylesheet" href="/css/admin-core.css?v=8">
+<link rel="stylesheet" href="/css/admin-core.css?v=12">
 <link rel="stylesheet" href="/css/skeleton.css?v=1">
 <link rel="stylesheet" href="/css/admin-shell.css">
 <link rel="stylesheet" href="/css/admin-orders.css?v=9">
-<link rel="stylesheet" href="/css/admin-tables.css?v=7">
+<link rel="stylesheet" href="/css/admin-tables.css?v=10">
 <link rel="stylesheet" href="/static/react/admin-tables.css?v=3">
 <link rel="stylesheet" href="/css/toast.css?v=1">
 <!-- 上線時建議打開 Google Fonts:
@@ -49,6 +49,10 @@
       <button data-panel="invites">
         <svg class="side-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 12H4"/><path d="M10 6l-6 6 6 6"/></svg>
         <span>邀請碼</span>
+      </button>
+      <button data-panel="coupons">
+        <svg class="side-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+        <span>優惠券</span>
       </button>
       <div class="side-nav-more">
         <button data-panel="leads"><span>諮詢名單</span></button>
@@ -216,16 +220,18 @@
         <table>
           <thead><tr>
             <th data-sort-key="name" data-sortable="text">客戶</th>
+            <th data-sort-key="phone" data-sortable="text">電話</th>
+            <th data-sort-key="email" data-sortable="text">Email</th>
             <th data-sort-key="source" data-sortable="text">來源</th>
             <th data-sort-key="summary" data-sortable="text">內容摘要</th>
             <th data-sort-key="created" data-sortable="date">建立時間</th>
             <th data-sort-key="status" data-sortable="text">狀態</th>
-            <th data-sortable="false"></th>
+            <th data-sortable="false">操作</th>
           </tr></thead>
           <tbody id="leadsTableBody">
-            <tr class="skel-row"><td colspan="6"><span class="skel-line skel-line--short"></span></td></tr>
-            <tr class="skel-row"><td colspan="6"><span class="skel-line skel-line--short"></span></td></tr>
-            <tr class="skel-row"><td colspan="6"><span class="skel-line skel-line--short"></span></td></tr>
+            <tr class="skel-row"><td colspan="8"><span class="skel-line skel-line--short"></span></td></tr>
+            <tr class="skel-row"><td colspan="8"><span class="skel-line skel-line--short"></span></td></tr>
+            <tr class="skel-row"><td colspan="8"><span class="skel-line skel-line--short"></span></td></tr>
           </tbody>
         </table>
       </div>
@@ -285,6 +291,13 @@
     <!-- 邀請碼 -->
     <section class="panel" id="panel-invites">
       <div id="invitesRoot" class="skel-panel" aria-busy="true" aria-label="載入邀請碼中">
+        <span class="skel-line skel-line--short"></span>
+      </div>
+    </section>
+
+    <!-- 優惠券 -->
+    <section class="panel" id="panel-coupons">
+      <div id="couponsRoot" class="skel-panel" aria-busy="true" aria-label="載入優惠券中">
         <span class="skel-line skel-line--short"></span>
       </div>
     </section>
@@ -365,37 +378,8 @@
 
     <!-- 內容管理 -->
     <section class="panel" id="panel-content">
-      <p class="note">
-        內容紅線提醒：全站文案迴避「培育鑽石與天然鑽石的比較」話題；
-        見證需取得客戶同意後上架，化名亦可。
-      </p>
-      <div class="card">
-        <div class="card-head">
-          <h2>頁面內容</h2>
-          <button class="btn-sm btn-primary">+ 新增頁面</button>
-        </div>
-        <div class="content-list">
-          <div class="content-row">
-            <div><p class="t">首頁</p><p class="path">/index.html・meta 已設定</p></div>
-            <div><span class="chip chip-done">已發布</span> <button class="btn-sm">編輯</button></div>
-          </div>
-          <div class="content-row">
-            <div><p class="t">常見問題 FAQ</p><p class="path">/faq・含 FAQPage 結構化資料</p></div>
-            <div><span class="chip chip-done">已發布</span> <button class="btn-sm">編輯</button></div>
-          </div>
-          <div class="content-row">
-            <div><p class="t">客戶故事：沈小姐與毛孩（訪談中）</p><p class="path">/stories/pet-diamond-story</p></div>
-            <div><span class="chip chip-talk">草稿</span> <button class="btn-sm">編輯</button></div>
-          </div>
-          <div class="content-row">
-            <div><p class="t">見證輪播（首頁）</p><p class="path">3 則示意文案待換真實見證</p></div>
-            <div><span class="chip chip-new">待更新</span> <button class="btn-sm">編輯</button></div>
-          </div>
-          <div class="content-row">
-            <div><p class="t">價目表</p><p class="path">/price・2026/03 版本</p></div>
-            <div><span class="chip chip-done">已發布</span> <button class="btn-sm">編輯</button></div>
-          </div>
-        </div>
+      <div id="contentRoot" class="skel-panel" aria-busy="true" aria-label="載入內容中">
+        <span class="skel-line skel-line--short"></span>
       </div>
     </section>
 
@@ -403,22 +387,24 @@
 </div>
 
 <script type="module" src="/static/react/admin-tables.js?v=3"></script>
-<script src="js/api-client.js?v=2"></script>
+<script src="js/api-client.js?v=7"></script>
 <script src="js/toast.js?v=1"></script>
-<script src="js/skeleton-ui.js?v=1"></script>
+<script src="js/skeleton-ui.js?v=2"></script>
 <script src="js/order-status.js"></script>
 <script src="js/chart.umd.min.js"></script>
 <script src="js/shop-assets.js"></script>
 <script src="js/admin-dashboard-chart.js"></script>
 <script src="js/admin-table-sort.js?v=1"></script>
 <script src="js/admin-image-urls.js?v=7"></script>
-<script src="js/admin.js?v=11"></script>
+<script src="js/admin.js?v=17"></script>
 <script src="js/girdle-engrave.js?v=10"></script>
-<script src="js/admin-orders.js?v=13"></script>
+<script src="js/admin-orders.js?v=14"></script>
 <script src="js/order-detail.js"></script>
 <script src="js/admin-products.js?v=17"></script>
 <script src="js/admin-accounts.js?v=7"></script>
 <script src="js/admin-invites.js?v=11"></script>
+<script src="js/admin-coupons.js?v=4"></script>
+<script src="js/admin-content.js?v=4"></script>
 <script src="js/pricing-config.js?v=1.1"></script>
 <script>
 /* 側邊欄分頁切換（純前端示意） */
@@ -426,10 +412,11 @@
   var buttons = document.querySelectorAll('.side-nav button');
   var titles = {
     dash: '儀表板', orders: '訂單管理', products: '商品上架',
-    accounts: '帳戶管理', invites: '邀請碼',
+    accounts: '帳戶管理', invites: '邀請碼', coupons: '優惠券',
     leads: '諮詢名單', pricing: '價格設定', content: '內容管理'
   };
   var mainEl = document.querySelector('.main');
+  var pendingPanel = null;
   buttons.forEach(function(btn){
     btn.addEventListener('click', function(){
       buttons.forEach(function(b){ b.classList.remove('is-active'); });
@@ -437,14 +424,21 @@
       document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('is-active'); });
       document.getElementById('panel-' + btn.dataset.panel).classList.add('is-active');
       if (mainEl) mainEl.classList.toggle('is-orders-view', btn.dataset.panel === 'orders');
-      var demoBadge = (btn.dataset.panel === 'content')
-        ? '<span class="badge-demo">示意資料</span>'
-        : '';
-      document.getElementById('pageTitle').innerHTML = titles[btn.dataset.panel] + demoBadge;
+      document.getElementById('pageTitle').textContent = titles[btn.dataset.panel] || '';
       if (btn.dataset.panel === 'pricing' && window.PricingPanel) window.PricingPanel.refresh();
-      if (window.AdminPanel) window.AdminPanel.onPanelSwitch(btn.dataset.panel);
+      if (window.AdminPanel) {
+        window.AdminPanel.onPanelSwitch(btn.dataset.panel);
+      } else {
+        pendingPanel = btn.dataset.panel;
+      }
     });
   });
+  window.__adminFlushPendingPanel = function () {
+    if (!pendingPanel || !window.AdminPanel) return;
+    var panel = pendingPanel;
+    pendingPanel = null;
+    window.AdminPanel.onPanelSwitch(panel);
+  };
 })();
 
 /* 價格設定面板：讀寫 window.ImprintPricing */

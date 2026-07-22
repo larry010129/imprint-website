@@ -51,7 +51,7 @@ function answerWithLinks(entry: FaqEntry): ReactNode {
   return entry.answer
 }
 
-function toFaqItem(entry: FaqEntry): FaqItem {
+export function toFaqItem(entry: FaqEntry): FaqItem {
   return {
     id: entry.id,
     question: entry.question,

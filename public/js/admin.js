@@ -71,8 +71,9 @@
       modalOverlay.innerHTML = innerHtml;
       modalOverlay.classList.add('is-open');
       document.body.style.overflow = 'hidden';
-      var closeBtn = modalOverlay.querySelector('[data-modal-close]');
-      if (closeBtn) closeBtn.addEventListener('click', closeModal);
+      modalOverlay.querySelectorAll('[data-modal-close]').forEach(function (btn) {
+        btn.addEventListener('click', closeModal);
+      });
     }
 
     function formatCurrency(amount) {
@@ -399,6 +400,67 @@
     var leadsLoaded = false;
 
     /* ---------- 諮詢名單（合併聯絡表單＋線上估價） ---------- */
+    var _leadsByKey = {};
+
+    function leadDetailRow(label, value) {
+      if (value == null || value === '') return '';
+      return (
+        '<div class="lead-detail__row">' +
+          '<span class="lead-detail__label">' + escapeHtml(label) + '</span>' +
+          '<span class="lead-detail__value">' + escapeHtml(String(value)) + '</span>' +
+        '</div>'
+      );
+    }
+
+    function openLeadDetail(key) {
+      var item = _leadsByKey[key];
+      if (!item) return;
+      var raw = item.raw || {};
+      var body = '';
+      if (item.type === 'message') {
+        body =
+          leadDetailRow('姓名', item.name) +
+          leadDetailRow('電話', item.phone) +
+          leadDetailRow('Email', item.email) +
+          leadDetailRow('來源頁', raw.source_page) +
+          leadDetailRow('狀態', item.status) +
+          leadDetailRow('建立時間', formatDateTime(item.created_at)) +
+          '<div class="lead-detail__block">' +
+            '<span class="lead-detail__label">留言內容</span>' +
+            '<p class="lead-detail__message">' + escapeHtml(raw.message || item.summary || '—') + '</p>' +
+          '</div>';
+      } else {
+        body =
+          leadDetailRow('姓名', item.name) +
+          leadDetailRow('電話', item.phone) +
+          leadDetailRow('Email', item.email) +
+          leadDetailRow('系列', raw.series) +
+          leadDetailRow('品項', raw.product_type) +
+          leadDetailRow('克拉', raw.carat) +
+          leadDetailRow('顏色', raw.color) +
+          leadDetailRow('造型', raw.shape) +
+          leadDetailRow('材質', raw.metal) +
+          leadDetailRow('數量', raw.quantity != null ? String(raw.quantity) : '') +
+          leadDetailRow(
+            '預估金額',
+            raw.estimated_price != null ? ('NT$ ' + Number(raw.estimated_price).toLocaleString('en-US')) : ''
+          ) +
+          leadDetailRow('狀態', item.status) +
+          leadDetailRow('建立時間', formatDateTime(item.created_at));
+      }
+
+      openModal(
+        '<div class="qr-modal lead-detail-modal" role="dialog" aria-modal="true">' +
+          '<button type="button" class="qr-modal-close" data-modal-close aria-label="關閉">&times;</button>' +
+          '<h3>' + (item.type === 'message' ? '聯絡留言詳情' : '線上估價詳情') + '</h3>' +
+          '<div class="lead-detail">' + body + '</div>' +
+          '<div class="ap-form-actions" style="margin-top:16px">' +
+            '<button type="button" class="btn-sm" data-modal-close>關閉</button>' +
+          '</div>' +
+        '</div>'
+      );
+    }
+
     function loadLeads(silent, force) {
       var tbody = document.getElementById('leadsTableBody');
       if (!tbody) return;
@@ -407,75 +469,137 @@
         var S = window.SkeletonUI;
         tbody.innerHTML = S
           ? S.tableBodyRows(5, S.leadsTableRow)
-          : '<tr><td colspan="6" class="table-placeholder">載入中…</td></tr>';
+          : '<tr><td colspan="8" class="table-placeholder">載入中…</td></tr>';
+      }
+
+      function fail(msg) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--ink-faint);">' +
+          escapeHtml(msg || '載入失敗，請重新整理頁面。') + '</td></tr>';
+        leadsLoaded = false;
+      }
+
+      function attr(s) {
+        return escapeHtml(String(s == null ? '' : s)).replace(/\r?\n/g, ' ');
       }
 
       api.admin.getLeads().then(function (res) {
         if (res.error) {
-          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--ink-faint);">載入失敗，請重新整理頁面。</td></tr>';
+          fail(typeof res.error === 'string' ? res.error : (res.error.message || '載入失敗'));
           return;
         }
-        var messages = (res.messages || []).map(function (m) {
-          return { type: 'message', id: m.id, name: m.name, phone: m.phone, email: m.email, summary: m.message, created_at: m.created_at, status: m.status };
-        });
-        var quotes = (res.quotes || []).map(function (q) {
-          var parts = [];
-          if (q.series) parts.push(q.series);
-          if (q.carat) parts.push(q.carat + ' 克拉');
-          if (q.product_type) parts.push(q.product_type);
-          if (q.estimated_price != null) parts.push('NT$ ' + Number(q.estimated_price).toLocaleString('en-US'));
-          return { type: 'quote', id: q.id, name: q.name, phone: q.phone, email: q.email, summary: parts.join('・') || '線上估價需求', created_at: q.created_at, status: q.status };
-        });
-        var all = messages.concat(quotes).sort(function (a, b) { return new Date(b.created_at) - new Date(a.created_at); });
+        try {
+          var messages = (res.messages || []).map(function (m) {
+            return {
+              type: 'message',
+              id: m.id,
+              name: m.name,
+              phone: m.phone,
+              email: m.email,
+              summary: m.message,
+              created_at: m.created_at,
+              status: m.status,
+              raw: m,
+            };
+          });
+          var quotes = (res.quotes || []).map(function (q) {
+            var parts = [];
+            if (q.series) parts.push(q.series);
+            if (q.carat) parts.push(q.carat + ' 克拉');
+            if (q.product_type) parts.push(q.product_type);
+            if (q.estimated_price != null) parts.push('NT$ ' + Number(q.estimated_price).toLocaleString('en-US'));
+            return {
+              type: 'quote',
+              id: q.id,
+              name: q.name,
+              phone: q.phone,
+              email: q.email,
+              summary: parts.join('・') || '線上估價需求',
+              created_at: q.created_at,
+              status: q.status,
+              raw: q,
+            };
+          });
+          var all = messages.concat(quotes).sort(function (a, b) {
+            return new Date(b.created_at) - new Date(a.created_at);
+          });
+          _leadsByKey = {};
 
-        if (!all.length) {
-          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--ink-faint);">目前沒有諮詢紀錄。</td></tr>';
-          leadsLoaded = true;
-        } else {
-          leadsLoaded = true;
-          tbody.innerHTML = all.map(function (item) {
-          var sourceLabel = item.type === 'message' ? '官網留言表單' : '線上估價';
-          var isDone = ['replied', 'contacted', 'converted', 'closed'].indexOf(item.status) !== -1;
-          var statusLabel = isDone ? '已處理' : '待處理';
-          return (
-            '<tr data-sort-name="' + escapeHtml(item.name) + '"' +
-              ' data-sort-source="' + escapeHtml(sourceLabel) + '"' +
-              ' data-sort-summary="' + escapeHtml(item.summary) + '"' +
-              ' data-sort-created="' + escapeHtml(item.created_at || '') + '"' +
-              ' data-sort-status="' + escapeHtml(statusLabel) + '">' +
-              '<td class="name">' + escapeHtml(item.name) + '<span class="sub">' + escapeHtml(item.phone || item.email || '') + '</span></td>' +
-              '<td>' + sourceLabel + '</td>' +
-              '<td>' + escapeHtml(item.summary) + '</td>' +
-              '<td>' + formatDateTime(item.created_at) + '</td>' +
-              '<td><span class="chip ' + (isDone ? 'chip-done' : 'chip-new') + '">' + statusLabel + '</span></td>' +
-              '<td>' + (isDone ? '' : '<button class="btn-sm" data-mark-done="' + item.type + ':' + item.id + '">標記已處理</button>') + '</td>' +
-            '</tr>'
-          );
-        }).join('');
-        }
+          if (!all.length) {
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--ink-faint);">目前沒有諮詢紀錄。</td></tr>';
+            leadsLoaded = true;
+          } else {
+            tbody.innerHTML = all.map(function (item) {
+              var key = item.type + ':' + item.id;
+              _leadsByKey[key] = item;
+              var sourceLabel = item.type === 'message' ? '官網留言表單' : '線上估價';
+              var isDone = ['replied', 'contacted', 'converted', 'closed'].indexOf(item.status) !== -1;
+              var statusLabel = isDone ? '已處理' : '待處理';
+              var summaryPreview = String(item.summary || '');
+              if (summaryPreview.length > 48) summaryPreview = summaryPreview.slice(0, 48) + '…';
+              var phone = item.phone || '';
+              var email = item.email || '';
+              return (
+                '<tr data-sort-name="' + attr(item.name) + '"' +
+                  ' data-sort-phone="' + attr(phone) + '"' +
+                  ' data-sort-email="' + attr(email) + '"' +
+                  ' data-sort-source="' + attr(sourceLabel) + '"' +
+                  ' data-sort-summary="' + attr(item.summary) + '"' +
+                  ' data-sort-created="' + attr(item.created_at || '') + '"' +
+                  ' data-sort-status="' + attr(statusLabel) + '">' +
+                  '<td class="name">' + escapeHtml(item.name) + '</td>' +
+                  '<td>' + (phone ? escapeHtml(phone) : '<span class="adx-muted">—</span>') + '</td>' +
+                  '<td>' + (email
+                    ? '<a class="lead-email-link" href="mailto:' + escapeHtml(email) + '">' + escapeHtml(email) + '</a>'
+                    : '<span class="adx-muted">—</span>') + '</td>' +
+                  '<td>' + sourceLabel + '</td>' +
+                  '<td>' + escapeHtml(summaryPreview) + '</td>' +
+                  '<td>' + formatDateTime(item.created_at) + '</td>' +
+                  '<td><span class="chip ' + (isDone ? 'chip-done' : 'chip-new') + '">' + statusLabel + '</span></td>' +
+                  '<td><div class="adx-actions">' +
+                    '<button type="button" class="btn-sm" data-lead-detail="' + escapeHtml(key) + '">詳情</button>' +
+                    (isDone ? '' : '<button type="button" class="btn-sm" data-mark-done="' + escapeHtml(key) + '">標記已處理</button>') +
+                  '</div></td>' +
+                '</tr>'
+              );
+            }).join('');
+            leadsLoaded = true;
+          }
 
-        var leadsTable = tbody.closest('table');
-        if (leadsTable && window.AdminTableSort) window.AdminTableSort.bind(leadsTable);
+          var leadsTable = tbody.closest('table');
+          if (leadsTable && window.AdminTableSort) window.AdminTableSort.bind(leadsTable);
 
-        tbody.querySelectorAll('[data-mark-done]').forEach(function (btn) {
-          btn.addEventListener('click', function () {
-            var sep = btn.dataset.markDone.indexOf(':');
-            var kind = btn.dataset.markDone.slice(0, sep);
-            var id = btn.dataset.markDone.slice(sep + 1);
-            btn.disabled = true;
-            btn.textContent = '更新中…';
-            api.admin.markLeadDone(kind, id).then(function (res) {
-              if (res.error) {
-                console.error('[admin]', res.error);
-                btn.disabled = false;
-                btn.textContent = '更新失敗，再試一次';
-                return;
-              }
-              loadLeads(true, true);
-              loadDashboardStats();
+          tbody.querySelectorAll('[data-lead-detail]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+              openLeadDetail(btn.dataset.leadDetail);
             });
           });
-        });
+
+          tbody.querySelectorAll('[data-mark-done]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+              var sep = btn.dataset.markDone.indexOf(':');
+              var kind = btn.dataset.markDone.slice(0, sep);
+              var id = btn.dataset.markDone.slice(sep + 1);
+              btn.disabled = true;
+              btn.textContent = '更新中…';
+              api.admin.markLeadDone(kind, id).then(function (doneRes) {
+                if (doneRes.error) {
+                  console.error('[admin]', doneRes.error);
+                  btn.disabled = false;
+                  btn.textContent = '更新失敗，再試一次';
+                  return;
+                }
+                loadLeads(true, true);
+                loadDashboardStats();
+              });
+            });
+          });
+        } catch (err) {
+          console.error('[admin] leads render', err);
+          fail('畫面渲染失敗，請重新整理。');
+        }
+      }).catch(function (err) {
+        console.error('[admin] leads fetch', err);
+        fail('系統連線異常，請稍後再試。');
       });
     }
 
@@ -565,9 +689,19 @@
           if (panel === 'orders' && window.AdminOrdersPanel) window.AdminOrdersPanel.ensureLoaded();
           if (panel === 'products' && window.AdminProductsPanel) window.AdminProductsPanel.ensureLoaded();
           if (panel === 'invites' && window.AdminInvitesPanel) window.AdminInvitesPanel.ensureLoaded();
+          if (panel === 'coupons' && window.AdminCouponsPanel) window.AdminCouponsPanel.ensureLoaded();
+          if (panel === 'content' && window.AdminContentPanel) window.AdminContentPanel.ensureLoaded();
           if (panel === 'accounts' && window.AdminAccountsPanel) window.AdminAccountsPanel.ensureLoaded();
         }
       };
+
+      var activeNav = document.querySelector('.side-nav button.is-active');
+      if (activeNav && activeNav.dataset.panel) {
+        window.AdminPanel.onPanelSwitch(activeNav.dataset.panel);
+      }
+      if (typeof window.__adminFlushPendingPanel === 'function') {
+        window.__adminFlushPendingPanel();
+      }
 
       if (window.AdminProductsPanel && window.AdminProductsPanel.prefetch) {
         window.AdminProductsPanel.prefetch();

@@ -6,6 +6,7 @@ export type Testimonial = {
   rating: number;
   category: string;
   city: string;
+  image?: string;
 };
 
 export const TESTIMONIALS: Testimonial[] = [
@@ -17,6 +18,7 @@ export const TESTIMONIALS: Testimonial[] = [
     city: "高雄",
     text: "我覺得我的寵物就像我的小孩，在世時就已經是非常耀眼的存在。過世後希望昇華成更閃耀的鑽石！",
     rating: 5,
+    image: "/static/images/testimonials/presets/ring-A.jpg",
   },
   {
     id: 2,
@@ -26,6 +28,7 @@ export const TESTIMONIALS: Testimonial[] = [
     city: "新北",
     text: "想要給牠不一樣的、特別的東西留做記念！",
     rating: 5,
+    image: "/static/images/testimonials/presets/ring-B.jpg",
   },
   {
     id: 3,
@@ -35,6 +38,7 @@ export const TESTIMONIALS: Testimonial[] = [
     city: "高雄",
     text: "我想要送一顆真的屬於我們自己 DNA 的鑽石，屬於妳跟我獨一無二的鑽石，我們結婚吧！",
     rating: 5,
+    image: "/static/images/testimonials/presets/ring-C.jpg",
   },
   {
     id: 4,
@@ -44,6 +48,7 @@ export const TESTIMONIALS: Testimonial[] = [
     city: "台北",
     text: "為父親製作了一顆 1.3 克拉的銘印鑽石，雖然父親離開了，但彼此的愛與親情永遠都不會消散。",
     rating: 5,
+    image: "/static/images/testimonials/testimonial-ring-01.jpg",
   },
   {
     id: 5,
@@ -53,6 +58,7 @@ export const TESTIMONIALS: Testimonial[] = [
     city: "台北",
     text: "「鑽石恆久遠」，我曾經嗤之以鼻的商業噱頭，但當摯愛可能離去，我發現我也抵抗不了鑽石賦予的意義……曾經存在的痕跡、一起渡過的回憶，這些會永遠留在我心中；但同時，我也將他的一部分，變成寓意永恆璀璨的鑽石，讓我戴在身上，長伴左右。",
     rating: 5,
+    image: "/static/images/testimonials/presets/pendant-A.jpg",
   },
   {
     id: 6,
@@ -62,6 +68,7 @@ export const TESTIMONIALS: Testimonial[] = [
     city: "新北",
     text: "可以親眼見證自己的鑽石生長，非常安心，鑽石的視頻包裝盒也好精美，喜歡喜歡。",
     rating: 5,
+    image: "/static/images/testimonials/testimonial-ring-02.jpg",
   },
   {
     id: 7,
@@ -71,6 +78,7 @@ export const TESTIMONIALS: Testimonial[] = [
     city: "新北",
     text: "我與未婚妻的頭髮做了二顆鑽石，當我們的結婚戒指，真正屬於我們的獨一無二結髮鑽石。",
     rating: 5,
+    image: "/static/images/testimonials/testimonial-ring-03.jpg",
   },
   {
     id: 8,
@@ -80,6 +88,7 @@ export const TESTIMONIALS: Testimonial[] = [
     city: "新北",
     text: "拿自己的頭髮製作了 1 克拉的銘印鑽石送給自己當生日禮物，我要好好的愛自己，才能更好地愛別人！",
     rating: 5,
+    image: "/static/images/testimonials/testimonial-ring-04.jpg",
   },
   {
     id: 9,
@@ -89,6 +98,7 @@ export const TESTIMONIALS: Testimonial[] = [
     city: "台中",
     text: "把爸爸、媽媽和我們兄妹三人的頭髮融合在一起，做成一顆全家福鑽石，感覺不管去到哪裡，家人都還在身邊。",
     rating: 5,
+    image: "/static/images/testimonials/testimonial-ring-05.jpg",
   },
   {
     id: 10,
@@ -98,6 +108,7 @@ export const TESTIMONIALS: Testimonial[] = [
     city: "桃園",
     text: "用女兒滿月時剪下的第一撮胎髮做了鑽石，想留到她長大後親手交給她，告訴她這是屬於她的第一份禮物。",
     rating: 5,
+    image: "/static/images/testimonials/presets/pendant-B.jpg",
   },
   {
     id: 11,
@@ -107,6 +118,7 @@ export const TESTIMONIALS: Testimonial[] = [
     city: "新竹",
     text: "陪了我十四年的柴犬走了，捨不得把牠的骨灰放進罐子裡，於是決定讓牠變成一顆鑽石，繼續陪著我。",
     rating: 5,
+    image: "/static/images/testimonials/presets/pendant-C.jpg",
   },
   {
     id: 12,
@@ -116,6 +128,7 @@ export const TESTIMONIALS: Testimonial[] = [
     city: "台南",
     text: "求婚那天，我把我們兩人的頭髮一起交給銘印鑽石，等鑽石完成的那天，我要親手鑲成她的求婚戒指。",
     rating: 5,
+    image: "/static/images/testimonials/testimonial-ring-06.jpg",
   },
   {
     id: 13,
@@ -125,6 +138,7 @@ export const TESTIMONIALS: Testimonial[] = [
     city: "基隆",
     text: "阿嬤走得很突然，來不及好好道別，做成鑽石之後，每次戴著它，就覺得她一直都在。",
     rating: 5,
+    image: "/static/images/testimonials/testimonial-pendant-01.jpg",
   },
   {
     id: 14,
@@ -134,6 +148,7 @@ export const TESTIMONIALS: Testimonial[] = [
     city: "宜蘭",
     text: "生日那天送給自己的禮物，不是包包也不是珠寶，是一顆用我自己的頭髮做成、獨一無二的鑽石。",
     rating: 5,
+    image: "/static/images/testimonials/testimonial-ring-07.jpg",
   },
   {
     id: 15,
@@ -143,6 +158,7 @@ export const TESTIMONIALS: Testimonial[] = [
     city: "花蓮",
     text: "媽媽罹癌康復後，我們全家決定做一顆全家福鑽石，紀念這段一起撐過來的日子。",
     rating: 5,
+    image: "/static/images/testimonials/testimonial-ring-08.jpg",
   },
   {
     id: 16,
@@ -152,5 +168,6 @@ export const TESTIMONIALS: Testimonial[] = [
     city: "台北",
     text: "牠不是寵物，牠是我的家人。把愛貓的毛髮做成鑽石鑲在項鍊上，就像牠從沒離開過。",
     rating: 5,
-  },
+    image: "/static/images/testimonials/testimonial-pendant-02.jpg",
+  }
 ];

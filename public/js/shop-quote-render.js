@@ -104,13 +104,18 @@
     var diamond = diamondColorId(config) || 'white';
     if (withChain) {
       var fullCombo = global.ShopAssets.productImage(styleKey, pendantMetal, defaultColor, diamond, { chainColor: chainMetal });
-      if (fullCombo && !isGenericThumb(fullCombo) && !/_(?:only|chain)\.[a-z0-9]+$/i.test(fullCombo)) {
+      var isLayer = /_(?:only|chain)\.(?:png|jpe?g|webp)(?:\?|$)/i.test(fullCombo || '')
+        && !/_chain_(?:silver|gold|rose)/i.test(fullCombo || '');
+      if (fullCombo && !isGenericThumb(fullCombo) && !isLayer) {
         return { primary: fullCombo, fallback: '' };
       }
-      var pendantLayer = global.ShopAssets.productImage(styleKey, pendantMetal, defaultColor, diamond, { pendantOnly: true });
-      var chainLayer = global.ShopAssets.productImage(styleKey, chainMetal, defaultColor, 'white', { chainOnly: true });
-      if (pendantLayer && chainLayer && !isGenericThumb(pendantLayer) && !isGenericThumb(chainLayer)) {
-        return { composite: true, pendant: pendantLayer, chain: chainLayer };
+      // White diamond: skip _only+chain composite (reads as pendant-only).
+      if (diamond !== 'white') {
+        var pendantLayer = global.ShopAssets.productImage(styleKey, pendantMetal, defaultColor, diamond, { pendantOnly: true });
+        var chainLayer = global.ShopAssets.productImage(styleKey, chainMetal, defaultColor, 'white', { chainOnly: true });
+        if (pendantLayer && chainLayer && !isGenericThumb(pendantLayer) && !isGenericThumb(chainLayer)) {
+          return { composite: true, pendant: pendantLayer, chain: chainLayer };
+        }
       }
     }
     var fullOpts = { pendantOnly: withChain ? false : pendantOnly };

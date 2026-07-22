@@ -1,5 +1,7 @@
+import { useEffect, useMemo, useState } from "react";
 import { TestimonialsRow } from "@/components/ui/testimonials-row";
-import { TESTIMONIALS } from "@/data/testimonials";
+import { TESTIMONIALS, type Testimonial } from "@/data/testimonials";
+import { fetchTestimonialsApi } from "@/lib/content-api";
 import { motion } from "motion/react";
 
 const LINE_URL = "https://lin.ee/ktVBtmx";
@@ -13,20 +15,47 @@ function excerpt(text: string, max = 88) {
   return plain.length > max ? `${plain.slice(0, max)}…` : plain;
 }
 
-const WALL_ITEMS = TESTIMONIALS.map((item) => ({
-  text: `「${excerpt(item.text)}」`,
-  name: item.name,
-  role: item.role,
-}));
-
-const WALL_ROW_CHUNK = Math.ceil(WALL_ITEMS.length / 2);
-const WALL_ROWS = [
-  WALL_ITEMS.slice(0, WALL_ROW_CHUNK),
-  WALL_ITEMS.slice(WALL_ROW_CHUNK, WALL_ROW_CHUNK * 2),
-];
+function toWallItems(list: Array<Pick<Testimonial, "name" | "role" | "text" | "image">>) {
+  return list.map((item) => ({
+    text: `「${excerpt(item.text)}」`,
+    name: item.name,
+    role: item.role,
+    image: item.image,
+  }));
+}
 
 export default function StoriesTestimonials() {
   const root = siteRoot();
+  const [items, setItems] = useState(TESTIMONIALS);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const api = await fetchTestimonialsApi();
+      if (cancelled || !api?.length) return;
+      setItems(
+        api.map((t, i) => ({
+          id: i + 1,
+          name: t.name,
+          role: t.role || `${t.category}・${t.city}`,
+          category: t.category,
+          city: t.city,
+          text: t.text,
+          rating: t.rating || 5,
+          image: t.image_url || undefined,
+        })),
+      );
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const wallRows = useMemo(() => {
+    const wall = toWallItems(items);
+    const chunk = Math.ceil(wall.length / 2) || 1;
+    return [wall.slice(0, chunk), wall.slice(chunk, chunk * 2)];
+  }, [items]);
 
   return (
     <>
@@ -75,7 +104,7 @@ export default function StoriesTestimonials() {
       <section className="border-b border-[#E3DCD3] bg-[#fdfcfa] py-8">
         <div className="mx-auto grid max-w-4xl grid-cols-1 gap-6 px-4 sm:grid-cols-3 sm:gap-8">
           {[
-            { value: `${TESTIMONIALS.length}+`, label: "則真實客戶見證" },
+            { value: `${items.length}+`, label: "則真實客戶見證" },
             { value: "全台唯一", label: "在地 DNA 鑽石培育實驗室" },
             { value: "可預約", label: "親眼見證鑽石生長過程" },
           ].map((stat) => (
@@ -117,8 +146,12 @@ export default function StoriesTestimonials() {
           </motion.div>
 
           <div className="mt-10 flex flex-col gap-6 overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
-            <TestimonialsRow testimonials={WALL_ROWS[0]} duration={32} />
-            <TestimonialsRow testimonials={WALL_ROWS[1]} duration={36} reverse />
+            <TestimonialsRow testimonials={wallRows[0] || []} duration={32} />
+            <TestimonialsRow
+              testimonials={wallRows[1] || []}
+              duration={36}
+              reverse
+            />
           </div>
         </div>
       </section>
