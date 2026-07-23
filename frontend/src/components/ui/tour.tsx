@@ -231,6 +231,7 @@ function calculateContentPosition(
   return {
     top: Math.max(VIEWPORT_MARGIN, Math.min(top, maxTop)),
     left: Math.max(VIEWPORT_MARGIN, Math.min(left, maxLeft)),
+    width: CONTENT_WIDTH,
   };
 }
 

@@ -36,7 +36,7 @@ def _jwt_secret() -> str:
 # ── passwords ────────────────────────────────────────────────────────────
 
 def hash_password(password: str) -> str:
-    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt(rounds=10)).decode("utf-8")
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt(rounds=12)).decode("utf-8")
 
 
 def verify_password(password: str, password_hash: str) -> bool:
@@ -179,6 +179,42 @@ def record_failure(key: str, max_attempts: int, lockout_seconds: int) -> None:
 def record_success(key: str) -> None:
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute("delete from login_lockouts where lockout_key = %s", (key,))
+
+
+def enforce_rate_limit(request: Request, *, action: str, limit: int, window_seconds: int) -> bool:
+    """Per-IP throttle for unauthenticated POST endpoints (contact/quote forms),
+    reusing the login_lockouts table so it works across gunicorn workers. Returns
+    True if the request is within the allowance, False if it should be rejected.
+
+    Fixed window that resets after `window_seconds` of inactivity: while a client
+    keeps hitting the endpoint the counter grows and, once it passes `limit`,
+    stays blocked; after it goes quiet for a full window the counter starts over.
+    Keys are namespaced by `action`, separate from login:/register: keys."""
+    key = f"{action}:{client_ip(request)}"
+    now = datetime.now(timezone.utc)
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute(
+            "select fail_count, updated_at from login_lockouts where lockout_key = %s",
+            (key,),
+        )
+        row = cur.fetchone()
+        within_window = bool(
+            row and row["updated_at"] and (now - row["updated_at"]).total_seconds() < window_seconds
+        )
+        count = (row["fail_count"] + 1) if within_window else 1
+        locked_until = now + timedelta(seconds=window_seconds) if count > limit else None
+        cur.execute(
+            """
+            insert into login_lockouts (lockout_key, fail_count, locked_until, updated_at)
+            values (%s, %s, %s, now())
+            on conflict (lockout_key) do update set
+              fail_count = excluded.fail_count,
+              locked_until = excluded.locked_until,
+              updated_at = now()
+            """,
+            (key, count, locked_until),
+        )
+        return count <= limit
 
 
 def check_login_lockout(request: Request, email: str) -> tuple[str, bool]:

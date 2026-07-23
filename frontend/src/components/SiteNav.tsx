@@ -141,11 +141,6 @@ export default function SiteNav() {
 
   const headerRef = React.useRef<HTMLElement>(null)
 
-  const isHome = React.useMemo(
-    () => document.body.classList.contains("page-home"),
-    [],
-  )
-
   const [session, setSession] = React.useState<Session | null>(null)
 
   const [mobileOpen, setMobileOpen] = React.useState(false)

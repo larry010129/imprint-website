@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import hashlib
+import logging
 import math
+import secrets
+from datetime import datetime, timedelta, timezone
 
 import psycopg
 from fastapi import APIRouter, Request, Response
@@ -18,6 +22,7 @@ from app.auth import (
     check_register_lockout,
     clear_session_cookie,
     consume_invite_code,
+    enforce_rate_limit,
     get_user_id,
     hash_password,
     is_admin,
@@ -30,8 +35,16 @@ from app.auth import (
     verify_password,
 )
 from app.database import get_connection
+from config.settings import settings
+
+RESET_TOKEN_TTL_HOURS = 1
+
+
+def _hash_reset_token(raw: str) -> str:
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+log = logging.getLogger(__name__)
 
 
 def _err(status: int, message: str) -> JSONResponse:
@@ -50,8 +63,8 @@ async def signup(request: Request, response: Response) -> JSONResponse:
 
     if not email or not password or not full_name or not phone:
         return _err(400, "請完整填寫所有欄位")
-    if len(password) < 6:
-        return _err(400, "密碼至少需要 6 碼")
+    if len(password) < 8:
+        return _err(400, "密碼至少需要 8 碼")
 
     normalized_email = email.lower()
 
@@ -160,6 +173,88 @@ async def logout(request: Request) -> JSONResponse:
     result = JSONResponse(content={"ok": True})
     clear_session_cookie(result)
     return result
+
+
+@router.post("/request-password-reset")
+async def request_password_reset(request: Request) -> JSONResponse:
+    # Always returns ok — never reveal whether an email is registered. Throttled
+    # per-IP so it can't be used to blast reset emails at someone's inbox.
+    if not enforce_rate_limit(request, action="pwreset", limit=5, window_seconds=900):
+        return _err(429, "請求過於頻繁，請稍後再試")
+
+    body = await request.json()
+    email = (body.get("email") or "").strip().lower()
+    generic = JSONResponse(content={"ok": True})
+    if not email:
+        return generic
+
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute("select id, email from users where email = %s and is_active = true", (email,))
+        user = cur.fetchone()
+
+    if not user:
+        return generic  # same response as success — no account enumeration
+
+    raw_token = secrets.token_urlsafe(32)
+    expires = datetime.now(timezone.utc) + timedelta(hours=RESET_TOKEN_TTL_HOURS)
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute(
+            "insert into password_reset_tokens (token, user_id, expires_at) values (%s, %s, %s)",
+            (_hash_reset_token(raw_token), user["id"], expires),
+        )
+
+    reset_url = f"{settings.public_base_url}/reset-password.html?token={raw_token}"
+    try:
+        from app.mail import send_email
+
+        send_email(
+            to=user["email"],
+            subject="銘印鑽石｜重設密碼",
+            text=(
+                "您好，\n\n我們收到您重設密碼的請求。請於 1 小時內點擊以下連結設定新密碼：\n\n"
+                f"{reset_url}\n\n若您沒有提出此請求，請忽略這封信，您的密碼不會變更。\n\n銘印鑽石 IMPRINT DIAMOND"
+            ),
+        )
+    except Exception:
+        log.exception("password reset email failed")
+
+    return generic
+
+
+@router.post("/reset-password")
+async def reset_password(request: Request) -> JSONResponse:
+    body = await request.json()
+    token = (body.get("token") or "").strip()
+    new_password = body.get("newPassword") or body.get("password") or ""
+    if not token or not new_password:
+        return _err(400, "缺少驗證碼或新密碼")
+    if len(new_password) < 8:
+        return _err(400, "密碼至少需要 8 碼")
+
+    token_hash = _hash_reset_token(token)
+    now = datetime.now(timezone.utc)
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute(
+            "select token, user_id, expires_at, used_at from password_reset_tokens where token = %s",
+            (token_hash,),
+        )
+        row = cur.fetchone()
+        if not row or row["used_at"] is not None or row["expires_at"] < now:
+            return _err(400, "重設連結無效或已過期，請重新申請")
+
+        cur.execute(
+            "update users set password_hash = %s where id = %s",
+            (hash_password(new_password), row["user_id"]),
+        )
+        cur.execute(
+            "update password_reset_tokens set used_at = now() where token = %s",
+            (token_hash,),
+        )
+
+    # Invalidate every existing session for this user (the reset may be because
+    # an attacker had access) — they must sign in again with the new password.
+    bump_token_version(row["user_id"])
+    return JSONResponse(content={"ok": True})
 
 
 @router.get("/session")

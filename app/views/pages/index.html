@@ -1,6 +1,7 @@
 {% extends "layouts/base.html" %}
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/home-ghibli.css?v=23">
+<link rel="stylesheet" href="/static/css/home-ghibli.css?v=25">
+{% include "partials/stories-react-css.html" %}
 {% include "partials/faq-react-css.html" %}
 {% endblock %}
 {% block extra_head %}
@@ -426,20 +427,7 @@
     <p class="gh-section__lead reveal reveal-d2">來自不同城市、不同故事的顧客，寫下他們與銘印鑽石相遇的片刻。</p>
   </div>
 
-  <div class="gh-wall__rows reveal reveal-d3" data-home-wall>
-    <div class="gh-wall__row" data-dir="left">
-      <div class="gh-wall__track">
-        <div class="gh-wall__card">
-          <p class="gh-wall__quote">「我覺得我的寵物就像我的小孩，在世時就已經是非常耀眼的存在。過世後希望昇華成更閃耀的鑽石！」</p>
-          <div class="gh-wall__meta"><span class="gh-wall__avatar">沈</span><span class="gh-wall__who"><strong>沈小姐</strong><em>寵物鑽石・高雄</em></span></div>
-        </div>
-        <div class="gh-wall__card">
-          <p class="gh-wall__quote">「想要給牠不一樣的、特別的東西留做記念！」</p>
-          <div class="gh-wall__meta"><span class="gh-wall__avatar">徐</span><span class="gh-wall__who"><strong>徐小姐</strong><em>寵物鑽石・新北</em></span></div>
-        </div>
-      </div>
-    </div>
-  </div>
+  <div class="gh-wall__rows reveal reveal-d3" data-home-wall></div>
 
   <div class="gh-wall__more reveal reveal-d4">
     <a class="gh-btn gh-btn--dark" href="/stories.html">閱讀更多客戶見證 →</a>
@@ -536,6 +524,6 @@
 {% endblock %}
 {% block extra_scripts %}
 {% include "partials/faq-react-js.html" %}
-<script src="/static/js/home-wall.js?v=2" defer></script>
+{% include "partials/stories-react-js.html" %}
 <script src="/static/js/home-banners.js?v=1" defer></script>
 {% endblock %}

@@ -27,16 +27,17 @@
   function cardHtml(t, hidden) {
     var quote = '「' + excerpt(t.text) + '」';
     var role = t.role || ((t.category || '') + (t.city ? '・' + t.city : ''));
-    var avatar = t.image_url
-      ? '<img class="gh-wall__avatar gh-wall__avatar--img" src="' + esc(t.image_url) + '" alt="" width="40" height="40" loading="lazy">'
-      : '<span class="gh-wall__avatar">' + esc(avatarChar(t.name)) + '</span>';
+    var photo = t.image_url
+      ? '<div class="gh-wall__photo"><img src="' + esc(t.image_url) + '" alt="" loading="lazy" decoding="async"></div>'
+      : '';
     return (
       '<div class="gh-wall__card"' + (hidden ? ' aria-hidden="true"' : '') + '>' +
         '<p class="gh-wall__quote">' + esc(quote) + '</p>' +
         '<div class="gh-wall__meta">' +
-          avatar +
+          '<span class="gh-wall__avatar">' + esc(avatarChar(t.name)) + '</span>' +
           '<span class="gh-wall__who"><strong>' + esc(t.name) + '</strong><em>' + esc(role) + '</em></span>' +
         '</div>' +
+        photo +
       '</div>'
     );
   }
@@ -56,11 +57,10 @@
     var mid = Math.ceil(list.length / 2);
     var left = list.slice(0, mid);
     var right = list.slice(mid);
+    root.classList.add('is-in');
     root.innerHTML =
-      '<div class="gh-wall__rows reveal reveal-d3 is-in">' +
-        rowHtml(left, 'left') +
-        (right.length ? rowHtml(right, 'right') : '') +
-      '</div>';
+      rowHtml(left, 'left') +
+      (right.length ? rowHtml(right, 'right') : '');
   }
 
   var base = (typeof window.IMPRINT_API_BASE === 'string' && window.IMPRINT_API_BASE) || '';

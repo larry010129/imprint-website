@@ -507,9 +507,8 @@ button.gh-btn--primary{ border:none; }
 }
 .gh-wall__head{ text-align:center; max-width:640px; margin:0 auto 44px; padding:0 16px; }
 .gh-wall__rows{
-  display:flex; flex-direction:column; gap:22px;
-  mask-image:linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
-  -webkit-mask-image:linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
+  /* React TestimonialsWall mount (same cards as /stories.html) */
+  min-height:120px;
 }
 .gh-wall__row{ overflow:hidden; }
 .gh-wall__track{
@@ -532,6 +531,15 @@ button.gh-btn--primary{ border:none; }
   -webkit-backdrop-filter:blur(14px) saturate(1.3);
   box-shadow:0 14px 36px rgba(20,58,96,.1);
   transition:transform .3s var(--ease), box-shadow .3s var(--ease);
+  overflow:hidden;
+  display:flex; flex-direction:column;
+}
+.gh-wall__photo{
+  margin-top:16px; aspect-ratio:4/3; overflow:hidden; border-radius:12px;
+  background:rgba(20,58,96,.06); flex:none;
+}
+.gh-wall__photo img{
+  display:block; width:100%; height:100%; object-fit:cover;
 }
 .gh-wall__card:hover{
   transform:translateY(-4px);
@@ -539,7 +547,7 @@ button.gh-btn--primary{ border:none; }
 }
 .gh-wall__quote{
   font-size:13.5px; line-height:1.9; letter-spacing:.02em; color:var(--gh-ink);
-  min-height:76px;
+  flex:1;
 }
 .gh-wall__meta{ display:flex; align-items:center; gap:10px; margin-top:18px; }
 .gh-wall__avatar{
@@ -548,16 +556,14 @@ button.gh-btn--primary{ border:none; }
   background:var(--gh-grad-deep); color:var(--gh-twilight);
   font-family:var(--serif); font-weight:600; font-size:14px;
 }
-.gh-wall__avatar--img{
-  object-fit:cover; padding:0; background:#eee;
-}
 .gh-wall__who{ display:flex; flex-direction:column; line-height:1.4; }
 .gh-wall__who strong{ font-size:13px; font-weight:600; color:var(--gh-ink); }
 .gh-wall__who em{ font-style:normal; font-size:11.5px; color:var(--gh-muted); }
 .gh-wall__more{ text-align:center; margin-top:44px; }
 @media (max-width:640px){
   .gh-wall__card{ width:260px; padding:20px; }
-  .gh-wall__quote{ font-size:13px; min-height:88px; }
+  .gh-wall__photo{ margin-top:14px; border-radius:10px; }
+  .gh-wall__quote{ font-size:13px; }
 }
 @media (prefers-reduced-motion: reduce){
   .gh-wall__track{ animation:none; }

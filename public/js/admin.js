@@ -84,6 +84,10 @@
       var el = document.getElementById(id);
       if (el) {
         el.classList.remove('skel-metric');
+        var parentSkel = el.parentElement;
+        if (parentSkel && parentSkel.classList.contains('skel-metric')) {
+          parentSkel.classList.remove('skel-metric');
+        }
         el.textContent = value;
       }
     }

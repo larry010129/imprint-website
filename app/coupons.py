@@ -85,13 +85,24 @@ def validate_coupon(
     code: str,
     user_id: str,
     subtotal: float,
+    lock: bool = False,
 ) -> tuple[dict[str, Any] | None, str | None]:
-    """Return (result_dict, error_message)."""
+    """Return (result_dict, error_message).
+
+    Pass lock=True inside the checkout write transaction: it takes a row lock on
+    the coupon (SELECT ... FOR UPDATE) so two concurrent checkouts of a
+    single-use (or per-user-capped) code can't both pass the used_count check
+    before either increments it. On an autocommit read (the /coupon/validate
+    preview) leave lock=False — the lock would be released instantly and only
+    adds contention."""
     normalized = normalize_code(code)
     if not normalized:
         return None, "請輸入優惠碼"
 
-    cur.execute("select * from coupons where code = %s", (normalized,))
+    cur.execute(
+        "select * from coupons where code = %s" + (" for update" if lock else ""),
+        (normalized,),
+    )
     coupon = cur.fetchone()
     if not coupon:
         return None, "優惠碼不存在"

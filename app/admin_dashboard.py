@@ -302,6 +302,17 @@ def build_dashboard_payload(orders: list[dict], cfg: dict) -> dict:
     }
 
 
+def _csv_safe(value) -> str:
+    """Neutralize spreadsheet formula injection. A cell beginning with = + - @
+    (or tab/CR) is treated as a formula by Excel/Sheets; customer_name and the
+    product summary are attacker-controlled at checkout, so prefix a single
+    quote to force text interpretation. See OWASP "CSV Injection"."""
+    text = "" if value is None else str(value)
+    if text and text[0] in ("=", "+", "-", "@", "\t", "\r"):
+        return "'" + text
+    return text
+
+
 def build_dashboard_csv(orders: list[dict], cfg: dict) -> tuple[str, str]:
     output = io.StringIO()
     writer = csv.writer(output)
@@ -319,11 +330,11 @@ def build_dashboard_csv(orders: list[dict], cfg: dict) -> tuple[str, str]:
         product = (order.get("product_type") or order.get("category") or "").strip() or "-"
         status = STATUS_LABELS_ZH.get(order.get("status") or "", order.get("status") or "")
         writer.writerow([
-            order.get("order_number") or "",
+            _csv_safe(order.get("order_number") or ""),
             date_str,
-            order.get("customer_name") or "",
-            product,
-            status,
+            _csv_safe(order.get("customer_name") or ""),
+            _csv_safe(product),
+            _csv_safe(status),
             round(float(order.get("total_price") or 0)),
         ])
 

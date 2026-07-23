@@ -237,12 +237,18 @@
       var thumb = t.image_url
         ? '<img class="adx-thumb" src="' + esc(t.image_url) + '" alt="" width="56" height="36" loading="lazy">'
         : '—';
+      var snippet = truncate(t.text, 20);
       return '<tr data-id="' + esc(t.id) + '">' +
         '<td>' + thumb + '</td>' +
         '<td>' + esc(t.name) + '</td>' +
         '<td>' + esc(t.category || '—') + '</td>' +
         '<td>' + esc(t.city || '—') + '</td>' +
-        '<td class="adx-muted">' + esc(truncate(t.text, 48)) + '</td>' +
+        '<td class="adx-cell-snippet">' +
+          '<button type="button" class="adx-snippet-btn" data-action="edit-t" data-id="' + esc(t.id) + '" title="點擊查看完整內容並編輯">' +
+            '<span class="adx-snippet-text">' + esc(snippet || '—') + '</span>' +
+            (String(t.text || '').length > 20 ? '<span class="adx-snippet-more">詳情</span>' : '') +
+          '</button>' +
+        '</td>' +
         '<td>' + esc(String(t.sort_order || 0)) + '</td>' +
         '<td><span class="adx-badge ' + (pub ? 'adx-badge--active' : 'adx-badge--revoked') + '">' +
           (pub ? '已發布' : '未發布') + '</span></td>' +
@@ -325,7 +331,7 @@
                   '上傳<input type="file" id="acTestimonialFile" accept="image/png,image/jpeg,image/webp" hidden>' +
                 '</label>' +
               '</div></label>' +
-            '<label class="ap-field ap-field--full"><span>見證內容</span><textarea name="text" class="ap-textarea" rows="4" required>' + esc(isEdit ? t.text : '') + '</textarea></label>' +
+            '<label class="ap-field ap-field--full"><span>見證內容（完整）</span><textarea name="text" class="ap-textarea" rows="8" required>' + esc(isEdit ? t.text : '') + '</textarea></label>' +
             '<label class="ap-field ap-field--check"><input type="checkbox" name="isPublished"' + (!isEdit || t.is_published ? ' checked' : '') + '><span>發布</span></label>' +
           '</div>' +
           '<div class="ap-form-actions">' +
@@ -409,7 +415,12 @@
       return '<tr data-id="' + esc(f.id) + '">' +
         '<td><code class="adx-code">' + esc(f.id) + '</code></td>' +
         '<td>' + esc(catTitle(f.category_id)) + '</td>' +
-        '<td>' + esc(truncate(f.question, 36)) + '</td>' +
+        '<td class="adx-cell-snippet">' +
+          '<button type="button" class="adx-snippet-btn" data-action="edit-f" data-id="' + esc(f.id) + '" title="點擊查看完整內容並編輯">' +
+            '<span class="adx-snippet-text">' + esc(truncate(f.question, 18)) + '</span>' +
+            (String(f.question || '').length > 18 ? '<span class="adx-snippet-more">詳情</span>' : '') +
+          '</button>' +
+        '</td>' +
         '<td>' + (f.show_in_teaser ? '是' : '—') + '</td>' +
         '<td><span class="adx-badge ' + (pub ? 'adx-badge--active' : 'adx-badge--revoked') + '">' +
           (pub ? '已發布' : '未發布') + '</span></td>' +
@@ -473,7 +484,7 @@
             '<label class="ap-field"><span>分類</span><select name="categoryId" required>' + opts + '</select></label>' +
             '<label class="ap-field"><span>排序</span><input type="number" name="sortOrder" value="' + esc(String(isEdit ? f.sort_order : 0)) + '"></label>' +
             '<label class="ap-field ap-field--full"><span>問題</span><input name="question" required value="' + esc(isEdit ? f.question : '') + '"></label>' +
-            '<label class="ap-field ap-field--full"><span>回答</span><textarea name="answer" class="ap-textarea" rows="5" required>' + esc(isEdit ? f.answer : '') + '</textarea></label>' +
+            '<label class="ap-field ap-field--full"><span>回答（完整）</span><textarea name="answer" class="ap-textarea" rows="8" required>' + esc(isEdit ? f.answer : '') + '</textarea></label>' +
             '<label class="ap-field ap-field--check"><input type="checkbox" name="isPublished"' + (!isEdit || f.is_published ? ' checked' : '') + '><span>發布</span></label>' +
             '<label class="ap-field ap-field--check"><input type="checkbox" name="showInTeaser"' + (isEdit && f.show_in_teaser ? ' checked' : '') + '><span>首頁 FAQ 精選</span></label>' +
           '</div>' +

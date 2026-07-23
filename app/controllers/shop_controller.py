@@ -524,7 +524,7 @@ async def cart_checkout(request: Request) -> dict:
         if str(coupon_code_raw).strip():
             subtotal = sum(item_totals)
             coupon_result, coupon_err = validate_coupon(
-                cur, code=str(coupon_code_raw), user_id=user_id, subtotal=subtotal
+                cur, code=str(coupon_code_raw), user_id=user_id, subtotal=subtotal, lock=True
             )
             if coupon_err:
                 return _err(400, coupon_err)

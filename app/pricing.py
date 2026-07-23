@@ -10,6 +10,12 @@ from __future__ import annotations
 from typing import Any
 
 from app.catalog import resolve_product_id
+from app.pricing_overrides import (
+    _merge_multi,
+    _merge_table,
+    canonical_carat,
+    load_overrides,
+)
 
 DIAMOND_PRICE = {
     "0.1": 24000, "0.2": 48000, "0.3": 79000, "0.5": 98000,
@@ -89,13 +95,37 @@ def _multi_stone_tier(carat_key: str, carat_num: float, table: dict) -> str | No
     return "0.3_plus" if carat_num > 0.3 else None
 
 
-def _resolve_multi_price(table: dict, tier: str, stone_count: int) -> float | None:
+def _resolve_multi_price(table: dict, tier: str, stone_count: int, multi_above_03: dict) -> float | None:
+    sc = str(stone_count)
     if tier == "0.3_plus":
         row = table.get("0.3") or {}
-        multiplier = MULTI_STONE_ABOVE_03_MULTIPLIER.get(stone_count)
-        base_row = row.get(stone_count)
+        multiplier = multi_above_03.get(sc)
+        base_row = row.get(sc)
         return round(base_row * multiplier) if (base_row is not None and multiplier) else None
-    return (table.get(tier) or {}).get(stone_count)
+    return (table.get(tier) or {}).get(sc)
+
+
+def _effective_tables(overrides: dict[str, Any] | None) -> dict[str, Any]:
+    """Overlay admin overrides onto the base diamond tables, canonicalizing carat
+    keys so client ('0.10') and server ('0.1') formats align. With no overrides
+    this yields the module constants unchanged (checkout math is untouched until
+    an admin sets a value)."""
+    ov = overrides or {}
+    dia = ov.get("diamond") if isinstance(ov.get("diamond"), dict) else {}
+    multi_above = {str(k): v for k, v in MULTI_STONE_ABOVE_03_MULTIPLIER.items()}
+    ov_above = ov.get("multiStoneAbove03Multiplier")
+    if isinstance(ov_above, dict):
+        for k, v in ov_above.items():
+            if isinstance(v, (int, float)):
+                multi_above[str(k)] = v
+    return {
+        "white": _merge_table(DIAMOND_PRICE, dia.get("white")),
+        "fancy": _merge_table(COLORED_SINGLE_DIAMOND_PRICE, dia.get("fancy")),
+        "white_multi": _merge_multi(WHITE_MULTI_DIAMOND_PRICE, ov.get("whiteMultiDiamondPrice")),
+        "fancy_multi": _merge_multi(COLORED_MULTI_DIAMOND_PRICE, ov.get("coloredMultiDiamondPrice")),
+        "multi_above_03": multi_above,
+        "surcharge_pct": ov.get("shapeSurchargePct"),
+    }
 
 
 def compute_diamond_list_price(
@@ -106,6 +136,7 @@ def compute_diamond_list_price(
     stone_count: Any = None,
     diamond_shape: str = "round",
     category: str | None = None,
+    overrides: dict[str, Any] | None = None,
 ) -> float | None:
     if not carat_key or category == "chain":
         return None
@@ -118,31 +149,36 @@ def compute_diamond_list_price(
     if not _shape_carat_allowed(carat_num, diamond_shape):
         return None
 
+    eff = _effective_tables(overrides)
+    ck = canonical_carat(carat_key) or carat_key
+
     base = None
     if diamond_kind == "white":
         if multi_stone:
             count = _as_stone_count(stone_count) or DEFAULT_STONE_COUNT_BY_CATEGORY.get(category, 2)
-            tier = _multi_stone_tier(carat_key, carat_num, WHITE_MULTI_DIAMOND_PRICE)
-            base = _resolve_multi_price(WHITE_MULTI_DIAMOND_PRICE, tier, count) if tier else None
+            tier = _multi_stone_tier(ck, carat_num, eff["white_multi"])
+            base = _resolve_multi_price(eff["white_multi"], tier, count, eff["multi_above_03"]) if tier else None
         else:
-            base = DIAMOND_PRICE.get(carat_key)
+            base = eff["white"].get(ck)
     elif diamond_kind == "fancy":
         if fancy_color not in VALID_FANCY_COLORS or carat_num < FANCY_MIN_CARAT:
             return None
         if multi_stone:
             count = _as_stone_count(stone_count) or DEFAULT_STONE_COUNT_BY_CATEGORY.get(category, 2)
-            tier = _multi_stone_tier(carat_key, carat_num, COLORED_MULTI_DIAMOND_PRICE)
-            base = _resolve_multi_price(COLORED_MULTI_DIAMOND_PRICE, tier, count) if tier else None
+            tier = _multi_stone_tier(ck, carat_num, eff["fancy_multi"])
+            base = _resolve_multi_price(eff["fancy_multi"], tier, count, eff["multi_above_03"]) if tier else None
         else:
-            base = COLORED_SINGLE_DIAMOND_PRICE.get(carat_key)
-            if base is None and carat_key == "1.0":
-                base = COLORED_SINGLE_DIAMOND_PRICE.get("1")
+            base = eff["fancy"].get(ck)
     else:
         return None
 
     if base is None:
         return None
-    surcharge = _shape_surcharge_rate(diamond_shape)
+    if (diamond_shape or "round") != "round":
+        pct = eff["surcharge_pct"]
+        surcharge = (pct / 100.0) if isinstance(pct, (int, float)) else NON_ROUND_SHAPE_SURCHARGE
+    else:
+        surcharge = 0.0
     return round(base * (1 + surcharge)) if surcharge else base
 
 
@@ -285,6 +321,10 @@ def compute_order_pricing(cur, data: dict[str, Any], *, require_published: bool 
     if category in ("chain", "bracelet") and length_cm is None:
         return {"ready": False}
 
+    overrides = load_overrides(cur)
+    ov_tax = overrides.get("taxRate")
+    tax_rate = ov_tax if isinstance(ov_tax, (int, float)) else TAX_RATE
+
     looked_up = _lookup_weight(
         cur, category=category, product_id=product_id, gold=gold, carat=carat,
         length_cm=length_cm, require_published=require_published,
@@ -308,16 +348,17 @@ def compute_order_pricing(cur, data: dict[str, Any], *, require_published: bool 
 
     gold_prices = get_metal_prices(cur)
     taijin_pre_tax, rate_used = _metal_pre_tax(gold_prices, gold, weight_chin)
-    taijin_display = round(taijin_pre_tax * (1 + TAX_RATE))
+    taijin_display = round(taijin_pre_tax * (1 + tax_rate))
     # Labor is flat NT$ — not taxed. Tax only on metal (and 搭配鏈條 metal).
     labor_display = labor_pre_tax
-    # Diamond list price is tax-inclusive; metal/chain quotes include 5% at display time.
+    # Diamond list price is tax-inclusive; metal/chain quotes include tax at display time.
 
     diamond_price = None
     if category != "chain":
         diamond_price = compute_diamond_list_price(
             carat, diamond_kind=diamond_kind, fancy_color=fancy_color,
             stone_count=stone_count, diamond_shape=diamond_shape, category=category,
+            overrides=overrides,
         )
         if diamond_price is None:
             return {"ready": False}
@@ -332,7 +373,7 @@ def compute_order_pricing(cur, data: dict[str, Any], *, require_published: bool 
         )
         if not addon:
             return {"ready": False, "error": "invalid chain option"}
-        chain_display = round(addon["chainPreTax"] * (1 + TAX_RATE))
+        chain_display = round(addon["chainPreTax"] * (1 + tax_rate))
         total += chain_display
 
     return {

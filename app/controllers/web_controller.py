@@ -5,7 +5,7 @@ from __future__ import annotations
 from functools import lru_cache
 
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -67,7 +67,14 @@ def register_pages(app: FastAPI) -> None:
         return FileResponse(settings.site_root / "sitemap.xml")
 
     @app.get("/admin.html", include_in_schema=False)
-    async def admin_page() -> FileResponse:
+    async def admin_page(request: Request):
+        # Defense-in-depth: the admin API is already guarded per-route, and
+        # admin.js redirects non-admins client-side — but don't hand the admin
+        # shell to anonymous visitors at all. Serve it only to a signed-in admin.
+        from app.auth import get_user_id, is_admin
+
+        if not is_admin(get_user_id(request)):
+            return RedirectResponse(url="/login.html?next=admin.html", status_code=302)
         path = settings.site_root / "admin.html"
         if not path.is_file():
             raise StarletteHTTPException(status_code=404, detail="Not Found")

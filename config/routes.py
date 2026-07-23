@@ -250,6 +250,54 @@ PAGE_PRICE = PageMeta(
     extra_head_blocks=[],
 )
 
+PAGE_PRIVACY = PageMeta(
+    route='/privacy.html',
+    template='pages/privacy.html',
+    title='隱私權政策（草稿）｜銘印鑽石 IMPRINT DIAMOND',
+    description='',
+    canonical_path='privacy.html',
+    og_title=None,
+    og_description=None,
+    og_image=None,
+    breadcrumbs=[('首頁', '/'), ('隱私權政策', None)],
+    mvc_page=None,
+    extra_body_class=None,
+    content_fragment=None,
+    extra_head_blocks=[],
+)
+
+PAGE_TERMS = PageMeta(
+    route='/terms.html',
+    template='pages/terms.html',
+    title='服務條款（草稿）｜銘印鑽石 IMPRINT DIAMOND',
+    description='',
+    canonical_path='terms.html',
+    og_title=None,
+    og_description=None,
+    og_image=None,
+    breadcrumbs=[('首頁', '/'), ('服務條款', None)],
+    mvc_page=None,
+    extra_body_class=None,
+    content_fragment=None,
+    extra_head_blocks=[],
+)
+
+PAGE_RETURN_POLICY = PageMeta(
+    route='/return-policy.html',
+    template='pages/return-policy.html',
+    title='退換貨與取消政策（草稿）｜銘印鑽石 IMPRINT DIAMOND',
+    description='',
+    canonical_path='return-policy.html',
+    og_title=None,
+    og_description=None,
+    og_image=None,
+    breadcrumbs=[('首頁', '/'), ('退換貨與取消政策', None)],
+    mvc_page=None,
+    extra_body_class=None,
+    content_fragment=None,
+    extra_head_blocks=[],
+)
+
 PAGE_PROFILE = PageMeta(
     route='/profile.html',
     template='pages/profile.html',
@@ -835,6 +883,9 @@ ALL_PAGES: list[PageMeta] = [
     PAGE_LOGIN,
     PAGE_NOTIFICATIONS,
     PAGE_PRICE,
+    PAGE_PRIVACY,
+    PAGE_TERMS,
+    PAGE_RETURN_POLICY,
     PAGE_PROFILE,
     PAGE_REGISTER,
     PAGE_RESET_PASSWORD,

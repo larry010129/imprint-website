@@ -45,6 +45,12 @@ const contactInfo = [
   },
 ];
 
+const legalLinks = [
+  { label: "隱私權政策", href: "/privacy.html" },
+  { label: "服務條款", href: "/terms.html" },
+  { label: "退換貨與取消政策", href: "/return-policy.html" },
+];
+
 const socialLinks = [
   {
     icon: (
@@ -163,9 +169,22 @@ export default function HoverFooter() {
             ))}
           </div>
 
-          <p className="text-center md:text-right">
-            © 2026 心之銘印鑽石有限公司
-          </p>
+          <div className="flex flex-col items-center space-y-2 md:items-end">
+            <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-[#F7F4F1]/50 md:justify-end">
+              {legalLinks.map((link) => (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  className="transition-colors hover:text-[#5ECFCF]"
+                >
+                  {link.label}
+                </a>
+              ))}
+            </div>
+            <p className="text-center md:text-right">
+              © 2026 心之銘印鑽石有限公司
+            </p>
+          </div>
         </div>
       </div>
 
