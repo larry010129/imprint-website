@@ -1,0 +1,180 @@
+/* Unified contact FAB — chat + social links; Botpress FAB hidden, opened from menu. */
+.imprint-contact-fab {
+  --fab-size: 56px;
+  --fab-gap: 12px;
+  --fab-blue: #0066ff;
+  --fab-shadow: 0 4px 16px rgba(0, 40, 120, 0.28);
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--fab-gap);
+  pointer-events: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .imprint-contact-fab.is-hover-mode {
+    pointer-events: auto;
+  }
+
+  .imprint-contact-fab.is-hover-mode.is-open .imprint-contact-fab__icon--chat {
+    display: block;
+  }
+
+  .imprint-contact-fab.is-hover-mode.is-open .imprint-contact-fab__icon--close {
+    display: none;
+  }
+}
+
+.imprint-contact-fab__menu,
+.imprint-contact-fab__toggle {
+  pointer-events: auto;
+}
+
+.imprint-contact-fab__menu {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--fab-gap);
+}
+
+.imprint-contact-fab__menu[hidden] {
+  display: none;
+}
+
+.imprint-contact-fab.is-open .imprint-contact-fab__menu {
+  display: flex;
+}
+
+.imprint-contact-fab__toggle,
+.imprint-contact-fab__item {
+  width: var(--fab-size);
+  height: var(--fab-size);
+  border: 0;
+  border-radius: 50%;
+  box-shadow: var(--fab-shadow);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  text-decoration: none;
+  font: inherit;
+  padding: 0;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.imprint-contact-fab__toggle {
+  background: var(--fab-blue);
+  color: #fff;
+}
+
+.imprint-contact-fab__toggle:hover,
+.imprint-contact-fab__item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 40, 120, 0.34);
+}
+
+.imprint-contact-fab__toggle:focus-visible,
+.imprint-contact-fab__item:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.imprint-contact-fab__icon {
+  width: 26px;
+  height: 26px;
+}
+
+.imprint-contact-fab__icon--menu,
+.imprint-contact-fab__icon--close {
+  display: none;
+}
+
+.imprint-contact-fab__icon--chat {
+  display: block;
+}
+
+.imprint-contact-fab.is-open .imprint-contact-fab__icon--chat,
+.imprint-contact-fab.is-open .imprint-contact-fab__icon--menu {
+  display: none;
+}
+
+.imprint-contact-fab.is-open .imprint-contact-fab__icon--close {
+  display: block;
+}
+
+.imprint-contact-fab__item svg {
+  width: 26px;
+  height: 26px;
+}
+
+.imprint-contact-fab__item span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.imprint-contact-fab__item--chat {
+  background: var(--fab-blue);
+  color: #fff;
+}
+
+.imprint-contact-fab__item--line {
+  background: #06c755;
+  color: #fff;
+}
+
+.imprint-contact-fab__item--ig {
+  background: linear-gradient(135deg, #f77737, #e1306c, #833ab4);
+  color: #fff;
+}
+
+.imprint-contact-fab__item--fb {
+  background: #0084ff;
+  color: #fff;
+}
+
+.imprint-contact-fab.is-open .imprint-contact-fab__item {
+  animation: imprint-fab-in 0.22s ease both;
+}
+
+.imprint-contact-fab.is-open .imprint-contact-fab__item:nth-child(1) { animation-delay: 0.04s; }
+.imprint-contact-fab.is-open .imprint-contact-fab__item:nth-child(2) { animation-delay: 0.08s; }
+.imprint-contact-fab.is-open .imprint-contact-fab__item:nth-child(3) { animation-delay: 0.12s; }
+.imprint-contact-fab.is-open .imprint-contact-fab__item:nth-child(4) { animation-delay: 0.16s; }
+
+@keyframes imprint-fab-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 900px) {
+  .imprint-contact-fab {
+    bottom: calc(var(--shop-mobile-buy-bar-height, 16px) + 16px);
+    right: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .imprint-contact-fab__toggle,
+  .imprint-contact-fab__item,
+  .imprint-contact-fab.is-open .imprint-contact-fab__item {
+    transition: none;
+    animation: none;
+  }
+}

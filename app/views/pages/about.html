@@ -1,43 +1,203 @@
-﻿{% extends "layouts/base.html" %}
+{% extends "layouts/base.html" %}
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/about.css?v=5">
+{% endblock %}
 {% block content %}
-<section class="page-hero">
-  <div class="page-hero-media">
-    <picture>
-      <source srcset="/static/images/hero/imprint-diamond-family-memorial.webp" type="image/webp">
-      <img src="/static/images/hero/imprint-diamond-family-memorial.jpg" alt="銘印鑽石品牌意象－家人手心捧著DNA紀念鑽石" loading="eager" fetchpriority="high" decoding="async" onerror="imgFallback(this)">
-    </picture>
-  </div>
-  <div class="page-hero-scrim"></div>
-  <div class="container page-hero-inner">
-    <p class="breadcrumb"><a href="/">首頁</a><span class="sep">/</span><a href="/about.html">關於我們</a><span class="sep">/</span><span class="current">品牌故事</span></p>
-    <p class="eyebrow">OUR STORY</p>
-    <h1>把最深的情感，銘印成永恆</h1>
-    <p>銘印鑽石相信，思念不需要隨時間淡去，它可以被好好安放，成為看得見、摸得到的珍藏。</p>
-  </div>
-</section>
+<article class="about-story">
+  <section class="about-intro" aria-labelledby="about-title">
+    <div class="about-shell about-intro__grid">
+      <div class="about-intro__meta reveal">
+        <nav class="about-breadcrumb" aria-label="麵包屑">
+          <ol>
+            <li><a href="/">首頁</a></li>
+            <li><span aria-hidden="true">/</span><a href="/about.html">關於我們</a></li>
+            <li><span aria-hidden="true">/</span><span aria-current="page">品牌故事</span></li>
+          </ol>
+        </nav>
+        <p class="about-marker">
+          <span>OUR PROMISE</span>
+          <span>01 — 04</span>
+        </p>
+      </div>
 
-<section class="prose-section">
-  <div class="container prose">
-
-    <h2>我們相信的事</h2>
-    <p>每個人與所愛之間，都有一段獨一無二的連結——可能是剛出生的寶寶、陪伴多年的毛孩、攜手一生的伴侶，或是已經離開、卻仍在心裡佔有位置的親人。這些關係很難用言語完整表達，但銘印鑽石相信，它可以有一個具體的形狀。</p>
-    <p>我們做的，是把毛髮或骨灰中的元素，透過在地實驗室的晶化培育，轉化成一顆真正的鑽石。不是複製品，也不是象徵物，而是從您珍視的樣本中，真實培育而成的專屬個人化鑽石。</p>
-
-    <h2>全台唯一在地培育實驗室</h2>
-    <p>銘印鑽石是全台唯一擁有在地 DNA 鑽石培育實驗室的紀念鑽石品牌。我們選擇把整個製程留在台灣，不是因為比較容易，而是因為您交付給我們的，是無法重來的珍貴樣本——它值得被留在您觸手可及的距離裡，而不是漂洋過海、交給看不見的流程。</p>
-    <p>也因為如此，我們歡迎每一位客戶預約蒞臨實驗室，親眼見證屬於自己的鑽石正在生長。</p>
-
-    <h2>慢慢決定，也沒關係</h2>
-    <p>訂製一顆紀念鑽石，往往不是一次衝動的消費，而是一個需要時間沉澱的決定。我們見過猶豫兩年才下定決心的客人，也理解每一段考慮期背後，都是還沒準備好放下、或還沒找到合適時機的心情。</p>
-    <p>所以銘印鑽石的顧問服務，從來不是催促成交，而是在您需要的時候提供清楚的資訊，陪您慢慢想清楚。加入官方 LINE 之後，我們會分享培育故事、客人的紀念故事與最新價目——不會頻繁打擾，在您準備好的那一天，我們都在。</p>
-
-    <h2>每一顆，都被慎重對待</h2>
-    <p>每一份樣本，我們都以單一客戶、單一培育流程處理，確保專屬與純粹。完工後附上銘印保證卡，0.20 克拉以上可代送 <a href="https://www.gia.edu/" target="_blank" rel="noopener">GIA</a> 或 <a href="https://www.igi.org/" target="_blank" rel="noopener">IGI</a> 國際鑑定機構出具證書，並交付專屬影音紀念盒，封存這顆鑽石從樣本到成品的完整過程。</p>
-
-    <div class="callout">
-      想更了解製作過程嗎？請看<a href="/what-is-dna-diamond.html">DNA 鑽石的誕生</a>；準備好開始了，歡迎<a href="/#series">瀏覽五大訂製系列</a>，或直接<a href="/contact.html">聯絡我們</a>。
+      <div class="about-intro__copy">
+        <p class="about-overline reveal">IMPRINT DIAMOND · TAIWAN</p>
+        <h1 id="about-title" class="reveal reveal-d1">在您準備好的時候，<br><em>我們都在</em>。</h1>
+        <p class="about-intro__lead reveal reveal-d2">銘印鑽石陪伴您走過一段無法催促的決定。我們存在，是為了讓思念可以被好好安放——成為您能觸碰、能珍藏的形式，而不帶任何壓力。</p>
+        <a class="about-scroll-cue reveal reveal-d3" href="#story-begins">
+          <span>閱讀我們的承諾</span>
+          <span class="about-scroll-cue__arrow" aria-hidden="true">↓</span>
+        </a>
+      </div>
     </div>
+  </section>
 
-  </div>
-</section>
+  <figure class="about-cinema reveal" id="story-begins">
+    <img src="/static/images/legacy-live/styles/taiwan-local-lab.jpg" alt="銘印鑽石台灣在地培育實驗室" loading="eager" fetchpriority="high" decoding="async" onerror="imgFallback(this)">
+    <div class="about-cinema__shade" aria-hidden="true"></div>
+    <figcaption>
+      <span>留在您觸手可及的距離</span>
+      <span>讓託付有被看見的安心</span>
+    </figcaption>
+  </figure>
+
+  <section class="about-thesis" aria-labelledby="belief-title">
+    <div class="about-shell about-thesis__grid">
+      <div class="about-chapter-label reveal" aria-hidden="true">
+        <span>01</span>
+        <span>WHAT WE BELIEVE</span>
+      </div>
+      <div class="about-thesis__copy">
+        <h2 id="belief-title" class="reveal">思念，可以有一個具體的形狀。</h2>
+        <div class="about-thesis__body">
+          <div class="reveal reveal-d1">
+            <p>每個人與所愛之間，都有一段獨一無二的連結——可能是剛出生的寶寶、陪伴多年的毛孩、攜手一生的伴侶，或是已經離開、卻仍在心裡佔有位置的親人。</p>
+            <p>這些關係很難用言語完整表達。銘印鑽石的角色，是為這份羈絆找到一個能觸碰、能傳承的形狀——從您珍視的樣本中，真實生長而成，而非符號或替代品。</p>
+          </div>
+          <blockquote class="reveal reveal-d2">不是複製品，也不是象徵物。<br>而是從您珍視的樣本中，真實培育而成的專屬鑽石。</blockquote>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="about-chapters" aria-label="品牌承諾">
+    <div class="about-shell about-chapters__grid">
+      <figure class="about-chapters__media reveal">
+        <img src="/static/images/legacy-live/features/heirloom-life.jpg" alt="三代家人在溫暖日光中相伴散步" loading="lazy" decoding="async" onerror="imgFallback(this)">
+        <figcaption>有些陪伴，值得以另一種形式繼續。</figcaption>
+      </figure>
+
+      <div class="about-chapters__copy">
+        <section class="about-chapter" aria-labelledby="local-title">
+          <div class="about-chapter__number" aria-hidden="true">02</div>
+          <p class="about-overline">STAY CLOSE</p>
+          <h2 id="local-title">留在離您最近的地方</h2>
+          <p>您交付給我們的，是無法重來的珍貴樣本。距離越遠、流程越不透明，不安就越難消散——所以我們選擇把整段旅程留在台灣，讓您始終知道記憶此刻身在何處。</p>
+          <p>當您準備好了，也歡迎預約蒞臨實驗室，親眼見證屬於自己的鑽石正在生長。那不是推銷參觀，而是多一層您可以親自確認的安心。<a href="/what-is-dna-diamond.html">了解在地實驗室如何運作 →</a></p>
+          <dl class="about-facts">
+            <div>
+              <dt>TAIWAN</dt>
+              <dd>全程在地</dd>
+            </div>
+            <div>
+              <dt>VISIT</dt>
+              <dd>預約見證（依您方便）</dd>
+            </div>
+          </dl>
+        </section>
+
+        {% if featured_video %}
+        <section class="about-video reveal" aria-labelledby="about-video-title">
+          <p class="about-overline">{{ featured_video.eyebrow }}</p>
+          <h2 id="about-video-title">{{ featured_video.heading }}</h2>
+          <p class="about-video__lead">{{ featured_video.lead }}</p>
+          <div class="about-video__embed">
+            <iframe
+              src="https://www.youtube-nocookie.com/embed/{{ featured_video.youtube_id }}"
+              title="{{ featured_video.title }}"
+              loading="lazy"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              referrerpolicy="strict-origin-when-cross-origin"
+              allowfullscreen
+            ></iframe>
+          </div>
+        </section>
+        {% endif %}
+
+        {% if youtube_latest_video %}
+        <section class="about-video about-video--youtube-latest reveal" aria-labelledby="about-youtube-latest-title">
+          <p class="about-overline">{{ youtube_latest_video.eyebrow }}</p>
+          <h2 id="about-youtube-latest-title">{{ youtube_latest_video.heading }}</h2>
+          <p class="about-video__lead">{{ youtube_latest_video.lead }}</p>
+          <div class="about-video__embed">
+            <iframe
+              src="https://www.youtube-nocookie.com/embed/{{ youtube_latest_video.youtube_id }}"
+              title="{{ youtube_latest_video.title }}"
+              loading="lazy"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              referrerpolicy="strict-origin-when-cross-origin"
+              allowfullscreen
+            ></iframe>
+          </div>
+          <p class="about-video__follow">
+            <a href="{{ youtube_latest_video.channel_url or 'https://www.youtube.com/@imprintdiamond' }}" target="_blank" rel="noopener">前往 YouTube 頻道 →</a>
+          </p>
+        </section>
+        {% endif %}
+
+        <section class="about-chapter" aria-labelledby="time-title">
+          <div class="about-chapter__number" aria-hidden="true">03</div>
+          <p class="about-overline">IN YOUR OWN TIME</p>
+          <h2 id="time-title">慢慢決定，也沒關係</h2>
+          <p>訂製一顆紀念鑽石，往往不是一次衝動的消費，而是一個需要時間沉澱的決定。我們見過猶豫兩年才下定決心的客人，也理解每一段考慮期背後，都是還沒準備好放下、或還沒找到合適時機的心情。</p>
+          <p>顧問的角色從來不是催促成交，而是在您開口詢問時，提供清楚的資訊——無論是樣本份量、價格試算，還是「我準備好了嗎？」這些問題，都值得被認真對待。官方 LINE、電話或預約到店，都是同樣受歡迎的起點。</p>
+          <ul class="about-service-list">
+            <li>一對一諮詢，不催促成交</li>
+            <li>樣本份量可先評估，不必先寄出</li>
+            <li>訂製進度可隨時<a href="/track-order.html">查詢</a></li>
+          </ul>
+          <p class="about-handwritten">在您準備好的那一天，我們都在。</p>
+        </section>
+      </div>
+    </div>
+  </section>
+
+  <section class="about-pullquote" aria-label="從記憶到鑽石">
+    <div class="about-shell about-pullquote__grid">
+      <figure class="about-pullquote__media reveal">
+        <img src="/static/images/legacy-live/styles/eternal-memorial.jpg" alt="思念化為永恆的紀念鑽石意象" loading="lazy" decoding="async" onerror="imgFallback(this)">
+      </figure>
+      <div class="about-pullquote__copy">
+        <p class="about-overline reveal">FROM MEMORY TO DIAMOND</p>
+        <blockquote class="reveal reveal-d1">您交付給我們的，<br>從來不只是一份樣本。</blockquote>
+        <p class="reveal reveal-d2">它是一段關係、一份思念，也是一件無法重來的託付。我們用同樣的慎重，對待您心裡最柔軟的那一部分——讓這段連結，有被保存下來的形狀。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="about-care" aria-labelledby="care-title">
+    <div class="about-shell">
+      <div class="about-care__heading">
+        <div class="about-chapter-label reveal" aria-hidden="true">
+          <span>04</span>
+          <span>HOW WE CARE</span>
+        </div>
+        <div>
+          <h2 id="care-title" class="reveal">每一顆，都被慎重對待</h2>
+          <p class="reveal reveal-d1">從樣本進入實驗室的那一刻，到成品被交回您手中——每一位客戶、每一段旅程，都以尊嚴與專屬的方式被對待。</p>
+        </div>
+      </div>
+
+      <ul class="about-assurances">
+        <li class="reveal">
+          <span class="about-assurance__number">01</span>
+          <h3>專屬託付</h3>
+          <p>每一份樣本獨立處理，不混 batch、不代用。<a href="/what-is-dna-diamond.html">了解完整製程 →</a></p>
+        </li>
+        <li class="reveal reveal-d1">
+          <span class="about-assurance__number">02</span>
+          <h3>透明可見</h3>
+          <p>關鍵階段可追蹤；歡迎預約見證生長。<a href="/track-order.html">查詢訂製進度 →</a></p>
+        </li>
+        <li class="reveal reveal-d2">
+          <span class="about-assurance__number">03</span>
+          <h3>完整交付</h3>
+          <p>鑽石連同紀念與證明一併交還，讓故事被保存。<a href="/what-is-dna-diamond.html">鑑定與保障說明 →</a></p>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="about-next" aria-labelledby="next-title">
+    <div class="about-shell about-next__inner">
+      <p class="about-overline reveal">WHEN YOU ARE READY</p>
+      <h2 id="next-title" class="reveal reveal-d1">不需要急著決定。<br>準備好的那一天，我們都在。</h2>
+      <p class="reveal reveal-d2">您可以先<a href="/what-is-dna-diamond.html">了解製作方式</a>、<a href="/#series">瀏覽訂製系列</a>，或與顧問聊聊心裡的想法。</p>
+      <div class="about-next__actions reveal reveal-d3">
+        <a class="about-button about-button--primary" href="https://lin.ee/ktVBtmx" target="_blank" rel="noopener">預約一對一諮詢</a>
+        <a class="about-button about-button--secondary" href="/what-is-dna-diamond.html">了解 DNA 鑽石的誕生</a>
+      </div>
+    </div>
+  </section>
+</article>
 {% endblock %}

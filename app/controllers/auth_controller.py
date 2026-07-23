@@ -159,9 +159,13 @@ async def login(request: Request) -> JSONResponse:
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute("update users set last_login_at = now() where id = %s", (user["id"],))
 
+    remember = body.get("remember", True)
+    if isinstance(remember, str):
+        remember = remember.strip().lower() not in ("0", "false", "no")
+
     token = sign_session(str(user["id"]), user["token_version"])
     result = JSONResponse(content={"ok": True, "user": {"id": str(user["id"]), "email": user["email"]}})
-    set_session_cookie(result, token, request)
+    set_session_cookie(result, token, request, remember=remember)
     return result
 
 
@@ -171,7 +175,7 @@ async def logout(request: Request) -> JSONResponse:
     if user_id:
         bump_token_version(user_id)
     result = JSONResponse(content={"ok": True})
-    clear_session_cookie(result)
+    clear_session_cookie(result, request)
     return result
 
 

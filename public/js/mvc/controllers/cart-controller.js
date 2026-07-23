@@ -3,6 +3,7 @@
   var M = global.ImprintMVC;
   var Model = global.ImprintModels.Cart;
   var View = global.ImprintViews.Cart;
+  var detailRequestToken = 0;
 
   M.createController({
     run: function () {
@@ -70,13 +71,18 @@
   function openDetail(id) {
     var e = View.els();
     if (!e.dialog) return;
+    var requestToken = ++detailRequestToken;
     e.dialogBody.innerHTML = window.SkeletonUI
       ? '<div class="skel-panel" aria-busy="true">' + window.SkeletonUI.line('long') + window.SkeletonUI.line('medium') + '</div>'
       : '<p class="member-state">載入中…</p>';
     e.dialog.showModal();
     Model.detail(id).then(function (data) {
-      if (data.item) View.renderDetail(data.item);
+      if (requestToken !== detailRequestToken || !e.dialog.open) return;
+      if (data.item) View.renderDetail(data.item, data.breakdown);
       else e.dialogBody.innerHTML = '<p class="member-state">無法載入明細</p>';
+    }).catch(function () {
+      if (requestToken !== detailRequestToken || !e.dialog.open) return;
+      e.dialogBody.innerHTML = '<p class="member-state">無法載入明細，請稍後再試。</p>';
     });
   }
 })(window);

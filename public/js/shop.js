@@ -931,6 +931,25 @@ document.getElementById('shop-config-hint-close')?.addEventListener('click', () 
 document.getElementById('shop-config-warning-close')?.addEventListener('click', () =>
   dismissConfigNotice(document.querySelector('.shop-config-notices .ui-alert--warning')));
 
+/** Keep the address bar reflecting how deep into the wizard the user is —
+    empty at catalog, ?category= at the style grid, ?category=&product= once
+    a specific item is being configured. Skipped in cart/order-edit mode so we
+    don't clobber the cart_edit=/editOrder= param a refresh depends on. */
+function syncShopUrl() {
+  if (window.cartEditData || window.editData) return;
+  const params = new URLSearchParams();
+  if ((shopView === 'styles' || shopView === 'product') && state.category) {
+    params.set('category', state.category);
+  }
+  if (shopView === 'product' && state.type) {
+    params.set('product', state.type);
+  }
+  const qs = params.toString();
+  const url = window.location.pathname + (qs ? '?' + qs : '') + window.location.hash;
+  const current = window.location.pathname + window.location.search + window.location.hash;
+  if (url !== current) history.replaceState(history.state, '', url);
+}
+
 function setShopView(view, options) {
   const opts = options || {};
   shopView = view;
@@ -953,6 +972,7 @@ function setShopView(view, options) {
   updateWizardGuide();
   updateDiamondWizardChrome();
   if (view === 'product') { updateLargeImage(); resetConfigNotices(); }
+  syncShopUrl();
   const skipScroll = opts.skipScroll || document.documentElement.classList.contains('shop-tour-active');
   if (!skipScroll) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1261,6 +1281,7 @@ function isReadyToSubmit() {
   if (state.category !== 'chain' && state.diamondKind === 'fancy' && !state.fancyColor) return false;
   if (state.category === 'pendant' && state.includeChain
     && (!state.chainProductId || !state.chainGold || !state.chainColor || !state.chainLength)) return false;
+  if (state.category !== 'chain' && isDiamondShapeOtherPending()) return false;
   if (state.category === 'chain' && state.gold === '9k') {
     const chainProduct = getSelectedProduct();
     if (chainProduct && chainProduct.defaultColor !== 'white') return false;
@@ -1290,6 +1311,9 @@ function missingSubmitLabels() {
     if (!state.chainProductId || !state.chainGold || !state.chainColor || !state.chainLength) {
       missing.push(tr('step_pendant_chain'));
     }
+  }
+  if (state.category !== 'chain' && isDiamondShapeOtherPending()) {
+    missing.push(tr('step_diamond_shape_other'));
   }
   return missing;
 }
@@ -1785,6 +1809,15 @@ function isNonRoundShape(shapeId = state.diamondShape) {
   return !!shapeId && shapeId !== 'round';
 }
 
+function isDiamondShapeOtherPending(shapeId = state.diamondShape) {
+  return shapeId === 'other';
+}
+
+function resolvedDiamondShape(shapeId = state.diamondShape) {
+  const id = shapeId || 'round';
+  return id === 'other' ? 'round' : id;
+}
+
 function isDiamondShapeChipActive(chipId) {
   const current = state.diamondShape || 'round';
   if (chipId === 'round') return current === 'round';
@@ -1793,7 +1826,7 @@ function isDiamondShapeChipActive(chipId) {
 }
 
 function diamondShapeDisplayMeta(shapeId = state.diamondShape) {
-  if (!shapeId || shapeId === 'round') return null;
+  if (!shapeId || shapeId === 'round' || shapeId === 'other') return null;
   return nonRoundMatrixShapes().find((s) => s.id === shapeId)
     || diamondShapeOptions().find((s) => s.id === shapeId)
     || { id: shapeId, labelZh: shapeId, labelEn: shapeId };
@@ -1995,52 +2028,232 @@ function renderDiamondShapeButtons() {
   syncDiamondShapeOtherDropdown();
 }
 
-let diamondShapeOtherBound = false;
+let diamondShapePickerBound = false;
 
-function bindDiamondShapeOtherSelect() {
-  if (diamondShapeOtherBound) return;
-  const select = document.getElementById('diamond-shape-other-select');
-  if (!select) return;
-  diamondShapeOtherBound = true;
-  select.addEventListener('change', () => {
-    if (select.value) selectDiamondShape(select.value);
+function diamondShapePickerOptions() {
+  return Array.from(document.querySelectorAll(
+    '#diamond-shape-other-listbox .diamond-shape-picker__option'
+  ));
+}
+
+function setDiamondShapePickerOpen(open, { focus = null, restoreFocus = false } = {}) {
+  const trigger = document.getElementById('diamond-shape-other-trigger');
+  const popover = document.getElementById('diamond-shape-other-popover');
+  if (!trigger || !popover) return;
+
+  const shouldOpen = !!open;
+  trigger.setAttribute('aria-expanded', String(shouldOpen));
+  popover.hidden = !shouldOpen;
+
+  if (!shouldOpen) {
+    if (restoreFocus) trigger.focus();
+    return;
+  }
+
+  requestAnimationFrame(() => {
+    const options = diamondShapePickerOptions();
+    if (!options.length) return;
+    let target = options.find((option) => option.getAttribute('aria-selected') === 'true');
+    if (focus === 'first') target = options[0];
+    if (focus === 'last') target = options[options.length - 1];
+    target?.scrollIntoView({ block: 'nearest' });
+    if (focus) target?.focus();
+  });
+}
+
+function moveDiamondShapePickerFocus(direction) {
+  const options = diamondShapePickerOptions();
+  if (!options.length) return;
+  const current = options.indexOf(document.activeElement);
+  const next = current < 0
+    ? (direction > 0 ? 0 : options.length - 1)
+    : (current + direction + options.length) % options.length;
+  options[next].focus();
+  options[next].scrollIntoView({ block: 'nearest' });
+}
+
+function diamondShapePickerMeta(shape) {
+  const primary = diamondMetaLabel(shape);
+  const alternate = shopLang() === 'en' ? shape.labelZh : shape.labelEn;
+  const rawSurcharge = Number(diamondOptions.nonRoundShapeSurcharge ?? 0.10);
+  const surcharge = Math.round((rawSurcharge <= 1 ? rawSurcharge * 100 : rawSurcharge) * 100) / 100;
+  return [alternate && alternate !== primary ? alternate : '', `+${surcharge}%`]
+    .filter(Boolean)
+    .join(' · ');
+}
+
+function bindDiamondShapeOtherPicker() {
+  if (diamondShapePickerBound) return;
+  const picker = document.getElementById('diamond-shape-other-picker');
+  const trigger = document.getElementById('diamond-shape-other-trigger');
+  const popover = document.getElementById('diamond-shape-other-popover');
+  const optionsRoot = document.getElementById('diamond-shape-other-listbox');
+  if (!picker || !trigger || !popover || !optionsRoot) return;
+  diamondShapePickerBound = true;
+
+  trigger.addEventListener('click', () => {
+    const isOpen = trigger.getAttribute('aria-expanded') === 'true';
+    setDiamondShapePickerOpen(!isOpen);
+  });
+
+  trigger.addEventListener('keydown', (event) => {
+    const isOpen = trigger.getAttribute('aria-expanded') === 'true';
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      setDiamondShapePickerOpen(true, { focus: event.key === 'ArrowDown' ? 'selected' : 'last' });
+    } else if ((event.key === 'Enter' || event.key === ' ') && !isOpen) {
+      event.preventDefault();
+      setDiamondShapePickerOpen(true, { focus: 'selected' });
+    } else if (event.key === 'Escape' && isOpen) {
+      event.preventDefault();
+      setDiamondShapePickerOpen(false);
+    } else if (event.key === 'Tab' && isOpen) {
+      setDiamondShapePickerOpen(false);
+    }
+  });
+
+  optionsRoot.addEventListener('click', (event) => {
+    const option = event.target.closest('.diamond-shape-picker__option');
+    if (!option || !optionsRoot.contains(option)) return;
+    const shapeId = option.dataset.shape;
+    if (!shapeId) return;
+    setDiamondShapePickerOpen(false);
+    selectDiamondShape(shapeId);
+    trigger.focus();
+  });
+
+  optionsRoot.addEventListener('keydown', (event) => {
+    const option = event.target.closest('.diamond-shape-picker__option');
+    if (!option) return;
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      moveDiamondShapePickerFocus(1);
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      moveDiamondShapePickerFocus(-1);
+    } else if (event.key === 'Home') {
+      event.preventDefault();
+      diamondShapePickerOptions()[0]?.focus();
+    } else if (event.key === 'End') {
+      event.preventDefault();
+      const options = diamondShapePickerOptions();
+      options[options.length - 1]?.focus();
+    } else if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      option.click();
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      setDiamondShapePickerOpen(false, { restoreFocus: true });
+    } else if (event.key === 'Tab') {
+      setDiamondShapePickerOpen(false);
+    }
+  });
+
+  document.addEventListener('pointerdown', (event) => {
+    if (!picker.contains(event.target)) setDiamondShapePickerOpen(false);
   });
 }
 
 function syncDiamondShapeOtherDropdown() {
-  bindDiamondShapeOtherSelect();
+  bindDiamondShapeOtherPicker();
   const wrap = document.getElementById('diamond-shape-other-wrap');
-  const select = document.getElementById('diamond-shape-other-select');
-  if (!wrap || !select) return;
+  const trigger = document.getElementById('diamond-shape-other-trigger');
+  const image = document.getElementById('diamond-shape-other-image');
+  const value = document.getElementById('diamond-shape-other-value');
+  const meta = document.getElementById('diamond-shape-other-meta');
+  const optionsRoot = document.getElementById('diamond-shape-other-listbox');
+  if (!wrap || !trigger || !image || !value || !meta || !optionsRoot) return;
 
-  if (isDiamondOnlyCategory()) {
-    wrap.hidden = true;
+  const options = nonRoundMatrixShapes();
+  const avatar = trigger.querySelector('.diamond-shape-picker__avatar');
+  let selected = options.find((shape) => shape.id === state.diamondShape);
+  if (isNonRoundShape() && state.diamondShape !== 'other' && !selected) {
+    state.diamondShape = 'other';
+    selected = null;
+  }
+  const isPending = isDiamondShapeOtherPending();
+  if (isPending) selected = null;
+  const show = !isDiamondOnlyCategory() && (isPending || !!selected);
+  wrap.hidden = !show;
+  if (!show) {
+    setDiamondShapePickerOpen(false);
     return;
   }
 
-  const options = nonRoundMatrixShapes();
-  const show = isNonRoundShape();
-  wrap.hidden = !show;
-  if (!show) return;
+  if (isPending) {
+    if (avatar) avatar.hidden = true;
+    image.removeAttribute('src');
+    image.alt = '';
+    value.textContent = tr('step_diamond_shape_other');
+    meta.textContent = '';
+    trigger.classList.add('diamond-shape-picker__trigger--placeholder');
+  } else if (selected) {
+    if (avatar) avatar.hidden = false;
+    image.src = diamondMatrixImageUrl(selected.id, selectedDiamondColorId());
+    image.alt = '';
+    value.textContent = diamondMetaLabel(selected);
+    meta.textContent = diamondShapePickerMeta(selected);
+    trigger.classList.remove('diamond-shape-picker__trigger--placeholder');
+  }
 
-  select.innerHTML = '';
+  optionsRoot.innerHTML = '';
   options.forEach((shape) => {
-    const opt = document.createElement('option');
-    opt.value = shape.id;
-    opt.textContent = diamondMetaLabel(shape);
-    select.appendChild(opt);
+    const isSelected = !!selected && shape.id === selected.id;
+    const option = document.createElement('button');
+    option.type = 'button';
+    option.id = `diamond-shape-option-${shape.id}`;
+    option.className = 'diamond-shape-picker__option';
+    option.dataset.shape = shape.id;
+    option.setAttribute('role', 'option');
+    option.setAttribute('aria-selected', String(isSelected));
+    option.tabIndex = -1;
+
+    const avatar = document.createElement('span');
+    avatar.className = 'diamond-shape-picker__avatar';
+    avatar.setAttribute('aria-hidden', 'true');
+    const avatarImage = document.createElement('img');
+    avatarImage.src = diamondMatrixImageUrl(shape.id, selectedDiamondColorId());
+    avatarImage.alt = '';
+    avatarImage.loading = 'lazy';
+    avatarImage.decoding = 'async';
+    avatar.appendChild(avatarImage);
+
+    const text = document.createElement('span');
+    text.className = 'diamond-shape-picker__text';
+    const name = document.createElement('span');
+    name.className = 'diamond-shape-picker__value';
+    name.textContent = diamondMetaLabel(shape);
+    const detail = document.createElement('span');
+    detail.className = 'diamond-shape-picker__meta';
+    detail.textContent = diamondShapePickerMeta(shape);
+    text.appendChild(name);
+    text.appendChild(detail);
+
+    const check = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    check.classList.add('diamond-shape-picker__check');
+    check.setAttribute('viewBox', '0 0 24 24');
+    check.setAttribute('width', '16');
+    check.setAttribute('height', '16');
+    check.setAttribute('fill', 'none');
+    check.setAttribute('stroke', 'currentColor');
+    check.setAttribute('stroke-width', '2');
+    check.setAttribute('stroke-linecap', 'round');
+    check.setAttribute('stroke-linejoin', 'round');
+    check.setAttribute('aria-hidden', 'true');
+    const checkPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    checkPath.setAttribute('d', 'm20 6-11 11-5-5');
+    check.appendChild(checkPath);
+
+    option.appendChild(avatar);
+    option.appendChild(text);
+    option.appendChild(check);
+    optionsRoot.appendChild(option);
   });
-  const next = options.some((s) => s.id === state.diamondShape)
-    ? state.diamondShape
-    : (options[0]?.id || '');
-  if (next) select.value = next;
 }
 
 function selectDiamondShape(shapeId) {
   if (shapeId === 'other') {
-    if (!isNonRoundShape()) {
-      state.diamondShape = nonRoundMatrixShapes()[0]?.id || 'oval';
-    }
+    if (state.diamondShape === 'round') state.diamondShape = 'other';
   } else {
     state.diamondShape = shapeId || 'round';
   }
@@ -2323,7 +2536,7 @@ function updateEngravingSteps() {
   if (girdleCtrl) {
     girdleCtrl.setAllowChinese(allowChinese);
     girdleCtrl.setValue(state.engravingGirdle || '');
-    girdleCtrl.setPreviewShapeAndColor(state.diamondShape || 'round', selectedDiamondColorId() || 'white');
+    girdleCtrl.setPreviewShapeAndColor(resolvedDiamondShape(), selectedDiamondColorId() || 'white');
   }
   const hint = document.getElementById('shop-girdle-engrave-hint');
   if (hint) {
@@ -2480,7 +2693,7 @@ function currentProductImages() {
   const product = getSelectedProduct();
   if (!product || usesPendantCompositePreview()) return [];
   if (isDiamondOnlyCategory()) {
-    return [diamondMatrixImageUrl(state.diamondShape, selectedDiamondColorId())];
+    return [diamondMatrixImageUrl(resolvedDiamondShape(), selectedDiamondColorId())];
   }
   return productImagesForColor(product, previewColor(), selectedDiamondColorId());
 }
@@ -2609,7 +2822,7 @@ function updateLargeImage(layer) {
   if (isDiamondOnlyCategory()) {
     previewRoot?.classList.remove('is-pendant-only');
     const nextSrc = images[productImageIndex]
-      || diamondMatrixImageUrl(state.diamondShape, selectedDiamondColorId());
+      || diamondMatrixImageUrl(resolvedDiamondShape(), selectedDiamondColorId());
     if (img) {
       img.style.visibility = '';
       img.onerror = null;
@@ -3054,7 +3267,7 @@ document.getElementById('engraving-band-input')?.addEventListener('input', (e) =
 
 function updateGirdlePreview() {
   const ctrl = ensureGirdleEngrave();
-  const shapeId = state.diamondShape || 'round';
+  const shapeId = resolvedDiamondShape();
   const colorId = selectedDiamondColorId() || 'white';
   if (ctrl?.setPreviewShapeAndColor) {
     ctrl.setPreviewShapeAndColor(shapeId, colorId);
@@ -3073,7 +3286,7 @@ function ensureGirdleEngrave() {
     countEl: document.getElementById('shop-girdle-engrave-count'),
     previewEl: document.getElementById('shop-girdle-engrave-preview'),
     emblemsRoot: document.getElementById('engraving-girdle-step'),
-    previewShape: state.diamondShape || 'round',
+    previewShape: resolvedDiamondShape(),
     previewColor: selectedDiamondColorId() || 'white',
     allowChinese: caratAllowsChineseEngraving(),
     max: 12,
@@ -3596,6 +3809,87 @@ document.getElementById("quote-sheet-btn")?.addEventListener("click", openQuoteS
 document.getElementById("share-config-btn")?.addEventListener("click", openShareSummary);
 document.getElementById("favorite-btn")?.addEventListener("click", addCurrentFavorite);
 
+(function setupMobileBuyBarMetrics() {
+  const bar = document.getElementById('mobile-buy-bar');
+  if (!bar) return;
+
+  const root = document.documentElement;
+  const siteChrome = document.querySelector('.site-chrome');
+  const mobileQuery = window.matchMedia('(max-width: 900px)');
+
+  function syncMobileBuyBarHeight() {
+    const isVisible =
+      mobileQuery.matches &&
+      !bar.classList.contains('hidden') &&
+      window.getComputedStyle(bar).display !== 'none';
+    const height = isVisible ? Math.ceil(bar.getBoundingClientRect().height) : 0;
+
+    if (height > 0) {
+      root.style.setProperty('--shop-mobile-buy-bar-height', `${height}px`);
+    } else {
+      root.style.removeProperty('--shop-mobile-buy-bar-height');
+    }
+  }
+
+  function syncMobileSiteChromeHeight() {
+    const height = siteChrome ? Math.ceil(siteChrome.getBoundingClientRect().height) : 0;
+    if (height > 0) {
+      root.style.setProperty('--shop-mobile-site-chrome-height', `${height}px`);
+    } else {
+      root.style.removeProperty('--shop-mobile-site-chrome-height');
+    }
+  }
+
+  if (typeof ResizeObserver === 'function') {
+    new ResizeObserver(syncMobileBuyBarHeight).observe(bar);
+    if (siteChrome) {
+      new ResizeObserver(syncMobileSiteChromeHeight).observe(siteChrome);
+    }
+  }
+
+  new MutationObserver(() => {
+    window.requestAnimationFrame(syncMobileBuyBarHeight);
+  }).observe(bar, { attributes: true, attributeFilter: ['class'] });
+
+  mobileQuery.addEventListener?.('change', syncMobileBuyBarHeight);
+  window.addEventListener('resize', syncMobileBuyBarHeight, { passive: true });
+  window.addEventListener('resize', syncMobileSiteChromeHeight, { passive: true });
+  window.requestAnimationFrame(() => {
+    syncMobileBuyBarHeight();
+    syncMobileSiteChromeHeight();
+  });
+})();
+
+(function setupMobileChatOffset() {
+  const styleId = 'shop-mobile-buy-bar-chat-offset';
+
+  function installChatOffsetStyle() {
+    const shadowRoot = document.querySelector('.bpChatContainer > #fab-root')?.shadowRoot;
+    if (!shadowRoot) return false;
+    if (shadowRoot.getElementById(styleId)) return true;
+
+    const style = document.createElement('style');
+    style.id = styleId;
+    style.textContent = `
+      @media (max-width: 900px) {
+        #message-preview-root {
+          bottom: calc(var(--shop-mobile-buy-bar-height, 0px) + 104px) !important;
+          visibility: var(--shop-mobile-chat-visibility, visible) !important;
+        }
+      }
+    `;
+    shadowRoot.appendChild(style);
+    return true;
+  }
+
+  installChatOffsetStyle();
+  const pollId = window.setInterval(installChatOffsetStyle, 250);
+  window.setTimeout(() => {
+    installChatOffsetStyle();
+    window.clearInterval(pollId);
+  }, 15000);
+})();
+
 (function setupMobilePricePanel() {
   const details = document.getElementById('price-breakdown-details');
   const toggle = document.getElementById('mobile-price-toggle');
@@ -3607,18 +3901,36 @@ document.getElementById("favorite-btn")?.addEventListener("click", addCurrentFav
 
   const isWizard = !!document.querySelector('.shop-page.shop-wizard');
 
+  function syncMobileChatVisibility() {
+    const hideChat = isMobileShop() && panel?.classList.contains('is-mobile-open');
+    if (hideChat) {
+      document.documentElement.style.setProperty('--shop-mobile-chat-visibility', 'hidden');
+    } else {
+      document.documentElement.style.removeProperty('--shop-mobile-chat-visibility');
+    }
+  }
+
   function syncDetailsOpen() {
     if (!details) return;
     if (!isMobileShop() || isWizard) {
       details.open = true;
       panel?.classList.remove('is-mobile-open');
+      toggle?.setAttribute('aria-expanded', 'false');
+      syncMobileChatVisibility();
       return;
     }
     if (!details.dataset.userOpened) details.open = false;
+    syncMobileChatVisibility();
   }
 
   syncDetailsOpen();
   window.addEventListener('resize', syncDetailsOpen);
+  if (panel) {
+    new MutationObserver(syncMobileChatVisibility).observe(panel, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
+  }
 
   toggle?.addEventListener('click', () => {
     if (!panel || !details) return;
@@ -3733,6 +4045,13 @@ function restoreShopConfig(cfg) {
   state.stoneCount = cfg.stoneCount || null;
   ensureStoneCountDefault();
   state.diamondShape = cfg.diamondShape || 'round';
+  if (state.diamondShape !== 'round' && state.diamondShape !== 'other') {
+    const restoredShape = nonRoundMatrixShapes().find((shape) => shape.id === state.diamondShape);
+    if (!restoredShape) state.diamondShape = 'other';
+  }
+  if (state.carat && isCaratHiddenForShop(state.carat)) {
+    state.carat = null;
+  }
 
   if (cfg.ringSize != null && cfg.ringSize !== '') {
     setRingSizeActive(cfg.ringSize);
@@ -3740,6 +4059,7 @@ function restoreShopConfig(cfg) {
 
   updateRingSizeStep();
   updateDiamondSteps();
+  updateCaratButtons();
   updateEngravingSteps();
   updateChainOptions();
   updateLengthStep();

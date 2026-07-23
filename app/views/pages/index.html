@@ -1,6 +1,6 @@
 {% extends "layouts/base.html" %}
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/home-ghibli.css?v=25">
+<link rel="stylesheet" href="/static/css/home-ghibli.css?v=26">
 {% include "partials/stories-react-css.html" %}
 {% include "partials/faq-react-css.html" %}
 {% endblock %}
@@ -239,13 +239,16 @@
     <div class="gh-poem__copy">
       <p class="gh-script reveal">銘印鑽石</p>
       <h2 class="gh-poem__title reveal reveal-d1">不只是鑽石，<br>是把羈絆留成可以觸碰的光。</h2>
-      <p class="gh-poem__text reveal reveal-d2"><span class="gh-dna">DNA</span> 鑽石是萃取毛髮或骨灰中的元素，於台灣在地實驗室培育而成的專屬個人化鑽石——從您珍視的樣本中，真實培育而成。</p>
-      <a class="gh-poem__link reveal reveal-d3" href="/what-is-dna-diamond.html">
-        <span class="gh-poem__play" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-        </span>
-        <span>了解 DNA 鑽石的誕生</span>
-      </a>
+      <p class="gh-poem__text reveal reveal-d2">從您珍視的樣本中，真實培育而成的專屬鑽石——讓羈絆留成可以觸碰的光。</p>
+      <div class="gh-poem__links reveal reveal-d3">
+        <a class="gh-poem__link" href="/what-is-dna-diamond.html">
+          <span class="gh-poem__play" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          </span>
+          <span>了解 DNA 鑽石的誕生</span>
+        </a>
+        <a class="gh-poem__link gh-poem__link--secondary" href="/about.html">認識銘印鑽石 →</a>
+      </div>
     </div>
   </div>
 </section>
@@ -259,49 +262,15 @@
   <div class="gh-scene__fade-bottom"></div>
 </div>
 
-<section class="gh-section gh-about" id="about">
+<section class="gh-section gh-about" id="dna-intro">
   <div class="container">
     <p class="gh-script reveal">What is DNA Diamond</p>
     <h2 class="gh-section__title reveal reveal-d1">什麼是 <span class="gh-dna">DNA</span> 鑽石</h2>
-    <p class="gh-section__lead reveal reveal-d2">樣本萃取 → 晶化培育 → 切割鑑定 → 鑲嵌交付。全程於台灣在地實驗室完成，約 70–90 天。</p>
+    <p class="gh-section__lead reveal reveal-d2">從樣本萃取到鑲嵌交付，全程於台灣在地實驗室完成——完整製程、樣本份量與四大保障，請見鑽石知識頁。</p>
 
-    <div class="gh-about-grid">
-      <div class="gh-about-steps reveal">
-        <div class="gh-about-step">
-          <span class="gh-about-step__no">01</span>
-          <div>
-            <h3>樣本萃取</h3>
-            <p>毛髮約一顆雞蛋大小、骨灰約 3–5 公克，單一客戶、單一培育流程。</p>
-          </div>
-        </div>
-        <div class="gh-about-step">
-          <span class="gh-about-step__no">02</span>
-          <div>
-            <h3>晶化培育</h3>
-            <p>元素注入生長設備，晶體自然生長，全程台灣在地完成。</p>
-          </div>
-        </div>
-        <div class="gh-about-step">
-          <span class="gh-about-step__no">03</span>
-          <div>
-            <h3>切割・鑑定・交付</h3>
-            <p>附銘印保證卡與專屬影音紀念盒，可鑲嵌為飾品永久珍藏。</p>
-          </div>
-        </div>
-        <a class="gh-btn gh-btn--primary" href="/what-is-dna-diamond.html">了解完整製程</a>
-      </div>
-      <div class="gh-about-visual reveal reveal-d1">
-        <picture>
-          <source srcset="/static/images/hero/imprint-diamond-heirloom-memorial.webp" type="image/webp">
-          <img src="/static/images/hero/imprint-diamond-heirloom-memorial.jpg" alt="生命鑽石－以摯愛親人樣本培育的紀念鑽石" loading="lazy" decoding="async" onerror="imgFallback(this)">
-        </picture>
-        <ul class="gh-usp-list">
-          <li><strong>在地實驗室</strong><span>樣本不送海外</span></li>
-          <li><strong>鑑定保障</strong><span>銘印保證卡・GIA／IGI</span></li>
-          <li><strong>影音紀念盒</strong><span>封存培育全程</span></li>
-          <li><strong>飾品鑲嵌</strong><span>戒指・項鍊・耳環・手鍊</span></li>
-        </ul>
-      </div>
+    <div class="gh-about-teaser reveal reveal-d3">
+      <a class="gh-btn gh-btn--primary" href="/what-is-dna-diamond.html">了解完整製程與保障</a>
+      <a class="gh-btn gh-btn--dark" href="/about.html">為什麼選擇銘印 →</a>
     </div>
   </div>
 </section>
@@ -309,7 +278,7 @@
 <section class="gh-section" id="series">
   <p class="gh-script reveal">Five Collections</p>
   <h2 class="gh-section__title reveal reveal-d1">選擇屬於您的系列</h2>
-  <p class="gh-section__lead reveal reveal-d2">每一種羈絆，都有屬於它的光。點進系列頁即可線上選擇克拉數、形狀與飾品款式。</p>
+  <p class="gh-section__lead reveal reveal-d2">每一種羈絆，都有屬於它的光。先<a href="/series.html">了解五大系列</a>代表的意義，再點進系列頁選擇克拉數、形狀與飾品款式。</p>
 
   <div class="gh-series-cards">
     <a class="gh-series-card reveal" href="/series/first-love/">
@@ -388,36 +357,7 @@
     </a>
   </div>
 
-  <a class="gh-btn gh-btn--primary reveal" href="/#series">查看系列總覽</a>
-</section>
-
-<div class="gh-scene">
-  <picture>
-    <source srcset="/static/images/hero/imprint-diamond-family-portrait-jewelry.webp" type="image/webp">
-    <img src="/static/images/hero/imprint-diamond-family-portrait-jewelry.jpg" alt="全家福鑽石－家族紀念鑽石意象" loading="lazy" decoding="async" onerror="imgFallback(this)">
-  </picture>
-  <div class="gh-scene__fade-top"></div>
-  <div class="gh-scene__fade-bottom"></div>
-</div>
-
-<section class="gh-stories">
-  <div class="container gh-stories-grid">
-    <div class="gh-stories__media reveal">
-      <picture>
-        <source srcset="/static/images/hero/imprint-diamond-pet-memorial-cat.webp" type="image/webp">
-        <img src="/static/images/hero/imprint-diamond-pet-memorial-cat.jpg" alt="寵物鑽石客戶故事意象" loading="lazy" decoding="async" onerror="imgFallback(this)">
-      </picture>
-    </div>
-    <div class="gh-stories__copy reveal reveal-d1">
-      <p class="gh-script">Testimonials</p>
-      <h2 class="gh-section__title">思念，在他們手中發著光</h2>
-      <blockquote class="gh-stories__quote">
-        <p>「牠陪了我十四年。現在牠變成一顆小小的、會發光的存在，還是天天跟著我出門。」</p>
-        <footer>沈小姐｜寵物鑽石・高雄</footer>
-      </blockquote>
-      <a class="gh-btn gh-btn--ghost gh-btn--dark" href="/stories.html">閱讀更多客戶見證</a>
-    </div>
-  </div>
+  <a class="gh-btn gh-btn--primary reveal" href="/series.html">查看系列總覽</a>
 </section>
 
 <section class="gh-wall">
@@ -442,10 +382,7 @@
   <div class="gh-cards">
     <a class="gh-card reveal" href="/what-is-dna-diamond.html">
       <div class="gh-card__media">
-        <picture>
-          <source srcset="/static/images/hero/imprint-diamond-family-memorial.webp" type="image/webp">
-          <img src="/static/images/hero/imprint-diamond-family-memorial.jpg" alt="" loading="lazy" decoding="async" onerror="imgFallback(this)">
-        </picture>
+        <img src="/static/images/learn-cards/dna-diamond.jpg?v=3" alt="毛髮樣本與培育完成的 DNA 紀念鑽石" loading="lazy" decoding="async" onerror="imgFallback(this)">
       </div>
       <h3>什麼是 DNA 鑽石</h3>
       <p>從樣本萃取到鑑定交付，完整六步驟與四大保障說明。</p>
@@ -453,10 +390,7 @@
     </a>
     <a class="gh-card reveal reveal-d1" href="/price.html">
       <div class="gh-card__media">
-        <picture>
-          <source srcset="/static/images/hero/imprint-diamond-newborn-baby-necklace.webp" type="image/webp">
-          <img src="/static/images/hero/imprint-diamond-newborn-baby-necklace.jpg" alt="" loading="lazy" decoding="async" onerror="imgFallback(this)">
-        </picture>
+        <img src="/static/images/learn-cards/price.jpg?v=3" alt="居家試算價格與鑽石款式意象" loading="lazy" decoding="async" onerror="imgFallback(this)">
       </div>
       <h3>價格試算</h3>
       <p>依克拉數、切工、彩鑽與飾品款式，線上即時試算參考價格。</p>
@@ -464,10 +398,7 @@
     </a>
     <a class="gh-card reveal reveal-d2" href="/stories.html">
       <div class="gh-card__media">
-        <picture>
-          <source srcset="/static/images/hero/imprint-diamond-pet-memorial-cat.webp" type="image/webp">
-          <img src="/static/images/hero/imprint-diamond-pet-memorial-cat.jpg" alt="" loading="lazy" decoding="async" onerror="imgFallback(this)">
-        </picture>
+        <img src="/static/images/learn-cards/stories.jpg?v=3" alt="紀念盒、手寫信與鑽石飾品的客戶故事" loading="lazy" decoding="async" onerror="imgFallback(this)">
       </div>
       <h3>客戶見證</h3>
       <p>寵物、生命、結髮、滿月——每一顆鑽石背後的情感故事。</p>
@@ -475,10 +406,7 @@
     </a>
     <a class="gh-card reveal reveal-d3" href="/faq.html">
       <div class="gh-card__media">
-        <picture>
-          <source srcset="/static/images/hero/imprint-diamond-heirloom-memorial.webp" type="image/webp">
-          <img src="/static/images/hero/imprint-diamond-heirloom-memorial.jpg" alt="" loading="lazy" decoding="async" onerror="imgFallback(this)">
-        </picture>
+        <img src="/static/images/learn-cards/faq.jpg?v=3" alt="鑽石、鑑定書與說明文件的常見問題意象" loading="lazy" decoding="async" onerror="imgFallback(this)">
       </div>
       <h3>常見問題</h3>
       <p>樣本份量、製作時間、鑑定證書與如何開始，一次解答。</p>

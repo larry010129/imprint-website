@@ -1,0 +1,288 @@
+{% extends "layouts/base.html" %}
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/home-ghibli.css?v=27">
+<link rel="stylesheet" href="/static/css/series-overview.css?v=1">
+{% endblock %}
+{% block content %}
+<article class="series-overview">
+
+  <header class="sov-hero">
+    <div class="container">
+      <nav class="sov-breadcrumb" aria-label="麵包屑">
+        <a href="/">首頁</a><span class="sep">/</span><span aria-current="page">五大系列</span>
+      </nav>
+      <p class="sov-hero__eyebrow">Five Collections</p>
+      <h1>選擇屬於您的系列</h1>
+      <p class="sov-hero__lead">銘印鑽石依不同的羈絆與生命階段，整理成五個系列。每一顆鑽石都從您珍視的樣本中真實培育而成——先了解各系列代表的意義，再進一步選擇克拉數、形狀與飾品款式。</p>
+    </div>
+  </header>
+
+  <section class="sov-intro" aria-labelledby="sov-intro-title">
+    <div class="container">
+      <h2 id="sov-intro-title">五大系列，對應五種珍視的連結</h2>
+      <p>無論是寶寶的第一縷胎髮、毛孩多年的陪伴、伴侶之間的誓約、全家人的髮絲，或是已離開的摯愛——我們以相同的在地培育技術，為不同故事找到最貼切的起點。系列之間沒有優劣，只有「哪一種連結，此刻最貼近您的心」。</p>
+    </div>
+  </section>
+
+  <div class="sov-pillars" aria-label="系列共通說明">
+    <div class="sov-pillar">
+      <p class="sov-pillar__label">Sample</p>
+      <h3>樣本來源</h3>
+      <p>胎髮、髮絲、寵物毛髮或骨灰——依系列不同而異。毛髮約一顆雞蛋大小；骨灰約 3–5 公克。份量不足時，可先透過 LINE 與顧問確認。</p>
+    </div>
+    <div class="sov-pillar">
+      <p class="sov-pillar__label">Process</p>
+      <h3>培育方式</h3>
+      <p>全台唯一在地 DNA 鑽石實驗室，單一客戶、單一流程，樣本不送海外。從萃取到晶化約需 70–90 天，歡迎預約蒞臨見證。</p>
+    </div>
+    <div class="sov-pillar">
+      <p class="sov-pillar__label">Delivery</p>
+      <h3>交付內容</h3>
+      <p>裸鑽或鑲嵌飾品、銘印保證卡，以及封存培育歷程的影音紀念盒。0.20 克拉以上可代送 GIA／IGI 國際鑑定（費用另計）。</p>
+    </div>
+  </div>
+
+  <section class="sov-guide" aria-labelledby="sov-guide-title">
+    <div class="sov-guide__head">
+      <h2 id="sov-guide-title">不確定從哪個系列開始？</h2>
+      <p>依您目前的狀況快速對照——點選即可進入該系列詳細介紹。</p>
+    </div>
+    <div class="sov-guide__list">
+      <a class="sov-guide__row" href="#first-love">
+        <span class="sov-guide__situation">寶寶滿月或周歲，想留住第一縷胎髮</span>
+        <span class="sov-guide__series">滿月鑽石 →</span>
+      </a>
+      <a class="sov-guide__row" href="#pet">
+        <span class="sov-guide__situation">毛孩陪伴多年，想讓牠以另一種形式留在身邊</span>
+        <span class="sov-guide__series">寵物鑽石 →</span>
+      </a>
+      <a class="sov-guide__row" href="#love">
+        <span class="sov-guide__situation">求婚、婚禮或週年，想以兩人髮絲見證誓約</span>
+        <span class="sov-guide__series">結髮鑽石 →</span>
+      </a>
+      <a class="sov-guide__row" href="#family">
+        <span class="sov-guide__situation">想集合全家人的髮絲，凝成可以傳承的家族珍藏</span>
+        <span class="sov-guide__series">全家福鑽石 →</span>
+      </a>
+      <a class="sov-guide__row" href="#heirloom">
+        <span class="sov-guide__situation">摯愛親人已離開，想讓思念有永恆的形狀</span>
+        <span class="sov-guide__series">生命鑽石 →</span>
+      </a>
+    </div>
+  </section>
+
+  <section class="sov-details" aria-labelledby="sov-details-title">
+    <div class="sov-details__head">
+      <h2 id="sov-details-title">各系列詳細介紹</h2>
+    </div>
+
+    <article class="sov-detail" id="first-love">
+      <div class="sov-detail__media">
+        <picture>
+          <source srcset="/static/images/hero/imprint-diamond-newborn-baby-necklace.webp" type="image/webp">
+          <img src="/static/images/hero/imprint-diamond-newborn-baby-necklace.jpg" alt="滿月鑽石－以寶寶胎髮培育的紀念鑽石" loading="lazy" decoding="async" onerror="imgFallback(this)">
+        </picture>
+      </div>
+      <div class="sov-detail__copy">
+        <p class="sov-detail__en">First Love</p>
+        <h3>滿月鑽石</h3>
+        <p>以寶寶的胎髮培育專屬鑽石，珍藏生命最初的印記。胎髮通常只剃一次——與其收進盒子裡漸漸泛黃，不如讓它凝成一顆會發光的鑽石，陪伴孩子長大、傳承給下一代。</p>
+        <p>可鑲嵌為項鍊、戒指或手鍊；許多家庭會在滿月或周歲時開始規劃，實際訂製時間依您準備好的步調而定。</p>
+        <div class="sov-detail__facts">
+          <span class="sov-detail__fact">樣本：寶寶胎髮</span>
+          <span class="sov-detail__fact">適合：滿月・周歲紀念</span>
+          <span class="sov-detail__fact">週期：約 70–90 天</span>
+        </div>
+        <div class="sov-detail__actions">
+          <a class="gh-btn gh-btn--primary" href="/series/first-love/">了解滿月鑽石</a>
+          <a class="gh-btn gh-btn--dark" href="/shop/calculator/?category=diamond&amp;type=diamond-first-love">線上試算</a>
+        </div>
+      </div>
+    </article>
+
+    <article class="sov-detail sov-detail--reverse" id="pet">
+      <div class="sov-detail__media">
+        <picture>
+          <source srcset="/static/images/hero/imprint-diamond-pet-memorial-cat.webp" type="image/webp">
+          <img src="/static/images/hero/imprint-diamond-pet-memorial-cat.jpg" alt="寵物鑽石－以毛孩毛髮培育的紀念鑽石" loading="lazy" decoding="async" onerror="imgFallback(this)">
+        </picture>
+      </div>
+      <div class="sov-detail__copy">
+        <p class="sov-detail__en">Companion</p>
+        <h3>寵物鑽石</h3>
+        <p>以毛孩的毛髮培育專屬鑽石，讓那份無條件的陪伴，以另一種形式延續。無論牠還在身邊，或已經離開，這顆鑽石都是飼主與毛孩之間獨一無二的連結。</p>
+        <p>毛髮約一顆雞蛋大小即可訂製；若毛量不足，請先透過官方 LINE 與顧問討論可行方案，不需要先寄送樣本。</p>
+        <div class="sov-detail__facts">
+          <span class="sov-detail__fact">樣本：寵物毛髮</span>
+          <span class="sov-detail__fact">適合：陪伴紀念・離世追思</span>
+          <span class="sov-detail__fact">週期：約 70–90 天</span>
+        </div>
+        <div class="sov-detail__actions">
+          <a class="gh-btn gh-btn--primary" href="/series/pet/">了解寵物鑽石</a>
+          <a class="gh-btn gh-btn--dark" href="/shop/calculator/?category=diamond&amp;type=diamond-pet">線上試算</a>
+        </div>
+      </div>
+    </article>
+
+    <article class="sov-detail" id="love">
+      <div class="sov-detail__media">
+        <picture>
+          <source srcset="/static/images/hero/imprint-diamond-wedding-couple-ring.webp" type="image/webp">
+          <img src="/static/images/hero/imprint-diamond-wedding-couple-ring.jpg" alt="結髮鑽石－以兩人髮絲共同培育的婚戒鑽石" loading="lazy" decoding="async" onerror="imgFallback(this)">
+        </picture>
+      </div>
+      <div class="sov-detail__copy">
+        <p class="sov-detail__en">Love</p>
+        <h3>結髮鑽石</h3>
+        <p>結髮為夫妻——以兩人的髮絲共同培育一顆鑽石，見證一生一次的誓約。常見於求婚戒、結婚對戒或週年紀念，讓這顆鑽石同時承載兩個人的 DNA，是專屬於你們兩人的信物。</p>
+        <p>可選擇單鑽、對戒或項鍊等多種形式；克拉數、形狀與金屬成色皆可在線上試算後，由專屬顧問與您一對一確認。</p>
+        <div class="sov-detail__facts">
+          <span class="sov-detail__fact">樣本：兩人髮絲</span>
+          <span class="sov-detail__fact">適合：求婚・婚禮・週年</span>
+          <span class="sov-detail__fact">週期：約 70–90 天</span>
+        </div>
+        <div class="sov-detail__actions">
+          <a class="gh-btn gh-btn--primary" href="/series/love/">了解結髮鑽石</a>
+          <a class="gh-btn gh-btn--dark" href="/shop/calculator/?category=diamond&amp;type=diamond-love">線上試算</a>
+        </div>
+      </div>
+    </article>
+
+    <article class="sov-detail sov-detail--reverse" id="family">
+      <div class="sov-detail__media">
+        <picture>
+          <source srcset="/static/images/hero/imprint-diamond-family-portrait-jewelry.webp" type="image/webp">
+          <img src="/static/images/hero/imprint-diamond-family-portrait-jewelry.jpg" alt="全家福鑽石－全家人髮絲培育的紀念鑽石" loading="lazy" decoding="async" onerror="imgFallback(this)">
+        </picture>
+      </div>
+      <div class="sov-detail__copy">
+        <p class="sov-detail__en">Family</p>
+        <h3>全家福鑽石</h3>
+        <p>集合全家人的髮絲，凝成一顆象徵家族連結的鑽石。父母、孩子、甚至祖父母——每一縷髮絲都代表一位家人，共同組成這顆獨一無二的家族之鑽。</p>
+        <p>適合作為三代同堂的紀念、搬家或重要家庭里程碑的珍藏，也可在節日時開始規劃，讓家的記憶以可傳承的形式延續。</p>
+        <div class="sov-detail__facts">
+          <span class="sov-detail__fact">樣本：全家人髮絲</span>
+          <span class="sov-detail__fact">適合：家族傳承・里程碑</span>
+          <span class="sov-detail__fact">週期：約 70–90 天</span>
+        </div>
+        <div class="sov-detail__actions">
+          <a class="gh-btn gh-btn--primary" href="/series/family/">了解全家福鑽石</a>
+          <a class="gh-btn gh-btn--dark" href="/shop/calculator/?category=diamond&amp;type=diamond-family">線上試算</a>
+        </div>
+      </div>
+    </article>
+
+    <article class="sov-detail" id="heirloom">
+      <div class="sov-detail__media">
+        <picture>
+          <source srcset="/static/images/hero/imprint-diamond-heirloom-memorial.webp" type="image/webp">
+          <img src="/static/images/hero/imprint-diamond-heirloom-memorial.jpg" alt="生命鑽石－以親人毛髮或骨灰培育的紀念鑽石" loading="lazy" decoding="async" onerror="imgFallback(this)">
+        </picture>
+      </div>
+      <div class="sov-detail__copy">
+        <p class="sov-detail__en">Heirloom</p>
+        <h3>生命鑽石</h3>
+        <p>以摯愛親人的毛髮或骨灰，培育成專屬紀念鑽石，讓思念有永恆的形狀。這個決定往往需要時間——我們理解您可能需要先了解製程、樣本份量與價格，再慢慢做決定。</p>
+        <p>樣本全程於台灣在地實驗室處理，不需國際運送；0.20 克拉以上可代送 GIA 或 IGI 鑑定，讓這份珍藏在未來傳承時，有正式的身分證明。</p>
+        <div class="sov-detail__facts">
+          <span class="sov-detail__fact">樣本：毛髮或骨灰</span>
+          <span class="sov-detail__fact">適合：追思・永恆陪伴</span>
+          <span class="sov-detail__fact">週期：約 70–90 天</span>
+        </div>
+        <div class="sov-detail__actions">
+          <a class="gh-btn gh-btn--primary" href="/series/heirloom/">了解生命鑽石</a>
+          <a class="gh-btn gh-btn--dark" href="/shop/calculator/?category=diamond&amp;type=diamond-heirloom">線上試算</a>
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <section class="sov-cards-wrap" aria-labelledby="sov-cards-title">
+    <h2 id="sov-cards-title">快速瀏覽五大系列</h2>
+    <div class="gh-series-cards">
+      <a class="gh-series-card" href="/series/first-love/">
+        <div class="gh-series-card__media">
+          <picture>
+            <source srcset="/static/images/hero/imprint-diamond-newborn-baby-necklace.webp" type="image/webp">
+            <img src="/static/images/hero/imprint-diamond-newborn-baby-necklace.jpg" alt="滿月鑽石" loading="lazy" decoding="async" onerror="imgFallback(this)">
+          </picture>
+        </div>
+        <div class="gh-series-card__body">
+          <p class="gh-series-card__en">First Love</p>
+          <h3>滿月鑽石</h3>
+          <p>以寶寶的胎髮，珍藏生命最初的印記，成為陪伴孩子一生的傳家珍藏。</p>
+          <span class="gh-series-card__more">立即客製 →</span>
+        </div>
+      </a>
+      <a class="gh-series-card" href="/series/pet/">
+        <div class="gh-series-card__media">
+          <picture>
+            <source srcset="/static/images/hero/imprint-diamond-pet-memorial-cat.webp" type="image/webp">
+            <img src="/static/images/hero/imprint-diamond-pet-memorial-cat.jpg" alt="寵物鑽石" loading="lazy" decoding="async" onerror="imgFallback(this)">
+          </picture>
+        </div>
+        <div class="gh-series-card__body">
+          <p class="gh-series-card__en">Companion</p>
+          <h3>寵物鑽石</h3>
+          <p>以毛孩的毛髮培育專屬鑽石，讓那份無條件的陪伴，以另一種形式延續。</p>
+          <span class="gh-series-card__more">立即客製 →</span>
+        </div>
+      </a>
+      <a class="gh-series-card" href="/series/love/">
+        <div class="gh-series-card__media">
+          <picture>
+            <source srcset="/static/images/hero/imprint-diamond-wedding-couple-ring.webp" type="image/webp">
+            <img src="/static/images/hero/imprint-diamond-wedding-couple-ring.jpg" alt="結髮鑽石" loading="lazy" decoding="async" onerror="imgFallback(this)">
+          </picture>
+        </div>
+        <div class="gh-series-card__body">
+          <p class="gh-series-card__en">Love</p>
+          <h3>結髮鑽石</h3>
+          <p>結髮為夫妻。以兩人的髮絲共同培育一顆鑽石，見證一生一次的誓約。</p>
+          <span class="gh-series-card__more">立即客製 →</span>
+        </div>
+      </a>
+      <a class="gh-series-card" href="/series/family/">
+        <div class="gh-series-card__media">
+          <picture>
+            <source srcset="/static/images/hero/imprint-diamond-family-portrait-jewelry.webp" type="image/webp">
+            <img src="/static/images/hero/imprint-diamond-family-portrait-jewelry.jpg" alt="全家福鑽石" loading="lazy" decoding="async" onerror="imgFallback(this)">
+          </picture>
+        </div>
+        <div class="gh-series-card__body">
+          <p class="gh-series-card__en">Family</p>
+          <h3>全家福鑽石</h3>
+          <p>集合全家人的髮絲，凝成一顆象徵家族連結的鑽石，讓家的記憶可以傳承。</p>
+          <span class="gh-series-card__more">立即客製 →</span>
+        </div>
+      </a>
+      <a class="gh-series-card" href="/series/heirloom/">
+        <div class="gh-series-card__media">
+          <picture>
+            <source srcset="/static/images/hero/imprint-diamond-heirloom-memorial.webp" type="image/webp">
+            <img src="/static/images/hero/imprint-diamond-heirloom-memorial.jpg" alt="生命鑽石" loading="lazy" decoding="async" onerror="imgFallback(this)">
+          </picture>
+        </div>
+        <div class="gh-series-card__body">
+          <p class="gh-series-card__en">Heirloom</p>
+          <h3>生命鑽石</h3>
+          <p>以摯愛親人的毛髮或骨灰，讓思念有永恆的形狀，靜靜陪在您身邊。</p>
+          <span class="gh-series-card__more">立即客製 →</span>
+        </div>
+      </a>
+    </div>
+  </section>
+
+  <section class="sov-next" aria-labelledby="sov-next-title">
+    <h2 id="sov-next-title">還想多了解一點？</h2>
+    <p>系列選定之後，您可以進一步了解製程細節、價格試算，或直接與專屬顧問聊聊——我們會依您的步調，不催促、不打擾。</p>
+    <div class="sov-next__links">
+      <a class="gh-btn gh-btn--primary" href="/what-is-dna-diamond.html">DNA 鑽石怎麼做的</a>
+      <a class="gh-btn gh-btn--dark" href="/price.html">查看價格總覽</a>
+      <a class="gh-btn gh-btn--dark" href="/faq.html">常見問題</a>
+      <a class="gh-btn gh-btn--dark" href="https://lin.ee/ktVBtmx" target="_blank" rel="noopener">加入官方 LINE</a>
+    </div>
+  </section>
+
+</article>
+{% endblock %}

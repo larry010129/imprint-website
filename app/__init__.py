@@ -49,6 +49,22 @@ def create_app() -> FastAPI:
     )
 
     @application.middleware("http")
+    async def dev_static_fresh(request, call_next):
+        """Local dev: skip conditional-cache 304s so static assets always revalidate as 200."""
+        if not settings.is_render:
+            path = request.url.path
+            if path.startswith(("/static/", "/js/", "/css/")):
+                request.scope["headers"] = [
+                    (name, value)
+                    for name, value in request.scope["headers"]
+                    if name.lower() not in (b"if-none-match", b"if-modified-since")
+                ]
+        response = await call_next(request)
+        if not settings.is_render and request.url.path.startswith(("/static/", "/js/", "/css/")):
+            response.headers["Cache-Control"] = "no-store"
+        return response
+
+    @application.middleware("http")
     async def security_headers(request, call_next):
         response = await call_next(request)
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
@@ -63,8 +79,8 @@ def create_app() -> FastAPI:
         # can't be nonced piecemeal, but is still locked to an origin allowlist,
         # so injected external <script src=evil> is blocked. Allowed origins are
         # exactly what the site loads: Botpress webchat, Google Maps, Google
-        # Fonts. frame-ancestors 'self' + object-src 'none' + base-uri 'self'
-        # are the high-value additions.
+        # Fonts, YouTube embeds. frame-ancestors 'self' + object-src 'none' +
+        # base-uri 'self' are the high-value additions.
         if response.headers.get("content-type", "").startswith("text/html"):
             response.headers.setdefault(
                 "Content-Security-Policy",
@@ -76,7 +92,8 @@ def create_app() -> FastAPI:
                 "img-src 'self' data: https:; "
                 "connect-src 'self' https://*.botpress.cloud wss://*.botpress.cloud "
                 "https://cdn.botpress.cloud https://files.bpcontent.cloud; "
-                "frame-src https://www.google.com https://*.botpress.cloud; "
+                "frame-src https://www.google.com https://www.youtube.com "
+                "https://www.youtube-nocookie.com https://*.botpress.cloud; "
                 "frame-ancestors 'self'; object-src 'none'; base-uri 'self'",
             )
         return response

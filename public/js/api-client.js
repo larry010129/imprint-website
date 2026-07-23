@@ -53,7 +53,12 @@
     apiErrorMessage: apiErrorMessage,
     // ---- auth ----
     signup: function (fields) { return request('/api/auth/signup', { method: 'POST', body: fields }); },
-    login: function (email, password) { return request('/api/auth/login', { method: 'POST', body: { email: email, password: password } }); },
+    login: function (email, password, remember) {
+      return request('/api/auth/login', {
+        method: 'POST',
+        body: { email: email, password: password, remember: remember !== false },
+      });
+    },
     logout: function () { return request('/api/auth/logout', { method: 'POST' }); },
     getSession: function () { return request('/api/auth/session'); },
     requestPasswordReset: function (email) { return request('/api/auth/request-password-reset', { method: 'POST', body: { email: email } }); },

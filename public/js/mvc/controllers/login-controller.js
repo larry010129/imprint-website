@@ -4,6 +4,30 @@
   var Model = global.ImprintModels.Login;
   var View = global.ImprintViews.Login;
 
+  var REMEMBER_EMAIL_COOKIE = 'imprint_login_email';
+
+  function readRememberedEmail() {
+    return document.cookie.split(';').reduce(function (found, part) {
+      if (found) return found;
+      var chunk = part.trim();
+      if (chunk.indexOf(REMEMBER_EMAIL_COOKIE + '=') !== 0) return '';
+      try {
+        return decodeURIComponent(chunk.slice(REMEMBER_EMAIL_COOKIE.length + 1));
+      } catch (e) {
+        return chunk.slice(REMEMBER_EMAIL_COOKIE.length + 1);
+      }
+    }, '');
+  }
+
+  function storeRememberedEmail(email, remember) {
+    if (remember && email) {
+      document.cookie = REMEMBER_EMAIL_COOKIE + '=' + encodeURIComponent(email)
+        + '; path=/; max-age=' + (365 * 24 * 60 * 60) + '; SameSite=Lax';
+    } else {
+      document.cookie = REMEMBER_EMAIL_COOKIE + '=; path=/; max-age=0; SameSite=Lax';
+    }
+  }
+
   function redirectAfterLogin() {
     var next = new URLSearchParams(global.location.search).get('next');
     var target = 'account.html';
@@ -32,6 +56,12 @@
         });
       }
 
+      var remembered = readRememberedEmail();
+      if (remembered && e.email) {
+        e.email.value = remembered;
+        if (e.remember) e.remember.checked = true;
+      }
+
       e.form.addEventListener('submit', function (ev) {
         ev.preventDefault();
         View.setMsg('');
@@ -43,13 +73,14 @@
 
         var email = e.form.email.value.trim();
         var password = e.form.password.value;
+        var remember = !(e.remember && !e.remember.checked);
         if (!email || !password) {
           View.setMsg('請輸入 Email 與密碼。', 'err');
           return;
         }
 
         View.setLoading(true);
-        Model.login(email, password).then(function (res) {
+        Model.login(email, password, remember).then(function (res) {
           if (res.error || !res.user) {
             View.setLoading(false);
             var msg = (M.api() && global.imprintAPI && global.imprintAPI.apiErrorMessage)
@@ -72,6 +103,7 @@
               View.setMsg('登入成功但無法保存登入狀態，請確認瀏覽器允許 Cookie 後再試。', 'err');
               return;
             }
+            storeRememberedEmail(email, remember);
             View.setMsg('登入成功，跳轉中…', 'ok');
             setTimeout(redirectAfterLogin, 300);
           });

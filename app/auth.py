@@ -83,20 +83,25 @@ def _is_secure_request(request: Request) -> bool:
     return False
 
 
-def set_session_cookie(response: Response, token: str, request: Request) -> None:
-    response.set_cookie(
-        key=COOKIE_NAME,
-        value=token,
-        max_age=SESSION_DAYS * 24 * 60 * 60,
-        path="/",
-        httponly=True,
-        secure=_is_secure_request(request),
-        samesite="lax",
-    )
+def set_session_cookie(response: Response, token: str, request: Request, *, remember: bool = True) -> None:
+    """Set signed JWT session cookie. Persistent (30d) when remember=True, else browser-session only."""
+    kwargs: dict = {
+        "key": COOKIE_NAME,
+        "value": token,
+        "path": "/",
+        "httponly": True,
+        "secure": _is_secure_request(request),
+        "samesite": "lax",
+    }
+    if remember:
+        kwargs["max_age"] = SESSION_DAYS * 24 * 60 * 60
+    response.set_cookie(**kwargs)
 
 
-def clear_session_cookie(response: Response) -> None:
-    response.delete_cookie(key=COOKIE_NAME, path="/")
+def clear_session_cookie(response: Response, request: Request | None = None) -> None:
+    """Delete session cookie — secure/samesite must match set_session_cookie or browsers keep it."""
+    secure = _is_secure_request(request) if request is not None else False
+    response.delete_cookie(key=COOKIE_NAME, path="/", httponly=True, secure=secure, samesite="lax")
 
 
 def get_user_id(request: Request) -> str | None:

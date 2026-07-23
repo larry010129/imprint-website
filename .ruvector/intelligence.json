@@ -1,0 +1,27 @@
+{
+  "patterns": {},
+  "memories": [],
+  "trajectories": [],
+  "errors": {},
+  "file_sequences": [],
+  "agents": {},
+  "edges": [],
+  "stats": {
+    "total_patterns": 0,
+    "total_memories": 0,
+    "total_trajectories": 0,
+    "total_errors": 0,
+    "session_count": 0,
+    "last_session": 0
+  },
+  "activeTrajectories": {
+    "traj_1784789975368_6neu225wh": {
+      "id": "traj_1784789975368_6neu225wh",
+      "context": "landing-check: Verify the landing page no longer shows the static testimonial section and still shows the auto-scrolling testimonial wall.",
+      "agent": "browser-session",
+      "file": null,
+      "steps": [],
+      "startTime": 1784789975368
+    }
+  }
+}

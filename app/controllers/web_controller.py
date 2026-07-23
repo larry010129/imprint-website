@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 from functools import lru_cache
+from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
@@ -12,9 +14,56 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from config.routes import ALL_PAGES, PAGE_404, STANDALONE_PAGES, PageMeta
 from config.settings import settings
+from app.youtube_channel import fetch_latest_channel_video, resolve_channel_id
 
 templates = Jinja2Templates(directory=str(settings.templates_dir))
 _FRAGMENTS_DIR = settings.templates_dir / "fragments"
+_FEATURED_VIDEO_PATH = Path(__file__).resolve().parent.parent / "data" / "featured-video.json"
+_FEATURED_YOUTUBE_LATEST_PATH = Path(__file__).resolve().parent.parent / "data" / "featured-youtube-latest.json"
+
+
+def load_featured_video() -> dict | None:
+    """Pinned About-page video (fixed ID from JSON)."""
+    if not _FEATURED_VIDEO_PATH.is_file():
+        return None
+    try:
+        data = json.loads(_FEATURED_VIDEO_PATH.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return None
+    if not data.get("enabled") or not data.get("youtube_id"):
+        return None
+    return data
+
+
+def load_youtube_latest_video() -> dict | None:
+    """Latest upload from the configured YouTube channel."""
+    if not _FEATURED_YOUTUBE_LATEST_PATH.is_file():
+        return None
+    try:
+        data = json.loads(_FEATURED_YOUTUBE_LATEST_PATH.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return None
+    if not data.get("enabled"):
+        return None
+
+    source = (data.get("source") or "fixed").strip().lower()
+    if source == "channel_latest":
+        channel_id = resolve_channel_id(
+            data.get("channel_id"),
+            data.get("channel_handle"),
+        )
+        ttl = int(data.get("cache_ttl_seconds") or 21600)
+        if channel_id:
+            try:
+                latest = fetch_latest_channel_video(channel_id, ttl_seconds=ttl)
+                if latest:
+                    data = {**data, **latest}
+            except OSError:
+                pass
+
+    if not data.get("youtube_id"):
+        return None
+    return data
 
 
 @lru_cache(maxsize=None)
@@ -38,6 +87,9 @@ def _context(request: Request, meta: PageMeta) -> dict:
     }
     if meta.content_fragment:
         context["content_html"] = _load_fragment(meta.content_fragment)
+    if meta.route == "/about.html":
+        context["featured_video"] = load_featured_video()
+        context["youtube_latest_video"] = load_youtube_latest_video()
     return context
 
 

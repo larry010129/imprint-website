@@ -424,9 +424,21 @@ button.gh-btn--primary{ border:none; }
 }
 .gh-poem__copy .gh-poem__title{ margin-left:0; margin-right:0; text-align:left; }
 .gh-poem__copy .gh-poem__text{ margin-left:0; margin-right:0; }
+.gh-poem__links{
+  display:flex; flex-wrap:wrap; align-items:center; gap:14px 20px;
+}
+.gh-poem__link--secondary{
+  padding:12px 0; border:0; background:transparent; box-shadow:none;
+  color:var(--gh-dna-deep); font-size:13px;
+}
+.gh-poem__link--secondary:hover{ box-shadow:none; text-decoration:underline; }
 
 /* ---------- About (DNA diamond) ---------- */
 .gh-about{ padding-top:56px; }
+.gh-about-teaser{
+  display:flex; flex-wrap:wrap; justify-content:center; gap:14px;
+  max-width:980px; margin:36px auto 0;
+}
 .gh-about-grid{
   display:grid; grid-template-columns:1fr 1fr; gap:48px;
   max-width:980px; margin:0 auto; text-align:left;

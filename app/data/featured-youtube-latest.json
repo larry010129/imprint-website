@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "source": "channel_latest",
+  "channel_id": "UCiI_Xayu0OrUT2swTeV6zTw",
+  "channel_handle": "@imprintdiamond",
+  "cache_ttl_seconds": 21600,
+  "youtube_id": "",
+  "title": "YouTube 最新影片",
+  "eyebrow": "YOUTUBE LATEST",
+  "heading": "頻道最新影片",
+  "lead": "追蹤銘印鑽石 YouTube 頻道，看最新品牌動態與分享。",
+  "channel_url": "https://www.youtube.com/@imprintdiamond"
+}

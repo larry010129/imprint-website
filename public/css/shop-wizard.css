@@ -475,29 +475,58 @@
   height: auto;
 }
 
-.shop-page.shop-wizard .shop-price-panel,
-.shop-page.shop-wizard .shop-price-panel--wizard {
-  height: auto;
-  max-height: none;
-  overflow: visible;
-}
+@media (min-width: 901px) {
+  .shop-page.shop-wizard .shop-price-panel,
+  .shop-page.shop-wizard .shop-price-panel--wizard {
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
 
-.shop-page.shop-wizard .price-breakdown-details {
-  flex: none;
-  min-height: auto;
-  overflow: visible;
-}
+  .shop-page.shop-wizard .price-breakdown-details {
+    flex: none;
+    min-height: auto;
+    overflow: visible;
+  }
 
-.shop-page.shop-wizard .price-breakdown-panel {
-  flex: none;
-  min-height: auto;
-  max-height: none;
-  overflow: visible;
+  .shop-page.shop-wizard .price-breakdown-panel {
+    flex: none;
+    min-height: auto;
+    max-height: none;
+    overflow: visible;
+  }
 }
 
 /* Wizard: always show full breakdown (克拉、金工價格) */
 .shop-page.shop-wizard .price-breakdown-details:not([open]) .price-breakdown-panel {
   display: block !important;
+}
+
+/* Pendant-only renders are 573x451. Match the responsive frame to the
+   source ratio so contain does not expose a false empty band above it. */
+@media (max-width: 1100px) {
+  .shop-page.shop-wizard .product-preview.is-pendant-only {
+    aspect-ratio: 573 / 451;
+    max-height: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .shop-page.shop-wizard .shop-price-panel .shop-secondary-actions {
+    display: none;
+  }
+
+  .shop-page.shop-wizard .breakdown-rows .summary-row {
+    grid-template-columns: minmax(6.5em, max-content) 1em minmax(0, 1fr);
+    line-height: 1.45;
+  }
+
+  .shop-page.shop-wizard .breakdown-rows .summary-row .val {
+    min-width: 0;
+    justify-self: start;
+    text-align: left;
+    overflow-wrap: anywhere;
+  }
 }
 
 @media (min-width: 901px) {

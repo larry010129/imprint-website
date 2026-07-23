@@ -38,6 +38,11 @@
   </url>
 
   <url>
+    <loc>https://www.imprint-diamond.com/series.html</loc>
+    <changefreq>monthly</changefreq><priority>0.85</priority>
+    <image:image><image:loc>https://www.imprint-diamond.com/images/hero/imprint-diamond-family-portrait-jewelry.jpg</image:loc><image:title>五大系列總覽－銘印鑽石 DNA 紀念鑽石</image:title></image:image>
+  </url>
+  <url>
     <loc>https://www.imprint-diamond.com/series/first-love/</loc>
     <changefreq>monthly</changefreq><priority>0.8</priority>
     <image:image><image:loc>https://www.imprint-diamond.com/images/hero/imprint-diamond-newborn-baby-necklace.jpg</image:loc><image:title>滿月鑽石－寶寶胎髮紀念鑽石</image:title></image:image>

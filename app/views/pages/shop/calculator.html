@@ -1,8 +1,8 @@
 {% extends "layouts/base.html" %}
 {% block main_class %} class="main-content shop-calculator-page"{% endblock %}
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/shop.css?v=6.20">
-<link rel="stylesheet" href="/static/css/shop-wizard.css?v=12">
+<link rel="stylesheet" href="/static/css/shop.css?v=6.23">
+<link rel="stylesheet" href="/static/css/shop-wizard.css?v=14">
 {% include "partials/shop-tour-react-css.html" %}
 {% endblock %}
 {% block content %}
@@ -192,9 +192,34 @@
             <div class="variant-group hidden" id="diamond-shape-step">
               <h3 class="variant-label" data-i18n="step_diamond_shape">選擇鑽石切工</h3>
               <div class="variant-chips" id="diamond-shape-row"></div>
-              <div class="diamond-shape-other-wrap hidden" id="diamond-shape-other-wrap">
-                <label class="variant-label variant-label--sub" for="diamond-shape-other-select" data-i18n="step_diamond_shape_other">選擇形狀</label>
-                <select id="diamond-shape-other-select" class="diamond-shape-other-select ring-size-select" aria-label="選擇鑽石形狀"></select>
+              <div class="diamond-shape-other-wrap" id="diamond-shape-other-wrap" hidden>
+                <span class="variant-label variant-label--sub" id="diamond-shape-other-label"
+                      data-i18n="step_diamond_shape_other">選擇形狀</span>
+                <div class="diamond-shape-picker" id="diamond-shape-other-picker">
+                  <button type="button" class="diamond-shape-picker__trigger" id="diamond-shape-other-trigger"
+                          aria-haspopup="listbox" aria-expanded="false"
+                          aria-controls="diamond-shape-other-listbox"
+                          aria-labelledby="diamond-shape-other-label diamond-shape-other-value">
+                    <span class="diamond-shape-picker__avatar" aria-hidden="true">
+                      <img id="diamond-shape-other-image" src="" alt="" width="28" height="28">
+                    </span>
+                    <span class="diamond-shape-picker__text">
+                      <span class="diamond-shape-picker__value" id="diamond-shape-other-value"></span>
+                      <span class="diamond-shape-picker__meta" id="diamond-shape-other-meta"></span>
+                    </span>
+                    <svg class="diamond-shape-picker__chevrons" viewBox="0 0 24 24" width="16" height="16"
+                         fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                         stroke-linejoin="round" aria-hidden="true">
+                      <path d="m7 15 5 5 5-5"></path>
+                      <path d="m7 9 5-5 5 5"></path>
+                    </svg>
+                  </button>
+                  <div class="diamond-shape-picker__popover" id="diamond-shape-other-popover" hidden>
+                    <div class="diamond-shape-picker__title" data-i18n="step_diamond_shape_other">選擇形狀</div>
+                    <div class="diamond-shape-picker__options" id="diamond-shape-other-listbox"
+                         role="listbox" aria-labelledby="diamond-shape-other-label"></div>
+                  </div>
+                </div>
               </div>
               <p class="diamond-shape-hint" id="diamond-shape-min-carat-notice" role="note"
                  data-i18n="diamond_shape_min_carat">※ 溫馨提醒：除圓鑽外，其餘切工需 0.3 克拉（30 分）以上方可選擇與製作。</p>
@@ -756,7 +781,7 @@
 <script src="/static/js/shop-catalog-data.js?v=5"></script>
 <script src="/static/js/shop-pricing-local.js?v=9"></script>
 <script src="/static/js/shop-i18n.js?v=8"></script>
-<script src="/static/js/girdle-engrave.js?v=15"></script>
+<script src="/static/js/girdle-engrave.js?v=16"></script>
 <script src="/static/js/shop-terms.js?v=4"></script>
-<script src="/static/js/shop.js?v=96"></script>
+<script src="/static/js/shop.js?v=99"></script>
 {% endblock %}

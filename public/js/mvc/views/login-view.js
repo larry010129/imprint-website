@@ -8,6 +8,8 @@
         btn: document.getElementById('loginSubmitBtn'),
         msg: document.getElementById('loginFormMsg'),
         forgotBtn: document.getElementById('forgotPwBtn'),
+        remember: document.getElementById('loginRemember'),
+        email: document.getElementById('loginEmail'),
       };
     },
     setMsg: function (text, type) {

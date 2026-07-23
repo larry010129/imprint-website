@@ -2,8 +2,8 @@
   'use strict';
   global.ImprintModels = global.ImprintModels || {};
   global.ImprintModels.Login = {
-    login: function (email, password) {
-      return global.imprintAPI.login(email, password);
+    login: function (email, password, remember) {
+      return global.imprintAPI.login(email, password, remember);
     },
     getSession: function () {
       return global.imprintAPI.getSession();

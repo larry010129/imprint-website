@@ -1,5 +1,5 @@
-# Python
-.venv/
+# Runtime caches
+app/data/.featured-video-cache.json
 venv/
 __pycache__/
 *.py[cod]

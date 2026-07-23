@@ -6,6 +6,7 @@
 <title>{% block title %}{{ title }}{% endblock %}</title>
 <meta name="robots" content="noindex, nofollow">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="stylesheet" href="/static/css/social-fab.css?v=3">
 {% block extra_css %}{% endblock %}
 {% block extra_head %}{% endblock %}
 </head>
@@ -14,6 +15,7 @@
 {% block content %}{% endblock %}
 </main>
 {% block extra_scripts %}{% endblock %}
+{% include "partials/social-fab.html" %}
 {% include "partials/botpress-webchat.html" %}
 </body>
 </html>

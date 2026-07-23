@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { motion, useReducedMotion } from "motion/react";
 import DnaInfoFigure from "@/components/DnaInfoFigure";
+import { ScrollReveal } from "@/components/ui/scroll-reveal";
 import {
   ABOUT_STEPS,
   ASSURANCE_SECTION,
@@ -110,37 +112,59 @@ function SplitSection({
 }
 
 function ProcessSteps() {
+  const reduceMotion = useReducedMotion();
+
   return (
     <div className="space-y-0">
-      {FLOW_PHASES.map((step, i) => (
-        <div key={step.id} className="relative grid grid-cols-[auto_1fr] gap-5 pb-10 last:pb-0 md:gap-6">
-          {i < FLOW_PHASES.length - 1 && (
-            <div className="absolute bottom-0 left-4 top-9 w-px bg-[#e3dcd3]" aria-hidden />
-          )}
-          <div className="relative z-10 flex flex-col items-center pt-0.5">
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-full border-2 border-[#5ecfcf] bg-[#fdfcfa]">
-              <span
-                className="text-xs font-medium text-[#5ecfcf]"
+      {FLOW_PHASES.map((step, i) => {
+        const StepWrap = reduceMotion ? "div" : motion.div;
+        const stepProps = reduceMotion
+          ? {}
+          : {
+              initial: { opacity: 0, x: -16 },
+              whileInView: { opacity: 1, x: 0 },
+              viewport: { once: true, amount: 0.2, margin: "0px 0px -4% 0px" },
+              transition: {
+                duration: 0.65,
+                delay: i * 0.08,
+                ease: [0.22, 1, 0.36, 1] as const,
+              },
+            };
+
+        return (
+          <StepWrap
+            key={step.id}
+            className="relative grid grid-cols-[auto_1fr] gap-5 pb-10 last:pb-0 md:gap-6"
+            {...stepProps}
+          >
+            {i < FLOW_PHASES.length - 1 && (
+              <div className="absolute bottom-0 left-4 top-9 w-px bg-[#e3dcd3]" aria-hidden />
+            )}
+            <div className="relative z-10 flex flex-col items-center pt-0.5">
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-full border-2 border-[#5ecfcf] bg-[#fdfcfa] shadow-[0_0_0_4px_rgba(94,207,207,0.12)]">
+                <span
+                  className="text-xs font-medium text-[#5ecfcf]"
+                  style={{ fontFamily: "var(--serif, 'Noto Serif TC', serif)" }}
+                >
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+              </div>
+            </div>
+            <div className="min-w-0 rounded-md transition-colors duration-300 hover:bg-[#fafefe]/70">
+              <h3
+                className="mb-3 text-base font-semibold text-[#2b2320]"
                 style={{ fontFamily: "var(--serif, 'Noto Serif TC', serif)" }}
               >
-                {String(i + 1).padStart(2, "0")}
-              </span>
+                第{["一", "二", "三", "四", "五", "六"][i]}步　{step.title}
+              </h3>
+              <div className="dna-info-step-row">
+                <Prose>{step.description}</Prose>
+                <DnaInfoFigure image={step.image} variant="step" />
+              </div>
             </div>
-          </div>
-          <div className="min-w-0">
-            <h3
-              className="mb-3 text-base font-semibold text-[#2b2320]"
-              style={{ fontFamily: "var(--serif, 'Noto Serif TC', serif)" }}
-            >
-              第{["一", "二", "三", "四", "五", "六"][i]}步　{step.title}
-            </h3>
-            <div className="dna-info-step-row">
-              <Prose>{step.description}</Prose>
-              <DnaInfoFigure image={step.image} variant="step" />
-            </div>
-          </div>
-        </div>
-      ))}
+          </StepWrap>
+        );
+      })}
     </div>
   );
 }
@@ -170,129 +194,169 @@ export default function DnaDiamondPage() {
     <div className="dna-info-page bg-[#fdfcfa] text-[#2b2320]">
       <div className="dna-info-layout">
         <aside className="dna-info-toc-wrap">
-          <InfoToc activeSection={activeSection} />
+          <ScrollReveal y={20} amount={0.5}>
+            <InfoToc activeSection={activeSection} />
+          </ScrollReveal>
         </aside>
 
         <main className="dna-info-main min-w-0 space-y-16 md:space-y-20">
           <section id="intro">
-            <SectionTitle en="Introduction" zh={WHAT_IS.title} />
+            <ScrollReveal>
+              <SectionTitle en="Introduction" zh={WHAT_IS.title} />
+            </ScrollReveal>
             <div className="space-y-5">
-              <SplitSection body={<Prose>{WHAT_IS.body}</Prose>} image={WHAT_IS.image} />
-              <div className="overflow-hidden rounded-md border border-[#e3dcd3]">
-                <div className="border-b border-[#e3dcd3] bg-[#f7f4f1] px-5 py-3">
-                  <p className="text-xs font-medium text-[#2b2320]">重要基本資訊</p>
+              <ScrollReveal delay={0.06}>
+                <SplitSection body={<Prose>{WHAT_IS.body}</Prose>} image={WHAT_IS.image} />
+              </ScrollReveal>
+              <ScrollReveal delay={0.1}>
+                <div className="overflow-hidden rounded-md border border-[#e3dcd3]">
+                  <div className="border-b border-[#e3dcd3] bg-[#f7f4f1] px-5 py-3">
+                    <p className="text-xs font-medium text-[#2b2320]">重要基本資訊</p>
+                  </div>
+                  <div className="dna-info-facts grid divide-y divide-[#e3dcd3]">
+                    {KEY_FACTS.map((item, i) => (
+                      <ScrollReveal key={item.label} delay={0.04 * i} y={20} amount={0.3}>
+                        <div className="px-5 py-4">
+                          <p className="mb-1 text-[10px] tracking-wide text-[#8a817b]">{item.label}</p>
+                          <p className="text-sm font-medium text-[#2b2320]">{item.value}</p>
+                        </div>
+                      </ScrollReveal>
+                    ))}
+                  </div>
                 </div>
-                <div className="dna-info-facts grid divide-y divide-[#e3dcd3]">
-                  {KEY_FACTS.map((item) => (
-                    <div key={item.label} className="px-5 py-4">
-                      <p className="mb-1 text-[10px] tracking-wide text-[#8a817b]">{item.label}</p>
-                      <p className="text-sm font-medium text-[#2b2320]">{item.value}</p>
-                    </div>
-                  ))}
+              </ScrollReveal>
+              <ScrollReveal delay={0.12} y={24}>
+                <div className="dna-info-callout rounded-md border border-[#dcf2f2] bg-[#f4fbfb] px-5 py-4 text-sm leading-[1.95] text-[#3a7a7a] shadow-[0_8px_28px_rgba(94,207,207,0.08)]">
+                  {WHAT_IS.callout}
                 </div>
-              </div>
-              <div className="rounded-md border border-[#dcf2f2] bg-[#f4fbfb] px-5 py-4 text-sm leading-[1.95] text-[#3a7a7a]">
-                {WHAT_IS.callout}
-              </div>
+              </ScrollReveal>
             </div>
           </section>
 
           <section id="process">
-            <SectionTitle en="Manufacturing Process" zh={FLOW_TITLE} />
-            <div className="dna-info-split mb-8">
-              <Prose>
-                從樣本萃取到鑲嵌交付，每一顆 DNA 鑽石都經過慎重對待的完整流程。以下依序說明六個主要階段，全程於台灣在地實驗室完成。
-              </Prose>
-              <SplitVideo
-                youtubeId={PROCESS_LEAD_VIDEO.youtubeId}
-                title={PROCESS_LEAD_VIDEO.title}
-              />
-            </div>
+            <ScrollReveal>
+              <SectionTitle en="Manufacturing Process" zh={FLOW_TITLE} />
+            </ScrollReveal>
+            <ScrollReveal delay={0.06}>
+              <div className="dna-info-split mb-8">
+                <Prose>
+                  從樣本萃取到鑲嵌交付，每一顆 DNA 鑽石都經過慎重對待的完整流程。以下依序說明六個主要階段，全程於台灣在地實驗室完成。
+                </Prose>
+                <SplitVideo
+                  youtubeId={PROCESS_LEAD_VIDEO.youtubeId}
+                  title={PROCESS_LEAD_VIDEO.title}
+                />
+              </div>
+            </ScrollReveal>
             <ProcessSteps />
           </section>
 
           <section id="sample">
-            <SectionTitle en="Sample Requirements" zh={SAMPLE_SECTION.title} />
-            <SplitSection body={<Prose>{SAMPLE_SECTION.body}</Prose>} image={SAMPLE_SECTION.image} />
+            <ScrollReveal>
+              <SectionTitle en="Sample Requirements" zh={SAMPLE_SECTION.title} />
+            </ScrollReveal>
+            <ScrollReveal delay={0.08}>
+              <SplitSection body={<Prose>{SAMPLE_SECTION.body}</Prose>} image={SAMPLE_SECTION.image} />
+            </ScrollReveal>
           </section>
 
           <section id="local">
-            <SectionTitle en="Local Laboratory" zh={LOCAL_SECTION.title} />
-            <SplitSection body={<Prose>{LOCAL_SECTION.body}</Prose>} image={LOCAL_SECTION.image} />
+            <ScrollReveal>
+              <SectionTitle en="Local Laboratory" zh={LOCAL_SECTION.title} />
+            </ScrollReveal>
+            <ScrollReveal delay={0.08}>
+              <SplitSection body={<Prose>{LOCAL_SECTION.body}</Prose>} image={LOCAL_SECTION.image} />
+            </ScrollReveal>
           </section>
 
           <section id="assurance">
-            <SectionTitle en="Quality & Certification" zh={ASSURANCE_SECTION.title} />
-            <SplitSection body={<Prose>{ASSURANCE_SECTION.body}</Prose>} image={ASSURANCE_SECTION.image} />
-            <div className="mt-8 flex flex-wrap gap-3">
-              <a
-                href={`${root}#series`}
-                className="inline-flex items-center rounded-full bg-[#9cefef] px-6 py-3 text-sm tracking-wider text-[#2b2320] transition hover:bg-[#b7f4f4]"
-              >
-                探索您的專屬紀念｜五大訂製系列
-              </a>
-              <a
-                href={`${root}faq.html`}
-                className="inline-flex items-center rounded-full border border-[#2b2320] px-6 py-3 text-sm tracking-wider text-[#2b2320] transition hover:bg-[#2b2320] hover:text-white"
-              >
-                與顧問聊聊您的故事
-              </a>
-            </div>
+            <ScrollReveal>
+              <SectionTitle en="Quality & Certification" zh={ASSURANCE_SECTION.title} />
+            </ScrollReveal>
+            <ScrollReveal delay={0.08}>
+              <SplitSection body={<Prose>{ASSURANCE_SECTION.body}</Prose>} image={ASSURANCE_SECTION.image} />
+            </ScrollReveal>
+            <ScrollReveal delay={0.12}>
+              <div className="mt-8 flex flex-wrap gap-3">
+                <a
+                  href={`${root}series.html`}
+                  className="inline-flex items-center rounded-full bg-[#9cefef] px-6 py-3 text-sm tracking-wider text-[#2b2320] transition hover:bg-[#b7f4f4] hover:shadow-[0_8px_24px_rgba(94,207,207,0.25)]"
+                >
+                  探索您的專屬紀念｜五大訂製系列
+                </a>
+                <a
+                  href={`${root}faq.html`}
+                  className="inline-flex items-center rounded-full border border-[#2b2320] px-6 py-3 text-sm tracking-wider text-[#2b2320] transition hover:bg-[#2b2320] hover:text-white"
+                >
+                  與顧問聊聊您的故事
+                </a>
+              </div>
+            </ScrollReveal>
           </section>
 
           <section id="promise">
-            <SectionTitle en="Our Promise" zh="四大保障，讓您安心託付" />
-            <Prose>
-              DNA 鑽石是萃取毛髮或骨灰中的元素，注入鑽石生長設備中，經晶化培育而成的專屬個人化鑽石——不是複製品，而是從您珍視的樣本中，真實培育而成。
-            </Prose>
+            <ScrollReveal>
+              <SectionTitle en="Our Promise" zh="四大保障，讓您安心託付" />
+            </ScrollReveal>
+            <ScrollReveal delay={0.06}>
+              <Prose>
+                DNA 鑽石是萃取毛髮或骨灰中的元素，注入鑽石生長設備中，經晶化培育而成的專屬個人化鑽石——不是複製品，而是從您珍視的樣本中，真實培育而成。
+              </Prose>
+            </ScrollReveal>
             <div className="mt-8 space-y-0 divide-y divide-[#efe9e3] border-y border-[#efe9e3]">
-              {ABOUT_STEPS.map((step) => (
-                <div key={step.no} className="grid grid-cols-[auto_1fr] gap-5 py-5">
-                  <span
-                    className="shrink-0 pt-0.5 text-sm tracking-wider text-[#5ecfcf]"
-                    style={{ fontFamily: "var(--serif, 'Noto Serif TC', serif)" }}
-                  >
-                    {step.no}
-                  </span>
-                  <div>
-                    <h3
-                      className="text-base font-semibold text-[#2b2320]"
+              {ABOUT_STEPS.map((step, i) => (
+                <ScrollReveal key={step.no} delay={i * 0.05} y={22}>
+                  <div className="grid grid-cols-[auto_1fr] gap-5 py-5">
+                    <span
+                      className="shrink-0 pt-0.5 text-sm tracking-wider text-[#5ecfcf]"
                       style={{ fontFamily: "var(--serif, 'Noto Serif TC', serif)" }}
                     >
-                      {step.title}
-                    </h3>
-                    <p className="mt-1.5 text-sm leading-relaxed text-[#5c534e]">{step.body}</p>
+                      {step.no}
+                    </span>
+                    <div>
+                      <h3
+                        className="text-base font-semibold text-[#2b2320]"
+                        style={{ fontFamily: "var(--serif, 'Noto Serif TC', serif)" }}
+                      >
+                        {step.title}
+                      </h3>
+                      <p className="mt-1.5 text-sm leading-relaxed text-[#5c534e]">{step.body}</p>
+                    </div>
                   </div>
-                </div>
+                </ScrollReveal>
               ))}
             </div>
             <div className="dna-info-usp mt-8 grid gap-4">
-              {USP_FEATURES.map((feature) => (
-                <div key={feature.title} className="dna-info-usp-card overflow-hidden rounded-md border border-[#e3dcd3]">
-                  <DnaInfoFigure image={feature.image} variant="usp" />
-                  <div className="p-5">
-                    <h3
-                      className="text-sm font-semibold tracking-[0.06em] text-[#2b2320]"
-                      style={{ fontFamily: "var(--serif, 'Noto Serif TC', serif)" }}
-                    >
-                      {feature.title}
-                    </h3>
-                    <p className="mt-2 text-xs leading-[1.85] text-[#5c534e]">{feature.description}</p>
+              {USP_FEATURES.map((feature, i) => (
+                <ScrollReveal key={feature.title} delay={i * 0.07} y={28}>
+                  <div className="dna-info-usp-card overflow-hidden rounded-md border border-[#e3dcd3] transition-shadow duration-300 hover:border-[#5ecfcf]/40 hover:shadow-[0_12px_36px_rgba(94,207,207,0.12)]">
+                    <DnaInfoFigure image={feature.image} variant="usp" />
+                    <div className="p-5">
+                      <h3
+                        className="text-sm font-semibold tracking-[0.06em] text-[#2b2320]"
+                        style={{ fontFamily: "var(--serif, 'Noto Serif TC', serif)" }}
+                      >
+                        {feature.title}
+                      </h3>
+                      <p className="mt-2 text-xs leading-[1.85] text-[#5c534e]">{feature.description}</p>
+                    </div>
                   </div>
-                </div>
+                </ScrollReveal>
               ))}
             </div>
           </section>
 
-          <div className="border-t border-[#e3dcd3] pt-8">
-            <p className="text-xs leading-relaxed text-[#8a817b]">
-              完整培育週期約 <b className="font-medium text-[#5ecfcf]">70–90 天</b>｜歡迎
-              <a href={`${root}contact.html`} className="mx-1 text-[#5ecfcf] hover:underline">
-                預約蒞臨實驗室
-              </a>
-              親眼見證
-            </p>
-          </div>
+          <ScrollReveal y={16}>
+            <div className="border-t border-[#e3dcd3] pt-8">
+              <p className="text-xs leading-relaxed text-[#8a817b]">
+                完整培育週期約 <b className="font-medium text-[#5ecfcf]">70–90 天</b>｜歡迎
+                <a href={`${root}contact.html`} className="mx-1 text-[#5ecfcf] hover:underline">
+                  預約蒞臨實驗室
+                </a>
+                親眼見證
+              </p>
+            </div>
+          </ScrollReveal>
         </main>
       </div>
     </div>
