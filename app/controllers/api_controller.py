@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 from app.auth import enforce_rate_limit, get_user_id, is_admin
 from app.bot_gold import FALLBACK_XAG, FALLBACK_XPT, fetch_bot_gold_quote
 from app.catalog import build_catalog_response, fetch_catalog_rows, load_product_children
+from app.product_categories import fetch_categories
 from app.orders import attach_order_display, attach_order_relations, hydrate_order
 from app.database import get_connection, get_transaction
 from app.pricing import compute_order_pricing
@@ -188,7 +189,23 @@ async def catalog(
         products = fetch_catalog_rows(cur, category=category, include_drafts=include_drafts)
         product_ids = [row["id"] for row in products]
         variants_by_product, images_by_product = load_product_children(cur, product_ids)
-    return build_catalog_response(products, variants_by_product, images_by_product)
+        category_rows = fetch_categories(cur)
+        cat_order = [row["slug"] for row in category_rows]
+        cat_meta = {
+            row["slug"]: {
+                "labelZh": row["label_zh"],
+                "labelEn": row.get("label_en"),
+                "thumbUrl": row.get("thumbUrl"),
+            }
+            for row in category_rows
+        }
+    return build_catalog_response(
+        products,
+        variants_by_product,
+        images_by_product,
+        category_order=cat_order,
+        category_meta=cat_meta,
+    )
 
 
 @router.get("/testimonials")

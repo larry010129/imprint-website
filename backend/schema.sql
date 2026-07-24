@@ -23,7 +23,10 @@ create table if not exists profiles (
   full_name text,
   phone text,
   store_name text,
-  is_partner boolean not null default false
+  is_partner boolean not null default false,
+  shipping_postal text,
+  shipping_city text,
+  shipping_address text
 );
 
 create table if not exists staff_admins (
@@ -77,6 +80,24 @@ create table if not exists invite_codes (
 );
 
 -- ── product catalog (dynamic — admin-managed, replaces static jewelry/* pages) ──
+create table if not exists product_categories (
+  slug text primary key,
+  label_zh text not null,
+  label_en text,
+  thumb_path text,
+  sort_order int not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+insert into product_categories (slug, label_zh, label_en, sort_order) values
+  ('pendant', '項墜', 'Pendant', 0),
+  ('ring', '戒指', 'Ring', 1),
+  ('earring', '耳環', 'Earring', 2),
+  ('bracelet', '手鍊', 'Bracelet', 3),
+  ('chain', '鏈條', 'Chain', 4)
+on conflict (slug) do nothing;
+
 create table if not exists products (
   id uuid primary key default gen_random_uuid(),
   category text not null, -- 'ring' | 'necklace' | 'earring' | 'bracelet' | 'pendant' | 'chain'

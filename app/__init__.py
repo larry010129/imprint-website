@@ -5,6 +5,7 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from starlette.middleware.gzip import GZipMiddleware
 
 from config.settings import settings
 
@@ -31,10 +32,12 @@ def _startup_banner() -> None:
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    from app.profile_schema import ensure_profile_address_columns
     from app.seed_catalog import seed_catalog_if_empty
     from app.seed_content import seed_content_if_empty
 
     _startup_banner()
+    ensure_profile_address_columns()
     seed_catalog_if_empty()
     seed_content_if_empty()
     yield
@@ -47,6 +50,7 @@ def create_app() -> FastAPI:
         redoc_url=settings.redoc_url,
         lifespan=lifespan,
     )
+    application.add_middleware(GZipMiddleware, minimum_size=1024, compresslevel=5)
 
     @application.middleware("http")
     async def dev_static_fresh(request, call_next):
@@ -60,8 +64,11 @@ def create_app() -> FastAPI:
                     if name.lower() not in (b"if-none-match", b"if-modified-since")
                 ]
         response = await call_next(request)
-        if not settings.is_render and request.url.path.startswith(("/static/", "/js/", "/css/")):
-            response.headers["Cache-Control"] = "no-store"
+        if request.url.path.startswith(("/static/", "/js/", "/css/")):
+            if settings.is_render and response.status_code == 200:
+                response.headers.setdefault("Cache-Control", "public, max-age=300")
+            elif not settings.is_render:
+                response.headers["Cache-Control"] = "no-store"
         return response
 
     @application.middleware("http")

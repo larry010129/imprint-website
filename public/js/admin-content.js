@@ -15,6 +15,95 @@
   var _faqCategories = [];
   var _banners = [];
 
+  var PAGE_LINKS = [
+    { value: '/', label: '首頁' },
+    { value: '/shop/calculator/', label: '客製試算' },
+    { value: '/price.html', label: 'DNA 鑽石價格' },
+    { value: '/gold-price.html', label: '台銀金價' },
+    { value: '/series.html', label: '系列總覽' },
+    { value: '/what-is-dna-diamond.html', label: 'DNA 鑽石的誕生' },
+    { value: '/faq.html', label: '常見問題' },
+    { value: '/about.html', label: '品牌故事' },
+    { value: '/stories.html', label: '客戶見證' },
+    { value: '/contact.html', label: '聯絡我們' },
+    { value: '/track-order.html', label: '查詢訂製進度' },
+    { value: '/jewelry/', label: '飾品訂製' },
+    { value: '#home-poem', label: '首頁・詩文區塊' },
+    { value: '#series', label: '首頁・系列區塊' },
+    { value: 'https://lin.ee/ktVBtmx', label: '官方 LINE' },
+  ];
+
+  var TESTIMONIAL_CATEGORIES = [
+    '寵物鑽石', '結髮鑽石', '生命鑽石', '毛髮鑽石', '全家福鑽石', '初生鑽石',
+  ];
+
+  var TAIWAN_CITIES = [
+    '台北市', '新北市', '桃園市', '台中市', '台南市', '高雄市',
+    '基隆市', '新竹市', '新竹縣', '苗栗縣', '彰化縣', '南投縣',
+    '雲林縣', '嘉義市', '嘉義縣', '屏東縣', '宜蘭縣', '花蓮縣',
+    '台東縣', '澎湖縣', '金門縣', '連江縣',
+  ];
+
+  function reqStar() {
+    return ' <span class="ap-required" aria-hidden="true">*</span>';
+  }
+
+  function splitTestimonialName(t) {
+    if (t && t.name_part != null) {
+      return { part: t.name_part || '', honorific: t.honorific || '小姐' };
+    }
+    var full = String((t && t.name) || '').trim();
+    if (full.endsWith('先生')) return { part: full.slice(0, -2), honorific: '先生' };
+    if (full.endsWith('小姐')) return { part: full.slice(0, -2), honorific: '小姐' };
+    return { part: full, honorific: '小姐' };
+  }
+
+  function categoryOptions(selected) {
+    selected = String(selected || '').trim();
+    var html = '<option value="">— 請選擇 —</option>';
+    for (var i = 0; i < TESTIMONIAL_CATEGORIES.length; i++) {
+      var c = TESTIMONIAL_CATEGORIES[i];
+      html += '<option value="' + esc(c) + '"' + (selected === c ? ' selected' : '') + '>' + esc(c) + '</option>';
+    }
+    if (selected && TESTIMONIAL_CATEGORIES.indexOf(selected) < 0) {
+      html += '<option value="' + esc(selected) + '" selected>' + esc(selected) + '</option>';
+    }
+    return html;
+  }
+
+  function cityDatalistOptions() {
+    return TAIWAN_CITIES.map(function (c) {
+      return '<option value="' + esc(c) + '">';
+    }).join('');
+  }
+
+  function pageLinkOptions(current) {
+    current = String(current || '').trim();
+    var known = {};
+    var html = '<option value="">— 選擇頁面 —</option>';
+    for (var i = 0; i < PAGE_LINKS.length; i++) {
+      var p = PAGE_LINKS[i];
+      known[p.value] = true;
+      html +=
+        '<option value="' +
+        esc(p.value) +
+        '"' +
+        (current === p.value ? ' selected' : '') +
+        '>' +
+        esc(p.label) +
+        '</option>';
+    }
+    if (current && !known[current]) {
+      html +=
+        '<option value="' +
+        esc(current) +
+        '" selected>目前連結：' +
+        esc(current) +
+        '</option>';
+    }
+    return html;
+  }
+
   function esc(s) {
     return window.AdminPanel && window.AdminPanel.escapeHtml
       ? window.AdminPanel.escapeHtml(s)
@@ -55,6 +144,11 @@
   }
 
   function renderShell() {
+    var oldMount = document.getElementById('contentReactMount');
+    if (oldMount && window.AdminTables && window.AdminTables.unmount) {
+      try { window.AdminTables.unmount(oldMount); } catch (e) {}
+    }
+
     root.innerHTML =
       '<p class="adx-panel-note">管理首頁輪播、FAQ 與客戶見證。見證上架前請確認已取得同意；文案請迴避「培育鑽石與天然鑽石的比較」。FAQ 變更後，頁面 JSON-LD 結構化資料可能需部署更新。</p>' +
       '<div class="adx-tabs" role="tablist">' +
@@ -72,44 +166,108 @@
     });
 
     var body = document.getElementById('contentPanelBody');
-    if (_tab === 'banners') renderBanners(body);
-    else if (_tab === 'testimonials') renderTestimonials(body);
-    else renderFaq(body);
+    renderContentReact(body);
+  }
+
+  function renderContentReact(body) {
+    if (!body) return;
+    if (!window.AdminTables || !window.AdminTables.renderContentTables) {
+      body.innerHTML = '<p class="note warn">表格元件尚未載入，請重新整理頁面。</p>';
+      return;
+    }
+
+    var mount = document.getElementById('contentReactMount');
+    if (!mount) {
+      body.innerHTML = '<div id="contentReactMount"></div>';
+      mount = document.getElementById('contentReactMount');
+    }
+
+    var faqRows = _faqItems.map(function (f) {
+      return {
+        id: String(f.id),
+        category_title: catTitle(f.category_id),
+        question: f.question || '',
+        show_in_teaser: !!f.show_in_teaser,
+        is_published: !!f.is_published,
+      };
+    });
+
+    var bannerRows = _banners.map(function (b) {
+      return {
+        id: String(b.id),
+        title: b.title || '',
+        eyebrow: b.eyebrow || '',
+        sort_order: Number(b.sort_order || 0),
+        is_published: !!b.is_published,
+        image_url: b.image_url || '',
+      };
+    });
+
+    var testimonialRows = _testimonials.slice().sort(function (a, b) {
+      return Number(a.sort_order || 0) - Number(b.sort_order || 0);
+    }).map(function (t) {
+      return {
+        id: String(t.id),
+        name: t.name || '',
+        category: t.category || '',
+        city: t.city || '',
+        text: t.text || '',
+        sort_order: Number(t.sort_order || 0),
+        is_published: !!t.is_published,
+        image_url: t.image_url || '',
+      };
+    });
+
+    window.AdminTables.renderContentTables(mount, {
+      tab: _tab,
+      banners: bannerRows,
+      testimonials: testimonialRows,
+      faqItems: faqRows,
+      onAdd: function () {
+        if (_tab === 'banners') openBannerModal(null);
+        else if (_tab === 'testimonials') openTestimonialModal(null);
+        else openFaqModal(null);
+      },
+      onEdit: function (id) {
+        if (_tab === 'banners') openBannerModal(findBanner(id));
+        else if (_tab === 'testimonials') openTestimonialModal(findTestimonial(id));
+        else openFaqModal(findFaq(id));
+      },
+      onReorder: function (id, direction) {
+        if (_tab !== 'testimonials' || !id || !direction) return;
+        api.admin.reorderTestimonial(id, direction).then(function (res) {
+          if (res.error) {
+            alert(res.error.message || res.error);
+            return;
+          }
+          load(true, true);
+        });
+      },
+      onAction: function (id, action) {
+        if (!id || !action) return;
+        if (action === 'delete') {
+          var label = _tab === 'banners' ? '輪播' : _tab === 'testimonials' ? '見證' : 'FAQ';
+          if (!confirm('確定刪除此' + label + '？')) return;
+        }
+        var req =
+          _tab === 'banners'
+            ? api.admin.bannerAction(id, action)
+            : _tab === 'testimonials'
+              ? api.admin.testimonialAction(id, action)
+              : api.admin.faqAction(id, action);
+        req.then(function (res) {
+          if (res.error) {
+            alert(res.error.message || res.error);
+            return;
+          }
+          load(true, true);
+        });
+      },
+    });
   }
 
   function renderBanners(body) {
-    var rows = _banners.map(function (b) {
-      var pub = b.is_published;
-      var thumb = b.image_url
-        ? '<img class="adx-thumb" src="' + esc(b.image_url) + '" alt="" width="56" height="36" loading="lazy">'
-        : '—';
-      return '<tr data-id="' + esc(b.id) + '">' +
-        '<td>' + thumb + '</td>' +
-        '<td>' + esc(b.title) + '</td>' +
-        '<td class="adx-muted">' + esc(b.eyebrow || '—') + '</td>' +
-        '<td>' + esc(String(b.sort_order || 0)) + '</td>' +
-        '<td><span class="adx-badge ' + (pub ? 'adx-badge--active' : 'adx-badge--revoked') + '">' +
-          (pub ? '已發布' : '未發布') + '</span></td>' +
-        '<td><div class="adx-actions">' +
-          '<button type="button" class="btn-sm" data-action="edit-b" data-id="' + esc(b.id) + '">編輯</button>' +
-          (pub
-            ? '<button type="button" class="btn-sm" data-action="unpublish-b" data-id="' + esc(b.id) + '">下架</button>'
-            : '<button type="button" class="btn-sm" data-action="publish-b" data-id="' + esc(b.id) + '">發布</button>') +
-          '<button type="button" class="btn-sm adx-action--danger" data-action="delete-b" data-id="' + esc(b.id) + '">刪除</button>' +
-        '</div></td></tr>';
-    }).join('');
-
-    body.innerHTML =
-      '<div class="adx-panel-toolbar"><button type="button" class="btn-sm btn-primary" id="btnAddBanner">+ 新增輪播</button></div>' +
-      (_banners.length
-        ? '<div class="adx-table-card"><div class="adx-table-wrap"><table class="adx-table adx-table--center">' +
-          '<thead><tr><th>圖</th><th>標題</th><th>眉題</th><th>排序</th><th>狀態</th><th>操作</th></tr></thead>' +
-          '<tbody>' + rows + '</tbody></table></div></div>'
-        : '<p class="adx-table-empty">尚無輪播</p>');
-
-    var addBtn = document.getElementById('btnAddBanner');
-    if (addBtn) addBtn.addEventListener('click', function () { openBannerModal(null); });
-    body.querySelectorAll('[data-action]').forEach(bindBannerAction);
+    renderContentReact(body);
   }
 
   function bindBannerAction(btn) {
@@ -161,9 +319,9 @@
             '<label class="ap-field"><span>WebP URL（選填）</span><input name="imageWebp" value="' + esc(isEdit ? (b.image_webp || '') : '') + '"></label>' +
             '<label class="ap-field"><span>圖片 alt</span><input name="imageAlt" value="' + esc(isEdit ? b.image_alt : '') + '"></label>' +
             '<label class="ap-field"><span>主按鈕文字</span><input name="ctaPrimaryLabel" value="' + esc(isEdit ? b.cta_primary_label : '') + '"></label>' +
-            '<label class="ap-field"><span>主按鈕連結</span><input name="ctaPrimaryHref" placeholder="/shop/calculator/" value="' + esc(isEdit ? b.cta_primary_href : '') + '"></label>' +
+            '<div class="ap-field" id="acPrimaryHrefMount"></div>' +
             '<label class="ap-field"><span>次按鈕文字</span><input name="ctaSecondaryLabel" value="' + esc(isEdit ? b.cta_secondary_label : '') + '"></label>' +
-            '<label class="ap-field"><span>次按鈕連結</span><input name="ctaSecondaryHref" placeholder="#home-poem 或 /path" value="' + esc(isEdit ? b.cta_secondary_href : '') + '"></label>' +
+            '<div class="ap-field" id="acSecondaryHrefMount"></div>' +
             '<label class="ap-field"><span>排序</span><input type="number" name="sortOrder" value="' + esc(String(isEdit ? b.sort_order : 0)) + '"></label>' +
             '<label class="ap-field ap-field--check"><input type="checkbox" name="isPublished"' + (!isEdit || b.is_published ? ' checked' : '') + '><span>發布</span></label>' +
           '</div>' +
@@ -177,6 +335,28 @@
     window.AdminPanel.openModal(html);
     var form = document.getElementById('acBannerForm');
     if (form) form.addEventListener('submit', submitBanner);
+
+    if (window.AdminTables && window.AdminTables.renderPageLinkSelect) {
+      var primaryMount = document.getElementById('acPrimaryHrefMount');
+      var secondaryMount = document.getElementById('acSecondaryHrefMount');
+      if (primaryMount) {
+        window.AdminTables.renderPageLinkSelect(primaryMount, {
+          name: 'ctaPrimaryHref',
+          label: '主按鈕連結',
+          value: isEdit ? (b.cta_primary_href || '') : '/shop/calculator/',
+          placeholder: '— 選擇頁面 —',
+        });
+      }
+      if (secondaryMount) {
+        window.AdminTables.renderPageLinkSelect(secondaryMount, {
+          name: 'ctaSecondaryHref',
+          label: '次按鈕連結',
+          value: isEdit ? (b.cta_secondary_href || '') : '',
+          placeholder: '— 選擇頁面 —',
+        });
+      }
+    }
+
     var fileInput = document.getElementById('acBannerFile');
     if (fileInput) {
       fileInput.addEventListener('change', function () {
@@ -232,46 +412,7 @@
   }
 
   function renderTestimonials(body) {
-    var rows = _testimonials.map(function (t) {
-      var pub = t.is_published;
-      var thumb = t.image_url
-        ? '<img class="adx-thumb" src="' + esc(t.image_url) + '" alt="" width="56" height="36" loading="lazy">'
-        : '—';
-      var snippet = truncate(t.text, 20);
-      return '<tr data-id="' + esc(t.id) + '">' +
-        '<td>' + thumb + '</td>' +
-        '<td>' + esc(t.name) + '</td>' +
-        '<td>' + esc(t.category || '—') + '</td>' +
-        '<td>' + esc(t.city || '—') + '</td>' +
-        '<td class="adx-cell-snippet">' +
-          '<button type="button" class="adx-snippet-btn" data-action="edit-t" data-id="' + esc(t.id) + '" title="點擊查看完整內容並編輯">' +
-            '<span class="adx-snippet-text">' + esc(snippet || '—') + '</span>' +
-            (String(t.text || '').length > 20 ? '<span class="adx-snippet-more">詳情</span>' : '') +
-          '</button>' +
-        '</td>' +
-        '<td>' + esc(String(t.sort_order || 0)) + '</td>' +
-        '<td><span class="adx-badge ' + (pub ? 'adx-badge--active' : 'adx-badge--revoked') + '">' +
-          (pub ? '已發布' : '未發布') + '</span></td>' +
-        '<td><div class="adx-actions">' +
-          '<button type="button" class="btn-sm" data-action="edit-t" data-id="' + esc(t.id) + '">編輯</button>' +
-          (pub
-            ? '<button type="button" class="btn-sm" data-action="unpublish-t" data-id="' + esc(t.id) + '">下架</button>'
-            : '<button type="button" class="btn-sm" data-action="publish-t" data-id="' + esc(t.id) + '">發布</button>') +
-          '<button type="button" class="btn-sm adx-action--danger" data-action="delete-t" data-id="' + esc(t.id) + '">刪除</button>' +
-        '</div></td></tr>';
-    }).join('');
-
-    body.innerHTML =
-      '<div class="adx-panel-toolbar"><button type="button" class="btn-sm btn-primary" id="btnAddTestimonial">+ 新增見證</button></div>' +
-      (_testimonials.length
-        ? '<div class="adx-table-card"><div class="adx-table-wrap"><table class="adx-table adx-table--center">' +
-          '<thead><tr><th>圖</th><th>姓名</th><th>分類</th><th>城市</th><th>內容</th><th>排序</th><th>狀態</th><th>操作</th></tr></thead>' +
-          '<tbody>' + rows + '</tbody></table></div></div>'
-        : '<p class="adx-table-empty">尚無見證</p>');
-
-    var addBtn = document.getElementById('btnAddTestimonial');
-    if (addBtn) addBtn.addEventListener('click', function () { openTestimonialModal(null); });
-    body.querySelectorAll('[data-action]').forEach(bindTestimonialAction);
+    renderContentReact(body);
   }
 
   function bindTestimonialAction(btn) {
@@ -297,6 +438,8 @@
 
   function openTestimonialModal(t) {
     var isEdit = !!(t && t.id);
+    var nameParts = splitTestimonialName(t);
+    var imageUrl = isEdit ? (t.image_url || '') : '';
     var html =
       '<div class="qr-modal ai-modal" role="dialog" aria-modal="true">' +
         '<button type="button" class="qr-modal-close" data-modal-close aria-label="關閉">&times;</button>' +
@@ -304,34 +447,36 @@
         '<p class="ap-form-error" id="acFormError" hidden></p>' +
         '<form id="acTestimonialForm" class="ap-form" data-id="' + esc(isEdit ? t.id : '') + '">' +
           '<div class="ap-form-grid">' +
-            '<label class="ap-field"><span>姓名</span><input name="name" required value="' + esc(isEdit ? t.name : '') + '"></label>' +
-            '<label class="ap-field"><span>顯示角色</span><input name="role" placeholder="寵物鑽石・高雄" value="' + esc(isEdit ? t.role : '') + '"></label>' +
-            '<label class="ap-field"><span>分類</span><input name="category" placeholder="寵物鑽石" value="' + esc(isEdit ? t.category : '') + '"></label>' +
-            '<label class="ap-field"><span>城市</span><input name="city" value="' + esc(isEdit ? t.city : '') + '"></label>' +
-            '<label class="ap-field"><span>評分 (1–5)</span><input type="number" name="rating" min="1" max="5" value="' + esc(String(isEdit ? t.rating : 5)) + '"></label>' +
-            '<label class="ap-field"><span>排序</span><input type="number" name="sortOrder" value="' + esc(String(isEdit ? t.sort_order : 0)) + '"></label>' +
-            '<label class="ap-field ap-field--full"><span>圖片（訂製款式）</span>' +
-              '<select id="acJewelryPreset">' +
-                '<option value="">— 選擇與訂製頁相同款式 —</option>' +
-                '<optgroup label="戒指">' +
-                  '<option value="/static/images/testimonials/presets/ring-A.jpg">經典六爪（ring-A）</option>' +
-                  '<option value="/static/images/testimonials/presets/ring-B.jpg">低語之光（ring-B）</option>' +
-                  '<option value="/static/images/testimonials/presets/ring-C.jpg">羽翼（ring-C）</option>' +
-                '</optgroup>' +
-                '<optgroup label="項墜／項鍊">' +
-                  '<option value="/static/images/testimonials/presets/pendant-A.jpg">四爪項墜（pendant-A）</option>' +
-                  '<option value="/static/images/testimonials/presets/pendant-B.jpg">兔耳項墜（pendant-B）</option>' +
-                  '<option value="/static/images/testimonials/presets/pendant-C.jpg">水滴項墜（pendant-C）</option>' +
-                '</optgroup>' +
-              '</select></label>' +
-            '<label class="ap-field ap-field--full"><span>圖片 URL</span>' +
-              '<div class="ap-field-row">' +
-                '<input name="imageUrl" id="acTestimonialImageUrl" value="' + esc(isEdit ? (t.image_url || '') : '') + '" placeholder="/static/images/testimonials/...">' +
-                '<label class="btn-sm" style="cursor:pointer;white-space:nowrap">' +
-                  '上傳<input type="file" id="acTestimonialFile" accept="image/png,image/jpeg,image/webp" hidden>' +
-                '</label>' +
+            '<label class="ap-field"><span>姓名' + reqStar() + '</span>' +
+              '<div class="ap-name-row">' +
+                '<input name="namePart" required maxlength="30" autocomplete="off" placeholder="姓氏或名字" value="' + esc(nameParts.part) + '">' +
+                '<select name="honorific" aria-label="稱謂">' +
+                  '<option value="小姐"' + (nameParts.honorific === '小姐' ? ' selected' : '') + '>小姐</option>' +
+                  '<option value="先生"' + (nameParts.honorific === '先生' ? ' selected' : '') + '>先生</option>' +
+                '</select>' +
               '</div></label>' +
-            '<label class="ap-field ap-field--full"><span>見證內容（完整）</span><textarea name="text" class="ap-textarea" rows="8" required>' + esc(isEdit ? t.text : '') + '</textarea></label>' +
+            '<label class="ap-field"><span>分類' + reqStar() + '</span>' +
+              '<select name="category" required>' + categoryOptions(isEdit ? t.category : '') + '</select></label>' +
+            '<label class="ap-field"><span>城市' + reqStar() + '</span>' +
+              '<input name="city" list="acTaiwanCities" required autocomplete="off" placeholder="輸入或選擇縣市" value="' + esc(isEdit ? t.city : '') + '">' +
+              '<datalist id="acTaiwanCities">' + cityDatalistOptions() + '</datalist></label>' +
+            '<label class="ap-field ap-field--full"><span>訂製款式圖片' + reqStar() + '</span>' +
+              '<div class="ap-testimonial-upload">' +
+                '<div class="ap-testimonial-upload-preview" id="acTestimonialPreview">' +
+                  (imageUrl
+                    ? '<img src="' + esc(imageUrl) + '" alt="">'
+                    : '<span class="ap-testimonial-upload-empty">尚未上傳</span>') +
+                '</div>' +
+                '<label class="btn-sm ap-testimonial-upload-btn">' +
+                  '上傳圖片' +
+                  '<input type="file" id="acTestimonialFile" accept="image/png,image/jpeg,image/webp" hidden>' +
+                '</label>' +
+                '<p class="ap-section-hint">PNG / JPG / WEBP，5MB 內。前台顯示角色為「分類・城市」。</p>' +
+              '</div>' +
+              '<input type="hidden" name="imageUrl" id="acTestimonialImageUrl" value="' + esc(imageUrl) + '">' +
+            '</label>' +
+            '<label class="ap-field ap-field--full"><span>見證內容（完整）' + reqStar() + '</span>' +
+              '<textarea name="text" class="ap-textarea" rows="8" required placeholder="完整見證文案…">' + esc(isEdit ? t.text : '') + '</textarea></label>' +
             '<label class="ap-field ap-field--check"><input type="checkbox" name="isPublished"' + (!isEdit || t.is_published ? ' checked' : '') + '><span>發布</span></label>' +
           '</div>' +
           '<div class="ap-form-actions">' +
@@ -344,21 +489,19 @@
     window.AdminPanel.openModal(html);
     var form = document.getElementById('acTestimonialForm');
     if (form) form.addEventListener('submit', submitTestimonial);
-    var preset = document.getElementById('acJewelryPreset');
+
     var urlInput = document.getElementById('acTestimonialImageUrl');
-    if (preset && urlInput) {
-      if (urlInput.value) {
-        for (var i = 0; i < preset.options.length; i++) {
-          if (preset.options[i].value === urlInput.value) {
-            preset.selectedIndex = i;
-            break;
-          }
-        }
+    var preview = document.getElementById('acTestimonialPreview');
+    function setPreview(url) {
+      if (!preview || !urlInput) return;
+      urlInput.value = url || '';
+      if (url) {
+        preview.innerHTML = '<img src="' + esc(url) + '" alt="">';
+      } else {
+        preview.innerHTML = '<span class="ap-testimonial-upload-empty">尚未上傳</span>';
       }
-      preset.addEventListener('change', function () {
-        if (preset.value) urlInput.value = preset.value;
-      });
     }
+
     var fileInput = document.getElementById('acTestimonialFile');
     if (fileInput) {
       fileInput.addEventListener('change', function () {
@@ -372,8 +515,7 @@
             alert(res.error || '上傳失敗');
             return;
           }
-          if (urlInput) urlInput.value = res.url;
-          if (preset) preset.selectedIndex = 0;
+          setPreview(res.url);
         });
       });
     }
@@ -385,18 +527,38 @@
     var fd = new FormData(form);
     var errEl = document.getElementById('acFormError');
     var id = form.dataset.id;
+    var imageUrl = String(fd.get('imageUrl') || '').trim();
     var payload = {
       id: id || undefined,
-      name: String(fd.get('name') || '').trim(),
-      role: String(fd.get('role') || '').trim(),
+      name: String(fd.get('namePart') || '').trim(),
+      honorific: String(fd.get('honorific') || '小姐').trim(),
       category: String(fd.get('category') || '').trim(),
       city: String(fd.get('city') || '').trim(),
       text: String(fd.get('text') || '').trim(),
-      imageUrl: String(fd.get('imageUrl') || '').trim(),
-      rating: fd.get('rating'),
-      sortOrder: fd.get('sortOrder'),
+      imageUrl: imageUrl,
       isPublished: !!form.querySelector('[name="isPublished"]').checked,
     };
+    if (!payload.name) {
+      if (errEl) { errEl.textContent = '請填寫姓名'; errEl.hidden = false; }
+      return;
+    }
+    if (!payload.category) {
+      if (errEl) { errEl.textContent = '請選擇分類'; errEl.hidden = false; }
+      return;
+    }
+    if (!payload.city) {
+      if (errEl) { errEl.textContent = '請選擇城市'; errEl.hidden = false; }
+      return;
+    }
+    if (!payload.imageUrl) {
+      if (errEl) { errEl.textContent = '請上傳圖片'; errEl.hidden = false; }
+      return;
+    }
+    if (!payload.text) {
+      if (errEl) { errEl.textContent = '請填寫見證內容'; errEl.hidden = false; }
+      return;
+    }
+    if (errEl) errEl.hidden = true;
     var req = id ? api.admin.updateTestimonial(payload) : api.admin.createTestimonial(payload);
     req.then(function (res) {
       if (res.error) {
@@ -410,40 +572,7 @@
   }
 
   function renderFaq(body) {
-    var rows = _faqItems.map(function (f) {
-      var pub = f.is_published;
-      return '<tr data-id="' + esc(f.id) + '">' +
-        '<td><code class="adx-code">' + esc(f.id) + '</code></td>' +
-        '<td>' + esc(catTitle(f.category_id)) + '</td>' +
-        '<td class="adx-cell-snippet">' +
-          '<button type="button" class="adx-snippet-btn" data-action="edit-f" data-id="' + esc(f.id) + '" title="點擊查看完整內容並編輯">' +
-            '<span class="adx-snippet-text">' + esc(truncate(f.question, 18)) + '</span>' +
-            (String(f.question || '').length > 18 ? '<span class="adx-snippet-more">詳情</span>' : '') +
-          '</button>' +
-        '</td>' +
-        '<td>' + (f.show_in_teaser ? '是' : '—') + '</td>' +
-        '<td><span class="adx-badge ' + (pub ? 'adx-badge--active' : 'adx-badge--revoked') + '">' +
-          (pub ? '已發布' : '未發布') + '</span></td>' +
-        '<td><div class="adx-actions">' +
-          '<button type="button" class="btn-sm" data-action="edit-f" data-id="' + esc(f.id) + '">編輯</button>' +
-          (pub
-            ? '<button type="button" class="btn-sm" data-action="unpublish-f" data-id="' + esc(f.id) + '">下架</button>'
-            : '<button type="button" class="btn-sm" data-action="publish-f" data-id="' + esc(f.id) + '">發布</button>') +
-          '<button type="button" class="btn-sm adx-action--danger" data-action="delete-f" data-id="' + esc(f.id) + '">刪除</button>' +
-        '</div></td></tr>';
-    }).join('');
-
-    body.innerHTML =
-      '<div class="adx-panel-toolbar"><button type="button" class="btn-sm btn-primary" id="btnAddFaq">+ 新增 FAQ</button></div>' +
-      (_faqItems.length
-        ? '<div class="adx-table-card"><div class="adx-table-wrap"><table class="adx-table adx-table--center">' +
-          '<thead><tr><th>ID</th><th>分類</th><th>問題</th><th>首頁精選</th><th>狀態</th><th>操作</th></tr></thead>' +
-          '<tbody>' + rows + '</tbody></table></div></div>'
-        : '<p class="adx-table-empty">尚無 FAQ</p>');
-
-    var addBtn = document.getElementById('btnAddFaq');
-    if (addBtn) addBtn.addEventListener('click', function () { openFaqModal(null); });
-    body.querySelectorAll('[data-action]').forEach(bindFaqAction);
+    renderContentReact(body);
   }
 
   function bindFaqAction(btn) {
@@ -530,7 +659,11 @@
   function load(silent, force) {
     if (_loaded && !force) return;
     if (!silent) {
-      root.innerHTML = '<p class="adx-loading-inline">載入內容中…</p>';
+      root.setAttribute('aria-busy', 'true');
+      root.classList.add('skel-panel');
+      root.innerHTML = window.SkeletonUI && window.SkeletonUI.contentShell
+        ? window.SkeletonUI.contentShell()
+        : '<p class="adx-loading-inline">載入內容中…</p>';
     }
     Promise.all([
       api.admin.getTestimonials(),
@@ -542,6 +675,7 @@
       var bRes = results[2];
       if (tRes.error || fRes.error || bRes.error) {
         root.innerHTML = '<p class="note warn">載入失敗：' + esc(tRes.error || fRes.error || bRes.error) + '</p>';
+        root.removeAttribute('aria-busy');
         return;
       }
       _testimonials = tRes.testimonials || [];
@@ -550,6 +684,7 @@
       _banners = bRes.banners || [];
       _loaded = true;
       root.removeAttribute('aria-busy');
+      root.classList.remove('skel-panel');
       renderShell();
     });
   }
@@ -563,6 +698,12 @@
   document.querySelectorAll('.side-nav button[data-panel="content"]').forEach(function (btn) {
     btn.addEventListener('click', ensureLoaded);
   });
+
+  if (root && window.SkeletonUI && !_loaded && root.querySelector('.skel-line')) {
+    root.innerHTML = window.SkeletonUI.contentShell
+      ? window.SkeletonUI.contentShell()
+      : root.innerHTML;
+  }
 
   var panel = document.getElementById('panel-content');
   if (panel && panel.classList.contains('is-active')) ensureLoaded();

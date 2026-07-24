@@ -1,1 +1,22 @@
-<script type="module" src="/static/react/faq.js?v=8"></script>
+<script type="module">
+  const root = document.querySelector("[data-faq-root]");
+  let requested = false;
+  const load = () => {
+    if (requested) return;
+    requested = true;
+    void import("/static/react/faq.js?v=9");
+  };
+  if (root) {
+    const nearViewport = root.getBoundingClientRect().top <= window.innerHeight + 800;
+    if (nearViewport || !("IntersectionObserver" in window)) {
+      load();
+    } else {
+      const observer = new IntersectionObserver((entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        observer.disconnect();
+        load();
+      }, { rootMargin: "800px 0px" });
+      observer.observe(root);
+    }
+  }
+</script>

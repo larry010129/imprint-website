@@ -100,7 +100,18 @@
           return Model.getSession().then(function (sess) {
             View.setLoading(false);
             if (!sess || !sess.user) {
-              View.setMsg('登入成功但無法保存登入狀態，請確認瀏覽器允許 Cookie 後再試。', 'err');
+              if (res.user && res.ok) {
+                storeRememberedEmail(email, remember);
+                View.setMsg('登入成功，跳轉中…', 'ok');
+                setTimeout(redirectAfterLogin, 300);
+                return;
+              }
+              var detail = (sess && sess.error) ? sess.error : '';
+              if (sess && sess._httpStatus >= 500) {
+                View.setMsg('登入成功但伺服器讀取 Session 失敗' + (detail ? '：' + detail : '') + '，請重新整理或聯絡管理員。', 'err');
+              } else {
+                View.setMsg('登入成功但無法保存登入狀態，請確認瀏覽器允許 Cookie 後再試。', 'err');
+              }
               return;
             }
             storeRememberedEmail(email, remember);

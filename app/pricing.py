@@ -145,7 +145,9 @@ def compute_diamond_list_price(
     except (TypeError, ValueError):
         return None
 
-    multi_stone = category in STONE_COUNT_CATEGORIES
+    multi_stone = category in STONE_COUNT_CATEGORIES or (
+        category == "diamond" and _as_stone_count(stone_count) in VALID_STONE_COUNTS
+    )
     if not _shape_carat_allowed(carat_num, diamond_shape):
         return None
 
@@ -316,12 +318,39 @@ def compute_order_pricing(cur, data: dict[str, Any], *, require_published: bool 
     chain_length = data.get("chainLength")
     product_id = data.get("type")
 
-    if not category or not carat or not gold or not product_id:
+    if not category or not carat or not product_id:
         return {"ready": False}
     if category in ("chain", "bracelet") and length_cm is None:
         return {"ready": False}
 
     overrides = load_overrides(cur)
+
+    # Memorial loose diamonds: list price only (no metal / labor)
+    if category == "diamond":
+        loose_diamond = compute_diamond_list_price(
+            carat,
+            diamond_kind=diamond_kind,
+            fancy_color=fancy_color,
+            stone_count=stone_count,
+            diamond_shape=diamond_shape,
+            category=category,
+            overrides=overrides,
+        )
+        if loose_diamond is None:
+            return {"ready": False}
+        return {
+            "ready": True,
+            "diamondPrice": loose_diamond,
+            "taijinPrice": 0,
+            "laborPrice": 0,
+            "metalworkPrice": 0,
+            "chainPrice": None,
+            "total": round(loose_diamond),
+            "priceSource": "server",
+        }
+
+    if not gold:
+        return {"ready": False}
     ov_tax = overrides.get("taxRate")
     tax_rate = ov_tax if isinstance(ov_tax, (int, float)) else TAX_RATE
 

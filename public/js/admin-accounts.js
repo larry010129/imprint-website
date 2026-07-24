@@ -109,7 +109,13 @@
     );
   }
 
+  function clearPanelBusy() {
+    root.removeAttribute('aria-busy');
+    root.classList.remove('skel-panel');
+  }
+
   function renderShell(accounts) {
+    clearPanelBusy();
     root.innerHTML =
       '<p class="adx-panel-note">已註冊帳號（密碼以加密方式儲存，無法顯示原文）</p>' +
       '<div class="adx-security-banner">為保護帳號安全，系統不儲存也不顯示明文密碼。如需協助店家登入，請使用「重設」設定新密碼後私下告知該店家。</div>' +
@@ -185,11 +191,13 @@
 
   function load(silent, force) {
     if (_loaded && !force) return;
+    clearPanelBusy();
     if (!silent) {
       root.innerHTML = window.SkeletonUI ? window.SkeletonUI.accountsShell() : '<p class="adx-loading-inline">載入帳戶中…</p>';
     }
     api.admin.getAccounts().then(function (res) {
       if (res.error) {
+        clearPanelBusy();
         root.innerHTML = '<p class="note warn">載入失敗：' + esc(res.error) + '</p>';
         return;
       }
@@ -203,8 +211,4 @@
   }
 
   window.AdminAccountsPanel = { load: load, ensureLoaded: ensureLoaded };
-
-  if (root && window.SkeletonUI && !_loaded && root.querySelector('.skel-line')) {
-    root.innerHTML = window.SkeletonUI.accountsShell();
-  }
 })();

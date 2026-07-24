@@ -2,7 +2,7 @@
 {% block main_class %} class="main-content shop-calculator-page"{% endblock %}
 {% block extra_css %}
 <link rel="stylesheet" href="/static/css/shop.css?v=6.23">
-<link rel="stylesheet" href="/static/css/shop-wizard.css?v=14">
+<link rel="stylesheet" href="/static/css/shop-wizard.css?v=17">
 {% include "partials/shop-tour-react-css.html" %}
 {% endblock %}
 {% block content %}
@@ -393,8 +393,8 @@
 
       
       <div class="shop-action-row shop-action-row--primary" id="shop-action-row">
-        <button type="button" class="shop-cta" id="confirm-btn" disabled data-i18n="btn_add_order">確認訂購</button>
-        <button type="button" class="shop-cta shop-cta--secondary" id="cart-btn" disabled data-i18n="btn_add_cart">加入購物車</button>
+        <button type="button" class="shop-cta" id="confirm-btn" data-i18n="btn_add_order">確認訂購</button>
+        <button type="button" class="shop-cta shop-cta--secondary" id="cart-btn" data-i18n="btn_add_cart">加入購物車</button>
       </div>
       
       <div class="shop-secondary-actions shop-secondary-actions--compact">
@@ -743,8 +743,8 @@
     <span class="mobile-buy-detail-hint" data-i18n="shop_price_breakdown">明細</span>
   </button>
   <div class="mobile-buy-actions">
-    <button type="button" class="shop-cta shop-cta-compact shop-cta--secondary" id="cart-btn-mobile" disabled data-i18n="btn_add_cart">加入購物車</button>
-    <button type="button" class="shop-cta shop-cta-compact" id="confirm-btn-mobile" disabled data-i18n="btn_add_order">訂購</button>
+    <button type="button" class="shop-cta shop-cta-compact shop-cta--secondary" id="cart-btn-mobile" data-i18n="btn_add_cart">加入購物車</button>
+    <button type="button" class="shop-cta shop-cta-compact" id="confirm-btn-mobile" data-i18n="btn_add_order">訂購</button>
   </div>
 </div>
 
@@ -783,5 +783,5 @@
 <script src="/static/js/shop-i18n.js?v=8"></script>
 <script src="/static/js/girdle-engrave.js?v=16"></script>
 <script src="/static/js/shop-terms.js?v=4"></script>
-<script src="/static/js/shop.js?v=99"></script>
+<script src="/static/js/shop.js?v=104"></script>
 {% endblock %}

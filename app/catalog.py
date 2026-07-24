@@ -130,9 +130,16 @@ def fetch_catalog_rows(cur, *, category: str | None = None, include_drafts: bool
     return cur.fetchall()
 
 
-def build_catalog_response(products: list[dict], variants_by_product: dict, images_by_product: dict) -> dict:
-    if not products:
-        return {"categories": {}, "categoryOrder": []}
+def build_catalog_response(
+    products: list[dict],
+    variants_by_product: dict,
+    images_by_product: dict,
+    *,
+    category_order: list[str] | None = None,
+    category_meta: dict[str, dict] | None = None,
+) -> dict:
+    if not products and not category_meta:
+        return {"categories": {}, "categoryOrder": [], "categoryMeta": {}}
 
     categories: dict[str, list[dict]] = {}
     for product in products:
@@ -145,9 +152,14 @@ def build_catalog_response(products: list[dict], variants_by_product: dict, imag
         categories.setdefault(product["category"], []).append(entry)
 
     present = list(categories.keys())
-    category_order = [c for c in CATEGORY_DISPLAY_ORDER if c in present]
-    category_order.extend(c for c in present if c not in CATEGORY_DISPLAY_ORDER)
-    return {"categories": categories, "categoryOrder": category_order}
+    preferred = category_order or CATEGORY_DISPLAY_ORDER
+    category_order_out = [c for c in preferred if c in present]
+    category_order_out.extend(c for c in present if c not in category_order_out)
+    return {
+        "categories": categories,
+        "categoryOrder": category_order_out,
+        "categoryMeta": category_meta or {},
+    }
 
 
 def load_product_children(cur, product_ids: list) -> tuple[dict, dict]:

@@ -29,18 +29,19 @@ def valid_image_color(color: str) -> bool:
     return bool(IMAGE_COLOR_RE.match(color))
 
 
-def validate_product_fields(body: dict | None) -> tuple[dict | None, str | None]:
+def validate_product_fields(body: dict | None, *, valid_categories: set[str] | None = None) -> tuple[dict | None, str | None]:
     """A draft (isPublished=False) only needs a valid category — name, variants,
     and images can all be filled in later. Publishing still requires all of them."""
     errors: list[str] = []
     cleaned: dict = {}
     body = body or {}
+    allowed_categories = valid_categories or VALID_CATEGORIES
 
     is_published = bool(body.get("isPublished"))
     cleaned["isPublished"] = is_published
 
     category = str(body.get("category") or "").strip()
-    if category not in VALID_CATEGORIES:
+    if category not in allowed_categories:
         errors.append("invalid category")
     else:
         cleaned["category"] = category

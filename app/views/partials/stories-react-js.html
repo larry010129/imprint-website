@@ -1,1 +1,24 @@
-<script type="module" src="/static/react/stories.js?v=35"></script>
+<script type="module">
+  const roots = document.querySelectorAll("[data-stories-root], [data-home-wall]");
+  let requested = false;
+  const load = () => {
+    if (requested) return;
+    requested = true;
+    void import("/static/react/stories.js?v=36");
+  };
+  if (roots.length) {
+    const nearViewport = Array.from(roots).some(
+      (root) => root.getBoundingClientRect().top <= window.innerHeight + 800,
+    );
+    if (nearViewport || !("IntersectionObserver" in window)) {
+      load();
+    } else {
+      const observer = new IntersectionObserver((entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        observer.disconnect();
+        load();
+      }, { rootMargin: "800px 0px" });
+      roots.forEach((root) => observer.observe(root));
+    }
+  }
+</script>

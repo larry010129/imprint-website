@@ -429,6 +429,21 @@
     position: fixed;
     inset: 0;
     z-index: 110;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.2s ease-out, visibility 0s linear 0.2s;
+  }
+
+  .mobile-animated-nav.is-open {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition-delay: 0s;
+  }
+
+  .mobile-menu-toggle__middle {
+    transition: opacity 0.1s ease-out;
   }
 
   .mobile-animated-nav__panel {
@@ -447,6 +462,22 @@
     padding: 12px 8vw calc(24px + env(safe-area-inset-bottom, 0px));
     list-style: none;
     overflow-y: auto;
+    opacity: 0;
+    transform: translateY(18px);
+    transition: opacity 0.2s ease-out, transform 0.22s ease-out;
+  }
+
+  .mobile-animated-nav.is-open .mobile-animated-nav__list {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mobile-animated-nav,
+    .mobile-animated-nav__list,
+    .mobile-menu-toggle__middle {
+      transition: none;
+    }
   }
 
   .mobile-animated-nav__item {
@@ -613,6 +644,57 @@
   color: #0485f7;
 }
 
+[data-profile-root] {
+  --background: #fdfcfa;
+  --foreground: #2b2320;
+  --card: #ffffff;
+  --card-foreground: #2b2320;
+  --border: #ede7e0;
+  --input: #ede7e0;
+  --muted: #f7f4f1;
+  --muted-foreground: #8a817b;
+  --primary: #2b2320;
+  --primary-foreground: #ffffff;
+  --secondary: #f7f4f1;
+  --secondary-foreground: #2b2320;
+  --accent: #f4fbfb;
+  --accent-foreground: #2b2320;
+  --ring: #5ecfcf;
+  --destructive: #c0392b;
+  --destructive-foreground: #ffffff;
+  font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+  letter-spacing: 0.05em;
+  color: var(--foreground);
+}
+
+[data-profile-root] .profile-page-stack {
+  width: 100%;
+}
+
+[data-profile-root] .profile-page-state {
+  display: flex;
+  justify-content: center;
+  padding: 32px 0 12px;
+}
+
+[data-profile-root] .profile-page-skel {
+  width: min(100%, 28rem);
+  height: 420px;
+  border-radius: 1.5rem;
+  background: linear-gradient(90deg, #f3f0ec 25%, #faf8f6 50%, #f3f0ec 75%);
+  background-size: 200% 100%;
+  animation: profile-skel-shimmer 1.2s ease-in-out infinite;
+}
+
+@keyframes profile-skel-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
 [data-checkout-root] {
   --background: #fdfcfa;
   --foreground: #2b2320;
@@ -672,6 +754,8 @@
   --foreground: #2b2320;
   --card: #ffffff;
   --card-foreground: #2b2320;
+  --popover: #ffffff;
+  --popover-foreground: #2b2320;
   --border: #ede7e0;
   --input: #ede7e0;
   --muted: #fafaf8;
@@ -687,6 +771,51 @@
   --ring: #5ecfcf;
   font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
   color: var(--foreground);
+}
+
+/* Portaled selects (body) still need admin tokens */
+[data-slot="select-content"] {
+  --background: #ffffff;
+  --foreground: #2b2320;
+  --popover: #ffffff;
+  --popover-foreground: #2b2320;
+  --border: #ede7e0;
+  --input: #ede7e0;
+  --muted: #fafaf8;
+  --muted-foreground: #8a817b;
+  --accent: #f7f3ee;
+  --accent-foreground: #2b2320;
+  --primary: #2b2320;
+  --ring: #5ecfcf;
+}
+
+/* Portaled dialogs (body) — admin delete confirm, etc. */
+[data-slot="dialog-overlay"] {
+  z-index: 100;
+  background-color: rgba(43, 35, 32, 0.45) !important;
+}
+
+[data-slot="dialog-content"] {
+  z-index: 101;
+  --background: #ffffff;
+  --foreground: #2b2320;
+  --popover: #ffffff;
+  --popover-foreground: #2b2320;
+  --border: #ede7e0;
+  --input: #ede7e0;
+  --muted: #fafaf8;
+  --muted-foreground: #8a817b;
+  --accent: #f7f3ee;
+  --accent-foreground: #2b2320;
+  --primary: #2b2320;
+  --primary-foreground: #ffffff;
+  --secondary: #f3f0ec;
+  --secondary-foreground: #2b2320;
+  --destructive: #c0392b;
+  --destructive-foreground: #ffffff;
+  --ring: #5ecfcf;
+  background-color: #ffffff;
+  color: #2b2320;
 }
 
 .account-menu {

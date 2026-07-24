@@ -541,3 +541,56 @@
     display: flex;
   }
 }
+
+/* Calculator: highlight missing options after order click */
+.shop-field-invalid {
+  --shop-invalid-color: #dc2626;
+  border-radius: 12px;
+  outline: 2px solid var(--shop-invalid-color);
+  outline-offset: 3px;
+  background-color: rgba(220, 38, 38, 0.05);
+  transition: outline-color 0.2s ease, background-color 0.2s ease;
+}
+
+.shop-field-invalid .variant-label,
+.shop-field-invalid .shop-section-title {
+  color: var(--shop-invalid-color);
+}
+
+.shop-field-invalid .ring-size-select,
+.shop-field-invalid .stone-count-input {
+  border-color: var(--shop-invalid-color);
+  box-shadow: 0 0 0 1px var(--shop-invalid-color);
+}
+
+.shop-field-invalid--flash {
+  animation: shop-field-invalid-flash 0.55s ease-in-out 2;
+}
+
+@keyframes shop-field-invalid-flash {
+  0%,
+  100% {
+    outline-color: #dc2626;
+    background-color: rgba(220, 38, 38, 0.05);
+  }
+
+  50% {
+    outline-color: #ef4444;
+    background-color: rgba(220, 38, 38, 0.14);
+  }
+}
+
+/* Hero total: count animation + up/down color cue */
+.hero-price-amount {
+  transition: color 0.45s ease, transform 0.35s ease;
+}
+
+.hero-price-amount.hero-price-tick--up {
+  color: #b91c1c;
+  transform: translateY(-3px);
+}
+
+.hero-price-amount.hero-price-tick--down {
+  color: #047857;
+  transform: translateY(2px);
+}

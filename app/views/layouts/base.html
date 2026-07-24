@@ -25,10 +25,10 @@
 <link rel="stylesheet" href="/static/css/base.css?v=4.0">
 <link rel="stylesheet" href="/static/css/nav.css?v=4.3">
 <link rel="stylesheet" href="/static/css/home.css?v=5.4">
-<link rel="stylesheet" href="/static/css/pages.css?v=5.9">
+<link rel="stylesheet" href="/static/css/pages.css?v=5.15">
 <link rel="stylesheet" href="/static/css/skeleton.css?v=2">
-<link rel="stylesheet" href="/static/css/responsive.css?v=3.14">
-<link rel="stylesheet" href="/static/css/social-fab.css?v=3">
+<link rel="stylesheet" href="/static/css/responsive.css?v=3.15">
+<link rel="stylesheet" href="/static/css/social-fab.css?v=7">
 {% include "partials/nav-react-css.html" %}
 {% include "partials/footer-react-css.html" %}
 {% block extra_css %}{% endblock %}
@@ -62,7 +62,7 @@
 {% include "partials/footer-react-js.html" %}
 <script src="/static/js/site-layout.js?v=2"></script>
 <script src="/static/js/main.js?v=2.3"></script>
-{% include "partials/social-fab.html" %}
-{% include "partials/botpress-webchat.html" %}
+{% block social_fab %}{% include "partials/social-fab.html" %}{% endblock %}
+{% block botpress_webchat %}{% include "partials/botpress-webchat.html" %}{% endblock %}
 </body>
 </html>

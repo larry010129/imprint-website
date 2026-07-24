@@ -1,37 +1,67 @@
 ﻿{% extends "layouts/base.html" %}
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/member-app.css?v=1">
+<link rel="stylesheet" href="/static/css/member-app.css?v=2">
 {% endblock %}
 {% block content %}
 <!-- @component partials/view-account.html -->
 <section class="account-section" id="view-account">
   <div class="container account-grid">
-    <aside class="cfg-summary">
+    <aside class="cfg-summary account-profile-card">
       <h3>我的帳戶</h3>
-      <div class="cfg-summary-row"><span class="k">姓名</span><span class="v" id="accName">-</span></div>
-      <div class="cfg-summary-row"><span class="k">電話</span><span class="v" id="accPhone">-</span></div>
-      <div class="cfg-summary-row"><span class="k">Email</span><span class="v" id="accEmail">-</span></div>
+      <form id="accountProfileForm" class="account-profile-form" novalidate>
+        <label class="account-field">
+          <span>姓名</span>
+          <input type="text" id="accName" name="fullName" autocomplete="name" required placeholder="請輸入姓名">
+        </label>
+        <label class="account-field">
+          <span>聯絡電話</span>
+          <input type="tel" id="accPhone" name="phone" autocomplete="tel" required placeholder="請輸入電話">
+        </label>
+        <div class="account-field account-field--readonly">
+          <span>Email</span>
+          <span class="v" id="accEmail">-</span>
+        </div>
+
+        <p class="account-address-heading">寄送地址</p>
+        <p class="account-address-hint">結帳選宅配時會自動帶入；可留空。</p>
+        <label class="account-field">
+          <span>郵遞區號</span>
+          <input type="text" id="accPostal" name="shippingPostal" autocomplete="postal-code" inputmode="numeric" placeholder="例：106">
+        </label>
+        <div class="account-field-row">
+          <label class="account-field">
+            <span>縣市</span>
+            <select id="accCity" name="shippingCityCounty" autocomplete="address-level1">
+              <option value="">請選擇縣市</option>
+            </select>
+          </label>
+          <label class="account-field">
+            <span>區／鄉／鎮</span>
+            <select id="accDistrict" name="shippingDistrict" autocomplete="address-level2" disabled>
+              <option value="">請先選縣市</option>
+            </select>
+          </label>
+        </div>
+        <label class="account-field">
+          <span>詳細地址</span>
+          <input type="text" id="accAddress" name="shippingAddress" autocomplete="street-address" placeholder="路名、巷弄、樓層（不含縣市區）">
+        </label>
+
+        <p class="account-profile-msg" id="accountProfileMsg" hidden></p>
+        <button type="submit" class="btn btn-dark account-save-btn" id="accountSaveBtn">儲存帳戶資料</button>
+      </form>
       <div class="cfg-actions cfg-actions--spaced">
         <button type="button" class="btn btn-line" id="logoutBtn">登出</button>
       </div>
     </aside>
-    <div>
-      <h1 class="account-title">我的訂單進度</h1>
-      <div class="orders-list" id="ordersList">
-        <div class="skel-order-cards skel-panel" aria-busy="true" id="account-orders-skeleton">
-          <div class="skel-order-card"><span class="skel-line skel-line--long"></span><span class="skel-line skel-line--medium"></span></div>
-          <div class="skel-order-card"><span class="skel-line skel-line--long"></span><span class="skel-line skel-line--medium"></span></div>
-        </div>
-      </div>
-    </div>
   </div>
 </section>
 {% endblock %}
 {% block extra_scripts %}
-<script src="/static/js/order-status.js"></script>
-<script src="/static/js/api-client.js"></script>
+<script src="/static/js/taiwan-admin-divisions.js?v=3"></script>
+<script src="/static/js/api-client.js?v=10"></script>
 <script src="/static/js/mvc/core.js"></script>
-<script src="/static/js/mvc/models/account-model.js"></script>
-<script src="/static/js/mvc/views/account-view.js"></script>
-<script src="/static/js/mvc/controllers/account-controller.js"></script>
+<script src="/static/js/mvc/models/account-model.js?v=2"></script>
+<script src="/static/js/mvc/views/account-view.js?v=5"></script>
+<script src="/static/js/mvc/controllers/account-controller.js?v=4"></script>
 {% endblock %}

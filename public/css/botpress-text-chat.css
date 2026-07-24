@@ -1,0 +1,279 @@
+/* Paste into Botpress → Webchat → Styles → Publish
+   Look: Bubble shapes + D Atelier Light colors
+   Soft rounded pills · ink header · warm paper · champagne · mint chips */
+
+/* ===== Shell ===== */
+.bpContainer,
+.bpWebchat {
+  border-radius: 16px !important;
+  border: 1px solid #e4ddd4 !important;
+  box-shadow: 0 18px 40px rgba(43, 35, 32, 0.12) !important;
+  overflow: hidden !important;
+  background: #faf8f5 !important;
+}
+
+/* ===== Header — D ink ===== */
+.bpHeaderContainer {
+  background: #2b2320 !important;
+  border-bottom: 1px solid #2b2320 !important;
+  color: #faf8f5 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
+}
+
+.bpHeaderContentTitle {
+  color: #faf8f5 !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.12em !important;
+  font-size: 13px !important;
+}
+
+.bpHeaderContentDescription {
+  color: #c9b79a !important;
+}
+
+.bpHeaderContentActionsIcons,
+.bpHeaderNewConversationIcon,
+.bpHeaderSoundToggleButton {
+  color: #e8d5b5 !important;
+}
+
+.bpHeaderContentActionsIcons:hover,
+.bpHeaderNewConversationIcon:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-radius: 4px !important;
+}
+
+.bpHeaderContentAvatarFallback {
+  background: linear-gradient(145deg, #e8d5b5 0%, #c9a87a 100%) !important;
+  color: #2b2320 !important;
+  font-weight: 700 !important;
+  border: none !important;
+}
+
+/* ===== Thread — D warm paper ===== */
+.bpMessageListContainer,
+.bpMessageListViewport {
+  background: #f3efe9 !important;
+}
+
+.bpMessageListMarqueeContainer,
+.bpMessageListMarqueeContent,
+.bpMessageListMarqueeTitle,
+.bpMessageListMarqueeDescription,
+.bpMessageListMarqueeAvatarContainer,
+.bpMessageListMarqueeAvatarImage,
+.bpMessageListMarqueeAvatarFallback {
+  display: none !important;
+}
+
+.bpMessageListHeaderMessage,
+.bpMessageContainer[data-direction="system"] {
+  color: #9a9188 !important;
+  font-size: 11px !important;
+}
+
+/* ===== Bubbles — soft pill shapes ===== */
+.bpMessageContainer {
+  gap: 8px !important;
+  margin: 10px 0 !important;
+  padding-left: 14px !important;
+  padding-right: 14px !important;
+  border-bottom: none !important;
+}
+
+.bpMessageBlocksBubble {
+  max-width: 84% !important;
+  padding: 12px 16px !important;
+  border: none !important;
+  box-shadow: none !important;
+  font-size: 14px !important;
+  line-height: 1.65 !important;
+  letter-spacing: 0.015em !important;
+}
+
+.bpMessageBlocksTextText {
+  margin: 0 0 0.35em 0 !important;
+  color: inherit !important;
+  line-height: 1.65 !important;
+}
+
+.bpMessageBlocksTextText:last-child {
+  margin-bottom: 0 !important;
+}
+
+.bpMessageBlocksTextLink {
+  text-decoration: underline !important;
+  text-underline-offset: 2px !important;
+}
+
+/* Bot — white soft bubble */
+.bpMessageContainer[data-direction="incoming"] .bpMessageBlocksBubble {
+  background: #ffffff !important;
+  color: #2b2320 !important;
+  border: 1px solid #e4ddd4 !important;
+  border-radius: 20px !important;
+  border-bottom-left-radius: 6px !important;
+}
+
+.bpMessageContainer[data-direction="incoming"] .bpMessageBlocksTextText {
+  color: #2b2320 !important;
+}
+
+.bpMessageContainer[data-direction="incoming"] .bpMessageBlocksTextLink {
+  color: #9a7340 !important;
+}
+
+/* You — champagne soft bubble */
+.bpMessageContainer[data-direction="outgoing"] .bpMessageBlocksBubble {
+  background: #e8d5b5 !important;
+  color: #2b2320 !important;
+  border: none !important;
+  border-radius: 20px !important;
+  border-bottom-right-radius: 6px !important;
+}
+
+.bpMessageContainer[data-direction="outgoing"] .bpMessageBlocksTextText,
+.bpMessageContainer[data-direction="outgoing"] .bpMessageBlocksTextLink {
+  color: #2b2320 !important;
+}
+
+.bpMessageAvatarContainer {
+  width: 28px !important;
+  height: 28px !important;
+  margin-top: 4px !important;
+}
+
+.bpMessageAvatarFallback {
+  background: #2b2320 !important;
+  color: #e8d5b5 !important;
+  font-size: 11px !important;
+}
+
+.bpMessageDeliveryStatus {
+  display: none !important;
+}
+
+.bpTypingIndicatorContainer {
+  background: #ffffff !important;
+  border: 1px solid #e4ddd4 !important;
+  border-radius: 20px !important;
+  border-bottom-left-radius: 6px !important;
+  padding: 12px 16px !important;
+}
+
+/* ===== Choice chips — D champagne / ink (match bubble palette) ===== */
+.bpMessageBlocksButton {
+  border-radius: 999px !important;
+  border: 1px solid #c9a87a !important;
+  background: #e8d5b5 !important;
+  color: #2b2320 !important;
+  font-weight: 500 !important;
+  font-size: 13px !important;
+  padding: 6px 14px !important;
+  margin: 0 !important;
+  box-shadow: none !important;
+  width: auto !important;
+  max-width: 100% !important;
+  min-height: 0 !important;
+  height: auto !important;
+  line-height: 1.3 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.bpMessageBlocksButton:hover {
+  background: #2b2320 !important;
+  border-color: #2b2320 !important;
+  color: #e8d5b5 !important;
+}
+
+.bpMessageBlocksRow,
+.bpMessageBlocksColumn {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+  align-items: flex-start !important;
+  margin-top: 8px !important;
+}
+
+.bpMessageBlocksRow .bpMessageBlocksButton,
+.bpMessageBlocksColumn .bpMessageBlocksButton {
+  width: auto !important;
+  flex: 0 0 auto !important;
+}
+
+/* ===== Composer — D ===== */
+.bpComposerWrapper {
+  background: #ffffff !important;
+  border: none !important;
+  border-top: 1px solid #e4ddd4 !important;
+  border-radius: 0 !important;
+  padding: 12px 14px 14px !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.bpComposerContainer {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.bpComposerInputContainer {
+  border-radius: 999px !important;
+  border: 1px solid #d6cec4 !important;
+  background: #faf8f5 !important;
+  box-shadow: none !important;
+  outline: none !important;
+  min-height: 46px !important;
+  padding: 6px 10px 6px 16px !important;
+}
+
+.bpComposerInputContainer:focus-within {
+  border-color: #c9a87a !important;
+  background: #ffffff !important;
+  box-shadow: 0 0 0 1px #c9a87a !important;
+}
+
+.bpComposerInput {
+  font-size: 14px !important;
+  color: #2b2320 !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.bpComposerInput::placeholder {
+  color: #9a9188 !important;
+}
+
+.bpComposerSendButton {
+  background: #2b2320 !important;
+  color: #e8d5b5 !important;
+  border-radius: 999px !important;
+  border: none !important;
+  font-weight: 700 !important;
+}
+
+.bpComposerVoiceButton,
+.bpComposerUploadButton {
+  color: #9a9188 !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.bpComposerFooter {
+  display: none !important;
+}
+
+.bpComposerWrapper *,
+.bpComposerContainer * {
+  outline: none !important;
+}

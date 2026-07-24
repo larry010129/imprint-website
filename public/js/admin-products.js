@@ -58,7 +58,15 @@
   var root = document.getElementById('productsRoot');
   if (!root) return;
 
-  var state = { products: [], categoryLabels: {}, activeTab: 'cat-pendant', editingId: null, view: 'list' };
+  var state = {
+    products: [],
+    categoryLabels: {},
+    categories: [],
+    categoryOrder: [],
+    activeTab: 'cat-pendant',
+    editingId: null,
+    view: 'list',
+  };
   var _loaded = false;
   var _loading = false;
   var _slotCounter = 0;
@@ -110,6 +118,75 @@
       + '&product=' + encodeURIComponent(product.id);
   }
 
+  function categoryOrderList() {
+    return (state.categoryOrder && state.categoryOrder.length) ? state.categoryOrder : CATEGORY_ORDER;
+  }
+
+  function categoryInfo(slug) {
+    return (state.categories || []).find(function (c) { return c.slug === slug; }) || null;
+  }
+
+  function categoryThumbUrl(slug) {
+    var info = categoryInfo(slug);
+    if (info && info.thumbUrl) return info.thumbUrl;
+    if (info && info.thumb_path) return imageUrl(info.thumb_path);
+    return window.AdminImageUrls ? window.AdminImageUrls.categoryFallback(slug) : '';
+  }
+
+  function publishedCountInCategory(cat) {
+    return productsInCategory(cat).filter(function (p) { return p.is_published; }).length;
+  }
+
+  function categoryPanelHtml() {
+    var cat = state.activeTab.replace('cat-', '');
+    var label = state.categoryLabels[cat] || cat;
+    var published = publishedCountInCategory(cat);
+    var thumb = categoryThumbUrl(cat);
+    return (
+      '<div class="ap-category-panel" id="apCategoryPanel">' +
+        '<div class="ap-category-panel-inner">' +
+          '<div class="ap-category-panel-text">' +
+            '<h4 class="ap-section-title ap-section-title--inline">' + esc(label) + ' · 試算頁 Step 1 品項圖</h4>' +
+            '<p class="ap-section-hint">此圖顯示於客製試算「選品項」步驟。' +
+            '品項需至少有一件<strong>已上架</strong>商品才會出現在試算頁' +
+            (published ? '（目前 ' + published + ' 件已上架）。' : '（尚無已上架商品，試算頁不會顯示此品項）。') +
+            '</p>' +
+          '</div>' +
+          '<div class="ap-category-thumb-block">' +
+            '<div class="ap-category-thumb-preview">' +
+              (thumb
+                ? '<img src="' + esc(thumb) + '" alt="">'
+                : '<span class="ap-category-thumb-empty">預設圖</span>') +
+            '</div>' +
+            '<label class="btn-sm ap-category-thumb-upload">' +
+              '更換圖片' +
+              '<input type="file" accept="image/png,image/jpeg,image/webp" hidden id="apCategoryThumbInput">' +
+            '</label>' +
+          '</div>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  function addCategoryDialogHtml() {
+    return (
+      '<dialog id="apAddCategoryDialog" class="ap-delete-dialog">' +
+        '<form method="dialog" id="apAddCategoryForm">' +
+          '<h3>新增品項</h3>' +
+          '<label class="ap-add-cat-label"><span>品項名稱</span>' +
+            '<input id="apNewCategoryName" maxlength="50" autocomplete="off" required placeholder="例如：胸針">' +
+          '</label>' +
+          '<p class="ap-hint">建立後可在此品項下新增商品。試算頁需有至少一件已上架商品才會顯示此品項。</p>' +
+          '<p class="ap-form-error" id="apAddCategoryError" hidden></p>' +
+          '<div class="ap-delete-actions">' +
+            '<button type="button" class="btn-sm" id="apAddCategoryCancel">取消</button>' +
+            '<button type="submit" class="btn-sm btn-primary">建立</button>' +
+          '</div>' +
+        '</form>' +
+      '</dialog>'
+    );
+  }
+
   function caratsFor(category) {
     return category === 'chain' ? CHAIN_CARATS : CARATS;
   }
@@ -151,18 +228,20 @@
   function renderShell() {
     unmountProductsTable();
     state.view = 'list';
-    var tabs = CATEGORY_ORDER.map(function (cat, i) {
+    var tabs = categoryOrderList().map(function (cat) {
       var label = state.categoryLabels[cat] || cat;
       var count = productsInCategory(cat).length;
       var active = state.activeTab === 'cat-' + cat;
       return '<button type="button" class="ap-tab-btn' + (active ? ' is-active' : '') + '" data-tab="cat-' + cat + '" role="tab" aria-selected="' + (active ? 'true' : 'false') + '">' +
         esc(label) + '<span class="ap-tab-count">' + count + '</span></button>';
     }).join('');
+    tabs += '<button type="button" class="ap-tab-btn ap-tab-btn--add" id="apAddCategory" title="新增品項" aria-label="新增品項">+</button>';
 
     setRoot(
       '<p class="note">管理商品款式、金屬選項與照片。上架後會顯示於客製試算頁；拖曳列可調整排序。</p>' +
       '<div class="ap-toolbar"><button type="button" class="btn-sm btn-primary" id="btnNewProduct">+ 新增商品</button></div>' +
       '<div class="ap-category-tabs" role="tablist">' + tabs + '</div>' +
+      categoryPanelHtml() +
       '<div class="ap-table-root" id="apProductsTableRoot">' + tableAreaSkeletonHtml() + '</div>' +
       '<dialog id="apDeleteDialog" class="ap-delete-dialog"><form method="dialog" id="apDeleteForm">' +
         '<h3>刪除商品</h3><p id="apDeleteTarget"></p>' +
@@ -170,7 +249,8 @@
         '<div class="ap-delete-actions">' +
           '<button type="button" class="btn-sm" id="apDeleteCancel">取消</button>' +
           '<button type="submit" class="btn-sm btn-primary">確認刪除</button>' +
-        '</div></form></dialog>'
+        '</div></form></dialog>' +
+      addCategoryDialogHtml()
     );
     bindShellEvents();
     renderActiveCategoryTable();
@@ -241,8 +321,15 @@
           b.setAttribute('aria-selected', active ? 'true' : 'false');
         });
         renderActiveCategoryTable();
+        refreshCategoryPanel();
       });
     });
+
+    var addCatBtn = document.getElementById('apAddCategory');
+    if (addCatBtn) addCatBtn.addEventListener('click', openAddCategoryDialog);
+
+    bindCategoryThumbUpload();
+    bindAddCategoryDialog();
 
     var newBtn = document.getElementById('btnNewProduct');
     if (newBtn) {
@@ -300,6 +387,82 @@
     var target = document.getElementById('apDeleteTarget');
     if (target) target.textContent = '即將刪除：' + (name || id);
     document.getElementById('apDeleteDialog')?.showModal();
+  }
+
+  function refreshCategoryPanel() {
+    var panel = document.getElementById('apCategoryPanel');
+    if (!panel) return;
+    var wrap = document.createElement('div');
+    wrap.innerHTML = categoryPanelHtml();
+    var next = wrap.firstElementChild;
+    if (next) {
+      panel.replaceWith(next);
+      bindCategoryThumbUpload();
+    }
+  }
+
+  function openAddCategoryDialog() {
+    var dialog = document.getElementById('apAddCategoryDialog');
+    var input = document.getElementById('apNewCategoryName');
+    var err = document.getElementById('apAddCategoryError');
+    if (!dialog) return;
+    if (input) input.value = '';
+    if (err) { err.hidden = true; err.textContent = ''; }
+    dialog.showModal();
+    input && input.focus();
+  }
+
+  function bindAddCategoryDialog() {
+    var dialog = document.getElementById('apAddCategoryDialog');
+    var cancel = document.getElementById('apAddCategoryCancel');
+    var form = document.getElementById('apAddCategoryForm');
+    if (!dialog || !form) return;
+    cancel && cancel.addEventListener('click', function () { dialog.close(); });
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var name = document.getElementById('apNewCategoryName')?.value.trim();
+      var err = document.getElementById('apAddCategoryError');
+      if (!name) {
+        if (err) { err.hidden = false; err.textContent = '請填寫品項名稱'; }
+        return;
+      }
+      if (err) err.hidden = true;
+      api.admin.createProductCategory({ labelZh: name }).then(function (res) {
+        if (res.error) {
+          if (err) { err.hidden = false; err.textContent = apiError(res); }
+          return;
+        }
+        dialog.close();
+        if (res.category && res.category.slug) {
+          state.activeTab = 'cat-' + res.category.slug;
+        }
+        load(true, true);
+      });
+    });
+  }
+
+  function bindCategoryThumbUpload() {
+    var input = document.getElementById('apCategoryThumbInput');
+    if (!input || input.dataset.bound) return;
+    input.dataset.bound = '1';
+    input.addEventListener('change', function () {
+      var file = input.files && input.files[0];
+      input.value = '';
+      if (!file) return;
+      var cat = state.activeTab.replace('cat-', '');
+      api.admin.uploadProductCategoryThumb(cat, file).then(function (res) {
+        if (res.error) {
+          alert('上傳失敗：' + apiError(res));
+          return;
+        }
+        if (res.category) {
+          var idx = (state.categories || []).findIndex(function (c) { return c.slug === cat; });
+          if (idx >= 0) state.categories[idx] = res.category;
+          else if (state.categories) state.categories.push(res.category);
+        }
+        refreshCategoryPanel();
+      });
+    });
   }
 
   function bindDragReorder(scope) {
@@ -727,7 +890,7 @@
       ? product.variants.map(function (v) { return variantRowHtml(v, category); }).join('')
       : variantRowHtml(null, category);
 
-    var catOpts = CATEGORY_ORDER.map(function (c) {
+    var catOpts = categoryOrderList().map(function (c) {
       var sel = category === c ? ' selected' : '';
       return '<option value="' + c + '"' + sel + '>' + esc(state.categoryLabels[c] || c) + '</option>';
     }).join('');
@@ -1021,6 +1184,11 @@
       }
       state.products = res.products || [];
       state.categoryLabels = res.categoryLabels || {};
+      state.categories = res.categories || [];
+      state.categoryOrder = res.categoryOrder || categoryOrderList();
+      if (state.categoryOrder.indexOf(state.activeTab.replace('cat-', '')) < 0 && state.categoryOrder.length) {
+        state.activeTab = 'cat-' + state.categoryOrder[0];
+      }
       _loaded = true;
       if (state.view === 'editor') return;
       renderShell();

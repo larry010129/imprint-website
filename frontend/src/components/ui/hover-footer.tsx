@@ -1,6 +1,5 @@
 "use client";
 import { useRef, useEffect, useState } from "react";
-import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 
 export const TextHoverEffect = ({
@@ -14,21 +13,33 @@ export const TextHoverEffect = ({
   className?: string;
 }) => {
   const svgRef = useRef<SVGSVGElement>(null);
-  const [cursor, setCursor] = useState({ x: 0, y: 0 });
+  const gradientRef = useRef<SVGRadialGradientElement>(null);
+  const pointerRef = useRef({ x: 0, y: 0 });
+  const frameRef = useRef<number | null>(null);
   const [hovered, setHovered] = useState(false);
-  const [maskPosition, setMaskPosition] = useState({ cx: "50%", cy: "50%" });
 
   useEffect(() => {
-    if (svgRef.current && cursor.x !== null && cursor.y !== null) {
-      const svgRect = svgRef.current.getBoundingClientRect();
-      const cxPercentage = ((cursor.x - svgRect.left) / svgRect.width) * 100;
-      const cyPercentage = ((cursor.y - svgRect.top) / svgRect.height) * 100;
-      setMaskPosition({
-        cx: `${cxPercentage}%`,
-        cy: `${cyPercentage}%`,
-      });
-    }
-  }, [cursor]);
+    return () => {
+      if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
+    };
+  }, []);
+
+  function trackPointer(clientX: number, clientY: number) {
+    pointerRef.current = { x: clientX, y: clientY };
+    if (frameRef.current !== null) return;
+    frameRef.current = requestAnimationFrame(() => {
+      frameRef.current = null;
+      const gradient = gradientRef.current;
+      const svg = svgRef.current;
+      if (!gradient || !svg) return;
+      const svgRect = svg.getBoundingClientRect();
+      if (!svgRect.width || !svgRect.height) return;
+      const cx = ((pointerRef.current.x - svgRect.left) / svgRect.width) * 100;
+      const cy = ((pointerRef.current.y - svgRect.top) / svgRect.height) * 100;
+      gradient.setAttribute("cx", `${cx}%`);
+      gradient.setAttribute("cy", `${cy}%`);
+    });
+  }
 
   return (
     <svg
@@ -39,7 +50,7 @@ export const TextHoverEffect = ({
       xmlns="http://www.w3.org/2000/svg"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onMouseMove={(e) => setCursor({ x: e.clientX, y: e.clientY })}
+      onMouseMove={(e) => trackPointer(e.clientX, e.clientY)}
       className={cn("select-none uppercase cursor-pointer", className)}
     >
       <defs>
@@ -61,17 +72,18 @@ export const TextHoverEffect = ({
           )}
         </linearGradient>
 
-        <motion.radialGradient
+        <radialGradient
+          ref={gradientRef}
           id="revealMask"
           gradientUnits="userSpaceOnUse"
           r="20%"
-          initial={{ cx: "50%", cy: "50%" }}
-          animate={maskPosition}
-          transition={{ duration: duration ?? 0, ease: "easeOut" }}
+          cx="50%"
+          cy="50%"
+          style={{ transition: `cx ${duration ?? 0}s ease-out, cy ${duration ?? 0}s ease-out` }}
         >
           <stop offset="0%" stopColor="white" />
           <stop offset="100%" stopColor="black" />
-        </motion.radialGradient>
+        </radialGradient>
         <mask id="textMask">
           <rect
             x="0"
@@ -93,26 +105,17 @@ export const TextHoverEffect = ({
       >
         {text}
       </text>
-      <motion.text
+      <text
         x="50%"
         y="50%"
         textAnchor="middle"
         dominantBaseline="middle"
         strokeWidth="0.3"
-        className="fill-transparent stroke-[#3ca2fa] font-[helvetica] text-7xl font-bold 
+        className="footer-hover-stroke-draw fill-transparent stroke-[#3ca2fa] font-[helvetica] text-7xl font-bold
         dark:stroke-[#3ca2fa99]"
-        initial={{ strokeDashoffset: 1000, strokeDasharray: 1000 }}
-        animate={{
-          strokeDashoffset: 0,
-          strokeDasharray: 1000,
-        }}
-        transition={{
-          duration: 4,
-          ease: "easeInOut",
-        }}
       >
         {text}
-      </motion.text>
+      </text>
       <text
         x="50%"
         y="50%"

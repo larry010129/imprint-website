@@ -5,3 +5,26 @@
   font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
   letter-spacing: 0.05em;
 }
+
+@keyframes footer-hover-stroke-draw {
+  from {
+    stroke-dasharray: 1000;
+    stroke-dashoffset: 1000;
+  }
+  to {
+    stroke-dasharray: 1000;
+    stroke-dashoffset: 0;
+  }
+}
+
+.footer-hover-stroke-draw {
+  animation: footer-hover-stroke-draw 4s ease-in-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .footer-hover-stroke-draw {
+    animation: none;
+    stroke-dasharray: 1000;
+    stroke-dashoffset: 0;
+  }
+}

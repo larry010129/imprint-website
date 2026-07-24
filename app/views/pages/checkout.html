@@ -1,9 +1,14 @@
 {% extends "layouts/base.html" %}
 
+{% block extra_body_class %}is-checkout-page{% endblock %}
+
+{% block social_fab %}{% endblock %}
+{% block botpress_webchat %}{% endblock %}
+
 {% block extra_css %}
 <link rel="stylesheet" href="/static/css/member-app.css?v=2">
 {% include "partials/checkout-react-css.html" %}
-<link rel="stylesheet" href="/static/css/checkout-page.css?v=10">
+<link rel="stylesheet" href="/static/css/checkout-page.css?v=12">
 {% endblock %}
 
 {% block content %}

@@ -122,7 +122,11 @@
     return '<div class="skel-status-cards skel-panel" aria-busy="true">' + items + '</div>';
   }
 
-  function memberList(count) {
+  function memberList(count, opts) {
+    opts = opts || {};
+    var blockPointer = opts.blockPointer !== false;
+    var busy = blockPointer ? ' aria-busy="true"' : '';
+    var panelClass = blockPointer ? ' skel-panel' : '';
     var rows = '';
     for (var i = 0; i < (count || 5); i++) {
       rows +=
@@ -134,7 +138,7 @@
           '<span class="skel-actions"></span>' +
         '</div>';
     }
-    return '<div class="skel-panel" aria-busy="true" aria-label="載入中">' + rows + '</div>';
+    return '<div class="skel-member-loading' + panelClass + '"' + busy + ' aria-label="載入中">' + rows + '</div>';
   }
 
   function cartList(count) {
@@ -214,7 +218,31 @@
   }
 
   function accountsShell() {
-    return line('short') + memberList(5);
+    return line('short') + memberList(5, { blockPointer: false });
+  }
+
+  function contentShell() {
+    return (
+      '<p class="note ap-skeleton-note">' + line('short') + '</p>' +
+      tabs(3) +
+      '<div style="margin:14px 0">' + block('btn') + '</div>' +
+      table({
+        headers: ['圖', '標題', '分類', '內容', '排序', '狀態', '操作'],
+        rows: 5,
+        rowFn: function () {
+          return tableRowCells([
+            block('thumb'),
+            line('long'),
+            line(),
+            line('medium'),
+            line('short'),
+            block('badge'),
+            '<span class="skel-actions"></span>',
+          ]);
+        },
+        label: '載入內容中',
+      })
+    );
   }
 
   global.SkeletonUI = {
@@ -234,6 +262,7 @@
     productsShell: productsShell,
     invitesShell: invitesShell,
     accountsShell: accountsShell,
+    contentShell: contentShell,
     orderTableRow: orderTableRow,
     leadsTableRow: leadsTableRow,
     memberOrderTableRow: memberOrderTableRow,

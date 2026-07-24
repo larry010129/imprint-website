@@ -2,6 +2,58 @@
   'use strict';
 
   var root = document.querySelector('[data-social-fab]');
+
+  function hideBotpressFab() {
+    var shadowRoot = document.querySelector('.bpChatContainer > #fab-root')?.shadowRoot;
+    if (!shadowRoot || !shadowRoot.querySelector('.bpFabWrapper')) return false;
+    var styleId = 'imprint-hide-botpress-fab';
+    if (shadowRoot.getElementById(styleId)) return true;
+
+    var style = document.createElement('style');
+    style.id = styleId;
+    style.textContent = [
+      '.bpFabWrapper { display: none !important; visibility: hidden !important; pointer-events: none !important; }',
+      '@media (max-width: 900px) {',
+      '  #message-preview-root {',
+      '    bottom: calc(var(--shop-mobile-buy-bar-height, 0px) + 104px) !important;',
+      '    visibility: var(--shop-mobile-chat-visibility, visible) !important;',
+      '  }',
+      '}',
+    ].join('\n');
+    shadowRoot.appendChild(style);
+    return true;
+  }
+
+  function isCheckoutFlowPage() {
+    var path = (window.location.pathname || '').toLowerCase();
+    return (
+      path.indexOf('checkout') !== -1 ||
+      path.indexOf('success') !== -1 ||
+      path.indexOf('cart') !== -1
+    );
+  }
+
+  if (isCheckoutFlowPage()) {
+    if (root) {
+      root.hidden = true;
+      root.setAttribute('aria-hidden', 'true');
+      root.style.display = 'none';
+    }
+    document.querySelectorAll('.bpChatContainer, #webchat-root, #fab-root, #message-preview-root').forEach(function (el) {
+      el.style.display = 'none';
+      el.setAttribute('aria-hidden', 'true');
+    });
+    hideBotpressFab();
+    var checkoutHidePoll = window.setInterval(function () {
+      if (hideBotpressFab()) window.clearInterval(checkoutHidePoll);
+    }, 250);
+    window.setTimeout(function () {
+      hideBotpressFab();
+      window.clearInterval(checkoutHidePoll);
+    }, 15000);
+    return;
+  }
+
   if (!root) return;
 
   var menu = document.getElementById('imprintContactFabMenu');
@@ -61,7 +113,7 @@
     return false;
   }
 
-  function hideBotpressFab() {
+  function hideBotpressLauncher() {
     var shadowRoot = document.querySelector('.bpChatContainer > #fab-root')?.shadowRoot;
     if (!shadowRoot || !shadowRoot.querySelector('.bpFabWrapper')) return false;
     if (shadowRoot.getElementById(BP_HIDE_STYLE_ID)) return true;
@@ -122,16 +174,16 @@
     });
   }
 
-  hideBotpressFab();
+  hideBotpressLauncher();
   var hidePoll = window.setInterval(function () {
-    if (hideBotpressFab()) window.clearInterval(hidePoll);
+    if (hideBotpressLauncher()) window.clearInterval(hidePoll);
   }, 250);
   window.setTimeout(function () {
-    hideBotpressFab();
+    hideBotpressLauncher();
     window.clearInterval(hidePoll);
   }, 15000);
 
   if (window.botpress && typeof window.botpress.on === 'function') {
-    window.botpress.on('webchat:initialized', hideBotpressFab);
+    window.botpress.on('webchat:initialized', hideBotpressLauncher);
   }
 })();

@@ -663,7 +663,17 @@ function productImageUrl(product, metalColor, diamondColor, opts) {
 }
 
 function categoryImageUrl(category) {
+  const meta = window._catalogCategoryMeta?.[category];
+  if (meta?.thumbUrl) return meta.thumbUrl;
   return window.ShopAssets?.categoryThumb(category) || '';
+}
+
+function categoryLabel(cat) {
+  const meta = window._catalogCategoryMeta?.[cat];
+  if (meta?.labelZh) return meta.labelZh;
+  const key = 'cat_' + cat;
+  const t = tr(key);
+  return t && t !== key ? t : cat;
 }
 
 function applyStaticCatalogFallback() {
@@ -722,6 +732,7 @@ async function loadCatalog() {
     if (!res.ok) throw new Error(`API ${res.status}`);
     catalog = data.categories || {};
     window._catalogCategoryOrder = data.categoryOrder || null;
+    window._catalogCategoryMeta = data.categoryMeta || null;
     enrichCatalogFromStatic();
     if (!catalogCategories().length && applyStaticCatalogFallback()) {
       if (errEl) errEl.remove();
@@ -812,7 +823,7 @@ function renderCatalogTiles() {
     window.ShopAssets?.attachImageFallback(img, categoryImageUrl(cat));
 
     const label = document.createElement('span');
-    label.textContent = tr('cat_' + cat);
+    label.textContent = categoryLabel(cat);
 
     btn.appendChild(img);
     btn.appendChild(label);
@@ -1270,18 +1281,74 @@ function effectiveColor() {
   return null;
 }
 
+const SUBMIT_FIELD_TARGETS = {
+  category: () => document.getElementById('shop-catalog'),
+  type: () => document.getElementById('shop-styles'),
+  carat: () => document.getElementById('carat-step'),
+  gold: () => document.getElementById('metal-step'),
+  color: () => document.getElementById('color-step'),
+  ringSize: () => document.getElementById('ringsize-step'),
+  length: () => document.getElementById('chain-length-step'),
+  fancyColor: () => document.getElementById('fancy-diamond-step'),
+  diamondShape: () => document.getElementById('diamond-shape-step'),
+  pendantChain: () => document.getElementById('pendant-chain-step'),
+  pendantChainMetal: () => document.querySelector('#pendant-chain-options .pendant-chain-metal'),
+  pendantChainColor: () => document.getElementById('pendant-chain-color-step'),
+  pendantChainLength: () => document.querySelector('#pendant-chain-options .pendant-chain-length'),
+};
+
+function getMissingSubmitFields() {
+  const missing = [];
+  if (!state.category) missing.push('category');
+  if (!state.type) missing.push('type');
+  if (!isDiamondOnlyCategory()) {
+    if (!state.gold) missing.push('gold');
+    else {
+      const product = getSelectedProduct();
+      if (needsColorSelection(state.gold, product) && !state.color) missing.push('color');
+    }
+  }
+  if (!state.carat) missing.push('carat');
+  if (state.category === 'ring' && !state.ringSize) missing.push('ringSize');
+  if (state.category === 'chain' && !state.lengthCm) missing.push('length');
+  if (state.category === 'bracelet' && !state.lengthCm) missing.push('length');
+  if (state.category !== 'chain' && state.diamondKind === 'fancy' && !state.fancyColor) {
+    missing.push('fancyColor');
+  }
+  if (state.category !== 'chain' && isDiamondShapeOtherPending()) {
+    missing.push('diamondShape');
+  }
+  if (state.category === 'pendant' && state.includeChain) {
+    if (!state.chainProductId) missing.push('pendantChain');
+    if (!state.chainGold) missing.push('pendantChainMetal');
+    if (!state.chainColor) missing.push('pendantChainColor');
+    if (!state.chainLength) missing.push('pendantChainLength');
+  }
+  return missing;
+}
+
+function labelForSubmitField(key) {
+  switch (key) {
+    case 'category': return tr('step_category');
+    case 'type': return tr('sum_style');
+    case 'gold':
+    case 'pendantChainMetal': return tr('step_metal');
+    case 'color':
+    case 'pendantChainColor': return tr('step_color');
+    case 'carat': return tr('step_carat');
+    case 'ringSize': return tr('step_ring_size');
+    case 'length':
+      return state.category === 'bracelet' ? tr('step_bracelet_length') : tr('step_chain_length');
+    case 'fancyColor': return tr('step_diamond_color');
+    case 'diamondShape': return tr('step_diamond_shape_other');
+    case 'pendantChain':
+    case 'pendantChainLength': return tr('step_pendant_chain');
+    default: return '';
+  }
+}
+
 function isReadyToSubmit() {
-  if (!state.category || !state.type || !state.carat) return false;
-  if (!isDiamondOnlyCategory() && !state.gold) return false;
-  const product = getSelectedProduct();
-  if (!isDiamondOnlyCategory() && state.gold && needsColorSelection(state.gold, product) && !state.color) return false;
-  if (state.category === 'ring' && !state.ringSize) return false;
-  if (state.category === 'chain' && !state.lengthCm) return false;
-  if (state.category === 'bracelet' && !state.lengthCm) return false;
-  if (state.category !== 'chain' && state.diamondKind === 'fancy' && !state.fancyColor) return false;
-  if (state.category === 'pendant' && state.includeChain
-    && (!state.chainProductId || !state.chainGold || !state.chainColor || !state.chainLength)) return false;
-  if (state.category !== 'chain' && isDiamondShapeOtherPending()) return false;
+  if (getMissingSubmitFields().length) return false;
   if (state.category === 'chain' && state.gold === '9k') {
     const chainProduct = getSelectedProduct();
     if (chainProduct && chainProduct.defaultColor !== 'white') return false;
@@ -1290,32 +1357,61 @@ function isReadyToSubmit() {
 }
 
 function missingSubmitLabels() {
-  const missing = [];
-  if (!state.category) missing.push(tr('step_category'));
-  if (!state.type) missing.push(tr('sum_style'));
-  if (!isDiamondOnlyCategory()) {
-    if (!state.gold) missing.push(tr('step_metal'));
-    else {
-      const product = getSelectedProduct();
-      if (needsColorSelection(state.gold, product) && !state.color) missing.push(tr('step_color'));
-    }
+  return getMissingSubmitFields().map(labelForSubmitField).filter(Boolean);
+}
+
+function clearAllSubmitFieldHighlights() {
+  document.querySelectorAll('.shop-field-invalid').forEach((el) => {
+    el.classList.remove('shop-field-invalid', 'shop-field-invalid--flash');
+  });
+}
+
+function clearFixedSubmitFieldHighlights() {
+  const missing = new Set(getMissingSubmitFields());
+  Object.entries(SUBMIT_FIELD_TARGETS).forEach(([key, getEl]) => {
+    const el = getEl();
+    if (!el || missing.has(key)) return;
+    el.classList.remove('shop-field-invalid', 'shop-field-invalid--flash');
+  });
+}
+
+function navigateToMissingSubmitView(missing) {
+  if (!missing.length) return;
+  const first = missing[0];
+  if (first === 'category') {
+    setShopView('catalog');
+    return;
   }
-  if (!state.carat) missing.push(tr('step_carat'));
-  if (state.category === 'ring' && !state.ringSize) missing.push(tr('step_ring_size'));
-  if (state.category === 'chain' && !state.lengthCm) missing.push(tr('step_chain_length'));
-  if (state.category === 'bracelet' && !state.lengthCm) missing.push(tr('step_bracelet_length'));
-  if (state.category !== 'chain' && state.diamondKind === 'fancy' && !state.fancyColor) {
-    missing.push(tr('step_diamond_color'));
+  if (first === 'type') {
+    if (state.category === 'diamond') setShopView('product', { skipScroll: true });
+    else setShopView('styles');
+    return;
   }
-  if (state.category === 'pendant' && state.includeChain) {
-    if (!state.chainProductId || !state.chainGold || !state.chainColor || !state.chainLength) {
-      missing.push(tr('step_pendant_chain'));
-    }
+  if (state.category && state.type) {
+    setShopView('product', { skipScroll: true });
   }
-  if (state.category !== 'chain' && isDiamondShapeOtherPending()) {
-    missing.push(tr('step_diamond_shape_other'));
-  }
-  return missing;
+}
+
+function highlightMissingSubmitFields(missing) {
+  navigateToMissingSubmitView(missing);
+  requestAnimationFrame(() => {
+    missing.forEach((key, index) => {
+      const el = SUBMIT_FIELD_TARGETS[key]?.();
+      if (!el) return;
+      el.classList.add('shop-field-invalid');
+      if (index === 0) {
+        el.classList.add('shop-field-invalid--flash');
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+  });
+}
+
+function isSubmitPriceReady() {
+  if (!shopUsesApi()) return true;
+  if (!isReadyToSubmit()) return false;
+  const quote = window.ShopPricingLocal?.computeOrderPricing?.(buildQuotePayload(), catalog);
+  return !!(quote?.ready && quote.total != null);
 }
 
 function updatePriceHint(total) {
@@ -1354,7 +1450,7 @@ function updateCtaState(total) {
     confirmBtns.forEach(btn => {
       if (!btn) return;
       btn.hidden = false;
-      btn.disabled = !ready;
+      btn.disabled = false;
       btn.textContent = tr('shop_guest_login');
     });
     cartBtns.forEach(btn => { if (btn) { btn.hidden = true; btn.disabled = true; } });
@@ -1367,27 +1463,14 @@ function updateCtaState(total) {
     confirmBtns.forEach(btn => {
       if (!btn) return;
       btn.hidden = false;
-      btn.disabled = !ready;
+      btn.disabled = false;
       btn.textContent = btn.id === 'confirm-btn-mobile' ? tr('cart_update_short') : tr('cart_update');
-    });
-  } else if (isDiamondOnlyCategory()) {
-    // Memorial loose diamonds: LINE consult (no API product variants yet)
-    cartBtns.forEach(btn => {
-      if (!btn) return;
-      btn.hidden = true;
-      btn.disabled = true;
-    });
-    confirmBtns.forEach(btn => {
-      if (!btn) return;
-      btn.hidden = false;
-      btn.disabled = !ready;
-      btn.textContent = tr('btn_line_consult');
     });
   } else {
     confirmBtns.forEach(btn => {
       if (!btn) return;
       btn.hidden = false;
-      btn.disabled = !ready;
+      btn.disabled = false;
       if (window.editData) {
         btn.textContent = tr('btn_update');
       } else {
@@ -1397,11 +1480,12 @@ function updateCtaState(total) {
     cartBtns.forEach(btn => {
       if (!btn) return;
       btn.hidden = false;
-      btn.disabled = !ready || !!window.editData;
+      btn.disabled = !!window.editData;
       btn.textContent = btn.id === 'cart-btn-mobile' ? tr('btn_add_cart_short') : tr('btn_add_cart');
     });
   }
 
+  clearFixedSubmitFieldHighlights();
   updatePriceHint(total);
   const bar = document.getElementById('mobile-buy-bar');
   const showMobileBar = !!state.category;
@@ -2431,6 +2515,81 @@ function scheduleQuoteRefresh() {
   quoteTimer = setTimeout(() => { refreshQuotePrices(); }, 120);
 }
 
+function parseDisplayedTotal(text) {
+  if (text == null) return null;
+  const trimmed = String(text).trim();
+  if (!trimmed || trimmed === '?' || trimmed === '—' || trimmed === '-') return null;
+  const n = Number(trimmed.replace(/,/g, ''));
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Animate the large hero total (#sum-total) with count-up/down + color flash. */
+function animateShopTotal(el, targetValue) {
+  if (!el) return;
+  const target = Math.round(Number(targetValue));
+  if (!Number.isFinite(target)) {
+    if (el._priceAnimFrame) cancelAnimationFrame(el._priceAnimFrame);
+    el.classList.remove('hero-price-tick--up', 'hero-price-tick--down');
+    el.textContent = '—';
+    delete el.dataset.lastValue;
+    return;
+  }
+
+  const stored = el.dataset.lastValue;
+  const fromStored = stored !== undefined && stored !== '' ? Number(stored) : null;
+  const fromDisplay = parseDisplayedTotal(el.textContent);
+  let from;
+  if (Number.isFinite(fromStored)) from = fromStored;
+  else if (Number.isFinite(fromDisplay)) from = fromDisplay;
+  else from = 0;
+
+  el.dataset.lastValue = String(target);
+
+  if (from === target) {
+    el.textContent = target.toLocaleString();
+    return;
+  }
+
+  if (el._priceAnimFrame) cancelAnimationFrame(el._priceAnimFrame);
+
+  const direction = target > from ? 'up' : 'down';
+  el.classList.remove('hero-price-tick--up', 'hero-price-tick--down');
+  void el.offsetWidth;
+  el.classList.add(direction === 'up' ? 'hero-price-tick--up' : 'hero-price-tick--down');
+
+  const duration = 520;
+  const startValue = from;
+  const delta = target - from;
+  const startTime = performance.now();
+  const gen = (el._priceAnimGen = (el._priceAnimGen || 0) + 1);
+
+  function finish() {
+    el.textContent = target.toLocaleString();
+    window.setTimeout(() => {
+      if (el._priceAnimGen === gen) {
+        el.classList.remove('hero-price-tick--up', 'hero-price-tick--down');
+      }
+    }, 700);
+  }
+
+  function tick(now) {
+    if (el._priceAnimGen !== gen) return;
+    const t = Math.min(1, (now - startTime) / duration);
+    const eased = 1 - Math.pow(1 - t, 3);
+    el.textContent = Math.round(startValue + delta * eased).toLocaleString();
+    if (t < 1) {
+      el._priceAnimFrame = requestAnimationFrame(tick);
+    } else {
+      el._priceAnimFrame = 0;
+      finish();
+    }
+  }
+
+  el._priceAnimFrame = requestAnimationFrame(tick);
+}
+
+window.animateCountUp = animateShopTotal;
+
 async function refreshQuotePrices() {
   const pricePanel = document.getElementById('shop-price-panel');
   pricePanel?.classList.add('is-loading-prices');
@@ -2454,7 +2613,7 @@ async function refreshQuotePrices() {
     document.getElementById('sum-metalwork-price').textContent = '-';
     const chainPriceEl = document.getElementById('sum-chain-price');
     if (chainPriceEl) chainPriceEl.textContent = '-';
-    if (totalEl) totalEl.textContent = '—';
+    if (totalEl) animateShopTotal(totalEl, NaN);
     if (mobileTotal) mobileTotal.textContent = '—';
     updatePriceHint(null);
     updateCtaState(null);
@@ -2491,13 +2650,10 @@ async function refreshQuotePrices() {
   }
 
   const total = quote.total;
-  if (total != null && window.animateCountUp) {
-    if (totalEl) window.animateCountUp(totalEl, Math.round(total));
-    if (mobileTotal) window.animateCountUp(mobileTotal, Math.round(total));
-  } else {
-    const totalStr = total != null ? Math.round(total).toLocaleString() : '—';
-    if (totalEl) totalEl.textContent = totalStr;
-    if (mobileTotal) mobileTotal.textContent = totalStr;
+  const roundedTotal = total != null ? Math.round(total) : null;
+  if (totalEl) animateShopTotal(totalEl, roundedTotal != null ? roundedTotal : NaN);
+  if (mobileTotal) {
+    mobileTotal.textContent = roundedTotal != null ? roundedTotal.toLocaleString() : '—';
   }
   updatePriceHint(total);
   updateCtaState(total);
@@ -3563,48 +3719,30 @@ async function addCurrentFavorite() {
   }
 }
 
-function validateBeforeSubmit(toast) {
-  if (!state.category) { toast(tr('alert_pick_category')); return false; }
-  if (!state.type)     { toast(tr('alert_pick_type'));     return false; }
-  if (!isDiamondOnlyCategory()) {
-    if (!state.gold) { toast(tr('alert_pick_gold')); return false; }
-    const submitColor = effectiveColor();
-    if (!submitColor) {
-      const product = getSelectedProduct();
-      toast(needsColorSelection(state.gold, product) ? tr('alert_pick_color') : tr('alert_pick_material'));
-      return false;
-    }
-  }
-
-  if (!state.carat) { toast(tr('alert_pick_carat')); return false; }
-
-  if (state.category === 'ring' && !state.ringSize) {
-    toast(tr('alert_pick_ring_size')); return false;
-  }
-
-  if (state.category === 'chain' && !state.lengthCm) {
-    toast(tr('alert_pick_chain_length')); return false;
-  }
-
-  if (state.category === 'bracelet' && !state.lengthCm) {
-    toast(tr('alert_pick_bracelet_length')); return false;
-  }
-
-  if (state.category !== 'chain' && state.diamondKind === 'fancy' && !state.fancyColor) {
-    toast(tr('step_diamond_color')); return false;
-  }
-
-  if (state.category === 'pendant' && state.includeChain
-    && (!state.chainProductId || !state.chainGold || !state.chainColor || !state.chainLength)) {
-    toast(tr('alert_pick_chain_length')); return false;
+function validateBeforeSubmit(toast, opts = {}) {
+  const highlight = opts.highlight !== false;
+  const missing = getMissingSubmitFields();
+  if (missing.length) {
+    // Inline red highlights + #price-hint only — no alert()/toast popup
+    if (highlight) highlightMissingSubmitFields(missing);
+    updatePriceHint(null);
+    return false;
   }
 
   if (state.category === 'chain' && state.gold === '9k') {
     const product = getSelectedProduct();
     if (product && product.defaultColor !== 'white') {
-      toast(tr('alert_chain_9k_white_only')); return false;
+      toast(tr('alert_chain_9k_white_only'));
+      return false;
     }
   }
+
+  if (shopUsesApi() && !isSubmitPriceReady()) {
+    toast(tr('shop_price_unavailable'));
+    return false;
+  }
+
+  clearAllSubmitFieldHighlights();
   return true;
 }
 
@@ -3753,14 +3891,6 @@ async function handleSubmit() {
   }
 
   const toast = (msg) => window.showToast ? window.showToast(msg, 'error') : alert(msg);
-  if (isDiamondOnlyCategory()) {
-    if (!validateBeforeSubmit(toast)) return;
-    try {
-      sessionStorage.setItem('shopInquiryDraft', buildInquirySummaryLines().join('\n'));
-    } catch (_) { /* ignore */ }
-    window.open('https://lin.ee/ktVBtmx', '_blank', 'noopener');
-    return;
-  }
   if (!shopUsesApi()) {
     openContactForOrder();
     return;

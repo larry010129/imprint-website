@@ -1,5 +1,16 @@
 /* Checkout page shell — no hero banner; compact member-app layout */
 
+/* Checkout flow — no chat/contact FAB (blocks submit bar) */
+body.is-checkout-page .imprint-contact-fab,
+body.is-checkout-page .bpChatContainer,
+body.is-checkout-page #webchat-root,
+body.is-checkout-page #fab-root,
+body.is-checkout-page #message-preview-root {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
 .checkout-page {
   padding-top: 32px;
 }
@@ -431,7 +442,7 @@ a.checkout-stepper-label:hover {
     left: 0;
     right: 0;
     bottom: 0;
-    z-index: 90;
+    z-index: 10050;
     align-items: center;
     justify-content: space-between;
     gap: 12px;

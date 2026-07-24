@@ -21,8 +21,9 @@
    因為 V3 的商品線是全新設計，沒有對應的克重資料，mounting 目前仍是估算表。
 
    即時金價：排程腳本 scripts/fetch_gold_quote.py（GitHub Actions）更新
-   data/gold-quote.json；線上則由 FastAPI GET /api/bot-gold 提供。
-   getLiveGoldPrice() 透過 API 讀快取，目前 mounting 仍用估算表，金價僅供顯示參考。
+   data/gold-quote.json；線上則由 FastAPI GET /api/bot-gold 提供 alloyRates。
+   飾品戒台費用 = 基準表（DEFAULTS.mounting）依即時金價換算：金工費 NT$5,000 固定，
+   金屬部分隨台銀牌價等比浮動（與 frontend mounting-pricing.ts / 價格頁一致）。
 */
 (function (global) {
   'use strict';
@@ -62,11 +63,8 @@
        顯示/加總時另外加稅(見 configurator.js 的 render())。 */
     taxRate: 0.05,
 
-    /* 估算值：飾品戒台費用（依飾品款式 × 金屬材質，未稅）。
-       只有「9K 經典款項鍊 NT$10,000 起」是官方公開的真實數字，
-       其餘皆用倍率推算佔位，請儘快替換成正式報價。
-       純銀(silver)為基本金屬，估算價低於 9K，且僅提供白色成色(見 configurator.js 的成色限制邏輯)。
-       戒指戒圍加價與 diamond-calculator 同步，見 js/jewelry-mounting.js。 */
+    /* 基準戒台費（未稅）：供依台銀金價換算。公式 = NT$5,000 金工費 + 金屬部分 × (即時成色金價 / 基準金價)。
+       9K 經典項鍊 NT$10,000 為官方公開基準；其餘依倍率估算。 */
     mounting: {
       loose:    { '18k': 0,     '14k': 0,     '9k': 0,     'pt950': 0,     'silver': 0    },
       necklace: { '18k': 15000, '14k': 12500, '9k': 10000, 'pt950': 18000, 'silver': 7000 },
@@ -80,6 +78,16 @@
   };
 
   var STORAGE_KEY = 'imprintPricingOverridesV1';
+
+  /* 戒台費用依即時金價換算（金工費固定，金屬部分等比浮動） */
+  var LABOR_FEE_TWD = 5000;
+  var PURITY_MULTIPLIER = { '9k': 0.5, '14k': 0.75, '18k': 0.85, pt950: 1.1, s925: 0.925 };
+  var METAL_SYMBOL = { '9k': 'XAU', '14k': 'XAU', '18k': 'XAU', pt950: 'XPT', s925: 'XAG' };
+  var MOUNTING_METAL_RATE_KEY = { '18k': '18k', '14k': '14k', '9k': '9k', pt950: 'pt950', silver: 's925' };
+  var FALLBACK_METAL_RAW = { XAU: 4300, XPT: 1050, XAG: 30 };
+
+  var liveAlloyRates = null;
+  var goldQuoteMeta = null;
 
   function isPlainObject(v) {
     return v && typeof v === 'object' && !Array.isArray(v);
@@ -114,30 +122,101 @@
 
   var currentOverrides = loadLocalCache() || {};
 
+  function baselineRateForMetal(metalKey) {
+    var rateKey = MOUNTING_METAL_RATE_KEY[metalKey];
+    var symbol = METAL_SYMBOL[rateKey];
+    return FALLBACK_METAL_RAW[symbol] * PURITY_MULTIPLIER[rateKey];
+  }
+
+  function perGramForMetal(metalKey, alloyRates) {
+    var rateKey = MOUNTING_METAL_RATE_KEY[metalKey];
+    var rates = alloyRates || liveAlloyRates;
+    var live = rates && rates[rateKey];
+    if (live != null && isFinite(live)) return live;
+    return baselineRateForMetal(metalKey);
+  }
+
+  function mountingFeePreTaxLive(style, metalKey, baseTable, alloyRates) {
+    var base = (baseTable[style] && baseTable[style][metalKey]) || 0;
+    if (!base) return 0;
+    var metalPortion = base - LABOR_FEE_TWD;
+    if (metalPortion <= 0) return base;
+    var scale = perGramForMetal(metalKey, alloyRates) / baselineRateForMetal(metalKey);
+    return Math.round(LABOR_FEE_TWD + metalPortion * scale);
+  }
+
+  function buildLiveMountingTable(baseTable, alloyRates) {
+    var out = {};
+    var base = baseTable || DEFAULTS.mounting;
+    for (var style in base) {
+      if (!Object.prototype.hasOwnProperty.call(base, style)) continue;
+      if (style === 'loose') {
+        out[style] = base[style];
+        continue;
+      }
+      out[style] = {};
+      for (var metal in base[style]) {
+        if (!Object.prototype.hasOwnProperty.call(base[style], metal)) continue;
+        out[style][metal] = mountingFeePreTaxLive(style, metal, base, alloyRates);
+      }
+    }
+    return out;
+  }
+
+  function getMountingBaseline() {
+    var merged = deepMerge(DEFAULTS, currentOverrides);
+    return merged.mounting || DEFAULTS.mounting;
+  }
+
+  function fetchBotGoldQuote() {
+    return fetch('/api/bot-gold', { cache: 'no-store' })
+      .then(function (res) { return res.ok ? res.json() : null; })
+      .catch(function () { return null; });
+  }
+
+  function refreshLiveGold() {
+    return fetchBotGoldQuote().then(function (data) {
+      if (data && data.quote && data.quote.available && data.alloyRates) {
+        liveAlloyRates = data.alloyRates;
+        goldQuoteMeta = data.quote;
+      }
+      return data;
+    });
+  }
+
   function getAll() {
-    return deepMerge(DEFAULTS, currentOverrides);
+    var merged = deepMerge(DEFAULTS, currentOverrides);
+    merged.mounting = buildLiveMountingTable(getMountingBaseline(), liveAlloyRates);
+    return merged;
   }
 
   function hasOverrides() {
     return !!(currentOverrides && Object.keys(currentOverrides).length);
   }
 
-  /* 頁面一載入就去後端 API 拿最新價格；ready 讓呼叫端知道「這是不是已經是最新資料」。
+  /* 頁面一載入就去後端 API 拿最新價格與台銀金價；ready 讓呼叫端知道「這是不是已經是最新資料」。
      連線失敗時也會 resolve，讓頁面至少能用預設值/舊快取運作。 */
   var ready = new Promise(function (resolve) {
-    if (!global.imprintAPI) { resolve(); return; }
+    function finishPricingLoad() {
+      refreshLiveGold().finally(resolve);
+    }
+    if (!global.imprintAPI) { finishPricingLoad(); return; }
     global.imprintAPI.getPricingOverrides().then(function (res) {
       if (res && !res.error && isPlainObject(res.overrides)) {
         currentOverrides = res.overrides;
+        delete currentOverrides.mounting;
         saveLocalCache(currentOverrides);
       }
-      resolve();
+      finishPricingLoad();
     }, function () {
-      resolve(); // 連線失敗就沿用本機快取/預設值，不擋頁面
+      finishPricingLoad(); // 連線失敗就沿用本機快取/預設值，不擋頁面
     });
   });
 
   function saveOverrides(overrides) {
+    if (isPlainObject(overrides)) {
+      delete overrides.mounting; /* 戒台費用依金價自動換算，不寫入覆寫 */
+    }
     currentOverrides = overrides;
     saveLocalCache(overrides);
     if (!global.imprintAPI) return Promise.resolve({ error: '尚未連上後端 API' });
@@ -216,6 +295,10 @@
     resetOverrides: resetOverrides,
     hasOverrides: hasOverrides,
     computeDiamondPrice: computeDiamondPrice,
-    getLiveGoldPrice: getLiveGoldPrice
+    getLiveGoldPrice: getLiveGoldPrice,
+    refreshLiveGold: refreshLiveGold,
+    getGoldQuoteMeta: function () { return goldQuoteMeta; },
+    buildLiveMountingTable: buildLiveMountingTable,
+    LABOR_FEE_TWD: LABOR_FEE_TWD
   };
 })(window);

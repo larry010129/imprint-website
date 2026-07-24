@@ -1,1 +1,9 @@
-<script type="module" src="/static/react/shop-tour.js?v=16"></script>
+<script type="module">
+  let shouldLoad = true;
+  try {
+    shouldLoad = localStorage.getItem("imprint_shop_tour_v2") !== "1";
+  } catch {
+    shouldLoad = true;
+  }
+  if (shouldLoad) void import("/static/react/shop-tour.js?v=17");
+</script>

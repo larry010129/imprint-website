@@ -6,12 +6,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>銘印鑽石｜管理後台</title>
 <meta name="robots" content="noindex">
-<link rel="stylesheet" href="/css/admin-core.css?v=12">
+<link rel="stylesheet" href="/css/admin-core.css?v=16">
 <link rel="stylesheet" href="/css/skeleton.css?v=1">
 <link rel="stylesheet" href="/css/admin-shell.css">
 <link rel="stylesheet" href="/css/admin-orders.css?v=9">
-<link rel="stylesheet" href="/css/admin-tables.css?v=11">
-<link rel="stylesheet" href="/static/react/admin-tables.css?v=3">
+<link rel="stylesheet" href="/css/admin-tables.css?v=15">
+<link rel="stylesheet" href="/static/react/admin-tables.css?v=13">
 <link rel="stylesheet" href="/css/toast.css?v=1">
 <!-- 上線時建議打開 Google Fonts:
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -283,7 +283,7 @@
 
     <!-- 帳戶管理 -->
     <section class="panel" id="panel-accounts">
-      <div id="accountsRoot" class="skel-panel" aria-busy="true" aria-label="載入帳戶中">
+      <div id="accountsRoot" aria-label="載入帳戶中">
         <span class="skel-line skel-line--short"></span>
       </div>
     </section>
@@ -343,9 +343,10 @@
 
       <div class="card">
         <div class="card-head">
-          <h2>飾品戒台費用<span class="src-tag estimate">估算值，待確認</span></h2>
-          <span class="hint">只有「9K 經典款項鍊 NT$10,000」是官方公開數字，其餘請盡快改成正式報價</span>
+          <h2>飾品戒台費用<span class="src-tag estimate">依台銀金價自動換算</span></h2>
+          <span class="hint">金工費 NT$5,000 固定；金屬部分依即時台銀牌價等比浮動（未稅）。9K 經典項鍊基準 NT$10,000。</span>
         </div>
+        <p class="note" id="mountingGoldNote" style="margin:0 18px 12px;font-size:12px;color:var(--ink-faint);"></p>
         <div class="admin-scroll">
           <table class="price-edit-table" id="tblMounting">
             <thead><tr><th>款式</th><th>18K 金</th><th>14K 金</th><th>9K 金</th><th>PT950 鉑金</th><th>純銀</th></tr></thead>
@@ -386,26 +387,26 @@
   </main>
 </div>
 
-<script type="module" src="/static/react/admin-tables.js?v=3"></script>
-<script src="js/api-client.js?v=7"></script>
+<script type="module" src="/static/react/admin-tables.js?v=14"></script>
+<script src="js/api-client.js?v=9"></script>
 <script src="js/toast.js?v=1"></script>
-<script src="js/skeleton-ui.js?v=2"></script>
+<script src="js/skeleton-ui.js?v=4"></script>
 <script src="js/order-status.js"></script>
 <script src="js/chart.umd.min.js"></script>
 <script src="js/shop-assets.js"></script>
 <script src="js/admin-dashboard-chart.js"></script>
 <script src="js/admin-table-sort.js?v=1"></script>
-<script src="js/admin-image-urls.js?v=7"></script>
+<script src="js/admin-image-urls.js?v=8"></script>
 <script src="js/admin.js?v=18"></script>
 <script src="js/girdle-engrave.js?v=10"></script>
 <script src="js/admin-orders.js?v=14"></script>
 <script src="js/order-detail.js"></script>
-<script src="js/admin-products.js?v=17"></script>
-<script src="js/admin-accounts.js?v=7"></script>
-<script src="js/admin-invites.js?v=11"></script>
-<script src="js/admin-coupons.js?v=4"></script>
-<script src="js/admin-content.js?v=5"></script>
-<script src="js/pricing-config.js?v=1.1"></script>
+<script src="js/admin-products.js?v=18"></script>
+<script src="js/admin-accounts.js?v=9"></script>
+<script src="js/admin-invites.js?v=12"></script>
+<script src="js/admin-coupons.js?v=5"></script>
+<script src="js/admin-content.js?v=11"></script>
+<script src="js/pricing-config.js?v=1.2"></script>
 <script>
 /* 側邊欄分頁切換（純前端示意） */
 (function(){
@@ -500,13 +501,26 @@
       var key = inp.dataset.mounting, metal = inp.dataset.metal;
       var v = p.mounting[key] ? p.mounting[key][metal] : null;
       inp.value = (v != null) ? v : 0;
+      inp.readOnly = true;
+      inp.classList.add('is-auto-price');
+      inp.title = '依台銀即時金價自動換算，無需手動輸入';
     });
     inpShapePct.value = p.shapeSurchargePct;
     inpEngraveFee.value = p.engraveFee;
+    var goldNote = document.getElementById('mountingGoldNote');
+    if (goldNote && window.ImprintPricing.getGoldQuoteMeta) {
+      var q = window.ImprintPricing.getGoldQuoteMeta();
+      if (q && q.available) {
+        var stale = q.is_stale ? '（資料可能已過期）' : '';
+        goldNote.textContent = '金價來源：台銀牌價 · 更新：' + (q.fetched_at_display || q.fetched_at || '—') + stale;
+      } else {
+        goldNote.textContent = '金價暫未取得，目前顯示基準估算值；待台銀資料更新後會自動換算。';
+      }
+    }
   }
 
   function collectOverrides(){
-    var overrides = { diamond: { white: {}, fancy: {} }, mounting: {} };
+    var overrides = { diamond: { white: {}, fancy: {} } };
     document.querySelectorAll('[data-diamond]').forEach(function(inp){
       var color = inp.dataset.diamond, carat = inp.dataset.carat;
       if (inp.value === '') {
@@ -514,13 +528,6 @@
       } else {
         overrides.diamond[color][carat] = Number(inp.value);
       }
-    });
-    MOUNTING_ROWS.forEach(function(row){
-      overrides.mounting[row[0]] = {};
-    });
-    document.querySelectorAll('[data-mounting]').forEach(function(inp){
-      var key = inp.dataset.mounting, metal = inp.dataset.metal;
-      overrides.mounting[key][metal] = Number(inp.value) || 0;
     });
     overrides.shapeSurchargePct = Number(inpShapePct.value) || 0;
     overrides.engraveFee = Number(inpEngraveFee.value) || 0;
@@ -571,7 +578,19 @@
     msg.textContent = '';
   });
 
-  window.PricingPanel = { refresh: fillValues };
+  window.PricingPanel = {
+    refresh: function () {
+      if (!window.ImprintPricing || !window.ImprintPricing.refreshLiveGold) {
+        fillValues();
+        return Promise.resolve();
+      }
+      msg.textContent = '更新金價與戒台費用中…';
+      return window.ImprintPricing.refreshLiveGold().then(function () {
+        fillValues();
+        msg.textContent = '';
+      });
+    }
+  };
 })();
 </script>
 </body>

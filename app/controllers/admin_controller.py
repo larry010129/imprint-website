@@ -27,7 +27,8 @@ from app.auth import (
     log_admin_action,
     verify_password,
 )
-from app.catalog import build_catalog_response, fetch_catalog_rows, load_product_children
+from app.catalog import load_product_children
+from app.product_categories import category_labels, create_category, fetch_categories, update_category_thumb, valid_category_slugs
 from config.settings import settings
 from app.database import get_connection, get_transaction
 from app.orders import attach_order_display, attach_order_relations, hydrate_order
@@ -424,6 +425,7 @@ async def orders_bulk_update(request: Request) -> JSONResponse:
 
 
 _PRODUCT_UPLOAD_DIR = settings.static_dir / "uploads" / "products"
+_CATEGORY_UPLOAD_DIR = settings.static_dir / "uploads" / "categories"
 _BANNER_UPLOAD_DIR = settings.static_dir / "uploads" / "banners"
 _TESTIMONIAL_UPLOAD_DIR = settings.static_dir / "uploads" / "testimonials"
 _ALLOWED_IMAGE_EXT = {".png", ".jpg", ".jpeg", ".webp"}
@@ -450,6 +452,54 @@ async def product_upload(request: Request, file: UploadFile = File(...)) -> JSON
     name = f"{uuid.uuid4().hex}{ext}"
     (_PRODUCT_UPLOAD_DIR / name).write_bytes(data)
     return JSONResponse(content={"url": f"/static/uploads/products/{name}"})
+
+
+@router.post("/product-category")
+async def product_category_create(request: Request) -> JSONResponse:
+    _require_admin(request)
+    body = await request.json()
+    label_zh = body.get("labelZh") or body.get("label_zh") or ""
+    label_en = body.get("labelEn") or body.get("label_en")
+    with get_transaction() as conn, conn.cursor() as cur:
+        category, error = create_category(cur, label_zh=label_zh, label_en=label_en)
+    if error:
+        return JSONResponse(status_code=400, content={"error": error})
+    return JSONResponse(content={"category": category})
+
+
+@router.post("/product-category-upload")
+async def product_category_upload(
+    request: Request,
+    file: UploadFile = File(...),
+    slug: str = Query(...),
+) -> JSONResponse:
+    _require_admin(request)
+    slug = (slug or "").strip()
+    if not slug:
+        return JSONResponse(status_code=400, content={"error": "missing slug"})
+    if not file.filename:
+        return JSONResponse(status_code=400, content={"error": "missing file"})
+
+    ext = Path(file.filename).suffix.lower()
+    if ext not in _ALLOWED_IMAGE_EXT:
+        return JSONResponse(status_code=400, content={"error": "僅支援 PNG / JPG / JPEG / WEBP"})
+
+    data = await file.read()
+    if not data:
+        return JSONResponse(status_code=400, content={"error": "empty file"})
+    if len(data) > _MAX_IMAGE_BYTES:
+        return JSONResponse(status_code=400, content={"error": "圖片需小於 5MB"})
+
+    _CATEGORY_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    name = f"{slug}{ext}"
+    (_CATEGORY_UPLOAD_DIR / name).write_bytes(data)
+    url = f"/static/uploads/categories/{name}"
+
+    with get_transaction() as conn, conn.cursor() as cur:
+        category, error = update_category_thumb(cur, slug, url)
+    if error:
+        return JSONResponse(status_code=400, content={"error": error})
+    return JSONResponse(content={"url": url, "category": category})
 
 
 def _products_with_children(cur) -> list[dict]:
@@ -482,14 +532,23 @@ async def products_list(request: Request) -> dict:
     _require_admin(request)
     with get_connection() as conn, conn.cursor() as cur:
         products = _products_with_children(cur)
-    return {"products": products, "categoryLabels": CATEGORY_LABELS}
+        categories = fetch_categories(cur)
+        labels = category_labels(cur)
+    return {
+        "products": products,
+        "categoryLabels": labels or CATEGORY_LABELS,
+        "categories": categories,
+        "categoryOrder": [row["slug"] for row in categories],
+    }
 
 
 @router.post("/products")
 async def products_create(request: Request) -> JSONResponse:
     user_id = _require_admin(request)
     body = await request.json()
-    cleaned, error = validate_product_fields(body)
+    with get_connection() as conn, conn.cursor() as cur:
+        allowed = valid_category_slugs(cur)
+    cleaned, error = validate_product_fields(body, valid_categories=allowed)
     if error:
         return JSONResponse(status_code=400, content={"error": error})
 
@@ -530,7 +589,9 @@ async def product_update(request: Request) -> JSONResponse:
     if not product_id:
         return JSONResponse(status_code=400, content={"error": "missing id"})
 
-    cleaned, error = validate_product_fields(body)
+    with get_connection() as conn, conn.cursor() as cur:
+        allowed = valid_category_slugs(cur)
+    cleaned, error = validate_product_fields(body, valid_categories=allowed)
     if error:
         return JSONResponse(status_code=400, content={"error": error})
 
@@ -1258,29 +1319,20 @@ async def admin_testimonials_create(request: Request) -> JSONResponse:
     if not isinstance(body, dict):
         body = {}
 
-    from app.content import serialize_testimonial
+    from app.content import (
+        apply_testimonial_sort_order,
+        next_testimonial_sort_order,
+        parse_testimonial_payload,
+        serialize_testimonial,
+    )
 
-    name = str(body.get("name") or "").strip()
-    text = str(body.get("text") or "").strip()
-    if not name or not text:
-        return JSONResponse(status_code=400, content={"error": "請填寫姓名與見證內容"})
-    role = str(body.get("role") or "").strip()
-    category = str(body.get("category") or "").strip()
-    city = str(body.get("city") or "").strip()
-    try:
-        rating = int(body.get("rating") or 5)
-    except (TypeError, ValueError):
-        return JSONResponse(status_code=400, content={"error": "評分無效"})
-    if rating < 1 or rating > 5:
-        return JSONResponse(status_code=400, content={"error": "評分須為 1–5"})
-    try:
-        sort_order = int(body.get("sortOrder") if body.get("sortOrder") not in (None, "") else 0)
-    except (TypeError, ValueError):
-        return JSONResponse(status_code=400, content={"error": "排序無效"})
-    is_published = bool(body.get("isPublished") if body.get("isPublished") is not None else True)
-    image_url = str(body.get("imageUrl") or body.get("image_url") or "").strip()
+    cleaned, error = parse_testimonial_payload(body)
+    if error:
+        return JSONResponse(status_code=400, content={"error": error})
 
-    with get_connection() as conn, conn.cursor() as cur:
+    explicit_sort = body.get("sortOrder") not in (None, "")
+    with get_transaction() as conn, conn.cursor() as cur:
+        sort_order = next_testimonial_sort_order(cur)
         cur.execute(
             """
             insert into testimonials (
@@ -1288,9 +1340,27 @@ async def admin_testimonials_create(request: Request) -> JSONResponse:
             ) values (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             returning *
             """,
-            (name, role, category, city, text, image_url, rating, sort_order, is_published),
+            (
+                cleaned["name"],
+                cleaned["role"],
+                cleaned["category"],
+                cleaned["city"],
+                cleaned["text"],
+                cleaned["image_url"],
+                cleaned["rating"],
+                sort_order,
+                cleaned["is_published"],
+            ),
         )
         row = serialize_testimonial(cur.fetchone())
+        if explicit_sort:
+            try:
+                target = max(0, int(body.get("sortOrder")))
+            except (TypeError, ValueError):
+                return JSONResponse(status_code=400, content={"error": "排序無效"})
+            apply_testimonial_sort_order(cur, row["id"], target)
+            cur.execute("select * from testimonials where id = %s", (row["id"],))
+            row = serialize_testimonial(cur.fetchone())
 
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute("select email from users where id = %s", (user_id,))
@@ -1325,52 +1395,77 @@ async def admin_testimonials_update(request: Request) -> JSONResponse:
     if not isinstance(body, dict):
         body = {}
 
-    from app.content import serialize_testimonial
+    from app.content import apply_testimonial_sort_order, parse_testimonial_payload, serialize_testimonial
 
     tid = body.get("id")
     if not tid:
         return JSONResponse(status_code=400, content={"error": "缺少 id"})
-    name = str(body.get("name") or "").strip()
-    text = str(body.get("text") or "").strip()
-    if not name or not text:
-        return JSONResponse(status_code=400, content={"error": "請填寫姓名與見證內容"})
-    role = str(body.get("role") or "").strip()
-    category = str(body.get("category") or "").strip()
-    city = str(body.get("city") or "").strip()
-    image_url = str(body.get("imageUrl") or body.get("image_url") or "").strip()
-    try:
-        rating = int(body.get("rating") or 5)
-    except (TypeError, ValueError):
-        return JSONResponse(status_code=400, content={"error": "評分無效"})
-    if rating < 1 or rating > 5:
-        return JSONResponse(status_code=400, content={"error": "評分須為 1–5"})
-    try:
-        sort_order = int(body.get("sortOrder") if body.get("sortOrder") not in (None, "") else 0)
-    except (TypeError, ValueError):
-        return JSONResponse(status_code=400, content={"error": "排序無效"})
-    is_published = bool(body.get("isPublished") if body.get("isPublished") is not None else True)
+    cleaned, error = parse_testimonial_payload(body)
+    if error:
+        return JSONResponse(status_code=400, content={"error": error})
 
-    with get_connection() as conn, conn.cursor() as cur:
+    explicit_sort = body.get("sortOrder") not in (None, "")
+
+    with get_transaction() as conn, conn.cursor() as cur:
+        cur.execute("select sort_order from testimonials where id = %s", (tid,))
+        existing = cur.fetchone()
+        if not existing:
+            return JSONResponse(status_code=404, content={"error": "找不到見證"})
+        sort_order = int(existing["sort_order"])
         cur.execute(
             """
             update testimonials set
               name = %s, role = %s, category = %s, city = %s, text = %s,
-              image_url = %s, rating = %s, sort_order = %s, is_published = %s, updated_at = now()
+              image_url = %s, rating = %s, is_published = %s, updated_at = now()
             where id = %s
             returning *
             """,
-            (name, role, category, city, text, image_url, rating, sort_order, is_published, tid),
+            (
+                cleaned["name"],
+                cleaned["role"],
+                cleaned["category"],
+                cleaned["city"],
+                cleaned["text"],
+                cleaned["image_url"],
+                cleaned["rating"],
+                cleaned["is_published"],
+                tid,
+            ),
         )
-        row = cur.fetchone()
-        if not row:
-            return JSONResponse(status_code=404, content={"error": "找不到見證"})
-        out = serialize_testimonial(row)
+        row = serialize_testimonial(cur.fetchone())
+        if explicit_sort:
+            try:
+                target = max(0, int(body.get("sortOrder")))
+            except (TypeError, ValueError):
+                return JSONResponse(status_code=400, content={"error": "排序無效"})
+            apply_testimonial_sort_order(cur, str(tid), target)
+            cur.execute("select * from testimonials where id = %s", (tid,))
+            row = serialize_testimonial(cur.fetchone())
 
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute("select email from users where id = %s", (user_id,))
         actor = cur.fetchone()
     log_admin_action(actor["email"] if actor else None, "testimonial_updated", {"id": str(tid)})
-    return JSONResponse(content={"testimonial": out})
+    return JSONResponse(content={"testimonial": row})
+
+
+@router.post("/testimonial-reorder")
+async def admin_testimonial_reorder(request: Request) -> JSONResponse:
+    _require_admin(request)
+    body = await request.json()
+    if not isinstance(body, dict):
+        body = {}
+    tid = body.get("id")
+    direction = body.get("direction")
+    if not tid or direction not in {"up", "down"}:
+        return JSONResponse(status_code=400, content={"error": "invalid id/direction"})
+
+    from app.content import move_testimonial
+
+    with get_transaction() as conn, conn.cursor() as cur:
+        if not move_testimonial(cur, str(tid), direction):
+            return JSONResponse(status_code=400, content={"error": "無法調整排序"})
+    return JSONResponse(content={"ok": True})
 
 
 @router.post("/testimonial-action")
@@ -1398,6 +1493,10 @@ async def admin_testimonial_action(request: Request) -> JSONResponse:
         row = cur.fetchone()
         if not row:
             return JSONResponse(status_code=404, content={"error": "找不到見證"})
+        if action == "delete":
+            from app.content import renormalize_testimonial_sort
+
+            renormalize_testimonial_sort(cur)
 
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute("select email from users where id = %s", (user_id,))

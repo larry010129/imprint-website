@@ -1,39 +1,6 @@
 import * as React from "react"
-import {
-  motion,
-  type Variants,
-} from "motion/react"
 
 import { navParentIsLink, resolveHref, type NavItem } from "@/lib/nav-items"
-
-const panelVariants: Variants = {
-  open: {
-    opacity: 1,
-    transition: { duration: 0.22, ease: "easeOut" },
-  },
-  closed: {
-    opacity: 0,
-    transition: { duration: 0.18 },
-  },
-}
-
-const navVariants: Variants = {
-  open: { transition: { staggerChildren: 0.06, delayChildren: 0.18 } },
-  closed: { transition: { staggerChildren: 0.04, staggerDirection: -1 } },
-}
-
-const itemVariants: Variants = {
-  open: {
-    y: 0,
-    opacity: 1,
-    transition: { y: { stiffness: 1000, velocity: -100 } },
-  },
-  closed: {
-    y: 40,
-    opacity: 0,
-    transition: { y: { stiffness: 1000 } },
-  },
-}
 
 type MobileAnimatedNavProps = {
   isOpen: boolean
@@ -59,36 +26,28 @@ export function MobileMenuToggle({
       onClick={onToggle}
     >
       <svg width="23" height="23" viewBox="0 0 23 23" aria-hidden="true">
-        <motion.path
+        <path
           fill="transparent"
           strokeWidth="3"
           stroke="currentColor"
           strokeLinecap="round"
-          animate={
-            isOpen
-              ? { d: "M 3 16.5 L 17 2.5" }
-              : { d: "M 2 2.5 L 20 2.5" }
-          }
+          d={isOpen ? "M 3 16.5 L 17 2.5" : "M 2 2.5 L 20 2.5"}
         />
-        <motion.path
+        <path
+          className="mobile-menu-toggle__middle"
           fill="transparent"
           strokeWidth="3"
           stroke="currentColor"
           strokeLinecap="round"
           d="M 2 9.423 L 20 9.423"
-          animate={{ opacity: isOpen ? 0 : 1 }}
-          transition={{ duration: 0.1 }}
+          opacity={isOpen ? 0 : 1}
         />
-        <motion.path
+        <path
           fill="transparent"
           strokeWidth="3"
           stroke="currentColor"
           strokeLinecap="round"
-          animate={
-            isOpen
-              ? { d: "M 3 2.5 L 17 16.346" }
-              : { d: "M 2 16.346 L 20 16.346" }
-          }
+          d={isOpen ? "M 3 2.5 L 17 16.346" : "M 2 16.346 L 20 16.346"}
         />
       </svg>
     </button>
@@ -109,32 +68,18 @@ export default function MobileAnimatedNav({
   }, [isOpen])
 
   return (
-    <motion.nav
-      className="mobile-animated-nav"
-      initial={false}
-      animate={isOpen ? "open" : "closed"}
+    <nav
+      className={`mobile-animated-nav${isOpen ? " is-open" : ""}`}
       aria-hidden={!isOpen}
-      style={{ pointerEvents: isOpen ? "auto" : "none" }}
     >
-      <motion.div
-        className="mobile-animated-nav__panel"
-        variants={panelVariants}
-      />
-      <motion.ul
-        className="mobile-animated-nav__list"
-        variants={navVariants}
-        role="list"
-      >
+      <div className="mobile-animated-nav__panel" />
+      <ul className="mobile-animated-nav__list" role="list">
         {items.map((item) => {
           const hasChildren = !!item.children?.length
           const expanded = expandedId === item.id
 
           return (
-            <motion.li
-              key={item.id}
-              className="mobile-animated-nav__item"
-              variants={itemVariants}
-            >
+            <li key={item.id} className="mobile-animated-nav__item">
               <div className="mobile-animated-nav__row">
                 {navParentIsLink(item) ? (
                   <a
@@ -197,18 +142,15 @@ export default function MobileAnimatedNav({
                   ))}
                 </ul>
               ) : null}
-            </motion.li>
+            </li>
           )
         })}
         {accountSlot ? (
-          <motion.li
-            className="mobile-animated-nav__item mobile-animated-nav__item--account"
-            variants={itemVariants}
-          >
+          <li className="mobile-animated-nav__item mobile-animated-nav__item--account">
             {accountSlot}
-          </motion.li>
+          </li>
         ) : null}
-      </motion.ul>
-    </motion.nav>
+      </ul>
+    </nav>
   )
 }

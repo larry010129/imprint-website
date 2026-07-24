@@ -150,7 +150,7 @@
   background: var(--card);
   border: 1px solid #EDE7E0;
   border-radius: 10px;
-  overflow: hidden;
+  overflow: visible;
   box-shadow: 0 8px 24px rgba(43, 35, 32, 0.04);
 }
 
@@ -166,6 +166,11 @@
   position: sticky;
   top: 0;
   z-index: 2;
+  pointer-events: none;
+}
+
+.adx-member-head .adx-sort-btn {
+  pointer-events: auto;
 }
 
 .adx-member-row {
@@ -204,7 +209,12 @@
 }
 
 .adx-col-grow { flex: 1 1 220px; min-width: 0; }
-.adx-col-role { flex: 0 0 108px; }
+.adx-col-role {
+  flex: 0 0 108px;
+  position: relative;
+  z-index: 1;
+  overflow: visible;
+}
 .adx-col-status { flex: 0 0 72px; }
 .adx-col-joined { flex: 0 0 96px; }
 .adx-col-store { flex: 0 0 120px; min-width: 0; }
@@ -340,8 +350,14 @@
   padding: 6px 8px;
   border: 1px solid #DDD5CC;
   border-radius: 6px;
-  background: #fff;
+  background-color: #fff;
   color: var(--ink);
+  cursor: pointer;
+  pointer-events: auto;
+  position: relative;
+  z-index: 2;
+  appearance: auto;
+  -webkit-appearance: menulist;
 }
 
 .adx-role-select:disabled {
@@ -531,10 +547,74 @@
   background: transparent;
   color: var(--ink-soft);
   cursor: pointer;
+  transition: none;
+  box-shadow: none;
+}
+.adx-tab:hover,
+.adx-tab:focus,
+.adx-tab:focus-visible,
+.adx-tab:active {
+  background: transparent;
+  color: var(--ink-soft);
+  border-color: transparent;
+  outline: none;
+  box-shadow: none;
 }
 .adx-tab.is-active {
   background: #F3F0EC;
   color: var(--ink);
   border-color: #E3DCD3;
   font-weight: 600;
+}
+.adx-tab.is-active:hover,
+.adx-tab.is-active:focus,
+.adx-tab.is-active:focus-visible,
+.adx-tab.is-active:active {
+  background: #F3F0EC;
+  color: var(--ink);
+  border-color: #E3DCD3;
+  outline: none;
+  box-shadow: none;
+}
+
+/* React admin tables — keep primary actions visible (admin-core resets button bg) */
+[data-admin-root] [data-slot="button-1"] {
+  border: none;
+}
+
+[data-admin-root] [data-slot="button-1"].bg-primary,
+[data-admin-root] [data-slot="button-1"][class*="bg-primary"] {
+  background-color: var(--primary, #2b2320);
+  color: var(--primary-foreground, #fff);
+}
+
+[data-admin-root] [data-slot="button-1"].bg-primary:hover,
+[data-admin-root] [data-slot="button-1"].bg-primary:focus,
+[data-admin-root] [data-slot="button-1"].bg-primary:focus-visible,
+[data-admin-root] [data-slot="button-1"].bg-primary:active,
+[data-admin-root] [data-slot="button-1"][class*="bg-[#2b2320]"]:hover,
+[data-admin-root] [data-slot="button-1"][class*="bg-[#2b2320]"]:focus,
+[data-admin-root] [data-slot="button-1"][class*="bg-[#2b2320]"]:focus-visible,
+[data-admin-root] [data-slot="button-1"][class*="bg-[#2b2320]"]:active {
+  background-color: var(--primary, #2b2320);
+  color: var(--primary-foreground, #fff);
+}
+
+[data-admin-root] [data-slot="button-1"].bg-destructive,
+[data-admin-root] [data-slot="button-1"][class*="bg-destructive"],
+[data-admin-root] [data-slot="button-1"][class*="bg-[#c0392b]"] {
+  background-color: var(--destructive, #c0392b);
+  color: var(--destructive-foreground, #fff);
+}
+
+[data-admin-root] [data-slot="button-1"].bg-destructive:hover,
+[data-admin-root] [data-slot="button-1"].bg-destructive:focus,
+[data-admin-root] [data-slot="button-1"].bg-destructive:focus-visible,
+[data-admin-root] [data-slot="button-1"].bg-destructive:active,
+[data-admin-root] [data-slot="button-1"][class*="bg-[#c0392b]"]:hover,
+[data-admin-root] [data-slot="button-1"][class*="bg-[#c0392b]"]:focus,
+[data-admin-root] [data-slot="button-1"][class*="bg-[#c0392b]"]:focus-visible,
+[data-admin-root] [data-slot="button-1"][class*="bg-[#c0392b]"]:active {
+  background-color: var(--destructive, #c0392b);
+  color: var(--destructive-foreground, #fff);
 }

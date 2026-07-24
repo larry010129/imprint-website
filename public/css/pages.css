@@ -276,6 +276,63 @@
 
 /* 聯絡頁 */
 .contact-section{ padding:90px 0 100px; }
+.contact-section--intro{
+  padding:48px 0 24px;
+}
+.contact-section--intro .contact-grid{
+  gap:28px;
+  align-items:start;
+}
+.contact-section--intro .contact-card{
+  padding:22px 20px;
+}
+.contact-section--intro .contact-card h3{
+  margin-bottom:14px;
+}
+.contact-section--intro .contact-list li{
+  padding:9px 0;
+  font-size:13px;
+}
+.contact-section--intro .text-faint-lead{
+  margin-top:12px;
+  line-height:1.65;
+}
+.contact-section--intro .mt-lg{
+  margin-top:14px;
+}
+.contact-section--intro .contact-map iframe{
+  min-height:0;
+  height:200px;
+}
+@media (min-width:901px){
+  .contact-section--intro .contact-map iframe{ height:240px; }
+}
+.contact-scroll-hint{
+  margin:18px 0 0;
+  text-align:center;
+}
+.contact-scroll-hint a{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:8px 16px;
+  border:1px solid #EFE9E3;
+  border-radius:999px;
+  background:#fff;
+  color:var(--ink-soft);
+  font-size:13px;
+  letter-spacing:.06em;
+  text-decoration:none;
+  box-shadow:var(--shadow-soft);
+  transition:color .2s, border-color .2s;
+}
+.contact-scroll-hint a:hover{
+  color:var(--mint-deep);
+  border-color:color-mix(in srgb, var(--mint-deep) 45%, #EFE9E3);
+}
+#view-contact-form{
+  scroll-margin-top:96px;
+}
 .contact-grid{ display:grid; grid-template-columns:1fr 1fr; gap:56px; }
 .contact-card{ background:#fff; border:1px solid #EFE9E3; border-radius:8px; padding:36px 32px; box-shadow:var(--shadow-soft); }
 .contact-card h3{ font-size:15px; font-weight:600; letter-spacing:.12em; margin-bottom:22px; }
@@ -331,18 +388,31 @@
 }
 .contact-form-panel__email:hover{ color:var(--ink); text-decoration:underline; }
 .contact-form-panel__socials{
-  display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-top:14px;
+  display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin-top:14px;
 }
 .contact-form-panel__or{ font-size:12px; color:var(--ink-faint); letter-spacing:.08em; }
 .contact-form-panel__social{
   display:inline-flex; align-items:center; justify-content:center;
-  min-height:36px; padding:0 14px;
-  border:1px solid var(--mint-line); border-radius:8px;
-  background:#fff; color:var(--ink); font-size:13px; font-weight:500;
-  text-decoration:none; transition:background .15s, border-color .15s, color .15s;
+  width:44px; height:44px; padding:0;
+  border:none; border-radius:50%;
+  color:#fff; text-decoration:none;
+  box-shadow:0 4px 12px rgba(0,0,0,.16);
+  transition:transform .15s ease, box-shadow .15s ease, filter .15s ease;
 }
+.contact-form-panel__social svg{
+  width:22px; height:22px; display:block;
+}
+.contact-form-panel__social--line{ background:#06c755; }
+.contact-form-panel__social--fb{ background:#1877f2; }
 .contact-form-panel__social:hover{
-  background:var(--mint-soft); border-color:var(--mint-deep); color:var(--ink);
+  transform:translateY(-2px);
+  box-shadow:0 6px 18px rgba(0,0,0,.22);
+  filter:brightness(1.05);
+}
+.contact-form-panel__social:active{ transform:scale(.96); }
+.contact-form-panel__social:focus-visible{
+  outline:2px solid var(--mint-deep, #5ecfcf);
+  outline-offset:3px;
 }
 .contact-form-panel__rule{
   margin:22px 0; border:0; border-top:1px solid #EFE9E3;
@@ -450,8 +520,58 @@
 .order-row .num{ font-weight:600; letter-spacing:.04em; }
 .order-row .status{ font-size:12px; color:var(--mint-deep); margin-top:4px; }
 .account-section{ padding:90px 0 100px; }
-.account-grid{ display:grid; grid-template-columns:280px 1fr; gap:48px; }
-@media (max-width:860px){ .account-grid{ grid-template-columns:1fr; } }
+.account-grid{ display:grid; grid-template-columns:minmax(280px,420px); gap:48px; justify-content:center; }
+
+.account-profile-card .account-profile-form{
+  display:flex; flex-direction:column; gap:12px; margin-bottom:18px;
+}
+.account-field{
+  display:flex; flex-direction:column; gap:6px;
+  font-size:12px; color:var(--ink-faint); letter-spacing:.04em;
+}
+.account-field-row{
+  display:grid; grid-template-columns:1fr 1fr; gap:10px;
+}
+@media (max-width:420px){
+  .account-field-row{ grid-template-columns:1fr; }
+}
+.account-field input,
+.account-field select{
+  width:100%; font-family:inherit; font-size:14px; color:var(--ink);
+  padding:10px 12px; border:1px solid #DDD5CC; border-radius:6px; background:#fff;
+}
+.account-field select{
+  appearance:none; -webkit-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%232B2320' d='M1.2 1.2L6 6l4.8-4.8'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 12px center; background-size:12px 8px;
+  padding-right:36px; cursor:pointer;
+}
+.account-field select:disabled{
+  opacity:.65; cursor:not-allowed; background-color:#f7f5f2;
+}
+.account-field input:focus,
+.account-field select:focus{
+  outline:none; border-color:var(--mint-deep, #5ecfcf);
+}
+.account-field--readonly .v{
+  font-size:14px; font-weight:500; color:var(--ink); word-break:break-all;
+}
+.account-address-heading{
+  margin:8px 0 0; font-size:13px; font-weight:600; color:var(--ink); letter-spacing:.06em;
+}
+.account-address-hint{
+  margin:0; font-size:11px; color:var(--ink-faint); line-height:1.5;
+}
+.account-save-btn{ width:100%; margin-top:4px; }
+.account-profile-msg{
+  margin:0; font-size:13px; line-height:1.5;
+}
+.account-profile-msg.is-ok{ color:#3e8e62; }
+.account-profile-msg.is-err{ color:#c0392b; }
+.account-profile-card .cfg-actions{
+  display:flex; flex-wrap:wrap; gap:8px;
+}
+.account-profile-card .cfg-actions .btn{ flex:1 1 auto; text-align:center; }
 
 /* 客戶見證頁：加大版見證牆 */
 .stories-page-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:24px; padding:44px 0 90px; }
@@ -764,7 +884,7 @@
 .series--hero-padding { padding: 80px 0 110px; }
 .flex-wrap-gap { display: flex; gap: 12px; flex-wrap: wrap; }
 .auth-card--narrow { max-width: 480px; }
-.contact-section--flush { padding-top: 0; }
+.contact-section--flush { padding-top: 0; padding-bottom: 80px; }
 .container--narrow-md { max-width: 840px; }
 .section-title--mb-xl { margin-bottom: 26px; }
 .prose-soft { font-size: 15px; color: var(--ink-soft); line-height: 2.15; }

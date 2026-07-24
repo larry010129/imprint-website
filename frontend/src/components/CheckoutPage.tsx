@@ -196,24 +196,30 @@ export default function CheckoutPage() {
     let cancelled = false;
 
     (async () => {
+      const resultsPromise = Promise.all(
+        itemIds.map((id) =>
+          apiFetch<ItemDetail>("/api/cart-item?id=" + encodeURIComponent(id)).catch(() => null)
+        )
+      );
       const session = await fetchSession();
+      if (cancelled) return;
       if (!session) {
         const next = window.location.pathname + window.location.search;
         window.location.href = "/login.html?next=" + encodeURIComponent(next);
         return;
       }
-      if (cancelled) return;
       setName(session.profile?.full_name || "");
       setPhone(session.profile?.phone || "");
       setEmail(session.user.email || "");
+      setPostal(session.profile?.shipping_postal || "");
+      setCity(session.profile?.shipping_city || "");
+      setAddress(session.profile?.shipping_address || "");
 
-      const results = await Promise.all(
-        itemIds.map((id) => apiFetch<ItemDetail>("/api/cart-item?id=" + encodeURIComponent(id)))
-      );
+      const results = await resultsPromise;
       if (cancelled) return;
       const found = results
-        .filter((r) => r.ok && r.data?.item)
-        .map((r) => r.data as ItemDetail);
+        .filter((r) => r?.ok && r.data?.item)
+        .map((r) => r?.data as ItemDetail);
       if (!found.length) setError("找不到訂購項目，請重新選購。");
       setItems(found);
       setAppliedCoupon(null);
@@ -272,49 +278,98 @@ export default function CheckoutPage() {
     setCouponInput("");
   }
 
+  function showCheckoutError(message: string) {
+    setError(message);
+    window.requestAnimationFrame(() => {
+      document.getElementById("checkout-form-error")?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    });
+  }
+
+  function mapCheckoutError(raw?: string | null): string {
+    if (!raw) return "送出失敗，請稍後再試";
+    const known: Record<string, string> = {
+      "cart is empty": "購物車是空的，請返回購物車重新選購",
+      "invalid item selection": "訂購項目無效，請返回購物車重新選擇",
+      "not signed in": "請先登入後再送出訂單",
+      "Internal Server Error": "伺服器發生錯誤，請稍後再試或聯絡客服",
+    };
+    if (known[raw]) return known[raw];
+    if (raw.startsWith("缺少欄位")) {
+      return "品項規格不完整，請返回購物車編輯後再送出";
+    }
+    return raw;
+  }
+
+  function readApiError(data: { error?: string; detail?: string | string[] } | null): string | null {
+    if (!data) return null;
+    if (typeof data.error === "string" && data.error.trim()) return data.error.trim();
+    const detail = data.detail;
+    if (typeof detail === "string" && detail.trim()) return detail.trim();
+    if (Array.isArray(detail) && detail.length) {
+      const first = detail.find((part) => typeof part === "string" && part.trim());
+      if (typeof first === "string") return first.trim();
+    }
+    return null;
+  }
+
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
 
     if (!name.trim() || !phone.trim()) {
-      setError("請填寫姓名與聯絡電話");
+      showCheckoutError("請填寫姓名與聯絡電話");
       return;
     }
     if (method === "delivery" && (!address.trim() || !city.trim() || !postal.trim())) {
-      setError("請填寫完整的收件地址");
+      showCheckoutError("請填寫完整的收件地址");
+      return;
+    }
+
+    const emailTrimmed = email.trim();
+    if (emailTrimmed && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrimmed)) {
+      showCheckoutError("Email 格式不正確，請修正或清空後再送出");
       return;
     }
 
     setSubmitting(true);
-    const { status, data } = await apiFetch<{ ok?: boolean; orderNumbers?: string[]; error?: string }>(
-      "/api/cart-checkout",
-      {
-        method: "POST",
-        body: JSON.stringify({
-          itemIds,
-          customerName: name.trim(),
-          customerPhone: phone.trim(),
-          customerEmail: email.trim() || undefined,
-          fulfillmentMethod: method,
-          shippingAddress: method === "delivery" ? address.trim() : undefined,
-          shippingCity: method === "delivery" ? city.trim() : undefined,
-          shippingPostal: method === "delivery" ? postal.trim() : undefined,
-          orderNote: note.trim() || undefined,
-          couponCode: appliedCoupon?.code || undefined,
-        }),
-      }
-    );
+    try {
+      const { status, data } = await apiFetch<{ ok?: boolean; orderNumbers?: string[]; error?: string; detail?: string | string[] }>(
+        "/api/cart-checkout",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            itemIds,
+            customerName: name.trim(),
+            customerPhone: phone.trim(),
+            customerEmail: emailTrimmed || undefined,
+            fulfillmentMethod: method,
+            shippingAddress: method === "delivery" ? address.trim() : undefined,
+            shippingCity: method === "delivery" ? city.trim() : undefined,
+            shippingPostal: method === "delivery" ? postal.trim() : undefined,
+            orderNote: note.trim() || undefined,
+            couponCode: appliedCoupon?.code || undefined,
+          }),
+        }
+      );
 
-    if (status === 401) {
-      window.location.href = "/login.html";
-      return;
+      if (status === 401) {
+        const next = window.location.pathname + window.location.search;
+        window.location.href = "/login.html?next=" + encodeURIComponent(next);
+        return;
+      }
+      if (data?.ok) {
+        window.location.href = buildSuccessUrl(data.orderNumbers);
+        return;
+      }
+      showCheckoutError(mapCheckoutError(readApiError(data)));
+    } catch {
+      showCheckoutError("網路異常，請稍後再試");
+    } finally {
+      setSubmitting(false);
     }
-    if (data?.ok) {
-      window.location.href = buildSuccessUrl(data.orderNumbers);
-      return;
-    }
-    setSubmitting(false);
-    setError(data?.error || "送出失敗，請稍後再試");
   }
 
   if (loading) {
@@ -419,7 +474,7 @@ export default function CheckoutPage() {
   );
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={handleSubmit} noValidate>
       <CheckoutHeader />
 
       <div className="checkout-layout">
@@ -439,13 +494,13 @@ export default function CheckoutPage() {
                   <Label htmlFor="checkout-name">
                     姓名<span className="text-red-500">*</span>
                   </Label>
-                  <Input id="checkout-name" className="mt-2" value={name} onChange={(e) => setName(e.target.value)} required />
+                  <Input id="checkout-name" className="mt-2" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
                 </div>
                 <div>
                   <Label htmlFor="checkout-phone">
                     聯絡電話<span className="text-red-500">*</span>
                   </Label>
-                  <Input id="checkout-phone" className="mt-2" value={phone} onChange={(e) => setPhone(e.target.value)} required />
+                  <Input id="checkout-phone" className="mt-2" value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel" />
                 </div>
               </div>
               <div>
@@ -488,20 +543,20 @@ export default function CheckoutPage() {
                     <Label htmlFor="checkout-address">
                       收件地址<span className="text-red-500">*</span>
                     </Label>
-                    <Input id="checkout-address" className="mt-2" value={address} onChange={(e) => setAddress(e.target.value)} required />
+                    <Input id="checkout-address" className="mt-2" value={address} onChange={(e) => setAddress(e.target.value)} autoComplete="street-address" />
                   </div>
                   <div className="checkout-field-row">
                     <div>
                       <Label htmlFor="checkout-city">
                         縣市<span className="text-red-500">*</span>
                       </Label>
-                      <Input id="checkout-city" className="mt-2" value={city} onChange={(e) => setCity(e.target.value)} required />
+                      <Input id="checkout-city" className="mt-2" value={city} onChange={(e) => setCity(e.target.value)} autoComplete="address-level1" />
                     </div>
                     <div>
                       <Label htmlFor="checkout-postal">
                         郵遞區號<span className="text-red-500">*</span>
                       </Label>
-                      <Input id="checkout-postal" className="mt-2" value={postal} onChange={(e) => setPostal(e.target.value)} required />
+                      <Input id="checkout-postal" className="mt-2" value={postal} onChange={(e) => setPostal(e.target.value)} autoComplete="postal-code" />
                     </div>
                   </div>
                 </>
@@ -534,7 +589,11 @@ export default function CheckoutPage() {
             </div>
           </section>
 
-          {error && <p className="checkout-error">{error}</p>}
+          {error && (
+            <p id="checkout-form-error" className="checkout-error" role="alert">
+              {error}
+            </p>
+          )}
         </div>
 
         {summaryBlock}

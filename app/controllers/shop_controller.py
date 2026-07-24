@@ -44,9 +44,11 @@ def _pricing(config: dict[str, Any]) -> dict[str, Any]:
 
 
 def _validate_config(body: dict[str, Any]) -> str | None:
-    for key in ("category", "type", "gold", "carat"):
+    for key in ("category", "type", "carat"):
         if not body.get(key):
             return f"缺少欄位：{key}"
+    if body.get("category") != "diamond" and not body.get("gold"):
+        return "缺少欄位：gold"
     return None
 
 
@@ -470,6 +472,19 @@ async def coupon_validate(request: Request) -> dict:
 
 @router.post("/cart-checkout")
 async def cart_checkout(request: Request) -> dict:
+    import logging
+
+    logger = logging.getLogger(__name__)
+    try:
+        return await _cart_checkout_impl(request)
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("cart_checkout failed")
+        return _err(500, "訂單建立失敗，請稍後再試或聯絡客服")
+
+
+async def _cart_checkout_impl(request: Request) -> dict:
     user_id = _user_id(request)
     body = await request.json()
     if not isinstance(body, dict):

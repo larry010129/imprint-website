@@ -35,6 +35,7 @@ from app.auth import (
     verify_password,
 )
 from app.database import get_connection
+from app.profile_schema import fetch_profile
 from config.settings import settings
 
 RESET_TOKEN_TTL_HOURS = 1
@@ -273,8 +274,7 @@ async def session(request: Request) -> JSONResponse:
         if not user:
             return JSONResponse(content={"user": None})
 
-        cur.execute("select full_name, phone from profiles where id = %s", (user_id,))
-        profile = cur.fetchone()
+        profile = fetch_profile(cur, user_id)
 
     return JSONResponse(
         content={
@@ -283,3 +283,44 @@ async def session(request: Request) -> JSONResponse:
             "isAdmin": is_admin(user_id),
         }
     )
+
+
+@router.patch("/profile")
+async def update_profile(request: Request) -> JSONResponse:
+    user_id = get_user_id(request)
+    if not user_id:
+        return _err(401, "請先登入")
+
+    body = await request.json()
+    if not isinstance(body, dict):
+        body = {}
+
+    full_name = str(body.get("fullName") or body.get("full_name") or "").strip()
+    phone = str(body.get("phone") or "").strip()
+    shipping_postal = str(body.get("shippingPostal") or body.get("shipping_postal") or "").strip()
+    shipping_city = str(body.get("shippingCity") or body.get("shipping_city") or "").strip()
+    shipping_address = str(body.get("shippingAddress") or body.get("shipping_address") or "").strip()
+    if not full_name:
+        return _err(400, "請填寫姓名")
+    if not phone:
+        return _err(400, "請填寫聯絡電話")
+
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            insert into profiles (id, full_name, phone, shipping_postal, shipping_city, shipping_address)
+            values (%s, %s, %s, %s, %s, %s)
+            on conflict (id) do update set
+              full_name = excluded.full_name,
+              phone = excluded.phone,
+              shipping_postal = excluded.shipping_postal,
+              shipping_city = excluded.shipping_city,
+              shipping_address = excluded.shipping_address
+            returning full_name, phone, store_name, is_partner,
+                      shipping_postal, shipping_city, shipping_address
+            """,
+            (user_id, full_name, phone, shipping_postal or None, shipping_city or None, shipping_address or None),
+        )
+        profile = cur.fetchone()
+
+    return JSONResponse(content={"ok": True, "profile": profile})

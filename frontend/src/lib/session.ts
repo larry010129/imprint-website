@@ -1,6 +1,11 @@
 export type SessionProfile = {
   full_name?: string | null
   phone?: string | null
+  store_name?: string | null
+  is_partner?: boolean | null
+  shipping_postal?: string | null
+  shipping_city?: string | null
+  shipping_address?: string | null
 }
 
 export type SessionUser = {
@@ -12,6 +17,18 @@ export type Session = {
   user: SessionUser
   profile?: SessionProfile | null
   isAdmin?: boolean
+}
+
+type SharedSessionWindow = Window & {
+  __imprintSessionPromise?: Promise<Session | null>
+}
+
+function sharedSessionWindow(): SharedSessionWindow {
+  return window as SharedSessionWindow
+}
+
+function clearSharedSession(): void {
+  delete sharedSessionWindow().__imprintSessionPromise
 }
 
 function apiBase(): string {
@@ -37,17 +54,29 @@ async function request<T>(path: string, init?: RequestInit): Promise<T | null> {
 }
 
 export async function fetchSession(): Promise<Session | null> {
-  const data = await request<{
+  const shared = sharedSessionWindow()
+  const existing = shared.__imprintSessionPromise
+  if (existing) return existing
+
+  const pending = request<{
     user: SessionUser | null
     profile?: SessionProfile | null
     isAdmin?: boolean
-  }>("/api/auth/session")
-  if (!data?.user) return null
-  return { user: data.user, profile: data.profile ?? null, isAdmin: !!data.isAdmin }
+  }>("/api/auth/session").then((data) =>
+    data?.user
+      ? { user: data.user, profile: data.profile ?? null, isAdmin: !!data.isAdmin }
+      : null,
+  )
+  shared.__imprintSessionPromise = pending
+  const session = await pending
+  if (!session && shared.__imprintSessionPromise === pending) clearSharedSession()
+  return session
 }
 
 export async function logoutSession(): Promise<boolean> {
+  clearSharedSession()
   const data = await request<{ ok?: boolean }>("/api/auth/logout", { method: "POST" })
+  clearSharedSession()
   return !!data?.ok
 }
 

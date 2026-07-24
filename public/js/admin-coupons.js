@@ -426,6 +426,7 @@
       }
       _loaded = true;
       root.removeAttribute('aria-busy');
+      root.classList.remove('skel-panel');
       renderShell(res.coupons || []);
     }).catch(function (err) {
       root.innerHTML = '<p class="note warn">載入失敗：' + esc(err && err.message ? err.message : err) + '</p>';

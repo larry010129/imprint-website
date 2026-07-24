@@ -99,7 +99,13 @@
     );
   }
 
+  function clearPanelBusy() {
+    root.removeAttribute('aria-busy');
+    root.classList.remove('skel-panel');
+  }
+
   function renderShell(invites) {
+    clearPanelBusy();
     root.innerHTML =
       '<p class="adx-panel-note">建立邀請碼供合作廠商註冊帳號。可設定名稱、使用次數與有效期限；刪除邀請碼不影響已註冊帳戶。</p>' +
       '<div class="adx-panel-toolbar"><button type="button" class="btn-sm btn-primary" id="btnCreateInvite">+ 建立邀請碼</button></div>' +
@@ -289,6 +295,7 @@
     }
     api.admin.getInvites().then(function (res) {
       if (res.error) {
+        clearPanelBusy();
         root.innerHTML = '<p class="note warn">載入失敗：' + esc(res.error) + '</p>';
         return;
       }

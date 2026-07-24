@@ -8,6 +8,9 @@
     getOrders: function () {
       return global.imprintAPI.getMyOrders();
     },
+    updateProfile: function (fields) {
+      return global.imprintAPI.updateProfile(fields);
+    },
     logout: function () {
       return global.imprintAPI.logout();
     },

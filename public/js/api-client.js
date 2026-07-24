@@ -61,6 +61,9 @@
     },
     logout: function () { return request('/api/auth/logout', { method: 'POST' }); },
     getSession: function () { return request('/api/auth/session'); },
+    updateProfile: function (fields) {
+      return request('/api/auth/profile', { method: 'PATCH', body: fields });
+    },
     requestPasswordReset: function (email) { return request('/api/auth/request-password-reset', { method: 'POST', body: { email: email } }); },
     resetPassword: function (token, newPassword) { return request('/api/auth/reset-password', { method: 'POST', body: { token: token, newPassword: newPassword } }); },
 
@@ -143,6 +146,27 @@
       },
       deleteOrder: function (id, reason) { return request('/api/admin/order-cancel', { method: 'POST', body: { id: id, reason: reason || '管理員取消' } }); },
       getProducts: function () { return request('/api/admin/products'); },
+      createProductCategory: function (fields) { return request('/api/admin/product-category', { method: 'POST', body: fields }); },
+      uploadProductCategoryThumb: function (slug, file) {
+        var fd = new FormData();
+        fd.append('file', file);
+        return fetch(API_BASE + '/api/admin/product-category-upload?slug=' + encodeURIComponent(slug), {
+          method: 'POST',
+          credentials: 'include',
+          body: fd,
+        }).then(function (res) {
+          return res.json().catch(function () { return {}; }).then(function (data) {
+            if (!res.ok && !data.error) {
+              if (typeof data.detail === 'string') data.error = data.detail;
+              else data.error = 'HTTP ' + res.status;
+            }
+            data._httpStatus = res.status;
+            return data;
+          });
+        }).catch(function () {
+          return { error: '系統連線異常，請稍後再試。' };
+        });
+      },
       saveProduct: function (fields) { return request('/api/admin/products', { method: 'POST', body: fields }); },
       updateProduct: function (fields) { return request('/api/admin/product-update', { method: 'POST', body: fields }); },
       productAction: function (id, action) { return request('/api/admin/product-action', { method: 'POST', body: { id: id, action: action } }); },
@@ -157,6 +181,9 @@
       getTestimonials: function () { return request('/api/admin/testimonials'); },
       createTestimonial: function (fields) { return request('/api/admin/testimonials', { method: 'POST', body: fields }); },
       updateTestimonial: function (fields) { return request('/api/admin/testimonial-update', { method: 'POST', body: fields }); },
+      reorderTestimonial: function (id, direction) {
+        return request('/api/admin/testimonial-reorder', { method: 'POST', body: { id: id, direction: direction } });
+      },
       testimonialAction: function (id, action) { return request('/api/admin/testimonial-action', { method: 'POST', body: { id: id, action: action } }); },
       uploadTestimonial: function (file) {
         var fd = new FormData();

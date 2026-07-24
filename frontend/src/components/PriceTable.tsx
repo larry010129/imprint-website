@@ -353,9 +353,7 @@ export default function PriceTable() {
         <div className="text-center">
           <a
             className="inline-flex items-center justify-center rounded-lg bg-foreground px-6 py-3 text-sm font-medium text-background transition-opacity hover:opacity-90"
-            href="https://lin.ee/ktVBtmx"
-            target="_blank"
-            rel="noopener noreferrer"
+            href="/shop/calculator/"
           >
             索取專屬報價
           </a>
