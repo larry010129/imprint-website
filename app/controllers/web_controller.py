@@ -17,6 +17,7 @@ from config.settings import settings
 from app.youtube_channel import fetch_latest_channel_video, resolve_channel_id
 
 templates = Jinja2Templates(directory=str(settings.templates_dir))
+templates.env.globals["google_client_id"] = settings.google_client_id
 _FRAGMENTS_DIR = settings.templates_dir / "fragments"
 _FEATURED_VIDEO_PATH = Path(__file__).resolve().parent.parent / "data" / "featured-video.json"
 _FEATURED_YOUTUBE_LATEST_PATH = Path(__file__).resolve().parent.parent / "data" / "featured-youtube-latest.json"

@@ -22,6 +22,8 @@
         saveBtn: document.getElementById('accountSaveBtn'),
         ordersList: document.getElementById('ordersList'),
         logoutBtn: document.getElementById('logoutBtn'),
+        completeBanner: document.getElementById('accountCompleteBanner'),
+        googleImportBtn: document.getElementById('googleProfileImportBtn'),
       };
     },
     fillCityOptions: function (selectedCity) {
@@ -90,6 +92,25 @@
         : { city: '', district: '' };
       this.fillCityOptions(parsed.city);
       this.fillDistrictOptions(parsed.city, parsed.district);
+      this.updateCompleteBanner(session);
+    },
+    updateCompleteBanner: function (session) {
+      var e = this.els();
+      var params = new URLSearchParams(global.location.search);
+      var showComplete = params.get('complete') === '1' || session.profileComplete === false;
+      if (e.completeBanner) {
+        e.completeBanner.hidden = !showComplete || !!session.profileComplete;
+      }
+      if (e.googleImportBtn) {
+        var canImport = !!(session.hasGoogleLinked && global.IMPRINT_GOOGLE_CLIENT_ID && global.imprintGoogleProfileImport);
+        e.googleImportBtn.hidden = !showComplete || !canImport || !!session.profileComplete;
+      }
+    },
+    setGoogleImportLoading: function (loading) {
+      var e = this.els();
+      if (!e.googleImportBtn) return;
+      e.googleImportBtn.disabled = !!loading;
+      e.googleImportBtn.textContent = loading ? '匯入中…' : '從 Google 帳戶匯入電話與地址';
     },
     setMsg: function (text, type) {
       var e = this.els();

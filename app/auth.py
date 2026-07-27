@@ -43,6 +43,31 @@ def verify_password(password: str, password_hash: str) -> bool:
     return bcrypt.checkpw(password.encode("utf-8"), password_hash.encode("utf-8"))
 
 
+# ── Google Sign-In (Google Identity Services) ───────────────────────────────
+
+def ensure_google_id_column() -> None:
+    """Idempotent — same pattern as app.profile_schema.ensure_profile_address_columns.
+    Called from the app lifespan so a fresh DB doesn't need a manual migration."""
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute("alter table users add column if not exists google_id text unique")
+
+
+def verify_google_id_token(credential: str) -> dict | None:
+    """Verifies a Google ID token's signature, issuer, audience and expiry —
+    never trust the profile data a client sends without this. Returns the
+    decoded claims (sub/email/email_verified/name) or None if invalid."""
+    client_id = settings.google_client_id
+    if not client_id or not credential:
+        return None
+    from google.auth.transport import requests as google_requests
+    from google.oauth2 import id_token as google_id_token
+
+    try:
+        return google_id_token.verify_oauth2_token(credential, google_requests.Request(), client_id)
+    except Exception:
+        return None
+
+
 # ── session cookie ───────────────────────────────────────────────────────
 
 def sign_session(user_id: str, token_version: int = 0) -> str:

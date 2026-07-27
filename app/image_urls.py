@@ -330,10 +330,15 @@ def config_image_url(
 
     db_url = ""
     style_key = style_key_from_refs(cat, str(type_ref) if type_ref else None)
+    # 項墜搭配鍊條時，鍊條金屬色可與項墜本體不同色；優先找上架時標記該鍊條色的照片
+    # （slot key 多一段鍊條金屬色，例如 white-yellow-rose）。
+    chain_metal = _resolve_color(chain_color) if (cat == "pendant" and chain_color) else None
 
     # Exact metal-diamond DB upload (admin slot key e.g. white-pink)
     if diamond != "white":
-        exact = _db_url_for(f"{color}-{diamond}")
+        candidates = [f"{color}-{diamond}-{chain_metal}"] if chain_metal else []
+        candidates.append(f"{color}-{diamond}")
+        exact = _db_url_for(*candidates)
         if exact:
             return exact
 
@@ -361,7 +366,9 @@ def config_image_url(
             return real
 
     # Legacy metal-only DB upload / white-stone slot
-    db_url = _db_url_for(color, f"{color}-white")
+    legacy_candidates = [f"{color}-white-{chain_metal}"] if chain_metal else []
+    legacy_candidates += [color, f"{color}-white"]
+    db_url = _db_url_for(*legacy_candidates)
     if db_url and diamond == "white":
         return db_url
     if not db_url and image_rows:

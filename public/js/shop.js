@@ -19,6 +19,46 @@ function refreshShopLoginState() {
 
 if (new URLSearchParams(window.location.search).get('preview') === '1') {
   window.shopConfig = Object.assign({}, window.shopConfig || {}, { preview: true, useApi: true });
+  (function showAdminPreviewBanner() {
+    const style = document.createElement('style');
+    style.textContent = [
+      '#admin-preview-banner{position:sticky;top:0;z-index:99999;width:100%;',
+      'display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;',
+      'background:#E0A458;color:#2B2320;font-weight:600;font-size:13px;',
+      'padding:10px 16px;box-shadow:0 2px 8px rgba(0,0,0,.15);}',
+      '#admin-preview-return-btn{position:relative;overflow:hidden;flex-shrink:0;',
+      'display:inline-flex;align-items:center;height:30px;padding:0 16px;border:0;',
+      'border-radius:6px;background:#2B2320;color:#fff;font-size:12px;font-weight:600;',
+      'font-family:inherit;cursor:pointer;}',
+      '#admin-preview-return-btn .apb-label{transition:opacity .3s ease;white-space:nowrap;padding-left:20px;}',
+      '#admin-preview-return-btn:hover .apb-label{opacity:0;}',
+      '#admin-preview-return-btn .apb-icon{position:absolute;inset:0;width:25%;',
+      'display:flex;align-items:center;justify-content:center;',
+      'background:rgba(255,255,255,.15);transition:width .3s ease;}',
+      '#admin-preview-return-btn:hover .apb-icon{width:100%;}',
+    ].join('');
+    document.head.appendChild(style);
+
+    const banner = document.createElement('div');
+    banner.id = 'admin-preview-banner';
+
+    const text = document.createElement('span');
+    text.textContent = '⚠ 商品上架預覽模式 — 此頁僅供管理員檢視商品畫面，非顧客看到的正式頁面，無法送出訂單';
+    banner.appendChild(text);
+
+    const returnBtn = document.createElement('button');
+    returnBtn.type = 'button';
+    returnBtn.id = 'admin-preview-return-btn';
+    returnBtn.innerHTML =
+      '<span class="apb-label">返回商品上架</span>' +
+      '<span class="apb-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg></span>';
+    returnBtn.addEventListener('click', function () {
+      window.location.href = '/admin.html#products';
+    });
+    banner.appendChild(returnBtn);
+
+    document.body.prepend(banner);
+  })();
 }
 
 /** Static calculator: bundled catalog + client pricing (no backend). Set useApi:true to enable API. */

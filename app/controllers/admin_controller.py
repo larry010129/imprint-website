@@ -28,7 +28,7 @@ from app.auth import (
     verify_password,
 )
 from app.catalog import load_product_children
-from app.product_categories import category_labels, create_category, fetch_categories, update_category_thumb, valid_category_slugs
+from app.product_categories import category_labels, create_category, delete_category, fetch_categories, update_category_thumb, valid_category_slugs
 from config.settings import settings
 from app.database import get_connection, get_transaction
 from app.orders import attach_order_display, attach_order_relations, hydrate_order
@@ -465,6 +465,16 @@ async def product_category_create(request: Request) -> JSONResponse:
     if error:
         return JSONResponse(status_code=400, content={"error": error})
     return JSONResponse(content={"category": category})
+
+
+@router.delete("/product-category/{slug}")
+async def product_category_delete(request: Request, slug: str) -> JSONResponse:
+    _require_admin(request)
+    with get_transaction() as conn, conn.cursor() as cur:
+        ok, error = delete_category(cur, slug)
+    if error:
+        return JSONResponse(status_code=400, content={"error": error})
+    return JSONResponse(content={"ok": ok})
 
 
 @router.post("/product-category-upload")

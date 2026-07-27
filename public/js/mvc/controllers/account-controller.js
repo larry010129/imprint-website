@@ -4,6 +4,20 @@
   var Model = global.ImprintModels.Account;
   var View = global.ImprintViews.Account;
 
+  function importMessage(res) {
+    if (!res || res.error) {
+      return (global.imprintAPI && global.imprintAPI.apiErrorMessage)
+        ? global.imprintAPI.apiErrorMessage(res)
+        : (res && res.error) || '匯入失敗，請稍後再試';
+    }
+    if (res.message) return res.message;
+    var parts = [];
+    if (res.imported && res.imported.phone) parts.push('電話');
+    if (res.imported && res.imported.address) parts.push('地址');
+    if (parts.length) return '已從 Google 匯入：' + parts.join('、') + '。';
+    return 'Google 帳戶中沒有可匯入的資料，請手動填寫。';
+  }
+
   M.createController({
     run: function () {
       if (!M.isPage('account')) return;
@@ -45,9 +59,31 @@
               return;
             }
             View.setMsg('已儲存帳戶資料', 'ok');
-            if (res.profile) {
-              View.renderProfile({ user: { email: e.email ? e.email.textContent : '' }, profile: res.profile });
+            Model.getSession().then(function (session) {
+              if (session && session.user) View.renderProfile(session);
+            });
+          });
+        });
+      }
+
+      if (e.googleImportBtn && global.imprintGoogleProfileImport) {
+        e.googleImportBtn.addEventListener('click', function () {
+          View.setMsg('');
+          View.setGoogleImportLoading(true);
+          global.imprintGoogleProfileImport.requestImport(function (res) {
+            View.setGoogleImportLoading(false);
+            if (res && res._httpStatus === 401) {
+              global.location.href = '/login.html?next=' + encodeURIComponent('/account.html?complete=1');
+              return;
             }
+            if (!res || res.error || !res.ok) {
+              View.setMsg(importMessage(res), 'err');
+              return;
+            }
+            View.setMsg(importMessage(res), res.imported && (res.imported.phone || res.imported.address) ? 'ok' : 'info');
+            Model.getSession().then(function (session) {
+              if (session && session.user) View.renderProfile(session);
+            });
           });
         });
       }

@@ -7,6 +7,7 @@
         form: document.getElementById('registerForm'),
         btn: document.getElementById('registerSubmitBtn'),
         msg: document.getElementById('registerFormMsg'),
+        acceptTerms: document.getElementById('rAcceptTerms'),
       };
     },
     setMsg: function (text, type) {

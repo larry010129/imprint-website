@@ -108,6 +108,23 @@ def create_category(cur, *, label_zh: str, label_en: str | None = None) -> tuple
         return None, "新增品項失敗"
 
 
+def delete_category(cur, slug: str) -> tuple[bool, str | None]:
+    slug = (slug or "").strip()
+    categories = fetch_categories(cur)
+    if slug not in {row["slug"] for row in categories}:
+        return False, "品項不存在"
+    if len(categories) <= 1:
+        return False, "至少需保留一個品項"
+
+    cur.execute("select count(*) as c from products where category = %s", (slug,))
+    in_use = int(cur.fetchone()["c"])
+    if in_use > 0:
+        return False, "此品項下尚有商品，請先刪除或移動商品後再刪除品項"
+
+    cur.execute("delete from product_categories where slug = %s", (slug,))
+    return True, None
+
+
 def update_category_thumb(cur, slug: str, thumb_path: str) -> tuple[dict | None, str | None]:
     slug = (slug or "").strip()
     if slug not in valid_category_slugs(cur):

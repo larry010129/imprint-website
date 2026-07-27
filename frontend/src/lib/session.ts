@@ -17,6 +17,8 @@ export type Session = {
   user: SessionUser
   profile?: SessionProfile | null
   isAdmin?: boolean
+  hasGoogleLinked?: boolean
+  profileComplete?: boolean
 }
 
 type SharedSessionWindow = Window & {
@@ -27,8 +29,13 @@ function sharedSessionWindow(): SharedSessionWindow {
   return window as SharedSessionWindow
 }
 
-function clearSharedSession(): void {
+export function clearSharedSession(): void {
   delete sharedSessionWindow().__imprintSessionPromise
+}
+
+export async function refreshSession(): Promise<Session | null> {
+  clearSharedSession()
+  return fetchSession()
 }
 
 function apiBase(): string {
@@ -62,9 +69,20 @@ export async function fetchSession(): Promise<Session | null> {
     user: SessionUser | null
     profile?: SessionProfile | null
     isAdmin?: boolean
+    hasGoogleLinked?: boolean
+    profileComplete?: boolean
   }>("/api/auth/session").then((data) =>
     data?.user
-      ? { user: data.user, profile: data.profile ?? null, isAdmin: !!data.isAdmin }
+      ? {
+          user: data.user,
+          profile: data.profile ?? null,
+          isAdmin: !!data.isAdmin,
+          hasGoogleLinked: !!data.hasGoogleLinked,
+          profileComplete:
+            typeof data.profileComplete === "boolean"
+              ? data.profileComplete
+              : !!data.profile?.phone?.trim(),
+        }
       : null,
   )
   shared.__imprintSessionPromise = pending

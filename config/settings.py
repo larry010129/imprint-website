@@ -26,6 +26,10 @@ class Settings:
         return os.environ.get("RENDER") == "true" or bool(os.environ.get("RENDER_SERVICE_ID"))
 
     @property
+    def google_client_id(self) -> str:
+        return os.environ.get("GOOGLE_CLIENT_ID", "").strip()
+
+    @property
     def public_base_url(self) -> str:
         external = os.environ.get("RENDER_EXTERNAL_URL")
         if external:

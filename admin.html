@@ -440,6 +440,12 @@
     pendingPanel = null;
     window.AdminPanel.onPanelSwitch(panel);
   };
+
+  var initialPanel = (window.location.hash || '').replace('#', '');
+  if (initialPanel && titles[initialPanel]) {
+    var initialBtn = document.querySelector('.side-nav button[data-panel="' + initialPanel + '"]');
+    if (initialBtn) initialBtn.click();
+  }
 })();
 
 /* 價格設定面板：讀寫 window.ImprintPricing */

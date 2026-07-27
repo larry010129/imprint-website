@@ -11,6 +11,8 @@
   var CHAIN_CARATS = ['3fen', '4fen'];
   var COLORS = ['white', 'yellow', 'rose'];
   var GOLD_LABELS = { '9k': '9K', '14k': '14K', '18k': '18K', 'pt950': 'PT950', 's925': 'S925' };
+  // 蠟重(錢) × factor → 成品金重(錢)；試算頁下單時以後端 app/pricing.py 的同一份係數為準，這裡僅供上架時預覽估算。
+  var WAX_TO_METAL_CHIN = { '9k': 11.5, '14k': 14.0, '18k': 16.0, 'pt950': 24.0, 's925': 11.0 };
   var COLOR_LABELS = { white: '白金', yellow: '黃金', rose: '玫瑰金' };
   var METAL_SLOT_OPTIONS = [
     { value: 'white', label: '白金' },
@@ -26,33 +28,38 @@
   var METAL_SLOT_VALUES = METAL_SLOT_OPTIONS.map(function (o) { return o.value; });
   var DIAMOND_SLOT_VALUES = DIAMOND_SLOT_OPTIONS.map(function (o) { return o.value; });
 
-  function buildSlotKey(metal, diamond) {
-    return String(metal) + '-' + String(diamond);
+  // 項墜可搭配鍊條展示，且鍊條金屬色可與項墜本體不同色；第三段記錄鍊條的金屬色
+  // （白金/黃金/玫瑰金），留空表示沒有搭配鍊條的照片。其他品項不會出現第三段。
+  function buildSlotKey(metal, diamond, chainMetal) {
+    return String(metal) + '-' + String(diamond) + (chainMetal ? '-' + chainMetal : '');
   }
 
   function parseSlotKey(key) {
     var parts = String(key || '').split('-');
-    if (parts.length >= 2 && METAL_SLOT_VALUES.indexOf(parts[0]) >= 0 && DIAMOND_SLOT_VALUES.indexOf(parts[1]) >= 0) {
-      return { metal: parts[0], diamond: parts[1] };
+    if (parts.length >= 3 && METAL_SLOT_VALUES.indexOf(parts[0]) >= 0
+      && DIAMOND_SLOT_VALUES.indexOf(parts[1]) >= 0 && METAL_SLOT_VALUES.indexOf(parts[2]) >= 0) {
+      return { metal: parts[0], diamond: parts[1], chainMetal: parts[2] };
     }
-    if (METAL_SLOT_VALUES.indexOf(key) >= 0) return { metal: key, diamond: 'white' };
+    if (parts.length >= 2 && METAL_SLOT_VALUES.indexOf(parts[0]) >= 0 && DIAMOND_SLOT_VALUES.indexOf(parts[1]) >= 0) {
+      return { metal: parts[0], diamond: parts[1], chainMetal: null };
+    }
+    if (METAL_SLOT_VALUES.indexOf(key) >= 0) return { metal: key, diamond: 'white', chainMetal: null };
     return null;
   }
 
-  function allPresetSlotKeys() {
+  function allPresetSlotKeys(includeChainVariants) {
     var keys = [];
     METAL_SLOT_VALUES.forEach(function (metal) {
       DIAMOND_SLOT_VALUES.forEach(function (diamond) {
-        keys.push(buildSlotKey(metal, diamond));
+        keys.push(buildSlotKey(metal, diamond, null));
+        if (includeChainVariants) {
+          METAL_SLOT_VALUES.forEach(function (chainMetal) {
+            keys.push(buildSlotKey(metal, diamond, chainMetal));
+          });
+        }
       });
     });
     return keys;
-  }
-
-  function slotSelectHtml(options, selected) {
-    return options.map(function (opt) {
-      return '<option value="' + opt.value + '"' + (opt.value === selected ? ' selected' : '') + '>' + esc(opt.label) + '</option>';
-    }).join('');
   }
 
   var root = document.getElementById('productsRoot');
@@ -163,8 +170,25 @@
               '<input type="file" accept="image/png,image/jpeg,image/webp" hidden id="apCategoryThumbInput">' +
             '</label>' +
           '</div>' +
+          '<button type="button" class="btn-sm ap-category-delete-btn" id="apDeleteCategoryBtn" data-slug="' + esc(cat) + '" data-label="' + esc(label) + '">刪除此品項</button>' +
         '</div>' +
       '</div>'
+    );
+  }
+
+  function deleteCategoryDialogHtml() {
+    return (
+      '<dialog id="apDeleteCategoryDialog" class="ap-delete-dialog">' +
+        '<form method="dialog" id="apDeleteCategoryForm">' +
+          '<h3>刪除品項</h3><p id="apDeleteCategoryTarget"></p>' +
+          '<p class="ap-hint">刪除後無法復原。若此品項下仍有商品，需先刪除或搬移商品才能刪除品項。</p>' +
+          '<p class="ap-form-error" id="apDeleteCategoryError" hidden></p>' +
+          '<div class="ap-delete-actions">' +
+            '<button type="button" class="btn-sm" id="apDeleteCategoryCancel">取消</button>' +
+            '<button type="submit" class="btn-sm btn-primary">確認刪除</button>' +
+          '</div>' +
+        '</form>' +
+      '</dialog>'
     );
   }
 
@@ -250,7 +274,8 @@
           '<button type="button" class="btn-sm" id="apDeleteCancel">取消</button>' +
           '<button type="submit" class="btn-sm btn-primary">確認刪除</button>' +
         '</div></form></dialog>' +
-      addCategoryDialogHtml()
+      addCategoryDialogHtml() +
+      deleteCategoryDialogHtml()
     );
     bindShellEvents();
     renderActiveCategoryTable();
@@ -329,7 +354,9 @@
     if (addCatBtn) addCatBtn.addEventListener('click', openAddCategoryDialog);
 
     bindCategoryThumbUpload();
+    bindCategoryDeleteButton();
     bindAddCategoryDialog();
+    bindDeleteCategoryDialog();
 
     var newBtn = document.getElementById('btnNewProduct');
     if (newBtn) {
@@ -398,7 +425,53 @@
     if (next) {
       panel.replaceWith(next);
       bindCategoryThumbUpload();
+      bindCategoryDeleteButton();
     }
+  }
+
+  var deleteCategorySlug = null;
+  function bindCategoryDeleteButton() {
+    var btn = document.getElementById('apDeleteCategoryBtn');
+    if (!btn || btn.dataset.bound) return;
+    btn.dataset.bound = '1';
+    btn.addEventListener('click', function () {
+      openDeleteCategoryDialog(btn.dataset.slug, btn.dataset.label);
+    });
+  }
+
+  function openDeleteCategoryDialog(slug, label) {
+    deleteCategorySlug = slug;
+    var target = document.getElementById('apDeleteCategoryTarget');
+    if (target) target.textContent = '即將刪除品項：' + (label || slug);
+    var err = document.getElementById('apDeleteCategoryError');
+    if (err) { err.hidden = true; err.textContent = ''; }
+    document.getElementById('apDeleteCategoryDialog')?.showModal();
+  }
+
+  function bindDeleteCategoryDialog() {
+    var dialog = document.getElementById('apDeleteCategoryDialog');
+    var cancel = document.getElementById('apDeleteCategoryCancel');
+    var form = document.getElementById('apDeleteCategoryForm');
+    if (!dialog || !form || dialog.dataset.bound) return;
+    dialog.dataset.bound = '1';
+    cancel && cancel.addEventListener('click', function () { dialog.close(); });
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      if (!deleteCategorySlug) return;
+      var err = document.getElementById('apDeleteCategoryError');
+      var removedSlug = deleteCategorySlug;
+      api.admin.deleteProductCategory(removedSlug).then(function (res) {
+        if (res.error) {
+          if (err) { err.hidden = false; err.textContent = apiError(res); }
+          return;
+        }
+        dialog.close();
+        deleteCategorySlug = null;
+        var remaining = categoryOrderList().filter(function (c) { return c !== removedSlug; });
+        if (remaining.length) state.activeTab = 'cat-' + remaining[0];
+        load(true, true);
+      });
+    });
   }
 
   function openAddCategoryDialog() {
@@ -505,6 +578,22 @@
     });
   }
 
+  function metalWeightLabel(weightChin, gold) {
+    var n = parseFloat(weightChin);
+    var factor = WAX_TO_METAL_CHIN[gold];
+    if (!n || !factor) return '—';
+    return (n * factor).toFixed(2) + ' 錢';
+  }
+
+  function updateVariantRowMetalWeight(row) {
+    if (!row) return;
+    var out = row.querySelector('.ap-metal-weight-out');
+    if (!out) return;
+    var weightInput = row.querySelector('[name="weight"]');
+    var goldSelect = row.querySelector('[name="gold"]');
+    out.textContent = metalWeightLabel(weightInput ? weightInput.value : '', goldSelect ? goldSelect.value : GOLDS[0]);
+  }
+
   function variantRowHtml(variant, category) {
     var carats = caratsFor(category);
     var goldOpts = GOLDS.map(function (g) {
@@ -517,10 +606,12 @@
     }).join('');
     var weight = variant ? variant.weight_chin : '';
     var price = variant && variant.manual_price_twd != null ? variant.manual_price_twd : '';
+    var gold = (variant && variant.gold) || GOLDS[0];
     return '<div class="ap-variant-row">' +
       '<select name="gold">' + goldOpts + '</select>' +
       '<select name="carat">' + caratOpts + '</select>' +
       '<input type="number" name="weight" step="0.0001" min="0.0001" placeholder="蠟重（錢）" value="' + esc(weight) + '">' +
+      '<output class="ap-metal-weight-out" name="metalWeight">' + metalWeightLabel(weight, gold) + '</output>' +
       '<input type="number" name="price" step="1" min="0" placeholder="手動定價" value="' + esc(price) + '">' +
       '<button type="button" class="ap-remove-row" aria-label="移除">✕</button></div>';
   }
@@ -539,10 +630,23 @@
     );
   }
 
-  function slotKeySelectHtml(selectedKey, used) {
-    var parsed = parseSlotKey(selectedKey) || { metal: 'white', diamond: 'white' };
-    var taken = used || {};
-    return (
+  function slotSelectHtml(options, selected) {
+    return options.map(function (opt) {
+      return '<option value="' + opt.value + '"' + (opt.value === selected ? ' selected' : '') + '>' + esc(opt.label) + '</option>';
+    }).join('');
+  }
+
+  function chainMetalOptionsHtml(selected) {
+    var opts = [{ value: '', label: '無鍊條' }].concat(METAL_SLOT_OPTIONS);
+    return opts.map(function (opt) {
+      var sel = opt.value === (selected || '') ? ' selected' : '';
+      return '<option value="' + opt.value + '"' + sel + '>' + esc(opt.label) + '</option>';
+    }).join('');
+  }
+
+  function slotPairSelectHtml(selectedKey, category) {
+    var parsed = parseSlotKey(selectedKey) || { metal: 'white', diamond: 'white', chainMetal: null };
+    var html = (
       '<label class="ap-image-slot-pair">' +
         '<span>金屬</span>' +
         '<select class="ap-image-slot-metal">' + slotSelectHtml(METAL_SLOT_OPTIONS, parsed.metal) + '</select>' +
@@ -552,6 +656,15 @@
         '<select class="ap-image-slot-diamond">' + slotSelectHtml(DIAMOND_SLOT_OPTIONS, parsed.diamond) + '</select>' +
       '</label>'
     );
+    if (category === 'pendant') {
+      html += (
+        '<label class="ap-image-slot-pair ap-image-slot-pair--chain">' +
+          '<span>鍊條金屬（可與項墜本體不同色）</span>' +
+          '<select class="ap-image-slot-chain">' + chainMetalOptionsHtml(parsed.chainMetal) + '</select>' +
+        '</label>'
+      );
+    }
+    return html;
   }
 
   function groupImagesForSlots(images) {
@@ -568,22 +681,19 @@
     });
   }
 
-  function imageSlotHtml(slot, usedKeys) {
+  function imageSlotHtml(slot, category) {
     var slotId = 'slot-' + (++_slotCounter);
     var color = slot.color || 'white-white';
-    var parsed = parseSlotKey(color) || { metal: 'white', diamond: 'white' };
     var slides = (slot.urls || []).map(function (url) {
       return imageSlideHtml(url, color);
     }).join('');
-    var used = Object.assign({}, usedKeys || {});
-    used[color] = true;
 
     return (
-      '<div class="ap-image-slot" data-slot-id="' + slotId + '">' +
+      '<div class="ap-image-slot" data-slot-id="' + slotId + '" data-category="' + esc(category || '') + '">' +
         '<div class="ap-image-slot-head">' +
           '<div class="ap-image-slot-label ap-image-slot-label--pair">' +
             '<span>圖片選項</span>' +
-            slotKeySelectHtml(color, used) +
+            slotPairSelectHtml(color, category) +
           '</div>' +
           '<button type="button" class="ap-remove-slot" aria-label="移除此選項">✕</button>' +
         '</div>' +
@@ -618,15 +728,9 @@
     );
   }
 
-  function imageSlotsHtml(images) {
+  function imageSlotsHtml(images, category) {
     var slots = groupImagesForSlots(images);
-    var used = {};
-    return slots.map(function (slot) {
-      var html = imageSlotHtml(slot, used);
-      if (parseSlotKey(slot.color)) used[slot.color] = true;
-      else if (slot.color) used[slot.color] = true;
-      return html;
-    }).join('');
+    return slots.map(function (slot) { return imageSlotHtml(slot, category); }).join('');
   }
 
   function initCarousel(carousel) {
@@ -670,7 +774,8 @@
     var metalSel = slotEl.querySelector('.ap-image-slot-metal');
     var diamondSel = slotEl.querySelector('.ap-image-slot-diamond');
     if (metalSel && diamondSel) {
-      return buildSlotKey(metalSel.value, diamondSel.value);
+      var chainSel = slotEl.querySelector('.ap-image-slot-chain');
+      return buildSlotKey(metalSel.value, diamondSel.value, chainSel ? chainSel.value : null);
     }
     var legacy = slotEl.querySelector('.ap-image-slot-key');
     return legacy ? legacy.value : '';
@@ -684,17 +789,6 @@
       if (key && key !== '__custom__') used[key] = true;
     });
     return used;
-  }
-
-  function syncSlotKeySelects(form) {
-    form.querySelectorAll('.ap-image-slot').forEach(function (slot) {
-      var current = slotColorKey(slot);
-      var parsed = parseSlotKey(current) || { metal: 'white', diamond: 'white' };
-      var metalSel = slot.querySelector('.ap-image-slot-metal');
-      var diamondSel = slot.querySelector('.ap-image-slot-diamond');
-      if (metalSel) metalSel.value = parsed.metal;
-      if (diamondSel) diamondSel.value = parsed.diamond;
-    });
   }
 
   function uploadFilesToSlot(files, slot, form) {
@@ -772,6 +866,50 @@
     });
   }
 
+  function bindSlotKeySelectors(slot, form) {
+    var metalSel = slot.querySelector('.ap-image-slot-metal');
+    var diamondSel = slot.querySelector('.ap-image-slot-diamond');
+    var chainSel = slot.querySelector('.ap-image-slot-chain');
+
+    slot.dataset.lastKey = slotColorKey(slot);
+
+    function onSlotKeyChange() {
+      var key = slotColorKey(slot);
+      var used = usedSlotKeys(form, slot);
+      if (used[key]) {
+        alert('此組合已用於其他圖片選項，請選擇不同的組合。');
+        var prev = parseSlotKey(slot.dataset.lastKey) || { metal: 'white', diamond: 'white', chainMetal: null };
+        if (metalSel) metalSel.value = prev.metal;
+        if (diamondSel) diamondSel.value = prev.diamond;
+        if (chainSel) chainSel.value = prev.chainMetal || '';
+        return;
+      }
+      slot.dataset.lastKey = key;
+      slot.querySelectorAll('.ap-carousel-item[data-url]').forEach(function (item) {
+        item.dataset.color = key;
+      });
+    }
+
+    metalSel?.addEventListener('change', onSlotKeyChange);
+    diamondSel?.addEventListener('change', onSlotKeyChange);
+    chainSel?.addEventListener('change', onSlotKeyChange);
+  }
+
+  function refreshImageSlotCategory(slot, form, category) {
+    var metalSel = slot.querySelector('.ap-image-slot-metal');
+    var diamondSel = slot.querySelector('.ap-image-slot-diamond');
+    var baseColor = buildSlotKey(metalSel ? metalSel.value : 'white', diamondSel ? diamondSel.value : 'white', null);
+    slot.dataset.category = category || '';
+    var pairWrap = slot.querySelector('.ap-image-slot-label--pair');
+    if (!pairWrap) return;
+    pairWrap.innerHTML = '<span>圖片選項</span>' + slotPairSelectHtml(baseColor, category);
+    bindSlotKeySelectors(slot, form);
+    var key = slotColorKey(slot);
+    slot.querySelectorAll('.ap-carousel-item[data-url]').forEach(function (item) {
+      item.dataset.color = key;
+    });
+  }
+
   function bindImageSlot(slot, form) {
     if (slot.dataset.bound) return;
     slot.dataset.bound = '1';
@@ -779,20 +917,9 @@
     var carousel = slot.querySelector('[data-carousel]');
     if (carousel) initCarousel(carousel);
 
-    var metalSel = slot.querySelector('.ap-image-slot-metal');
-    var diamondSel = slot.querySelector('.ap-image-slot-diamond');
+    bindSlotKeySelectors(slot, form);
+
     var removeSlot = slot.querySelector('.ap-remove-slot');
-
-    function onSlotKeyChange() {
-      var key = slotColorKey(slot);
-      slot.querySelectorAll('.ap-carousel-item[data-url]').forEach(function (item) {
-        item.dataset.color = key;
-      });
-      syncSlotKeySelects(form);
-    }
-
-    metalSel?.addEventListener('change', onSlotKeyChange);
-    diamondSel?.addEventListener('change', onSlotKeyChange);
 
       removeSlot?.addEventListener('click', function () {
         if (form.querySelectorAll('.ap-image-slot').length <= 1) {
@@ -800,7 +927,6 @@
           return;
         }
         slot.remove();
-        syncSlotKeySelects(form);
         refreshAllCarousels(form);
       });
 
@@ -922,13 +1048,13 @@
             '</div>' +
             '<h4 class="ap-section-title">款式選項</h4>' +
             '<div class="ap-variant-block">' +
-              '<div class="ap-variant-head"><span>金屬</span><span>克拉</span><span>金重</span><span>手動定價</span><span></span></div>' +
+              '<div class="ap-variant-head"><span>金屬</span><span>克拉</span><span>蠟重（錢）</span><span>預估金重</span><span>手動定價</span><span></span></div>' +
               '<div id="apVariantGrid">' + variants + '</div>' +
             '</div>' +
             '<button type="button" class="btn-sm" id="apAddVariant">+ 新增款式</button>' +
             '<h4 class="ap-section-title">商品照片</h4>' +
             '<p class="ap-section-hint">每個選項可上傳多張圖片，請分別選擇「金屬」與「鑽石顏色」（例如：白金 + 黃鑽 → white-yellow）。前台試算頁會依選項切換商品圖。</p>' +
-            '<div class="ap-image-slots" id="apImageSlots">' + imageSlotsHtml(product && product.images) + '</div>' +
+            '<div class="ap-image-slots" id="apImageSlots">' + imageSlotsHtml(product && product.images, category) + '</div>' +
             '<button type="button" class="btn-sm" id="apAddImageSlot">+ 新增圖片選項</button>' +
             '<div class="ap-form-actions ap-editor-actions">' +
               '<button type="button" class="btn-sm" id="apEditorCancel">取消</button>' +
@@ -960,19 +1086,33 @@
     }
     bindRemoveRows();
 
+    if (!grid.dataset.metalWeightBound) {
+      grid.dataset.metalWeightBound = '1';
+      grid.addEventListener('input', function (e) {
+        if (e.target.name === 'weight') updateVariantRowMetalWeight(e.target.closest('.ap-variant-row'));
+      });
+      grid.addEventListener('change', function (e) {
+        if (e.target.name === 'gold') updateVariantRowMetalWeight(e.target.closest('.ap-variant-row'));
+      });
+    }
+
     bindImageSlots(form);
 
     document.getElementById('apAddImageSlot')?.addEventListener('click', function () {
       var host = document.getElementById('apImageSlots');
       if (!host) return;
+      var cat = catSel.value;
       var used = usedSlotKeys(form);
-      var pick = allPresetSlotKeys().find(function (v) { return !used[v]; }) || buildSlotKey('white', 'white');
+      var pick = allPresetSlotKeys(cat === 'pendant').find(function (v) { return !used[v]; });
+      if (!pick) {
+        alert('所有組合都已建立，無法再新增圖片選項');
+        return;
+      }
       var wrap = document.createElement('div');
-      wrap.innerHTML = imageSlotHtml({ color: pick, urls: [] }, used);
+      wrap.innerHTML = imageSlotHtml({ color: pick, urls: [] }, cat);
       var slot = wrap.firstElementChild;
       host.appendChild(slot);
       bindImageSlot(slot, form);
-      syncSlotKeySelects(form);
       slot.querySelector('.ap-image-slot-metal')?.focus();
     });
 
@@ -984,6 +1124,10 @@
           return '<option value="' + c + '">' + c + '</option>';
         }).join('');
         if (opts.indexOf(prev) >= 0) sel.value = prev;
+      });
+      var cat = catSel.value;
+      form.querySelectorAll('#apImageSlots .ap-image-slot').forEach(function (slot) {
+        refreshImageSlotCategory(slot, form, cat);
       });
     });
 

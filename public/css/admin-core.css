@@ -12,6 +12,7 @@
   --serif:"Noto Serif TC",serif;
 }
 *{margin:0;padding:0;box-sizing:border-box;}
+html{scrollbar-gutter:stable;}
 body{font-family:var(--sans);background:var(--paper);color:var(--ink);font-size:14px;line-height:1.7;}
 
 /* 全站 <dialog> 的置中靠瀏覽器內建的 margin:auto，但上面的 * reset 會把它歸零，
@@ -20,7 +21,7 @@ dialog{margin:auto;border:0;border-radius:12px;box-shadow:0 20px 60px rgba(43,35
 dialog::backdrop{background:rgba(43,35,32,.45);}
 a{color:inherit;text-decoration:none;}
 button{font-family:inherit;cursor:pointer;}
-button:not(.btn-sm):not([data-slot="button-1"]){border:none;background:none;}
+button:not(.btn-sm):not(.ap-tab-btn):not([data-slot="button-1"]):not([data-granularity]):not([data-trend-metric]):not([data-trend-view]){border:none;background:none;}
 
 .layout{display:grid;grid-template-columns:232px 1fr;min-height:100vh;}
 
@@ -132,14 +133,14 @@ button:not(.btn-sm):not([data-slot="button-1"]){border:none;background:none;}
 .dash-panel-head p{font-size:11.5px;color:var(--ink-faint);margin-top:4px;}
 .dash-toggles{display:flex;flex-wrap:wrap;gap:8px;}
 .dash-toggle{
-  display:inline-flex;border:1px solid #EDE7E0;border-radius:6px;overflow:hidden;
+  display:inline-flex;gap:2px;background:#F3F0EC;border:1px solid #EDE7E0;border-radius:8px;padding:3px;
 }
 .dash-toggle button{
-  font-size:11px;letter-spacing:.06em;padding:7px 12px;color:var(--ink-soft);
-  background:#fff;transition:all .2s;
+  border:0;border-radius:6px;font-size:11px;letter-spacing:.06em;padding:6px 12px;
+  color:var(--ink-soft);background:transparent;transition:background-color .15s ease,color .15s ease;
 }
-.dash-toggle button.is-active{background:var(--ink);color:#fff;}
-.dash-toggle button:hover:not(.is-active){background:var(--mint-soft);}
+.dash-toggle button.is-active{background:#fff;color:var(--ink);font-weight:600;box-shadow:0 1px 2px rgba(43,35,32,.12);}
+.dash-toggle button:hover:not(.is-active){background:rgba(43,35,32,.06);color:var(--ink);}
 .dash-status-cards{
   display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:0 24px 24px;
 }
@@ -195,11 +196,13 @@ button:not(.btn-sm):not([data-slot="button-1"]){border:none;background:none;}
 }
 .dash-toolbar-period{font-size:12px;color:var(--ink-faint);letter-spacing:.06em;}
 .dash-toolbar-actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px;}
-.dash-granularity{display:inline-flex;border:1px solid #EDE7E0;border-radius:6px;overflow:hidden;}
+.dash-granularity{display:inline-flex;gap:2px;background:#F3F0EC;border:1px solid #EDE7E0;border-radius:8px;padding:3px;}
 .dash-granularity button{
-  font-size:12px;letter-spacing:.08em;padding:8px 14px;color:var(--ink-soft);background:#fff;
+  border:0;border-radius:6px;font-size:12px;letter-spacing:.08em;padding:7px 14px;
+  color:var(--ink-soft);background:transparent;transition:background-color .15s ease,color .15s ease;
 }
-.dash-granularity button.is-active{background:var(--ink);color:#fff;}
+.dash-granularity button.is-active{background:#fff;color:var(--ink);font-weight:600;box-shadow:0 1px 2px rgba(43,35,32,.12);}
+.dash-granularity button:hover:not(.is-active){background:rgba(43,35,32,.06);color:var(--ink);}
 .dash-range-form{display:flex;flex-wrap:wrap;align-items:center;gap:8px;}
 .dash-range-form select,
 .dash-range-form input[type="date"]{
@@ -214,12 +217,13 @@ button:not(.btn-sm):not([data-slot="button-1"]){border:none;background:none;}
 
 /* 商品上架 */
 .ap-toolbar{display:flex;justify-content:flex-end;margin-bottom:14px;}
-.ap-category-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
+.ap-category-tabs{display:flex;flex-wrap:wrap;align-items:center;gap:2px;margin-bottom:16px;border-bottom:1px solid #EDE7E0;}
 .ap-tab-btn--add{
-  min-width:40px;justify-content:center;font-size:18px;line-height:1;padding:8px 12px;
-  border-style:dashed;color:var(--ink-faint);
+  min-width:40px;justify-content:center;font-size:18px;line-height:1;
+  padding:6px 12px;margin:0 0 6px;border-radius:20px;
+  border:1px dashed #C9BFB2;background:#fff;color:var(--ink);font-weight:700;
 }
-.ap-tab-btn--add:hover{border-color:var(--ink);color:var(--ink);}
+.ap-tab-btn--add:hover{border-color:var(--ink);background:var(--ink);color:#fff;}
 .ap-category-panel{
   margin-bottom:18px;padding:14px 16px;border:1px solid #EDE7E0;border-radius:10px;background:#FAF8F5;
 }
@@ -234,6 +238,10 @@ button:not(.btn-sm):not([data-slot="button-1"]){border:none;background:none;}
 .ap-category-thumb-preview img{width:100%;height:100%;object-fit:cover;}
 .ap-category-thumb-empty{font-size:11px;color:var(--ink-faint);text-align:center;padding:4px;}
 .ap-category-thumb-upload{cursor:pointer;margin:0;}
+.ap-category-delete-btn{
+  color:#B5523D;border-color:#E8C4BC;white-space:nowrap;
+}
+.ap-category-delete-btn:hover{color:#9A3F2C;border-color:#9A3F2C;}
 .ap-add-cat-label{display:flex;flex-direction:column;gap:6px;margin:12px 0;font-size:12.5px;color:var(--ink-soft);}
 .ap-add-cat-label input{
   font-family:inherit;font-size:13.5px;padding:8px 10px;border:1px solid #DDD5CC;border-radius:6px;color:var(--ink);
@@ -250,10 +258,17 @@ button:not(.btn-sm):not([data-slot="button-1"]){border:none;background:none;}
 .ap-testimonial-upload-empty{font-size:11px;color:var(--ink-faint);text-align:center;padding:6px;}
 .ap-testimonial-upload-btn{cursor:pointer;margin:0;}
 .ap-tab-btn{
-  display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:20px;
-  border:1px solid #EDE7E0;background:#fff;color:var(--ink-soft);font-size:12.5px;letter-spacing:.06em;
+  display:inline-flex;align-items:center;gap:8px;padding:10px 16px;margin-bottom:-1px;
+  border:0;border-radius:6px 6px 0 0;background:transparent;
+  color:var(--ink-soft);font-size:12.5px;letter-spacing:.06em;
+  position:relative;transition:color .15s ease,background-color .15s ease;
 }
-.ap-tab-btn.is-active{background:var(--ink);color:#fff;border-color:var(--ink);}
+.ap-tab-btn:hover{color:var(--ink);background:rgba(43,35,32,.06);}
+.ap-tab-btn.is-active{color:var(--ink);font-weight:700;}
+.ap-tab-btn.is-active::after{
+  content:'';position:absolute;left:12px;right:12px;bottom:-1px;height:2px;
+  background:var(--ink);border-radius:2px;
+}
 .ap-tab-count{font-size:11px;opacity:.75;}
 .ap-table{width:100%;}
 .ap-thumb{width:44px;height:44px;object-fit:cover;border-radius:6px;border:1px solid #EDE7E0;background:#F7F3EE;}
@@ -333,12 +348,17 @@ button:not(.btn-sm):not([data-slot="button-1"]){border:none;background:none;}
 .ap-variant-block{width:100%;overflow-x:auto;padding-bottom:2px;}
 .ap-variant-head,.ap-variant-row{
   display:grid;
-  grid-template-columns:minmax(76px,0.9fr) minmax(76px,0.9fr) minmax(120px,1.2fr) minmax(120px,1.2fr) 36px;
-  gap:10px;align-items:center;margin-bottom:8px;min-width:min(100%,520px);
+  grid-template-columns:minmax(70px,0.8fr) minmax(70px,0.8fr) minmax(96px,1fr) minmax(96px,1fr) minmax(110px,1.1fr) 36px;
+  gap:10px;align-items:center;margin-bottom:8px;min-width:min(100%,620px);
 }
 .ap-variant-head{font-size:11px;color:var(--ink-faint);}
 .ap-variant-row input,.ap-variant-row select{
   width:100%;min-width:0;padding:7px 8px;border:1px solid #DDD5CC;border-radius:5px;font-size:13px;box-sizing:border-box;
+}
+.ap-metal-weight-out{
+  display:flex;align-items:center;justify-content:center;width:100%;min-width:0;
+  padding:7px 8px;border-radius:5px;font-size:13px;box-sizing:border-box;
+  background:#F3F0EC;color:var(--ink-soft);white-space:nowrap;
 }
 .ap-remove-row{
   border:0;background:#F3F0EC;border-radius:4px;cursor:pointer;height:32px;width:36px;flex-shrink:0;
@@ -352,13 +372,14 @@ button:not(.btn-sm):not([data-slot="button-1"]){border:none;background:none;}
 .ap-image-slot-head{
   display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px;margin-bottom:12px;
 }
-.ap-image-slot-label--pair{
+.ap-image-slot-label.ap-image-slot-label--pair{
   display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:end;flex:1;min-width:280px;
 }
 .ap-image-slot-label--pair > span{grid-column:1/-1;font-size:12px;font-weight:500;color:var(--ink-soft);}
 .ap-image-slot-pair{display:flex;flex-direction:column;gap:4px;flex:1;min-width:120px;}
 .ap-image-slot-pair span{font-size:11px;color:var(--ink-faint);}
-.ap-image-slot-metal,.ap-image-slot-diamond,.ap-image-slot-key,.ap-image-slot-custom{
+.ap-image-slot-pair--chain{grid-column:1/-1;}
+.ap-image-slot-metal,.ap-image-slot-diamond,.ap-image-slot-chain,.ap-image-slot-key,.ap-image-slot-custom{
   width:100%;padding:7px 10px;border:1px solid #DDD5CC;border-radius:6px;font-size:13px;background:#fff;
 }
 .ap-image-slot-label{display:flex;flex-direction:column;gap:6px;flex:1;min-width:200px;}

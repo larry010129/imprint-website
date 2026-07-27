@@ -50,6 +50,15 @@
           View.setMsg('請輸入邀請碼。', 'err');
           return;
         }
+        if (!e.acceptTerms || !e.acceptTerms.checked) {
+          View.setMsg('請先閱讀並同意服務條款與隱私權政策。', 'err');
+          if (global.imprintRegisterTerms && global.imprintRegisterTerms.open) {
+            global.imprintRegisterTerms.open(function (agreed) {
+              if (e.acceptTerms) e.acceptTerms.checked = !!agreed;
+            });
+          }
+          return;
+        }
 
         View.setLoading(true);
         Model.signup({
@@ -59,6 +68,7 @@
           phone: phone,
           storeName: storeName || undefined,
           inviteCode: inviteCode || undefined,
+          acceptTerms: true,
         }).then(function (res) {
           if (res.error || !res.user) {
             View.setLoading(false);

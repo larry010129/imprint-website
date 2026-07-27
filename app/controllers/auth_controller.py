@@ -32,9 +32,17 @@ from app.auth import (
     set_session_cookie,
     sign_session,
     validate_invite_code,
+    verify_google_id_token,
     verify_password,
 )
 from app.database import get_connection
+from app.google_people import (
+    fetch_people_profile,
+    merge_into_profile,
+    parse_address,
+    parse_phone,
+    verify_access_token,
+)
 from app.profile_schema import fetch_profile
 from config.settings import settings
 
@@ -52,6 +60,29 @@ def _err(status: int, message: str) -> JSONResponse:
     return JSONResponse(status_code=status, content={"error": message})
 
 
+def _session_payload(user: dict, profile: dict | None, user_id: str) -> dict:
+    phone = (profile or {}).get("phone") if profile else None
+    return {
+        "user": {"id": str(user["id"]), "email": user["email"]},
+        "profile": profile,
+        "isAdmin": is_admin(user_id),
+        "hasGoogleLinked": bool(user.get("google_id")),
+        "profileComplete": bool(str(phone or "").strip()),
+    }
+
+
+def _backfill_google_name(cur, user_id: str, full_name: str) -> None:
+    if not full_name:
+        return
+    cur.execute(
+        """
+        update profiles set full_name = %s
+        where id = %s and coalesce(trim(full_name), '') = ''
+        """,
+        (full_name, user_id),
+    )
+
+
 @router.post("/signup")
 async def signup(request: Request, response: Response) -> JSONResponse:
     body = await request.json()
@@ -61,9 +92,14 @@ async def signup(request: Request, response: Response) -> JSONResponse:
     phone = (body.get("phone") or "").strip()
     store_name = (body.get("storeName") or "").strip() or None
     invite_code = body.get("inviteCode")
+    accept_terms = body.get("acceptTerms")
+    if isinstance(accept_terms, str):
+        accept_terms = accept_terms.strip().lower() in ("1", "true", "yes", "on")
 
     if not email or not password or not full_name or not phone:
         return _err(400, "請完整填寫所有欄位")
+    if not accept_terms:
+        return _err(400, "請先閱讀並同意服務條款與隱私權政策")
     if len(password) < 8:
         return _err(400, "密碼至少需要 8 碼")
 
@@ -170,6 +206,78 @@ async def login(request: Request) -> JSONResponse:
     return result
 
 
+@router.post("/google")
+async def google_login(request: Request) -> JSONResponse:
+    """Sign in / sign up with a Google Identity Services ID token (see
+    public/js/google-signin.js). The credential is verified server-side —
+    the client-sent profile fields are never trusted directly."""
+    body = await request.json()
+    credential = (body.get("credential") or "").strip()
+    if not credential:
+        return _err(400, "缺少 Google 登入憑證")
+
+    idinfo = verify_google_id_token(credential)
+    if not idinfo:
+        return _err(401, "Google 登入驗證失敗，請再試一次")
+
+    google_sub = idinfo.get("sub")
+    email = (idinfo.get("email") or "").strip().lower()
+    email_verified = bool(idinfo.get("email_verified"))
+    full_name = (idinfo.get("name") or "").strip()
+    if not google_sub or not email or not email_verified:
+        return _err(401, "無法取得已驗證的 Google 帳號資訊")
+
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute(
+            "select id, email, token_version, is_active from users where google_id = %s",
+            (google_sub,),
+        )
+        user = cur.fetchone()
+
+        if not user:
+            # Same email already has a password account — link this Google
+            # identity to it instead of creating a duplicate user.
+            cur.execute(
+                "select id, email, token_version, is_active from users where email = %s",
+                (email,),
+            )
+            existing = cur.fetchone()
+            if existing:
+                cur.execute("update users set google_id = %s where id = %s", (google_sub, existing["id"]))
+                user = existing
+                _backfill_google_name(cur, user["id"], full_name)
+            else:
+                # No password login is possible with this hash — it's a random
+                # value the account owner never sees, not a usable credential.
+                placeholder_hash = hash_password(secrets.token_urlsafe(32))
+                cur.execute(
+                    """
+                    insert into users (email, password_hash, email_verified, google_id)
+                    values (%s, %s, true, %s)
+                    returning id, email, token_version, is_active
+                    """,
+                    (email, placeholder_hash, google_sub),
+                )
+                user = cur.fetchone()
+                cur.execute(
+                    "insert into profiles (id, full_name) values (%s, %s) on conflict (id) do nothing",
+                    (user["id"], full_name or None),
+                )
+        else:
+            _backfill_google_name(cur, user["id"], full_name)
+
+    if not user["is_active"]:
+        return _err(403, "此帳號已被停用，請聯絡客服。 (This account has been deactivated.)")
+
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute("update users set last_login_at = now() where id = %s", (user["id"],))
+
+    token = sign_session(str(user["id"]), user["token_version"])
+    result = JSONResponse(content={"ok": True, "user": {"id": str(user["id"]), "email": user["email"]}})
+    set_session_cookie(result, token, request)
+    return result
+
+
 @router.post("/logout")
 async def logout(request: Request) -> JSONResponse:
     user_id = get_user_id(request)
@@ -269,20 +377,84 @@ async def session(request: Request) -> JSONResponse:
         return JSONResponse(content={"user": None})
 
     with get_connection() as conn, conn.cursor() as cur:
-        cur.execute("select id, email from users where id = %s", (user_id,))
+        cur.execute("select id, email, google_id from users where id = %s", (user_id,))
         user = cur.fetchone()
         if not user:
             return JSONResponse(content={"user": None})
 
         profile = fetch_profile(cur, user_id)
 
-    return JSONResponse(
-        content={
-            "user": {"id": str(user["id"]), "email": user["email"]},
-            "profile": profile,
-            "isAdmin": is_admin(user_id),
+    return JSONResponse(content=_session_payload(user, profile, user_id))
+
+
+@router.post("/google-enrich")
+async def google_enrich(request: Request) -> JSONResponse:
+    """Import phone/address from Google People API after user grants extra OAuth scopes."""
+    user_id = get_user_id(request)
+    if not user_id:
+        return _err(401, "請先登入")
+
+    body = await request.json()
+    access_token = (body.get("access_token") or "").strip()
+    if not access_token:
+        return _err(400, "缺少 Google 授權")
+
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute("select id, email, google_id from users where id = %s", (user_id,))
+        user = cur.fetchone()
+        if not user or not user.get("google_id"):
+            return _err(400, "此帳號未連結 Google，無法匯入")
+
+        if not verify_access_token(
+            access_token,
+            expected_sub=user["google_id"],
+            expected_email=user["email"],
+        ):
+            return _err(401, "Google 授權無效或已過期，請再試一次")
+
+        people = fetch_people_profile(access_token)
+        if not people:
+            return _err(502, "無法讀取 Google 帳戶資料，請稍後再試")
+
+        phone = parse_phone(people)
+        address = parse_address(people)
+        existing = fetch_profile(cur, user_id)
+        updates = merge_into_profile(existing, phone, address)
+
+        imported = {
+            "phone": bool(updates.get("phone")),
+            "address": any(
+                updates.get(k) for k in ("shipping_postal", "shipping_city", "shipping_address")
+            ),
         }
-    )
+
+        if not updates:
+            return JSONResponse(
+                content={
+                    "ok": True,
+                    "profile": existing,
+                    "imported": imported,
+                    "message": "Google 帳戶中沒有可匯入的電話或地址，或您已填寫完成。",
+                }
+            )
+
+        cur.execute("insert into profiles (id) values (%s) on conflict (id) do nothing", (user_id,))
+
+        set_parts = []
+        params: list[str] = []
+        for key, val in updates.items():
+            set_parts.append(f"{key} = %s")
+            params.append(val)
+        params.append(user_id)
+        cur.execute(
+            f"update profiles set {', '.join(set_parts)} where id = %s returning "
+            "full_name, phone, store_name, is_partner, "
+            "shipping_postal, shipping_city, shipping_address",
+            params,
+        )
+        profile = cur.fetchone()
+
+    return JSONResponse(content={"ok": True, "profile": profile, "imported": imported})
 
 
 @router.patch("/profile")

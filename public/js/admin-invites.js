@@ -125,7 +125,8 @@
         '<form id="aiCreateForm" class="ap-form">' +
           '<div class="ap-form-grid">' +
             '<label class="ap-field-wide"><span>合作廠商名稱</span>' +
-              '<input name="label" maxlength="120" placeholder="例：台北鑽石行"></label>' +
+              '<input name="label" maxlength="120" placeholder="台北鑽石行"></label>' +
+            '<p class="ai-hint ap-field-wide">僅供管理後台顯示與辨識用，可自由填寫或留空，不影響邀請碼本身的功能。</p>' +
             '<label><span>可使用次數</span>' +
               '<input type="number" name="maxUses" min="1" step="1" placeholder="留空 = 不限"></label>' +
             '<label><span>有效天數</span>' +

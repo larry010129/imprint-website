@@ -64,6 +64,12 @@
     updateProfile: function (fields) {
       return request('/api/auth/profile', { method: 'PATCH', body: fields });
     },
+    googleEnrichProfile: function (accessToken) {
+      return request('/api/auth/google-enrich', {
+        method: 'POST',
+        body: { access_token: accessToken },
+      });
+    },
     requestPasswordReset: function (email) { return request('/api/auth/request-password-reset', { method: 'POST', body: { email: email } }); },
     resetPassword: function (token, newPassword) { return request('/api/auth/reset-password', { method: 'POST', body: { token: token, newPassword: newPassword } }); },
 
@@ -147,6 +153,7 @@
       deleteOrder: function (id, reason) { return request('/api/admin/order-cancel', { method: 'POST', body: { id: id, reason: reason || '管理員取消' } }); },
       getProducts: function () { return request('/api/admin/products'); },
       createProductCategory: function (fields) { return request('/api/admin/product-category', { method: 'POST', body: fields }); },
+      deleteProductCategory: function (slug) { return request('/api/admin/product-category/' + encodeURIComponent(slug), { method: 'DELETE' }); },
       uploadProductCategoryThumb: function (slug, file) {
         var fd = new FormData();
         fd.append('file', file);

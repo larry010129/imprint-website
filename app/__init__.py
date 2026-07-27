@@ -32,12 +32,14 @@ def _startup_banner() -> None:
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    from app.auth import ensure_google_id_column
     from app.profile_schema import ensure_profile_address_columns
     from app.seed_catalog import seed_catalog_if_empty
     from app.seed_content import seed_content_if_empty
 
     _startup_banner()
     ensure_profile_address_columns()
+    ensure_google_id_column()
     seed_catalog_if_empty()
     seed_content_if_empty()
     yield
@@ -93,14 +95,18 @@ def create_app() -> FastAPI:
                 "Content-Security-Policy",
                 "default-src 'self'; "
                 "script-src 'self' 'unsafe-inline' https://cdn.botpress.cloud "
-                "https://files.bpcontent.cloud https://*.botpress.cloud; "
+                "https://files.bpcontent.cloud https://*.botpress.cloud "
+                "https://accounts.google.com; "
                 "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
                 "font-src 'self' https://fonts.gstatic.com data:; "
                 "img-src 'self' data: https:; "
                 "connect-src 'self' https://*.botpress.cloud wss://*.botpress.cloud "
-                "https://cdn.botpress.cloud https://files.bpcontent.cloud; "
-                "frame-src https://www.google.com https://www.youtube.com "
-                "https://www.youtube-nocookie.com https://*.botpress.cloud; "
+                "https://cdn.botpress.cloud https://files.bpcontent.cloud "
+                "https://accounts.google.com https://oauth2.googleapis.com "
+                "https://people.googleapis.com; "
+                "frame-src https://www.google.com https://accounts.google.com "
+                "https://www.youtube.com https://www.youtube-nocookie.com "
+                "https://*.botpress.cloud; "
                 "frame-ancestors 'self'; object-src 'none'; base-uri 'self'",
             )
         return response
