@@ -29,6 +29,7 @@
         var storeName = (e.form.storeName && e.form.storeName.value.trim()) || '';
         var isPartner = !!(e.form.querySelector('[data-auth-partner-toggle]') || {}).checked;
         var inviteCode = (e.form.inviteCode && e.form.inviteCode.value.trim()) || '';
+        var referralCode = (e.form.referralCode && e.form.referralCode.value.trim()) || '';
 
         if (!fullName || !phone || !email || !password || !confirmPassword) {
           View.setMsg('請完整填寫所有欄位。', 'err');
@@ -68,6 +69,7 @@
           phone: phone,
           storeName: storeName || undefined,
           inviteCode: inviteCode || undefined,
+          referralCode: referralCode || undefined,
           acceptTerms: true,
         }).then(function (res) {
           if (res.error || !res.user) {

@@ -13,6 +13,7 @@ from app.catalog import build_catalog_response, fetch_catalog_rows, load_product
 from app.product_categories import fetch_categories
 from app.orders import attach_order_display, attach_order_relations, hydrate_order
 from app.database import get_connection, get_transaction
+from app.membership_config import default_config, load_config, save_config
 from app.pricing import compute_order_pricing
 from app.pricing_overrides import load_overrides, save_overrides
 from app.schemas.gold_quote import GoldQuote
@@ -257,6 +258,49 @@ async def post_pricing(request: Request) -> JSONResponse:
     with get_transaction() as conn, conn.cursor() as cur:
         saved = save_overrides(cur, overrides)
     return JSONResponse(content={"ok": True, "overrides": saved})
+
+
+# ── membership ladder config (public read; admin write) ─────────────────────
+
+@router.get("/membership-config")
+async def get_membership_config() -> dict:
+    try:
+        with get_connection() as conn, conn.cursor() as cur:
+            return {"config": load_config(cur)}
+    except Exception:
+        log.exception("membership-config load failed; serving defaults")
+        return {"config": default_config()}
+
+
+@router.get("/admin/membership-config")
+async def admin_get_membership_config(request: Request) -> dict:
+    user_id = get_user_id(request)
+    if not user_id or not is_admin(user_id):
+        raise HTTPException(status_code=403, detail="admin access required")
+    with get_connection() as conn, conn.cursor() as cur:
+        return {"config": load_config(cur)}
+
+
+@router.post("/admin/membership-config")
+async def admin_post_membership_config(request: Request) -> JSONResponse:
+    user_id = get_user_id(request)
+    if not user_id or not is_admin(user_id):
+        raise HTTPException(status_code=403, detail="admin access required")
+    body = await request.json()
+    if not isinstance(body, dict):
+        return _err(400, "invalid body")
+    if body.get("reset"):
+        config = default_config()
+    else:
+        config = body.get("config")
+        if not isinstance(config, dict):
+            return _err(400, "config 必須是物件")
+    try:
+        with get_transaction() as conn, conn.cursor() as cur:
+            saved = save_config(cur, config)
+    except ValueError as exc:
+        return _err(400, str(exc))
+    return JSONResponse(content={"ok": True, "config": saved})
 
 
 # ── shop price feed + live quote ────────────────────────────────────────────

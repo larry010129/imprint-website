@@ -696,6 +696,9 @@
           if (panel === 'coupons' && window.AdminCouponsPanel) window.AdminCouponsPanel.ensureLoaded();
           if (panel === 'content' && window.AdminContentPanel) window.AdminContentPanel.ensureLoaded();
           if (panel === 'accounts' && window.AdminAccountsPanel) window.AdminAccountsPanel.ensureLoaded();
+          if (panel === 'member-search' && window.AdminMemberSearchPanel) {
+            window.AdminMemberSearchPanel.ensureLoaded();
+          }
         }
       };
 

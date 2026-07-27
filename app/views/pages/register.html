@@ -32,7 +32,11 @@
     </label>
     <div class="form-field" id="inviteCodeField" data-auth-invite-code-field hidden>
       <input type="text" id="rInviteCode" name="inviteCode" placeholder=" ">
-      <label for="rInviteCode">邀請碼</label>
+      <label for="rInviteCode">合作廠商邀請碼</label>
+    </div>
+    <div class="form-field">
+      <input type="text" id="rReferralCode" name="referralCode" placeholder=" " autocomplete="off">
+      <label for="rReferralCode">好友邀請碼（選填）</label>
     </div>
 
     <label class="partner-check terms-check" id="registerTermsTrigger">
@@ -106,5 +110,5 @@
 <script src="/static/js/mvc/core.js"></script>
 <script src="/static/js/mvc/models/register-model.js"></script>
 <script src="/static/js/mvc/views/register-view.js?v=2"></script>
-<script src="/static/js/mvc/controllers/register-controller.js?v=2"></script>
+<script src="/static/js/mvc/controllers/register-controller.js?v=3"></script>
 {% endblock %}

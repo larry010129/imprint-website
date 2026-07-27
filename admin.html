@@ -6,11 +6,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>銘印鑽石｜管理後台</title>
 <meta name="robots" content="noindex">
-<link rel="stylesheet" href="/css/admin-core.css?v=16">
+<link rel="stylesheet" href="/css/admin-core.css?v=17">
 <link rel="stylesheet" href="/css/skeleton.css?v=1">
 <link rel="stylesheet" href="/css/admin-shell.css">
 <link rel="stylesheet" href="/css/admin-orders.css?v=9">
-<link rel="stylesheet" href="/css/admin-tables.css?v=15">
+<link rel="stylesheet" href="/css/admin-tables.css?v=18">
 <link rel="stylesheet" href="/static/react/admin-tables.css?v=13">
 <link rel="stylesheet" href="/css/toast.css?v=1">
 <!-- 上線時建議打開 Google Fonts:
@@ -46,6 +46,10 @@
         <svg class="side-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         <span>帳戶管理</span>
       </button>
+      <button data-panel="member-search">
+        <svg class="side-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <span>搜尋會員</span>
+      </button>
       <button data-panel="invites">
         <svg class="side-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 12H4"/><path d="M10 6l-6 6 6 6"/></svg>
         <span>邀請碼</span>
@@ -57,6 +61,7 @@
       <div class="side-nav-more">
         <button data-panel="leads"><span>諮詢名單</span></button>
         <button data-panel="pricing"><span>價格設定</span></button>
+        <button data-panel="membership"><span>會員等級</span></button>
         <button data-panel="content"><span>內容管理</span></button>
       </div>
     </nav>
@@ -288,6 +293,13 @@
       </div>
     </section>
 
+    <!-- 搜尋會員 -->
+    <section class="panel" id="panel-member-search">
+      <div id="memberSearchRoot" aria-label="搜尋會員">
+        <span class="skel-line skel-line--short"></span>
+      </div>
+    </section>
+
     <!-- 邀請碼 -->
     <section class="panel" id="panel-invites">
       <div id="invitesRoot" class="skel-panel" aria-busy="true" aria-label="載入邀請碼中">
@@ -377,6 +389,24 @@
       </div>
     </section>
 
+    <!-- 會員等級設定 -->
+    <section class="panel" id="panel-membership">
+      <p class="note">
+        調整一般會員與合作廠商的等級名稱、達成／維持門檻與權益表。儲存後帳戶頁與個人頁會同步讀取。
+        等級內部 id 固定不可改；銘鑽／合作銘鑽為邀請制。
+      </p>
+      <div id="membershipMaster" class="card" style="margin-bottom:14px"></div>
+      <div id="membershipTabs" class="admin-panel-pad" style="padding-bottom:0"></div>
+      <div id="membershipTable"></div>
+      <div class="pricing-savebar">
+        <span class="msg" id="membershipMsg"></span>
+        <div class="btns">
+          <button class="btn-sm" id="btnResetMembership">還原成預設值</button>
+          <button class="btn-sm btn-primary" id="btnSaveMembership">儲存會員等級</button>
+        </div>
+      </div>
+    </section>
+
     <!-- 內容管理 -->
     <section class="panel" id="panel-content">
       <div id="contentRoot" class="skel-panel" aria-busy="true" aria-label="載入內容中">
@@ -388,7 +418,7 @@
 </div>
 
 <script type="module" src="/static/react/admin-tables.js?v=14"></script>
-<script src="js/api-client.js?v=9"></script>
+<script src="js/api-client.js?v=12"></script>
 <script src="js/toast.js?v=1"></script>
 <script src="js/skeleton-ui.js?v=4"></script>
 <script src="js/order-status.js"></script>
@@ -397,24 +427,26 @@
 <script src="js/admin-dashboard-chart.js"></script>
 <script src="js/admin-table-sort.js?v=1"></script>
 <script src="js/admin-image-urls.js?v=8"></script>
-<script src="js/admin.js?v=18"></script>
+<script src="js/admin.js?v=19"></script>
 <script src="js/girdle-engrave.js?v=10"></script>
 <script src="js/admin-orders.js?v=14"></script>
 <script src="js/order-detail.js"></script>
 <script src="js/admin-products.js?v=18"></script>
-<script src="js/admin-accounts.js?v=9"></script>
+<script src="js/admin-accounts.js?v=11"></script>
+<script src="js/admin-member-search.js?v=3"></script>
 <script src="js/admin-invites.js?v=12"></script>
 <script src="js/admin-coupons.js?v=5"></script>
 <script src="js/admin-content.js?v=11"></script>
 <script src="js/pricing-config.js?v=1.2"></script>
+<script src="js/membership-config.js?v=6"></script>
 <script>
 /* 側邊欄分頁切換（純前端示意） */
 (function(){
   var buttons = document.querySelectorAll('.side-nav button');
   var titles = {
     dash: '儀表板', orders: '訂單管理', products: '商品上架',
-    accounts: '帳戶管理', invites: '邀請碼', coupons: '優惠券',
-    leads: '諮詢名單', pricing: '價格設定', content: '內容管理'
+    accounts: '帳戶管理', 'member-search': '搜尋會員', invites: '邀請碼', coupons: '優惠券',
+    leads: '諮詢名單', pricing: '價格設定', membership: '會員等級', content: '內容管理'
   };
   var mainEl = document.querySelector('.main');
   var pendingPanel = null;

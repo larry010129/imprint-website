@@ -525,7 +525,7 @@
 }
 .account-grid{
   display:grid;
-  grid-template-columns:minmax(280px,420px);
+  grid-template-columns:minmax(280px,min(100%,64rem));
   gap:48px;
   justify-content:center;
 }

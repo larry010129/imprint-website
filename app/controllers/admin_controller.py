@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -895,29 +896,154 @@ def _serialize_account(row: dict) -> dict:
     out["is_admin"] = bool(out.get("is_admin"))
     out["is_partner"] = bool(out.get("is_partner"))
     out["is_active"] = bool(out.get("is_active"))
+    out["imprint_invited"] = bool(out.get("imprint_invited"))
+    out["partner_imprint_invited"] = bool(out.get("partner_imprint_invited"))
     return out
 
 
+def _ensure_membership_profile_cols(cur) -> None:
+    for stmt in (
+        "alter table profiles add column if not exists imprint_invited boolean not null default false",
+        "alter table profiles add column if not exists partner_imprint_invited boolean not null default false",
+        "alter table profiles add column if not exists referral_code text",
+    ):
+        cur.execute(stmt)
+
+
 @router.get("/accounts")
-async def accounts_list(request: Request) -> dict:
+async def accounts_list(request: Request, q: str | None = Query(None)) -> dict:
     _require_admin(request)
+    search = (q or "").strip()
+    # Card shows short id like "9A68 6CB8 40" — match against UUID without hyphens/spaces.
+    compact = re.sub(r"[\s\-]+", "", search)
     with get_connection() as conn, conn.cursor() as cur:
         _ensure_invite_schema(cur)
-        cur.execute(
-            """
+        _ensure_membership_profile_cols(cur)
+        base_sql = """
             select u.id, u.email, u.is_active, u.last_login_at, u.created_at,
-                   p.full_name, p.phone, p.store_name,
+                   p.full_name, p.phone, p.store_name, p.referral_code,
                    coalesce(p.is_partner, false) as is_partner,
+                   coalesce(p.imprint_invited, false) as imprint_invited,
+                   coalesce(p.partner_imprint_invited, false) as partner_imprint_invited,
                    (sa.user_id is not null) as is_admin,
                    (select count(*)::int from orders o where o.user_id = u.id) as order_count
             from users u
             left join profiles p on p.id = u.id
             left join staff_admins sa on sa.user_id = u.id
-            order by u.created_at desc
-            """
-        )
+        """
+        if search:
+            like = f"%{search}%"
+            like_compact = f"%{compact}%"
+            cur.execute(
+                base_sql
+                + """
+                where u.email ilike %s
+                   or coalesce(p.full_name, '') ilike %s
+                   or coalesce(p.phone, '') ilike %s
+                   or coalesce(p.store_name, '') ilike %s
+                   or coalesce(p.referral_code, '') ilike %s
+                   or u.id::text ilike %s
+                   or replace(u.id::text, '-', '') ilike %s
+                order by u.created_at desc
+                limit 100
+                """,
+                (like, like, like, like, like, like, like_compact),
+            )
+        else:
+            cur.execute(base_sql + " order by u.created_at desc")
         accounts = [_serialize_account(row) for row in cur.fetchall()]
     return {"accounts": accounts}
+
+
+@router.get("/accounts/{account_id}", response_model=None)
+async def account_detail(request: Request, account_id: str):
+    _require_admin(request)
+    try:
+        uid = str(uuid.UUID(str(account_id).strip()))
+    except (ValueError, TypeError, AttributeError):
+        return JSONResponse(status_code=400, content={"error": "invalid account id"})
+
+    with get_connection() as conn, conn.cursor() as cur:
+        _ensure_invite_schema(cur)
+        _ensure_membership_profile_cols(cur)
+        for stmt in (
+            "alter table profiles add column if not exists shipping_postal text",
+            "alter table profiles add column if not exists shipping_city text",
+            "alter table profiles add column if not exists shipping_address text",
+            "alter table profiles add column if not exists referred_by uuid",
+            "alter table profiles add column if not exists referred_at timestamptz",
+        ):
+            cur.execute(stmt)
+
+        cur.execute(
+            """
+            select u.id, u.email, u.is_active, u.last_login_at, u.created_at,
+                   p.full_name, p.phone, p.store_name, p.referral_code,
+                   p.shipping_postal, p.shipping_city, p.shipping_address,
+                   p.referred_by, p.referred_at,
+                   coalesce(p.is_partner, false) as is_partner,
+                   coalesce(p.imprint_invited, false) as imprint_invited,
+                   coalesce(p.partner_imprint_invited, false) as partner_imprint_invited,
+                   (sa.user_id is not null) as is_admin,
+                   (select count(*)::int from orders o where o.user_id = u.id) as order_count
+            from users u
+            left join profiles p on p.id = u.id
+            left join staff_admins sa on sa.user_id = u.id
+            where u.id = %s
+            """,
+            (uid,),
+        )
+        row = cur.fetchone()
+        if not row:
+            return JSONResponse(status_code=404, content={"error": "account not found"})
+
+        account = _serialize_account(row)
+        for key in ("referred_at",):
+            val = account.get(key)
+            if isinstance(val, datetime):
+                account[key] = val.isoformat()
+        if account.get("referred_by") is not None:
+            account["referred_by"] = str(account["referred_by"])
+
+        referred_by_label = None
+        if account.get("referred_by"):
+            cur.execute(
+                """
+                select u.email, p.full_name
+                from users u
+                left join profiles p on p.id = u.id
+                where u.id = %s
+                """,
+                (account["referred_by"],),
+            )
+            ref = cur.fetchone()
+            if ref:
+                referred_by_label = (ref.get("full_name") or ref.get("email") or account["referred_by"])
+
+        cur.execute(
+            """
+            select id, order_number, status, total_price, summary_zh, created_at
+            from orders
+            where user_id = %s
+            order by created_at desc
+            limit 12
+            """,
+            (uid,),
+        )
+        orders = []
+        for o in cur.fetchall():
+            item = dict(o)
+            if item.get("id") is not None:
+                item["id"] = str(item["id"])
+            created = item.get("created_at")
+            if isinstance(created, datetime):
+                item["created_at"] = created.isoformat()
+            if item.get("total_price") is not None:
+                item["total_price"] = float(item["total_price"])
+            orders.append(item)
+
+    account["referred_by_label"] = referred_by_label
+    return {"account": account, "orders": orders}
 
 
 @router.post("/account-action")
@@ -927,7 +1053,15 @@ async def account_action(request: Request) -> JSONResponse:
     account_id = body.get("id")
     action = body.get("action")
 
-    if not account_id or action not in {"toggle-active", "clear-lockout", "delete", "reset-password", "set-role"}:
+    if not account_id or action not in {
+        "toggle-active",
+        "clear-lockout",
+        "delete",
+        "reset-password",
+        "set-role",
+        "set-imprint-invited",
+        "set-partner-imprint-invited",
+    }:
         return JSONResponse(status_code=400, content={"error": "invalid id/action"})
 
     with get_connection() as conn, conn.cursor() as cur:
@@ -993,6 +1127,27 @@ async def account_action(request: Request) -> JSONResponse:
                     """,
                     (account_id,),
                 )
+        elif action == "set-imprint-invited":
+            _ensure_membership_profile_cols(cur)
+            flag = bool(body.get("value"))
+            cur.execute(
+                """
+                insert into profiles (id, imprint_invited) values (%s, %s)
+                on conflict (id) do update set imprint_invited = excluded.imprint_invited
+                """,
+                (account_id, flag),
+            )
+        elif action == "set-partner-imprint-invited":
+            _ensure_membership_profile_cols(cur)
+            flag = bool(body.get("value"))
+            cur.execute(
+                """
+                insert into profiles (id, partner_imprint_invited) values (%s, %s)
+                on conflict (id) do update
+                set partner_imprint_invited = excluded.partner_imprint_invited
+                """,
+                (account_id, flag),
+            )
 
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute("select email from users where id = %s", (admin_id,))

@@ -12,10 +12,20 @@ _ADDRESS_COLUMNS = (
     ("shipping_address", "text"),
 )
 
+_MEMBERSHIP_COLUMNS = (
+    ("referral_code", "text"),
+    ("referred_by", "uuid"),
+    ("referred_at", "timestamptz"),
+    ("imprint_invited", "boolean not null default false"),
+    ("partner_imprint_invited", "boolean not null default false"),
+)
+
 
 def ensure_profile_address_columns() -> None:
     with get_connection() as conn, conn.cursor() as cur:
         for name, col_type in _ADDRESS_COLUMNS:
+            cur.execute(f"alter table profiles add column if not exists {name} {col_type}")
+        for name, col_type in _MEMBERSHIP_COLUMNS:
             cur.execute(f"alter table profiles add column if not exists {name} {col_type}")
 
 
@@ -24,7 +34,10 @@ def fetch_profile(cur, user_id: str) -> dict | None:
         cur.execute(
             """
             select full_name, phone, store_name, is_partner,
-                   shipping_postal, shipping_city, shipping_address
+                   shipping_postal, shipping_city, shipping_address,
+                   referral_code, referred_by, referred_at,
+                   coalesce(imprint_invited, false) as imprint_invited,
+                   coalesce(partner_imprint_invited, false) as partner_imprint_invited
             from profiles where id = %s
             """,
             (user_id,),
@@ -43,4 +56,9 @@ def fetch_profile(cur, user_id: str) -> dict | None:
             "shipping_postal": None,
             "shipping_city": None,
             "shipping_address": None,
+            "referral_code": None,
+            "referred_by": None,
+            "referred_at": None,
+            "imprint_invited": False,
+            "partner_imprint_invited": False,
         }

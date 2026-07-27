@@ -1,8 +1,7 @@
 import * as React from "react";
-import { ArrowRight, Check, Sparkles, X } from "lucide-react";
+import { CheckIcon, Sparkles, XIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -12,9 +11,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  MEMBERSHIP_FEATURE_GROUPS,
-  MEMBERSHIP_PLANS,
+  featureGroupsForTrack,
+  plansForTrack,
   type CellValue,
+  type MembershipTrack,
   type MembershipTierId,
 } from "@/lib/membership-tiers";
 import { cn } from "@/lib/utils";
@@ -22,176 +22,191 @@ import { cn } from "@/lib/utils";
 type MembershipComparisonProps = {
   currentTierId: MembershipTierId;
   upgradeHint?: string | null;
+  track?: MembershipTrack;
 };
 
-function ComparisonCell({
-  value,
-  highlighted,
-}: {
-  value: CellValue;
-  highlighted: boolean;
-}) {
+function ComparisonCell({ value }: { value: CellValue }) {
   if (typeof value === "boolean") {
     return value ? (
-      <span
-        className={cn(
-          "mx-auto flex size-5 items-center justify-center rounded-sm",
-          highlighted ? "bg-[#2b2320]" : "bg-[#2b2320]/80",
-        )}
-      >
-        <Check className="size-3.5 text-white" aria-hidden="true" />
+      <>
+        <CheckIcon className="mx-auto mb-1 stroke-emerald-600" size={18} aria-hidden="true" />
         <span className="sr-only">包含</span>
-      </span>
+      </>
     ) : (
-      <span className="mx-auto flex size-5 items-center justify-center rounded-sm bg-[#f7f4f1]">
-        <X className="size-3.5 text-[#8a817b]" aria-hidden="true" />
+      <>
+        <XIcon className="mx-auto mb-1 stroke-red-600" size={18} aria-hidden="true" />
         <span className="sr-only">不包含</span>
-      </span>
+      </>
     );
   }
 
-  return (
-    <span
-      className={cn(
-        "text-sm font-medium",
-        highlighted ? "text-[#2b2320]" : "text-[#8a817b]",
-      )}
-    >
-      {value}
-    </span>
-  );
+  return <div className="text-xs text-muted-foreground leading-snug">{value}</div>;
 }
-
-const PLAN_CTAS: Record<MembershipTierId, { label: string; href: string }> = {
-  standard: { label: "開始試算", href: "/shop/calculator.html" },
-  companion: { label: "查看訂單", href: "/history.html" },
-  legacy: { label: "聯絡顧問", href: "/contact.html" },
-};
 
 export const MembershipComparison = React.memo(function MembershipComparison({
   currentTierId,
   upgradeHint,
+  track = "member",
 }: MembershipComparisonProps) {
-  const plans = MEMBERSHIP_PLANS.map((plan) => ({
+  const plans = plansForTrack(track).map((plan) => ({
     ...plan,
     highlighted: plan.id === currentTierId,
   }));
+  const groups = featureGroupsForTrack(track);
+  const isPartner = track === "partner";
+
+  let rowIndex = 0;
 
   return (
-    <section
-      className="w-full rounded-3xl border border-[#ede7e0] bg-white px-4 py-8 text-[#2b2320] shadow-[0_12px_40px_rgba(43,35,32,0.06)] sm:px-6"
-      aria-label="會員等級權益比較"
-    >
-      <div className="mb-6 max-w-2xl">
-        <Badge variant="outline" className="mb-4 border-[#dcf2f2] bg-[#f4fbfb] text-[#2b2320]">
+    <section className="w-full max-w-6xl mx-auto text-[#2b2320]" aria-label="各等級權益比較">
+      <div className="mb-5 px-1">
+        <Badge variant="outline" className="mb-3 border-[#dcf2f2] bg-[#f4fbfb] text-[#2b2320]">
           <Sparkles className="size-3.5" aria-hidden="true" />
-          會員制度
+          {isPartner ? "合作廠商制度" : "會員制度"}
         </Badge>
         <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">各等級權益比較</h2>
-        <p className="mt-3 text-sm text-[#8a817b]">
-          依訂單累積自動升級。您目前的等級已標示，可對照各方案差異。
+        <p className="mt-2 max-w-2xl text-sm text-[#8a817b]">
+          {isPartner
+            ? "依本月 or 本年合格訂單筆數升級（擇優）；合作銘鑽僅限邀請。月 or 年曆重計。"
+            : "訂單筆數 or 消費金額 or 好友邀請可升級／維持；銘鑽卡僅限品牌邀請。"}
         </p>
         {upgradeHint ? (
           <p className="mt-2 text-sm font-medium text-[#5ecfcf]">{upgradeHint}</p>
         ) : null}
       </div>
 
-      <div className="relative">
-        <div className="overflow-x-auto rounded-xl border border-[#ede7e0]">
-          <Table className="table-fixed text-sm">
-            <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="sticky top-0 z-20 w-[34%] border-b border-[#ede7e0] bg-white align-bottom">
-                  <span className="inline-block pb-3 text-xs font-semibold tracking-wide text-[#8a817b] uppercase">
-                    權益項目
-                  </span>
-                </TableHead>
-                {plans.map((plan) => (
-                  <TableHead
-                    key={plan.id}
+      <Table className="min-w-[720px] border border-gray-200 rounded-lg overflow-hidden">
+        <TableHeader className="border border-gray-200">
+          <TableRow className="border border-gray-200 hover:bg-transparent">
+            <TableHead className="w-40 sticky left-0 z-20 bg-white border-r border-gray-200">
+              權益項目
+            </TableHead>
+            {plans.map((plan) => (
+              <TableHead
+                key={plan.id}
+                className={cn(
+                  "text-center text-xs align-bottom border-r border-gray-200 last:border-r-0",
+                  plan.highlighted && "bg-muted/40",
+                )}
+              >
+                <div className="flex flex-col items-center gap-1.5">
+                  <div className="flex h-5 items-center justify-center">
+                    {plan.highlighted ? (
+                      <span className="rounded-full bg-[#2b2320] px-2 py-0.5 text-[10px] font-semibold tracking-wide text-white whitespace-nowrap">
+                        目前等級
+                      </span>
+                    ) : null}
+                  </div>
+                  <div
+                    className="h-1.5 w-10 rounded-full"
+                    style={{ background: plan.accent.chip }}
+                    aria-hidden="true"
+                  />
+                  <div className="font-semibold text-sm text-[#2b2320]">{plan.name}</div>
+                  {isPartner ? (
+                    <div className="text-[10px] font-medium text-muted-foreground">合作</div>
+                  ) : null}
+                </div>
+              </TableHead>
+            ))}
+          </TableRow>
+        </TableHeader>
+
+        <TableBody className="border border-gray-200">
+          <TableRow className="border-t border-gray-200 hover:bg-muted/20 bg-muted/10">
+            <TableCell
+              colSpan={6}
+              className="font-semibold border-l-4 border-gray-200 text-xs tracking-wide uppercase"
+            >
+              等級條件
+            </TableCell>
+          </TableRow>
+
+          <TableRow
+            className={cn(
+              "hover:bg-muted/20 *:border-r border-t border-gray-200",
+              rowIndex++ % 2 === 0 && "bg-muted/10",
+            )}
+          >
+            <TableCell className="font-semibold sticky left-0 z-10 bg-inherit border-l-4 border-gray-200">
+              達成門檻
+            </TableCell>
+            {plans.map((plan) => (
+              <TableCell
+                key={`price-${plan.id}`}
+                className={cn(
+                  "text-center py-3 border border-gray-200 text-xs text-muted-foreground leading-snug",
+                  plan.highlighted && "bg-muted/30",
+                )}
+              >
+                {plan.price}
+              </TableCell>
+            ))}
+          </TableRow>
+
+          <TableRow
+            className={cn(
+              "hover:bg-muted/20 *:border-r border-t border-gray-200",
+              rowIndex++ % 2 === 0 && "bg-muted/10",
+            )}
+          >
+            <TableCell className="font-semibold sticky left-0 z-10 bg-inherit border-l-4 border-gray-200">
+              {isPartner ? "計算週期" : "續卡"}
+            </TableCell>
+            {plans.map((plan) => (
+              <TableCell
+                key={`cadence-${plan.id}`}
+                className={cn(
+                  "text-center py-3 border border-gray-200 text-xs text-muted-foreground leading-snug",
+                  plan.highlighted && "bg-muted/30",
+                )}
+              >
+                {plan.cadence}
+              </TableCell>
+            ))}
+          </TableRow>
+
+          {groups.map((group) => (
+            <React.Fragment key={group.section}>
+              <TableRow className="border-t border-gray-200 hover:bg-muted/20 bg-muted/10">
+                <TableCell
+                  colSpan={6}
+                  className="font-semibold border-l-4 border-gray-200 text-xs tracking-wide uppercase"
+                >
+                  {group.section}
+                </TableCell>
+              </TableRow>
+              {group.features.map((feature) => {
+                const stripe = rowIndex++ % 2 === 0;
+                return (
+                  <TableRow
+                    key={`${group.section}-${feature.label}`}
                     className={cn(
-                      "sticky top-0 z-20 border-b border-[#ede7e0] text-center align-bottom",
-                      plan.highlighted ? "bg-[#f4fbfb]" : "bg-white",
+                      "hover:bg-muted/20 *:border-r border-t border-gray-200",
+                      stripe && "bg-muted/10",
                     )}
                   >
-                    <div className="relative flex flex-col items-center gap-1 py-3">
-                      {plan.highlighted ? (
-                        <Badge className="absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 bg-[#5ecfcf] text-[#2b2320] hover:bg-[#5ecfcf]">
-                          目前等級
-                        </Badge>
-                      ) : null}
-                      <span className="text-sm font-semibold text-[#2b2320]">{plan.name}</span>
-                      <span className="text-base font-bold text-[#2b2320]">{plan.price}</span>
-                      <span className="text-xs font-normal text-[#8a817b]">{plan.cadence}</span>
-                    </div>
-                  </TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-
-            <TableBody>
-              {MEMBERSHIP_FEATURE_GROUPS.map((group) => (
-                <React.Fragment key={group.section}>
-                  <TableRow className="bg-[#fafaf8] hover:bg-[#fafaf8]">
-                    <TableCell
-                      colSpan={4}
-                      className="py-2 text-xs font-semibold tracking-wide text-[#2b2320] uppercase"
-                    >
-                      {group.section}
+                    <TableCell className="font-semibold sticky left-0 z-10 bg-inherit border-l-4 border-gray-200">
+                      {feature.label}
                     </TableCell>
-                  </TableRow>
-                  {group.features.map((feature) => (
-                    <TableRow key={`${group.section}-${feature.label}`}>
-                      <TableCell className="py-2.5 font-medium text-[#2b2320]">
-                        {feature.label}
-                      </TableCell>
-                      {feature.values.map((value, i) => (
-                        <TableCell
-                          key={`${feature.label}-${plans[i].id}`}
-                          className={cn(
-                            "py-2.5 text-center",
-                            plans[i].highlighted && "bg-[#f4fbfb]/60",
-                          )}
-                        >
-                          <ComparisonCell value={value} highlighted={plans[i].highlighted} />
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))}
-                </React.Fragment>
-              ))}
-
-              <TableRow className="hover:bg-transparent">
-                <TableCell className="py-4" />
-                {plans.map((plan) => {
-                  const cta = PLAN_CTAS[plan.id];
-                  return (
-                    <TableCell
-                      key={`cta-${plan.id}`}
-                      className={cn("py-4 text-center", plan.highlighted && "bg-[#f4fbfb]/60")}
-                    >
-                      <Button
-                        asChild
-                        size="sm"
-                        variant={plan.highlighted ? "default" : "secondary"}
+                    {feature.values.map((value, i) => (
+                      <TableCell
+                        key={`${feature.label}-${plans[i]?.id || i}`}
                         className={cn(
-                          "w-full rounded-full",
-                          plan.highlighted && "bg-[#2b2320] hover:bg-[#2b2320]/90",
+                          "text-center py-3 border border-gray-200",
+                          plans[i]?.highlighted && "bg-muted/30",
                         )}
                       >
-                        <a href={cta.href}>
-                          {plan.highlighted ? "您目前的等級" : cta.label}
-                          <ArrowRight className="size-3.5" aria-hidden="true" />
-                        </a>
-                      </Button>
-                    </TableCell>
-                  );
-                })}
-              </TableRow>
-            </TableBody>
-          </Table>
-        </div>
-      </div>
+                        <ComparisonCell value={value} />
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                );
+              })}
+            </React.Fragment>
+          ))}
+        </TableBody>
+      </Table>
     </section>
   );
 });

@@ -6,6 +6,9 @@ export type SessionProfile = {
   shipping_postal?: string | null
   shipping_city?: string | null
   shipping_address?: string | null
+  referral_code?: string | null
+  imprint_invited?: boolean | null
+  partner_imprint_invited?: boolean | null
 }
 
 export type SessionUser = {
@@ -19,6 +22,10 @@ export type Session = {
   isAdmin?: boolean
   hasGoogleLinked?: boolean
   profileComplete?: boolean
+  imprintInvited?: boolean
+  partnerImprintInvited?: boolean
+  inviteCount2y?: number
+  referralCode?: string | null
 }
 
 type SharedSessionWindow = Window & {
@@ -71,6 +78,10 @@ export async function fetchSession(): Promise<Session | null> {
     isAdmin?: boolean
     hasGoogleLinked?: boolean
     profileComplete?: boolean
+    imprintInvited?: boolean
+    partnerImprintInvited?: boolean
+    inviteCount2y?: number
+    referralCode?: string | null
   }>("/api/auth/session").then((data) =>
     data?.user
       ? {
@@ -82,6 +93,11 @@ export async function fetchSession(): Promise<Session | null> {
             typeof data.profileComplete === "boolean"
               ? data.profileComplete
               : !!data.profile?.phone?.trim(),
+          imprintInvited: !!data.imprintInvited || !!data.profile?.imprint_invited,
+          partnerImprintInvited:
+            !!data.partnerImprintInvited || !!data.profile?.partner_imprint_invited,
+          inviteCount2y: Number(data.inviteCount2y) || 0,
+          referralCode: data.referralCode || data.profile?.referral_code || null,
         }
       : null,
   )

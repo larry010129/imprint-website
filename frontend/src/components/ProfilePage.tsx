@@ -4,10 +4,15 @@ import { ClipboardList, DoorOpen, KeyRound, LayoutDashboard, ShoppingCart } from
 import { ProfileDropdown, type ProfileMenuItem } from "@/components/ui/profile-dropdown";
 import { MembershipComparison } from "@/components/ui/membership-comparison";
 import {
-  eligibleMembershipOrderCount,
+  applyFetchedMembershipConfig,
+  fetchMembershipConfig,
+  isMembershipProgramEnabled,
+  memberWindowStats,
   membershipDisplayLabel,
+  membershipTrackForSession,
   membershipUpgradeHint,
-  resolveMembershipTier,
+  partnerWindowStats,
+  resolveMembershipFromContext,
 } from "@/lib/membership-tiers";
 import {
   displayName,
@@ -17,7 +22,7 @@ import {
   type Session,
 } from "@/lib/session";
 
-type OrderRow = { status?: string | null };
+type OrderRow = { status?: string | null; total_price?: number | null; created_at?: string | null };
 
 function apiBase(): string {
   const base = (window as Window & { IMPRINT_API_BASE?: string }).IMPRINT_API_BASE;
@@ -54,6 +59,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<Session | null>(null);
   const [orders, setOrders] = useState<OrderRow[]>([]);
+  const [configReady, setConfigReady] = useState(false);
   const [editName, setEditName] = useState("");
   const [editPhone, setEditPhone] = useState("");
   const [editPostal, setEditPostal] = useState("");
@@ -67,9 +73,10 @@ export default function ProfilePage() {
     let cancelled = false;
 
     (async () => {
-      const [data, orderResult] = await Promise.all([
+      const [data, orderResult, config] = await Promise.all([
         fetchSession(),
         apiFetch<{ orders?: OrderRow[] }>("/api/orders").catch(() => null),
+        fetchMembershipConfig(),
       ]);
       if (cancelled) return;
       if (!data) {
@@ -77,6 +84,7 @@ export default function ProfilePage() {
         return;
       }
 
+      applyFetchedMembershipConfig(config);
       setSession(data);
       setEditName(data.profile?.full_name?.trim() || "");
       setEditPhone(data.profile?.phone?.trim() || "");
@@ -87,6 +95,7 @@ export default function ProfilePage() {
       if (orderResult?.ok && orderResult.data?.orders) {
         setOrders(orderResult.data.orders);
       }
+      setConfigReady(true);
       setLoading(false);
     })();
 
@@ -134,16 +143,46 @@ export default function ProfilePage() {
   }, [session]);
 
   const membershipSummary = useMemo(() => {
-    if (!session) return null;
-    const eligibleOrderTotal = eligibleMembershipOrderCount(orders);
-    const tierId = resolveMembershipTier(session, eligibleOrderTotal);
+    if (!session || !configReady) return null;
+    const programOn = isMembershipProgramEnabled();
+    const track = membershipTrackForSession(session);
+    const tierId = resolveMembershipFromContext({
+      session,
+      orders,
+      inviteCount2y: session.inviteCount2y || 0,
+    });
+    const memberStats = memberWindowStats(orders);
+    const partnerStats = partnerWindowStats(orders);
+    const upgradeHint = !programOn
+      ? null
+      : track === "partner"
+        ? membershipUpgradeHint(tierId, partnerStats.monthCount, partnerStats.yearCount)
+        : membershipUpgradeHint(
+            tierId,
+            memberStats.orderCount,
+            memberStats.spend,
+            session.inviteCount2y || 0,
+          );
     return {
+      programOn,
       tierId,
-      label: membershipDisplayLabel(session, tierId),
-      upgradeHint: membershipUpgradeHint(tierId, eligibleOrderTotal),
+      track,
+      label: programOn
+        ? membershipDisplayLabel(session, tierId)
+        : session.isAdmin
+          ? "管理員"
+          : session.profile?.is_partner
+            ? "合作廠商"
+            : "會員",
+      upgradeHint,
       pendingOrders: pendingCount(orders),
+      tagline: programOn
+        ? track === "partner"
+          ? "合作廠商依本月 or 本年合格訂單筆數升級；合作銘鑽僅限邀請。"
+          : "訂單 or 消費 or 好友邀請可升級；銘鑽卡僅限品牌邀請。"
+        : "感謝您選擇銘印鑽石。",
     };
-  }, [orders, session]);
+  }, [orders, session, configReady]);
 
   async function handleSaveProfile() {
     setSaveError(null);
@@ -222,7 +261,15 @@ export default function ProfilePage() {
 
   const name = displayName(session);
   const email = session.user.email || "";
-  const { tierId, label: membershipLabel, upgradeHint, pendingOrders } = membershipSummary;
+  const {
+    programOn,
+    tierId,
+    track,
+    label: membershipLabel,
+    upgradeHint,
+    pendingOrders,
+    tagline,
+  } = membershipSummary;
 
   return (
     <div className="profile-page-stack mx-auto flex w-full max-w-5xl flex-col gap-8 pb-4">
@@ -232,7 +279,7 @@ export default function ProfilePage() {
         phone={session.profile?.phone?.trim() || ""}
         roleLabel={membershipLabel}
         membershipTier={membershipLabel}
-        membershipTagline="感謝您選擇銘印鑽石，完成訂單即可自動升級會員等級。"
+        membershipTagline={tagline}
         orderTotal={orders.length}
         orderPending={pendingOrders}
         editName={editName}
@@ -252,7 +299,9 @@ export default function ProfilePage() {
         menuItems={menuItems}
         initials={initials(session)}
       />
-      <MembershipComparison currentTierId={tierId} upgradeHint={upgradeHint} />
+      {programOn ? (
+        <MembershipComparison currentTierId={tierId} upgradeHint={upgradeHint} track={track} />
+      ) : null}
     </div>
   );
 }

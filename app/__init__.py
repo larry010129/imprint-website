@@ -33,6 +33,8 @@ def _startup_banner() -> None:
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     from app.auth import ensure_google_id_column
+    from app.database import get_connection
+    from app.membership_config import ensure_membership_schema
     from app.profile_schema import ensure_profile_address_columns
     from app.seed_catalog import seed_catalog_if_empty
     from app.seed_content import seed_content_if_empty
@@ -40,6 +42,11 @@ async def lifespan(_app: FastAPI):
     _startup_banner()
     ensure_profile_address_columns()
     ensure_google_id_column()
+    try:
+        with get_connection() as conn, conn.cursor() as cur:
+            ensure_membership_schema(cur)
+    except Exception:
+        pass
     seed_catalog_if_empty()
     seed_content_if_empty()
     yield

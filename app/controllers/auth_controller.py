@@ -43,6 +43,12 @@ from app.google_people import (
     parse_phone,
     verify_access_token,
 )
+from app.membership_referral import (
+    apply_friend_referral,
+    count_invites_since,
+    ensure_referral_code,
+    rolling_two_year_start,
+)
 from app.profile_schema import fetch_profile
 from config.settings import settings
 
@@ -60,14 +66,43 @@ def _err(status: int, message: str) -> JSONResponse:
     return JSONResponse(status_code=status, content={"error": message})
 
 
-def _session_payload(user: dict, profile: dict | None, user_id: str) -> dict:
+def _serialize_profile(profile: dict | None) -> dict | None:
+    if not profile:
+        return None
+    out = dict(profile)
+    if out.get("referred_by") is not None:
+        out["referred_by"] = str(out["referred_by"])
+    referred_at = out.get("referred_at")
+    if isinstance(referred_at, datetime):
+        out["referred_at"] = referred_at.isoformat()
+    out["imprint_invited"] = bool(out.get("imprint_invited"))
+    out["partner_imprint_invited"] = bool(out.get("partner_imprint_invited"))
+    out["is_partner"] = bool(out.get("is_partner"))
+    return out
+
+
+def _session_payload(
+    user: dict,
+    profile: dict | None,
+    user_id: str,
+    *,
+    invite_count_2y: int = 0,
+    referral_code: str | None = None,
+) -> dict:
     phone = (profile or {}).get("phone") if profile else None
+    serialized = _serialize_profile(profile)
+    if serialized is not None and referral_code:
+        serialized["referral_code"] = referral_code
     return {
         "user": {"id": str(user["id"]), "email": user["email"]},
-        "profile": profile,
+        "profile": serialized,
         "isAdmin": is_admin(user_id),
         "hasGoogleLinked": bool(user.get("google_id")),
         "profileComplete": bool(str(phone or "").strip()),
+        "imprintInvited": bool((profile or {}).get("imprint_invited")),
+        "partnerImprintInvited": bool((profile or {}).get("partner_imprint_invited")),
+        "inviteCount2y": int(invite_count_2y or 0),
+        "referralCode": referral_code or (serialized or {}).get("referral_code"),
     }
 
 
@@ -92,6 +127,7 @@ async def signup(request: Request, response: Response) -> JSONResponse:
     phone = (body.get("phone") or "").strip()
     store_name = (body.get("storeName") or "").strip() or None
     invite_code = body.get("inviteCode")
+    referral_code = (body.get("referralCode") or body.get("friendCode") or "").strip() or None
     accept_terms = body.get("acceptTerms")
     if isinstance(accept_terms, str):
         accept_terms = accept_terms.strip().lower() in ("1", "true", "yes", "on")
@@ -135,6 +171,9 @@ async def signup(request: Request, response: Response) -> JSONResponse:
                 "insert into profiles (id, full_name, phone, store_name) values (%s, %s, %s, %s)",
                 (user["id"], full_name, phone, store_name),
             )
+            ensure_referral_code(cur, user["id"])
+            if referral_code:
+                apply_friend_referral(cur, user["id"], referral_code)
         except psycopg.errors.UniqueViolation:
             # Two concurrent signups for the same email raced past the SELECT
             # check above; the DB's unique constraint is the real guard.
@@ -383,8 +422,23 @@ async def session(request: Request) -> JSONResponse:
             return JSONResponse(content={"user": None})
 
         profile = fetch_profile(cur, user_id)
+        referral_code = None
+        invite_count_2y = 0
+        try:
+            referral_code = ensure_referral_code(cur, user_id)
+            invite_count_2y = count_invites_since(cur, user_id, rolling_two_year_start())
+        except Exception:
+            log.exception("membership referral enrichment failed for session")
 
-    return JSONResponse(content=_session_payload(user, profile, user_id))
+    return JSONResponse(
+        content=_session_payload(
+            user,
+            profile,
+            user_id,
+            invite_count_2y=invite_count_2y,
+            referral_code=referral_code,
+        )
+    )
 
 
 @router.post("/google-enrich")

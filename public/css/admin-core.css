@@ -608,6 +608,37 @@ a.btn-sm.btn-primary:hover{background:#453A34;color:#fff;border-color:#453A34;}
 .price-edit-table input[type="number"]:focus{ outline:none;border-color:var(--mint-deep); }
 .price-edit-table input.is-na{ background:#F7F3EE;color:var(--ink-faint); }
 .price-edit-table input.is-auto-price{ background:#F7F3EE;color:var(--ink);cursor:default; }
+
+/* 會員等級：權益 radio（shadcn-style） */
+.ms-radio-group{
+  display:flex;flex-direction:column;gap:6px;align-items:flex-start;min-width:108px;
+}
+.ms-radio-row{
+  display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;
+  font-size:12px;color:var(--ink,#2B2320);letter-spacing:.02em;line-height:1.2;
+}
+.ms-radio-row input[type="radio"]{
+  appearance:none;-webkit-appearance:none;position:relative;
+  width:16px;height:16px;margin:0;flex-shrink:0;border-radius:999px;
+  border:1.5px solid var(--ink,#2B2320);background:#fff;cursor:pointer;
+}
+.ms-radio-row input[type="radio"]:focus-visible{
+  outline:2px solid var(--mint-deep,#5ECFCF);outline-offset:2px;
+}
+.ms-radio-row input[type="radio"]:checked{
+  border-color:var(--ink,#2B2320);
+  background:
+    radial-gradient(circle at center, var(--ink,#2B2320) 0 38%, transparent 40%),
+    #fff;
+}
+.ms-radio-row:hover{ color:#111; }
+.ms-radio-custom{
+  width:100%;box-sizing:border-box;font-family:inherit;font-size:12px;
+  padding:5px 8px;border:1px solid #DDD5CC;border-radius:5px;color:var(--ink);
+}
+.ms-radio-custom:focus{ outline:none;border-color:var(--mint-deep,#5ECFCF); }
+.ms-radio-custom:disabled{ background:#F7F3EE;color:var(--ink-faint,#8A817B); }
+
 .src-tag{
   display:inline-block;font-size:10px;letter-spacing:.08em;padding:2px 8px;border-radius:20px;margin-left:8px;vertical-align:1px;
 }

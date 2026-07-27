@@ -87,6 +87,14 @@
     getPricingOverrides: function () { return request('/api/pricing'); },
     savePricingOverrides: function (overrides) { return request('/api/pricing', { method: 'POST', body: { overrides: overrides } }); },
     resetPricingOverrides: function () { return request('/api/pricing', { method: 'POST', body: { reset: true } }); },
+    getMembershipConfig: function () { return request('/api/membership-config'); },
+    getAdminMembershipConfig: function () { return request('/api/admin/membership-config'); },
+    saveAdminMembershipConfig: function (config) {
+      return request('/api/admin/membership-config', { method: 'POST', body: { config: config } });
+    },
+    resetAdminMembershipConfig: function () {
+      return request('/api/admin/membership-config', { method: 'POST', body: { reset: true } });
+    },
     getLiveGoldPrice: function () { return request('/api/gold-price'); },
     refreshGoldPrice: function () { return request('/api/gold-refresh', { method: 'POST' }); },
 
@@ -241,7 +249,14 @@
           return { error: '系統連線異常，請稍後再試。' };
         });
       },
-      getAccounts: function () { return request('/api/admin/accounts'); },
+      getAccounts: function (q) {
+        var path = '/api/admin/accounts';
+        if (q) path += '?q=' + encodeURIComponent(q);
+        return request(path);
+      },
+      getAccount: function (id) {
+        return request('/api/admin/accounts/' + encodeURIComponent(id));
+      },
       accountAction: function (id, action, extra) {
         var body = { id: id, action: action };
         if (extra) Object.keys(extra).forEach(function (k) { body[k] = extra[k]; });

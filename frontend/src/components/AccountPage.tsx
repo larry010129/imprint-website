@@ -2,15 +2,25 @@ import * as React from "react"
 import { AnimatePresence, motion } from "motion/react"
 import { ArrowLeft, Loader2 } from "lucide-react"
 
-import { MemberAccountCard } from "@/components/ui/member-account-card"
-import { Button } from "@/components/ui/button"
+import { MembershipCard } from "@/components/ui/membership-card"
+import { MembershipComparison } from "@/components/ui/membership-comparison"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { cn } from "@/lib/utils"
 import {
+  applyFetchedMembershipConfig,
+  fetchMembershipConfig,
+  isMembershipProgramEnabled,
+  memberWindowStats,
+  membershipDisplayLabel,
+  membershipTrackForSession,
+  membershipUpgradeHint,
+  partnerWindowStats,
+  resolveMembershipFromContext,
+} from "@/lib/membership-tiers"
+import {
   displayName,
   fetchSession,
-  initials,
   logoutSession,
   refreshSession,
   type Session,
@@ -24,9 +34,22 @@ type EnrichResult = {
   profile?: Session["profile"]
 }
 
+type OrderRow = { status?: string | null; total_price?: number | null; created_at?: string | null }
+
 function apiBase(): string {
   const base = (window as Window & { IMPRINT_API_BASE?: string }).IMPRINT_API_BASE
   return typeof base === "string" ? base : ""
+}
+
+async function apiFetchOrders(): Promise<OrderRow[]> {
+  try {
+    const res = await fetch(`${apiBase()}/api/orders`, { credentials: "include" })
+    if (!res.ok) return []
+    const data = (await res.json()) as { orders?: OrderRow[] }
+    return Array.isArray(data.orders) ? data.orders : []
+  } catch {
+    return []
+  }
 }
 
 async function patchProfile(body: Record<string, string>) {
@@ -73,6 +96,8 @@ declare global {
 export default function AccountPage() {
   const [loading, setLoading] = React.useState(true)
   const [session, setSession] = React.useState<Session | null>(null)
+  const [orders, setOrders] = React.useState<OrderRow[]>([])
+  const [configReady, setConfigReady] = React.useState(false)
   const [editing, setEditing] = React.useState(false)
   const [saving, setSaving] = React.useState(false)
   const [importing, setImporting] = React.useState(false)
@@ -94,21 +119,71 @@ export default function AccountPage() {
 
   React.useEffect(() => {
     let cancelled = false
-    fetchSession().then((data) => {
+    ;(async () => {
+      const [data, orderRows, config] = await Promise.all([
+        fetchSession(),
+        apiFetchOrders(),
+        fetchMembershipConfig(),
+      ])
       if (cancelled) return
       if (!data) {
         window.location.href =
           "/login.html?next=" + encodeURIComponent(window.location.pathname + window.location.search)
         return
       }
+      applyFetchedMembershipConfig(config)
       setSession(data)
       syncForm(data)
+      setOrders(orderRows)
+      setConfigReady(true)
       setLoading(false)
-    })
+    })()
     return () => {
       cancelled = true
     }
   }, [syncForm])
+
+  const membership = React.useMemo(() => {
+    if (!session || !configReady) return null
+    const programOn = isMembershipProgramEnabled()
+    const track = membershipTrackForSession(session)
+    const tierId = resolveMembershipFromContext({
+      session,
+      orders,
+      inviteCount2y: session.inviteCount2y || 0,
+    })
+    const memberStats = memberWindowStats(orders)
+    const partnerStats = partnerWindowStats(orders)
+    const upgradeHint = !programOn
+      ? null
+      : track === "partner"
+        ? membershipUpgradeHint(tierId, partnerStats.monthCount, partnerStats.yearCount)
+        : membershipUpgradeHint(
+            tierId,
+            memberStats.orderCount,
+            memberStats.spend,
+            session.inviteCount2y || 0,
+          )
+    return {
+      programOn,
+      tierId,
+      track,
+      orderCount: memberStats.orderCount,
+      spend: memberStats.spend,
+      invites: session.inviteCount2y || 0,
+      monthCount: partnerStats.monthCount,
+      yearCount: partnerStats.yearCount,
+      label: programOn
+        ? membershipDisplayLabel(session, tierId)
+        : session.isAdmin
+          ? "管理員"
+          : session.profile?.is_partner
+            ? "合作廠商"
+            : "會員",
+      upgradeHint,
+      referralCode: session.referralCode || session.profile?.referral_code || "",
+    }
+  }, [orders, session, configReady])
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
@@ -203,10 +278,9 @@ export default function AccountPage() {
     )
   }
 
-  if (!session) return null
+  if (!session || !membership) return null
 
   const name = displayName(session)
-  const phone = session.profile?.phone?.trim() || ""
   const showComplete = wantsCompleteBanner(session)
   const canImport = !!(
     session.hasGoogleLinked &&
@@ -216,19 +290,21 @@ export default function AccountPage() {
   const qrCodeUrl = session.user.id
     ? `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`imprint-member:${session.user.id}`)}`
     : undefined
+  const roleOverride =
+    session.isAdmin || session.profile?.is_partner ? membership.label : undefined
+  const programOn = membership.programOn
 
   return (
-    <div className="mx-auto flex w-full max-w-[420px] flex-col items-center gap-5 px-1 py-2">
+    <div className="mx-auto flex w-full max-w-5xl flex-col items-center gap-8 px-1 py-2">
       {showComplete && !session.profileComplete && !editing ? (
-        <div className="w-full rounded-[16px] border border-[#E5E7EB] bg-white p-4 shadow-sm">
+        <div className="w-full max-w-[420px] rounded-[16px] border border-[#E5E7EB] bg-white p-4 shadow-sm">
           <p className="text-sm leading-relaxed text-[#4B5563]">
             歡迎加入！請補齊聯絡電話；寄送地址可稍後填寫。
           </p>
           {canImport ? (
-            <Button
+            <button
               type="button"
-              variant="outline"
-              className="mt-3 w-full border-[#E5E7EB] bg-white text-[#111827]"
+              className="mt-3 flex h-11 w-full items-center justify-center rounded-[10px] border border-[#E5E7EB] bg-white text-[14px] font-medium text-[#111827] transition-colors hover:bg-[#F9FAFB] disabled:opacity-60"
               disabled={importing}
               onClick={handleGoogleImport}
             >
@@ -240,19 +316,16 @@ export default function AccountPage() {
               ) : (
                 "從 Google 帳戶匯入電話與地址"
               )}
-            </Button>
+            </button>
           ) : null}
         </div>
       ) : null}
 
-      <div
-        className="relative w-full"
-        style={{ perspective: 1400 }}
-      >
+      <div className="relative w-full max-w-[420px]" style={{ perspective: 1400 }}>
         <AnimatePresence mode="wait" initial={false}>
           {!editing ? (
             <motion.div
-              key="card"
+              key={programOn ? "member-card" : "account-panel"}
               initial={swapIn.initial}
               animate={swapIn.animate}
               exit={swapIn.exit}
@@ -260,27 +333,80 @@ export default function AccountPage() {
               style={{ transformOrigin: "center center", backfaceVisibility: "hidden" }}
               className="w-full"
             >
-              <MemberAccountCard
-                member={{
-                  name,
-                  email: session.user.email,
-                  phone,
-                  initials: initials(session),
-                  memberId: shortMemberId(session.user.id),
-                  loginType: session.hasGoogleLinked ? "Google 帳號" : "Email 密碼",
-                  shippingCity: session.profile?.shipping_city?.trim() || "",
-                  shippingPostal: session.profile?.shipping_postal?.trim() || "",
-                  shippingAddress: session.profile?.shipping_address?.trim() || "",
-                  statusLabel: session.profileComplete ? "資料完整" : "待補齊資料",
-                  statusHint: session.profileComplete ? "可正常使用會員服務" : "請補齊聯絡電話",
-                }}
-                qrCodeUrl={qrCodeUrl}
-                onUpdateProfile={() => {
-                  setMsg(null)
-                  setEditing(true)
-                }}
-                onLogout={handleLogout}
-              />
+              {programOn ? (
+                <MembershipCard
+                  tierId={membership.tierId}
+                  memberName={name}
+                  memberId={shortMemberId(session.user.id)}
+                  roleLabel={roleOverride || membership.label}
+                  spend={membership.spend}
+                  orderCount={membership.orderCount}
+                  invites={membership.invites}
+                  monthCount={membership.monthCount}
+                  yearCount={membership.yearCount}
+                  partnerChip={membership.track === "partner"}
+                  qrCodeUrl={qrCodeUrl}
+                  onUpdateProfile={() => {
+                    setMsg(null)
+                    setEditing(true)
+                  }}
+                  onLogout={handleLogout}
+                />
+              ) : (
+                <div className="w-full rounded-[20px] border border-[#E5E7EB] bg-white p-7 text-[#111827] shadow-[0_18px_50px_-20px_rgba(15,23,42,0.28),0_8px_20px_-12px_rgba(15,23,42,0.12)]">
+                  <div className="flex items-center gap-3">
+                    <img
+                      src="/favicon.svg"
+                      alt=""
+                      aria-hidden="true"
+                      className="h-10 w-10 rounded-[8px] object-contain"
+                    />
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-semibold tracking-[0.14em] text-[#9CA3AF] uppercase">
+                        IMPRINT
+                      </p>
+                      <h2 className="truncate text-[20px] font-semibold tracking-tight">我的帳戶</h2>
+                    </div>
+                  </div>
+                  <div className="mt-6 space-y-3">
+                    <div>
+                      <p className="text-[12px] text-[#6B7280]">姓名</p>
+                      <p className="mt-0.5 text-[16px] font-medium">{name || "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-[12px] text-[#6B7280]">Email</p>
+                      <p className="mt-0.5 break-all text-[15px] text-[#374151]">
+                        {session.user.email || "—"}
+                      </p>
+                    </div>
+                    {session.profile?.phone?.trim() ? (
+                      <div>
+                        <p className="text-[12px] text-[#6B7280]">聯絡電話</p>
+                        <p className="mt-0.5 text-[15px] text-[#374151]">
+                          {session.profile.phone.trim()}
+                        </p>
+                      </div>
+                    ) : null}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMsg(null)
+                      setEditing(true)
+                    }}
+                    className="mt-7 flex h-12 w-full items-center justify-center rounded-[10px] bg-[#111111] text-[15px] font-semibold text-white transition-colors hover:bg-black"
+                  >
+                    更新帳戶資料
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="mt-3 w-full text-center text-[13px] text-[#6B7280] underline-offset-2 transition-colors hover:text-[#111827] hover:underline"
+                  >
+                    登出
+                  </button>
+                </div>
+              )}
             </motion.div>
           ) : (
             <motion.form
@@ -302,8 +428,8 @@ export default function AccountPage() {
                     setEditing(false)
                     setMsg(null)
                   }}
-                  className="absolute left-0 top-0 inline-flex h-9 w-9 items-center justify-center rounded-full text-[#6B7280] transition-colors hover:bg-[#F3F4F6] hover:text-[#111827]"
-                  aria-label="返回帳戶卡片"
+                  className="absolute top-0 left-0 inline-flex h-9 w-9 items-center justify-center rounded-full text-[#6B7280] transition-colors hover:bg-[#F3F4F6] hover:text-[#111827]"
+                  aria-label={programOn ? "返回會員卡" : "返回帳戶"}
                 >
                   <ArrowLeft className="h-4 w-4" />
                 </button>
@@ -444,6 +570,26 @@ export default function AccountPage() {
         >
           {msg.text}
         </p>
+      ) : null}
+
+      {!editing && membership.programOn && membership.referralCode ? (
+        <p className="max-w-[420px] text-center text-[13px] text-[#6B7280]">
+          好友邀請碼：
+          <span className="font-mono font-semibold tracking-wide text-[#111827]">
+            {membership.referralCode}
+          </span>
+          <span className="mt-1 block text-[12px]">好友註冊時填入，可協助維持會員等級</span>
+        </p>
+      ) : null}
+
+      {!editing && membership.programOn ? (
+        <div className="w-full">
+          <MembershipComparison
+            currentTierId={membership.tierId}
+            upgradeHint={membership.upgradeHint}
+            track={membership.track}
+          />
+        </div>
       ) : null}
     </div>
   )
