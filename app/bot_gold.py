@@ -9,6 +9,7 @@ from zoneinfo import ZoneInfo
 
 from curl_cffi.requests import AsyncSession
 
+from app.kitco_silver import fetch_xag_per_gram_twd
 from app.parse_bot_gold import find_gold_bar_prices, is_bot_challenge
 
 # BOT only updates this quote a few times a day — re-scraping the live page on
@@ -37,7 +38,8 @@ BOT_HEADERS = {
 PURITY_MULTIPLIER = {"9k": 0.5, "14k": 0.75, "18k": 0.85, "pt950": 1.1, "s925": 0.925}
 METAL_BASE = {"9k": "XAU", "14k": "XAU", "18k": "XAU", "pt950": "XPT", "s925": "XAG"}
 FALLBACK_XPT = 1050.0
-FALLBACK_XAG = 30.0
+# Fine silver TWD/g fallback (~Kitco Ask × BOT USD cash sell / troy oz grams)
+FALLBACK_XAG = 61.0
 CHIN_TO_GRAMS = 3.75
 
 TAIPEI = ZoneInfo("Asia/Taipei")
@@ -60,10 +62,16 @@ def format_fetched_at(when: datetime) -> str:
     return when.astimezone(TAIPEI).strftime("%Y/%m/%d %H:%M:%S")
 
 
-def build_payload(parsed: dict[str, float | str | None], source_url: str) -> dict:
+def build_payload(
+    parsed: dict[str, float | str | None],
+    source_url: str,
+    *,
+    xag_per_gram: float | None = None,
+) -> dict:
     now = datetime.now(timezone.utc)
     per_gram = float(parsed["perGram"])
-    raw = {"XAU": per_gram, "XPT": FALLBACK_XPT, "XAG": FALLBACK_XAG}
+    xag = float(xag_per_gram) if xag_per_gram and xag_per_gram > 0 else FALLBACK_XAG
+    raw = {"XAU": per_gram, "XPT": FALLBACK_XPT, "XAG": xag}
     alloy_rates = build_alloy_rates(raw)
     return {
         "refreshed": True,
@@ -80,6 +88,7 @@ def build_payload(parsed: dict[str, float | str | None], source_url: str) -> dic
         },
         "alloyRates": alloy_rates,
         "alloyRatesPerChin": build_alloy_rates_per_chin(alloy_rates),
+        "metals": {"XAU": per_gram, "XPT": FALLBACK_XPT, "XAG": xag},
     }
 
 
@@ -106,6 +115,7 @@ async def fetch_bot_gold_quote() -> dict:
 async def _fetch_bot_gold_quote_live() -> dict:
     last_error: Exception | None = None
     async with AsyncSession(impersonate="chrome120") as client:
+        xag = await fetch_xag_per_gram_twd(client)
         for url in BOT_URLS:
             try:
                 response = await client.get(url, headers=BOT_HEADERS, timeout=30)
@@ -117,7 +127,7 @@ async def _fetch_bot_gold_quote_live() -> dict:
                 parsed = find_gold_bar_prices(html)
                 if not parsed:
                     raise RuntimeError("parse failed")
-                return build_payload(parsed, url)
+                return build_payload(parsed, url, xag_per_gram=xag)
             except Exception as err:  # noqa: BLE001 — try next URL
                 last_error = err
     raise last_error or RuntimeError("BOT scrape failed")

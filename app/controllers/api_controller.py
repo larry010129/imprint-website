@@ -385,7 +385,10 @@ async def gold_refresh() -> dict:
         log.exception("gold-refresh fetch failed")
         raise HTTPException(status_code=502, detail="金價暫時無法取得，請稍後再試") from err
     quote = payload.get("quote") or {}
-    xau = float(quote.get("sell") or 0)
+    metals = payload.get("metals") or {}
+    xau = float(quote.get("sell") or metals.get("XAU") or 0)
+    xag = float(metals.get("XAG") or FALLBACK_XAG)
+    xpt = float(metals.get("XPT") or FALLBACK_XPT)
     if xau <= 0:
         raise HTTPException(status_code=502, detail="金價資料無效")
     with get_connection() as conn, conn.cursor() as cur:
@@ -395,12 +398,19 @@ async def gold_refresh() -> dict:
             values (1, %s, %s, %s, %s, 'bot', now())
             on conflict (id) do update set
               xau_per_gram = excluded.xau_per_gram,
+              xpt_per_gram = excluded.xpt_per_gram,
+              xag_per_gram = excluded.xag_per_gram,
               bot_posted_at = excluded.bot_posted_at,
               fetched_at = now()
             """,
-            (xau, FALLBACK_XPT, FALLBACK_XAG, quote.get("bot_posted_at")),
+            (xau, xpt, xag, quote.get("bot_posted_at")),
         )
-    return {"ok": True, "xau_per_gram": xau, "bot_posted_at": quote.get("bot_posted_at")}
+    return {
+        "ok": True,
+        "xau_per_gram": xau,
+        "xag_per_gram": xag,
+        "bot_posted_at": quote.get("bot_posted_at"),
+    }
 
 
 # ── favorites (saved configurations, per signed-in user) ────────────────────

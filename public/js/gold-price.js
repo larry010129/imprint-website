@@ -23,6 +23,8 @@
   };
 
   var FALLBACK_XAU = 4300;
+  /** Last-resort only — used when live API + cache + bootstrap all missing that metal. */
+  var FALLBACK_ALLOY_STUB = { pt950: 1155, s925: 56 };
   var liveReady = false;
 
   function formatTwd(value) {
@@ -68,8 +70,25 @@
     } catch (_) {}
   }
 
+  /** Prefer last live-fetched Pt/Ag rates over hardcoded stubs. */
+  function lastFetchedAlloyRates() {
+    var fromCache = readCache();
+    if (fromCache && fromCache.alloyRates) return fromCache.alloyRates;
+    var fromBoot = readBootstrap();
+    if (fromBoot && fromBoot.alloyRates) return fromBoot.alloyRates;
+    return {};
+  }
+
   function fallbackPayload() {
     var sell = FALLBACK_XAU;
+    var prev = lastFetchedAlloyRates();
+    var alloyRates = {
+      '9k': sell * 0.5,
+      '14k': sell * 0.75,
+      '18k': sell * 0.85,
+      pt950: prev.pt950 != null ? prev.pt950 : FALLBACK_ALLOY_STUB.pt950,
+      s925: prev.s925 != null ? prev.s925 : FALLBACK_ALLOY_STUB.s925,
+    };
     return {
       refreshed: false,
       fromFallback: true,
@@ -82,13 +101,7 @@
         is_stale: true,
         source_url: BOT_PUBLIC_RECENT,
       },
-      alloyRates: {
-        '9k': sell * 0.5,
-        '14k': sell * 0.75,
-        '18k': sell * 0.85,
-        pt950: 1050 * 1.1,
-        s925: 30 * 0.925,
-      },
+      alloyRates: alloyRates,
     };
   }
 

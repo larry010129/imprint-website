@@ -188,7 +188,7 @@ def get_metal_prices(cur) -> dict[str, float]:
     cur.execute("select xau_per_gram, xpt_per_gram, xag_per_gram from gold_price_cache where id = 1")
     row = cur.fetchone()
     if not row:
-        return {"XAU": 4300.0, "XPT": 1050.0, "XAG": 30.0}
+        return {"XAU": 4300.0, "XPT": 1050.0, "XAG": 61.0}
     return {
         "XAU": float(row["xau_per_gram"]),
         "XPT": float(row["xpt_per_gram"]),
