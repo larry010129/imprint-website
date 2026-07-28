@@ -406,10 +406,55 @@
 }
 
 @media (width <= 860px) {
+  [data-site-nav-root] .nav-inner.container {
+    width: 100%;
+    max-width: 100%;
+    padding-left: max(12px, env(safe-area-inset-left, 0px));
+    padding-right: max(12px, env(safe-area-inset-right, 0px));
+    box-sizing: border-box;
+    gap: 4px;
+  }
+
+  [data-site-nav-root] .nav-brand {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    gap: 6px;
+  }
+
+  [data-site-nav-root] .nav-brand .brand-mark {
+    width: 48px;
+    height: 24px;
+  }
+
+  [data-site-nav-root] .nav-brand .brand-name {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  [data-site-nav-root] .nav-brand .brand-name > span {
+    overflow: hidden;
+    text-overflow: clip;
+    white-space: nowrap;
+  }
+
+  [data-site-nav-root] .nav-cta {
+    flex: 0 0 auto;
+    min-width: 0;
+    gap: 4px;
+  }
+
+  [data-site-nav-root] .site-nav-account-desktop {
+    display: none;
+  }
+
   [data-site-nav-root] .mobile-menu-toggle {
     display: flex;
     align-items: center;
     justify-content: center;
+    width: 40px;
+    height: 44px;
+    flex: 0 0 40px;
     border: 0;
     background: transparent;
     color: var(--ink, #2b2320);
@@ -454,12 +499,13 @@
 
   .mobile-animated-nav__list {
     position: absolute;
-    top: 88px;
+    top: 76px;
     left: 0;
     right: 0;
     bottom: 0;
     margin: 0;
-    padding: 12px 8vw calc(24px + env(safe-area-inset-bottom, 0px));
+    padding: 0 clamp(16px, 6vw, 32px)
+      calc(24px + env(safe-area-inset-bottom, 0px));
     list-style: none;
     overflow-y: auto;
     opacity: 0;
@@ -568,52 +614,28 @@
     font-family: inherit;
   }
 
-  /* Mobile CTA visibility lives in public/css/responsive.css so page bundles
-     (price.css etc.) cannot override with a stale display:none. */
+  @media (width <= 360px) {
+    [data-site-nav-root] .nav-brand .brand-mark {
+      width: 42px;
+      height: 21px;
+    }
 
-  .nav-cta > .account-menu {
-    display: block;
-    margin-left: 0;
-    position: relative;
-    z-index: 112;
-  }
+    [data-site-nav-root] .nav-brand .brand-name .zh {
+      font-size: 15px;
+      letter-spacing: 0.08em;
+    }
 
-  .nav-cta > .account-menu .account-menu-text {
-    display: none;
-  }
-
-  .nav-cta > .account-menu .account-menu-trigger {
-    padding: 2px;
-    max-width: none;
-    border: 0;
-    background: transparent;
-    box-shadow: none;
-    backdrop-filter: none;
-  }
-
-  .nav-cta > .account-menu .account-menu-trigger:hover {
-    background: transparent;
-    box-shadow: none;
-  }
-
-  .nav-cta > .account-menu .account-menu-avatar {
-    width: 38px;
-    height: 38px;
-  }
-
-  [data-site-nav-root].is-nav-hero .nav-cta > .account-menu .account-menu-trigger {
-    background: transparent;
-    border: 0;
-    box-shadow: none;
-  }
-
-  .account-menu-panel {
-    right: 0;
-    left: auto;
+    [data-site-nav-root] .nav-brand .brand-name .en {
+      display: none;
+    }
   }
 }
 
 @media (width >= 861px) {
+  [data-site-nav-root] .site-nav-account-desktop {
+    display: contents;
+  }
+
   [data-site-nav-root] .mobile-menu-toggle {
     display: none !important;
   }

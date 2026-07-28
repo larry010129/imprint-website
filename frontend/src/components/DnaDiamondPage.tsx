@@ -12,7 +12,38 @@ import {
   SAMPLE_SECTION,
   USP_FEATURES,
   WHAT_IS,
+  type PageImage,
 } from "@/data/dna-diamond-content";
+
+type CmsImageRow = {
+  slot_key: string;
+  display_url?: string;
+  display_webp?: string;
+};
+
+function loadCmsImages(): Map<string, CmsImageRow> {
+  const raw = document.querySelector<HTMLElement>("[data-dna-diamond-root]")?.dataset.pageImages;
+  if (!raw) return new Map();
+  try {
+    const rows = JSON.parse(raw) as CmsImageRow[];
+    return new Map(rows.map((row) => [row.slot_key, row]));
+  } catch {
+    return new Map();
+  }
+}
+
+const CMS_IMAGES = loadCmsImages();
+
+function cmsImage(slot: string, fallback: PageImage): PageImage {
+  const row = CMS_IMAGES.get(slot);
+  if (!row?.display_url) return fallback;
+  return {
+    kind: "photo",
+    src: row.display_url,
+    webp: row.display_webp || undefined,
+    alt: fallback.alt,
+  };
+}
 
 const SECTIONS = [
   { id: "intro", label: "什麼是 DNA 鑽石" },
@@ -21,6 +52,13 @@ const SECTIONS = [
   { id: "local", label: "在地實驗室" },
   { id: "assurance", label: "鑑定與保障" },
   { id: "promise", label: "四大保障" },
+] as const;
+
+const USP_IMAGE_SLOTS = [
+  "usp-lab-photo",
+  "usp-certificate",
+  "usp-memorial-box",
+  "usp-jewelry-making",
 ] as const;
 
 const KEY_FACTS = [
@@ -113,6 +151,14 @@ function SplitSection({
 
 function ProcessSteps() {
   const reduceMotion = useReducedMotion();
+  const slots = [
+    "process-sample",
+    "process-growth",
+    "process-cutting",
+    "process-certificate",
+    "process-jewelry",
+    "process-memorial-box",
+  ];
 
   return (
     <div className="space-y-0">
@@ -159,7 +205,7 @@ function ProcessSteps() {
               </h3>
               <div className="dna-info-step-row">
                 <Prose>{step.description}</Prose>
-                <DnaInfoFigure image={step.image} variant="step" />
+                <DnaInfoFigure image={cmsImage(slots[i], step.image)} variant="step" />
               </div>
             </div>
           </StepWrap>
@@ -206,7 +252,7 @@ export default function DnaDiamondPage() {
             </ScrollReveal>
             <div className="space-y-5">
               <ScrollReveal delay={0.06}>
-                <SplitSection body={<Prose>{WHAT_IS.body}</Prose>} image={WHAT_IS.image} />
+                <SplitSection body={<Prose>{WHAT_IS.body}</Prose>} image={cmsImage("intro", WHAT_IS.image)} />
               </ScrollReveal>
               <ScrollReveal delay={0.1}>
                 <div className="overflow-hidden rounded-md border border-[#e3dcd3]">
@@ -256,7 +302,7 @@ export default function DnaDiamondPage() {
               <SectionTitle en="Sample Requirements" zh={SAMPLE_SECTION.title} />
             </ScrollReveal>
             <ScrollReveal delay={0.08}>
-              <SplitSection body={<Prose>{SAMPLE_SECTION.body}</Prose>} image={SAMPLE_SECTION.image} />
+              <SplitSection body={<Prose>{SAMPLE_SECTION.body}</Prose>} image={cmsImage("sample-quantity", SAMPLE_SECTION.image)} />
             </ScrollReveal>
           </section>
 
@@ -265,7 +311,10 @@ export default function DnaDiamondPage() {
               <SectionTitle en="Local Laboratory" zh={LOCAL_SECTION.title} />
             </ScrollReveal>
             <ScrollReveal delay={0.08}>
-              <SplitSection body={<Prose>{LOCAL_SECTION.body}</Prose>} image={LOCAL_SECTION.image} />
+              <SplitSection
+                body={<Prose>{LOCAL_SECTION.body}</Prose>}
+                image={cmsImage("lab-photo", LOCAL_SECTION.image)}
+              />
             </ScrollReveal>
           </section>
 
@@ -274,7 +323,7 @@ export default function DnaDiamondPage() {
               <SectionTitle en="Quality & Certification" zh={ASSURANCE_SECTION.title} />
             </ScrollReveal>
             <ScrollReveal delay={0.08}>
-              <SplitSection body={<Prose>{ASSURANCE_SECTION.body}</Prose>} image={ASSURANCE_SECTION.image} />
+              <SplitSection body={<Prose>{ASSURANCE_SECTION.body}</Prose>} image={cmsImage("assurance-certificate", ASSURANCE_SECTION.image)} />
             </ScrollReveal>
             <ScrollReveal delay={0.12}>
               <div className="mt-8 flex flex-wrap gap-3">
@@ -330,7 +379,10 @@ export default function DnaDiamondPage() {
               {USP_FEATURES.map((feature, i) => (
                 <ScrollReveal key={feature.title} delay={i * 0.07} y={28}>
                   <div className="dna-info-usp-card overflow-hidden rounded-md border border-[#e3dcd3] transition-shadow duration-300 hover:border-[#5ecfcf]/40 hover:shadow-[0_12px_36px_rgba(94,207,207,0.12)]">
-                    <DnaInfoFigure image={feature.image} variant="usp" />
+                    <DnaInfoFigure
+                      image={cmsImage(USP_IMAGE_SLOTS[i], feature.image)}
+                      variant="usp"
+                    />
                     <div className="p-5">
                       <h3
                         className="text-sm font-semibold tracking-[0.06em] text-[#2b2320]"

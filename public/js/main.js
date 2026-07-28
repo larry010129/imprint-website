@@ -173,11 +173,24 @@
       }
       var hcDots = Array.prototype.slice.call(hcViewport.querySelectorAll('.hc-dot'));
 
+      function loadSlideImage(slide) {
+        var img = slide.querySelector('.hc-media img');
+        slide.querySelectorAll('.hc-media source[data-srcset]').forEach(function (source) {
+          source.srcset = source.dataset.srcset;
+          source.removeAttribute('data-srcset');
+        });
+        if (img && img.dataset.src) {
+          img.src = img.dataset.src;
+          img.removeAttribute('data-src');
+        }
+      }
+
       function hcRender(withTransition) {
         hcSlides.forEach(function (s, i) {
           var wasActive = s.classList.contains('is-active');
           var willBeActive = i === hcIndex;
           var img = s.querySelector('.hc-media img');
+          if (willBeActive) loadSlideImage(s);
           if (withTransition === false) { s.classList.add('no-anim'); }
           s.classList.toggle('is-active', willBeActive);
 

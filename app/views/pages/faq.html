@@ -242,7 +242,7 @@
             "name": "如何開始訂製？",
             "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "線上客製試算 — 前往 客製試算頁，依步驟選擇品項、款式、金屬與鑽石規格，系統即時試算價格；確認後可加入購物車並送出訂單，我們會與您聯繫確認樣本與細節。預約顧問 — 也可透過官方 LINE 預約，由專屬顧問一對一討論需求、確認樣本份量與報價。電話：02-2977-0268；門市：新北市三重區福德南路 43 號 1 樓（預約制）。"
+                "text": "線上客製試算 — 前往 客製試算頁，依步驟選擇品項、款式、金屬與鑽石規格，系統即時試算價格；確認後可加入購物車並送出訂單，我們會與您聯繫確認樣本與細節。預約顧問 — 也可透過官方 LINE 預約，由專屬顧問一對一討論需求、確認樣本份量與報價。門市：新北市三重區福德南路 43 號 1 樓（預約制）。"
             }
         }
     ]
@@ -257,7 +257,11 @@
 {% endblock %}
 {% block content %}
 <section class="page-hero page-hero--short">
-  <div class="page-hero-media"></div>
+  {% set _pi = page_image or {} %}
+  {% set _pi_url = _pi.display_url or _pi.image_url or '' %}
+  {% set _pi_webp = _pi.display_webp or _pi.image_webp or '' %}
+  {% set _pi_alt = _pi.image_alt or '常見問題頁主圖' %}
+  <div class="page-hero-media">{% if _pi_url %}<picture>{% if _pi_webp %}<source srcset="{{ _pi_webp }}" type="image/webp">{% endif %}<img src="{{ _pi_url }}" alt="{{ _pi_alt }}" loading="eager" decoding="async" fetchpriority="high" onerror="imgFallback(this)"></picture>{% endif %}</div>
   <div class="page-hero-scrim"></div>
   <div class="container page-hero-inner">
     <p class="breadcrumb"><a href="/">首頁</a><span class="sep">/</span><span class="current">常見問題</span></p>
@@ -300,7 +304,7 @@
 <div class="faq-item"><details><summary class="faq-q">銘印鑽石在送貨期間是否也有保險？</summary><div class="faq-a-inner">是的。若鑽石在送達您手上之前發生任何意外，您可獲得全額保險保障。</div></details></div>
 <div class="faq-item"><details><summary class="faq-q">若收到的銘印鑽石，和訂購的尺寸不符合，該如何處理？</summary><div class="faq-a-inner">若成品大於訂購尺寸，無需支付額外費用；若成品小於訂購尺寸，將按比例退款。例如：訂購 1.00 克拉白鑽（NT$250,000，誤差範圍 1.00～1.24 克拉），若收到 0.80 克拉則退還差價；若收到 1.45 克拉則無需加價。</div></details></div>
 <div class="faq-item"><details><summary class="faq-q">完工後我會收到什麼？</summary><div class="faq-a-inner">您會收到：專屬培育的 DNA 鑽石（或已鑲嵌完成的飾品）、銘印保證卡，以及專屬影音紀念盒——封存這顆鑽石從樣本到成品的珍貴過程。</div></details></div>
-<div class="faq-item"><details><summary class="faq-q">如何開始訂製？</summary><div class="faq-a-inner">線上客製試算 — 前往客製試算頁，依步驟選擇品項、款式、金屬與鑽石規格，系統即時試算價格；確認後可加入購物車並送出訂單，我們會與您聯繫確認樣本與細節。預約顧問 — 也可透過官方 LINE 預約，由專屬顧問一對一討論需求、確認樣本份量與報價。電話：02-2977-0268；門市：新北市三重區福德南路 43 號 1 樓（預約制）。</div></details></div>
+<div class="faq-item"><details><summary class="faq-q">如何開始訂製？</summary><div class="faq-a-inner">線上客製試算 — 前往客製試算頁，依步驟選擇品項、款式、金屬與鑽石規格，系統即時試算價格；確認後可加入購物車並送出訂單，我們會與您聯繫確認樣本與細節。預約顧問 — 也可透過官方 LINE 預約，由專屬顧問一對一討論需求、確認樣本份量與報價。門市：新北市三重區福德南路 43 號 1 樓（預約制）。</div></details></div>
       </div>
     </div>
     <div class="faq-more">

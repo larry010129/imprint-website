@@ -577,7 +577,12 @@
   box-shadow: none;
 }
 
-/* React admin tables — keep primary actions visible (admin-core resets button bg) */
+.adx-tabs--sub {
+  margin-top: -8px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom-style: dashed;
+}
 [data-admin-root] [data-slot="button-1"] {
   border: none;
 }

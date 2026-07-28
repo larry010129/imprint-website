@@ -71,8 +71,12 @@ function sortGolds(golds) {
 }
 
 function imageUrl(filePath) {
-  void filePath;
-  return '';
+  const value = String(filePath || '').trim().replace(/\\/g, '/');
+  if (!value) return '';
+  if (/^https?:\/\//i.test(value) || value.startsWith('/')) return value;
+  if (value.startsWith('static/')) return `/${value}`;
+  if (value.startsWith('images/')) return `/static/${value}`;
+  return `/${value}`;
 }
 
 function buildCatalogProduct(row) {
@@ -81,6 +85,12 @@ function buildCatalogProduct(row) {
   const weights = {};
   for (const v of row.variants) {
     (weights[v.gold] ||= {})[v.carat] = v.weightChin;
+  }
+  const images = {};
+  for (const image of row.images || []) {
+    const url = imageUrl(image.filePath);
+    if (!url || !image.color) continue;
+    (images[image.color] ||= []).push(url);
   }
   const styleKey = `${row.category}-${row.style}`;
   return {
@@ -94,8 +104,9 @@ function buildCatalogProduct(row) {
     golds,
     carats,
     colors: ['white', 'yellow', 'rose'],
-    images: {},
+    images,
     weights,
+    lengthWeights: row.lengthWeights || {},
     manualPrices: {},
     draft: false,
   };

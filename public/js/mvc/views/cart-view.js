@@ -62,7 +62,7 @@
 
   function caratLabel(carat, stoneCount) {
     if (!carat) return '';
-    var label = carat === '3fen' ? '3分' : carat === '4fen' ? '4分' : carat + 'ct';
+    var label = /mm$/.test(carat) ? carat : carat + 'ct';
     return Number(stoneCount) > 1 ? label + ' × ' + stoneCount : label;
   }
 
@@ -91,7 +91,7 @@
       { label: '品項', value: CAT_ZH[category] || category },
       { label: '款式', value: title },
       { label: '金屬材質', value: materialLabel(config.gold, config.color) },
-      { label: '克拉', value: caratLabel(config.carat) },
+      { label: category === 'chain' ? '厚度' : '克拉', value: caratLabel(config.carat) },
     ];
     var diamond = diamondLabel(config);
     if (diamond) rows.push({ label: '鑽石', value: diamond });

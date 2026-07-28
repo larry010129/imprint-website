@@ -451,14 +451,22 @@
     afterChange();
   }
 
-  var GIRDLE_PREVIEW_BASE = '/static/images/shop/girdle-diamond-preview';
+  // Color-only extreme girdle macro zoom (shape ignored for preview image).
+  var GIRDLE_ZOOM_BASE = '/static/images/shop/girdle/girdle-zoom';
+  var GIRDLE_ZOOM_VERSION = '7';
   var GIRDLE_MATRIX_BASE = '/static/images/diamonds/girdle-matrix';
   var GIRDLE_MATRIX_VERSION = '5';
   var GIRDLE_PREVIEW_BY_COLOR = {
-    white: GIRDLE_PREVIEW_BASE + '-white.png',
-    yellow: GIRDLE_PREVIEW_BASE + '-yellow.png',
-    blue: GIRDLE_PREVIEW_BASE + '-blue.png',
-    pink: GIRDLE_PREVIEW_BASE + '-pink.png'
+    white: GIRDLE_ZOOM_BASE + '-white.jpg?v=' + GIRDLE_ZOOM_VERSION,
+    yellow: GIRDLE_ZOOM_BASE + '-yellow.jpg?v=' + GIRDLE_ZOOM_VERSION,
+    blue: GIRDLE_ZOOM_BASE + '-blue.jpg?v=' + GIRDLE_ZOOM_VERSION,
+    pink: GIRDLE_ZOOM_BASE + '-pink.jpg?v=' + GIRDLE_ZOOM_VERSION
+  };
+  var GIRDLE_PREVIEW_WEBP_BY_COLOR = {
+    white: GIRDLE_ZOOM_BASE + '-white.webp?v=' + GIRDLE_ZOOM_VERSION,
+    yellow: GIRDLE_ZOOM_BASE + '-yellow.webp?v=' + GIRDLE_ZOOM_VERSION,
+    blue: GIRDLE_ZOOM_BASE + '-blue.webp?v=' + GIRDLE_ZOOM_VERSION,
+    pink: GIRDLE_ZOOM_BASE + '-pink.webp?v=' + GIRDLE_ZOOM_VERSION
   };
 
   function girdleMatrixSrc(shapeId, colorId) {
@@ -471,6 +479,10 @@
     return GIRDLE_PREVIEW_BY_COLOR[colorId] || GIRDLE_PREVIEW_BY_COLOR.white;
   }
 
+  function girdlePreviewWebpSrc(colorId) {
+    return GIRDLE_PREVIEW_WEBP_BY_COLOR[colorId] || GIRDLE_PREVIEW_WEBP_BY_COLOR.white;
+  }
+
   function setGirdlePreview(previewEl, shapeId, colorId) {
     var wrap = previewEl && previewEl.parentElement;
     if (!wrap) return;
@@ -480,8 +492,17 @@
     wrap.setAttribute('data-girdle-shape', shape);
     var img = wrap.querySelector('img.cfg-engrave-gem');
     if (!img) return;
-    var src = girdleMatrixSrc(shape, color);
-    img.onerror = null;
+    var src = girdlePreviewSrc(color);
+    var webpSrc = girdlePreviewWebpSrc(color);
+    var picture = img.parentElement && img.parentElement.tagName === 'PICTURE' ? img.parentElement : null;
+    var webpSource = picture ? picture.querySelector('source[type="image/webp"]') : null;
+    if (webpSource) webpSource.setAttribute('srcset', webpSrc);
+    img.onerror = function () {
+      img.onerror = null;
+      if (color !== 'white') {
+        setGirdlePreview(previewEl, shape, 'white');
+      }
+    };
     if (img.getAttribute('src') === src) {
       img.removeAttribute('src');
     }
@@ -753,6 +774,7 @@
     EMBLEMS: EMBLEMS,
     EMBLEM_LABELS: Object.keys(LABEL_TO_NAME).reduce(function (acc, label) { acc[label] = true; return acc; }, {}),
     PREVIEW_BY_COLOR: GIRDLE_PREVIEW_BY_COLOR,
+    PREVIEW_WEBP_BY_COLOR: GIRDLE_PREVIEW_WEBP_BY_COLOR,
     matrixSrc: girdleMatrixSrc,
     previewSrc: girdlePreviewSrc,
     init: init,

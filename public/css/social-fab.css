@@ -2,12 +2,12 @@
 .imprint-contact-fab {
   --fab-size: 60px;
   --fab-gap: 12px;
-  --fab-mint: #2eb8b8;
-  --fab-mint-deep: #249a9a;
-  --fab-mint-glow: rgba(46, 184, 184, 0.55);
+  --fab-mint: var(--mint, #8eedf0);
+  --fab-mint-deep: var(--mint-deep, #52c4c8);
+  --fab-mint-glow: rgba(142, 237, 240, 0.55);
   --fab-blue: #3276ea;
   --fab-line: #06c755;
-  --fab-shadow: 0 6px 18px rgba(0, 80, 80, 0.28);
+  --fab-shadow: 0 6px 18px rgba(43, 35, 32, 0.18);
   position: fixed;
   right: 24px;
   bottom: 24px;

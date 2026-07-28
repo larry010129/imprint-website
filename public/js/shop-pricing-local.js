@@ -41,11 +41,12 @@
   var METAL_SYMBOL = {
     '9k': 'XAU', '14k': 'XAU', '18k': 'XAU', pt950: 'XPT', s925: 'XAG',
   };
-  /** Universal 金工費 (flat NT$, not taxed). Same for every category. */
+  /** Default flat labor; standalone chains use metal-specific labor below. */
   var LABOR_FEE_TWD = 5000;
+  var CHAIN_LABOR_FEE_TWD = { s925: 500, other: 2000 };
+  var DEFAULT_ATTACHED_CHAIN_THICKNESS = '1.0mm';
   var TAX_RATE = 0.05;
   var CHIN_TO_GRAMS = 3.75;
-  var CHAIN_REFERENCE_LENGTH_CM = 45;
   var BRACELET_REFERENCE_LENGTH_CM = 18;
   var FANCY_MIN_CARAT = 0.3;
   var NON_ROUND_SHAPE_SURCHARGE = 0.10;
@@ -97,9 +98,10 @@
     var caratNum = parseFloat(caratKey);
     if (Number.isNaN(caratNum)) return null;
     var stoneCount = opts.stoneCount;
-    // Memorial loose diamonds: multi-stone package only when qty ≥ 2
-    var multiStone = !!STONE_COUNT_CATEGORIES[category]
-      || (category === 'diamond' && VALID_STONE_COUNTS[stoneCount]);
+    // Memorial loose diamonds: multi-stone package only when qty ≥ 2.
+    // Earrings are one pair and always use exactly two single-diamond prices.
+    var earringPair = category === 'earring';
+    var multiStone = category === 'diamond' && VALID_STONE_COUNTS[stoneCount];
     if (!isShapeCaratAllowed(caratNum, opts.diamondShape)) return null;
 
     var base = null;
@@ -135,7 +137,8 @@
 
     if (base == null) return null;
     var surcharge = shapeSurchargeRate(diamondShape);
-    return surcharge ? Math.round(base * (1 + surcharge)) : base;
+    var singlePrice = surcharge ? Math.round(base * (1 + surcharge)) : base;
+    return earringPair ? singlePrice * 2 : singlePrice;
   }
 
   function getPerGramPrices() {
@@ -173,11 +176,19 @@
 
   function lookupWeight(product, category, gold, carat, lengthCm) {
     var wax = product.weights && product.weights[gold] && product.weights[gold][carat];
+    if (category === 'chain') {
+      wax = product.lengthWeights && product.lengthWeights[carat]
+        && product.lengthWeights[carat][String(lengthCm)];
+    }
     if (wax == null) throw new Error('no weight');
     var weight = waxToMetalChin(Number(wax), gold);
-    if (category === 'chain' && lengthCm != null) weight *= Number(lengthCm) / CHAIN_REFERENCE_LENGTH_CM;
-    else if (category === 'bracelet' && lengthCm != null) weight *= Number(lengthCm) / BRACELET_REFERENCE_LENGTH_CM;
+    if (category === 'bracelet' && lengthCm != null) weight *= Number(lengthCm) / BRACELET_REFERENCE_LENGTH_CM;
     return weight;
+  }
+
+  function laborFee(category, gold) {
+    if (category !== 'chain') return LABOR_FEE_TWD;
+    return gold === 's925' ? CHAIN_LABOR_FEE_TWD.s925 : CHAIN_LABOR_FEE_TWD.other;
   }
 
   function perChinFor(gold) {
@@ -192,12 +203,10 @@
   function computeChainAddon(catalog, chainProductId, chainGold, chainLengthCm) {
     var chainProduct = findProduct(catalog, 'chain', chainProductId);
     if (!chainProduct) throw new Error('invalid chain');
-    var weightChin = lookupWeight(chainProduct, 'chain', chainGold, '3fen', chainLengthCm);
+    var carat = DEFAULT_ATTACHED_CHAIN_THICKNESS;
+    var weightChin = lookupWeight(chainProduct, 'chain', chainGold, carat, chainLengthCm);
     var weightGrams = weightChin * CHIN_TO_GRAMS;
-    var manual = chainProduct.manualPrices && chainProduct.manualPrices[chainGold]
-      && chainProduct.manualPrices[chainGold]['3fen'];
-    if (manual != null) return { chainPreTax: Number(manual), chainWeightChin: weightChin };
-    // 搭配鏈條 = metal only; standalone chain still gets LABOR_FEE_TWD in computeOrderPricing
+    // 搭配鏈條 = live metal only; standalone chain labor is added in computeOrderPricing
     var metal = metalPreTax(chainGold, weightChin);
     return { chainPreTax: metal.amount, chainWeightChin: weightChin };
   }
@@ -247,7 +256,7 @@
     }
 
     var manual = product.manualPrices && product.manualPrices[gold] && product.manualPrices[gold][carat];
-    if (manual != null) {
+    if (category !== 'chain' && manual != null) {
       return { ready: true, total: Number(manual), manualOverride: true };
     }
 
@@ -259,7 +268,7 @@
     }
 
     var weightGrams = weightChin * CHIN_TO_GRAMS;
-    var laborPreTax = LABOR_FEE_TWD;
+    var laborPreTax = laborFee(category, gold);
     var metal = metalPreTax(gold, weightChin);
     var taijinDisplay = Math.round(metal.amount * (1 + TAX_RATE));
     // Labor is flat NT$ — not taxed. Tax only on metal (and 搭配鏈條 metal).
@@ -380,5 +389,6 @@
     WAX_TO_METAL_CHIN: WAX_TO_METAL_CHIN,
     waxToMetalChin: waxToMetalChin,
     LABOR_FEE_TWD: LABOR_FEE_TWD,
+    CHAIN_LABOR_FEE_TWD: CHAIN_LABOR_FEE_TWD,
   };
 })(window);

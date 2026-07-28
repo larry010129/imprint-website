@@ -73,6 +73,11 @@ const columns: ColumnDef<ProductTableRow>[] = [
           className="ap-thumb"
           src={row.original.thumbUrl}
           alt=""
+          width={44}
+          height={44}
+          loading="lazy"
+          decoding="async"
+          fetchPriority="low"
           data-fallback={row.original.thumbFallback}
         />
       ) : (

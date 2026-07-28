@@ -18,19 +18,19 @@
 .login-container {
   --background: #fdfcfa;
   --foreground: #2b2320;
-  --primary: #5ecfcf;
+  --primary: #52c4c8;
   --primary-foreground: #2b2320;
   --accent: #eef9f9;
   --accent-foreground: #2b2320;
-  --border: #dcf2f2;
-  --ring: #5ecfcf;
+  --border: #d8f2f2;
+  --ring: #8eedf0;
   --login-paper: #fdfcfa;
   --login-ink: #2b2320;
   --login-ink-soft: #5a524e;
   --login-ink-faint: #8a817b;
-  --login-mint: #9cefef;
-  --login-mint-deep: #5ecfcf;
-  --login-mint-border: #dcf2f2;
+  --login-mint: #8eedf0;
+  --login-mint-deep: #52c4c8;
+  --login-mint-border: #d8f2f2;
   --login-card: #ffffff;
   --login-shadow: 0 18px 50px rgba(43, 35, 32, 0.08);
   font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
@@ -59,18 +59,18 @@
 .login-container.dark {
   --background: #1e1917;
   --foreground: #f7f4f1;
-  --primary: #5ecfcf;
+  --primary: #52c4c8;
   --primary-foreground: #1e1917;
   --accent: #2b2320;
   --accent-foreground: #f7f4f1;
   --border: #3d3532;
-  --ring: #9cefef;
+  --ring: #8eedf0;
   --login-paper: #1e1917;
   --login-ink: #f7f4f1;
   --login-ink-soft: #d4cdc8;
   --login-ink-faint: #b5ada8;
-  --login-mint: #5ecfcf;
-  --login-mint-deep: #9cefef;
+  --login-mint: #8eedf0;
+  --login-mint-deep: #52c4c8;
   --login-mint-border: #3d3532;
   --login-card: #2b2320;
   --login-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);

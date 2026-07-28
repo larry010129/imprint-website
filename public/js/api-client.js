@@ -249,6 +249,41 @@
           return { error: '系統連線異常，請稍後再試。' };
         });
       },
+      getPageImages: function () { return request('/api/admin/page-images'); },
+      getPageImageCreateOptions: function () { return request('/api/admin/page-image-create-options'); },
+      createPageImage: function (pageKey, slotKey) {
+        return request('/api/admin/page-image-create', {
+          method: 'POST',
+          body: { pageKey: pageKey, slotKey: slotKey },
+        });
+      },
+      updatePageImage: function (fields) { return request('/api/admin/page-image-update', { method: 'POST', body: fields }); },
+      pageImageAction: function (pageKey, slotKey, action) {
+        return request('/api/admin/page-image-action', {
+          method: 'POST',
+          body: { pageKey: pageKey, slotKey: slotKey, action: action },
+        });
+      },
+      uploadPageImage: function (file) {
+        var fd = new FormData();
+        fd.append('file', file);
+        return fetch(API_BASE + '/api/admin/page-image-upload', {
+          method: 'POST',
+          credentials: 'include',
+          body: fd,
+        }).then(function (res) {
+          return res.json().catch(function () { return {}; }).then(function (data) {
+            if (!res.ok && !data.error) {
+              if (typeof data.detail === 'string') data.error = data.detail;
+              else data.error = 'HTTP ' + res.status;
+            }
+            data._httpStatus = res.status;
+            return data;
+          });
+        }).catch(function () {
+          return { error: '系統連線異常，請稍後再試。' };
+        });
+      },
       getAccounts: function (q) {
         var path = '/api/admin/accounts';
         if (q) path += '?q=' + encodeURIComponent(q);

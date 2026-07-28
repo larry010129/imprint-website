@@ -242,11 +242,13 @@ function mergeProductWeights(product, staticProduct, category) {
   for (const [gold, carats] of Object.entries(staticProduct.weights)) {
     product.weights[gold] = { ...carats };
   }
+  product.lengthWeights = structuredClone(staticProduct.lengthWeights || {});
   if (Array.isArray(staticProduct.golds) && staticProduct.golds.length) {
     product.golds = [...staticProduct.golds];
   } else {
     product.golds = sortGolds(Object.keys(product.weights));
   }
+  product.carats = [...(staticProduct.carats || [])];
 }
 
 function enrichCatalogFromStatic() {
@@ -301,11 +303,11 @@ function compareChainStyleOrder(a, b) {
     - (CHAIN_STYLE_DISPLAY_ORDER[chainStyleLetter(b)] ?? 99);
 }
 
-// Which carat-unit system each category uses (ct vs chain's 分). Kept as a
+// Which carat-unit system each category uses (ct vs chain thickness). Kept as a
 // display/UI hint; the actual selectable set per listing comes from the
 // catalog (a listing only offers the carats it has variants for).
 const CATEGORY_CARAT_UNIT = {
-  diamond: 'ct', pendant: 'ct', ring: 'ct', earring: 'ct', bracelet: 'ct', chain: 'fen',
+  diamond: 'ct', pendant: 'ct', ring: 'ct', earring: 'ct', bracelet: 'ct', chain: 'mm',
 };
 const CATEGORY_DISPLAY_ORDER = ['diamond', 'pendant', 'ring', 'earring', 'bracelet', 'chain'];
 
@@ -527,9 +529,18 @@ function isPendantLayerAssetUrl(url) {
 }
 
 function pendantWithChainImageUrl(product, pendantMetal, chainMetal, diamond) {
+  const d = diamond || 'white';
+  // Admin 3-part slot (metal-diamond-chainMetal) — same keys as product edit UI / image_urls.py
+  const catalogKeys = window.ShopAssets?.imageSlotKeysForLookup
+    ? window.ShopAssets.imageSlotKeysForLookup(pendantMetal, d, chainMetal).filter((k) =>
+      String(k).split('-').length >= 3)
+    : [`${pendantMetal}-${d}-${chainMetal}`];
+  const fromCatalog = catalogImagesForKeys(product, catalogKeys);
+  if (fromCatalog.length && !isPendantLayerAssetUrl(fromCatalog[0])) {
+    return fromCatalog[0];
+  }
   const assetId = productAssetId(product);
   if (!assetId || !window.ShopAssets) return '';
-  const d = diamond || 'white';
   // Prefer direct productImage so white-diamond combos are not lost to resolve quirks.
   if (window.ShopAssets.productImage) {
     const direct = window.ShopAssets.productImage(
@@ -626,16 +637,41 @@ function productImagesForColor(product, metalColor, diamondColor, opts) {
     ? !!opts.pendantOnly
     : previewPendantOnlyMode();
   const imageOpts = { pendantOnly };
+  let chainMetal = null;
   if (!pendantOnly && state.category === 'pendant' && state.includeChain) {
-    imageOpts.chainColor = opts.chainColor || previewChainMetalForImage();
+    chainMetal = opts.chainColor || previewChainMetalForImage();
+    imageOpts.chainColor = chainMetal;
   }
   const assetId = productAssetId(product);
   const compoundKey = window.ShopAssets?.buildImageSlotKey
     ? window.ShopAssets.buildImageSlotKey(metal, diamond)
-    : (diamond !== 'white' ? `${metal}-${diamond}` : `${metal}-white`);
+    : `${metal}-${diamond}`;
 
-  // Shop-product PNGs (incl. cross-metal chain combos) must win over admin
-  // catalog slots — those are often metal-only and hide rose-chain / fancy renders.
+  // Exact admin uploads first (match app/image_urls.py). Never let legacy metal-only
+  // slots override fancy-diamond / cross-metal renders.
+  if (diamond !== 'white') {
+    const exactKeys = [];
+    if (chainMetal) {
+      exactKeys.push(
+        window.ShopAssets?.buildImageSlotKey
+          ? window.ShopAssets.buildImageSlotKey(metal, diamond, chainMetal)
+          : `${metal}-${diamond}-${chainMetal}`,
+      );
+    }
+    exactKeys.push(compoundKey);
+    const fromExact = catalogImagesForKeys(product, exactKeys);
+    if (fromExact.length) return fromExact;
+  } else {
+    const whiteKeys = window.ShopAssets?.imageSlotKeysForLookup
+      ? window.ShopAssets.imageSlotKeysForLookup(metal, 'white', chainMetal)
+      : (chainMetal
+        ? [`${metal}-white-${chainMetal}`, metal, `${metal}-white`]
+        : [metal, `${metal}-white`]);
+    const fromWhite = catalogImagesForKeys(product, whiteKeys);
+    if (fromWhite.length) return fromWhite;
+  }
+
+  // Shop-product PNGs when no exact admin slot for this metal/diamond[/chain].
   if (assetId && window.ShopAssets?.productImageResolve) {
     const resolved = window.ShopAssets.productImageResolve(
       assetId,
@@ -659,19 +695,8 @@ function productImagesForColor(product, metalColor, diamondColor, opts) {
     if (resolved) return [resolved];
   }
 
-  // Admin-uploaded compound slot (e.g. white-pink) — only after shop-product miss.
-  if (!pendantOnly && diamond !== 'white') {
-    const fromCompound = catalogImagesForKeys(product, [compoundKey]);
-    if (fromCompound.length) return fromCompound;
-  }
-
-  // White diamond: catalog metal slots, then any legacy upload.
+  // White diamond: broader catalog fallbacks after shop-product miss.
   if (diamond === 'white') {
-    const metalKeys = window.ShopAssets?.imageSlotKeysForLookup
-      ? window.ShopAssets.imageSlotKeysForLookup(metal, 'white')
-      : [metal, `${metal}-white`];
-    const fromMetal = catalogImagesForKeys(product, metalKeys);
-    if (fromMetal.length) return fromMetal;
     for (const key of [product?.defaultColor, 'white']) {
       const list = catalogImagesForKeys(product, [key]);
       if (list.length) return list;
@@ -910,7 +935,7 @@ let state = {
   type: null,       // Product id (string)
   gold: null,       // 9k / 14k / 18k / pt950 / s925
   color: null,      // white / yellow / rose / null
-  carat: null,      // 0.1 / 0.3 / 0.5 / 1.0 / 3fen / 4fen
+  carat: null,      // diamond carat or chain thickness (1.0mm–3.0mm)
   ringSize: null,   // integer 5–18
   engravingBand: '',
   engravingGirdle: '',
@@ -931,8 +956,7 @@ function isDiamondOnlyCategory(category = state.category) {
 }
 
 let shopView = 'catalog';
-const CHAIN_LENGTH_OPTIONS_CM = [35, 40, 46, 50, 56, 60, 66, 70, 76, 90, 102];
-const CHAIN_REFERENCE_LENGTH_CM = 45;
+const CHAIN_LENGTH_OPTIONS_CM = [36, 41, 46, 51, 61, 76, 80];
 const BRACELET_LENGTH_OPTIONS_CM = [15, 16, 17, 18, 19, 20, 21];
 const BRACELET_REFERENCE_LENGTH_CM = 18;
 
@@ -1270,12 +1294,8 @@ function updateConfigChips() {
   if (!container) return;
   container.innerHTML = '';
   const chips = [];
-  if (state.carat && state.category !== 'chain') {
-    chips.push(
-      state.carat === '3fen' ? tr('chain_3fen')
-        : state.carat === '4fen' ? tr('chain_4fen')
-          : state.carat + ' ct'
-    );
+  if (state.carat) {
+    chips.push(state.category === 'chain' ? state.carat : state.carat + ' ct');
   }
   if (state.gold) chips.push(materialLabel(state.gold, state.color));
   if (state.category !== 'chain') {
@@ -1772,8 +1792,8 @@ function renderTypeCards() {
 }
 
 function syncVariantChipActiveStates() {
-  document.querySelectorAll('.carat-btn').forEach(b =>
-    b.classList.toggle('active', b.dataset.carat === state.carat));
+  const caratSel = document.getElementById('carat-select');
+  if (caratSel) caratSel.value = state.carat != null ? String(state.carat) : '';
   document.querySelectorAll('#metal-btn-row .metal-btn').forEach(b =>
     b.classList.toggle('active', b.dataset.gold === state.gold));
   document.querySelectorAll('#color-btn-row .color-btn').forEach(b =>
@@ -1849,7 +1869,6 @@ function ensureChainCaratDefault() {
   const product = getSelectedProduct();
   const carats = product?.carats || [];
   if (!carats.length) return;
-  // Chain has no user-facing carat/fen picker — keep one weight for metal pricing
   if (!state.carat || !carats.includes(state.carat)) {
     state.carat = carats[0];
   }
@@ -1859,29 +1878,29 @@ function updateCaratButtons() {
   const product = getSelectedProduct();
   const validCarats = product ? product.carats : [];
   const isChain = state.category === 'chain';
-  document.getElementById('carat-step')?.classList.toggle('hidden', isChain);
+  document.getElementById('carat-step')?.classList.remove('hidden');
+  const label = document.querySelector('#carat-step .variant-label');
+  if (label) label.textContent = tr(isChain ? 'step_chain_thickness' : 'step_carat');
   if (isChain) {
     ensureChainCaratDefault();
-    updateDiamondSteps();
-    return;
   }
-  const row = document.getElementById('carat-btn-row');
-  if (!row) return;
-  row.innerHTML = '';
+  const sel = document.getElementById('carat-select');
+  if (!sel) return;
+  sel.innerHTML = '';
+  const placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = tr('carat_placeholder') || '— 請選擇克拉數 —';
+  sel.appendChild(placeholder);
   validCarats.forEach((v) => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'carat-btn variant-chip';
-    btn.dataset.carat = v;
     const n = parseFloat(v);
-    btn.textContent = Number.isNaN(n) ? v : `${n.toFixed(2)} ct`;
-    const visible = !isCaratHiddenForShop(v);
-    btn.style.display = visible ? '' : 'none';
-    btn.disabled = !visible;
-    btn.classList.toggle('active', v === state.carat);
-    btn.addEventListener('click', () => selectCarat(v));
-    row.appendChild(btn);
+    const visible = isChain || !isCaratHiddenForShop(v);
+    if (!visible) return;
+    const opt = document.createElement('option');
+    opt.value = v;
+    opt.textContent = isChain ? v : (Number.isNaN(n) ? v : `${n.toFixed(1)} ct`);
+    sel.appendChild(opt);
   });
+  sel.value = state.carat && validCarats.includes(state.carat) ? state.carat : '';
   updateDiamondSteps();
 }
 
@@ -1995,6 +2014,9 @@ function defaultStoneCountForCategory(category = state.category) {
 }
 
 function stoneCountBadgeText() {
+  if (state.category === 'earring') {
+    return tr('stone_count_badge').replace('{n}', '1');
+  }
   if (usesStoneCountPicker() && state.stoneCount && state.stoneCount > 1) {
     return tr('stone_count_badge').replace('{n}', String(state.stoneCount));
   }
@@ -2495,7 +2517,8 @@ function selectDiamondColor(colorId) {
     state.fancyColor = colorId;
     if (state.carat && isCaratHiddenForShop(state.carat)) {
       state.carat = null;
-      document.querySelectorAll('.carat-btn').forEach(b => b.classList.remove('active'));
+      const caratSel = document.getElementById('carat-select');
+      if (caratSel) caratSel.value = '';
     }
   }
   ensureStoneCountDefault();
@@ -3182,19 +3205,15 @@ function updateSummary() {
       ? tr('sum_loose_diamond')
       : (state.gold ? materialLabel(state.gold, state.color) : '-');
 
-  // Carat — hidden for chain-only (no diamond / no fen picker)
+  // Diamond carat or chain thickness
   const caratRow = document.getElementById('sum-carat-row');
-  if (state.category === 'chain') {
-    if (caratRow) caratRow.style.display = 'none';
-  } else {
-    if (caratRow) caratRow.style.display = '';
+  if (caratRow) caratRow.style.display = '';
+  {
     const caratBase = state.carat
-      ? (state.carat === '3fen' ? tr('chain_3fen')
-        : state.carat === '4fen' ? tr('chain_4fen')
-          : state.carat + 'ct')
+      ? (state.category === 'chain' ? state.carat : state.carat + 'ct')
       : '-';
     const badge = stoneCountBadgeText();
-    const caratDisplay = badge && state.carat && state.carat !== '3fen' && state.carat !== '4fen'
+    const caratDisplay = badge && state.carat && state.category !== 'chain'
       ? `${caratBase} ${badge}`
       : caratBase;
     document.getElementById("sum-carat").textContent = caratDisplay;
@@ -3228,7 +3247,7 @@ function updateSummary() {
     ? lookupWeight(state.category, state.type, state.gold, state.carat)
     : null;
   const chin = baseChin !== null && state.category === 'chain' && state.lengthCm
-    ? baseChin * (state.lengthCm / CHAIN_REFERENCE_LENGTH_CM)
+    ? getSelectedProduct()?.lengthWeights?.[state.carat]?.[String(state.lengthCm)] ?? null
     : baseChin !== null && state.category === 'bracelet' && state.lengthCm
       ? baseChin * (state.lengthCm / BRACELET_REFERENCE_LENGTH_CM)
       : baseChin;
@@ -3342,7 +3361,7 @@ function selectCategory(cat) {
   const titleEl = document.getElementById("shop-category-title");
   if (titleEl) titleEl.textContent = tr('cat_' + cat);
 
-  document.querySelectorAll(".carat-btn, #metal-btn-row .metal-btn, #color-btn-row .color-btn").forEach(b => b.classList.remove("active"));
+  document.querySelectorAll("#metal-btn-row .metal-btn, #color-btn-row .color-btn").forEach(b => b.classList.remove("active"));
   clearRingSizeSelection();
   updateMetalButtons();
   updateCaratButtons();
@@ -3374,7 +3393,7 @@ function selectType(typeId) {
 
   updateCaratButtons();
   updateMetalButtons();
-  document.querySelectorAll(".carat-btn, #metal-btn-row .metal-btn, #color-btn-row .color-btn").forEach(b => b.classList.remove("active"));
+  document.querySelectorAll("#metal-btn-row .metal-btn, #color-btn-row .color-btn").forEach(b => b.classList.remove("active"));
   clearRingSizeSelection();
 
   productImageIndex = 0;
@@ -3423,8 +3442,8 @@ function selectColor(color) {
 function selectCarat(carat) {
   state.carat = carat;
 
-  document.querySelectorAll(".carat-btn").forEach(b =>
-    b.classList.toggle("active", b.dataset.carat === carat));
+  const sel = document.getElementById('carat-select');
+  if (sel) sel.value = carat != null ? String(carat) : '';
 
   updateMetalButtons();
   updateRingSizeStep();
@@ -3438,8 +3457,8 @@ function selectCarat(carat) {
 
 // ── Event wiring ──────────────────────────────────────────────────────────
 
-document.querySelectorAll(".carat-btn").forEach(btn =>
-  btn.addEventListener("click", () => selectCarat(btn.dataset.carat)));
+document.getElementById('carat-select')?.addEventListener('change', (e) =>
+  selectCarat(e.target.value || null));
 
 document.getElementById('ring-size-select')?.addEventListener('change', (e) =>
   selectRingSize(e.target.value));
@@ -3561,7 +3580,7 @@ document.getElementById('back-to-catalog')?.addEventListener('click', () => {
   state.chainGold = null;
   state.chainColor = null;
   state.chainLength = null;
-  document.querySelectorAll('.cat-btn, .carat-btn, #metal-btn-row .metal-btn, #color-btn-row .color-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.cat-btn, #metal-btn-row .metal-btn, #color-btn-row .color-btn').forEach(b => b.classList.remove('active'));
   clearRingSizeSelection();
   updateChainOptions();
   setShopView('catalog');
@@ -3701,7 +3720,9 @@ function buildInquirySummaryLines() {
     `金屬：${state.gold || '-'}`,
   ];
   if (state.color) lines.push(`成色：${tr('color_' + state.color) || state.color}`);
-  if (state.carat && state.category !== 'chain') lines.push(`克拉：${state.carat}`);
+  if (state.carat) {
+    lines.push(state.category === 'chain' ? `厚度：${state.carat}` : `克拉：${state.carat}`);
+  }
   if (state.ringSize) lines.push(`戒圍：${state.ringSize}`);
   if (state.lengthCm) lines.push(`長度：${state.lengthCm} cm`);
   if (pricing?.total != null) lines.push(`試算參考價：NT$ ${Math.round(pricing.total).toLocaleString()}`);

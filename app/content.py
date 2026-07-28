@@ -1,7 +1,8 @@
-"""Content CMS helpers — FAQ + testimonials + home banners."""
+"""Content CMS helpers — FAQ + testimonials + home banners + page images."""
 
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from typing import Any
 from uuid import uuid4
@@ -307,3 +308,282 @@ def fetch_published_banners(cur) -> list[dict]:
 def fetch_all_banners(cur) -> list[dict]:
     cur.execute("select * from home_banners order by sort_order asc, created_at asc")
     return [serialize_banner(r) for r in cur.fetchall()]
+
+
+def ensure_banner_mobile_column(cur) -> None:
+    """Idempotent: add image_url_mobile to home_banners if it doesn't exist yet."""
+    cur.execute(
+        "alter table home_banners add column if not exists image_url_mobile text not null default ''"
+    )
+
+
+def ensure_page_images_schema(cur) -> None:
+    cur.execute(
+        """
+        create table if not exists page_images (
+          page_key text not null,
+          slot_key text not null default 'hero',
+          label text not null,
+          slot_label text not null default '主視覺',
+          group_key text not null default 'brand',
+          image_url text not null default '',
+          image_webp text,
+          image_alt text not null default '',
+          default_image_url text not null default '',
+          default_image_webp text,
+          target_w int not null,
+          target_h int not null,
+          sort_order int not null default 0,
+          is_published boolean not null default true,
+          created_at timestamptz not null default now(),
+          updated_at timestamptz not null default now(),
+          primary key (page_key, slot_key)
+        )
+        """
+    )
+    cur.execute("alter table page_images add column if not exists slot_key text")
+    cur.execute("update page_images set slot_key = 'hero' where slot_key is null or btrim(slot_key) = ''")
+    cur.execute("update page_images set slot_key = 'cinema' where page_key = '/about.html' and slot_key = 'hero'")
+    cur.execute("alter table page_images alter column slot_key set default 'hero'")
+    cur.execute("alter table page_images alter column slot_key set not null")
+    cur.execute("alter table page_images add column if not exists slot_label text")
+    cur.execute("update page_images set slot_label = label where slot_label is null or btrim(slot_label) = ''")
+    cur.execute("alter table page_images alter column slot_label set default '主視覺'")
+    cur.execute("alter table page_images alter column slot_label set not null")
+    cur.execute(
+        """
+        do $$
+        declare current_pk text;
+        declare key_count int;
+        begin
+          select conname, cardinality(conkey) into current_pk, key_count
+          from pg_constraint
+          where conrelid = 'page_images'::regclass and contype = 'p';
+          if current_pk is not null and key_count = 1 then
+            execute format('alter table page_images drop constraint %I', current_pk);
+            current_pk := null;
+          end if;
+          if current_pk is null then
+            alter table page_images
+              add constraint page_images_pkey primary key (page_key, slot_key);
+          end if;
+        end $$;
+        """
+    )
+    cur.execute(
+        """
+        create index if not exists page_images_group_sort_idx
+          on page_images (group_key, sort_order, page_key, slot_key)
+        """
+    )
+    # Product / calculator imagery lives in 商品上架 — never in this CMS.
+    cur.execute(
+        """
+        delete from page_images
+        where page_key like '/shop/%'
+           or page_key like '/jewelry/%'
+           or page_key = '/jewelry/'
+           or group_key = 'jewelry'
+        """
+    )
+
+
+def serialize_page_image(row: dict) -> dict:
+    out = dict(row)
+    for key in ("created_at", "updated_at"):
+        val = out.get(key)
+        if isinstance(val, datetime):
+            out[key] = val.isoformat()
+    if "is_published" in out:
+        out["is_published"] = bool(out["is_published"])
+    for key in ("target_w", "target_h", "sort_order"):
+        if out.get(key) is not None:
+            out[key] = int(out[key])
+    out["display_url"] = effective_page_image_url(out)
+    out["display_webp"] = effective_page_image_webp(out)
+    return out
+
+
+def effective_page_image_url(row: dict | None) -> str:
+    if not row:
+        return ""
+    if row.get("is_published") is False:
+        return str(row.get("default_image_url") or "").strip()
+    url = str(row.get("image_url") or "").strip()
+    if url:
+        return url
+    return str(row.get("default_image_url") or "").strip()
+
+
+def effective_page_image_webp(row: dict | None) -> str:
+    if not row:
+        return ""
+    if row.get("is_published") is False:
+        return str(row.get("default_image_webp") or "").strip()
+    webp = str(row.get("image_webp") or "").strip()
+    if webp:
+        return webp
+    image_url = str(row.get("image_url") or "").strip()
+    default_url = str(row.get("default_image_url") or "").strip()
+    if image_url and image_url != default_url:
+        return ""
+    return str(row.get("default_image_webp") or "").strip()
+
+
+def fetch_all_page_images(cur) -> list[dict]:
+    """Admin list: content-page slots only (no shop/calculator or jewelry).
+
+    Includes empty placeholder slots (e.g. DNA 實驗室照片) so they can be uploaded later.
+    """
+    cur.execute(
+        """
+        select * from page_images
+        where page_key not like '/shop/%'
+          and page_key not like '/jewelry/%'
+          and page_key <> '/jewelry/'
+          and coalesce(group_key, '') <> 'jewelry'
+        order by group_key asc, sort_order asc, page_key asc, slot_key asc
+        """
+    )
+    return [serialize_page_image(r) for r in cur.fetchall()]
+
+
+def fetch_page_images(cur, page_key: str) -> list[dict]:
+    cur.execute(
+        "select * from page_images where page_key = %s order by sort_order, slot_key",
+        (page_key,),
+    )
+    return [serialize_page_image(row) for row in cur.fetchall()]
+
+
+def fetch_page_image(cur, page_key: str, slot_key: str = "hero") -> dict | None:
+    """Backward-compatible single-slot lookup."""
+    cur.execute(
+        "select * from page_images where page_key = %s and slot_key = %s",
+        (page_key, slot_key),
+    )
+    row = cur.fetchone()
+    return serialize_page_image(row) if row else None
+
+
+def parse_page_image_payload(body: dict | None) -> tuple[dict | None, str | None]:
+    body = body or {}
+    page_key = str(body.get("pageKey") or body.get("page_key") or "").strip()
+    if not page_key:
+        return None, "缺少 page_key"
+    slot_key = str(body.get("slotKey") or body.get("slot_key") or "").strip()
+    if not slot_key:
+        return None, "缺少 slot_key"
+    if not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,63}", slot_key):
+        return None, "slot_key 無效"
+
+    image_url = str(body.get("imageUrl") or body.get("image_url") or "").strip()
+    image_webp_raw = body.get("imageWebp") if "imageWebp" in body else body.get("image_webp")
+    image_alt = str(body.get("imageAlt") or body.get("image_alt") or "").strip()
+    is_published = bool(
+        body.get("isPublished") if body.get("isPublished") is not None else body.get("is_published", True)
+    )
+
+    cleaned: dict[str, Any] = {
+        "page_key": page_key,
+        "slot_key": slot_key,
+        "image_url": image_url,
+        "image_alt": image_alt,
+        "is_published": is_published,
+    }
+    if image_webp_raw is not None:
+        cleaned["image_webp"] = str(image_webp_raw or "").strip() or None
+    return cleaned, None
+
+
+def _is_content_page_image_row(row: dict) -> bool:
+    page_key = str(row.get("page_key") or "")
+    group_key = str(row.get("group_key") or "")
+    if page_key.startswith("/shop/") or page_key.startswith("/jewelry/") or page_key == "/jewelry/":
+        return False
+    return group_key != "jewelry"
+
+
+def fetch_missing_page_image_slots(cur) -> list[dict]:
+    """Registry slots not yet present in page_images (content CMS only)."""
+    from app.page_image_slots import build_page_image_seed
+
+    cur.execute("select page_key, slot_key from page_images")
+    existing = {(r["page_key"], r["slot_key"]) for r in cur.fetchall()}
+    missing: list[dict] = []
+    for row in build_page_image_seed():
+        if not _is_content_page_image_row(row):
+            continue
+        key = (row["page_key"], row["slot_key"])
+        if key in existing:
+            continue
+        missing.append(
+            {
+                "page_key": row["page_key"],
+                "page_label": row["label"],
+                "slot_key": row["slot_key"],
+                "slot_label": row["slot_label"],
+                "target_w": row["target_w"],
+                "target_h": row["target_h"],
+            }
+        )
+    return missing
+
+
+def create_page_image_from_registry(
+    cur, page_key: str, slot_key: str
+) -> tuple[dict | None, str | None]:
+    from app.page_image_slots import build_page_image_seed
+
+    entry = next(
+        (
+            row
+            for row in build_page_image_seed()
+            if row["page_key"] == page_key and row["slot_key"] == slot_key
+        ),
+        None,
+    )
+    if not entry or not _is_content_page_image_row(entry):
+        return None, "找不到此頁面圖片區塊"
+    cur.execute(
+        "select page_key from page_images where page_key = %s and slot_key = %s",
+        (page_key, slot_key),
+    )
+    if cur.fetchone():
+        return None, "此區塊已存在"
+    cur.execute(
+        """
+        insert into page_images (
+          page_key, slot_key, label, slot_label, group_key,
+          image_url, image_webp, image_alt,
+          default_image_url, default_image_webp,
+          target_w, target_h, sort_order, is_published
+        ) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,true)
+        returning *
+        """,
+        (
+            entry["page_key"],
+            entry["slot_key"],
+            entry["label"],
+            entry["slot_label"],
+            entry["group_key"],
+            entry["image_url"],
+            entry.get("image_webp"),
+            entry.get("image_alt") or "",
+            entry["default_image_url"],
+            entry.get("default_image_webp"),
+            entry["target_w"],
+            entry["target_h"],
+            entry["sort_order"],
+        ),
+    )
+    return serialize_page_image(cur.fetchone()), None
+
+
+def apply_page_image_to_html(html: str, row: dict | None) -> str:
+    """Backward-compatible wrapper for explicit slot rendering."""
+    if not html or not row or not row.get("page_key"):
+        return html
+    from app.page_image_slots import apply_page_image_slots
+
+    return apply_page_image_slots(html, str(row["page_key"]), [row])

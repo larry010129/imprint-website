@@ -1,5 +1,4 @@
-import React from "react";
-import { motion } from "motion/react";
+import React, { type CSSProperties } from "react";
 import { type Testimonial } from "@/components/ui/testimonials-columns-1";
 
 /** Two horizontal marquee rows (L/R). DNA palette glass cards, 4:3 box @0.5x. */
@@ -9,22 +8,20 @@ export const TestimonialsRow = (props: {
   duration?: number;
   reverse?: boolean;
 }) => {
+  const trackClass = [
+    "home-testimonial-marquee__track flex w-max gap-3 pr-3",
+    props.reverse ? "home-testimonial-marquee__track--reverse" : "",
+  ].join(" ");
+
   return (
-    <div className={props.className}>
-      <motion.div
-        animate={{
-          translateX: props.reverse ? "0%" : "-50%",
-        }}
-        initial={{
-          translateX: props.reverse ? "-50%" : "0%",
-        }}
-        transition={{
-          duration: props.duration || 30,
-          repeat: Infinity,
-          ease: "linear",
-          repeatType: "loop",
-        }}
-        className="flex w-max gap-3 pr-3"
+    <div
+      aria-label="客戶見證跑馬燈，移入指標或聚焦可暫停"
+      className={`${props.className || ""} home-testimonial-marquee`}
+      tabIndex={0}
+    >
+      <div
+        className={trackClass}
+        style={{ "--marquee-duration": `${props.duration || 30}s` } as CSSProperties}
       >
         {[
           ...new Array(2).fill(0).map((_, index) => (
@@ -70,7 +67,7 @@ export const TestimonialsRow = (props: {
             </React.Fragment>
           )),
         ]}
-      </motion.div>
+      </div>
     </div>
   );
 };

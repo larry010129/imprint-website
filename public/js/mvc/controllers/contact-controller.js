@@ -21,7 +21,7 @@
         View.setMsg('');
 
         if (!M.api()) {
-          View.setMsg('系統連線異常，請直接透過 LINE 或電話聯繫我們。', 'err');
+          View.setMsg('系統連線異常，請直接透過官方 LINE 聯繫我們。', 'err');
           return;
         }
 
@@ -45,7 +45,7 @@
         }).then(function (res) {
           View.setLoading(false);
           if (res.error) {
-            View.setMsg('送出失敗，請稍後再試，或直接透過 LINE／電話聯繫我們。', 'err');
+            View.setMsg('送出失敗，請稍後再試，或直接透過官方 LINE 聯繫我們。', 'err');
             return;
           }
           e.form.reset();

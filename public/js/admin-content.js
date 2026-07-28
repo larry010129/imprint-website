@@ -1,4 +1,4 @@
-/* 銘印鑽石｜內容管理（見證 + FAQ + 首頁輪播） */
+/* 銘印鑽石｜首頁圖片與內容管理 */
 (function () {
   'use strict';
 
@@ -10,10 +10,12 @@
 
   var _loaded = false;
   var _tab = 'testimonials';
+  var _pageImagePage = '';
   var _testimonials = [];
   var _faqItems = [];
   var _faqCategories = [];
   var _banners = [];
+  var _pageImages = [];
 
   var PAGE_LINKS = [
     { value: '/', label: '首頁' },
@@ -143,33 +145,90 @@
     return id || '—';
   }
 
+  function pageImageId(row) {
+    return String(row.page_key) + '\u001f' + String(row.slot_key);
+  }
+
+  function findPageImage(id) {
+    for (var i = 0; i < _pageImages.length; i++) {
+      if (pageImageId(_pageImages[i]) === String(id)) return _pageImages[i];
+    }
+    return null;
+  }
+
+  function pageImagePages() {
+    var seen = {};
+    return _pageImages.reduce(function (pages, row) {
+      if (!seen[row.page_key]) {
+        seen[row.page_key] = true;
+        pages.push({ value: row.page_key, label: row.label || row.page_key });
+      }
+      return pages;
+    }, []);
+  }
+
   function renderShell() {
     var oldMount = document.getElementById('contentReactMount');
     if (oldMount && window.AdminTables && window.AdminTables.unmount) {
       try { window.AdminTables.unmount(oldMount); } catch (e) {}
     }
 
+    var imagePages = pageImagePages();
+    if (_tab === 'page-images' && (!_pageImagePage || !imagePages.some(function (p) { return p.value === _pageImagePage; }))) {
+      _pageImagePage = imagePages.length ? imagePages[0].value : '';
+    }
+
+    var pageSubTabsHtml = '';
+    if (_tab === 'page-images' && imagePages.length > 0) {
+      pageSubTabsHtml = '<div class="adx-tabs adx-tabs--sub" role="tablist">';
+      for (var pi = 0; pi < imagePages.length; pi++) {
+        var pg = imagePages[pi];
+        pageSubTabsHtml +=
+          '<button type="button" class="adx-tab' +
+          (_pageImagePage === pg.value ? ' is-active' : '') +
+          '" data-page-tab="' +
+          esc(pg.value) +
+          '">' +
+          esc(pg.label) +
+          '</button>';
+      }
+      pageSubTabsHtml += '</div>';
+    }
+
     root.innerHTML =
-      '<p class="adx-panel-note">管理首頁輪播、FAQ 與客戶見證。見證上架前請確認已取得同意；文案請迴避「培育鑽石與天然鑽石的比較」。FAQ 變更後，頁面 JSON-LD 結構化資料可能需部署更新。</p>' +
+      '<p class="adx-panel-note">「首頁圖片」管理首頁輪播；「頁面圖片」依頁面列出所有既有內容圖片。見證上架前請確認已取得同意；FAQ 變更後，頁面 JSON-LD 可能需部署更新。</p>' +
       '<div class="adx-tabs" role="tablist">' +
-        '<button type="button" class="adx-tab' + (_tab === 'banners' ? ' is-active' : '') + '" data-tab="banners">輪播</button>' +
+        '<button type="button" class="adx-tab' + (_tab === 'banners' ? ' is-active' : '') + '" data-tab="banners">首頁圖片</button>' +
+        '<button type="button" class="adx-tab' + (_tab === 'page-images' ? ' is-active' : '') + '" data-tab="page-images">頁面圖片</button>' +
         '<button type="button" class="adx-tab' + (_tab === 'testimonials' ? ' is-active' : '') + '" data-tab="testimonials">見證</button>' +
         '<button type="button" class="adx-tab' + (_tab === 'faq' ? ' is-active' : '') + '" data-tab="faq">FAQ</button>' +
       '</div>' +
+      pageSubTabsHtml +
       '<div id="contentPanelBody"></div>';
 
     root.querySelectorAll('[data-tab]').forEach(function (btn) {
       btn.addEventListener('click', function () {
-        _tab = btn.dataset.tab;
+        var nextTab = btn.dataset.tab;
+        if (!nextTab || nextTab === _tab) return;
+        _tab = nextTab;
+        renderShell();
+      });
+    });
+
+    root.querySelectorAll('[data-page-tab]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var pageKey = btn.dataset.pageTab;
+        if (!pageKey || pageKey === _pageImagePage) return;
+        _pageImagePage = pageKey;
         renderShell();
       });
     });
 
     var body = document.getElementById('contentPanelBody');
-    renderContentReact(body);
+    renderContentReact(body, imagePages);
   }
 
-  function renderContentReact(body) {
+  function renderContentReact(body, imagePages) {
     if (!body) return;
     if (!window.AdminTables || !window.AdminTables.renderContentTables) {
       body.innerHTML = '<p class="note warn">表格元件尚未載入，請重新整理頁面。</p>';
@@ -181,6 +240,7 @@
       body.innerHTML = '<div id="contentReactMount"></div>';
       mount = document.getElementById('contentReactMount');
     }
+    imagePages = imagePages || pageImagePages();
 
     var faqRows = _faqItems.map(function (f) {
       return {
@@ -200,6 +260,7 @@
         sort_order: Number(b.sort_order || 0),
         is_published: !!b.is_published,
         image_url: b.image_url || '',
+        image_url_mobile: b.image_url_mobile || '',
       };
     });
 
@@ -218,19 +279,42 @@
       };
     });
 
+    var pageImageRows = _pageImages
+      .filter(function (p) {
+        return p.page_key === _pageImagePage;
+      })
+      .map(function (p) {
+        return {
+          id: pageImageId(p),
+          label: p.label || p.page_key,
+          page_key: p.page_key,
+          slot_key: p.slot_key,
+          slot_label: p.slot_label || p.slot_key,
+          group_key: p.group_key || 'brand',
+          target_w: Number(p.target_w || 0),
+          target_h: Number(p.target_h || 0),
+          is_published: !!p.is_published,
+          image_url: p.image_url || '',
+          display_url: p.display_url || p.image_url || p.default_image_url || '',
+        };
+      });
+
     window.AdminTables.renderContentTables(mount, {
       tab: _tab,
       banners: bannerRows,
       testimonials: testimonialRows,
       faqItems: faqRows,
+      pageImages: pageImageRows,
+      pageImagePage: _pageImagePage,
       onAdd: function () {
         if (_tab === 'banners') openBannerModal(null);
         else if (_tab === 'testimonials') openTestimonialModal(null);
-        else openFaqModal(null);
+        else if (_tab === 'faq') openFaqModal(null);
       },
       onEdit: function (id) {
         if (_tab === 'banners') openBannerModal(findBanner(id));
         else if (_tab === 'testimonials') openTestimonialModal(findTestimonial(id));
+        else if (_tab === 'page-images') openPageImageModal(findPageImage(id));
         else openFaqModal(findFaq(id));
       },
       onReorder: function (id, direction) {
@@ -245,8 +329,21 @@
       },
       onAction: function (id, action) {
         if (!id || !action) return;
+        if (_tab === 'page-images') {
+          var pageImage = findPageImage(id);
+          if (!pageImage) return;
+          if (action === 'reset' && !confirm('還原此圖片為預設值？')) return;
+          api.admin.pageImageAction(pageImage.page_key, pageImage.slot_key, action).then(function (res) {
+            if (res.error) {
+              alert(res.error.message || res.error);
+              return;
+            }
+            load(true, true);
+          });
+          return;
+        }
         if (action === 'delete') {
-          var label = _tab === 'banners' ? '輪播' : _tab === 'testimonials' ? '見證' : 'FAQ';
+          var label = _tab === 'banners' ? '首頁圖片' : _tab === 'testimonials' ? '見證' : 'FAQ';
           if (!confirm('確定刪除此' + label + '？')) return;
         }
         var req =
@@ -266,6 +363,90 @@
     });
   }
 
+  function openPageImageModal(row) {
+    if (!row) return;
+    if (!window.AdminTables || !window.AdminTables.renderPageImageEditModal) {
+      alert('頁面元件尚未載入，請重新整理後再試。');
+      return;
+    }
+    var mount = document.createElement('div');
+    mount.id = 'acPageImageModalMount';
+    document.body.appendChild(mount);
+
+    function close() {
+      if (window.AdminTables && window.AdminTables.unmount) {
+        window.AdminTables.unmount(mount);
+      }
+      if (mount.parentNode) mount.parentNode.removeChild(mount);
+    }
+
+    window.AdminTables.renderPageImageEditModal(mount, {
+      row: {
+        page_key: row.page_key,
+        slot_key: row.slot_key,
+        slot_label: row.slot_label,
+        label: row.label,
+        target_w: row.target_w,
+        target_h: row.target_h,
+        is_published: !!row.is_published,
+        image_url: row.image_url || '',
+        image_webp: row.image_webp || '',
+        image_alt: row.image_alt || '',
+        display_url: row.display_url || '',
+        default_image_url: row.default_image_url || '',
+      },
+      onClose: close,
+      onSaved: function () {
+        close();
+        load(true, true);
+      },
+      uploadImage: function (file) {
+        return api.admin.uploadPageImage(file);
+      },
+      updatePageImage: function (fields) {
+        return api.admin.updatePageImage(fields);
+      },
+    });
+  }
+
+  function openPageImageCreateModal() {
+    if (!window.AdminTables || !window.AdminTables.renderPageImageCreateModal) {
+      alert('頁面元件尚未載入，請重新整理後再試。');
+      return;
+    }
+    api.admin.getPageImageCreateOptions().then(function (res) {
+      if (res.error) {
+        alert(res.error.message || res.error);
+        return;
+      }
+      var mount = document.createElement('div');
+      mount.id = 'acPageImageCreateModalMount';
+      document.body.appendChild(mount);
+
+      function closeCreate() {
+        if (window.AdminTables && window.AdminTables.unmount) {
+          window.AdminTables.unmount(mount);
+        }
+        if (mount.parentNode) mount.parentNode.removeChild(mount);
+      }
+
+      window.AdminTables.renderPageImageCreateModal(mount, {
+        options: res.options || [],
+        defaultPageKey: _pageImagePage,
+        onClose: closeCreate,
+        onCreated: function (createdRow) {
+          closeCreate();
+          _pageImagePage = createdRow.page_key;
+          openPageImageModal(createdRow);
+          load(true, true);
+        },
+        createPageImage: function (pageKey, slotKey) {
+          return api.admin.createPageImage(pageKey, slotKey);
+        },
+      });
+    });
+  }
+
   function renderBanners(body) {
     renderContentReact(body);
   }
@@ -281,7 +462,7 @@
       }
       var apiAction = action === 'publish-b' ? 'publish' : action === 'unpublish-b' ? 'unpublish' : action === 'delete-b' ? 'delete' : null;
       if (!apiAction || !id) return;
-      if (apiAction === 'delete' && !confirm('確定刪除此輪播？')) return;
+      if (apiAction === 'delete' && !confirm('確定刪除此首頁圖片？')) return;
       btn.disabled = true;
       api.admin.bannerAction(id, apiAction).then(function (res) {
         btn.disabled = false;
@@ -291,48 +472,80 @@
     });
   }
 
+  function unmountBannerEditorMounts() {
+    if (!window.AdminTables || !window.AdminTables.unmount) return;
+    ['acBannerImgCardsMount', 'acPrimaryHrefMount', 'acSecondaryHrefMount'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) window.AdminTables.unmount(el);
+    });
+  }
+
+  function closeBannerEditor() {
+    unmountBannerEditorMounts();
+    renderShell();
+  }
+
+  /** Full-page editor (not float modal) so crop dialog can sit above the page cleanly. */
   function openBannerModal(b) {
     var isEdit = !!(b && b.id);
     var tone = isEdit ? (b.tone || 'warm') : 'warm';
+    var existDesktop = isEdit ? (b.image_url || '') : '';
+    var existMobile = isEdit ? (b.image_url_mobile || '') : '';
     var html =
-      '<div class="qr-modal ai-modal" role="dialog" aria-modal="true">' +
-        '<button type="button" class="qr-modal-close" data-modal-close aria-label="關閉">&times;</button>' +
-        '<h3>' + (isEdit ? '編輯輪播' : '新增輪播') + '</h3>' +
-        '<p class="ap-form-error" id="acFormError" hidden></p>' +
-        '<form id="acBannerForm" class="ap-form" data-id="' + esc(isEdit ? b.id : '') + '">' +
-          '<div class="ap-form-grid">' +
-            '<label class="ap-field"><span>眉題</span><input name="eyebrow" placeholder="Imprint Diamond" value="' + esc(isEdit ? b.eyebrow : '') + '"></label>' +
-            '<label class="ap-field"><span>色調</span><select name="tone">' +
-              '<option value="warm"' + (tone === 'warm' ? ' selected' : '') + '>warm</option>' +
-              '<option value="light"' + (tone === 'light' ? ' selected' : '') + '>light</option>' +
-              '<option value="soft"' + (tone === 'soft' ? ' selected' : '') + '>soft</option>' +
-            '</select></label>' +
-            '<label class="ap-field ap-field--full"><span>標題</span><input name="title" required value="' + esc(isEdit ? b.title : '') + '"></label>' +
-            '<label class="ap-field ap-field--full"><span>說明</span><textarea name="lead" class="ap-textarea" rows="3">' + esc(isEdit ? b.lead : '') + '</textarea></label>' +
-            '<label class="ap-field ap-field--full"><span>圖片 URL</span>' +
-              '<div class="ap-field-row">' +
-                '<input name="imageUrl" id="acBannerImageUrl" required value="' + esc(isEdit ? b.image_url : '') + '">' +
-                '<label class="btn-sm" style="cursor:pointer;white-space:nowrap">' +
-                  '上傳<input type="file" id="acBannerFile" accept="image/png,image/jpeg,image/webp" hidden>' +
-                '</label>' +
-              '</div></label>' +
-            '<label class="ap-field"><span>WebP URL（選填）</span><input name="imageWebp" value="' + esc(isEdit ? (b.image_webp || '') : '') + '"></label>' +
-            '<label class="ap-field"><span>圖片 alt</span><input name="imageAlt" value="' + esc(isEdit ? b.image_alt : '') + '"></label>' +
-            '<label class="ap-field"><span>主按鈕文字</span><input name="ctaPrimaryLabel" value="' + esc(isEdit ? b.cta_primary_label : '') + '"></label>' +
-            '<div class="ap-field" id="acPrimaryHrefMount"></div>' +
-            '<label class="ap-field"><span>次按鈕文字</span><input name="ctaSecondaryLabel" value="' + esc(isEdit ? b.cta_secondary_label : '') + '"></label>' +
-            '<div class="ap-field" id="acSecondaryHrefMount"></div>' +
-            '<label class="ap-field"><span>排序</span><input type="number" name="sortOrder" value="' + esc(String(isEdit ? b.sort_order : 0)) + '"></label>' +
-            '<label class="ap-field ap-field--check"><input type="checkbox" name="isPublished"' + (!isEdit || b.is_published ? ' checked' : '') + '><span>發布</span></label>' +
+      '<div class="ap-editor-page ac-banner-editor">' +
+        '<div class="ap-editor-head">' +
+          '<div class="ap-editor-head-text">' +
+            '<h2>' + (isEdit ? '編輯首頁圖片' : '新增首頁圖片') + '</h2>' +
+            '<p class="ap-editor-sub">先裁切電腦版（16:9）與手機版（9:16），再填寫文案與按鈕連結。</p>' +
           '</div>' +
-          '<div class="ap-form-actions">' +
-            '<button type="button" class="btn-sm" data-modal-close>取消</button>' +
-            '<button type="submit" class="btn-sm btn-primary">' + (isEdit ? '儲存' : '建立') + '</button>' +
-          '</div>' +
-        '</form></div>';
+          '<button type="button" class="btn-sm ap-editor-back" id="acBannerBack">← 返回首頁圖片列表</button>' +
+        '</div>' +
+        '<div class="ap-editor-body">' +
+          '<p class="ap-form-error" id="acFormError" hidden></p>' +
+          '<form id="acBannerForm" class="ap-form" data-id="' + esc(isEdit ? b.id : '') + '">' +
+            '<div class="ap-form-grid">' +
+              '<label class="ap-field"><span>眉題</span><input name="eyebrow" placeholder="Imprint Diamond" value="' + esc(isEdit ? b.eyebrow : '') + '"></label>' +
+              '<label class="ap-field"><span>色調</span><select name="tone">' +
+                '<option value="warm"' + (tone === 'warm' ? ' selected' : '') + '>warm</option>' +
+                '<option value="light"' + (tone === 'light' ? ' selected' : '') + '>light</option>' +
+                '<option value="soft"' + (tone === 'soft' ? ' selected' : '') + '>soft</option>' +
+              '</select></label>' +
+              '<label class="ap-field ap-field--full"><span>標題</span><input name="title" required value="' + esc(isEdit ? b.title : '') + '"></label>' +
+              '<label class="ap-field ap-field--full"><span>說明</span><textarea name="lead" class="ap-textarea" rows="3">' + esc(isEdit ? b.lead : '') + '</textarea></label>' +
+              '<div class="ap-field ap-field--full">' +
+                '<input type="hidden" name="imageUrl" id="acBannerImageUrl" value="' + esc(existDesktop) + '">' +
+                '<input type="hidden" name="imageUrlMobile" id="acBannerImageUrlMobile" value="' + esc(existMobile) + '">' +
+                '<div id="acBannerImgCardsMount"></div>' +
+              '</div>' +
+              '<label class="ap-field"><span>主按鈕文字</span><input name="ctaPrimaryLabel" value="' + esc(isEdit ? b.cta_primary_label : '') + '"></label>' +
+              '<div class="ap-field" id="acPrimaryHrefMount"></div>' +
+              '<label class="ap-field"><span>次按鈕文字</span><input name="ctaSecondaryLabel" value="' + esc(isEdit ? b.cta_secondary_label : '') + '"></label>' +
+              '<div class="ap-field" id="acSecondaryHrefMount"></div>' +
+              '<label class="ap-field"><span>排序</span><input type="number" name="sortOrder" value="' + esc(String(isEdit ? b.sort_order : 0)) + '"></label>' +
+              '<label class="ap-field ap-field--check"><input type="checkbox" name="isPublished"' + (!isEdit || b.is_published ? ' checked' : '') + '><span>發布</span></label>' +
+            '</div>' +
+            '<div class="ap-form-actions ap-editor-actions">' +
+              '<button type="button" class="btn-sm" id="acBannerCancel">取消</button>' +
+              '<button type="submit" class="btn-sm btn-primary">' + (isEdit ? '儲存' : '建立') + '</button>' +
+            '</div>' +
+          '</form>' +
+        '</div>' +
+      '</div>';
 
-    if (!window.AdminPanel || !window.AdminPanel.openModal) return;
-    window.AdminPanel.openModal(html);
+    // Unmount list React table before replacing shell
+    var listMount = document.getElementById('contentTablesMount') || document.getElementById('contentPanelBody');
+    if (listMount && window.AdminTables && window.AdminTables.unmount) {
+      try { window.AdminTables.unmount(listMount); } catch (e) { /* ignore */ }
+    }
+
+    root.innerHTML = html;
+    root.scrollIntoView({ block: 'start', behavior: 'smooth' });
+
+    var backBtn = document.getElementById('acBannerBack');
+    var cancelBtn = document.getElementById('acBannerCancel');
+    if (backBtn) backBtn.addEventListener('click', closeBannerEditor);
+    if (cancelBtn) cancelBtn.addEventListener('click', closeBannerEditor);
+
     var form = document.getElementById('acBannerForm');
     if (form) form.addEventListener('submit', submitBanner);
 
@@ -357,23 +570,28 @@
       }
     }
 
-    var fileInput = document.getElementById('acBannerFile');
-    if (fileInput) {
-      fileInput.addEventListener('change', function () {
-        var file = fileInput.files && fileInput.files[0];
-        if (!file) return;
-        fileInput.disabled = true;
-        api.admin.uploadBanner(file).then(function (res) {
-          fileInput.disabled = false;
-          fileInput.value = '';
-          if (res.error || !res.url) {
-            alert(res.error || '上傳失敗');
-            return;
-          }
-          var urlInput = document.getElementById('acBannerImageUrl');
-          if (urlInput) urlInput.value = res.url;
+    if (window.AdminTables && window.AdminTables.renderBannerImageUploadCards) {
+      var cardsMount = document.getElementById('acBannerImgCardsMount');
+      if (cardsMount) {
+        window.AdminTables.renderBannerImageUploadCards(cardsMount, {
+          initialDesktopUrl: existDesktop,
+          initialMobileUrl: existMobile,
+          onDesktopUrlChange: function (url) {
+            var el = document.getElementById('acBannerImageUrl');
+            if (el) el.value = url;
+          },
+          onMobileUrlChange: function (url) {
+            var el = document.getElementById('acBannerImageUrlMobile');
+            if (el) el.value = url;
+          },
+          uploadImage: function (file) {
+            if (!file || !file.size) {
+              return Promise.resolve({ error: '請選擇圖片' });
+            }
+            return api.admin.uploadBanner(file);
+          },
         });
-      });
+      }
     }
   }
 
@@ -389,8 +607,7 @@
       title: String(fd.get('title') || '').trim(),
       lead: String(fd.get('lead') || '').trim(),
       imageUrl: String(fd.get('imageUrl') || '').trim(),
-      imageWebp: String(fd.get('imageWebp') || '').trim(),
-      imageAlt: String(fd.get('imageAlt') || '').trim(),
+      imageUrlMobile: String(fd.get('imageUrlMobile') || '').trim(),
       ctaPrimaryLabel: String(fd.get('ctaPrimaryLabel') || '').trim(),
       ctaPrimaryHref: String(fd.get('ctaPrimaryHref') || '').trim(),
       ctaSecondaryLabel: String(fd.get('ctaSecondaryLabel') || '').trim(),
@@ -399,6 +616,15 @@
       sortOrder: fd.get('sortOrder'),
       isPublished: !!form.querySelector('[name="isPublished"]').checked,
     };
+    if (!payload.imageUrl) {
+      if (errEl) {
+        errEl.textContent = '請先上傳並裁切電腦版圖片';
+        errEl.hidden = false;
+      } else {
+        alert('請先上傳並裁切電腦版圖片');
+      }
+      return;
+    }
     var req = id ? api.admin.updateBanner(payload) : api.admin.createBanner(payload);
     req.then(function (res) {
       if (res.error) {
@@ -406,7 +632,7 @@
         else alert(res.error);
         return;
       }
-      if (window.AdminPanel.closeModal) window.AdminPanel.closeModal();
+      unmountBannerEditorMounts();
       load(true, true);
     });
   }
@@ -461,18 +687,8 @@
               '<input name="city" list="acTaiwanCities" required autocomplete="off" placeholder="輸入或選擇縣市" value="' + esc(isEdit ? t.city : '') + '">' +
               '<datalist id="acTaiwanCities">' + cityDatalistOptions() + '</datalist></label>' +
             '<label class="ap-field ap-field--full"><span>訂製款式圖片' + reqStar() + '</span>' +
-              '<div class="ap-testimonial-upload">' +
-                '<div class="ap-testimonial-upload-preview" id="acTestimonialPreview">' +
-                  (imageUrl
-                    ? '<img src="' + esc(imageUrl) + '" alt="">'
-                    : '<span class="ap-testimonial-upload-empty">尚未上傳</span>') +
-                '</div>' +
-                '<label class="btn-sm ap-testimonial-upload-btn">' +
-                  '上傳圖片' +
-                  '<input type="file" id="acTestimonialFile" accept="image/png,image/jpeg,image/webp" hidden>' +
-                '</label>' +
-                '<p class="ap-section-hint">PNG / JPG / WEBP，5MB 內。前台顯示角色為「分類・城市」。</p>' +
-              '</div>' +
+              '<div id="acTestimonialImageUploadMount"></div>' +
+              '<p class="ap-section-hint">PNG / JPG / WEBP，1MB 內。前台顯示角色為「分類・城市」。</p>' +
               '<input type="hidden" name="imageUrl" id="acTestimonialImageUrl" value="' + esc(imageUrl) + '">' +
             '</label>' +
             '<label class="ap-field ap-field--full"><span>見證內容（完整）' + reqStar() + '</span>' +
@@ -491,33 +707,22 @@
     if (form) form.addEventListener('submit', submitTestimonial);
 
     var urlInput = document.getElementById('acTestimonialImageUrl');
-    var preview = document.getElementById('acTestimonialPreview');
-    function setPreview(url) {
-      if (!preview || !urlInput) return;
-      urlInput.value = url || '';
-      if (url) {
-        preview.innerHTML = '<img src="' + esc(url) + '" alt="">';
-      } else {
-        preview.innerHTML = '<span class="ap-testimonial-upload-empty">尚未上傳</span>';
-      }
-    }
-
-    var fileInput = document.getElementById('acTestimonialFile');
-    if (fileInput) {
-      fileInput.addEventListener('change', function () {
-        var file = fileInput.files && fileInput.files[0];
-        if (!file) return;
-        fileInput.disabled = true;
-        api.admin.uploadTestimonial(file).then(function (res) {
-          fileInput.disabled = false;
-          fileInput.value = '';
-          if (res.error || !res.url) {
-            alert(res.error || '上傳失敗');
-            return;
-          }
-          setPreview(res.url);
+    if (window.AdminTables && window.AdminTables.renderImageUploadField) {
+      var testimonialUploadMount = document.getElementById('acTestimonialImageUploadMount');
+      if (testimonialUploadMount && urlInput) {
+        window.AdminTables.renderImageUploadField(testimonialUploadMount, {
+          value: imageUrl,
+          onChange: function (url) {
+            urlInput.value = url || '';
+          },
+          onUpload: function (file) {
+            return api.admin.uploadTestimonial(file);
+          },
+          onValidationError: function (message) {
+            alert(message);
+          },
         });
-      });
+      }
     }
   }
 
@@ -669,12 +874,17 @@
       api.admin.getTestimonials(),
       api.admin.getFaqItems(),
       api.admin.getBanners(),
+      api.admin.getPageImages(),
     ]).then(function (results) {
       var tRes = results[0];
       var fRes = results[1];
       var bRes = results[2];
-      if (tRes.error || fRes.error || bRes.error) {
-        root.innerHTML = '<p class="note warn">載入失敗：' + esc(tRes.error || fRes.error || bRes.error) + '</p>';
+      var pRes = results[3];
+      if (tRes.error || fRes.error || bRes.error || pRes.error) {
+        root.innerHTML =
+          '<p class="note warn">載入失敗：' +
+          esc(tRes.error || fRes.error || bRes.error || pRes.error) +
+          '</p>';
         root.removeAttribute('aria-busy');
         return;
       }
@@ -682,6 +892,14 @@
       _faqItems = fRes.items || [];
       _faqCategories = fRes.categories || [];
       _banners = bRes.banners || [];
+      _pageImages = (pRes.pageImages || []).filter(function (row) {
+        var key = String(row.page_key || '');
+        var group = String(row.group_key || '');
+        if (key.indexOf('/shop/') === 0) return false;
+        if (key === '/jewelry/' || key.indexOf('/jewelry/') === 0) return false;
+        if (group === 'jewelry') return false;
+        return true;
+      });
       _loaded = true;
       root.removeAttribute('aria-busy');
       root.classList.remove('skel-panel');

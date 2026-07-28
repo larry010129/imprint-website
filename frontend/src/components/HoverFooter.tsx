@@ -1,4 +1,4 @@
-import { MapPin, MessageCircle, Phone } from "lucide-react";
+import { MapPin, MessageCircle } from "lucide-react";
 import {
   FooterBackgroundGradient,
   TextHoverEffect,
@@ -31,11 +31,6 @@ const contactInfo = [
     text: "新北市三重區福德南路 43 號 1 樓（預約制）",
     href: MAPS_URL,
     external: true,
-  },
-  {
-    icon: <Phone size={18} style={{ color: MINT }} />,
-    text: "02-2977-0268",
-    href: "tel:0229770268",
   },
   {
     icon: <MessageCircle size={18} style={{ color: MINT }} />,

@@ -3,7 +3,7 @@
   --admin-side-bg: #0d0d0d;
   --admin-side-text: #a8a29e;
   --admin-side-active: #1a1a1a;
-  --admin-side-mint: var(--mint, #9cefef);
+  --admin-side-mint: var(--mint, #8eedf0);
 }
 
 .side {
@@ -84,6 +84,14 @@
   font-size: 11px;
   color: #57534e;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.side-foot-credit {
+  margin-top: 5px;
+  font-size: 10px;
+  color: #4a4540;
+  letter-spacing: 0.06em;
+  opacity: 0.85;
 }
 
 .side-nav-more {

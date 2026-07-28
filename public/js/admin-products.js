@@ -7,8 +7,12 @@
 
   var CATEGORY_ORDER = ['pendant', 'ring', 'earring', 'bracelet', 'chain'];
   var GOLDS = ['9k', '14k', '18k', 'pt950', 's925'];
-  var CARATS = ['0.1', '0.2', '0.3', '0.5', '1.0'];
-  var CHAIN_CARATS = ['3fen', '4fen'];
+  var CARATS = [
+    '0.1', '0.2', '0.3', '0.4', '0.5', '0.6', '0.7', '0.8', '0.9', '1.0',
+    '1.1', '1.2', '1.3', '1.4', '1.5', '1.6', '1.7', '1.8', '1.9', '2.0',
+    '2.1', '2.2', '2.3', '2.4', '2.5', '2.6', '2.7', '2.8', '2.9', '3.0',
+  ];
+  var CHAIN_CARATS = ['1.0mm', '1.5mm', '2.0mm', '2.5mm', '3.0mm'];
   var COLORS = ['white', 'yellow', 'rose'];
   var GOLD_LABELS = { '9k': '9K', '14k': '14K', '18k': '18K', 'pt950': 'PT950', 's925': 'S925' };
   // 蠟重(錢) × factor → 成品金重(錢)；試算頁下單時以後端 app/pricing.py 的同一份係數為準，這裡僅供上架時預覽估算。
@@ -62,6 +66,17 @@
     return keys;
   }
 
+  /** Calculator image axes per category (matches shop.js preview lookup). */
+  function presetSlotKeysForCategory(category) {
+    if (category === 'pendant') return allPresetSlotKeys(true);
+    if (category === 'chain') {
+      return METAL_SLOT_VALUES.map(function (metal) {
+        return buildSlotKey(metal, 'white', null);
+      });
+    }
+    return allPresetSlotKeys(false);
+  }
+
   var root = document.getElementById('productsRoot');
   if (!root) return;
 
@@ -92,11 +107,22 @@
     return window.AdminImageUrls ? window.AdminImageUrls.resolve(path) : path;
   }
 
+  function imageCoversDefaultColor(imageColor, defaultColor) {
+    var key = String(imageColor || '').toLowerCase();
+    var def = String(defaultColor || '').toLowerCase();
+    if (!key || COLORS.indexOf(def) < 0) return false;
+    return key === def || key.indexOf(def + '-') === 0;
+  }
+
   function productThumb(product) {
     var images = product.images || [];
     var def = product.default_color || 'white';
-    var match = images.find(function (img) { return img.color === def; }) || images[0];
-    if (match) return imageUrl(match.file_path, def);
+    var match = images.find(function (img) { return imageCoversDefaultColor(img.color, def); }) || images[0];
+    if (match) {
+      return window.AdminImageUrls && window.AdminImageUrls.productThumbnail
+        ? window.AdminImageUrls.productThumbnail(match.file_path, def)
+        : imageUrl(match.file_path, def);
+    }
     return window.AdminImageUrls
       ? window.AdminImageUrls.categoryFallback(product.category)
       : '';
@@ -114,7 +140,7 @@
     if (!variants.length) return { ok: false, reason: '請先新增至少一個款式選項' };
     if (!images.length) return { ok: false, reason: '請先上傳至少一張商品照片' };
     var def = product.default_color || 'white';
-    if (!images.some(function (img) { return img.color === def; })) {
+    if (!images.some(function (img) { return imageCoversDefaultColor(img.color, def); })) {
       return { ok: false, reason: '預設顏色必須至少有一張商品照片' };
     }
     return { ok: true, reason: '' };
@@ -607,10 +633,11 @@
     var weight = variant ? variant.weight_chin : '';
     var price = variant && variant.manual_price_twd != null ? variant.manual_price_twd : '';
     var gold = (variant && variant.gold) || GOLDS[0];
+    var weightPlaceholder = category === 'chain' ? '46cm 蠟重（錢）' : '蠟重（錢）';
     return '<div class="ap-variant-row">' +
       '<select name="gold">' + goldOpts + '</select>' +
       '<select name="carat">' + caratOpts + '</select>' +
-      '<input type="number" name="weight" step="0.0001" min="0.0001" placeholder="蠟重（錢）" value="' + esc(weight) + '">' +
+      '<input type="number" name="weight" step="0.0001" min="0.0001" placeholder="' + weightPlaceholder + '" value="' + esc(weight) + '">' +
       '<output class="ap-metal-weight-out" name="metalWeight">' + metalWeightLabel(weight, gold) + '</output>' +
       '<input type="number" name="price" step="1" min="0" placeholder="手動定價" value="' + esc(price) + '">' +
       '<button type="button" class="ap-remove-row" aria-label="移除">✕</button></div>';
@@ -622,12 +649,49 @@
       '<div class="ap-carousel-item" data-url="' + esc(url) + '">' +
         '<div class="ap-carousel-card">' +
           '<div class="ap-carousel-card-media">' +
-            '<img class="ap-carousel-img" src="' + esc(src) + '" alt="" data-fallback="' + esc(src) + '">' +
+            '<img class="ap-carousel-img" data-src="' + esc(src) + '" alt="" data-fallback="' + esc(src) +
+              '" loading="lazy" decoding="async" fetchpriority="low" width="180" height="180">' +
             '<button type="button" class="ap-remove-image" aria-label="移除">✕</button>' +
           '</div>' +
         '</div>' +
       '</div>'
     );
+  }
+
+  var deferredImageObserver = null;
+
+  function loadDeferredImage(img) {
+    var src = img && img.dataset ? img.dataset.src : '';
+    if (!src) return;
+    img.src = src;
+    img.removeAttribute('data-src');
+  }
+
+  function observeDeferredImages(scope) {
+    if (!scope) return;
+    var images = scope.querySelectorAll('img.ap-carousel-img[data-src]');
+    if (!images.length) return;
+    if (!('IntersectionObserver' in window)) {
+      images.forEach(loadDeferredImage);
+      return;
+    }
+    if (!deferredImageObserver) {
+      var observer = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (!entry.isIntersecting) return;
+          observer.unobserve(entry.target);
+          loadDeferredImage(entry.target);
+        });
+      }, { rootMargin: '160px 0px' });
+      deferredImageObserver = observer;
+    }
+    images.forEach(function (img) { deferredImageObserver.observe(img); });
+  }
+
+  function resetDeferredImages() {
+    if (!deferredImageObserver) return;
+    deferredImageObserver.disconnect();
+    deferredImageObserver = null;
   }
 
   function slotSelectHtml(options, selected) {
@@ -674,11 +738,44 @@
       if (!groups[color]) groups[color] = [];
       groups[color].push(img.file_path || img.url);
     });
-    var keys = Object.keys(groups);
-    if (!keys.length) return [{ color: 'white', urls: [] }];
-    return keys.map(function (color) {
-      return { color: color, urls: groups[color] };
+    return groups;
+  }
+
+  /**
+   * Seed every calculator image axis as an editable slot:
+   * metal × diamond (all categories), plus pendant metal × diamond × chainMetal.
+   * Existing product_images load into matching keys; unknown legacy keys kept too.
+   */
+  function slotsForEditor(images, category) {
+    var groups = groupImagesForSlots(images);
+    var presets = presetSlotKeysForCategory(category);
+    var seen = {};
+    var slots = [];
+
+    function pushSlot(key) {
+      if (!key || seen[key]) return;
+      seen[key] = true;
+      slots.push({ color: key, urls: groups[key] ? groups[key].slice() : [] });
+    }
+
+    // Legacy metal-only (white/yellow/rose) → metal-white so selects stay truthful.
+    COLORS.forEach(function (metal) {
+      if (!groups[metal] || !groups[metal].length) return;
+      var normalized = buildSlotKey(metal, 'white', null);
+      if (!groups[normalized]) groups[normalized] = [];
+      groups[metal].forEach(function (url) {
+        if (groups[normalized].indexOf(url) < 0) groups[normalized].push(url);
+      });
     });
+
+    presets.forEach(pushSlot);
+    Object.keys(groups).forEach(function (key) {
+      if (COLORS.indexOf(key) >= 0) return; // folded into metal-white above
+      pushSlot(key);
+    });
+
+    if (!slots.length) slots.push({ color: 'white-white', urls: [] });
+    return slots;
   }
 
   function imageSlotHtml(slot, category) {
@@ -711,7 +808,7 @@
                       '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>' +
                     '</span>' +
                     '<span class="ap-upload-title">上傳圖片</span>' +
-                    '<span class="ap-upload-hint">或點擊瀏覽<br>PNG / JPG / WEBP，5MB 內</span>' +
+                    '<span class="ap-upload-hint">或點擊瀏覽<br>PNG / JPG / WEBP，1MB 內</span>' +
                     '<input type="file" class="ap-image-input" accept="image/png,image/jpeg,image/webp" multiple hidden>' +
                   '</label>' +
                   '<div class="ap-upload-progress" hidden><div class="ap-upload-progress-bar"></div></div>' +
@@ -729,7 +826,7 @@
   }
 
   function imageSlotsHtml(images, category) {
-    var slots = groupImagesForSlots(images);
+    var slots = slotsForEditor(images, category);
     return slots.map(function (slot) { return imageSlotHtml(slot, category); }).join('');
   }
 
@@ -852,6 +949,7 @@
         var item = wrap.firstElementChild;
         item.dataset.url = res.url;
         track.insertBefore(item, uploadItem);
+        observeDeferredImages(item);
         item.querySelector('.ap-remove-image')?.addEventListener('click', function () {
           item.remove();
           var carousel = slot.querySelector('[data-carousel]');
@@ -916,6 +1014,7 @@
 
     var carousel = slot.querySelector('[data-carousel]');
     if (carousel) initCarousel(carousel);
+    observeDeferredImages(slot);
 
     bindSlotKeySelectors(slot, form);
 
@@ -974,6 +1073,7 @@
   }
 
   function closeEditor() {
+    resetDeferredImages();
     state.view = 'list';
     state.editingId = null;
     renderShell();
@@ -1048,12 +1148,14 @@
             '</div>' +
             '<h4 class="ap-section-title">款式選項</h4>' +
             '<div class="ap-variant-block">' +
-              '<div class="ap-variant-head"><span>金屬</span><span>克拉</span><span>蠟重（錢）</span><span>預估金重</span><span>手動定價</span><span></span></div>' +
+              '<div class="ap-variant-head"><span>金屬</span><span>' + (category === 'chain' ? '厚度' : '克拉') + '</span><span>' + (category === 'chain' ? '46cm 蠟重（錢）' : '蠟重（錢）') + '</span><span>預估金重</span><span>手動定價</span><span></span></div>' +
               '<div id="apVariantGrid">' + variants + '</div>' +
             '</div>' +
             '<button type="button" class="btn-sm" id="apAddVariant">+ 新增款式</button>' +
             '<h4 class="ap-section-title">商品照片</h4>' +
-            '<p class="ap-section-hint">每個選項可上傳多張圖片，請分別選擇「金屬」與「鑽石顏色」（例如：白金 + 黃鑽 → white-yellow）。前台試算頁會依選項切換商品圖。</p>' +
+            '<p class="ap-section-hint">試算頁會依「金屬 × 鑽石顏色」切換商品圖' +
+              (category === 'pendant' ? '；項墜另可標「鍊條金屬」給含鍊／異色鍊組合（例如：白金 + 粉鑽 + 玫瑰金鍊 → white-pink-rose）' : '') +
+              '。下方已列出所有試算組合；有圖的會預先載入，無圖可直接上傳取代預設素材。</p>' +
             '<div class="ap-image-slots" id="apImageSlots">' + imageSlotsHtml(product && product.images, category) + '</div>' +
             '<button type="button" class="btn-sm" id="apAddImageSlot">+ 新增圖片選項</button>' +
             '<div class="ap-form-actions ap-editor-actions">' +
@@ -1103,7 +1205,7 @@
       if (!host) return;
       var cat = catSel.value;
       var used = usedSlotKeys(form);
-      var pick = allPresetSlotKeys(cat === 'pendant').find(function (v) { return !used[v]; });
+      var pick = presetSlotKeysForCategory(cat).find(function (v) { return !used[v]; });
       if (!pick) {
         alert('所有組合都已建立，無法再新增圖片選項');
         return;
@@ -1126,9 +1228,26 @@
         if (opts.indexOf(prev) >= 0) sel.value = prev;
       });
       var cat = catSel.value;
-      form.querySelectorAll('#apImageSlots .ap-image-slot').forEach(function (slot) {
-        refreshImageSlotCategory(slot, form, cat);
-      });
+      var host = document.getElementById('apImageSlots');
+      var hint = form.querySelector('.ap-section-hint');
+      if (host) {
+        resetDeferredImages();
+        var currentImages = [];
+        form.querySelectorAll('.ap-image-slot').forEach(function (slot) {
+          var color = slotColorKey(slot);
+          slot.querySelectorAll('.ap-carousel-item[data-url]').forEach(function (item) {
+            if (item.dataset.url) currentImages.push({ color: color, file_path: item.dataset.url });
+          });
+        });
+        _slotCounter = 0;
+        host.innerHTML = imageSlotsHtml(currentImages, cat);
+        bindImageSlots(form);
+      }
+      if (hint) {
+        hint.textContent = '試算頁會依「金屬 × 鑽石顏色」切換商品圖'
+          + (cat === 'pendant' ? '；項墜另可標「鍊條金屬」給含鍊／異色鍊組合（例如：白金 + 粉鑽 + 玫瑰金鍊 → white-pink-rose）' : '')
+          + '。下方已列出所有試算組合；有圖的會預先載入，無圖可直接上傳取代預設素材。';
+      }
     });
 
     form.addEventListener('submit', function (e) {

@@ -430,7 +430,7 @@ _CATEGORY_UPLOAD_DIR = settings.static_dir / "uploads" / "categories"
 _BANNER_UPLOAD_DIR = settings.static_dir / "uploads" / "banners"
 _TESTIMONIAL_UPLOAD_DIR = settings.static_dir / "uploads" / "testimonials"
 _ALLOWED_IMAGE_EXT = {".png", ".jpg", ".jpeg", ".webp"}
-_MAX_IMAGE_BYTES = 5 * 1024 * 1024
+_MAX_IMAGE_BYTES = 1 * 1024 * 1024
 
 
 @router.post("/product-upload")
@@ -447,7 +447,7 @@ async def product_upload(request: Request, file: UploadFile = File(...)) -> JSON
     if not data:
         return JSONResponse(status_code=400, content={"error": "empty file"})
     if len(data) > _MAX_IMAGE_BYTES:
-        return JSONResponse(status_code=400, content={"error": "圖片需小於 5MB"})
+        return JSONResponse(status_code=400, content={"error": "圖片需小於 1MB"})
 
     _PRODUCT_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     name = f"{uuid.uuid4().hex}{ext}"
@@ -499,7 +499,7 @@ async def product_category_upload(
     if not data:
         return JSONResponse(status_code=400, content={"error": "empty file"})
     if len(data) > _MAX_IMAGE_BYTES:
-        return JSONResponse(status_code=400, content={"error": "圖片需小於 5MB"})
+        return JSONResponse(status_code=400, content={"error": "圖片需小於 1MB"})
 
     _CATEGORY_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     name = f"{slug}{ext}"
@@ -1546,7 +1546,7 @@ async def testimonial_upload(request: Request, file: UploadFile = File(...)) -> 
     if not data:
         return JSONResponse(status_code=400, content={"error": "empty file"})
     if len(data) > _MAX_IMAGE_BYTES:
-        return JSONResponse(status_code=400, content={"error": "圖片需小於 5MB"})
+        return JSONResponse(status_code=400, content={"error": "圖片需小於 1MB"})
     _TESTIMONIAL_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     name = f"{uuid.uuid4().hex}{ext}"
     (_TESTIMONIAL_UPLOAD_DIR / name).write_bytes(data)
@@ -1844,6 +1844,7 @@ def _parse_banner_fields(body: dict):
         "title": title,
         "lead": str(body.get("lead") or "").strip(),
         "image_url": image_url,
+        "image_url_mobile": str(body.get("imageUrlMobile") or body.get("image_url_mobile") or "").strip(),
         "image_webp": str(body.get("imageWebp") or body.get("image_webp") or "").strip() or None,
         "image_alt": str(body.get("imageAlt") or body.get("image_alt") or "").strip(),
         "cta_primary_label": str(body.get("ctaPrimaryLabel") or body.get("cta_primary_label") or "").strip(),
@@ -1877,7 +1878,7 @@ async def banner_upload(request: Request, file: UploadFile = File(...)) -> JSONR
     if not data:
         return JSONResponse(status_code=400, content={"error": "empty file"})
     if len(data) > _MAX_IMAGE_BYTES:
-        return JSONResponse(status_code=400, content={"error": "圖片需小於 5MB"})
+        return JSONResponse(status_code=400, content={"error": "圖片需小於 1MB"})
     _BANNER_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     name = f"{uuid.uuid4().hex}{ext}"
     (_BANNER_UPLOAD_DIR / name).write_bytes(data)
@@ -1899,11 +1900,11 @@ async def admin_banners_create(request: Request) -> JSONResponse:
         cur.execute(
             """
             insert into home_banners (
-              eyebrow, title, lead, image_url, image_webp, image_alt,
+              eyebrow, title, lead, image_url, image_url_mobile, image_webp, image_alt,
               cta_primary_label, cta_primary_href,
               cta_secondary_label, cta_secondary_href,
               tone, sort_order, is_published
-            ) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            ) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
             returning *
             """,
             (
@@ -1911,6 +1912,7 @@ async def admin_banners_create(request: Request) -> JSONResponse:
                 fields["title"],
                 fields["lead"],
                 fields["image_url"],
+                fields["image_url_mobile"],
                 fields["image_webp"],
                 fields["image_alt"],
                 fields["cta_primary_label"],
@@ -1948,8 +1950,8 @@ async def admin_banners_update(request: Request) -> JSONResponse:
         cur.execute(
             """
             update home_banners set
-              eyebrow = %s, title = %s, lead = %s, image_url = %s, image_webp = %s,
-              image_alt = %s, cta_primary_label = %s, cta_primary_href = %s,
+              eyebrow = %s, title = %s, lead = %s, image_url = %s, image_url_mobile = %s,
+              image_webp = %s, image_alt = %s, cta_primary_label = %s, cta_primary_href = %s,
               cta_secondary_label = %s, cta_secondary_href = %s,
               tone = %s, sort_order = %s, is_published = %s, updated_at = now()
             where id = %s
@@ -1960,6 +1962,7 @@ async def admin_banners_update(request: Request) -> JSONResponse:
                 fields["title"],
                 fields["lead"],
                 fields["image_url"],
+                fields["image_url_mobile"],
                 fields["image_webp"],
                 fields["image_alt"],
                 fields["cta_primary_label"],
@@ -2012,3 +2015,207 @@ async def admin_banner_action(request: Request) -> JSONResponse:
         actor = cur.fetchone()
     log_admin_action(actor["email"] if actor else None, f"banner_{action}", {"id": str(bid)})
     return JSONResponse(content={"ok": True})
+
+
+# ── Content CMS: page image slots ────────────────────────────────────────────
+
+_PAGE_IMAGE_UPLOAD_DIR = settings.static_dir / "uploads" / "page-images"
+
+
+@router.get("/page-images")
+async def admin_page_images_list(request: Request) -> dict:
+    _require_admin(request)
+    from app.content import ensure_page_images_schema, fetch_all_page_images
+
+    with get_connection() as conn, conn.cursor() as cur:
+        ensure_page_images_schema(cur)
+        return {"pageImages": fetch_all_page_images(cur)}
+
+
+@router.get("/page-image-create-options")
+async def admin_page_image_create_options(request: Request) -> dict:
+    _require_admin(request)
+    from app.content import ensure_page_images_schema, fetch_missing_page_image_slots
+
+    with get_connection() as conn, conn.cursor() as cur:
+        ensure_page_images_schema(cur)
+        return {"options": fetch_missing_page_image_slots(cur)}
+
+
+@router.post("/page-image-create")
+async def admin_page_image_create(request: Request) -> JSONResponse:
+    user_id = _require_admin(request)
+    body = await request.json()
+    if not isinstance(body, dict):
+        body = {}
+    page_key = str(body.get("pageKey") or body.get("page_key") or "").strip()
+    slot_key = str(body.get("slotKey") or body.get("slot_key") or "").strip()
+    if not page_key or not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,63}", slot_key):
+        return JSONResponse(status_code=400, content={"error": "invalid page_key/slot_key"})
+    from app.content import create_page_image_from_registry, ensure_page_images_schema
+
+    with get_connection() as conn, conn.cursor() as cur:
+        ensure_page_images_schema(cur)
+        row, err = create_page_image_from_registry(cur, page_key, slot_key)
+        if err:
+            status = 409 if err == "此區塊已存在" else 404
+            return JSONResponse(status_code=status, content={"error": err})
+        assert row is not None
+    from app.controllers.web_controller import clear_page_image_cache
+
+    clear_page_image_cache()
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute("select email from users where id = %s", (user_id,))
+        actor = cur.fetchone()
+    log_admin_action(
+        actor["email"] if actor else None,
+        "page_image_created",
+        {"page_key": page_key, "slot_key": slot_key},
+    )
+    return JSONResponse(content={"pageImage": row})
+
+
+@router.post("/page-image-upload")
+async def page_image_upload(request: Request, file: UploadFile = File(...)) -> JSONResponse:
+    _require_admin(request)
+    if not file.filename:
+        return JSONResponse(status_code=400, content={"error": "missing file"})
+    ext = Path(file.filename).suffix.lower()
+    if ext not in _ALLOWED_IMAGE_EXT:
+        return JSONResponse(status_code=400, content={"error": "僅支援 PNG / JPG / JPEG / WEBP"})
+    data = await file.read()
+    if not data:
+        return JSONResponse(status_code=400, content={"error": "empty file"})
+    if len(data) > _MAX_IMAGE_BYTES:
+        return JSONResponse(status_code=400, content={"error": "圖片需小於 1MB"})
+    _PAGE_IMAGE_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    name = f"{uuid.uuid4().hex}{ext}"
+    (_PAGE_IMAGE_UPLOAD_DIR / name).write_bytes(data)
+    from app.controllers.web_controller import clear_page_image_cache
+
+    clear_page_image_cache()
+    return JSONResponse(content={"url": f"/static/uploads/page-images/{name}"})
+
+
+@router.post("/page-image-update")
+async def admin_page_image_update(request: Request) -> JSONResponse:
+    user_id = _require_admin(request)
+    body = await request.json()
+    if not isinstance(body, dict):
+        body = {}
+    from app.content import parse_page_image_payload, serialize_page_image
+
+    fields, err = parse_page_image_payload(body)
+    if err:
+        return JSONResponse(status_code=400, content={"error": err})
+    assert fields is not None
+    page_key = fields["page_key"]
+    slot_key = fields["slot_key"]
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute(
+            "select page_key from page_images where page_key = %s and slot_key = %s",
+            (page_key, slot_key),
+        )
+        if not cur.fetchone():
+            return JSONResponse(status_code=404, content={"error": "找不到頁面圖片設定"})
+        sets = [
+            "image_url = %s",
+            "image_alt = %s",
+            "is_published = %s",
+            "updated_at = now()",
+        ]
+        params: list = [fields["image_url"], fields["image_alt"], fields["is_published"]]
+        if "image_webp" in fields:
+            sets.insert(1, "image_webp = %s")
+            params.insert(1, fields["image_webp"])
+        params.extend((page_key, slot_key))
+        cur.execute(
+            f"""
+            update page_images set {', '.join(sets)}
+            where page_key = %s and slot_key = %s
+            returning *
+            """,
+            params,
+        )
+        row = serialize_page_image(cur.fetchone())
+    from app.controllers.web_controller import clear_page_image_cache
+
+    clear_page_image_cache()
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute("select email from users where id = %s", (user_id,))
+        actor = cur.fetchone()
+    log_admin_action(
+        actor["email"] if actor else None,
+        "page_image_updated",
+        {"page_key": page_key, "slot_key": slot_key},
+    )
+    return JSONResponse(content={"pageImage": row})
+
+
+@router.post("/page-image-action")
+async def admin_page_image_action(request: Request) -> JSONResponse:
+    user_id = _require_admin(request)
+    body = await request.json()
+    if not isinstance(body, dict):
+        body = {}
+    page_key = str(body.get("pageKey") or body.get("page_key") or body.get("id") or "").strip()
+    slot_key = str(body.get("slotKey") or body.get("slot_key") or "").strip()
+    action = body.get("action")
+    if (
+        not page_key
+        or not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,63}", slot_key)
+        or action not in {"publish", "unpublish", "reset"}
+    ):
+        return JSONResponse(status_code=400, content={"error": "invalid page_key/slot_key/action"})
+    from app.content import serialize_page_image
+
+    with get_connection() as conn, conn.cursor() as cur:
+        if action == "publish":
+            cur.execute(
+                """
+                update page_images
+                set is_published = true, updated_at = now()
+                where page_key = %s and slot_key = %s
+                returning *
+                """,
+                (page_key, slot_key),
+            )
+        elif action == "unpublish":
+            cur.execute(
+                """
+                update page_images
+                set is_published = false, updated_at = now()
+                where page_key = %s and slot_key = %s
+                returning *
+                """,
+                (page_key, slot_key),
+            )
+        else:
+            cur.execute(
+                """
+                update page_images
+                set image_url = default_image_url,
+                    image_webp = default_image_webp,
+                    is_published = true,
+                    updated_at = now()
+                where page_key = %s and slot_key = %s
+                returning *
+                """,
+                (page_key, slot_key),
+            )
+        row = cur.fetchone()
+        if not row:
+            return JSONResponse(status_code=404, content={"error": "找不到頁面圖片設定"})
+        payload = serialize_page_image(row)
+    from app.controllers.web_controller import clear_page_image_cache
+
+    clear_page_image_cache()
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute("select email from users where id = %s", (user_id,))
+        actor = cur.fetchone()
+    log_admin_action(
+        actor["email"] if actor else None,
+        f"page_image_{action}",
+        {"page_key": page_key, "slot_key": slot_key},
+    )
+    return JSONResponse(content={"ok": True, "pageImage": payload})

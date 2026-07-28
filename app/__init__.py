@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
+import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -18,6 +21,8 @@ from app.controllers import (
     web_controller,
 )
 
+log = logging.getLogger(__name__)
+
 
 def _startup_banner() -> None:
     base = settings.public_base_url
@@ -30,10 +35,19 @@ def _startup_banner() -> None:
     print("")
 
 
+def _startup_seed_mode() -> str:
+    mode = os.environ.get("STARTUP_SEED_MODE", "background").strip().lower()
+    if mode not in {"background", "blocking", "off"}:
+        log.warning("invalid STARTUP_SEED_MODE=%r; using background", mode)
+        return "background"
+    return mode
+
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     from app.auth import ensure_google_id_column
     from app.database import get_connection
+    from app.content import ensure_banner_mobile_column, ensure_page_images_schema
     from app.membership_config import ensure_membership_schema
     from app.profile_schema import ensure_profile_address_columns
     from app.seed_catalog import seed_catalog_if_empty
@@ -45,11 +59,30 @@ async def lifespan(_app: FastAPI):
     try:
         with get_connection() as conn, conn.cursor() as cur:
             ensure_membership_schema(cur)
+            ensure_page_images_schema(cur)
+            ensure_banner_mobile_column(cur)
     except Exception:
         pass
-    seed_catalog_if_empty()
-    seed_content_if_empty()
-    yield
+
+    def seed_initial_content() -> None:
+        seed_catalog_if_empty()
+        seed_content_if_empty()
+
+    seed_task: asyncio.Task[None] | None = None
+    seed_mode = _startup_seed_mode()
+    if seed_mode == "blocking":
+        seed_initial_content()
+    elif seed_mode == "background":
+        seed_task = asyncio.create_task(
+            asyncio.to_thread(seed_initial_content),
+            name="imprint-startup-seed",
+        )
+
+    try:
+        yield
+    finally:
+        if seed_task is not None:
+            await seed_task
 
 
 def create_app() -> FastAPI:
@@ -75,7 +108,11 @@ def create_app() -> FastAPI:
         response = await call_next(request)
         if request.url.path.startswith(("/static/", "/js/", "/css/")):
             if settings.is_render and response.status_code == 200:
-                response.headers.setdefault("Cache-Control", "public, max-age=300")
+                if request.url.query or request.url.path.startswith("/static/uploads/"):
+                    cache_control = "public, max-age=31536000, immutable"
+                else:
+                    cache_control = "public, max-age=86400, stale-while-revalidate=604800"
+                response.headers.setdefault("Cache-Control", cache_control)
             elif not settings.is_render:
                 response.headers["Cache-Control"] = "no-store"
         return response

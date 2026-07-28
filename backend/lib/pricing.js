@@ -10,6 +10,8 @@
  * mounting 估算表，因為靜態商品頁沒有逐款真實克重資料。
  */
 
+const { CHAIN_WAX_WEIGHT_CHIN } = require('./catalog-seed-data');
+
 const DIAMOND_PRICE = {
   '0.1': 24000, '0.2': 48000, '0.3': 79000, '0.5': 98000,
   '0.6': 113000, '0.7': 133000, '0.8': 159000, '0.9': 200000,
@@ -44,8 +46,6 @@ const NON_ROUND_SHAPE_MIN_CARAT = 0.3;
 const NON_ROUND_SHAPE_SURCHARGE = 0.10;
 
 const DEFAULT_STONE_COUNT_BY_CATEGORY = { earring: 2, ring: 2, pendant: 2 };
-const STONE_COUNT_CATEGORIES = new Set(['earring']);
-
 const WAX_TO_METAL_CHIN = {
   '9k': 11.5, '14k': 14, '18k': 16, s925: 11, pt950: 24,
   '999': 11.5, pt: 24, silver925: 11,
@@ -59,12 +59,13 @@ const METAL_SYMBOL = {
   '9k': 'XAU', '14k': 'XAU', '18k': 'XAU', pt950: 'XPT', s925: 'XAG',
   '999': 'XAU', pt: 'XPT', silver925: 'XAG',
 };
-/** Universal 金工費 (flat NT$, not taxed). Same for every category. */
+/** Default flat labor; standalone chains use metal-specific labor below. */
 const LABOR_FEE_TWD = 5000;
+const CHAIN_LABOR_FEE_TWD = { s925: 500, other: 2000 };
+const DEFAULT_ATTACHED_CHAIN_THICKNESS = '1.0mm';
 
 const TAX_RATE = 0.05;
 const CHIN_TO_GRAMS = 3.75;
-const CHAIN_REFERENCE_LENGTH_CM = 45;
 const BRACELET_REFERENCE_LENGTH_CM = 18;
 
 function isShapeCaratAllowed(carat, diamondShape) {
@@ -101,7 +102,8 @@ function computeDiamondListPrice(caratKey, {
   const caratNum = parseFloat(caratKey);
   if (Number.isNaN(caratNum)) return null;
 
-  const multiStone = STONE_COUNT_CATEGORIES.has(category);
+  const earringPair = category === 'earring';
+  const multiStone = category === 'diamond' && VALID_STONE_COUNTS.has(stoneCount);
   if (!isShapeCaratAllowed(caratNum, diamondShape)) return null;
 
   let base = null;
@@ -132,7 +134,8 @@ function computeDiamondListPrice(caratKey, {
 
   if (base == null) return null;
   const surcharge = shapeSurchargeRate(diamondShape);
-  return surcharge ? Math.round(base * (1 + surcharge)) : base;
+  const singlePrice = surcharge ? Math.round(base * (1 + surcharge)) : base;
+  return earringPair ? singlePrice * 2 : singlePrice;
 }
 
 /** {XAU,XPT,XAG} TWD/gram from gold_price_cache (falls back to a constant if empty). */
@@ -158,8 +161,25 @@ async function getProductVariant(sql, { category, productId, gold, carat, requir
           and pv.gold = ${gold} and pv.carat = ${carat}
       `;
   const [variant] = rows;
-  if (!variant) throw new Error('no matching product variant');
-  return variant;
+  if (variant) return variant;
+  if (category !== 'chain') throw new Error('no matching product variant');
+  // Compatibility for databases not yet reseeded from legacy 3fen/4fen rows.
+  const fallbackRows = requirePublished
+    ? await sql`
+        select pv.* from product_variants pv
+        join products p on p.id = pv.product_id
+        where p.id = ${productId} and p.category = 'chain'
+          and pv.gold = ${gold} and p.is_published = true
+        order by pv.carat limit 1
+      `
+    : await sql`
+        select pv.* from product_variants pv
+        join products p on p.id = pv.product_id
+        where p.id = ${productId} and p.category = 'chain' and pv.gold = ${gold}
+        order by pv.carat limit 1
+      `;
+  if (!fallbackRows[0]) throw new Error('no matching product variant');
+  return fallbackRows[0];
 }
 
 function waxToMetalChin(waxChin, gold) {
@@ -168,12 +188,25 @@ function waxToMetalChin(waxChin, gold) {
   return waxChin * factor;
 }
 
-/** Weight in chin for a product's variant, scaled by length for chain/bracelet. */
+function chainWaxChin(carat, lengthCm) {
+  const wax = CHAIN_WAX_WEIGHT_CHIN[carat]?.[String(lengthCm)];
+  if (wax == null) throw new Error('unsupported chain thickness or length');
+  return wax;
+}
+
+function laborFee(category, gold) {
+  if (category !== 'chain') return LABOR_FEE_TWD;
+  return gold === 's925' ? CHAIN_LABOR_FEE_TWD.s925 : CHAIN_LABOR_FEE_TWD.other;
+}
+
+/** Weight in chin for a product's variant, using exact chain wax by length. */
 async function lookupWeight(sql, { category, productId, gold, carat, lengthCm, requirePublished = true }) {
   const variant = await getProductVariant(sql, { category, productId, gold, carat, requirePublished });
-  let weight = waxToMetalChin(Number(variant.weight_chin), gold);
-  if (category === 'chain' && lengthCm != null) weight *= Number(lengthCm) / CHAIN_REFERENCE_LENGTH_CM;
-  else if (category === 'bracelet' && lengthCm != null) weight *= Number(lengthCm) / BRACELET_REFERENCE_LENGTH_CM;
+  const wax = category === 'chain'
+    ? chainWaxChin(carat, lengthCm)
+    : Number(variant.weight_chin);
+  let weight = waxToMetalChin(wax, gold);
+  if (category === 'bracelet' && lengthCm != null) weight *= Number(lengthCm) / BRACELET_REFERENCE_LENGTH_CM;
   return weight;
 }
 
@@ -184,19 +217,14 @@ async function metalPreTax(sql, goldPrices, gold, weightChin) {
 }
 
 /** Pre-tax chain total for a pendant's optional chain add-on (metal only — no labor).
- * Standalone chain products still charge LABOR_FEE_TWD via computeOrderPricing. */
+ * Standalone chain products use metal-specific labor via computeOrderPricing. */
 async function computeChainAddon(sql, goldPrices, { chainProductId, chainGold, chainLengthCm, requirePublished = true }) {
-  const variant = await getProductVariant(sql, { category: 'chain', productId: chainProductId, gold: chainGold, carat: '3fen', requirePublished });
-  const weightChin = await lookupWeight(sql, { category: 'chain', productId: chainProductId, gold: chainGold, carat: '3fen', lengthCm: chainLengthCm, requirePublished });
+  const carat = DEFAULT_ATTACHED_CHAIN_THICKNESS;
+  const variant = await getProductVariant(sql, { category: 'chain', productId: chainProductId, gold: chainGold, carat, requirePublished });
+  const weightChin = await lookupWeight(sql, { category: 'chain', productId: chainProductId, gold: chainGold, carat, lengthCm: chainLengthCm, requirePublished });
   const weightGrams = weightChin * CHIN_TO_GRAMS;
 
-  let prTax;
-  if (variant.manual_price_twd != null) {
-    prTax = Number(variant.manual_price_twd);
-  } else {
-    const { amount } = await metalPreTax(sql, goldPrices, chainGold, weightChin);
-    prTax = amount;
-  }
+  const { amount: prTax } = await metalPreTax(sql, goldPrices, chainGold, weightChin);
   return { chainPreTax: prTax, chainWeightChin: weightChin, chainVariant: variant };
 }
 
@@ -226,9 +254,9 @@ async function computeOrderPricing(sql, data, { requirePublished = true } = {}) 
   }
 
   const weightGrams = weightChin * CHIN_TO_GRAMS;
-  const laborPreTax = LABOR_FEE_TWD;
+  const laborPreTax = laborFee(category, gold);
 
-  if (variant.manual_price_twd != null) {
+  if (category !== 'chain' && variant.manual_price_twd != null) {
     const goldPrices = await getMetalPrices(sql);
     return {
       ready: true,
@@ -291,7 +319,8 @@ async function computeOrderPricing(sql, data, { requirePublished = true } = {}) 
 module.exports = {
   DIAMOND_PRICE, COLORED_SINGLE_DIAMOND_PRICE, WHITE_MULTI_DIAMOND_PRICE, COLORED_MULTI_DIAMOND_PRICE,
   MULTI_STONE_ABOVE_03_MULTIPLIER, WAX_TO_METAL_CHIN, PURITY_MULTIPLIER, METAL_SYMBOL, LABOR_FEE_TWD,
-  TAX_RATE, CHIN_TO_GRAMS, CHAIN_REFERENCE_LENGTH_CM, BRACELET_REFERENCE_LENGTH_CM,
+  CHAIN_LABOR_FEE_TWD, TAX_RATE, CHIN_TO_GRAMS, BRACELET_REFERENCE_LENGTH_CM,
+  chainWaxChin, laborFee,
   computeDiamondListPrice, getMetalPrices, getProductVariant, lookupWeight,
   computeChainAddon, computeOrderPricing,
 };

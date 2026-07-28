@@ -80,7 +80,7 @@ export default function PageLinkSelect({
         <SelectTrigger id={id} className="w-full">
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="z-[210]">
           <SelectItem value={EMPTY}>{placeholder}</SelectItem>
           {items.map((opt) => (
             <SelectItem key={opt.value} value={opt.value}>

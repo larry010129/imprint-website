@@ -110,15 +110,15 @@
     "images": [
       {
         "color": "white",
-        "filePath": "images/shop/styles/pendant-A.svg"
+        "filePath": "/static/images/products/white/pendant-A.png"
       },
       {
         "color": "yellow",
-        "filePath": "images/shop/styles/pendant-A.svg"
+        "filePath": "/static/images/products/yellow/pendant-A.png"
       },
       {
         "color": "rose",
-        "filePath": "images/shop/styles/pendant-A.svg"
+        "filePath": "/static/images/products/rose/pendant-A.png"
       }
     ]
   },
@@ -233,15 +233,15 @@
     "images": [
       {
         "color": "white",
-        "filePath": "images/shop/styles/pendant-B.svg"
+        "filePath": "/static/images/products/white/pendant-B.png"
       },
       {
         "color": "yellow",
-        "filePath": "images/shop/styles/pendant-B.svg"
+        "filePath": "/static/images/products/yellow/pendant-B.png"
       },
       {
         "color": "rose",
-        "filePath": "images/shop/styles/pendant-B.svg"
+        "filePath": "/static/images/products/rose/pendant-B.png"
       }
     ]
   },
@@ -356,15 +356,15 @@
     "images": [
       {
         "color": "white",
-        "filePath": "images/shop/styles/pendant-C.svg"
+        "filePath": "/static/images/products/white/pendant-C.png"
       },
       {
         "color": "yellow",
-        "filePath": "images/shop/styles/pendant-C.svg"
+        "filePath": "/static/images/products/yellow/pendant-C.png"
       },
       {
         "color": "rose",
-        "filePath": "images/shop/styles/pendant-C.svg"
+        "filePath": "/static/images/products/rose/pendant-C.png"
       }
     ]
   },
@@ -479,15 +479,15 @@
     "images": [
       {
         "color": "white",
-        "filePath": "images/shop/styles/ring-A.svg"
+        "filePath": "/static/images/products/white/ring-A.png"
       },
       {
         "color": "yellow",
-        "filePath": "images/shop/styles/ring-A.svg"
+        "filePath": "/static/images/products/yellow/ring-A.png"
       },
       {
         "color": "rose",
-        "filePath": "images/shop/styles/ring-A.svg"
+        "filePath": "/static/images/products/rose/ring-A.png"
       }
     ]
   },
@@ -602,15 +602,15 @@
     "images": [
       {
         "color": "white",
-        "filePath": "images/shop/styles/ring-B.svg"
+        "filePath": "/static/images/products/white/ring-B.png"
       },
       {
         "color": "yellow",
-        "filePath": "images/shop/styles/ring-B.svg"
+        "filePath": "/static/images/products/yellow/ring-B.png"
       },
       {
         "color": "rose",
-        "filePath": "images/shop/styles/ring-B.svg"
+        "filePath": "/static/images/products/rose/ring-B.png"
       }
     ]
   },
@@ -725,15 +725,15 @@
     "images": [
       {
         "color": "white",
-        "filePath": "images/shop/styles/ring-C.svg"
+        "filePath": "/static/images/products/white/ring-C.png"
       },
       {
         "color": "yellow",
-        "filePath": "images/shop/styles/ring-C.svg"
+        "filePath": "/static/images/products/yellow/ring-C.png"
       },
       {
         "color": "rose",
-        "filePath": "images/shop/styles/ring-C.svg"
+        "filePath": "/static/images/products/rose/ring-C.png"
       }
     ]
   },
@@ -808,15 +808,15 @@
     "images": [
       {
         "color": "white",
-        "filePath": "images/shop/styles/earring-A.svg"
+        "filePath": "/static/images/products/white/earring-A.png"
       },
       {
         "color": "yellow",
-        "filePath": "images/shop/styles/earring-A.svg"
+        "filePath": "/static/images/products/yellow/earring-A.png"
       },
       {
         "color": "rose",
-        "filePath": "images/shop/styles/earring-A.svg"
+        "filePath": "/static/images/products/rose/earring-A.png"
       }
     ]
   },
@@ -881,15 +881,15 @@
     "images": [
       {
         "color": "white",
-        "filePath": "images/shop/styles/bracelet-A.svg"
+        "filePath": "/static/images/products/white/bracelet-A.png"
       },
       {
         "color": "yellow",
-        "filePath": "images/shop/styles/bracelet-A.svg"
+        "filePath": "/static/images/products/yellow/bracelet-A.png"
       },
       {
         "color": "rose",
-        "filePath": "images/shop/styles/bracelet-A.svg"
+        "filePath": "/static/images/products/rose/bracelet-A.png"
       }
     ]
   },
@@ -929,15 +929,15 @@
     "images": [
       {
         "color": "white",
-        "filePath": "images/shop/styles/bracelet-B.svg"
+        "filePath": "/static/images/products/white/bracelet-B.png"
       },
       {
         "color": "yellow",
-        "filePath": "images/shop/styles/bracelet-B.svg"
+        "filePath": "/static/images/products/yellow/bracelet-B.png"
       },
       {
         "color": "rose",
-        "filePath": "images/shop/styles/bracelet-B.svg"
+        "filePath": "/static/images/products/rose/bracelet-B.png"
       }
     ]
   },
@@ -977,15 +977,15 @@
     "images": [
       {
         "color": "white",
-        "filePath": "images/shop/styles/bracelet-C.svg"
+        "filePath": "/static/images/products/white/bracelet-C.png"
       },
       {
         "color": "yellow",
-        "filePath": "images/shop/styles/bracelet-C.svg"
+        "filePath": "/static/images/products/yellow/bracelet-C.png"
       },
       {
         "color": "rose",
-        "filePath": "images/shop/styles/bracelet-C.svg"
+        "filePath": "/static/images/products/rose/bracelet-C.png"
       }
     ]
   },
@@ -995,70 +995,192 @@
     "nameZh": "斗圓鍊 K白",
     "defaultColor": "white",
     "sortOrder": 0,
+    "lengthWeights": {
+      "1.0mm": {
+        "36": 0.014,
+        "41": 0.016,
+        "46": 0.018,
+        "51": 0.02,
+        "61": 0.024,
+        "76": 0.03,
+        "80": 0.032
+      },
+      "1.5mm": {
+        "36": 0.026,
+        "41": 0.03,
+        "46": 0.033,
+        "51": 0.037,
+        "61": 0.043,
+        "76": 0.054,
+        "80": 0.057
+      },
+      "2.0mm": {
+        "36": 0.04,
+        "41": 0.046,
+        "46": 0.051,
+        "51": 0.056,
+        "61": 0.066,
+        "76": 0.083,
+        "80": 0.087
+      },
+      "2.5mm": {
+        "36": 0.047,
+        "41": 0.053,
+        "46": 0.059,
+        "51": 0.065,
+        "61": 0.076,
+        "76": 0.095,
+        "80": 0.1
+      },
+      "3.0mm": {
+        "36": 0.052,
+        "41": 0.06,
+        "46": 0.066,
+        "51": 0.074,
+        "61": 0.086,
+        "76": 0.11,
+        "80": 0.12
+      }
+    },
     "variants": [
       {
         "gold": "9k",
-        "carat": "3fen",
-        "weightChin": 0.02608695652173913
+        "carat": "1.0mm",
+        "weightChin": 0.018
       },
       {
         "gold": "9k",
-        "carat": "4fen",
-        "weightChin": 0.034782608695652174
+        "carat": "1.5mm",
+        "weightChin": 0.033
+      },
+      {
+        "gold": "9k",
+        "carat": "2.0mm",
+        "weightChin": 0.051
+      },
+      {
+        "gold": "9k",
+        "carat": "2.5mm",
+        "weightChin": 0.059
+      },
+      {
+        "gold": "9k",
+        "carat": "3.0mm",
+        "weightChin": 0.066
       },
       {
         "gold": "14k",
-        "carat": "3fen",
-        "weightChin": 0.02608695652173913
+        "carat": "1.0mm",
+        "weightChin": 0.018
       },
       {
         "gold": "14k",
-        "carat": "4fen",
-        "weightChin": 0.034782608695652174
+        "carat": "1.5mm",
+        "weightChin": 0.033
+      },
+      {
+        "gold": "14k",
+        "carat": "2.0mm",
+        "weightChin": 0.051
+      },
+      {
+        "gold": "14k",
+        "carat": "2.5mm",
+        "weightChin": 0.059
+      },
+      {
+        "gold": "14k",
+        "carat": "3.0mm",
+        "weightChin": 0.066
       },
       {
         "gold": "18k",
-        "carat": "3fen",
-        "weightChin": 0.02608695652173913
+        "carat": "1.0mm",
+        "weightChin": 0.018
       },
       {
         "gold": "18k",
-        "carat": "4fen",
-        "weightChin": 0.034782608695652174
+        "carat": "1.5mm",
+        "weightChin": 0.033
+      },
+      {
+        "gold": "18k",
+        "carat": "2.0mm",
+        "weightChin": 0.051
+      },
+      {
+        "gold": "18k",
+        "carat": "2.5mm",
+        "weightChin": 0.059
+      },
+      {
+        "gold": "18k",
+        "carat": "3.0mm",
+        "weightChin": 0.066
       },
       {
         "gold": "pt950",
-        "carat": "3fen",
-        "weightChin": 0.02608695652173913
+        "carat": "1.0mm",
+        "weightChin": 0.018
       },
       {
         "gold": "pt950",
-        "carat": "4fen",
-        "weightChin": 0.034782608695652174
+        "carat": "1.5mm",
+        "weightChin": 0.033
+      },
+      {
+        "gold": "pt950",
+        "carat": "2.0mm",
+        "weightChin": 0.051
+      },
+      {
+        "gold": "pt950",
+        "carat": "2.5mm",
+        "weightChin": 0.059
+      },
+      {
+        "gold": "pt950",
+        "carat": "3.0mm",
+        "weightChin": 0.066
       },
       {
         "gold": "s925",
-        "carat": "3fen",
-        "weightChin": 0.02608695652173913
+        "carat": "1.0mm",
+        "weightChin": 0.018
       },
       {
         "gold": "s925",
-        "carat": "4fen",
-        "weightChin": 0.034782608695652174
+        "carat": "1.5mm",
+        "weightChin": 0.033
+      },
+      {
+        "gold": "s925",
+        "carat": "2.0mm",
+        "weightChin": 0.051
+      },
+      {
+        "gold": "s925",
+        "carat": "2.5mm",
+        "weightChin": 0.059
+      },
+      {
+        "gold": "s925",
+        "carat": "3.0mm",
+        "weightChin": 0.066
       }
     ],
     "images": [
       {
         "color": "white",
-        "filePath": "images/shop/styles/chain-A.svg"
+        "filePath": "/static/images/products/white/chain-A.png"
       },
       {
         "color": "yellow",
-        "filePath": "images/shop/styles/chain-A.svg"
+        "filePath": "/static/images/products/yellow/chain-A.png"
       },
       {
         "color": "rose",
-        "filePath": "images/shop/styles/chain-A.svg"
+        "filePath": "/static/images/products/rose/chain-A.png"
       }
     ]
   },
@@ -1068,70 +1190,192 @@
     "nameZh": "斗圓鍊 K玫瑰",
     "defaultColor": "rose",
     "sortOrder": 2,
+    "lengthWeights": {
+      "1.0mm": {
+        "36": 0.014,
+        "41": 0.016,
+        "46": 0.018,
+        "51": 0.02,
+        "61": 0.024,
+        "76": 0.03,
+        "80": 0.032
+      },
+      "1.5mm": {
+        "36": 0.026,
+        "41": 0.03,
+        "46": 0.033,
+        "51": 0.037,
+        "61": 0.043,
+        "76": 0.054,
+        "80": 0.057
+      },
+      "2.0mm": {
+        "36": 0.04,
+        "41": 0.046,
+        "46": 0.051,
+        "51": 0.056,
+        "61": 0.066,
+        "76": 0.083,
+        "80": 0.087
+      },
+      "2.5mm": {
+        "36": 0.047,
+        "41": 0.053,
+        "46": 0.059,
+        "51": 0.065,
+        "61": 0.076,
+        "76": 0.095,
+        "80": 0.1
+      },
+      "3.0mm": {
+        "36": 0.052,
+        "41": 0.06,
+        "46": 0.066,
+        "51": 0.074,
+        "61": 0.086,
+        "76": 0.11,
+        "80": 0.12
+      }
+    },
     "variants": [
       {
         "gold": "9k",
-        "carat": "3fen",
-        "weightChin": 0.02608695652173913
+        "carat": "1.0mm",
+        "weightChin": 0.018
       },
       {
         "gold": "9k",
-        "carat": "4fen",
-        "weightChin": 0.034782608695652174
+        "carat": "1.5mm",
+        "weightChin": 0.033
+      },
+      {
+        "gold": "9k",
+        "carat": "2.0mm",
+        "weightChin": 0.051
+      },
+      {
+        "gold": "9k",
+        "carat": "2.5mm",
+        "weightChin": 0.059
+      },
+      {
+        "gold": "9k",
+        "carat": "3.0mm",
+        "weightChin": 0.066
       },
       {
         "gold": "14k",
-        "carat": "3fen",
-        "weightChin": 0.02608695652173913
+        "carat": "1.0mm",
+        "weightChin": 0.018
       },
       {
         "gold": "14k",
-        "carat": "4fen",
-        "weightChin": 0.034782608695652174
+        "carat": "1.5mm",
+        "weightChin": 0.033
+      },
+      {
+        "gold": "14k",
+        "carat": "2.0mm",
+        "weightChin": 0.051
+      },
+      {
+        "gold": "14k",
+        "carat": "2.5mm",
+        "weightChin": 0.059
+      },
+      {
+        "gold": "14k",
+        "carat": "3.0mm",
+        "weightChin": 0.066
       },
       {
         "gold": "18k",
-        "carat": "3fen",
-        "weightChin": 0.02608695652173913
+        "carat": "1.0mm",
+        "weightChin": 0.018
       },
       {
         "gold": "18k",
-        "carat": "4fen",
-        "weightChin": 0.034782608695652174
+        "carat": "1.5mm",
+        "weightChin": 0.033
+      },
+      {
+        "gold": "18k",
+        "carat": "2.0mm",
+        "weightChin": 0.051
+      },
+      {
+        "gold": "18k",
+        "carat": "2.5mm",
+        "weightChin": 0.059
+      },
+      {
+        "gold": "18k",
+        "carat": "3.0mm",
+        "weightChin": 0.066
       },
       {
         "gold": "pt950",
-        "carat": "3fen",
-        "weightChin": 0.02608695652173913
+        "carat": "1.0mm",
+        "weightChin": 0.018
       },
       {
         "gold": "pt950",
-        "carat": "4fen",
-        "weightChin": 0.034782608695652174
+        "carat": "1.5mm",
+        "weightChin": 0.033
+      },
+      {
+        "gold": "pt950",
+        "carat": "2.0mm",
+        "weightChin": 0.051
+      },
+      {
+        "gold": "pt950",
+        "carat": "2.5mm",
+        "weightChin": 0.059
+      },
+      {
+        "gold": "pt950",
+        "carat": "3.0mm",
+        "weightChin": 0.066
       },
       {
         "gold": "s925",
-        "carat": "3fen",
-        "weightChin": 0.02608695652173913
+        "carat": "1.0mm",
+        "weightChin": 0.018
       },
       {
         "gold": "s925",
-        "carat": "4fen",
-        "weightChin": 0.034782608695652174
+        "carat": "1.5mm",
+        "weightChin": 0.033
+      },
+      {
+        "gold": "s925",
+        "carat": "2.0mm",
+        "weightChin": 0.051
+      },
+      {
+        "gold": "s925",
+        "carat": "2.5mm",
+        "weightChin": 0.059
+      },
+      {
+        "gold": "s925",
+        "carat": "3.0mm",
+        "weightChin": 0.066
       }
     ],
     "images": [
       {
         "color": "white",
-        "filePath": "images/shop/styles/chain-B.svg"
+        "filePath": "/static/images/products/white/chain-B.png"
       },
       {
         "color": "yellow",
-        "filePath": "images/shop/styles/chain-B.svg"
+        "filePath": "/static/images/products/yellow/chain-B.png"
       },
       {
         "color": "rose",
-        "filePath": "images/shop/styles/chain-B.svg"
+        "filePath": "/static/images/products/rose/chain-B.png"
       }
     ]
   },
@@ -1141,70 +1385,192 @@
     "nameZh": "斗圓鍊 K黃",
     "defaultColor": "yellow",
     "sortOrder": 1,
+    "lengthWeights": {
+      "1.0mm": {
+        "36": 0.014,
+        "41": 0.016,
+        "46": 0.018,
+        "51": 0.02,
+        "61": 0.024,
+        "76": 0.03,
+        "80": 0.032
+      },
+      "1.5mm": {
+        "36": 0.026,
+        "41": 0.03,
+        "46": 0.033,
+        "51": 0.037,
+        "61": 0.043,
+        "76": 0.054,
+        "80": 0.057
+      },
+      "2.0mm": {
+        "36": 0.04,
+        "41": 0.046,
+        "46": 0.051,
+        "51": 0.056,
+        "61": 0.066,
+        "76": 0.083,
+        "80": 0.087
+      },
+      "2.5mm": {
+        "36": 0.047,
+        "41": 0.053,
+        "46": 0.059,
+        "51": 0.065,
+        "61": 0.076,
+        "76": 0.095,
+        "80": 0.1
+      },
+      "3.0mm": {
+        "36": 0.052,
+        "41": 0.06,
+        "46": 0.066,
+        "51": 0.074,
+        "61": 0.086,
+        "76": 0.11,
+        "80": 0.12
+      }
+    },
     "variants": [
       {
         "gold": "9k",
-        "carat": "3fen",
-        "weightChin": 0.02608695652173913
+        "carat": "1.0mm",
+        "weightChin": 0.018
       },
       {
         "gold": "9k",
-        "carat": "4fen",
-        "weightChin": 0.034782608695652174
+        "carat": "1.5mm",
+        "weightChin": 0.033
+      },
+      {
+        "gold": "9k",
+        "carat": "2.0mm",
+        "weightChin": 0.051
+      },
+      {
+        "gold": "9k",
+        "carat": "2.5mm",
+        "weightChin": 0.059
+      },
+      {
+        "gold": "9k",
+        "carat": "3.0mm",
+        "weightChin": 0.066
       },
       {
         "gold": "14k",
-        "carat": "3fen",
-        "weightChin": 0.02608695652173913
+        "carat": "1.0mm",
+        "weightChin": 0.018
       },
       {
         "gold": "14k",
-        "carat": "4fen",
-        "weightChin": 0.034782608695652174
+        "carat": "1.5mm",
+        "weightChin": 0.033
+      },
+      {
+        "gold": "14k",
+        "carat": "2.0mm",
+        "weightChin": 0.051
+      },
+      {
+        "gold": "14k",
+        "carat": "2.5mm",
+        "weightChin": 0.059
+      },
+      {
+        "gold": "14k",
+        "carat": "3.0mm",
+        "weightChin": 0.066
       },
       {
         "gold": "18k",
-        "carat": "3fen",
-        "weightChin": 0.02608695652173913
+        "carat": "1.0mm",
+        "weightChin": 0.018
       },
       {
         "gold": "18k",
-        "carat": "4fen",
-        "weightChin": 0.034782608695652174
+        "carat": "1.5mm",
+        "weightChin": 0.033
+      },
+      {
+        "gold": "18k",
+        "carat": "2.0mm",
+        "weightChin": 0.051
+      },
+      {
+        "gold": "18k",
+        "carat": "2.5mm",
+        "weightChin": 0.059
+      },
+      {
+        "gold": "18k",
+        "carat": "3.0mm",
+        "weightChin": 0.066
       },
       {
         "gold": "pt950",
-        "carat": "3fen",
-        "weightChin": 0.02608695652173913
+        "carat": "1.0mm",
+        "weightChin": 0.018
       },
       {
         "gold": "pt950",
-        "carat": "4fen",
-        "weightChin": 0.034782608695652174
+        "carat": "1.5mm",
+        "weightChin": 0.033
+      },
+      {
+        "gold": "pt950",
+        "carat": "2.0mm",
+        "weightChin": 0.051
+      },
+      {
+        "gold": "pt950",
+        "carat": "2.5mm",
+        "weightChin": 0.059
+      },
+      {
+        "gold": "pt950",
+        "carat": "3.0mm",
+        "weightChin": 0.066
       },
       {
         "gold": "s925",
-        "carat": "3fen",
-        "weightChin": 0.02608695652173913
+        "carat": "1.0mm",
+        "weightChin": 0.018
       },
       {
         "gold": "s925",
-        "carat": "4fen",
-        "weightChin": 0.034782608695652174
+        "carat": "1.5mm",
+        "weightChin": 0.033
+      },
+      {
+        "gold": "s925",
+        "carat": "2.0mm",
+        "weightChin": 0.051
+      },
+      {
+        "gold": "s925",
+        "carat": "2.5mm",
+        "weightChin": 0.059
+      },
+      {
+        "gold": "s925",
+        "carat": "3.0mm",
+        "weightChin": 0.066
       }
     ],
     "images": [
       {
         "color": "white",
-        "filePath": "images/shop/styles/chain-C.svg"
+        "filePath": "/static/images/products/white/chain-C.png"
       },
       {
         "color": "yellow",
-        "filePath": "images/shop/styles/chain-C.svg"
+        "filePath": "/static/images/products/yellow/chain-C.png"
       },
       {
         "color": "rose",
-        "filePath": "images/shop/styles/chain-C.svg"
+        "filePath": "/static/images/products/rose/chain-C.png"
       }
     ]
   }

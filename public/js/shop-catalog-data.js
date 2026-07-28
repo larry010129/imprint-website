@@ -30,7 +30,17 @@
           "yellow",
           "rose"
         ],
-        "images": {},
+        "images": {
+          "white": [
+            "/static/images/products/white/pendant-A.png"
+          ],
+          "yellow": [
+            "/static/images/products/yellow/pendant-A.png"
+          ],
+          "rose": [
+            "/static/images/products/rose/pendant-A.png"
+          ]
+        },
         "weights": {
           "9k": {
             "0.1": 0.008,
@@ -63,6 +73,7 @@
             "1.0": 0.018
           }
         },
+        "lengthWeights": {},
         "manualPrices": {},
         "draft": false
       },
@@ -92,7 +103,17 @@
           "yellow",
           "rose"
         ],
-        "images": {},
+        "images": {
+          "white": [
+            "/static/images/products/white/pendant-B.png"
+          ],
+          "yellow": [
+            "/static/images/products/yellow/pendant-B.png"
+          ],
+          "rose": [
+            "/static/images/products/rose/pendant-B.png"
+          ]
+        },
         "weights": {
           "9k": {
             "0.1": 0.009,
@@ -125,6 +146,7 @@
             "1.0": 0.024
           }
         },
+        "lengthWeights": {},
         "manualPrices": {},
         "draft": false
       },
@@ -154,7 +176,17 @@
           "yellow",
           "rose"
         ],
-        "images": {},
+        "images": {
+          "white": [
+            "/static/images/products/white/pendant-C.png"
+          ],
+          "yellow": [
+            "/static/images/products/yellow/pendant-C.png"
+          ],
+          "rose": [
+            "/static/images/products/rose/pendant-C.png"
+          ]
+        },
         "weights": {
           "9k": {
             "0.1": 0.012,
@@ -187,6 +219,7 @@
             "1.0": 0.038
           }
         },
+        "lengthWeights": {},
         "manualPrices": {},
         "draft": false
       }
@@ -218,7 +251,17 @@
           "yellow",
           "rose"
         ],
-        "images": {},
+        "images": {
+          "white": [
+            "/static/images/products/white/ring-A.png"
+          ],
+          "yellow": [
+            "/static/images/products/yellow/ring-A.png"
+          ],
+          "rose": [
+            "/static/images/products/rose/ring-A.png"
+          ]
+        },
         "weights": {
           "9k": {
             "0.1": 0.034,
@@ -251,6 +294,7 @@
             "1.0": 0.063
           }
         },
+        "lengthWeights": {},
         "manualPrices": {},
         "draft": false
       },
@@ -280,7 +324,17 @@
           "yellow",
           "rose"
         ],
-        "images": {},
+        "images": {
+          "white": [
+            "/static/images/products/white/ring-B.png"
+          ],
+          "yellow": [
+            "/static/images/products/yellow/ring-B.png"
+          ],
+          "rose": [
+            "/static/images/products/rose/ring-B.png"
+          ]
+        },
         "weights": {
           "9k": {
             "0.1": 0.034,
@@ -313,6 +367,7 @@
             "1.0": 0.13
           }
         },
+        "lengthWeights": {},
         "manualPrices": {},
         "draft": false
       },
@@ -342,7 +397,17 @@
           "yellow",
           "rose"
         ],
-        "images": {},
+        "images": {
+          "white": [
+            "/static/images/products/white/ring-C.png"
+          ],
+          "yellow": [
+            "/static/images/products/yellow/ring-C.png"
+          ],
+          "rose": [
+            "/static/images/products/rose/ring-C.png"
+          ]
+        },
         "weights": {
           "9k": {
             "0.1": 0.035,
@@ -375,6 +440,7 @@
             "1.0": 0.134
           }
         },
+        "lengthWeights": {},
         "manualPrices": {},
         "draft": false
       }
@@ -404,7 +470,17 @@
           "yellow",
           "rose"
         ],
-        "images": {},
+        "images": {
+          "white": [
+            "/static/images/products/white/earring-A.png"
+          ],
+          "yellow": [
+            "/static/images/products/yellow/earring-A.png"
+          ],
+          "rose": [
+            "/static/images/products/rose/earring-A.png"
+          ]
+        },
         "weights": {
           "9k": {
             "0.1": 0.008,
@@ -425,6 +501,7 @@
             "1.0": 0.022
           }
         },
+        "lengthWeights": {},
         "manualPrices": {},
         "draft": false
       }
@@ -454,7 +531,17 @@
           "yellow",
           "rose"
         ],
-        "images": {},
+        "images": {
+          "white": [
+            "/static/images/products/white/bracelet-A.png"
+          ],
+          "yellow": [
+            "/static/images/products/yellow/bracelet-A.png"
+          ],
+          "rose": [
+            "/static/images/products/rose/bracelet-A.png"
+          ]
+        },
         "weights": {
           "9k": {
             "0.1": 0.057,
@@ -477,6 +564,7 @@
             "0.2": 0.066957
           }
         },
+        "lengthWeights": {},
         "manualPrices": {},
         "draft": false
       },
@@ -503,7 +591,17 @@
           "yellow",
           "rose"
         ],
-        "images": {},
+        "images": {
+          "white": [
+            "/static/images/products/white/bracelet-B.png"
+          ],
+          "yellow": [
+            "/static/images/products/yellow/bracelet-B.png"
+          ],
+          "rose": [
+            "/static/images/products/rose/bracelet-B.png"
+          ]
+        },
         "weights": {
           "9k": {
             "0.1": 0.041
@@ -521,6 +619,7 @@
             "0.1": 0.041
           }
         },
+        "lengthWeights": {},
         "manualPrices": {},
         "draft": false
       },
@@ -547,7 +646,17 @@
           "yellow",
           "rose"
         ],
-        "images": {},
+        "images": {
+          "white": [
+            "/static/images/products/white/bracelet-C.png"
+          ],
+          "yellow": [
+            "/static/images/products/yellow/bracelet-C.png"
+          ],
+          "rose": [
+            "/static/images/products/rose/bracelet-C.png"
+          ]
+        },
         "weights": {
           "9k": {
             "0.1": 0.003
@@ -565,6 +674,7 @@
             "0.1": 0.003
           }
         },
+        "lengthWeights": {},
         "manualPrices": {},
         "draft": false
       }
@@ -586,35 +696,110 @@
           "s925"
         ],
         "carats": [
-          "3fen",
-          "4fen"
+          "1.0mm",
+          "1.5mm",
+          "2.0mm",
+          "2.5mm",
+          "3.0mm"
         ],
         "colors": [
           "white",
           "yellow",
           "rose"
         ],
-        "images": {},
+        "images": {
+          "white": [
+            "/static/images/products/white/chain-A.png"
+          ],
+          "yellow": [
+            "/static/images/products/yellow/chain-A.png"
+          ],
+          "rose": [
+            "/static/images/products/rose/chain-A.png"
+          ]
+        },
         "weights": {
           "9k": {
-            "3fen": 0.02608695652173913,
-            "4fen": 0.034782608695652174
+            "1.0mm": 0.018,
+            "1.5mm": 0.033,
+            "2.0mm": 0.051,
+            "2.5mm": 0.059,
+            "3.0mm": 0.066
           },
           "14k": {
-            "3fen": 0.02608695652173913,
-            "4fen": 0.034782608695652174
+            "1.0mm": 0.018,
+            "1.5mm": 0.033,
+            "2.0mm": 0.051,
+            "2.5mm": 0.059,
+            "3.0mm": 0.066
           },
           "18k": {
-            "3fen": 0.02608695652173913,
-            "4fen": 0.034782608695652174
+            "1.0mm": 0.018,
+            "1.5mm": 0.033,
+            "2.0mm": 0.051,
+            "2.5mm": 0.059,
+            "3.0mm": 0.066
           },
           "pt950": {
-            "3fen": 0.02608695652173913,
-            "4fen": 0.034782608695652174
+            "1.0mm": 0.018,
+            "1.5mm": 0.033,
+            "2.0mm": 0.051,
+            "2.5mm": 0.059,
+            "3.0mm": 0.066
           },
           "s925": {
-            "3fen": 0.02608695652173913,
-            "4fen": 0.034782608695652174
+            "1.0mm": 0.018,
+            "1.5mm": 0.033,
+            "2.0mm": 0.051,
+            "2.5mm": 0.059,
+            "3.0mm": 0.066
+          }
+        },
+        "lengthWeights": {
+          "1.0mm": {
+            "36": 0.014,
+            "41": 0.016,
+            "46": 0.018,
+            "51": 0.02,
+            "61": 0.024,
+            "76": 0.03,
+            "80": 0.032
+          },
+          "1.5mm": {
+            "36": 0.026,
+            "41": 0.03,
+            "46": 0.033,
+            "51": 0.037,
+            "61": 0.043,
+            "76": 0.054,
+            "80": 0.057
+          },
+          "2.0mm": {
+            "36": 0.04,
+            "41": 0.046,
+            "46": 0.051,
+            "51": 0.056,
+            "61": 0.066,
+            "76": 0.083,
+            "80": 0.087
+          },
+          "2.5mm": {
+            "36": 0.047,
+            "41": 0.053,
+            "46": 0.059,
+            "51": 0.065,
+            "61": 0.076,
+            "76": 0.095,
+            "80": 0.1
+          },
+          "3.0mm": {
+            "36": 0.052,
+            "41": 0.06,
+            "46": 0.066,
+            "51": 0.074,
+            "61": 0.086,
+            "76": 0.11,
+            "80": 0.12
           }
         },
         "manualPrices": {},
@@ -636,35 +821,110 @@
           "s925"
         ],
         "carats": [
-          "3fen",
-          "4fen"
+          "1.0mm",
+          "1.5mm",
+          "2.0mm",
+          "2.5mm",
+          "3.0mm"
         ],
         "colors": [
           "white",
           "yellow",
           "rose"
         ],
-        "images": {},
+        "images": {
+          "white": [
+            "/static/images/products/white/chain-B.png"
+          ],
+          "yellow": [
+            "/static/images/products/yellow/chain-B.png"
+          ],
+          "rose": [
+            "/static/images/products/rose/chain-B.png"
+          ]
+        },
         "weights": {
           "9k": {
-            "3fen": 0.02608695652173913,
-            "4fen": 0.034782608695652174
+            "1.0mm": 0.018,
+            "1.5mm": 0.033,
+            "2.0mm": 0.051,
+            "2.5mm": 0.059,
+            "3.0mm": 0.066
           },
           "14k": {
-            "3fen": 0.02608695652173913,
-            "4fen": 0.034782608695652174
+            "1.0mm": 0.018,
+            "1.5mm": 0.033,
+            "2.0mm": 0.051,
+            "2.5mm": 0.059,
+            "3.0mm": 0.066
           },
           "18k": {
-            "3fen": 0.02608695652173913,
-            "4fen": 0.034782608695652174
+            "1.0mm": 0.018,
+            "1.5mm": 0.033,
+            "2.0mm": 0.051,
+            "2.5mm": 0.059,
+            "3.0mm": 0.066
           },
           "pt950": {
-            "3fen": 0.02608695652173913,
-            "4fen": 0.034782608695652174
+            "1.0mm": 0.018,
+            "1.5mm": 0.033,
+            "2.0mm": 0.051,
+            "2.5mm": 0.059,
+            "3.0mm": 0.066
           },
           "s925": {
-            "3fen": 0.02608695652173913,
-            "4fen": 0.034782608695652174
+            "1.0mm": 0.018,
+            "1.5mm": 0.033,
+            "2.0mm": 0.051,
+            "2.5mm": 0.059,
+            "3.0mm": 0.066
+          }
+        },
+        "lengthWeights": {
+          "1.0mm": {
+            "36": 0.014,
+            "41": 0.016,
+            "46": 0.018,
+            "51": 0.02,
+            "61": 0.024,
+            "76": 0.03,
+            "80": 0.032
+          },
+          "1.5mm": {
+            "36": 0.026,
+            "41": 0.03,
+            "46": 0.033,
+            "51": 0.037,
+            "61": 0.043,
+            "76": 0.054,
+            "80": 0.057
+          },
+          "2.0mm": {
+            "36": 0.04,
+            "41": 0.046,
+            "46": 0.051,
+            "51": 0.056,
+            "61": 0.066,
+            "76": 0.083,
+            "80": 0.087
+          },
+          "2.5mm": {
+            "36": 0.047,
+            "41": 0.053,
+            "46": 0.059,
+            "51": 0.065,
+            "61": 0.076,
+            "76": 0.095,
+            "80": 0.1
+          },
+          "3.0mm": {
+            "36": 0.052,
+            "41": 0.06,
+            "46": 0.066,
+            "51": 0.074,
+            "61": 0.086,
+            "76": 0.11,
+            "80": 0.12
           }
         },
         "manualPrices": {},
@@ -686,35 +946,110 @@
           "s925"
         ],
         "carats": [
-          "3fen",
-          "4fen"
+          "1.0mm",
+          "1.5mm",
+          "2.0mm",
+          "2.5mm",
+          "3.0mm"
         ],
         "colors": [
           "white",
           "yellow",
           "rose"
         ],
-        "images": {},
+        "images": {
+          "white": [
+            "/static/images/products/white/chain-C.png"
+          ],
+          "yellow": [
+            "/static/images/products/yellow/chain-C.png"
+          ],
+          "rose": [
+            "/static/images/products/rose/chain-C.png"
+          ]
+        },
         "weights": {
           "9k": {
-            "3fen": 0.02608695652173913,
-            "4fen": 0.034782608695652174
+            "1.0mm": 0.018,
+            "1.5mm": 0.033,
+            "2.0mm": 0.051,
+            "2.5mm": 0.059,
+            "3.0mm": 0.066
           },
           "14k": {
-            "3fen": 0.02608695652173913,
-            "4fen": 0.034782608695652174
+            "1.0mm": 0.018,
+            "1.5mm": 0.033,
+            "2.0mm": 0.051,
+            "2.5mm": 0.059,
+            "3.0mm": 0.066
           },
           "18k": {
-            "3fen": 0.02608695652173913,
-            "4fen": 0.034782608695652174
+            "1.0mm": 0.018,
+            "1.5mm": 0.033,
+            "2.0mm": 0.051,
+            "2.5mm": 0.059,
+            "3.0mm": 0.066
           },
           "pt950": {
-            "3fen": 0.02608695652173913,
-            "4fen": 0.034782608695652174
+            "1.0mm": 0.018,
+            "1.5mm": 0.033,
+            "2.0mm": 0.051,
+            "2.5mm": 0.059,
+            "3.0mm": 0.066
           },
           "s925": {
-            "3fen": 0.02608695652173913,
-            "4fen": 0.034782608695652174
+            "1.0mm": 0.018,
+            "1.5mm": 0.033,
+            "2.0mm": 0.051,
+            "2.5mm": 0.059,
+            "3.0mm": 0.066
+          }
+        },
+        "lengthWeights": {
+          "1.0mm": {
+            "36": 0.014,
+            "41": 0.016,
+            "46": 0.018,
+            "51": 0.02,
+            "61": 0.024,
+            "76": 0.03,
+            "80": 0.032
+          },
+          "1.5mm": {
+            "36": 0.026,
+            "41": 0.03,
+            "46": 0.033,
+            "51": 0.037,
+            "61": 0.043,
+            "76": 0.054,
+            "80": 0.057
+          },
+          "2.0mm": {
+            "36": 0.04,
+            "41": 0.046,
+            "46": 0.051,
+            "51": 0.056,
+            "61": 0.066,
+            "76": 0.083,
+            "80": 0.087
+          },
+          "2.5mm": {
+            "36": 0.047,
+            "41": 0.053,
+            "46": 0.059,
+            "51": 0.065,
+            "61": 0.076,
+            "76": 0.095,
+            "80": 0.1
+          },
+          "3.0mm": {
+            "36": 0.052,
+            "41": 0.06,
+            "46": 0.066,
+            "51": 0.074,
+            "61": 0.086,
+            "76": 0.11,
+            "80": 0.12
           }
         },
         "manualPrices": {},
@@ -723,36 +1058,35 @@
     ],
     "diamond": [
       {
-        "id": "diamond-loose",
-        "styleKey": "diamond-loose",
-        "nameZh": "裸鑽試算",
-        "nameEn": "Loose Diamond Quote",
-        "descriptionZh": "依克拉、形狀與顏色試算裸鑽價格（不含鑲嵌）",
-        "descriptionEn": "Loose stone price by carat, shape, and color (setting not included)",
-        "defaultColor": "white",
-        "golds": [],
-        "carats": ["0.1", "0.2", "0.3", "0.5", "0.6", "0.7", "0.8", "0.9", "1.0", "1.5", "2.0", "3.0"],
-        "colors": ["white"],
-        "images": {
-          "white": ["/static/images/diamonds/colors/white.png"]
-        },
-        "weights": {},
-        "manualPrices": {},
-        "draft": false
-      },
-      {
         "id": "diamond-first-love",
         "styleKey": "diamond-first-love",
         "nameZh": "滿月鑽石",
         "nameEn": "First Love Diamond",
         "descriptionZh": "以寶寶胎髮培育的紀念鑽石（裸鑽試算，不含鑲嵌）",
-        "descriptionEn": "Memorial diamond from baby hair (loose stone quote)",
+        "descriptionEn": null,
         "defaultColor": "white",
         "golds": [],
-        "carats": ["0.1", "0.2", "0.3", "0.5", "0.6", "0.7", "0.8", "0.9", "1.0", "1.5", "2.0", "3.0"],
-        "colors": ["white"],
+        "carats": [
+          "0.1",
+          "0.2",
+          "0.3",
+          "0.5",
+          "0.6",
+          "0.7",
+          "0.8",
+          "0.9",
+          "1.0",
+          "1.5",
+          "2.0",
+          "3.0"
+        ],
+        "colors": [
+          "white"
+        ],
         "images": {
-          "white": ["/static/images/hero/imprint-diamond-newborn-baby-necklace.jpg"]
+          "white": [
+            "/static/images/hero/imprint-diamond-newborn-baby-necklace.jpg"
+          ]
         },
         "weights": {},
         "manualPrices": {},
@@ -764,13 +1098,30 @@
         "nameZh": "寵物鑽石",
         "nameEn": "Pet Diamond",
         "descriptionZh": "以毛孩毛髮培育的紀念鑽石（裸鑽試算，不含鑲嵌）",
-        "descriptionEn": "Memorial diamond from pet fur (loose stone quote)",
+        "descriptionEn": null,
         "defaultColor": "white",
         "golds": [],
-        "carats": ["0.1", "0.2", "0.3", "0.5", "0.6", "0.7", "0.8", "0.9", "1.0", "1.5", "2.0", "3.0"],
-        "colors": ["white"],
+        "carats": [
+          "0.1",
+          "0.2",
+          "0.3",
+          "0.5",
+          "0.6",
+          "0.7",
+          "0.8",
+          "0.9",
+          "1.0",
+          "1.5",
+          "2.0",
+          "3.0"
+        ],
+        "colors": [
+          "white"
+        ],
         "images": {
-          "white": ["/static/images/hero/imprint-diamond-pet-memorial-cat.jpg"]
+          "white": [
+            "/static/images/hero/imprint-diamond-pet-memorial-cat.jpg"
+          ]
         },
         "weights": {},
         "manualPrices": {},
@@ -782,13 +1133,30 @@
         "nameZh": "結髮鑽石",
         "nameEn": "Love Diamond",
         "descriptionZh": "以夫妻髮絲共同培育的紀念鑽石（裸鑽試算，不含鑲嵌）",
-        "descriptionEn": "Memorial diamond from couple hair (loose stone quote)",
+        "descriptionEn": null,
         "defaultColor": "white",
         "golds": [],
-        "carats": ["0.1", "0.2", "0.3", "0.5", "0.6", "0.7", "0.8", "0.9", "1.0", "1.5", "2.0", "3.0"],
-        "colors": ["white"],
+        "carats": [
+          "0.1",
+          "0.2",
+          "0.3",
+          "0.5",
+          "0.6",
+          "0.7",
+          "0.8",
+          "0.9",
+          "1.0",
+          "1.5",
+          "2.0",
+          "3.0"
+        ],
+        "colors": [
+          "white"
+        ],
         "images": {
-          "white": ["/static/images/hero/imprint-diamond-wedding-couple-ring.jpg"]
+          "white": [
+            "/static/images/hero/imprint-diamond-wedding-couple-ring.jpg"
+          ]
         },
         "weights": {},
         "manualPrices": {},
@@ -800,13 +1168,30 @@
         "nameZh": "全家福鑽石",
         "nameEn": "Family Diamond",
         "descriptionZh": "集合全家人髮絲培育的紀念鑽石（裸鑽試算，不含鑲嵌）",
-        "descriptionEn": "Memorial diamond from family hair (loose stone quote)",
+        "descriptionEn": null,
         "defaultColor": "white",
         "golds": [],
-        "carats": ["0.1", "0.2", "0.3", "0.5", "0.6", "0.7", "0.8", "0.9", "1.0", "1.5", "2.0", "3.0"],
-        "colors": ["white"],
+        "carats": [
+          "0.1",
+          "0.2",
+          "0.3",
+          "0.5",
+          "0.6",
+          "0.7",
+          "0.8",
+          "0.9",
+          "1.0",
+          "1.5",
+          "2.0",
+          "3.0"
+        ],
+        "colors": [
+          "white"
+        ],
         "images": {
-          "white": ["/static/images/hero/imprint-diamond-family-portrait-jewelry.jpg"]
+          "white": [
+            "/static/images/hero/imprint-diamond-family-portrait-jewelry.jpg"
+          ]
         },
         "weights": {},
         "manualPrices": {},
@@ -818,13 +1203,30 @@
         "nameZh": "生命鑽石",
         "nameEn": "Heirloom Diamond",
         "descriptionZh": "以親人毛髮或骨灰培育的紀念鑽石（裸鑽試算，不含鑲嵌）",
-        "descriptionEn": "Memorial diamond from loved one (loose stone quote)",
+        "descriptionEn": null,
         "defaultColor": "white",
         "golds": [],
-        "carats": ["0.1", "0.2", "0.3", "0.5", "0.6", "0.7", "0.8", "0.9", "1.0", "1.5", "2.0", "3.0"],
-        "colors": ["white"],
+        "carats": [
+          "0.1",
+          "0.2",
+          "0.3",
+          "0.5",
+          "0.6",
+          "0.7",
+          "0.8",
+          "0.9",
+          "1.0",
+          "1.5",
+          "2.0",
+          "3.0"
+        ],
+        "colors": [
+          "white"
+        ],
         "images": {
-          "white": ["/static/images/hero/imprint-diamond-heirloom-memorial.jpg"]
+          "white": [
+            "/static/images/hero/imprint-diamond-heirloom-memorial.jpg"
+          ]
         },
         "weights": {},
         "manualPrices": {},

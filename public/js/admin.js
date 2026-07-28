@@ -710,9 +710,6 @@
         window.__adminFlushPendingPanel();
       }
 
-      if (window.AdminProductsPanel && window.AdminProductsPanel.prefetch) {
-        window.AdminProductsPanel.prefetch();
-      }
     });
   });
 })();

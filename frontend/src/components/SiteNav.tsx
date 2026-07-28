@@ -300,12 +300,6 @@ export default function SiteNav() {
 
           </a>
 
-          <a className="btn btn-line" href="tel:0229770268">
-
-            02-2977-0268
-
-          </a>
-
           <a
 
             className="btn btn-dark"
@@ -322,7 +316,9 @@ export default function SiteNav() {
 
           </a>
 
-          <AccountMenu siteRoot={siteRoot} session={session} />
+          <div className="site-nav-account-desktop">
+            <AccountMenu siteRoot={siteRoot} session={session} />
+          </div>
 
           <MobileMenuToggle
 

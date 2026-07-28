@@ -7,6 +7,22 @@ import AdminContentTables, {
 import PageLinkSelect, {
   type PageLinkSelectProps,
 } from "@/components/admin/PageLinkSelect";
+import PageImageEditModal, {
+  type PageImageEditModalProps,
+} from "@/components/admin/PageImageEditModal";
+import PageImageCreateModal, {
+  type PageImageCreateModalProps,
+} from "@/components/admin/PageImageCreateModal";
+import BannerCropModal, {
+  type BannerCropModalProps,
+} from "@/components/admin/BannerCropModal";
+import BannerImageUploadCards, {
+  type BannerImageUploadCardsProps,
+} from "@/components/admin/BannerImageUploadCards";
+import {
+  ImageUploadField,
+  type ImageUploadFieldProps,
+} from "@/components/ui/image-upload";
 import "./index.css";
 
 const roots = new WeakMap<Element, Root>();
@@ -37,6 +53,26 @@ function renderPageLinkSelect(container: Element, props: PageLinkSelectProps) {
   getRoot(container).render(<PageLinkSelect {...props} />);
 }
 
+function renderPageImageEditModal(container: Element, props: PageImageEditModalProps) {
+  getRoot(container).render(<PageImageEditModal {...props} />);
+}
+
+function renderPageImageCreateModal(container: Element, props: PageImageCreateModalProps) {
+  getRoot(container).render(<PageImageCreateModal {...props} />);
+}
+
+function renderImageUploadField(container: Element, props: ImageUploadFieldProps) {
+  getRoot(container).render(<ImageUploadField {...props} />);
+}
+
+function renderBannerCropModal(container: Element, props: BannerCropModalProps) {
+  getRoot(container).render(<BannerCropModal {...props} />);
+}
+
+function renderBannerImageUploadCards(container: Element, props: BannerImageUploadCardsProps) {
+  getRoot(container).render(<BannerImageUploadCards {...props} />);
+}
+
 function unmount(container: Element) {
   const root = roots.get(container);
   if (root) {
@@ -52,6 +88,11 @@ declare global {
       renderProductsTable: typeof renderProductsTable;
       renderContentTables: typeof renderContentTables;
       renderPageLinkSelect: typeof renderPageLinkSelect;
+      renderPageImageEditModal: typeof renderPageImageEditModal;
+      renderPageImageCreateModal: typeof renderPageImageCreateModal;
+      renderImageUploadField: typeof renderImageUploadField;
+      renderBannerCropModal: typeof renderBannerCropModal;
+      renderBannerImageUploadCards: typeof renderBannerImageUploadCards;
       unmount: typeof unmount;
     };
   }
@@ -62,5 +103,10 @@ window.AdminTables = {
   renderProductsTable,
   renderContentTables,
   renderPageLinkSelect,
+  renderPageImageEditModal,
+  renderPageImageCreateModal,
+  renderImageUploadField,
+  renderBannerCropModal,
+  renderBannerImageUploadCards,
   unmount,
 };

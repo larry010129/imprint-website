@@ -1,10 +1,18 @@
 <script type="module">
   const root = document.querySelector("[data-faq-root]");
   let requested = false;
+  const ensureStylesheet = () => {
+    if (document.querySelector('link[href^="/static/react/faq.css"]')) return;
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = "/static/react/faq.css?v=5";
+    document.head.append(link);
+  };
   const load = () => {
     if (requested) return;
     requested = true;
-    void import("/static/react/faq.js?v=9");
+    ensureStylesheet();
+    void import("/static/react/faq.js?v=10");
   };
   if (root) {
     const nearViewport = root.getBoundingClientRect().top <= window.innerHeight + 800;

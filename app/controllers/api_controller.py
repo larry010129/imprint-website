@@ -154,7 +154,7 @@ async def track_order(request: Request) -> dict:
 
 
 @router.get("/orders")
-async def my_orders(request: Request) -> dict:
+def my_orders(request: Request) -> dict:
     user_id = get_user_id(request)
     if not user_id:
         raise HTTPException(status_code=401, detail="not signed in")
@@ -175,7 +175,7 @@ async def my_orders(request: Request) -> dict:
 
 
 @router.get("/catalog")
-async def catalog(
+def catalog(
     request: Request,
     category: str | None = Query(None),
     preview: int = Query(0),
@@ -210,7 +210,7 @@ async def catalog(
 
 
 @router.get("/testimonials")
-async def public_testimonials() -> dict:
+def public_testimonials() -> dict:
     from app.content import fetch_published_testimonials
 
     with get_connection() as conn, conn.cursor() as cur:
@@ -218,7 +218,7 @@ async def public_testimonials() -> dict:
 
 
 @router.get("/faq")
-async def public_faq() -> dict:
+def public_faq() -> dict:
     from app.content import fetch_faq_public
 
     with get_connection() as conn, conn.cursor() as cur:
@@ -226,7 +226,7 @@ async def public_faq() -> dict:
 
 
 @router.get("/banners")
-async def public_banners() -> dict:
+def public_banners() -> dict:
     from app.content import fetch_published_banners
 
     with get_connection() as conn, conn.cursor() as cur:
@@ -236,7 +236,7 @@ async def public_banners() -> dict:
 # ── pricing overrides (public read for the configurator, admin write) ───────
 
 @router.get("/pricing")
-async def get_pricing() -> dict:
+def get_pricing() -> dict:
     with get_connection() as conn, conn.cursor() as cur:
         return {"overrides": load_overrides(cur)}
 
@@ -263,7 +263,7 @@ async def post_pricing(request: Request) -> JSONResponse:
 # ── membership ladder config (public read; admin write) ─────────────────────
 
 @router.get("/membership-config")
-async def get_membership_config() -> dict:
+def get_membership_config() -> dict:
     try:
         with get_connection() as conn, conn.cursor() as cur:
             return {"config": load_config(cur)}
@@ -273,7 +273,7 @@ async def get_membership_config() -> dict:
 
 
 @router.get("/admin/membership-config")
-async def admin_get_membership_config(request: Request) -> dict:
+def admin_get_membership_config(request: Request) -> dict:
     user_id = get_user_id(request)
     if not user_id or not is_admin(user_id):
         raise HTTPException(status_code=403, detail="admin access required")
@@ -306,7 +306,7 @@ async def admin_post_membership_config(request: Request) -> JSONResponse:
 # ── shop price feed + live quote ────────────────────────────────────────────
 
 @router.get("/prices")
-async def shop_prices() -> dict:
+def shop_prices() -> dict:
     """Server-authoritative pricing constants for the configurator (with admin
     overrides applied). Ring-size/diamond-option tables stay client-side; this
     only supplies the money-critical numbers so the browser never guesses."""
@@ -357,7 +357,7 @@ async def shop_quote(request: Request, preview: int = Query(0)) -> dict:
 # ── live gold price (reads gold_price_cache; refresh re-scrapes BOT) ─────────
 
 @router.get("/gold-price")
-async def gold_price() -> dict:
+def gold_price() -> dict:
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute("select * from gold_price_cache where id = 1")
         row = cur.fetchone()
@@ -416,7 +416,7 @@ async def gold_refresh() -> dict:
 # ── favorites (saved configurations, per signed-in user) ────────────────────
 
 @router.get("/favorites")
-async def get_favorites(request: Request) -> dict:
+def get_favorites(request: Request) -> dict:
     user_id = get_user_id(request)
     if not user_id:
         raise HTTPException(status_code=401, detail="not signed in")
@@ -468,7 +468,7 @@ async def add_favorite(request: Request) -> JSONResponse:
 
 
 @router.delete("/favorites")
-async def delete_favorite(request: Request) -> dict:
+def delete_favorite(request: Request) -> dict:
     user_id = get_user_id(request)
     if not user_id:
         raise HTTPException(status_code=401, detail="not signed in")

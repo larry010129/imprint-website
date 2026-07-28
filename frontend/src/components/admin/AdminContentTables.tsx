@@ -1,15 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import type { ColumnDef, PaginationState, SortingState } from "@tanstack/react-table";
+import type { ColumnDef, PaginationState } from "@tanstack/react-table";
 import {
   getCoreRowModel,
   getPaginationRowModel,
-  getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
 
 import {
   DataGrid,
-  DataGridColumnHeader,
   DataGridContainer,
   DataGridPagination,
   DataGridTable,
@@ -19,7 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button-1";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 
-export type ContentTab = "banners" | "testimonials" | "faq";
+export type ContentTab = "banners" | "testimonials" | "faq" | "page-images";
 
 export type ContentBannerRow = {
   id: string;
@@ -49,14 +47,30 @@ export type ContentFaqRow = {
   is_published: boolean;
 };
 
+export type ContentPageImageRow = {
+  id: string;
+  label: string;
+  page_key: string;
+  slot_key: string;
+  slot_label: string;
+  group_key: string;
+  target_w: number;
+  target_h: number;
+  is_published: boolean;
+  image_url?: string;
+  display_url?: string;
+};
+
 export type AdminContentTablesProps = {
   tab: ContentTab;
   banners: ContentBannerRow[];
   testimonials: ContentTestimonialRow[];
   faqItems: ContentFaqRow[];
+  pageImages?: ContentPageImageRow[];
+  pageImagePage?: string;
   onAdd: () => void;
   onEdit: (id: string) => void;
-  onAction: (id: string, action: "publish" | "unpublish" | "delete") => void;
+  onAction: (id: string, action: "publish" | "unpublish" | "delete" | "reset") => void;
   onReorder?: (id: string, direction: "up" | "down") => void;
   onRendered?: () => void;
 };
@@ -156,17 +170,15 @@ function ContentDataGrid<T extends { id: string }>({
     pageIndex: 0,
     pageSize: 10,
   });
-  const [sorting, setSorting] = useState<SortingState>([]);
 
   const table = useReactTable({
     data,
     columns,
-    state: { pagination, sorting },
+    state: { pagination },
     onPaginationChange: setPagination,
-    onSortingChange: setSorting,
+    enableSorting: false,
     getRowId: (row) => row.id,
     getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
   });
 
@@ -200,6 +212,8 @@ export default function AdminContentTables({
   banners,
   testimonials,
   faqItems,
+  pageImages = [],
+  pageImagePage = "",
   onAdd,
   onEdit,
   onAction,
@@ -218,7 +232,11 @@ export default function AdminContentTables({
               src={row.original.image_url}
               alt=""
               className="h-9 w-14 rounded object-cover"
+              width={56}
+              height={36}
               loading="lazy"
+              decoding="async"
+              fetchPriority="low"
             />
           ) : (
             "—"
@@ -227,7 +245,7 @@ export default function AdminContentTables({
       },
       {
         accessorKey: "title",
-        header: ({ column }) => <DataGridColumnHeader column={column} title="標題" />,
+        header: "標題",
         size: 180,
         meta: { headerTitle: "標題", skeleton: <Skeleton className="h-4 w-28" /> },
       },
@@ -242,7 +260,7 @@ export default function AdminContentTables({
       },
       {
         accessorKey: "sort_order",
-        header: ({ column }) => <DataGridColumnHeader column={column} title="排序" />,
+        header: "排序",
         size: 70,
         meta: { headerTitle: "排序", skeleton: <Skeleton className="h-4 w-8" /> },
       },
@@ -283,7 +301,11 @@ export default function AdminContentTables({
               src={row.original.image_url}
               alt=""
               className="h-9 w-14 rounded object-cover"
+              width={56}
+              height={36}
               loading="lazy"
+              decoding="async"
+              fetchPriority="low"
             />
           ) : (
             "—"
@@ -292,7 +314,7 @@ export default function AdminContentTables({
       },
       {
         accessorKey: "name",
-        header: ({ column }) => <DataGridColumnHeader column={column} title="姓名" />,
+        header: "姓名",
         size: 100,
         meta: { headerTitle: "姓名", skeleton: <Skeleton className="h-4 w-16" /> },
       },
@@ -336,7 +358,7 @@ export default function AdminContentTables({
       },
       {
         accessorKey: "sort_order",
-        header: ({ column }) => <DataGridColumnHeader column={column} title="排序" />,
+        header: "排序",
         size: 100,
         cell: ({ row }) => (
           <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
@@ -467,26 +489,148 @@ export default function AdminContentTables({
     [onAction, onEdit],
   );
 
+  const pageImageColumns = useMemo<ColumnDef<ContentPageImageRow>[]>(
+    () => [
+      {
+        id: "image",
+        header: "圖",
+        size: 72,
+        cell: ({ row }) => {
+          const src = row.original.display_url || row.original.image_url;
+          return src ? (
+            <img
+              src={src}
+              alt=""
+              className="h-9 w-14 rounded object-cover"
+              width={56}
+              height={36}
+              loading="lazy"
+              decoding="async"
+              fetchPriority="low"
+            />
+          ) : (
+            <span className="text-muted-foreground">未設定</span>
+          );
+        },
+        meta: { skeleton: <Skeleton className="h-9 w-14" /> },
+      },
+      {
+        accessorKey: "slot_label",
+        header: "圖片區塊",
+        size: 200,
+        meta: { headerTitle: "圖片區塊", skeleton: <Skeleton className="h-4 w-24" /> },
+      },
+      {
+        id: "size",
+        header: "建議尺寸 W×H",
+        size: 130,
+        cell: ({ row }) => (
+          <span className="tabular-nums font-semibold text-[#2b2320]">
+            {row.original.target_w}×{row.original.target_h}
+          </span>
+        ),
+        meta: { skeleton: <Skeleton className="h-4 w-20" /> },
+      },
+      {
+        accessorKey: "is_published",
+        header: "狀態",
+        size: 90,
+        cell: ({ getValue }) => <StatusBadge published={!!getValue()} />,
+        meta: { skeleton: <Skeleton className="h-5 w-14 rounded-full" /> },
+      },
+      {
+        id: "actions",
+        header: "操作",
+        size: 240,
+        cell: ({ row }) => (
+          <div className="flex flex-wrap items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-input bg-background shadow-none hover:bg-background hover:text-foreground hover:border-input"
+              onClick={() => onEdit(row.original.id)}
+            >
+              更換圖片
+            </Button>
+            {row.original.is_published ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="hover:bg-transparent hover:text-foreground"
+                onClick={() => onAction(row.original.id, "unpublish")}
+              >
+                下架
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="hover:bg-transparent hover:text-foreground"
+                onClick={() => onAction(row.original.id, "publish")}
+              >
+                發布
+              </Button>
+            )}
+            <Button
+              size="sm"
+              variant="ghost"
+              className="hover:bg-transparent hover:text-foreground"
+              onClick={() => onAction(row.original.id, "reset")}
+            >
+              還原預設
+            </Button>
+          </div>
+        ),
+        meta: { skeleton: <Skeleton className="h-7 w-36" /> },
+      },
+    ],
+    [onAction, onEdit],
+  );
+
   const addLabel =
-    tab === "banners" ? "+ 新增輪播" : tab === "testimonials" ? "+ 新增見證" : "+ 新增 FAQ";
+    tab === "banners"
+      ? "+ 新增首頁圖片"
+      : tab === "testimonials"
+        ? "+ 新增見證"
+        : tab === "faq"
+          ? "+ 新增 FAQ"
+          : "";
+
+  const pageHref = pageImagePage.trim();
 
   return (
-    <div className="space-y-3">
-      <div className="flex justify-start">
-        <Button
-          size="sm"
-          variant="primary"
-          className="rounded-full bg-[#2b2320] text-white shadow-none hover:bg-[#2b2320] hover:text-primary-foreground focus-visible:ring-0"
-          onClick={onAdd}
-        >
-          {addLabel}
-        </Button>
-      </div>
+    <div className="space-y-4">
+      {tab === "page-images" ? (
+        <div className="flex justify-start">
+          <Button
+            size="sm"
+            variant="outline"
+            className="rounded-full border-[#2b2320] text-[#2b2320] shadow-none hover:bg-[#2b2320] hover:text-white focus-visible:ring-0"
+            disabled={!pageHref}
+            onClick={() => {
+              if (pageHref) window.open(pageHref, "_blank", "noopener,noreferrer");
+            }}
+          >
+            前往頁面
+          </Button>
+        </div>
+      ) : addLabel ? (
+        <div className="flex justify-start">
+          <Button
+            size="sm"
+            variant="primary"
+            className="rounded-full bg-[#2b2320] text-white shadow-none hover:bg-[#2b2320] hover:text-primary-foreground focus-visible:ring-0"
+            onClick={onAdd}
+          >
+            {addLabel}
+          </Button>
+        </div>
+      ) : null}
       {tab === "banners" ? (
         <ContentDataGrid
           data={banners}
           columns={bannerColumns}
-          emptyMessage="尚無輪播"
+          emptyMessage="尚無首頁圖片"
           onRendered={onRendered}
         />
       ) : tab === "testimonials" ? (
@@ -494,6 +638,13 @@ export default function AdminContentTables({
           data={testimonials}
           columns={testimonialColumns}
           emptyMessage="尚無見證"
+          onRendered={onRendered}
+        />
+      ) : tab === "page-images" ? (
+        <ContentDataGrid
+          data={pageImages}
+          columns={pageImageColumns}
+          emptyMessage="尚無頁面圖片設定"
           onRendered={onRendered}
         />
       ) : (

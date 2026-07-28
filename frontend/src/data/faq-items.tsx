@@ -43,7 +43,7 @@ function answerWithLinks(entry: FaqEntry): ReactNode {
           {" "}
           點此加入
         </a>
-        ；電話：02-2977-0268；門市：新北市三重區福德南路 43 號 1 樓（預約制）。
+        ；門市：新北市三重區福德南路 43 號 1 樓（預約制）。
       </>
     )
   }

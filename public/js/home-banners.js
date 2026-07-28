@@ -18,6 +18,13 @@
     return t.replace(/\bDNA\b/g, '<span class="gh-dna">DNA</span>');
   }
 
+  function formatTitle(title, index) {
+    var text = esc(title);
+    var splitAt = text.indexOf('，');
+    if (index !== 0 || splitAt < 0) return text;
+    return text.slice(0, splitAt + 1) + '<em>' + text.slice(splitAt + 1) + '</em>';
+  }
+
   function ctaSecondary(b) {
     var label = String(b.cta_secondary_label || '').trim();
     var href = String(b.cta_secondary_href || '').trim();
@@ -31,12 +38,21 @@
 
   function slideHtml(b, index) {
     var tone = b.tone || 'warm';
+    var align = b.align || (index === 3 ? 'right' : 'left');
     var titleTag = index === 0 ? 'h1' : 'h2';
     var loading = index === 0
       ? 'loading="eager" fetchpriority="high"'
       : 'loading="lazy"';
+    var sourceAttr = index === 0 ? 'srcset' : 'data-srcset';
+    var imageAttr = index === 0 ? 'src' : 'data-src';
+
+    /* Mobile crop (9:16 portrait) served on viewports ≤860px — matches home.css breakpoint. */
+    var mobileValue = String(b.image_url_mobile || '').trim();
+    var mobileSrc = mobileValue || String(b.image_url || '');
+    var mobileSource = '<source media="(max-width:860px)" ' + sourceAttr + '="' + esc(mobileSrc) + '">';
+
     var webp = b.image_webp
-      ? '<source srcset="' + esc(b.image_webp) + '" type="image/webp">'
+      ? '<source ' + sourceAttr + '="' + esc(b.image_webp) + '" type="image/webp">'
       : '';
     var primary = '';
     if (b.cta_primary_label && b.cta_primary_href) {
@@ -46,15 +62,17 @@
     var secondary = ctaSecondary(b);
     return (
       '<li class="hc-slide' + (index === 0 ? ' is-active' : '') +
-        '" data-align="center" data-tone="' + esc(tone) + '">' +
-        '<div class="hc-media"><picture>' + webp +
-          '<img src="' + esc(b.image_url) + '" alt="' + esc(b.image_alt || b.title) + '" ' +
+        '" data-align="' + esc(align) + '" data-tone="' + esc(tone) + '">' +
+        '<div class="hc-media"><picture>' +
+          mobileSource +
+          webp +
+          '<img ' + imageAttr + '="' + esc(b.image_url) + '" alt="' + esc(b.image_alt || b.title) + '" ' +
           loading + ' decoding="async" onerror="imgFallback(this)">' +
         '</picture></div>' +
         '<div class="hc-scrim gh-hc-scrim"></div>' +
         '<div class="container hc-copy gh-hc-copy">' +
           (b.eyebrow ? '<p class="gh-script reveal">' + esc(b.eyebrow) + '</p>' : '') +
-          '<' + titleTag + ' class="gh-hero__title reveal reveal-d1">' + esc(b.title) + '</' + titleTag + '>' +
+          '<' + titleTag + ' class="gh-hero__title reveal reveal-d1">' + formatTitle(b.title, index) + '</' + titleTag + '>' +
           (b.lead ? '<p class="gh-hero__lead reveal reveal-d2">' + formatLead(b.lead) + '</p>' : '') +
           ((primary || secondary)
             ? '<div class="gh-hero__actions reveal reveal-d3">' + primary + secondary + '</div>'
@@ -71,12 +89,30 @@
     }
   }
 
-  var base = (typeof window.IMPRINT_API_BASE === 'string' && window.IMPRINT_API_BASE) || '';
-  fetch(base + '/api/banners', { credentials: 'same-origin' })
-    .then(function (res) { return res.ok ? res.json() : null; })
-    .then(function (data) {
-      var list = (data && data.banners) || [];
-      if (list.length) apply(list);
-    })
-    .catch(function () { /* keep SSR slides */ });
+  function refreshBanners() {
+    var base = (typeof window.IMPRINT_API_BASE === 'string' && window.IMPRINT_API_BASE) || '';
+    fetch(base + '/api/banners', { credentials: 'same-origin' })
+      .then(function (res) { return res.ok ? res.json() : null; })
+      .then(function (data) {
+        var list = data && Array.isArray(data.banners) ? data.banners : [];
+        if (list.length) apply(list);
+      })
+      .catch(function () { /* keep SSR slides */ });
+  }
+
+  function scheduleRefresh() {
+    window.setTimeout(function () {
+      if ('requestIdleCallback' in window) {
+        window.requestIdleCallback(refreshBanners, { timeout: 5000 });
+      } else {
+        refreshBanners();
+      }
+    }, 2000);
+  }
+
+  if (document.readyState === 'complete') {
+    scheduleRefresh();
+  } else {
+    window.addEventListener('load', scheduleRefresh, { once: true });
+  }
 })();

@@ -1,6 +1,6 @@
 /* ============================================================
    銘印鑽石 IMPRINT DIAMOND｜官網前端樣式
-   品牌色：薄荷藍綠 #9CEFEF／深咖啡黑 #2B2320
+   品牌色：薄荷藍綠 #8eedf0／深咖啡黑 #2B2320
    字體：標題 Noto Serif TC（襯線）／內文 Noto Sans TC
 ============================================================ */
 
@@ -8,10 +8,10 @@
   --ink:        #2B2320;
   --ink-soft:   #5C534E;
   --ink-faint:  #8A817B;
-  --mint:       #9CEFEF;
-  --mint-deep:  #5ECFCF;
-  --mint-soft:  #F4FBFB;
-  --mint-line:  #DCF2F2;
+  --mint:       #8eedf0;
+  --mint-deep:  #52c4c8;
+  --mint-soft:  #F0FBFB;
+  --mint-line:  #D8F2F2;
   --paper:      #FDFCFA;
   --paper-warm: #F7F4F1;
   --gold:       #C4B49E;
@@ -45,7 +45,7 @@ body .container{ width:min(1160px, 92vw); margin:0 auto; }
 
 /* ---------- 通用元件 ---------- */
 .eyebrow{
-  font-size:12px; letter-spacing:.38em; color:#7FAFAF;
+  font-size:12px; letter-spacing:.38em; color:var(--mint-deep);
   text-transform:uppercase; margin-bottom:16px; font-weight:500;
 }
 .section-title{
@@ -63,9 +63,9 @@ body .container{ width:min(1160px, 92vw); margin:0 auto; }
   white-space:nowrap;
 }
 .btn-dark{ background:var(--mint); color:var(--ink); }
-.btn-dark:hover{ background:#B7F4F4; transform:translateY(-2px); }
+.btn-dark:hover{ background:color-mix(in srgb,var(--mint) 65%,#fff); transform:translateY(-2px); }
 .btn-mint{ background:var(--mint); color:var(--ink); font-weight:500; }
-.btn-mint:hover{ background:#B7F4F4; transform:translateY(-2px); }
+.btn-mint:hover{ background:color-mix(in srgb,var(--mint) 65%,#fff); transform:translateY(-2px); }
 .btn-line{ border:1px solid var(--ink); color:var(--ink); }
 .btn-line:hover{ background:var(--ink); color:#fff; }
 

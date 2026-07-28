@@ -64,12 +64,20 @@ METAL_SYMBOL = {
     "9k": "XAU", "14k": "XAU", "18k": "XAU", "pt950": "XPT", "s925": "XAG",
     "999": "XAU", "pt": "XPT", "silver925": "XAG",
 }
-# Universal 金工費 (flat NT$, not taxed). Same for every category.
+# Default flat labor; standalone chains use metal-specific labor below.
 LABOR_FEE_TWD = 5000
+CHAIN_LABOR_FEE_TWD = {"s925": 500, "other": 2000}
+DEFAULT_ATTACHED_CHAIN_THICKNESS = "1.0mm"
+CHAIN_WAX_WEIGHT_CHIN = {
+    "1.0mm": {36: 0.014, 41: 0.016, 46: 0.018, 51: 0.020, 61: 0.024, 76: 0.030, 80: 0.032},
+    "1.5mm": {36: 0.026, 41: 0.030, 46: 0.033, 51: 0.037, 61: 0.043, 76: 0.054, 80: 0.057},
+    "2.0mm": {36: 0.040, 41: 0.046, 46: 0.051, 51: 0.056, 61: 0.066, 76: 0.083, 80: 0.087},
+    "2.5mm": {36: 0.047, 41: 0.053, 46: 0.059, 51: 0.065, 61: 0.076, 76: 0.095, 80: 0.100},
+    "3.0mm": {36: 0.052, 41: 0.060, 46: 0.066, 51: 0.074, 61: 0.086, 76: 0.110, 80: 0.120},
+}
 
 TAX_RATE = 0.05
 CHIN_TO_GRAMS = 3.75
-CHAIN_REFERENCE_LENGTH_CM = 45
 BRACELET_REFERENCE_LENGTH_CM = 18
 
 
@@ -145,9 +153,8 @@ def compute_diamond_list_price(
     except (TypeError, ValueError):
         return None
 
-    multi_stone = category in STONE_COUNT_CATEGORIES or (
-        category == "diamond" and _as_stone_count(stone_count) in VALID_STONE_COUNTS
-    )
+    earring_pair = category == "earring"
+    multi_stone = category == "diamond" and _as_stone_count(stone_count) in VALID_STONE_COUNTS
     if not _shape_carat_allowed(carat_num, diamond_shape):
         return None
 
@@ -181,7 +188,8 @@ def compute_diamond_list_price(
         surcharge = (pct / 100.0) if isinstance(pct, (int, float)) else NON_ROUND_SHAPE_SURCHARGE
     else:
         surcharge = 0.0
-    return round(base * (1 + surcharge)) if surcharge else base
+    single_price = round(base * (1 + surcharge)) if surcharge else base
+    return single_price * 2 if earring_pair else single_price
 
 
 def get_metal_prices(cur) -> dict[str, float]:
@@ -197,8 +205,6 @@ def get_metal_prices(cur) -> dict[str, float]:
 
 
 def _carat_lookup_keys(carat: str) -> list[str]:
-    if carat in ("3fen", "4fen"):
-        return [carat]
     keys: list[str] = []
     for key in (carat, str(carat).strip()):
         if key and key not in keys:
@@ -218,6 +224,23 @@ def wax_to_metal_chin(wax_chin: float, gold: str) -> float:
     if factor is None:
         raise ValueError(f"unknown gold: {gold}")
     return wax_chin * factor
+
+
+def _chain_wax_chin(carat: str, length_cm: Any) -> float:
+    try:
+        length = int(length_cm)
+    except (TypeError, ValueError):
+        raise ValueError("invalid chain length") from None
+    wax = CHAIN_WAX_WEIGHT_CHIN.get(carat, {}).get(length)
+    if wax is None:
+        raise ValueError("unsupported chain thickness or length")
+    return wax
+
+
+def _labor_fee(category: str, gold: str) -> int:
+    if category != "chain":
+        return LABOR_FEE_TWD
+    return CHAIN_LABOR_FEE_TWD["s925" if gold == "s925" else "other"]
 
 
 def get_product_variant(
@@ -252,6 +275,18 @@ def get_product_variant(
         row = cur.fetchone()
         if row:
             return row
+    if category == "chain":
+        sql = """
+            select pv.* from product_variants pv
+            join products p on p.id = pv.product_id
+            where p.id = %s and p.category = 'chain' and pv.gold = %s
+        """
+        params: list[Any] = [resolved, gold]
+        if require_published:
+            sql += " and p.is_published = true"
+        sql += " order by pv.carat limit 1"
+        cur.execute(sql, params)
+        return cur.fetchone()
     return None
 
 
@@ -265,10 +300,9 @@ def _lookup_weight(
     )
     if not variant:
         return None
-    weight = wax_to_metal_chin(float(variant["weight_chin"]), gold)
-    if category == "chain" and length_cm is not None:
-        weight *= float(length_cm) / CHAIN_REFERENCE_LENGTH_CM
-    elif category == "bracelet" and length_cm is not None:
+    wax = _chain_wax_chin(carat, length_cm) if category == "chain" else float(variant["weight_chin"])
+    weight = wax_to_metal_chin(wax, gold)
+    if category == "bracelet" and length_cm is not None:
         weight *= float(length_cm) / BRACELET_REFERENCE_LENGTH_CM
     return variant, weight
 
@@ -285,19 +319,16 @@ def _compute_chain_addon(
     chain_length_cm: Any, require_published: bool,
 ) -> dict | None:
     looked_up = _lookup_weight(
-        cur, category="chain", product_id=chain_product_id, gold=chain_gold, carat="3fen",
+        cur, category="chain", product_id=chain_product_id, gold=chain_gold,
+        carat=DEFAULT_ATTACHED_CHAIN_THICKNESS,
         length_cm=chain_length_cm, require_published=require_published,
     )
     if not looked_up:
         return None
     variant, weight_chin = looked_up
 
-    if variant.get("manual_price_twd") is not None:
-        pre_tax = float(variant["manual_price_twd"])
-    else:
-        # 搭配鏈條 = metal only; standalone chain still gets LABOR_FEE_TWD in compute_order_pricing
-        amount, _ = _metal_pre_tax(gold_prices, chain_gold, weight_chin)
-        pre_tax = amount
+    # 搭配鏈條 = live metal only; standalone chain labor is added by compute_order_pricing
+    pre_tax, _ = _metal_pre_tax(gold_prices, chain_gold, weight_chin)
     return {"chainPreTax": pre_tax}
 
 
@@ -362,9 +393,9 @@ def compute_order_pricing(cur, data: dict[str, Any], *, require_published: bool 
         return {"ready": False, "error": "product not available"}
     variant, weight_chin = looked_up
     weight_grams = weight_chin * CHIN_TO_GRAMS
-    labor_pre_tax = LABOR_FEE_TWD
+    labor_pre_tax = _labor_fee(category, gold)
 
-    if variant.get("manual_price_twd") is not None:
+    if category != "chain" and variant.get("manual_price_twd") is not None:
         gold_prices = get_metal_prices(cur)
         return {
             "ready": True,

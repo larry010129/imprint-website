@@ -7,8 +7,8 @@
  */
 
 const VALID_CATEGORIES = new Set(['pendant', 'ring', 'earring', 'bracelet', 'chain']);
-const VALID_CARATS = new Set(['0.1', '0.2', '0.3', '0.5', '1.0']);
-const VALID_CARATS_CHAIN = new Set(['3fen', '4fen']);
+const VALID_CARATS = new Set(['0.1', '0.2', '0.3', '0.5', '0.6', '0.7', '0.8', '0.9', '1.0', '1.5', '2.0']);
+const VALID_CARATS_CHAIN = new Set(['1.0mm', '1.5mm', '2.0mm', '2.5mm', '3.0mm']);
 const VALID_GOLDS = new Set(['9k', '14k', '18k', 'pt950', 's925']);
 const GOLDS_REQUIRING_COLOR = new Set(['14k', '18k']);
 const GOLD_WHITE_ONLY = new Set(['9k']);
@@ -20,7 +20,7 @@ const GIRDLE_MAX_SLOTS = 12;
 const GIRDLE_EMBLEM_SLOT_COST = 2;
 const GIRDLE_EMBLEM_LABELS = new Set(['蝴蝶結', '幸運草', '無限', '愛心', '雙愛心', '肉球', '骨頭', '戒圈']);
 const GIRDLE_ENGRAVING_CATEGORIES = new Set(['pendant', 'ring', 'earring', 'bracelet']);
-const CHAIN_LENGTH_OPTIONS_CM = new Set([35, 40, 46, 50, 56, 60, 66, 70, 76, 90, 102]);
+const CHAIN_LENGTH_OPTIONS_CM = new Set([36, 41, 46, 51, 61, 76, 80]);
 const BRACELET_LENGTH_OPTIONS_CM = new Set([15, 16, 17, 18, 19, 20, 21]);
 const VALID_DIAMOND_KINDS = new Set(['white', 'fancy']);
 const VALID_DIAMOND_SHAPES = new Set([

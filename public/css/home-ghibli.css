@@ -6,9 +6,9 @@
 
 .page-home{
   --gh-cream:#FBF6ED;
-  --gh-ink:#2a2438;
-  --gh-muted:#6b6578;
-  --gh-twilight:#2a1845;
+  --gh-ink:#242220;
+  --gh-muted:#65615d;
+  --gh-twilight:#171614;
   --gh-dna:#8eedf0;
   --gh-dna-light:#daf8f9;
   --gh-dna-deep:#52c4c8;
@@ -232,40 +232,50 @@
   height:min(92vh, 880px); min-height:600px; max-height:880px;
 }
 .gh-hc-scrim{
-  background:linear-gradient(180deg, rgba(42,24,69,.55) 0%, rgba(42,24,69,.12) 45%, rgba(42,24,69,.42) 100%) !important;
+  background:linear-gradient(90deg, rgba(12,12,12,.68) 0%, rgba(12,12,12,.2) 52%, rgba(12,12,12,.08) 100%) !important;
 }
-/* Per-slide scrim — tuned for photo brightness while keeping light hero text */
+/* Neutral scrims preserve photo warmth without muddy purple tint. */
 .hc-slide[data-tone="warm"] .gh-hc-scrim{
   background:linear-gradient(
-    180deg,
-    rgba(42,24,69,.5) 0%,
-    rgba(42,24,69,.22) 42%,
-    rgba(42,24,69,.48) 100%
+    90deg,
+    rgba(10,10,10,.68) 0%,
+    rgba(10,10,10,.18) 52%,
+    rgba(10,10,10,.06) 100%
   ) !important;
 }
 .hc-slide[data-tone="light"] .gh-hc-scrim{
   background:linear-gradient(
-    180deg,
-    rgba(42,24,69,.38) 0%,
-    rgba(42,24,69,.34) 38%,
-    rgba(42,24,69,.44) 100%
+    90deg,
+    rgba(10,10,10,.64) 0%,
+    rgba(10,10,10,.2) 54%,
+    rgba(10,10,10,.08) 100%
   ) !important;
 }
 .hc-slide[data-tone="soft"] .gh-hc-scrim{
   background:linear-gradient(
-    180deg,
-    rgba(42,24,69,.58) 0%,
-    rgba(42,24,69,.16) 45%,
-    rgba(42,24,69,.46) 100%
+    90deg,
+    rgba(10,10,10,.7) 0%,
+    rgba(10,10,10,.18) 54%,
+    rgba(10,10,10,.06) 100%
   ) !important;
 }
+.hc-slide[data-align="right"] .gh-hc-scrim{
+  transform:scaleX(-1);
+}
+.gh-hc-copy{
+  padding:120px 84px 88px; max-width:1200px; margin:0 auto;
+}
+.gh-hc-copy > *{ width:min(100%, 540px); }
+.hc-slide[data-align="left"] .gh-hc-copy{ align-items:flex-start; text-align:left; }
+.hc-slide[data-align="right"] .gh-hc-copy{ align-items:flex-end; text-align:right; }
+.hc-slide[data-align="left"] .gh-hc-copy .gh-hero__lead{ margin-left:0; }
+.hc-slide[data-align="right"] .gh-hc-copy .gh-hero__lead{ margin-right:0; }
+.hc-slide[data-align="left"] .gh-hc-copy .gh-hero__actions{ justify-content:flex-start; }
+.hc-slide[data-align="right"] .gh-hc-copy .gh-hero__actions{ justify-content:flex-end; }
 .hc-slide[data-align="center"] .hc-copy{
   align-items:center; text-align:center;
 }
 .hc-slide[data-align="center"] .hc-actions{ justify-content:center; }
-.gh-hc-copy{
-  padding:120px 16px 88px; max-width:760px; margin:0 auto;
-}
 .gh-hc-copy .gh-hero__title{ margin-bottom:18px; }
 .gh-hc-arrow{
   background:rgba(255,255,255,.22); border-color:rgba(255,255,255,.55); color:#fff;
@@ -302,7 +312,7 @@
   text-shadow:0 4px 32px rgba(0,0,0,.25); margin-bottom:22px;
 }
 .gh-hero__title em{
-  font-style:normal;
+  display:block; font-style:normal;
   background:var(--gh-grad-hero-text);
   -webkit-background-clip:text; background-clip:text; color:transparent;
 }
@@ -322,7 +332,7 @@
   color:#F1ECE6;
   max-width:520px;
   margin:0 auto 34px;
-  text-shadow:0 2px 18px rgba(42, 24, 69, 0.45);
+  text-shadow:0 2px 18px rgba(0,0,0,.58);
 }
 .gh-hc-copy .gh-hero__lead{
   margin-bottom:28px;
@@ -422,6 +432,14 @@ button.gh-btn--primary{ border:none; }
 .gh-poem__visual img{
   width:100%; height:100%; object-fit:cover; display:block;
 }
+.gh-poem__visual iframe{
+  width:100%; height:100%; display:block; border:0;
+}
+.gh-poem__brand{
+  font-family:var(--serif); font-size:clamp(24px, 3.4vw, 38px);
+  font-weight:600; letter-spacing:.08em; line-height:1.55;
+  color:var(--gh-ink); margin-bottom:14px;
+}
 .gh-poem__copy .gh-poem__title{ margin-left:0; margin-right:0; text-align:left; }
 .gh-poem__copy .gh-poem__text{ margin-left:0; margin-right:0; }
 .gh-poem__links{
@@ -436,8 +454,33 @@ button.gh-btn--primary{ border:none; }
 /* ---------- About (DNA diamond) ---------- */
 .gh-about{ padding-top:56px; }
 .gh-about-teaser{
-  display:flex; flex-wrap:wrap; justify-content:center; gap:14px;
-  max-width:980px; margin:36px auto 0;
+  display:grid; grid-template-columns:minmax(180px, 280px) 1fr;
+  align-items:center; gap:36px; max-width:760px; margin:24px auto 0;
+}
+.gh-about-diamond{
+  position:relative; aspect-ratio:1; border-radius:50%;
+}
+.gh-about-diamond::after{
+  content:""; position:absolute; inset:12%; border-radius:50%;
+  background:linear-gradient(115deg, transparent 38%, rgba(255,255,255,.72) 49%, transparent 60%);
+  mix-blend-mode:screen; animation:gh-diamond-shine 4.8s ease-in-out infinite;
+}
+.gh-about-diamond img{
+  position:relative; z-index:1; display:block; width:100%; height:100%;
+  object-fit:contain; animation:gh-diamond-float 5.5s ease-in-out infinite;
+  filter:drop-shadow(0 18px 24px rgba(20,58,96,.2));
+}
+.gh-about-actions{
+  display:flex; flex-wrap:wrap; justify-content:flex-start; gap:14px;
+}
+@keyframes gh-diamond-float{
+  0%,100%{ transform:translateY(0) rotate(-1deg); }
+  50%{ transform:translateY(-10px) rotate(1deg); }
+}
+@keyframes gh-diamond-shine{
+  0%,30%{ transform:translateX(-70%); opacity:0; }
+  50%{ opacity:.72; }
+  70%,100%{ transform:translateX(70%); opacity:0; }
 }
 .gh-about-grid{
   display:grid; grid-template-columns:1fr 1fr; gap:48px;
@@ -572,13 +615,34 @@ button.gh-btn--primary{ border:none; }
 .gh-wall__who strong{ font-size:13px; font-weight:600; color:var(--gh-ink); }
 .gh-wall__who em{ font-style:normal; font-size:11.5px; color:var(--gh-muted); }
 .gh-wall__more{ text-align:center; margin-top:44px; }
+.home-testimonial-marquee{
+  overflow:hidden; cursor:grab; outline:none;
+}
+.home-testimonial-marquee:active{ cursor:grabbing; }
+.home-testimonial-marquee__track{
+  animation:home-testimonial-scroll var(--marquee-duration, 32s) linear infinite;
+}
+.home-testimonial-marquee__track--reverse{ animation-direction:reverse; }
+.home-testimonial-marquee:hover .home-testimonial-marquee__track,
+.home-testimonial-marquee:focus .home-testimonial-marquee__track,
+.home-testimonial-marquee:focus-within .home-testimonial-marquee__track,
+.home-testimonial-marquee:active .home-testimonial-marquee__track{
+  animation-play-state:paused;
+}
+@keyframes home-testimonial-scroll{
+  from{ transform:translateX(0); }
+  to{ transform:translateX(-50%); }
+}
 @media (max-width:640px){
   .gh-wall__card{ width:260px; padding:20px; }
   .gh-wall__photo{ margin-top:14px; border-radius:10px; }
   .gh-wall__quote{ font-size:13px; }
 }
 @media (prefers-reduced-motion: reduce){
-  .gh-wall__track{ animation:none; }
+  .gh-wall__track,
+  .home-testimonial-marquee__track,
+  .gh-about-diamond img,
+  .gh-about-diamond::after{ animation:none; }
 }
 
 /* ---------- Atmospheric scene dividers ---------- */
@@ -795,12 +859,23 @@ button.gh-btn--primary{ border:none; }
   .gh-about-step{ text-align:left; }
   .gh-series-cards{ grid-template-columns:1fr 1fr; }
   .gh-usp-list{ grid-template-columns:1fr; }
+  .gh-hc-copy{ padding-left:72px; padding-right:72px; }
 }
 @media (max-width:640px){
-  .gh-hc-viewport{ min-height:520px; }
-  .gh-hc-copy{ padding:100px 16px 76px; }
+  .gh-hc-viewport{ height:max(560px, 82svh); min-height:0; max-height:760px; }
+  .hc-media img{ object-position:center; }
+  .gh-hc-copy{
+    padding:94px 72px 74px; align-items:center !important; text-align:center !important;
+  }
+  .gh-hc-copy > *{ width:100%; }
+  .gh-hc-copy .gh-hero__lead{ margin-left:auto !important; margin-right:auto !important; }
+  .gh-hc-copy .gh-hero__actions{ justify-content:center !important; margin-bottom:0; }
+  .gh-hero__title{ font-size:clamp(27px, 8vw, 38px); line-height:1.5; letter-spacing:.06em; }
   .gh-hc-arrow{ width:40px; height:40px; }
   .gh-hc-dots{ bottom:24px; }
+  .gh-about-teaser{ grid-template-columns:1fr; gap:20px; }
+  .gh-about-diamond{ width:min(58vw, 230px); margin:0 auto; }
+  .gh-about-actions{ justify-content:center; }
   .gh-series-cards,
   .gh-cards{ grid-template-columns:1fr; }
   .gh-series-grid{ grid-template-columns:repeat(2, 1fr); gap:24px 16px; }

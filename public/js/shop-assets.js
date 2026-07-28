@@ -30,25 +30,36 @@
 
   var DIAMOND_COLORS = ['white', 'yellow', 'blue', 'pink'];
 
-  function buildImageSlotKey(metal, diamond) {
-    return String(metal) + '-' + String(diamond);
+  function buildImageSlotKey(metal, diamond, chainMetal) {
+    var key = String(metal) + '-' + String(diamond);
+    if (chainMetal && COLOR_DIR[chainMetal]) key += '-' + String(chainMetal);
+    return key;
   }
 
-  /** Parse admin/catalog image slot key → { metal, diamond } or null for legacy/custom. */
+  /** Parse admin/catalog image slot key → { metal, diamond, chainMetal } or null for legacy/custom. */
   function parseImageSlotKey(key) {
     var parts = String(key || '').split('-');
-    if (parts.length >= 2 && COLOR_DIR[parts[0]] && DIAMOND_COLORS.indexOf(parts[1]) >= 0) {
-      return { metal: parts[0], diamond: parts[1] };
+    if (parts.length >= 3 && COLOR_DIR[parts[0]] && DIAMOND_COLORS.indexOf(parts[1]) >= 0
+      && COLOR_DIR[parts[2]]) {
+      return { metal: parts[0], diamond: parts[1], chainMetal: parts[2] };
     }
-    if (COLOR_DIR[key]) return { metal: key, diamond: 'white' };
+    if (parts.length >= 2 && COLOR_DIR[parts[0]] && DIAMOND_COLORS.indexOf(parts[1]) >= 0) {
+      return { metal: parts[0], diamond: parts[1], chainMetal: null };
+    }
+    if (COLOR_DIR[key]) return { metal: key, diamond: 'white', chainMetal: null };
     return null;
   }
 
-  /** Lookup order: metal-diamond → metal (legacy white diamond). */
-  function imageSlotKeysForLookup(metal, diamond) {
+  /**
+   * Lookup order matching admin slots + app/image_urls.py:
+   * metal-diamond-chain → metal-diamond → metal (legacy white) → metal-white.
+   */
+  function imageSlotKeysForLookup(metal, diamond, chainMetal) {
     var m = resolveColor(metal);
     var d = diamond && DIAMOND_COLORS.indexOf(diamond) >= 0 ? diamond : 'white';
+    var chain = chainMetal && COLOR_DIR[chainMetal] ? resolveColor(chainMetal) : null;
     var keys = [];
+    if (chain) keys.push(buildImageSlotKey(m, d, chain));
     if (d !== 'white') keys.push(buildImageSlotKey(m, d));
     keys.push(m);
     if (d === 'white') keys.push(buildImageSlotKey(m, 'white'));
@@ -117,6 +128,16 @@
     var suffix = COLOR_SUFFIX[c];
     var d = diamondColor && DIAMOND_COLORS.indexOf(diamondColor) >= 0 ? diamondColor : 'white';
     var basename;
+
+    // These edited fancy-stone renders do not exist in the asset library.
+    // Resolve them to the same-metal white-stone original so CMS/storefront
+    // thumbnails never receive a known 404 URL.
+    if (d !== 'white' && (
+      category === 'bracelet'
+      || (category === 'earring' && style === 'A' && c === 'yellow')
+    )) {
+      d = 'white';
+    }
 
     if (category === 'chain') {
       basename = CHAIN_BASENAME[style];

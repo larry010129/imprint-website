@@ -6,12 +6,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>銘印鑽石｜管理後台</title>
 <meta name="robots" content="noindex">
-<link rel="stylesheet" href="/css/admin-core.css?v=17">
+<link rel="stylesheet" href="/css/admin-core.css?v=18">
 <link rel="stylesheet" href="/css/skeleton.css?v=1">
 <link rel="stylesheet" href="/css/admin-shell.css">
 <link rel="stylesheet" href="/css/admin-orders.css?v=9">
-<link rel="stylesheet" href="/css/admin-tables.css?v=18">
-<link rel="stylesheet" href="/static/react/admin-tables.css?v=13">
+<link rel="stylesheet" href="/css/admin-tables.css?v=27">
+<link rel="stylesheet" href="/static/react/admin-tables.css?v=27">
 <link rel="stylesheet" href="/css/toast.css?v=1">
 <!-- 上線時建議打開 Google Fonts:
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -62,10 +62,13 @@
         <button data-panel="leads"><span>諮詢名單</span></button>
         <button data-panel="pricing"><span>價格設定</span></button>
         <button data-panel="membership"><span>會員等級</span></button>
-        <button data-panel="content"><span>內容管理</span></button>
+        <button data-panel="content"><span>內容與頁面圖片</span></button>
       </div>
     </nav>
-    <div class="side-foot">管理後台 · 僅限員工帳號</div>
+    <div class="side-foot">
+      <div>管理後台 · 僅限員工帳號</div>
+      <div class="side-foot-credit">design by 鈺梓燒</div>
+    </div>
   </aside>
 
   <!-- 主區 -->
@@ -417,26 +420,26 @@
   </main>
 </div>
 
-<script type="module" src="/static/react/admin-tables.js?v=14"></script>
-<script src="js/api-client.js?v=12"></script>
+<script type="module" src="/static/react/admin-tables.js?v=34"></script>
+<script src="js/api-client.js?v=13"></script>
 <script src="js/toast.js?v=1"></script>
 <script src="js/skeleton-ui.js?v=4"></script>
 <script src="js/order-status.js"></script>
 <script src="js/chart.umd.min.js"></script>
-<script src="js/shop-assets.js"></script>
+<script src="js/shop-assets.js?v=13"></script>
 <script src="js/admin-dashboard-chart.js"></script>
 <script src="js/admin-table-sort.js?v=1"></script>
-<script src="js/admin-image-urls.js?v=8"></script>
-<script src="js/admin.js?v=19"></script>
-<script src="js/girdle-engrave.js?v=10"></script>
+<script src="js/admin-image-urls.js?v=10"></script>
+<script src="js/admin.js?v=20"></script>
+<script src="js/girdle-engrave.js?v=11"></script>
 <script src="js/admin-orders.js?v=14"></script>
 <script src="js/order-detail.js"></script>
-<script src="js/admin-products.js?v=18"></script>
+<script src="js/admin-products.js?v=25"></script>
 <script src="js/admin-accounts.js?v=11"></script>
 <script src="js/admin-member-search.js?v=3"></script>
 <script src="js/admin-invites.js?v=12"></script>
 <script src="js/admin-coupons.js?v=5"></script>
-<script src="js/admin-content.js?v=11"></script>
+<script src="js/admin-content.js?v=26"></script>
 <script src="js/pricing-config.js?v=1.2"></script>
 <script src="js/membership-config.js?v=6"></script>
 <script>
@@ -446,7 +449,7 @@
   var titles = {
     dash: '儀表板', orders: '訂單管理', products: '商品上架',
     accounts: '帳戶管理', 'member-search': '搜尋會員', invites: '邀請碼', coupons: '優惠券',
-    leads: '諮詢名單', pricing: '價格設定', membership: '會員等級', content: '內容管理'
+    leads: '諮詢名單', pricing: '價格設定', membership: '會員等級', content: '內容與頁面圖片'
   };
   var mainEl = document.querySelector('.main');
   var pendingPanel = null;

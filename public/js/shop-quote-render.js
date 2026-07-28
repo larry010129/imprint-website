@@ -30,9 +30,7 @@
 
   function caratLabel(carat) {
     if (!carat) return '—';
-    if (carat === '3fen') return '3分';
-    if (carat === '4fen') return '4分';
-    return carat + 'ct';
+    return /mm$/.test(carat) ? carat : carat + 'ct';
   }
 
   function formatDate(d) {
@@ -140,7 +138,7 @@
       { label: '品項', value: CAT_ZH[config.category] || config.category || '—' },
       { label: '款式', value: config.summaryZh || '訂製品項' },
       { label: '金屬材質', value: materialLabel(config.gold, config.color) },
-      { label: '克拉', value: caratLabel(config.carat) },
+      { label: config.category === 'chain' ? '厚度' : '克拉', value: caratLabel(config.carat) },
     ];
     var diamondLabel = diamondColorLabel(config);
     if (diamondLabel) rows.push({ label: '鑽石顏色', value: diamondLabel });

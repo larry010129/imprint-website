@@ -14,7 +14,8 @@ _UUID = re.compile(
     re.I,
 )
 _VALID_CATEGORIES = frozenset({"pendant", "ring", "earring", "bracelet", "chain"})
-_DIAMOND_COLORS = frozenset({"white", "yellow", "blue", "pink"})
+_DIAMOND_COLOR_ORDER = ("white", "yellow", "blue", "pink")
+_DIAMOND_COLORS = frozenset(_DIAMOND_COLOR_ORDER)
 
 _IMAGE_ROOT = "/static/images/shop-product/"
 
@@ -26,6 +27,7 @@ _CATEGORY_ZH = {
 }
 
 _COLOR_DIR = {"white": "silver", "yellow": "gold", "rose": "rose_gold"}
+_METAL_COLORS = tuple(_COLOR_DIR)
 _COLOR_SUFFIX = {"white": "silver", "yellow": "gold", "rose": "rose"}
 
 _CHAIN_BASENAME = {
@@ -35,7 +37,8 @@ _CHAIN_BASENAME = {
 }
 
 _FILE_OVERRIDES = {
-    "rose_gold|斗圓鍊K玫瑰|rose": "斗圓鍊K玫瑰_silver2.png",
+    # chain-B has no 斗圓鍊K玫瑰_rose.png — use the actual rose-gold cable photo.
+    "rose_gold|斗圓鍊K玫瑰|rose": "斗圓鍊_rose.png",
 }
 
 _CATEGORY_THUMB = {
@@ -164,6 +167,7 @@ def shop_style_png_url(
     diamond_color: str | None = None,
     *,
     chain_color: str | None = None,
+    pendant_only: bool = False,
 ) -> str:
     cat = (category or "").strip().lower()
     style = (style_letter or "").strip().upper()
@@ -197,7 +201,10 @@ def shop_style_png_url(
                 f"{color_dir}/{zh}{style}_{suffix}_chain_{chain_suffix}{diamond_suffix}.png"
             )
 
-    return _join_shop_path(f"{color_dir}/{zh}{style}_{suffix}{diamond_suffix}.png")
+    only_suffix = "_only" if cat == "pendant" and pendant_only else ""
+    return _join_shop_path(
+        f"{color_dir}/{zh}{style}_{suffix}{diamond_suffix}{only_suffix}.png"
+    )
 
 
 def shop_product_image_url(
@@ -207,6 +214,7 @@ def shop_product_image_url(
     default_color: str | None = None,
     diamond_color: str | None = None,
     chain_color: str | None = None,
+    pendant_only: bool = False,
 ) -> str:
     if not style_key:
         return ""
@@ -223,15 +231,73 @@ def shop_product_image_url(
         resolved,
         diamond_color,
         chain_color=chain_color,
+        pendant_only=pendant_only,
     )
     if png and (diamond_color in (None, "", "white") or _shop_asset_exists(png)):
         return png
     if png and _resolve_diamond(diamond_color) != "white":
         # Fancy stone render missing — fall back to white-stone metal match
-        white = shop_style_png_url(category, style, resolved, "white", chain_color=chain_color)
+        white = shop_style_png_url(
+            category,
+            style,
+            resolved,
+            "white",
+            chain_color=chain_color,
+            pendant_only=pendant_only,
+        )
         if white:
             return white
     return png or shop_style_thumb_url(style_key)
+
+
+def catalog_image_slot_urls(style_key: str | None) -> dict[str, str]:
+    """Return one existing canonical image URL for every CMS calculator slot.
+
+    Exact edited renders are preferred. When a fancy render is unavailable,
+    ``shop_product_image_url`` supplies the same-product white-diamond fallback
+    so neither the CMS carousel nor storefront thumbnails receive a 404 URL.
+    """
+    match = _STYLE_ID.match(style_key or "")
+    if not match:
+        return {}
+
+    category = match.group(1).lower()
+    if category not in _VALID_CATEGORIES:
+        return {}
+
+    slots: dict[str, str] = {}
+    diamonds = ("white",) if category == "chain" else _DIAMOND_COLOR_ORDER
+
+    def add(key: str, url: str) -> None:
+        if url and _shop_asset_exists(url):
+            slots[key] = url
+
+    for metal in _METAL_COLORS:
+        for diamond in diamonds:
+            key = f"{metal}-{diamond}"
+            add(
+                key,
+                shop_product_image_url(
+                    style_key,
+                    metal,
+                    diamond_color=diamond,
+                    pendant_only=category == "pendant",
+                ),
+            )
+            if category != "pendant":
+                continue
+            for chain_metal in _METAL_COLORS:
+                add(
+                    f"{key}-{chain_metal}",
+                    shop_product_image_url(
+                        style_key,
+                        metal,
+                        diamond_color=diamond,
+                        chain_color=chain_metal,
+                    ),
+                )
+
+    return slots
 
 
 def shop_style_thumb_url(style_key: str | None) -> str:

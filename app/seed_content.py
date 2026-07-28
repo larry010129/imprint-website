@@ -18,6 +18,7 @@ def seed_content_if_empty() -> int:
     created = 0
     created += _seed_faq_testimonials()
     created += _seed_banners()
+    created += _seed_page_images()
     return created
 
 
@@ -152,4 +153,72 @@ def _seed_banners() -> int:
             return created
     except Exception:
         log.exception("banner seed failed")
+        return 0
+
+
+def _seed_page_images() -> int:
+    try:
+        from app.content import ensure_page_images_schema
+        from app.page_image_slots import build_page_image_seed
+
+        with get_connection() as conn, conn.cursor() as cur:
+            ensure_page_images_schema(cur)
+            rows = build_page_image_seed()
+            registry = [
+                {"page_key": row["page_key"], "slot_key": row["slot_key"]} for row in rows
+            ]
+            cur.execute(
+                """
+                delete from page_images
+                where not exists (
+                  select 1
+                  from jsonb_to_recordset(%s::jsonb) as slot(page_key text, slot_key text)
+                  where slot.page_key = page_images.page_key
+                    and slot.slot_key = page_images.slot_key
+                )
+                """,
+                (json.dumps(registry),),
+            )
+            created = 0
+            for entry in rows:
+                cur.execute(
+                    """
+                    insert into page_images (
+                      page_key, slot_key, label, slot_label, group_key,
+                      image_url, image_webp, image_alt,
+                      default_image_url, default_image_webp,
+                      target_w, target_h, sort_order, is_published
+                    ) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,true)
+                    on conflict (page_key, slot_key) do update set
+                      label = excluded.label,
+                      slot_label = excluded.slot_label,
+                      group_key = excluded.group_key,
+                      default_image_url = excluded.default_image_url,
+                      default_image_webp = excluded.default_image_webp,
+                      target_w = excluded.target_w,
+                      target_h = excluded.target_h,
+                      sort_order = excluded.sort_order
+                    """,
+                    (
+                        entry["page_key"],
+                        entry["slot_key"],
+                        entry["label"],
+                        entry["slot_label"],
+                        entry["group_key"],
+                        entry["image_url"],
+                        entry.get("image_webp"),
+                        entry.get("image_alt") or "",
+                        entry["default_image_url"],
+                        entry.get("default_image_webp"),
+                        entry["target_w"],
+                        entry["target_h"],
+                        entry["sort_order"],
+                    ),
+                )
+                created += 1
+            if created:
+                log.info("seeded %s page images", created)
+            return created
+    except Exception:
+        log.exception("page images seed failed")
         return 0

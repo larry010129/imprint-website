@@ -35,10 +35,14 @@
     var style = String(styleType).trim();
     if (UUID.test(style)) return categoryFallback(cat);
     if (style.length === 1 && 'ABC'.indexOf(style) >= 0 && cat) {
-      return '/static/images/shop/styles/' + cat + '-' + style + '.svg';
+      return global.ShopAssets
+        ? global.ShopAssets.styleThumb(cat + '-' + style)
+        : categoryFallback(cat);
     }
     var m = style.match(STYLE_ID);
-    if (m) return '/static/images/shop/styles/' + m[1].toLowerCase() + '-' + m[2].toUpperCase() + '.svg';
+    if (m && global.ShopAssets) {
+      return global.ShopAssets.styleThumb(m[1].toLowerCase() + '-' + m[2].toUpperCase());
+    }
     return categoryFallback(cat);
   }
 
@@ -57,10 +61,31 @@
     if (/\.(png|jpe?g|webp)$/i.test(url)) return url;
     var styleKey = styleKeyFromPath(path) || styleKeyFromPath(url);
     if (styleKey && global.ShopAssets) {
-      var real = global.ShopAssets.productImage(styleKey, color, color);
+      var slot = global.ShopAssets.parseImageSlotKey
+        ? global.ShopAssets.parseImageSlotKey(color)
+        : null;
+      var metal = slot ? slot.metal : color;
+      var diamond = slot ? slot.diamond : 'white';
+      var opts = slot && slot.chainMetal ? { chainColor: slot.chainMetal } : {};
+      var resolved = global.ShopAssets.productImageResolve
+        ? global.ShopAssets.productImageResolve(styleKey, metal, metal, diamond, opts)
+        : null;
+      var real = resolved && resolved.src
+        ? resolved.src
+        : global.ShopAssets.productImage(styleKey, metal, metal, diamond, opts);
       if (real) return real;
     }
     return url;
+  }
+
+  /** Use the small style asset in tables; keep uploaded/custom images exact. */
+  function productThumbnail(path, color) {
+    var styleKey = styleKeyFromPath(path);
+    if (styleKey && global.ShopAssets) {
+      var thumb = global.ShopAssets.styleThumb(styleKey);
+      if (thumb) return thumb;
+    }
+    return productPhoto(path, color);
   }
 
   function styleKeyFromCategoryStyle(category, styleType) {
@@ -97,6 +122,7 @@
     orderFallback: orderFallback,
     categoryFallback: categoryFallback,
     productPhoto: productPhoto,
+    productThumbnail: productThumbnail,
     orderPhoto: orderPhoto,
   };
 })(window);

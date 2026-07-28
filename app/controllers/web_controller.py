@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from functools import lru_cache
 from pathlib import Path
+from time import monotonic
 
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
@@ -21,6 +22,27 @@ templates.env.globals["google_client_id"] = settings.google_client_id
 _FRAGMENTS_DIR = settings.templates_dir / "fragments"
 _FEATURED_VIDEO_PATH = Path(__file__).resolve().parent.parent / "data" / "featured-video.json"
 _FEATURED_YOUTUBE_LATEST_PATH = Path(__file__).resolve().parent.parent / "data" / "featured-youtube-latest.json"
+_PUBLIC_PHONE_TEXT = "電話：02-2977-0268；"
+_PAGE_IMAGE_CACHE_TTL_SECONDS = 30
+
+
+def _strip_public_phone_metadata(block: str) -> str:
+    """Remove public phone fields and copy from JSON-LD registry blocks."""
+    try:
+        payload = json.loads(block)
+    except json.JSONDecodeError:
+        return block
+
+    def clean(value):
+        if isinstance(value, dict):
+            return {key: clean(item) for key, item in value.items() if key != "telephone"}
+        if isinstance(value, list):
+            return [clean(item) for item in value]
+        if isinstance(value, str):
+            return value.replace(_PUBLIC_PHONE_TEXT, "")
+        return value
+
+    return json.dumps(clean(payload), ensure_ascii=False, indent=2)
 
 
 def load_featured_video() -> dict | None:
@@ -72,7 +94,43 @@ def _load_fragment(relpath: str) -> str:
     return (_FRAGMENTS_DIR / relpath).read_text(encoding="utf-8")
 
 
+@lru_cache(maxsize=2)
+def _fetch_page_images_cached(_time_bucket: int) -> dict[str, list[dict]]:
+    from app.content import fetch_all_page_images
+    from app.database import get_connection
+
+    with get_connection() as conn, conn.cursor() as cur:
+        grouped: dict[str, list[dict]] = {}
+        for row in fetch_all_page_images(cur):
+            grouped.setdefault(row["page_key"], []).append(row)
+        return grouped
+
+
+def _load_page_images(route: str) -> list[dict]:
+    try:
+        time_bucket = int(monotonic() // _PAGE_IMAGE_CACHE_TTL_SECONDS)
+        return _fetch_page_images_cached(time_bucket).get(route, [])
+    except Exception:
+        return []
+
+
+def _load_page_image(route: str) -> dict | None:
+    """Backward-compatible primary slot used by existing Jinja templates."""
+    rows = _load_page_images(route)
+    preferred = "cinema" if route == "/about.html" else "hero"
+    return next((row for row in rows if row.get("slot_key") == preferred), None)
+
+
+def clear_page_image_cache() -> None:
+    _fetch_page_images_cached.cache_clear()
+
+
 def _context(request: Request, meta: PageMeta) -> dict:
+    page_images = _load_page_images(meta.route)
+    page_image = _load_page_image(meta.route)
+    lcp_image = None
+    if page_image and meta.route not in {"/", "/about.html"}:
+        lcp_image = page_image.get("display_webp") or page_image.get("display_url")
     context = {
         "request": request,
         "title": meta.title,
@@ -84,21 +142,37 @@ def _context(request: Request, meta: PageMeta) -> dict:
         "breadcrumbs": meta.breadcrumbs,
         "mvc_page": meta.mvc_page,
         "extra_body_class": meta.extra_body_class,
-        "extra_head_blocks": meta.extra_head_blocks,
+        "extra_head_blocks": [_strip_public_phone_metadata(block) for block in meta.extra_head_blocks],
+        "page_image": page_image,
+        "page_images": page_images,
+        "lcp_image": lcp_image,
+        "lcp_image_type": "image/webp" if lcp_image and lcp_image.endswith(".webp") else None,
     }
     if meta.content_fragment:
         context["content_html"] = _load_fragment(meta.content_fragment)
-    if meta.route == "/about.html":
+    if meta.route in {"/", "/about.html"}:
         context["featured_video"] = load_featured_video()
+    if meta.route == "/about.html":
         context["youtube_latest_video"] = load_youtube_latest_video()
     return context
 
 
 def _make_handler(meta: PageMeta, status_code: int = 200):
     async def handler(request: Request) -> HTMLResponse:
-        return templates.TemplateResponse(
-            request, meta.template, _context(request, meta), status_code=status_code
+        from app.page_image_slots import apply_page_image_slots
+
+        context = _context(request, meta)
+        response = templates.TemplateResponse(
+            request, meta.template, context, status_code=status_code
         )
+        rewritten = apply_page_image_slots(
+            response.body.decode(response.charset),
+            meta.route,
+            context["page_images"],
+        )
+        response.body = rewritten.encode(response.charset)
+        response.headers["content-length"] = str(len(response.body))
+        return response
 
     return handler
 

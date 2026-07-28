@@ -1,6 +1,6 @@
 {% extends "layouts/base.html" %}
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/about.css?v=5">
+<link rel="stylesheet" href="/static/css/about.css?v=7">
 {% endblock %}
 {% block content %}
 <article class="about-story">
@@ -33,7 +33,17 @@
   </section>
 
   <figure class="about-cinema reveal" id="story-begins">
-    <img src="/static/images/legacy-live/styles/taiwan-local-lab.jpg" alt="銘印鑽石台灣在地培育實驗室" loading="eager" fetchpriority="high" decoding="async" onerror="imgFallback(this)">
+    {% set _pi = page_image or {} %}
+    {% set _pi_url = _pi.display_url or _pi.image_url or '/static/images/legacy-live/styles/taiwan-local-lab.jpg' %}
+    {% set _pi_alt = _pi.image_alt or '銘印鑽石台灣在地培育實驗室' %}
+    {% if _pi.display_webp or _pi.image_webp %}
+    <picture>
+      <source srcset="{{ _pi.display_webp or _pi.image_webp }}" type="image/webp">
+      <img src="{{ _pi_url }}" alt="{{ _pi_alt }}" loading="eager" fetchpriority="high" decoding="async" onerror="imgFallback(this)">
+    </picture>
+    {% else %}
+    <img src="{{ _pi_url }}" alt="{{ _pi_alt }}" loading="eager" fetchpriority="high" decoding="async" onerror="imgFallback(this)">
+    {% endif %}
     <div class="about-cinema__shade" aria-hidden="true"></div>
     <figcaption>
       <span>留在您觸手可及的距離</span>
@@ -130,7 +140,7 @@
           <p class="about-overline">IN YOUR OWN TIME</p>
           <h2 id="time-title">慢慢決定，也沒關係</h2>
           <p>訂製一顆紀念鑽石，往往不是一次衝動的消費，而是一個需要時間沉澱的決定。我們見過猶豫兩年才下定決心的客人，也理解每一段考慮期背後，都是還沒準備好放下、或還沒找到合適時機的心情。</p>
-          <p>顧問的角色從來不是催促成交，而是在您開口詢問時，提供清楚的資訊——無論是樣本份量、價格試算，還是「我準備好了嗎？」這些問題，都值得被認真對待。官方 LINE、電話或預約到店，都是同樣受歡迎的起點。</p>
+          <p>顧問的角色從來不是催促成交，而是在您開口詢問時，提供清楚的資訊——無論是樣本份量、價格試算，還是「我準備好了嗎？」這些問題，都值得被認真對待。官方 LINE 或預約到店，都是同樣受歡迎的起點。</p>
           <ul class="about-service-list">
             <li>一對一諮詢，不催促成交</li>
             <li>樣本份量可先評估，不必先寄出</li>

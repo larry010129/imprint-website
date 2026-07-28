@@ -5,7 +5,7 @@
    ============================================================ */
 :root{
   --ink:#2B2320; --ink-soft:#5C534E; --ink-faint:#8A817B;
-  --mint:#9CEFEF; --mint-deep:#5ECFCF; --mint-soft:#F4FBFB; --mint-line:#DCF2F2;
+  --mint:#8eedf0; --mint-deep:#52c4c8; --mint-soft:#F0FBFB; --mint-line:#D8F2F2;
   --paper:#FBFAF8; --card:#FFFFFF;
   --ok:#4CAF7D; --warn:#E0A458; --info:#6C9BD1;
   --sans:"Noto Sans TC","Microsoft JhengHei",sans-serif;
@@ -293,7 +293,7 @@ button:not(.btn-sm):not(.ap-tab-btn):not([data-slot="button-1"]):not([data-granu
 .ap-form-error{color:#B5523D;font-size:13px;margin-bottom:12px;}
 .ap-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;}
 .ap-form-grid label{display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:var(--ink-soft);}
-.ap-form-grid label.ap-field--full{grid-column:1 / -1;}
+.ap-form-grid label.ap-field--full,.ap-form-grid div.ap-field--full{grid-column:1 / -1;}
 .ap-form-grid label.ap-field--check{flex-direction:row;align-items:center;gap:8px;margin-top:8px;}
 .ac-code-row{display:flex;gap:8px;align-items:center;}
 .ac-code-row input{flex:1;min-width:0;}

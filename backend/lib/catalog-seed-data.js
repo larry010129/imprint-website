@@ -118,7 +118,15 @@ const LEGACY_WEIGHT_TABLE = {
   },
 };
 
-const CHAIN_WEIGHT_CHIN = { '3fen': 0.3, '4fen': 0.4 };
+/** Exact 抖圓鏈 wax weight (錢) from 鍊條價格.xlsx, keyed by thickness and length. */
+const CHAIN_WAX_WEIGHT_CHIN = {
+  '1.0mm': { 36: 0.014, 41: 0.016, 46: 0.018, 51: 0.020, 61: 0.024, 76: 0.030, 80: 0.032 },
+  '1.5mm': { 36: 0.026, 41: 0.030, 46: 0.033, 51: 0.037, 61: 0.043, 76: 0.054, 80: 0.057 },
+  '2.0mm': { 36: 0.040, 41: 0.046, 46: 0.051, 51: 0.056, 61: 0.066, 76: 0.083, 80: 0.087 },
+  '2.5mm': { 36: 0.047, 41: 0.053, 46: 0.059, 51: 0.065, 61: 0.076, 76: 0.095, 80: 0.100 },
+  '3.0mm': { 36: 0.052, 41: 0.060, 46: 0.066, 51: 0.074, 61: 0.086, 76: 0.110, 80: 0.120 },
+};
+const CHAIN_REFERENCE_LENGTH_CM = 46;
 
 function carat02Weight(w01, w03) {
   return Math.round((w01 + (w03 - w01) * 0.5) * 10000) / 10000;
@@ -159,10 +167,9 @@ function buildWeightTable() {
   return legacy;
 }
 
-/** Relative URL served from the static site (shop/calculator uses ../../images/shop/). */
+/** Canonical persisted originals used by both 商品上架 and the storefront. */
 function imagePath(category, style, color) {
-  void color;
-  return `images/shop/styles/${category}-${style}.svg`;
+  return `/static/images/products/${color}/${category}-${style}.png`;
 }
 
 function styleSortOrder(style) {
@@ -202,9 +209,12 @@ function buildSeedRows() {
   for (const [style, defaultColor] of Object.entries(CHAIN_COLORS)) {
     const variants = [];
     for (const gold of VALID_GOLDS) {
-      for (const [carat] of Object.entries(CHAIN_WEIGHT_CHIN)) {
-        const weightChin = CHAIN_WEIGHT_CHIN[carat] / WAX_TO_METAL_CHIN['9k'];
-        variants.push({ gold, carat, weightChin });
+      for (const [carat, lengthWeights] of Object.entries(CHAIN_WAX_WEIGHT_CHIN)) {
+        variants.push({
+          gold,
+          carat,
+          weightChin: lengthWeights[CHAIN_REFERENCE_LENGTH_CM],
+        });
       }
     }
     const images = IMAGE_COLORS.map((color) => ({
@@ -217,6 +227,7 @@ function buildSeedRows() {
       nameZh: STYLE_LABELS.chain[style] || style,
       defaultColor,
       sortOrder: CHAIN_SORT_ORDER[style] ?? styleSortOrder(style),
+      lengthWeights: CHAIN_WAX_WEIGHT_CHIN,
       variants,
       images,
     });
@@ -229,6 +240,8 @@ module.exports = {
   IMAGE_COLORS,
   VALID_GOLDS,
   STYLE_LABELS,
+  CHAIN_WAX_WEIGHT_CHIN,
+  CHAIN_REFERENCE_LENGTH_CM,
   buildSeedRows,
   imagePath,
 };

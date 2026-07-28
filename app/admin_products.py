@@ -6,8 +6,8 @@ import re
 from datetime import datetime, timezone
 
 VALID_CATEGORIES = {"pendant", "ring", "earring", "bracelet", "chain"}
-VALID_CARATS = {"0.1", "0.2", "0.3", "0.5", "1.0"}
-VALID_CARATS_CHAIN = {"3fen", "4fen"}
+VALID_CARATS = {"0.1", "0.2", "0.3", "0.5", "0.6", "0.7", "0.8", "0.9", "1.0", "1.5", "2.0"}
+VALID_CARATS_CHAIN = {"1.0mm", "1.5mm", "2.0mm", "2.5mm", "3.0mm"}
 VALID_GOLDS = {"9k", "14k", "18k", "pt950", "s925"}
 VALID_COLORS = {"white", "yellow", "rose"}
 IMAGE_COLOR_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,31}$")
@@ -27,6 +27,17 @@ def valid_image_color(color: str) -> bool:
     if color in VALID_COLORS:
         return True
     return bool(IMAGE_COLOR_RE.match(color))
+
+
+def image_covers_default_color(image_color: str, default_color: str) -> bool:
+    """defaultColor is metal-only; slots may be metal, metal-diamond, or metal-diamond-chain."""
+    key = (image_color or "").strip().lower()
+    default = (default_color or "").strip().lower()
+    if not key or default not in VALID_COLORS:
+        return False
+    if key == default:
+        return True
+    return key.startswith(default + "-")
 
 
 def validate_product_fields(body: dict | None, *, valid_categories: set[str] | None = None) -> tuple[dict | None, str | None]:
@@ -130,8 +141,10 @@ def validate_product_fields(body: dict | None, *, valid_categories: set[str] | N
     if not final_colors:
         if is_published:
             errors.append("at least one product image is required")
-    elif is_published and cleaned.get("defaultColor") and cleaned["defaultColor"] not in final_colors:
-        errors.append("default color must have at least one image")
+    elif is_published and cleaned.get("defaultColor"):
+        default = cleaned["defaultColor"]
+        if not any(image_covers_default_color(c, default) for c in final_colors):
+            errors.append("default color must have at least one image")
     cleaned["images"] = images
 
     if errors:
@@ -166,7 +179,7 @@ def _format_product_errors(errors: list[str]) -> str:
             parts.append("款式選項：金屬成色無效")
             continue
         if err.startswith("invalid variant carat"):
-            parts.append("款式選項：克拉／分數無效")
+            parts.append("款式選項：克拉／厚度無效")
             continue
         if err.startswith("invalid weight for"):
             parts.append("款式選項：蠟重無效")
@@ -233,10 +246,11 @@ def publish_readiness(cur, product: dict) -> tuple[bool, str | None]:
     if int(cur.fetchone()["c"]) == 0:
         return False, "請先上傳至少一張商品照片"
     cur.execute(
-        "select 1 from product_images where product_id = %s and color = %s limit 1",
-        (product_id, product["default_color"]),
+        "select color from product_images where product_id = %s",
+        (product_id,),
     )
-    if not cur.fetchone():
+    default = product["default_color"]
+    if not any(image_covers_default_color(row["color"], default) for row in cur.fetchall()):
         return False, "預設顏色必須至少有一張商品照片"
     return True, None
 

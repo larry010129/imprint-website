@@ -10,10 +10,6 @@ window.botpress.init({
       title: "sales1@imprint-diamond.com",
       link: "sales1@imprint-diamond.com"
     },
-    phone: {
-      title: "+886 2-29770268",
-      link: "+886 2-29770268"
-    },
     termsOfService: {},
     privacyPolicy: {},
     /* Darker mint so chat pops on white pages */

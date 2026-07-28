@@ -1,7 +1,11 @@
 ﻿{% extends "layouts/base.html" %}
 {% block content %}
 <section class="page-hero">
-  <div class="page-hero-media"><picture><source srcset="/static/images/products/category-ring.webp" type="image/webp"><img src="/static/images/products/category-ring.jpg" alt="時尚珠寶－戒指項鍊耳環手鍊 DNA紀念鑽石" loading="eager" decoding="async" fetchpriority="high" onerror="imgFallback(this)"></picture></div>
+  {% set _pi = page_image or {} %}
+  {% set _pi_url = _pi.display_url or _pi.image_url or '/static/images/products/category-ring.jpg' %}
+  {% set _pi_webp = _pi.display_webp or _pi.image_webp or '/static/images/products/category-ring.webp' %}
+  {% set _pi_alt = _pi.image_alt or '時尚珠寶－戒指項鍊耳環手鍊 DNA紀念鑽石' %}
+  <div class="page-hero-media"><picture>{% if _pi_webp %}<source srcset="{{ _pi_webp }}" type="image/webp">{% endif %}<img src="{{ _pi_url }}" alt="{{ _pi_alt }}" loading="eager" decoding="async" fetchpriority="high" onerror="imgFallback(this)"></picture></div>
   <div class="page-hero-scrim"></div>
   <div class="container page-hero-inner">
     <p class="breadcrumb">
@@ -131,6 +135,6 @@
 {% block extra_scripts %}
 <script src="/static/js/pdgallery.js?v=1.1"></script>
 <script src="/static/js/pricing-config.js?v=1.2"></script>
-<script src="/static/js/girdle-engrave.js?v=10"></script>
+<script src="/static/js/girdle-engrave.js?v=11"></script>
 <script src="/static/js/configurator.js?v=1.3"></script>
 {% endblock %}

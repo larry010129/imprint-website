@@ -1,7 +1,7 @@
 {% extends "layouts/base.html" %}
 {% block main_class %} class="main-content shop-calculator-page"{% endblock %}
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/shop.css?v=6.23">
+<link rel="stylesheet" href="/static/css/shop.css?v=6.26">
 <link rel="stylesheet" href="/static/css/shop-wizard.css?v=17">
 {% include "partials/shop-tour-react-css.html" %}
 {% endblock %}
@@ -140,7 +140,7 @@
             <header class="product-info-header" id="product-info-header">
               <p class="product-subtitle" id="product-subtitle"></p>
               <div class="product-title-row">
-                <h2 class="product-title" id="product-title">?</h2>
+                <h2 class="product-title" id="product-title">—</h2>
                 
                 <button type="button" class="favorite-toggle" id="favorite-btn" aria-label="收藏此配置" title="收藏此配置">♡</button>
                 
@@ -169,23 +169,17 @@
             <div class="product-options-section" id="product-options-section">
             <div class="variant-group" id="carat-step">
               <h3 class="variant-label" data-i18n="step_carat">選擇克拉數</h3>
-              <div class="variant-chips variant-chips--row" id="carat-btn-row">
-                <button type="button" class="carat-btn variant-chip" data-carat="0.1">0.10 ct</button>
-                <button type="button" class="carat-btn variant-chip" data-carat="0.2">0.20 ct</button>
-                <button type="button" class="carat-btn variant-chip" data-carat="0.3">0.30 ct</button>
-                <button type="button" class="carat-btn variant-chip" data-carat="0.5">0.50 ct</button>
-                <button type="button" class="carat-btn variant-chip" data-carat="1.0">1.00 ct</button>
-                <button type="button" class="carat-btn variant-chip" data-carat="3fen" data-i18n="chain_3fen">3分重 (0.3錢)</button>
-                <button type="button" class="carat-btn variant-chip" data-carat="4fen" data-i18n="chain_4fen">4分重 (0.4錢)</button>
-              </div>
+              <select class="carat-select" id="carat-select" aria-label="選擇克拉數">
+                <option value="" data-i18n="carat_placeholder">— 請選擇克拉數 —</option>
+              </select>
             </div>
 
             <div class="variant-group" id="fancy-diamond-step">
               <h3 class="variant-label" data-i18n="step_diamond_color">選擇鑽石顏色</h3>
               <div class="diamond-carousel-wrap">
-                <button type="button" class="diamond-carousel-nav" id="fancy-color-prev" aria-label="Previous" hidden>?</button>
+                <button type="button" class="diamond-carousel-nav" id="fancy-color-prev" aria-label="Previous" hidden>‹</button>
                 <div class="diamond-carousel" id="fancy-color-carousel"></div>
-                <button type="button" class="diamond-carousel-nav" id="fancy-color-next" aria-label="Next" hidden>?</button>
+                <button type="button" class="diamond-carousel-nav" id="fancy-color-next" aria-label="Next" hidden>›</button>
               </div>
             </div>
 
@@ -316,7 +310,7 @@
                   </div>
                 </div>
                 <div class="cfg-engrave-preview shop-girdle-engrave__preview">
-                  <img class="cfg-engrave-gem" src="/static/images/diamonds/girdle-matrix/round-white.png?v=4" alt=""
+                  <img class="cfg-engrave-gem" src="/static/images/shop/girdle/girdle-zoom-white.jpg?v=7" alt=""
                        width="640" height="360" loading="lazy" decoding="async" aria-hidden="true">
                   <div class="cfg-engrave-preview-text" id="shop-girdle-engrave-preview" aria-hidden="true"></div>
                 </div>
@@ -367,7 +361,7 @@
         <span class="shop-price-panel-label">試算總價</span>
         <div class="hero-price">
         <span class="hero-price-currency">NT$</span>
-        <span class="hero-price-amount" id="sum-total">?</span>
+        <span class="hero-price-amount" id="sum-total">—</span>
         </div>
       </div>
       <p class="hero-price-hint" id="price-hint" data-i18n="shop_complete_options">請完成選項以查看價格</p>
@@ -739,7 +733,7 @@
 <div class="mobile-buy-bar hidden" id="mobile-buy-bar">
   <button type="button" class="mobile-buy-price" id="mobile-price-toggle" aria-expanded="false" aria-controls="shop-price-panel">
     <span class="mobile-buy-label" data-i18n="sum_total">總價</span>
-    <span class="mobile-buy-amount">NT$ <span id="sum-total-mobile">?</span></span>
+    <span class="mobile-buy-amount">NT$ <span id="sum-total-mobile">—</span></span>
     <span class="mobile-buy-detail-hint" data-i18n="shop_price_breakdown">明細</span>
   </button>
   <div class="mobile-buy-actions">
@@ -777,11 +771,11 @@
     shareBaseUrl: '/s/TOKEN',
   }, window.shopConfig || {});
 </script>
-<script src="/static/js/shop-assets.js?v=11"></script>
-<script src="/static/js/shop-catalog-data.js?v=5"></script>
+<script src="/static/js/shop-assets.js?v=13"></script>
+<script src="/static/js/shop-catalog-data.js?v=6"></script>
 <script src="/static/js/shop-pricing-local.js?v=9"></script>
 <script src="/static/js/shop-i18n.js?v=8"></script>
-<script src="/static/js/girdle-engrave.js?v=16"></script>
+<script src="/static/js/girdle-engrave.js?v=22"></script>
 <script src="/static/js/shop-terms.js?v=4"></script>
-<script src="/static/js/shop.js?v=104"></script>
+<script src="/static/js/shop.js?v=105"></script>
 {% endblock %}

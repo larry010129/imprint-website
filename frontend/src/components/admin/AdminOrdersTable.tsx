@@ -120,7 +120,11 @@ const columns: ColumnDef<OrderTableRow>[] = [
           className="order-style-thumb"
           src={row.original.imageUrl}
           alt={row.original.imageAlt}
+          width={40}
+          height={40}
           loading="lazy"
+          decoding="async"
+          fetchPriority="low"
           data-fallback={row.original.imageFallback}
         />
       ) : (
