@@ -9,7 +9,7 @@
   if (!root) return;
 
   var _loaded = false;
-  var _tab = 'testimonials';
+  var _tab = 'pages';
   var _pageImagePage = '';
   var _testimonials = [];
   var _faqItems = [];
@@ -168,10 +168,12 @@
   }
 
   function renderShell() {
-    var oldMount = document.getElementById('contentReactMount');
-    if (oldMount && window.AdminTables && window.AdminTables.unmount) {
-      try { window.AdminTables.unmount(oldMount); } catch (e) {}
-    }
+    ['contentReactMount', 'cmsPagesMount'].forEach(function (id) {
+      var oldMount = document.getElementById(id);
+      if (oldMount && window.AdminTables && window.AdminTables.unmount) {
+        try { window.AdminTables.unmount(oldMount); } catch (e) {}
+      }
+    });
 
     var imagePages = pageImagePages();
     if (_tab === 'page-images' && (!_pageImagePage || !imagePages.some(function (p) { return p.value === _pageImagePage; }))) {
@@ -195,9 +197,12 @@
       pageSubTabsHtml += '</div>';
     }
 
+    if (_tab === 'copy') _tab = 'pages';
+
     root.innerHTML =
-      '<p class="adx-panel-note">「首頁圖片」管理首頁輪播；「頁面圖片」依頁面列出所有既有內容圖片。見證上架前請確認已取得同意；FAQ 變更後，頁面 JSON-LD 可能需部署更新。</p>' +
+      '<p class="adx-panel-note">「頁面」= 區塊拖曳編輯文字／圖片／按鈕（/p/slug）。圖片素材也可用「頁面圖片／首頁圖片」。FAQ／見證用對應分頁。商店試算／上架／價格表不在此編輯。</p>' +
       '<div class="adx-tabs" role="tablist">' +
+        '<button type="button" class="adx-tab' + (_tab === 'pages' ? ' is-active' : '') + '" data-tab="pages">頁面</button>' +
         '<button type="button" class="adx-tab' + (_tab === 'banners' ? ' is-active' : '') + '" data-tab="banners">首頁圖片</button>' +
         '<button type="button" class="adx-tab' + (_tab === 'page-images' ? ' is-active' : '') + '" data-tab="page-images">頁面圖片</button>' +
         '<button type="button" class="adx-tab' + (_tab === 'testimonials' ? ' is-active' : '') + '" data-tab="testimonials">見證</button>' +
@@ -225,7 +230,102 @@
     });
 
     var body = document.getElementById('contentPanelBody');
-    renderContentReact(body, imagePages);
+    if (_tab === 'pages') renderCmsPages(body);
+    else if (_tab === 'faq') {
+      body.innerHTML = '';
+      renderFaqCategoryBar(body);
+      renderContentReact(body, imagePages);
+    } else {
+      body.innerHTML = '';
+      renderContentReact(body, imagePages);
+    }
+  }
+
+  function cmsApiBridge() {
+    return {
+      listPages: function () { return api.admin.listCmsPages(); },
+      createPage: function (fields) { return api.admin.createCmsPage(fields); },
+      getPage: function (id) { return api.admin.getCmsPage(id); },
+      updatePage: function (fields) { return api.admin.updateCmsPage(fields); },
+      pageAction: function (id, action) { return api.admin.cmsPageAction(id, action); },
+      createSection: function (pageId, body) { return api.admin.createCmsSection(pageId, body); },
+      updateSection: function (fields) { return api.admin.updateCmsSection(fields); },
+      sectionAction: function (id, action) { return api.admin.cmsSectionAction(id, action); },
+      reorderSections: function (pageId, sectionIds) { return api.admin.reorderCmsSections(pageId, sectionIds); },
+      getMedia: function () { return api.admin.getCmsMedia(); },
+      getFaqCategories: function () { return api.admin.getFaqCategories(); },
+      uploadMedia: function (file) { return api.admin.uploadCmsMedia(file); },
+      deleteMedia: function (id) { return api.admin.cmsMediaAction(id, 'delete'); },
+      getCopySlots: function () { return api.admin.getPageCopySlots(); },
+      updateCopySlot: function (fields) { return api.admin.updatePageCopySlot(fields); },
+    };
+  }
+
+  function renderCmsPages(body) {
+    if (!body) return;
+    if (!window.AdminTables || !window.AdminTables.renderCmsPagesPanel) {
+      body.innerHTML = '<p class="note warn">頁面編輯器尚未載入，請重新整理。</p>';
+      return;
+    }
+    body.innerHTML = '<div id="cmsPagesMount"></div>';
+    window.AdminTables.renderCmsPagesPanel(document.getElementById('cmsPagesMount'), {
+      api: cmsApiBridge(),
+    });
+  }
+
+  function renderFaqCategoryBar(body) {
+    if (!body) return;
+    var bar = document.createElement('div');
+    bar.className = 'cms-faq-cat-bar';
+    var opts = _faqCategories.map(function (c) {
+      return '<option value="' + esc(c.id) + '">' + esc(c.title) + ' (' + esc(c.id) + ')</option>';
+    }).join('');
+    bar.innerHTML =
+      '<form class="cms-faq-cat-form" id="faqCatCreateForm">' +
+        '<strong>FAQ 分類</strong>' +
+        '<input name="title" placeholder="新分類名稱" required>' +
+        '<input name="id" placeholder="id（可留空）">' +
+        '<button type="submit" class="btn-sm">新增分類</button>' +
+      '</form>' +
+      '<form class="cms-faq-cat-form" id="faqCatEditForm">' +
+        '<select name="id" required>' + opts + '</select>' +
+        '<input name="title" placeholder="重新命名" required>' +
+        '<button type="submit" class="btn-sm">更新</button>' +
+        '<button type="button" class="btn-sm" id="faqCatDeleteBtn">刪除分類</button>' +
+      '</form>';
+    body.appendChild(bar);
+    var createForm = bar.querySelector('#faqCatCreateForm');
+    createForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var fd = new FormData(createForm);
+      api.admin.createFaqCategory({
+        title: String(fd.get('title') || ''),
+        id: String(fd.get('id') || ''),
+      }).then(function (res) {
+        if (res.error) { alert(res.error.message || res.error); return; }
+        load(true, true);
+      });
+    });
+    var editForm = bar.querySelector('#faqCatEditForm');
+    editForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var fd = new FormData(editForm);
+      api.admin.updateFaqCategory({
+        id: String(fd.get('id') || ''),
+        title: String(fd.get('title') || ''),
+      }).then(function (res) {
+        if (res.error) { alert(res.error.message || res.error); return; }
+        load(true, true);
+      });
+    });
+    bar.querySelector('#faqCatDeleteBtn').addEventListener('click', function () {
+      var id = editForm.querySelector('[name="id"]').value;
+      if (!id || !confirm('刪除此分類？分類下不可有 FAQ。')) return;
+      api.admin.faqCategoryAction(id, 'delete').then(function (res) {
+        if (res.error) { alert(res.error.message || res.error); return; }
+        load(true, true);
+      });
+    });
   }
 
   function renderContentReact(body, imagePages) {
@@ -237,8 +337,9 @@
 
     var mount = document.getElementById('contentReactMount');
     if (!mount) {
-      body.innerHTML = '<div id="contentReactMount"></div>';
-      mount = document.getElementById('contentReactMount');
+      mount = document.createElement('div');
+      mount.id = 'contentReactMount';
+      body.appendChild(mount);
     }
     imagePages = imagePages || pageImagePages();
 

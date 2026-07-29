@@ -125,9 +125,34 @@ def clear_page_image_cache() -> None:
     _fetch_page_images_cached.cache_clear()
 
 
+@lru_cache(maxsize=2)
+def _fetch_page_copy_cached(_time_bucket: int) -> dict[str, list[dict]]:
+    from app.cms_copy_slots import fetch_all_copy_slots
+    from app.database import get_connection
+
+    with get_connection() as conn, conn.cursor() as cur:
+        grouped: dict[str, list[dict]] = {}
+        for row in fetch_all_copy_slots(cur):
+            grouped.setdefault(row["page_key"], []).append(row)
+        return grouped
+
+
+def _load_page_copy_slots(route: str) -> list[dict]:
+    try:
+        time_bucket = int(monotonic() // _PAGE_IMAGE_CACHE_TTL_SECONDS)
+        return _fetch_page_copy_cached(time_bucket).get(route, [])
+    except Exception:
+        return []
+
+
+def clear_page_copy_cache() -> None:
+    _fetch_page_copy_cached.cache_clear()
+
+
 def _context(request: Request, meta: PageMeta) -> dict:
     page_images = _load_page_images(meta.route)
     page_image = _load_page_image(meta.route)
+    page_copy_slots = _load_page_copy_slots(meta.route)
     lcp_image = None
     if page_image and meta.route not in {"/", "/about.html"}:
         lcp_image = page_image.get("display_webp") or page_image.get("display_url")
@@ -145,6 +170,7 @@ def _context(request: Request, meta: PageMeta) -> dict:
         "extra_head_blocks": [_strip_public_phone_metadata(block) for block in meta.extra_head_blocks],
         "page_image": page_image,
         "page_images": page_images,
+        "page_copy_slots": page_copy_slots,
         "lcp_image": lcp_image,
         "lcp_image_type": "image/webp" if lcp_image and lcp_image.endswith(".webp") else None,
     }
@@ -159,18 +185,35 @@ def _context(request: Request, meta: PageMeta) -> dict:
 
 def _make_handler(meta: PageMeta, status_code: int = 200):
     async def handler(request: Request) -> HTMLResponse:
+        from app.auth import get_user_id, is_admin
+        from app.cms_copy_slots import apply_page_copy_slots
         from app.page_image_slots import apply_page_image_slots
 
         context = _context(request, meta)
         response = templates.TemplateResponse(
             request, meta.template, context, status_code=status_code
         )
-        rewritten = apply_page_image_slots(
-            response.body.decode(response.charset),
-            meta.route,
-            context["page_images"],
+        html = response.body.decode(response.charset)
+        html = apply_page_image_slots(html, meta.route, context["page_images"])
+        html = apply_page_copy_slots(html, meta.route, context["page_copy_slots"])
+        site_edit = (
+            str(request.query_params.get("cms_edit") or "").lower() in {"1", "true", "yes"}
+            and is_admin(get_user_id(request))
         )
-        response.body = rewritten.encode(response.charset)
+        if site_edit:
+            page_key = json.dumps(meta.route)
+            edit_boot = (
+                f"<script>window.__CMS_SITE_PAGE_KEY__={page_key};</script>"
+                '<script src="/js/site-inline-edit.js?v=1"></script>'
+            )
+            html = html.replace(
+                "<body ",
+                f'<body data-cms-site-edit="1" data-cms-page-key={json.dumps(meta.route)} ',
+                1,
+            )
+            html = html.replace("</body>", f"{edit_boot}</body>", 1)
+            response.headers["Cache-Control"] = "no-store"
+        response.body = html.encode(response.charset)
         response.headers["content-length"] = str(len(response.body))
         return response
 
@@ -216,6 +259,86 @@ def register_pages(app: FastAPI) -> None:
             STANDALONE_SHARE_SUMMARY.template,
             _context(request, STANDALONE_SHARE_SUMMARY),
         )
+
+    @app.get("/p/{slug}", include_in_schema=False)
+    async def cms_public_page(request: Request, slug: str) -> HTMLResponse:
+        from app.auth import get_user_id, is_admin
+        from app.cms_boundary import is_reserved_cms_slug, normalize_cms_slug
+        from app.cms_pages import SECTION_TYPES, ensure_cms_pages_schema, fetch_page_with_sections
+        from app.content import fetch_faq_public, fetch_published_testimonials
+        from app.database import get_connection
+
+        clean = normalize_cms_slug(slug)
+        if not clean or is_reserved_cms_slug(clean):
+            raise StarletteHTTPException(status_code=404, detail="Not Found")
+
+        preview = str(request.query_params.get("preview") or "") in {"1", "true", "yes"}
+        inline = str(request.query_params.get("inline") or "") in {"1", "true", "yes"}
+        admin_ok = is_admin(get_user_id(request))
+        if (preview or inline) and not admin_ok:
+            raise StarletteHTTPException(status_code=404, detail="Not Found")
+
+        try:
+            with get_connection() as conn, conn.cursor() as cur:
+                ensure_cms_pages_schema(cur)
+                page = fetch_page_with_sections(cur, slug=clean, visible_only=not preview)
+                faq = fetch_faq_public(cur)
+                testimonials = fetch_published_testimonials(cur)
+        except Exception:
+            raise StarletteHTTPException(status_code=404, detail="Not Found") from None
+
+        if not page:
+            raise StarletteHTTPException(status_code=404, detail="Not Found")
+        if page.get("status") != "published" and not (preview and admin_ok):
+            raise StarletteHTTPException(status_code=404, detail="Not Found")
+        page["sections"] = [
+            section
+            for section in (page.get("sections") or [])
+            if section.get("type") in SECTION_TYPES
+        ]
+
+        faq_items = faq.get("teaser") or []
+        if not faq_items:
+            faq_items = [
+                item
+                for cat in (faq.get("categories") or [])
+                for item in (cat.get("items") or [])
+            ]
+        faq_by_category = {
+            str(cat.get("id")): cat.get("items") or []
+            for cat in (faq.get("categories") or [])
+        }
+
+        # Admin editor iframe: bare shell (no site nav/footer) so each page
+        # preview is unique content only. Public /p/{slug} keeps full site chrome.
+        embed = preview or inline
+        context = {
+            "request": request,
+            "layout": "layouts/cms-embed.html" if embed else "layouts/base.html",
+            "title": page.get("title") or "銘印鑽石",
+            "description": page.get("meta_description") or "",
+            "canonical_path": f"p/{page['slug']}",
+            "og_title": page.get("title") or "",
+            "og_description": page.get("meta_description") or "",
+            "og_image": "images/hero/imprint-diamond-family-memorial.jpg",
+            "breadcrumbs": [],
+            "mvc_page": "cms",
+            "extra_body_class": "cms-modular",
+            "extra_head_blocks": [],
+            "page_image": None,
+            "page_images": [],
+            "lcp_image": None,
+            "lcp_image_type": None,
+            "cms_page": page,
+            "cms_sections": page.get("sections") or [],
+            "cms_preview": preview,
+            "cms_inline": inline,
+            "cms_faq_items": faq_items,
+            "cms_faq_all_items": faq.get("items") or [],
+            "cms_faq_by_category": faq_by_category,
+            "cms_testimonials": testimonials,
+        }
+        return templates.TemplateResponse(request, "pages/cms_page.html", context)
 
     @app.exception_handler(StarletteHTTPException)
     async def not_found(request: Request, exc: StarletteHTTPException) -> HTMLResponse:

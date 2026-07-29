@@ -1,0 +1,41 @@
+{% extends layout %}
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/cms-sections.css?v=3">
+{% if cms_preview or cms_inline %}
+<style>
+  .cms-preview-banner {
+    position: sticky; top: 0; z-index: 80;
+    background: #1a1a1a; color: #fff;
+    text-align: center; padding: 0.5rem 1rem;
+    font-size: 0.85rem; letter-spacing: 0.04em;
+  }
+  .cms-page[data-cms-inline] a[href] {
+    cursor: default;
+  }
+</style>
+{% endif %}
+{% endblock %}
+{% block content %}
+{% if cms_preview or cms_inline %}
+<div class="cms-preview-banner" role="status">
+  預覽：{{ cms_page.title }} · /p/{{ cms_page.slug }}{% if cms_page.status != 'published' %}（草稿）{% endif %}
+</div>
+{% endif %}
+<article class="cms-page" data-cms-page="{{ cms_page.slug }}"{% if cms_inline %} data-cms-inline="1"{% endif %}>
+  {% for section in cms_sections %}
+    {% set props = section.props or {} %}
+    {% include "partials/cms/section_" + section.type + ".html" %}
+  {% else %}
+    <section class="cms-section cms-section--empty">
+      <div class="container">
+        <p>此頁尚無區塊內容。請從左側新增區塊。</p>
+      </div>
+    </section>
+  {% endfor %}
+</article>
+{% endblock %}
+{% block extra_scripts %}
+{% if cms_inline %}
+<script src="/js/cms-inline-edit.js?v=3"></script>
+{% endif %}
+{% endblock %}

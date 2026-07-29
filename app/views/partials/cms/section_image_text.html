@@ -1,0 +1,22 @@
+<section class="cms-section cms-image-text cms-image-text--{{ props.layout or 'left' }}" data-cms-section-id="{{ section.id }}" data-cms-section-type="image_text">
+  <div class="container cms-image-text__grid">
+    <figure class="cms-image-text__media">
+      {% if props.image_url %}
+      <img src="{{ props.image_url }}" alt="{{ props.image_alt or '' }}" loading="lazy" decoding="async" data-cms-editable="image_url" data-cms-prop="image_url">
+      {% endif %}
+    </figure>
+    <div class="cms-image-text__copy">
+      {% if props.title %}
+      <h2 data-cms-editable="text" data-cms-prop="title">{{ props.title }}</h2>
+      {% endif %}
+      {% if props.body %}
+      <div class="cms-body" data-cms-editable="text" data-cms-prop="body">{{ props.body }}</div>
+      {% endif %}
+      {% if props.cta_label %}
+      <div class="cms-actions">
+        <a class="cms-btn" href="{{ props.cta_href or '#' }}" data-cms-editable="button" data-cms-prop="cta_label" data-cms-href-prop="cta_href">{{ props.cta_label }}</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</section>

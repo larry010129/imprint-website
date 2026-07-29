@@ -1,0 +1,25 @@
+<section class="cms-section cms-embed" data-cms-section-id="{{ section.id }}" data-cms-section-type="faq_embed">
+  <div class="container">
+    <h2>常見問題</h2>
+    <div class="cms-embed__list">
+      {% if props.category_id %}
+        {% set items = cms_faq_by_category.get(props.category_id, []) %}
+      {% elif props.mode == 'all' %}
+        {% set items = cms_faq_all_items or [] %}
+      {% else %}
+        {% set items = cms_faq_items or [] %}
+      {% endif %}
+      {% for item in items[:props.limit|default(6)] %}
+      <article class="cms-embed__item">
+        <h3>{{ item.question }}</h3>
+        <p>{{ item.answer }}</p>
+      </article>
+      {% else %}
+      <p class="cms-body">目前尚無 FAQ。請至後台「內容」管理新增。</p>
+      {% endfor %}
+    </div>
+    <div class="cms-actions">
+      <a class="cms-btn" href="/faq.html">查看全部 FAQ</a>
+    </div>
+  </div>
+</section>

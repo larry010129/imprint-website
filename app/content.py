@@ -467,10 +467,14 @@ def fetch_page_image(cur, page_key: str, slot_key: str = "hero") -> dict | None:
 
 
 def parse_page_image_payload(body: dict | None) -> tuple[dict | None, str | None]:
+    from app.cms_boundary import assert_content_page_key
+
     body = body or {}
-    page_key = str(body.get("pageKey") or body.get("page_key") or "").strip()
-    if not page_key:
-        return None, "缺少 page_key"
+    page_key, key_err = assert_content_page_key(
+        str(body.get("pageKey") or body.get("page_key") or "")
+    )
+    if key_err:
+        return None, key_err
     slot_key = str(body.get("slotKey") or body.get("slot_key") or "").strip()
     if not slot_key:
         return None, "缺少 slot_key"
@@ -497,9 +501,11 @@ def parse_page_image_payload(body: dict | None) -> tuple[dict | None, str | None
 
 
 def _is_content_page_image_row(row: dict) -> bool:
+    from app.cms_boundary import is_reserved_page_key
+
     page_key = str(row.get("page_key") or "")
     group_key = str(row.get("group_key") or "")
-    if page_key.startswith("/shop/") or page_key.startswith("/jewelry/") or page_key == "/jewelry/":
+    if is_reserved_page_key(page_key):
         return False
     return group_key != "jewelry"
 

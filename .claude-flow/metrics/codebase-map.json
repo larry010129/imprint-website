@@ -1,11 +1,11 @@
 {
-  "timestamp": "2026-07-28T17:04:00.676Z",
-  "projectRoot": "C:\\Users\\yuzi0\\Documents\\Diamond web\\imprint-website",
+  "timestamp": "2026-07-29T11:12:23.305Z",
+  "projectRoot": "C:\\Users\\user\\Documents\\Diamond web\\imprint-website",
   "structure": {
     "hasPackageJson": true,
     "hasTsConfig": false,
     "hasClaudeConfig": true,
     "hasClaudeFlow": true
   },
-  "scannedAt": 1785258240678
+  "scannedAt": 1785323543306
 }

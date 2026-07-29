@@ -12,3 +12,5 @@ google-auth>=2.35.0
 requests>=2.32.0
 python-dotenv>=1.0.1
 python-multipart>=0.0.9
+pytest>=9.1.1
+httpx2>=2.9.1

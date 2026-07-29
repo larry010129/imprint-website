@@ -16,6 +16,7 @@ from app.controllers import (
     admin_controller,
     api_controller,
     auth_controller,
+    cms_admin_controller,
     notifications_controller,
     shop_controller,
     web_controller,
@@ -47,6 +48,10 @@ def _startup_seed_mode() -> str:
 async def lifespan(_app: FastAPI):
     from app.auth import ensure_google_id_column
     from app.database import get_connection
+    from app.cms_copy_slots import ensure_page_copy_slots_schema, seed_page_copy_slots
+    from app.cms_media import ensure_cms_media_schema
+    from app.cms_pages import ensure_cms_pages_schema
+    from app.cms_seed import remove_legacy_seeded_pages
     from app.content import ensure_banner_mobile_column, ensure_page_images_schema
     from app.membership_config import ensure_membership_schema
     from app.profile_schema import ensure_profile_address_columns
@@ -61,6 +66,11 @@ async def lifespan(_app: FastAPI):
             ensure_membership_schema(cur)
             ensure_page_images_schema(cur)
             ensure_banner_mobile_column(cur)
+            ensure_cms_pages_schema(cur)
+            ensure_page_copy_slots_schema(cur)
+            ensure_cms_media_schema(cur)
+            seed_page_copy_slots(cur)
+            remove_legacy_seeded_pages(cur)
     except Exception:
         pass
 
@@ -148,7 +158,8 @@ def create_app() -> FastAPI:
                 "https://cdn.botpress.cloud https://files.bpcontent.cloud "
                 "https://accounts.google.com https://oauth2.googleapis.com "
                 "https://people.googleapis.com; "
-                "frame-src https://www.google.com https://accounts.google.com "
+                # 'self' required for CMS page-builder preview iframe (/p/{slug}?preview=1)
+                "frame-src 'self' https://www.google.com https://accounts.google.com "
                 "https://www.youtube.com https://www.youtube-nocookie.com "
                 "https://*.botpress.cloud; "
                 "frame-ancestors 'self'; object-src 'none'; base-uri 'self'",
@@ -160,6 +171,7 @@ def create_app() -> FastAPI:
     application.include_router(notifications_controller.router, prefix="/api")
     application.include_router(shop_controller.router, prefix="/api")
     application.include_router(admin_controller.router, prefix="/api")
+    application.include_router(cms_admin_controller.router, prefix="/api")
     web_controller.register_pages(application)
     web_controller.mount_static(application)
     return application

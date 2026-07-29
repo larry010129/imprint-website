@@ -1,7 +1,7 @@
 {
-  "timestamp": "2026-07-28T06:31:57.518Z",
-  "backedUp": false,
-  "sizeBytes": 0,
-  "rotatedAway": 0,
-  "skipped": "better-sqlite3 unavailable"
+  "timestamp": "2026-07-29T09:37:23.139Z",
+  "backedUp": true,
+  "path": "C:\\Users\\user\\Documents\\Diamond web\\imprint-website\\.swarm\\backups\\memory-2026-07-29T09-37-23-098Z.db",
+  "sizeBytes": 659456,
+  "rotatedAway": 0
 }

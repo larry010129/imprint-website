@@ -1,0 +1,16 @@
+<section class="cms-section cms-cta" data-cms-section-id="{{ section.id }}" data-cms-section-type="cta_band">
+  <div class="container">
+    <h2 data-cms-editable="text" data-cms-prop="title">{{ props.title }}</h2>
+    {% if props.lead %}
+    <p class="cms-lead" data-cms-editable="text" data-cms-prop="lead">{{ props.lead }}</p>
+    {% endif %}
+    <div class="cms-actions">
+      {% if props.cta_label %}
+      <a class="cms-btn cms-btn--solid" href="{{ props.cta_href or '#' }}" data-cms-editable="button" data-cms-prop="cta_label" data-cms-href-prop="cta_href">{{ props.cta_label }}</a>
+      {% endif %}
+      {% if props.cta_secondary_label %}
+      <a class="cms-btn cms-btn--ghost" href="{{ props.cta_secondary_href or '#' }}" data-cms-editable="button" data-cms-prop="cta_secondary_label" data-cms-href-prop="cta_secondary_href">{{ props.cta_secondary_label }}</a>
+      {% endif %}
+    </div>
+  </div>
+</section>

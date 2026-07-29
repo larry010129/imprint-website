@@ -225,6 +225,64 @@
       createFaqItem: function (fields) { return request('/api/admin/faq-items', { method: 'POST', body: fields }); },
       updateFaqItem: function (fields) { return request('/api/admin/faq-update', { method: 'POST', body: fields }); },
       faqAction: function (id, action) { return request('/api/admin/faq-action', { method: 'POST', body: { id: id, action: action } }); },
+      createFaqCategory: function (fields) { return request('/api/admin/faq-categories', { method: 'POST', body: fields }); },
+      updateFaqCategory: function (fields) { return request('/api/admin/faq-category-update', { method: 'POST', body: fields }); },
+      faqCategoryAction: function (id, action) {
+        return request('/api/admin/faq-category-action', { method: 'POST', body: { id: id, action: action } });
+      },
+      listCmsPages: function () { return request('/api/admin/cms-pages'); },
+      getCmsPage: function (id) { return request('/api/admin/cms-pages/' + encodeURIComponent(id)); },
+      createCmsPage: function (fields) { return request('/api/admin/cms-pages', { method: 'POST', body: fields }); },
+      updateCmsPage: function (fields) { return request('/api/admin/cms-page-update', { method: 'POST', body: fields }); },
+      cmsPageAction: function (id, action) {
+        return request('/api/admin/cms-page-action', { method: 'POST', body: { id: id, action: action } });
+      },
+      createCmsSection: function (pageId, fields) {
+        return request('/api/admin/cms-pages/' + encodeURIComponent(pageId) + '/sections', {
+          method: 'POST',
+          body: fields,
+        });
+      },
+      updateCmsSection: function (fields) {
+        return request('/api/admin/cms-section-update', { method: 'POST', body: fields });
+      },
+      cmsSectionAction: function (id, action) {
+        return request('/api/admin/cms-section-action', { method: 'POST', body: { id: id, action: action } });
+      },
+      reorderCmsSections: function (pageId, sectionIds) {
+        return request('/api/admin/cms-pages/' + encodeURIComponent(pageId) + '/sections/reorder', {
+          method: 'PATCH',
+          body: { sectionIds: sectionIds },
+        });
+      },
+      getPageCopySlots: function () { return request('/api/admin/page-copy-slots'); },
+      updatePageCopySlot: function (fields) {
+        return request('/api/admin/page-copy-slot-update', { method: 'POST', body: fields });
+      },
+      getCmsMedia: function () { return request('/api/admin/cms-media'); },
+      uploadCmsMedia: function (file) {
+        var fd = new FormData();
+        fd.append('file', file);
+        return fetch(API_BASE + '/api/admin/cms-media-upload', {
+          method: 'POST',
+          credentials: 'include',
+          body: fd,
+        }).then(function (res) {
+          return res.json().catch(function () { return {}; }).then(function (data) {
+            if (!res.ok && !data.error) {
+              if (typeof data.detail === 'string') data.error = data.detail;
+              else data.error = 'HTTP ' + res.status;
+            }
+            data._httpStatus = res.status;
+            return data;
+          });
+        }).catch(function () {
+          return { error: '系統連線異常，請稍後再試。' };
+        });
+      },
+      cmsMediaAction: function (id, action) {
+        return request('/api/admin/cms-media-action', { method: 'POST', body: { id: id, action: action } });
+      },
       getBanners: function () { return request('/api/admin/banners'); },
       createBanner: function (fields) { return request('/api/admin/banners', { method: 'POST', body: fields }); },
       updateBanner: function (fields) { return request('/api/admin/banner-update', { method: 'POST', body: fields }); },

@@ -2048,10 +2048,17 @@ async def admin_page_image_create(request: Request) -> JSONResponse:
     body = await request.json()
     if not isinstance(body, dict):
         body = {}
-    page_key = str(body.get("pageKey") or body.get("page_key") or "").strip()
+    from app.cms_boundary import assert_content_page_key
+
+    page_key, key_err = assert_content_page_key(
+        str(body.get("pageKey") or body.get("page_key") or "")
+    )
     slot_key = str(body.get("slotKey") or body.get("slot_key") or "").strip()
-    if not page_key or not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,63}", slot_key):
-        return JSONResponse(status_code=400, content={"error": "invalid page_key/slot_key"})
+    if key_err or not slot_key or not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,63}", slot_key):
+        return JSONResponse(
+            status_code=400,
+            content={"error": key_err or "invalid page_key/slot_key"},
+        )
     from app.content import create_page_image_from_registry, ensure_page_images_schema
 
     with get_connection() as conn, conn.cursor() as cur:
