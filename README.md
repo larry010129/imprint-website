@@ -26,9 +26,21 @@ dev.bat                         # or: npm run dev
 
 Open the site at `http://127.0.0.1:8080/`.
 
-## Deploy (Render)
+## Deploy (Render) — production
 
 1. Connect repo → Blueprint from `render.yaml` (service: `imprint-api` only)
 2. Set env vars: `DATABASE_URL`, `JWT_SECRET`, etc. (see `.env.example`)
 3. Run `backend/schema.sql` once on the database
 4. **Start Command** must be `bash scripts/render-start.sh`
+
+## Cloudflare Workers (experimental only)
+
+`wrangler.toml` → `src/entry.py` (ASGI bridge). **Do not use for full production** — Workers/Pyodide cannot run `psycopg`, disk uploads, and most of this stack. Production stays on Render.
+
+```bash
+# needs Node + uv (https://docs.astral.sh/uv/)
+uvx --from workers-py pywrangler dev
+uvx --from workers-py pywrangler deploy
+```
+
+Plain `npx wrangler deploy` will fail or mis-handle Python packages — use **pywrangler**.

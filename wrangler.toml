@@ -1,4 +1,13 @@
+# Cloudflare Python Workers config.
+# Production site still deploys on Render — see scripts/render-start.sh / README.
+#
+# Commands (use pywrangler for Python Workers, not plain `wrangler deploy`):
+#   uvx --from workers-py pywrangler dev
+#   uvx --from workers-py pywrangler deploy
+#
+# Requires: Node + uv (https://docs.astral.sh/uv/)
+
 name = "imprint-website"
 main = "src/entry.py"
 compatibility_date = "2026-07-31"
-compatibility_flags = [ "python_workers" ]
+compatibility_flags = ["python_workers"]
