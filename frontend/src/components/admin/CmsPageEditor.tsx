@@ -763,6 +763,7 @@ export default function CmsPageEditor({ pageId, api, onBack, onDeleted }: CmsPag
         <CmsMediaModal
           media={media}
           onClose={() => setMediaOpen(false)}
+          onInvalid={(message) => notify(message, "error")}
           onUpload={(file) => {
             void api.uploadMedia(file).then((res) => {
               if (res.media) {

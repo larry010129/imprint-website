@@ -328,6 +328,7 @@ create table if not exists testimonials (
   role text not null default '',
   category text not null default '',
   city text not null default '',
+  country text not null default '',
   text text not null,
   image_url text not null default '',
   rating int not null default 5 check (rating >= 1 and rating <= 5),

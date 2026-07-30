@@ -124,18 +124,28 @@ def _join_shop_path(relative: str) -> str:
 _SHOP_ASSET_EXISTS_CACHE: dict[str, bool] = {}
 
 
-def _shop_asset_exists(url: str) -> bool:
-    if not url.startswith("/static/"):
+def static_url_exists(url: str | None) -> bool:
+    """True when URL is a local /static/ path and the file is on disk."""
+    if not url:
         return False
-    cached = _SHOP_ASSET_EXISTS_CACHE.get(url)
+    path = str(url).strip().split("?", 1)[0]
+    if path.startswith(("http://", "https://")):
+        return True
+    if not path.startswith("/static/"):
+        return False
+    cached = _SHOP_ASSET_EXISTS_CACHE.get(path)
     if cached is not None:
         return cached
     from config.settings import settings
 
-    rel = unquote(url[len("/static/") :])
+    rel = unquote(path[len("/static/") :])
     exists = (settings.static_dir / Path(rel)).is_file()
-    _SHOP_ASSET_EXISTS_CACHE[url] = exists
+    _SHOP_ASSET_EXISTS_CACHE[path] = exists
     return exists
+
+
+def _shop_asset_exists(url: str) -> bool:
+    return static_url_exists(url)
 
 
 def style_key_from_path(path: str | None) -> str | None:

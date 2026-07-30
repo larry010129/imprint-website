@@ -1,4 +1,4 @@
-﻿{% extends "layouts/base.html" %}
+{% extends "layouts/base.html" %}
 {% block content %}
 <section class="contact-section contact-section--intro">
   <div class="container contact-grid">
@@ -66,7 +66,11 @@
 
       <hr class="contact-form-panel__rule" />
 
-      <form id="contactForm" class="contact-form-panel__form" novalidate>
+      <form id="contactForm" class="contact-form-panel__form" novalidate
+        hx-post="/htmx/contact"
+        hx-target="#contactFormMsg"
+        hx-swap="innerHTML"
+        hx-disabled-elt="button[type=submit]">
         <p class="contact-form-panel__muted">留下簡短訊息</p>
         <div class="contact-form-panel__grid">
           <div class="form-field">
@@ -87,16 +91,10 @@
           <textarea id="cMessage" name="message" rows="4" placeholder="簡述您想了解的克拉、系列或預約時間…" required></textarea>
         </div>
         <button type="submit" class="contact-form-panel__submit" id="contactSubmitBtn">送出留言</button>
-        <p class="form-msg" id="contactFormMsg" role="status" aria-live="polite"></p>
+        <div id="contactFormMsg" role="status" aria-live="polite"></div>
       </form>
     </div>
   </div>
 </section>
 {% endblock %}
-{% block extra_scripts %}
-<script src="/static/js/api-client.js"></script>
-<script src="/static/js/mvc/core.js"></script>
-<script src="/static/js/mvc/models/contact-model.js"></script>
-<script src="/static/js/mvc/views/contact-view.js"></script>
-<script src="/static/js/mvc/controllers/contact-controller.js"></script>
-{% endblock %}
+

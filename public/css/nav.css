@@ -333,6 +333,79 @@
 
 
 
+/* SSR cart icon + badge (HTMX; login-gated via /htmx/nav-cart) */
+.nav-cart-link{
+  position:relative; display:inline-flex; align-items:center; justify-content:center;
+  width:36px; height:36px; color:var(--ink); text-decoration:none; margin-right:4px;
+  flex-shrink:0;
+}
+.nav-cart-icon{
+  display:block; width:22px; height:22px;
+}
+.nav-cart-badge{
+  min-width:18px; height:18px; padding:0 5px; border-radius:999px;
+  background:transparent; color:#fff; font-size:11px; font-weight:700;
+  line-height:18px; text-align:center; display:inline-block;
+}
+.nav-cart-badge.is-hot{ background:var(--mint-deep, #2a9d9d); }
+.nav-cart-link .nav-cart-badge{
+  position:absolute; top:1px; right:-2px; display:none;
+}
+.nav-cart-link .nav-cart-badge.is-hot{ display:inline-block; }
+.nav-cart-mobile-link{
+  position:relative; display:inline-flex; align-items:center; gap:10px;
+}
+.nav-cart-mobile-link .nav-cart-badge:not(.is-hot){ display:none; }
+
+/*
+  Contain frozen src.css .gradient-button::before (conic, inset:-160%).
+  Without overflow:hidden the flare paints over the whole hero.
+*/
+.gradient-button,
+.nav-gradient-cta{
+  position:relative;
+  isolation:isolate;
+  display:inline-flex;
+  padding:2px;
+  overflow:hidden;
+  border-radius:9px;
+  flex-shrink:0;
+}
+.nav-gradient-cta .gradient-button-inner{
+  min-width:0;
+  border-radius:7px;
+  padding:10px 16px;
+  font-size:12.5px;
+  line-height:1;
+  letter-spacing:.05em;
+  white-space:nowrap;
+  font-weight:500;
+}
+
+/* Mobile animated drawer — also in frozen src.css under [data-site-nav-root] */
+.mobile-animated-nav{
+  display:none;
+}
+@media (max-width: 860px){
+  .mobile-animated-nav{
+    display:block;
+    position:fixed;
+    inset:0;
+    z-index:110;
+    opacity:0;
+    visibility:hidden;
+    pointer-events:none;
+  }
+  .nav.is-mobile-menu-open .mobile-animated-nav,
+  .mobile-animated-nav.is-open{
+    opacity:1;
+    visibility:visible;
+    pointer-events:auto;
+  }
+  .site-nav-account-desktop{ display:none; }
+  .nav-burger.mobile-menu-toggle{ display:flex; }
+}
+
 /* 手機選單 */
 
 .nav-burger{ display:none; width:44px; height:44px; position:relative; flex-shrink:0; }

@@ -1,29 +1,7 @@
-# Dual Render: Next.js HTML edge + FastAPI JSON/static API
+# Single Render service: FastAPI + Jinja SSR (HTML + JSON + static)
 # Dashboard → Blueprints → Sync after push
 # https://render.com/docs/blueprint-spec
 services:
-  - type: web
-    name: imprint-web
-    runtime: node
-    plan: free
-    rootDir: apps/web
-    buildCommand: bash ../../scripts/render-build-web.sh
-    startCommand: bash ../../scripts/render-start-web.sh
-    healthCheckPath: /health
-    envVars:
-      - key: NODE_VERSION
-        value: "22.14.0"
-      - key: API_PROXY_TARGET
-        fromService:
-          name: imprint-api
-          type: web
-          property: host
-      - key: API_INTERNAL_BASE
-        fromService:
-          name: imprint-api
-          type: web
-          property: host
-
   - type: web
     name: imprint-api
     runtime: python
@@ -36,8 +14,3 @@ services:
         value: "3.12.8"
       - key: NO_OPEN
         value: "1"
-      - key: NEXT_PUBLIC_ORIGIN
-        fromService:
-          name: imprint-web
-          type: web
-          property: host

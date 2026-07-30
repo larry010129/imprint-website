@@ -1,7 +1,6 @@
-﻿{% extends "layouts/base.html" %}
+{% extends "layouts/base.html" %}
 {% block extra_css %}
 <link rel="stylesheet" href="/static/css/member-app.css?v=2">
-{% include "partials/profile-react-css.html" %}
 {% endblock %}
 {% block content %}
 <section class="page-section member-app profile-page-shell" aria-label="帳戶設定">
@@ -11,11 +10,13 @@
         <p class="eyebrow">ACCOUNT</p>
         <h1 class="price-reference-title">帳戶設定</h1>
       </div>
-      <div data-profile-root></div>
+      <div id="htmx-profile"
+        hx-get="/htmx/profile"
+        hx-trigger="load"
+        hx-swap="innerHTML">
+        <div class="skel-panel" aria-busy="true"><span class="skel-line skel-line--medium"></span></div>
+      </div>
     </div>
   </div>
 </section>
-{% endblock %}
-{% block extra_scripts %}
-{% include "partials/profile-react-js.html" %}
 {% endblock %}

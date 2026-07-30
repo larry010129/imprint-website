@@ -1,0 +1,77 @@
+{% if guest %}
+<div class="member-state member-state--empty">
+  <p>請先登入以查看購物車。</p>
+  <a href="/login.html?next=/cart.html" class="btn btn-mint">會員登入</a>
+</div>
+{% elif not items %}
+<div class="member-state member-state--empty" id="cart-empty">
+  <p>購物車目前是空的。</p>
+  <a href="/shop/calculator/" class="btn btn-mint">前往品項訂製</a>
+</div>
+{% else %}
+<div class="member-cart-toolbar">
+  <label><input type="checkbox" id="cart-select-all" checked data-cart-select-all> 全選</label>
+</div>
+<ul class="member-cart-list" id="cart-list">
+  {% for item in items %}
+  <li class="member-cart-item" data-cart-id="{{ item.id }}">
+    <label class="member-cart-item__check">
+      <input type="checkbox" name="itemIds" value="{{ item.id }}" checked data-cart-check data-price="{{ item.total_price or 0 }}">
+    </label>
+    {% if item.image_url %}
+    <img class="member-cart-item__thumb" src="{{ item.image_url }}" alt="" loading="lazy" width="72" height="72">
+    {% endif %}
+    <div class="member-cart-item__body">
+      <p class="member-cart-item__summary">{{ item.summary_zh or '訂製品項' }}</p>
+      <strong class="member-cart-item__price">{{ format_twd(item.total_price) }}</strong>
+    </div>
+    <div class="member-cart-item__actions">
+      <a class="btn btn-line" href="/shop/calculator/?cart_edit={{ item.id }}">編輯</a>
+      <button type="button" class="btn btn-line"
+        hx-post="/htmx/cart/delete"
+        hx-vals='{"id":"{{ item.id }}"}'
+        hx-target="#htmx-cart"
+        hx-confirm="移除此品項？">移除</button>
+    </div>
+  </li>
+  {% endfor %}
+</ul>
+<div class="member-cart-summary">
+  <div class="member-cart-summary__row">
+    <span id="cart-selected-label">已選 {{ items|length }} 件</span>
+    {% set ns = namespace(total=0) %}{% for item in items %}{% set ns.total = ns.total + (item.total_price or 0) %}{% endfor %}
+    <strong id="cart-selected-total">{{ format_twd(ns.total) }}</strong>
+  </div>
+  <button type="button" class="btn btn-dark" id="cart-checkout-btn" data-cart-checkout>訂購已選品項</button>
+  <a href="/shop/calculator/" class="member-cart-continue">繼續選購</a>
+</div>
+<script>
+(function(){
+  var root=document.getElementById('htmx-cart'); if(!root) return;
+  function sync(){
+    var boxes=[].slice.call(root.querySelectorAll('[data-cart-check]'));
+    var selected=boxes.filter(function(b){return b.checked;});
+    var total=selected.reduce(function(s,b){return s+(parseFloat(b.dataset.price)||0);},0);
+    var lab=root.querySelector('#cart-selected-label');
+    var tot=root.querySelector('#cart-selected-total');
+    if(lab) lab.textContent='已選 '+selected.length+' 件';
+    if(tot) tot.textContent='NT$'+Math.round(total).toLocaleString('zh-Hant-TW');
+    var all=root.querySelector('[data-cart-select-all]');
+    if(all) all.checked=selected.length===boxes.length && boxes.length>0;
+  }
+  root.addEventListener('change',function(e){
+    if(e.target.matches('[data-cart-select-all]')){
+      root.querySelectorAll('[data-cart-check]').forEach(function(b){b.checked=e.target.checked;});
+    }
+    sync();
+  });
+  var btn=root.querySelector('[data-cart-checkout]');
+  if(btn) btn.addEventListener('click',function(){
+    var ids=[].slice.call(root.querySelectorAll('[data-cart-check]:checked')).map(function(b){return b.value;});
+    if(!ids.length){alert('請至少選擇一件品項');return;}
+    location.href='/checkout.html?items='+encodeURIComponent(ids.join(','));
+  });
+  sync();
+})();
+</script>
+{% endif %}

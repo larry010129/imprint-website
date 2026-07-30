@@ -1,0 +1,4 @@
+name = "imprint-website"
+main = "src/entry.py"
+compatibility_date = "2026-07-31"
+compatibility_flags = [ "python_workers" ]

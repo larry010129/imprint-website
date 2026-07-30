@@ -7,17 +7,20 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from fastapi import APIRouter, File, HTTPException, Query, Request, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import JSONResponse, Response
 from psycopg.types.json import Jsonb
 
 from app.admin_dashboard import build_dashboard_csv, build_dashboard_payload, normalize_range
 from app.admin_products import (
     CATEGORY_LABELS,
+    append_product_image,
+    ensure_product_sell_mode_columns,
     first_published_at_value,
     publish_readiness,
     save_product_children,
     serialize_product_row,
+    valid_image_color,
     validate_product_fields,
 )
 from app.auth import (
@@ -430,6 +433,7 @@ _CATEGORY_UPLOAD_DIR = settings.static_dir / "uploads" / "categories"
 _BANNER_UPLOAD_DIR = settings.static_dir / "uploads" / "banners"
 _TESTIMONIAL_UPLOAD_DIR = settings.static_dir / "uploads" / "testimonials"
 _ALLOWED_IMAGE_EXT = {".png", ".jpg", ".jpeg", ".webp"}
+_ALLOWED_IMAGE_MIME = {"image/png", "image/jpeg", "image/webp"}
 _MAX_IMAGE_BYTES = 1 * 1024 * 1024
 
 
@@ -443,26 +447,65 @@ def _image_signature_matches(data: bytes, ext: str) -> bool:
     return False
 
 
+def _image_upload_error(file: UploadFile, data: bytes, ext: str) -> str | None:
+    """Reject non-image MIME/ext, oversize, or magic-byte mismatch."""
+    if ext not in _ALLOWED_IMAGE_EXT:
+        return "僅支援 PNG / JPG / JPEG / WEBP"
+    ct = (file.content_type or "").split(";")[0].strip().lower()
+    if ct and ct not in _ALLOWED_IMAGE_MIME and ct not in {
+        "application/octet-stream",
+        "binary/octet-stream",
+    }:
+        return "僅支援 PNG / JPG / JPEG / WEBP"
+    if not data:
+        return "empty file"
+    if len(data) > _MAX_IMAGE_BYTES:
+        return "圖片需小於 1MB"
+    if not _image_signature_matches(data, ext):
+        return "檔案內容與副檔名不符"
+    return None
+
+
 @router.post("/product-upload")
-async def product_upload(request: Request, file: UploadFile = File(...)) -> JSONResponse:
+async def product_upload(
+    request: Request,
+    file: UploadFile = File(...),
+    product_id: str | None = Form(None),
+    color: str | None = Form(None),
+) -> JSONResponse:
+    """Write bytes to disk; when product_id+color given, also insert product_images row."""
     _require_admin(request)
     if not file.filename:
         return JSONResponse(status_code=400, content={"error": "missing file"})
 
     ext = Path(file.filename).suffix.lower()
-    if ext not in _ALLOWED_IMAGE_EXT:
-        return JSONResponse(status_code=400, content={"error": "僅支援 PNG / JPG / JPEG / WEBP"})
-
     data = await file.read()
-    if not data:
-        return JSONResponse(status_code=400, content={"error": "empty file"})
-    if len(data) > _MAX_IMAGE_BYTES:
-        return JSONResponse(status_code=400, content={"error": "圖片需小於 1MB"})
+    err = _image_upload_error(file, data, ext)
+    if err:
+        return JSONResponse(status_code=400, content={"error": err})
 
     _PRODUCT_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     name = f"{uuid.uuid4().hex}{ext}"
     (_PRODUCT_UPLOAD_DIR / name).write_bytes(data)
-    return JSONResponse(content={"url": f"/static/uploads/products/{name}"})
+    url = f"/static/uploads/products/{name}"
+
+    pid = (product_id or "").strip()
+    slot = (color or "").strip().lower()
+    image_row = None
+    if pid and slot:
+        if not valid_image_color(slot):
+            return JSONResponse(status_code=400, content={"error": "圖片選項代碼無效", "url": url})
+        with get_transaction() as conn, conn.cursor() as cur:
+            image_row = append_product_image(cur, pid, slot, url)
+        if image_row and image_row.get("id") is not None:
+            image_row["id"] = str(image_row["id"])
+        if image_row and image_row.get("product_id") is not None:
+            image_row["product_id"] = str(image_row["product_id"])
+
+    payload: dict = {"url": url}
+    if image_row:
+        payload["image"] = image_row
+    return JSONResponse(content=payload)
 
 
 @router.post("/product-category")
@@ -502,14 +545,10 @@ async def product_category_upload(
         return JSONResponse(status_code=400, content={"error": "missing file"})
 
     ext = Path(file.filename).suffix.lower()
-    if ext not in _ALLOWED_IMAGE_EXT:
-        return JSONResponse(status_code=400, content={"error": "僅支援 PNG / JPG / JPEG / WEBP"})
-
     data = await file.read()
-    if not data:
-        return JSONResponse(status_code=400, content={"error": "empty file"})
-    if len(data) > _MAX_IMAGE_BYTES:
-        return JSONResponse(status_code=400, content={"error": "圖片需小於 1MB"})
+    err = _image_upload_error(file, data, ext)
+    if err:
+        return JSONResponse(status_code=400, content={"error": err})
 
     _CATEGORY_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     name = f"{slug}{ext}"
@@ -575,6 +614,7 @@ async def products_create(request: Request) -> JSONResponse:
 
     first_published = first_published_at_value(None, cleaned["isPublished"])
     with get_transaction() as conn, conn.cursor() as cur:
+        ensure_product_sell_mode_columns(cur)
         cur.execute(
             """
             insert into products (
@@ -621,6 +661,7 @@ async def product_update(request: Request) -> JSONResponse:
         return JSONResponse(status_code=400, content={"error": error})
 
     with get_transaction() as conn, conn.cursor() as cur:
+        ensure_product_sell_mode_columns(cur)
         cur.execute(
             "select id, is_published, first_published_at from products where id = %s",
             (product_id,),
@@ -671,6 +712,7 @@ async def product_action(request: Request) -> JSONResponse:
         return JSONResponse(status_code=400, content={"error": "invalid id/action"})
 
     with get_transaction() as conn, conn.cursor() as cur:
+        ensure_product_sell_mode_columns(cur)
         cur.execute("select * from products where id = %s", (product_id,))
         product = cur.fetchone()
         if not product:
@@ -1498,9 +1540,10 @@ async def coupon_action(request: Request) -> JSONResponse:
 @router.get("/testimonials")
 async def admin_testimonials_list(request: Request) -> dict:
     _require_admin(request)
-    from app.content import fetch_all_testimonials
+    from app.content import ensure_testimonial_country_column, fetch_all_testimonials
 
     with get_connection() as conn, conn.cursor() as cur:
+        ensure_testimonial_country_column(cur)
         return {"testimonials": fetch_all_testimonials(cur)}
 
 
@@ -1513,6 +1556,7 @@ async def admin_testimonials_create(request: Request) -> JSONResponse:
 
     from app.content import (
         apply_testimonial_sort_order,
+        ensure_testimonial_country_column,
         next_testimonial_sort_order,
         parse_testimonial_payload,
         serialize_testimonial,
@@ -1524,12 +1568,13 @@ async def admin_testimonials_create(request: Request) -> JSONResponse:
 
     explicit_sort = body.get("sortOrder") not in (None, "")
     with get_transaction() as conn, conn.cursor() as cur:
+        ensure_testimonial_country_column(cur)
         sort_order = next_testimonial_sort_order(cur)
         cur.execute(
             """
             insert into testimonials (
-              name, role, category, city, text, image_url, rating, sort_order, is_published
-            ) values (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+              name, role, category, city, country, text, image_url, rating, sort_order, is_published
+            ) values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             returning *
             """,
             (
@@ -1537,6 +1582,7 @@ async def admin_testimonials_create(request: Request) -> JSONResponse:
                 cleaned["role"],
                 cleaned["category"],
                 cleaned["city"],
+                cleaned.get("country") or "",
                 cleaned["text"],
                 cleaned["image_url"],
                 cleaned["rating"],
@@ -1567,13 +1613,10 @@ async def testimonial_upload(request: Request, file: UploadFile = File(...)) -> 
     if not file.filename:
         return JSONResponse(status_code=400, content={"error": "missing file"})
     ext = Path(file.filename).suffix.lower()
-    if ext not in _ALLOWED_IMAGE_EXT:
-        return JSONResponse(status_code=400, content={"error": "僅支援 PNG / JPG / JPEG / WEBP"})
     data = await file.read()
-    if not data:
-        return JSONResponse(status_code=400, content={"error": "empty file"})
-    if len(data) > _MAX_IMAGE_BYTES:
-        return JSONResponse(status_code=400, content={"error": "圖片需小於 1MB"})
+    err = _image_upload_error(file, data, ext)
+    if err:
+        return JSONResponse(status_code=400, content={"error": err})
     _TESTIMONIAL_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     name = f"{uuid.uuid4().hex}{ext}"
     (_TESTIMONIAL_UPLOAD_DIR / name).write_bytes(data)
@@ -1587,7 +1630,12 @@ async def admin_testimonials_update(request: Request) -> JSONResponse:
     if not isinstance(body, dict):
         body = {}
 
-    from app.content import apply_testimonial_sort_order, parse_testimonial_payload, serialize_testimonial
+    from app.content import (
+        apply_testimonial_sort_order,
+        ensure_testimonial_country_column,
+        parse_testimonial_payload,
+        serialize_testimonial,
+    )
 
     tid = body.get("id")
     if not tid:
@@ -1599,6 +1647,7 @@ async def admin_testimonials_update(request: Request) -> JSONResponse:
     explicit_sort = body.get("sortOrder") not in (None, "")
 
     with get_transaction() as conn, conn.cursor() as cur:
+        ensure_testimonial_country_column(cur)
         cur.execute("select sort_order from testimonials where id = %s", (tid,))
         existing = cur.fetchone()
         if not existing:
@@ -1607,7 +1656,7 @@ async def admin_testimonials_update(request: Request) -> JSONResponse:
         cur.execute(
             """
             update testimonials set
-              name = %s, role = %s, category = %s, city = %s, text = %s,
+              name = %s, role = %s, category = %s, city = %s, country = %s, text = %s,
               image_url = %s, rating = %s, is_published = %s, updated_at = now()
             where id = %s
             returning *
@@ -1617,6 +1666,7 @@ async def admin_testimonials_update(request: Request) -> JSONResponse:
                 cleaned["role"],
                 cleaned["category"],
                 cleaned["city"],
+                cleaned.get("country") or "",
                 cleaned["text"],
                 cleaned["image_url"],
                 cleaned["rating"],
@@ -1899,13 +1949,10 @@ async def banner_upload(request: Request, file: UploadFile = File(...)) -> JSONR
     if not file.filename:
         return JSONResponse(status_code=400, content={"error": "missing file"})
     ext = Path(file.filename).suffix.lower()
-    if ext not in _ALLOWED_IMAGE_EXT:
-        return JSONResponse(status_code=400, content={"error": "僅支援 PNG / JPG / JPEG / WEBP"})
     data = await file.read()
-    if not data:
-        return JSONResponse(status_code=400, content={"error": "empty file"})
-    if len(data) > _MAX_IMAGE_BYTES:
-        return JSONResponse(status_code=400, content={"error": "圖片需小於 1MB"})
+    err = _image_upload_error(file, data, ext)
+    if err:
+        return JSONResponse(status_code=400, content={"error": err})
     _BANNER_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     name = f"{uuid.uuid4().hex}{ext}"
     (_BANNER_UPLOAD_DIR / name).write_bytes(data)
@@ -2115,15 +2162,10 @@ async def page_image_upload(request: Request, file: UploadFile = File(...)) -> J
     if not file.filename:
         return JSONResponse(status_code=400, content={"error": "missing file"})
     ext = Path(file.filename).suffix.lower()
-    if ext not in _ALLOWED_IMAGE_EXT:
-        return JSONResponse(status_code=400, content={"error": "僅支援 PNG / JPG / JPEG / WEBP"})
     data = await file.read()
-    if not data:
-        return JSONResponse(status_code=400, content={"error": "empty file"})
-    if len(data) > _MAX_IMAGE_BYTES:
-        return JSONResponse(status_code=400, content={"error": "圖片需小於 1MB"})
-    if not _image_signature_matches(data, ext):
-        return JSONResponse(status_code=400, content={"error": "圖片格式與副檔名不符"})
+    err = _image_upload_error(file, data, ext)
+    if err:
+        return JSONResponse(status_code=400, content={"error": err})
     _PAGE_IMAGE_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     name = f"{uuid.uuid4().hex}{ext}"
     (_PAGE_IMAGE_UPLOAD_DIR / name).write_bytes(data)

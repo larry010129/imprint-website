@@ -1,14 +1,12 @@
 {
   "name": "imprint-diamond-site",
   "private": true,
-  "description": "Next.js HTML edge (apps/web) + FastAPI JSON/static API. Pricing SoT: app/pricing.py.",
+  "description": "FastAPI + Jinja SSR + HTMX on :8080. Pricing SoT: app/pricing.py. React: admin-tables only.",
   "scripts": {
     "dev": "python -m uvicorn main:app --reload --host 127.0.0.1 --port 8080",
-    "dev:web": "npm run dev --prefix apps/web",
+    "dev:api": "python -m uvicorn main:app --reload --host 127.0.0.1 --port 8080",
     "build:frontend": "npm run build --prefix frontend",
-    "build:web": "npm run build --prefix apps/web",
     "export:site": "python scripts/export_site_content.py",
-    "generate:routes": "python scripts/generate_next_routes.py",
     "fetch:gold": "python scripts/fetch_gold_quote.py"
   }
 }

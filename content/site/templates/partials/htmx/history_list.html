@@ -1,0 +1,18 @@
+{% if guest %}
+<div class="member-state member-state--empty">
+  <p>請先登入以查看訂購紀錄。</p>
+  <a href="/login.html?next=/history.html" class="btn btn-mint">會員登入</a>
+</div>
+{% elif not orders %}
+<div class="member-state member-state--empty"><p>尚無訂購紀錄。</p></div>
+{% else %}
+<ul class="member-order-list">
+  {% for order in orders %}
+  <li class="member-order-item">
+    <strong>{{ order.order_number }}</strong>
+    <span>{{ order.status_label or order.status or '—' }}</span>
+    <span>{{ format_twd(order.total_price or order.total) }}</span>
+  </li>
+  {% endfor %}
+</ul>
+{% endif %}

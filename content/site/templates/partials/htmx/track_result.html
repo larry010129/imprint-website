@@ -1,0 +1,13 @@
+{% if error %}
+<p class="form-msg is-error" role="alert">{{ error }}</p>
+{% elif not rows %}
+<p class="form-msg" role="status">查無符合的訂單，請確認編號與電話。</p>
+{% else %}
+{% for order in rows %}
+<article class="order-result-card">
+  <h2>{{ order.order_number }}</h2>
+  <p>狀態：{{ order.status_label or order.status or '—' }}</p>
+  {% if order.summary_zh %}<p>{{ order.summary_zh }}</p>{% endif %}
+</article>
+{% endfor %}
+{% endif %}

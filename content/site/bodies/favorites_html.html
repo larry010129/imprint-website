@@ -1,3 +1,4 @@
+
 <section aria-label="收藏款式" class="page-section member-app" id="mvc-favorites">
 <div class="container">
 <div class="price-reference member-panel">
@@ -6,10 +7,9 @@
 <h1 class="price-reference-title">收藏款式</h1>
 <p class="price-reference-lead">快速載入常用配置，並以目前金價重新試算。</p>
 </div>
-<div aria-busy="true" class="skel-panel" id="favorites-loading">
-<div class="skel-fav-grid"><div class="skel-fav-card"><div class="skel-fav-card__img"></div><div class="skel-fav-card__body"><span class="skel-line skel-line--long"></span><span class="skel-line skel-line--medium"></span></div></div><div class="skel-fav-card"><div class="skel-fav-card__img"></div><div class="skel-fav-card__body"><span class="skel-line skel-line--long"></span><span class="skel-line skel-line--medium"></span></div></div></div>
+<div hx-get="/htmx/favorites" hx-swap="innerHTML" hx-trigger="load" id="htmx-favorites">
+<div aria-busy="true" class="skel-panel"><div class="skel-fav-grid"><div class="skel-fav-card"><div class="skel-fav-card__img"></div></div></div></div>
 </div>
-<div class="member-favorites-grid hidden" id="favorites-grid"></div>
 </div>
 </div>
 </section>

@@ -125,22 +125,20 @@
             (on ? '前台會依門檻計算並顯示會員／合作等級。' : '前台不啟動會員等級制度；儲存後立即生效。') +
           '</p>' +
         '</div>' +
-        '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
-          '<button type="button" class="btn-sm' + (on ? ' btn-primary' : '') + '" id="btnMembershipOn">開啟制度</button>' +
-          '<button type="button" class="btn-sm' + (!on ? ' btn-primary' : '') + '" id="btnMembershipOff">關閉制度</button>' +
+        '<div class="ap-sell-mode-dual' + (on ? ' is-chain' : '') + '" role="group" aria-label="會員制度總開關" data-mode="' + (on ? 'on' : 'off') + '">' +
+          '<span class="ap-sell-mode-side" data-side="only" aria-hidden="true">關閉制度</span>' +
+          '<label class="ap-switch ap-cine-switch">' +
+            '<input type="checkbox" class="ap-switch-input" id="membershipEnabledToggle"' +
+              (on ? ' checked' : '') + ' aria-label="會員制度：開啟或關閉">' +
+            '<span class="ap-cine-track" aria-hidden="true"><span class="ap-cine-thumb"></span></span>' +
+          '</label>' +
+          '<span class="ap-sell-mode-side" data-side="chain" aria-hidden="true">開啟制度</span>' +
         '</div>' +
       '</div>';
-    var btnOn = document.getElementById('btnMembershipOn');
-    var btnOff = document.getElementById('btnMembershipOff');
-    if (btnOn) {
-      btnOn.addEventListener('click', function () {
-        state.config.enabled = true;
-        renderMaster();
-      });
-    }
-    if (btnOff) {
-      btnOff.addEventListener('click', function () {
-        state.config.enabled = false;
+    var toggle = document.getElementById('membershipEnabledToggle');
+    if (toggle) {
+      toggle.addEventListener('change', function () {
+        state.config.enabled = !!toggle.checked;
         renderMaster();
       });
     }

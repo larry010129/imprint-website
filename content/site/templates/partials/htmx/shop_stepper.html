@@ -1,0 +1,39 @@
+<nav class="shop-stepper" id="shop-step-rail" aria-label="訂製步驟">
+  <a
+    href="/shop/calculator/{% if preview %}?preview=1{% endif %}"
+    class="shop-stepper-step{% if step == 'catalog' %} is-active{% elif step in ('styles', 'product') %} is-done{% endif %}"
+    data-step="catalog"
+    hx-get="/htmx/shop/step/catalog{% if preview %}?preview=1{% endif %}"
+    hx-target="#shop-htmx-root"
+    hx-swap="innerHTML"
+  >
+    <span class="shop-stepper-bar" aria-hidden="true"></span>
+    <span class="shop-stepper-label">選品項</span>
+  </a>
+  <button
+    type="button"
+    class="shop-stepper-step{% if step == 'styles' %} is-active{% elif step == 'product' %} is-done{% endif %}"
+    data-step="styles"
+    {% if not category %}disabled{% else %}
+    hx-get="/htmx/shop/step/styles?category={{ category }}{% if preview %}&preview=1{% endif %}"
+    hx-target="#shop-htmx-root"
+    hx-swap="innerHTML"
+    {% endif %}
+  >
+    <span class="shop-stepper-bar" aria-hidden="true"></span>
+    <span class="shop-stepper-label">選款式</span>
+  </button>
+  <button
+    type="button"
+    class="shop-stepper-step{% if step == 'product' %} is-active{% endif %}"
+    data-step="product"
+    {% if not product %}disabled{% else %}
+    hx-get="/htmx/shop/step/configure?category={{ category }}&type={{ product.id }}{% if preview %}&preview=1{% endif %}"
+    hx-target="#shop-htmx-root"
+    hx-swap="innerHTML"
+    {% endif %}
+  >
+    <span class="shop-stepper-bar" aria-hidden="true"></span>
+    <span class="shop-stepper-label">配置下單</span>
+  </button>
+</nav>

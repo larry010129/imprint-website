@@ -11,7 +11,43 @@
 </button>
 <div class="login-card">
 <div class="login-card-inner">
-<div data-auth-login-root="" data-google-client-id=""></div>
+<div class="login-header">
+<h1>會員登入</h1>
+<p>登入後可查詢訂製進度、管理購物車與帳戶資料。</p>
+</div>
+<div id="auth-form-msg"></div>
+<form class="login-form" hx-disabled-elt="button[type=submit]" hx-post="/htmx/auth/login" hx-swap="innerHTML" hx-target="#auth-form-msg">
+<input name="next" type="hidden" value="/account.html"/>
+<div class="form-field">
+<input autocomplete="username" id="lEmail" name="email" placeholder=" " required="" type="email"/>
+<label for="lEmail">電子郵件</label>
+</div>
+<div class="form-field">
+<input autocomplete="current-password" id="lPassword" name="password" placeholder=" " required="" type="password"/>
+<label for="lPassword">密碼</label>
+<button aria-label="顯示密碼" class="toggle-password" data-auth-toggle-password="" type="button">
+<svg aria-hidden="true" data-auth-eye-icon="" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"></path><circle cx="12" cy="12" r="3"></circle></svg>
+<svg aria-hidden="true" data-auth-eye-off-icon="" fill="none" hidden="" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"><path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"></path><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"></path><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"></path><path d="m2 2 20 20"></path></svg>
+</button>
+</div>
+<label class="partner-check">
+<input checked="" name="remember" type="checkbox" value="1"/>
+<span class="checkmark"></span>
+      記住我
+    </label>
+<button class="login-button" type="submit">登入</button>
+</form>
+<p class="signup-prompt">
+<a href="#" id="forgot-toggle">忘記密碼？</a>
+    · 還不是會員？<a href="/register.html">立即註冊</a>
+</p>
+<form class="login-form" hidden="" hx-post="/htmx/auth/request-reset" hx-swap="innerHTML" hx-target="#auth-form-msg" id="forgot-form">
+<div class="form-field">
+<input autocomplete="username" id="fEmail" name="email" placeholder=" " required="" type="email"/>
+<label for="fEmail">註冊用 Email</label>
+</div>
+<button class="login-button" type="submit">寄送重設連結</button>
+</form>
 </div>
 </div>
 </div>

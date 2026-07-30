@@ -7,7 +7,8 @@ import logging
 from pathlib import Path
 
 from app.database import get_connection
-from app.image_urls import catalog_image_slot_urls, style_key_from_path
+from app.admin_products import is_dead_catalog_placeholder
+from app.image_urls import catalog_image_slot_urls, resolve_product_image_url, static_url_exists, style_key_from_path
 
 log = logging.getLogger(__name__)
 
@@ -34,9 +35,16 @@ def _product_style_key(
         style_key = style_key_from_path(image.get("file_path"))
         if style_key:
             return style_key
-    return seed_styles.get(
+    by_name = seed_styles.get(
         (str(product.get("category") or ""), str(product.get("name_zh") or ""))
     )
+    if by_name:
+        return by_name
+    category = (product.get("category") or "").strip().lower()
+    order = int(product.get("sort_order") or 0)
+    if category and 0 <= order <= 25:
+        return f"{category}-{chr(ord('A') + order)}"
+    return None
 
 
 def backfill_catalog_image_slots(cur, seed_rows: list[dict]) -> tuple[int, int]:
@@ -80,6 +88,20 @@ def backfill_catalog_image_slots(cur, seed_rows: list[dict]) -> tuple[int, int]:
                 cur.execute(
                     "update product_images set color = %s where id = %s",
                     (color, image["id"]),
+                )
+                normalized += 1
+            # Replace seed SVG /styles placeholders and missing-on-disk uploads.
+            path = image.get("file_path")
+            resolved = resolve_product_image_url(path) if path else ""
+            path_dead = is_dead_catalog_placeholder(path) or (
+                bool(resolved)
+                and resolved.startswith("/static/")
+                and not static_url_exists(resolved)
+            )
+            if color in desired and path_dead:
+                cur.execute(
+                    "update product_images set file_path = %s where id = %s",
+                    (desired[color], image["id"]),
                 )
                 normalized += 1
             existing_keys.add(color)

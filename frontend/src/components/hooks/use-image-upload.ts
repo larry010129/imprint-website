@@ -7,20 +7,11 @@ import {
   type DragEvent,
 } from "react";
 
-const DEFAULT_ACCEPT = "image/png,image/jpeg,image/webp";
+import { IMAGE_ACCEPT, validateImageFile } from "@/lib/image-file";
+
+const DEFAULT_ACCEPT = IMAGE_ACCEPT;
 // Selected sources are resized and compressed before upload.
 const DEFAULT_MAX_BYTES = 20 * 1024 * 1024;
-
-function isAcceptedType(file: File, accept: string) {
-  const tokens = accept.split(",").map((t) => t.trim()).filter(Boolean);
-  if (tokens.length === 0) return true;
-  return tokens.some((token) => {
-    if (token.endsWith("/*")) {
-      return file.type.startsWith(token.slice(0, -1));
-    }
-    return file.type === token;
-  });
-}
 
 export type UseImageUploadOptions = {
   accept?: string;
@@ -69,12 +60,9 @@ export function useImageUpload({
         setPreviewUrl(initialPreviewUrl);
         return;
       }
-      if (!isAcceptedType(next, accept)) {
-        reportError("僅支援 PNG / JPG / WEBP");
-        return;
-      }
-      if (next.size > maxSizeBytes) {
-        reportError("來源圖片需小於 20MB");
+      const err = validateImageFile(next, maxSizeBytes);
+      if (err) {
+        reportError(err);
         return;
       }
       const objectUrl = URL.createObjectURL(next);
@@ -82,7 +70,7 @@ export function useImageUpload({
       setFile(next);
       setPreviewUrl(objectUrl);
     },
-    [accept, cleanupObjectUrl, initialPreviewUrl, maxSizeBytes, reportError],
+    [cleanupObjectUrl, initialPreviewUrl, maxSizeBytes, reportError],
   );
 
   const openFilePicker = useCallback(() => {

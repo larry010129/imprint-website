@@ -1,0 +1,37 @@
+<div class="shop-page shop-fit shop-wizard" id="shop-page" data-shop-htmx="1"{% if preview %} data-shop-preview="1"{% endif %}>
+  <header class="shop-wizard-header" id="shop-wizard-header">
+    {% include "partials/htmx/shop_stepper.html" %}
+    <div class="shop-wizard-guide" id="shop-wizard-guide">
+      <p class="shop-wizard-eyebrow">線上訂製 · 三步完成{% if preview %} · 預覽{% endif %}</p>
+      <h1 class="shop-wizard-title">先選擇您要的品項</h1>
+      <p class="shop-wizard-desc">紀念鑽石、戒指、項墜、耳飾、手鍊或鍊條——點選一個類別即可開始。</p>
+    </div>
+  </header>
+
+  <section id="shop-catalog" class="shop-section shop-section--focus">
+    <h2 class="shop-section-title">選擇品項</h2>
+    {% if tiles %}
+    <div class="catalog-grid" id="catalog-grid" aria-busy="false">
+      {% for tile in tiles %}
+      <button
+        type="button"
+        class="catalog-tile cat-btn"
+        data-cat="{{ tile.slug }}"
+        hx-get="/htmx/shop/step/styles?category={{ tile.slug }}{% if preview %}&preview=1{% endif %}"
+        hx-target="#shop-htmx-root"
+        hx-swap="innerHTML"
+      >
+        {% if tile.thumb %}
+        <img src="{{ tile.thumb }}" alt="" loading="lazy" width="160" height="160">
+        {% endif %}
+        <span class="catalog-tile-label">{{ tile.label }}</span>
+      </button>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="catalog-filter-empty" id="catalog-empty">
+      <p>目前沒有上架商品。</p>
+    </div>
+    {% endif %}
+  </section>
+</div>

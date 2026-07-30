@@ -13,7 +13,7 @@ class Settings:
     app_name: str = "Imprint Diamond"
     site_root: Path = ROOT
     static_dir: Path = ROOT / "public"
-    # Legacy Jinja dir (removed after cutover). Slot seed reads content/site bodies.
+    # Jinja SSR root: layouts/, pages/, partials/. Fragments live in site_content_dir/fragments.
     templates_dir: Path = ROOT / "content" / "site" / "templates"
     site_content_dir: Path = ROOT / "content" / "site"
     docs_url: str | None = None
@@ -41,14 +41,6 @@ class Settings:
         if self.is_render and not base.startswith("http"):
             base = f"https://{base}"
         return base
-
-    @property
-    def next_public_origin(self) -> str:
-        """Next.js origin for CMS public pages (/p/{slug}). Empty = no redirect."""
-        raw = (os.environ.get("NEXT_PUBLIC_ORIGIN") or "").strip().rstrip("/")
-        if raw and not raw.startswith("http://") and not raw.startswith("https://"):
-            return f"https://{raw}"
-        return raw
 
 
 settings = Settings()

@@ -1,3 +1,4 @@
+
 <section class="contact-section contact-section--intro">
 <div class="container contact-grid">
 <div class="contact-card">
@@ -23,6 +24,7 @@
 <a href="#view-contact-form">↓ 線上留言諮詢</a>
 </p>
 </section>
+ @component partials/view-contact-form.html 
 <section class="contact-section contact-section--flush" id="view-contact-form">
 <div class="container">
 <div class="contact-form-panel">
@@ -47,7 +49,7 @@
 </div>
 </div>
 <hr class="contact-form-panel__rule"/>
-<form class="contact-form-panel__form" id="contactForm" novalidate="">
+<form class="contact-form-panel__form" hx-disabled-elt="button[type=submit]" hx-post="/htmx/contact" hx-swap="innerHTML" hx-target="#contactFormMsg" id="contactForm" novalidate="">
 <p class="contact-form-panel__muted">留下簡短訊息</p>
 <div class="contact-form-panel__grid">
 <div class="form-field">
@@ -68,7 +70,7 @@
 <textarea id="cMessage" name="message" placeholder="簡述您想了解的克拉、系列或預約時間…" required="" rows="4"></textarea>
 </div>
 <button class="contact-form-panel__submit" id="contactSubmitBtn" type="submit">送出留言</button>
-<p aria-live="polite" class="form-msg" id="contactFormMsg" role="status"></p>
+<div aria-live="polite" id="contactFormMsg" role="status"></div>
 </form>
 </div>
 </div>

@@ -40,12 +40,37 @@
     '寵物鑽石', '結髮鑽石', '生命鑽石', '毛髮鑽石', '全家福鑽石', '初生鑽石',
   ];
 
-  var TAIWAN_CITIES = [
-    '台北市', '新北市', '桃園市', '台中市', '台南市', '高雄市',
-    '基隆市', '新竹市', '新竹縣', '苗栗縣', '彰化縣', '南投縣',
-    '雲林縣', '嘉義市', '嘉義縣', '屏東縣', '宜蘭縣', '花蓮縣',
-    '台東縣', '澎湖縣', '金門縣', '連江縣',
+  // Fallback matches ImprintTaiwanAdminDivisions.testimonialCities (台 spelling; zh-Hant-TW).
+  var TAIWAN_CITIES_FALLBACK = [
+    '台北市', '基隆市', '新北市', '宜蘭縣', '桃園市', '新竹市', '新竹縣', '苗栗縣',
+    '台中市', '彰化縣', '南投縣', '嘉義市', '嘉義縣', '雲林縣', '台南市', '高雄市',
+    '澎湖縣', '金門縣', '屏東縣', '台東縣', '花蓮縣', '連江縣', '其他',
   ];
+
+  function taiwanCities() {
+    var div = window.ImprintTaiwanAdminDivisions;
+    var shared = div && (div.testimonialCities || div.cities);
+    return shared && shared.length ? shared : TAIWAN_CITIES_FALLBACK;
+  }
+
+  /** Map legacy short / 臺 spellings to canonical 縣市; leave ambiguous stems unchanged. */
+  function normalizeTaiwanCity(raw) {
+    var v = String(raw || '').trim().replace(/臺/g, '台');
+    if (!v) return '';
+    var cities = taiwanCities();
+    if (cities.indexOf(v) >= 0) return v;
+    var matches = [];
+    for (var i = 0; i < cities.length; i++) {
+      var c = cities[i];
+      var stem = c.replace(/[市縣]$/, '');
+      if (v === stem) matches.push(c);
+    }
+    return matches.length === 1 ? matches[0] : v;
+  }
+
+  function isTaiwanCity(raw) {
+    return taiwanCities().indexOf(normalizeTaiwanCity(raw)) >= 0;
+  }
 
   function reqStar() {
     return ' <span class="ap-required" aria-hidden="true">*</span>';
@@ -74,10 +99,243 @@
     return html;
   }
 
-  function cityDatalistOptions() {
-    return TAIWAN_CITIES.map(function (c) {
-      return '<option value="' + esc(c) + '">';
-    }).join('');
+  var COMBO_CHEVRON =
+    '<svg class="ap-combo__chevron" viewBox="0 0 24 24" width="16" height="16" ' +
+    'aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" ' +
+    'stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>';
+
+  var COMBO_CHECK =
+    '<svg class="ap-combo__check" viewBox="0 0 24 24" width="16" height="16" ' +
+    'aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" ' +
+    'stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>';
+
+  function filterTaiwanCities(query) {
+    var q = String(query || '').trim().replace(/臺/g, '台');
+    var cities = taiwanCities();
+    if (!q) return cities.slice();
+    return cities.filter(function (c) {
+      var stem = c.replace(/[市縣]$/, '');
+      return c.indexOf(q) >= 0 || stem.indexOf(q) >= 0;
+    });
+  }
+
+  function cityComboMarkup(selected) {
+    selected = normalizeTaiwanCity(selected);
+    var label = selected || '選擇縣市';
+    var ph = selected ? '' : ' is-placeholder';
+    return (
+      '<div class="ap-field">' +
+        '<span id="acCityLabel">城市' + reqStar() + '</span>' +
+        '<div class="ap-combo" id="acCityCombo">' +
+          '<input type="hidden" name="city" id="acCityValue" value="' + esc(selected) + '">' +
+          '<button type="button" class="ap-combo__trigger" id="acCityTrigger" ' +
+            'aria-haspopup="listbox" aria-expanded="false" aria-controls="acCityList" ' +
+            'aria-labelledby="acCityLabel">' +
+            '<span class="ap-combo__label' + ph + '" id="acCityTriggerLabel">' + esc(label) + '</span>' +
+            COMBO_CHEVRON +
+          '</button>' +
+          '<div class="ap-combo__panel" id="acCityPanel" aria-hidden="true">' +
+            '<input type="search" class="ap-combo__search" id="acCitySearch" ' +
+              'placeholder="輸入搜尋縣市…" autocomplete="off" aria-label="搜尋縣市">' +
+            '<ul class="ap-combo__list" id="acCityList" role="listbox" ' +
+              'aria-labelledby="acCityLabel"></ul>' +
+          '</div>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  function countryFieldMarkup(country, city) {
+    var show = normalizeTaiwanCity(city) === '其他';
+    return (
+      '<label class="ap-field" id="acCountryField"' + (show ? '' : ' hidden') + '>' +
+        '<span>國家 / 地區' + reqStar() + '</span>' +
+        '<input type="text" name="country" id="acCountryInput" maxlength="40" ' +
+          'autocomplete="off" placeholder="例：日本" value="' + esc(show ? (country || '') : '') + '"' +
+          (show ? ' required' : '') + '>' +
+      '</label>'
+    );
+  }
+
+  function syncCountryField(city) {
+    var field = document.getElementById('acCountryField');
+    var input = document.getElementById('acCountryInput');
+    if (!field || !input) return;
+    var show = normalizeTaiwanCity(city) === '其他';
+    field.hidden = !show;
+    if (show) {
+      input.required = true;
+    } else {
+      input.required = false;
+      input.value = '';
+    }
+  }
+
+  function displayTestimonialCity(t) {
+    var city = String((t && t.city) || '').trim();
+    var country = String((t && t.country) || '').trim();
+    if (city === '其他' && country) return '其他（' + country + '）';
+    return city;
+  }
+
+  var _cityComboDocBound = false;
+
+  function closeOpenCityCombos(exceptRoot) {
+    var nodes = document.querySelectorAll('.ap-combo.is-open');
+    for (var i = 0; i < nodes.length; i++) {
+      if (exceptRoot && nodes[i] === exceptRoot) continue;
+      var closeFn = nodes[i]._apComboClose;
+      if (typeof closeFn === 'function') closeFn();
+      else {
+        nodes[i].classList.remove('is-open');
+        var t = nodes[i].querySelector('.ap-combo__trigger');
+        var p = nodes[i].querySelector('.ap-combo__panel');
+        if (t) t.setAttribute('aria-expanded', 'false');
+        if (p) p.setAttribute('aria-hidden', 'true');
+      }
+    }
+  }
+
+  function ensureCityComboDocListeners() {
+    if (_cityComboDocBound) return;
+    _cityComboDocBound = true;
+    document.addEventListener('mousedown', function (e) {
+      var openCombo = document.querySelector('.ap-combo.is-open');
+      if (!openCombo || openCombo.contains(e.target)) return;
+      closeOpenCityCombos();
+    });
+    // Capture: close combo before admin.js Escape closes the whole modal.
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape') return;
+      var openCombo = document.querySelector('.ap-combo.is-open');
+      if (!openCombo) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      closeOpenCityCombos();
+      var t = openCombo.querySelector('.ap-combo__trigger');
+      if (t) t.focus();
+    }, true);
+  }
+
+  function bindCityCombo() {
+    var root = document.getElementById('acCityCombo');
+    if (!root || root.getAttribute('data-bound') === '1') return;
+    root.setAttribute('data-bound', '1');
+    ensureCityComboDocListeners();
+
+    var trigger = document.getElementById('acCityTrigger');
+    var panel = document.getElementById('acCityPanel');
+    var search = document.getElementById('acCitySearch');
+    var list = document.getElementById('acCityList');
+    var hidden = document.getElementById('acCityValue');
+    var labelEl = document.getElementById('acCityTriggerLabel');
+    if (!trigger || !panel || !search || !list || !hidden || !labelEl) return;
+
+    var open = false;
+    var activeIndex = -1;
+
+    function selectedValue() {
+      return String(hidden.value || '');
+    }
+
+    function setOpen(next) {
+      if (next === open) return;
+      if (next) closeOpenCityCombos(root);
+      open = next;
+      root.classList.toggle('is-open', open);
+      trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+      panel.setAttribute('aria-hidden', open ? 'false' : 'true');
+      if (open) {
+        search.value = '';
+        activeIndex = -1;
+        renderList('');
+        setTimeout(function () { search.focus(); }, 20);
+      }
+    }
+
+    root._apComboClose = function () { setOpen(false); };
+
+    function choose(city) {
+      var v = normalizeTaiwanCity(city);
+      if (!isTaiwanCity(v)) return;
+      hidden.value = v;
+      labelEl.textContent = v;
+      labelEl.classList.remove('is-placeholder');
+      syncCountryField(v);
+      setOpen(false);
+      trigger.focus();
+      if (v === '其他') {
+        var countryInput = document.getElementById('acCountryInput');
+        if (countryInput) setTimeout(function () { countryInput.focus(); }, 20);
+      }
+    }
+
+    function renderList(query) {
+      var cities = filterTaiwanCities(query);
+      var sel = selectedValue();
+      if (!cities.length) {
+        list.innerHTML = '<li class="ap-combo__empty" role="presentation">無符合縣市</li>';
+        activeIndex = -1;
+        return;
+      }
+      list.innerHTML = cities.map(function (c, i) {
+        var on = c === sel;
+        return (
+          '<li class="ap-combo__option' + (on ? ' is-selected' : '') + '" role="option" ' +
+            'data-value="' + esc(c) + '" data-index="' + i + '" ' +
+            'aria-selected="' + (on ? 'true' : 'false') + '" tabindex="-1">' +
+            '<span class="ap-combo__option-label">' + esc(c) + '</span>' +
+            (on ? COMBO_CHECK : '') +
+          '</li>'
+        );
+      }).join('');
+      activeIndex = -1;
+    }
+
+    function moveActive(delta) {
+      var opts = list.querySelectorAll('.ap-combo__option');
+      if (!opts.length) return;
+      if (activeIndex >= 0) opts[activeIndex].classList.remove('is-active');
+      activeIndex = (activeIndex + delta + opts.length) % opts.length;
+      opts[activeIndex].classList.add('is-active');
+      opts[activeIndex].scrollIntoView({ block: 'nearest' });
+    }
+
+    trigger.addEventListener('click', function (e) {
+      e.preventDefault();
+      setOpen(!open);
+    });
+
+    search.addEventListener('input', function () {
+      renderList(search.value);
+    });
+
+    search.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); moveActive(1); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); moveActive(-1); }
+      else if (e.key === 'Enter') {
+        e.preventDefault();
+        var opts = list.querySelectorAll('.ap-combo__option');
+        if (activeIndex >= 0 && opts[activeIndex]) {
+          choose(opts[activeIndex].getAttribute('data-value'));
+        } else if (opts.length === 1) {
+          choose(opts[0].getAttribute('data-value'));
+        }
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        setOpen(false);
+        trigger.focus();
+      }
+    });
+
+    list.addEventListener('click', function (e) {
+      var opt = e.target.closest('.ap-combo__option');
+      if (!opt || !list.contains(opt)) return;
+      choose(opt.getAttribute('data-value'));
+    });
+
+    renderList('');
   }
 
   function pageLinkOptions(current) {
@@ -467,7 +725,7 @@
         id: String(t.id),
         name: t.name || '',
         category: t.category || '',
-        city: t.city || '',
+        city: displayTestimonialCity(t),
         text: t.text || '',
         sort_order: Number(t.sort_order || 0),
         is_published: !!t.is_published,
@@ -879,12 +1137,11 @@
               '</div></label>' +
             '<label class="ap-field"><span>分類' + reqStar() + '</span>' +
               '<select name="category" required>' + categoryOptions(isEdit ? t.category : '') + '</select></label>' +
-            '<label class="ap-field"><span>城市' + reqStar() + '</span>' +
-              '<input name="city" list="acTaiwanCities" required autocomplete="off" placeholder="輸入或選擇縣市" value="' + esc(isEdit ? t.city : '') + '">' +
-              '<datalist id="acTaiwanCities">' + cityDatalistOptions() + '</datalist></label>' +
+            cityComboMarkup(isEdit ? t.city : '') +
+            countryFieldMarkup(isEdit ? t.country : '', isEdit ? t.city : '') +
             '<label class="ap-field ap-field--full"><span>訂製款式圖片' + reqStar() + '</span>' +
               '<div id="acTestimonialImageUploadMount"></div>' +
-              '<p class="ap-section-hint">PNG / JPG / WEBP，1MB 內。前台顯示角色為「分類・城市」。</p>' +
+              '<p class="ap-section-hint">PNG / JPG / WEBP，1MB 內。前台顯示角色為「分類・城市／國家」。</p>' +
               '<input type="hidden" name="imageUrl" id="acTestimonialImageUrl" value="' + esc(imageUrl) + '">' +
             '</label>' +
             '<label class="ap-field ap-field--full"><span>見證內容（完整）' + reqStar() + '</span>' +
@@ -901,6 +1158,8 @@
     window.AdminPanel.openModal(html);
     var form = document.getElementById('acTestimonialForm');
     if (form) form.addEventListener('submit', submitTestimonial);
+    bindCityCombo();
+    syncCountryField(isEdit ? t.city : '');
 
     var urlInput = document.getElementById('acTestimonialImageUrl');
     if (window.AdminTables && window.AdminTables.renderImageUploadField) {
@@ -929,12 +1188,15 @@
     var errEl = document.getElementById('acFormError');
     var id = form.dataset.id;
     var imageUrl = String(fd.get('imageUrl') || '').trim();
+    var city = normalizeTaiwanCity(fd.get('city'));
+    var country = city === '其他' ? String(fd.get('country') || '').trim() : '';
     var payload = {
       id: id || undefined,
       name: String(fd.get('namePart') || '').trim(),
       honorific: String(fd.get('honorific') || '小姐').trim(),
       category: String(fd.get('category') || '').trim(),
-      city: String(fd.get('city') || '').trim(),
+      city: city,
+      country: country,
       text: String(fd.get('text') || '').trim(),
       imageUrl: imageUrl,
       isPublished: !!form.querySelector('[name="isPublished"]').checked,
@@ -947,8 +1209,14 @@
       if (errEl) { errEl.textContent = '請選擇分類'; errEl.hidden = false; }
       return;
     }
-    if (!payload.city) {
-      if (errEl) { errEl.textContent = '請選擇城市'; errEl.hidden = false; }
+    if (!payload.city || !isTaiwanCity(payload.city)) {
+      if (errEl) { errEl.textContent = '請從清單選擇城市（縣市）'; errEl.hidden = false; }
+      return;
+    }
+    if (payload.city === '其他' && !payload.country) {
+      if (errEl) { errEl.textContent = '請填寫國家 / 地區'; errEl.hidden = false; }
+      var countryEl = document.getElementById('acCountryInput');
+      if (countryEl) countryEl.focus();
       return;
     }
     if (!payload.imageUrl) {

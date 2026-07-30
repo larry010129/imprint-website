@@ -102,6 +102,7 @@ function saveShopResumeSnapshot() {
       carat: state.carat,
       ringSize: state.ringSize,
       engravingBand: state.engravingBand,
+      engravingRemark: state.engravingRemark,
       engravingGirdle: state.engravingGirdle,
       lengthCm: state.lengthCm,
       includeChain: state.includeChain,
@@ -949,6 +950,7 @@ let state = {
   carat: null,      // diamond carat or chain thickness (1.0mm–3.0mm)
   ringSize: null,   // integer 5–18
   engravingBand: '',
+  engravingRemark: '',
   engravingGirdle: '',
   lengthCm: null,
   includeChain: false,
@@ -1324,6 +1326,7 @@ function updateConfigChips() {
   }
   if (state.ringSize) chips.push('#' + state.ringSize);
   if (state.engravingBand) chips.push(`${tr('step_engraving_band')}: ${state.engravingBand}`);
+  if (state.engravingRemark) chips.push(`${tr('step_engraving_remark')}: ${state.engravingRemark}`);
   chips.forEach(text => {
     const span = document.createElement('span');
     span.className = 'config-chip';
@@ -1951,7 +1954,12 @@ function updateCaratButtons() {
   sel.innerHTML = '';
   const placeholder = document.createElement('option');
   placeholder.value = '';
-  placeholder.textContent = tr('carat_placeholder') || '選擇克拉';
+  if (isChain) {
+    placeholder.textContent = '選擇厚度';
+  } else {
+    const ph = tr('carat_placeholder');
+    placeholder.textContent = (ph && ph !== 'carat_placeholder') ? ph : '選擇克拉';
+  }
   sel.appendChild(placeholder);
   validCarats.forEach((v) => {
     const n = parseFloat(v);
@@ -2830,16 +2838,22 @@ function productAllowsEngraving() {
 
 function updateEngravingSteps() {
   const bandStep = document.getElementById('engraving-band-step');
+  const remarkStep = document.getElementById('engraving-remark-step');
   const girdleStep = document.getElementById('engraving-girdle-step');
   const allows = productAllowsEngraving();
   const hasBand = allows && state.category === 'ring';
+  const hasRemark = allows && state.category !== 'chain';
   const hasGirdle = allows && state.category !== 'chain';
   bandStep?.classList.toggle('hidden', !hasBand);
+  remarkStep?.classList.toggle('hidden', !hasRemark);
   girdleStep?.classList.toggle('hidden', !hasGirdle);
   if (!hasBand) state.engravingBand = '';
+  if (!hasRemark) state.engravingRemark = '';
   if (!hasGirdle) state.engravingGirdle = '';
   const bandInput = document.getElementById('engraving-band-input');
   if (bandInput) bandInput.value = state.engravingBand;
+  const remarkInput = document.getElementById('engraving-remark-input');
+  if (remarkInput) remarkInput.value = state.engravingRemark;
   const allowChinese = caratAllowsChineseEngraving();
   const girdleCtrl = ensureGirdleEngrave();
   if (girdleCtrl) {
@@ -3375,6 +3389,7 @@ function updateSummary() {
 function clearRingSizeSelection() {
   state.ringSize = null;
   state.engravingBand = '';
+  state.engravingRemark = '';
   state.engravingGirdle = '';
   state.lengthCm = null;
   state.includeChain = false;
@@ -3452,6 +3467,7 @@ function selectCategory(cat) {
   state.carat = null;
   state.ringSize = null;
   state.engravingBand = '';
+  state.engravingRemark = '';
   state.engravingGirdle = '';
   state.lengthCm = null;
   state.includeChain = false;
@@ -3498,6 +3514,7 @@ function selectType(typeId) {
   state.color = null;
   state.ringSize = null;
   state.engravingBand = '';
+  state.engravingRemark = '';
   state.engravingGirdle = '';
   resetDiamondOptions();
 
@@ -3593,6 +3610,11 @@ document.getElementById('engraving-band-input')?.addEventListener('input', (e) =
   updateSummary();
 });
 
+document.getElementById('engraving-remark-input')?.addEventListener('input', (e) => {
+  state.engravingRemark = e.target.value;
+  updateSummary();
+});
+
 function updateGirdlePreview() {
   const ctrl = ensureGirdleEngrave();
   const shapeId = resolvedDiamondShape();
@@ -3682,6 +3704,7 @@ document.getElementById('back-to-catalog')?.addEventListener('click', () => {
   state.carat = null;
   state.ringSize = null;
   state.engravingBand = '';
+  state.engravingRemark = '';
   state.engravingGirdle = '';
   state.lengthCm = null;
   state.includeChain = false;
@@ -3759,6 +3782,7 @@ function buildSubmitPayload() {
     carat:    state.carat,
     ringSize: state.ringSize,
     engravingBand: state.engravingBand,
+    engravingRemark: state.engravingRemark,
     engravingGirdle: state.engravingGirdle,
     lengthCm: state.lengthCm,
     includeChain: state.includeChain,
@@ -3836,6 +3860,7 @@ function buildInquirySummaryLines() {
   if (state.lengthCm) lines.push(`長度：${state.lengthCm} cm`);
   if (pricing?.total != null) lines.push(`試算參考價：NT$ ${Math.round(pricing.total).toLocaleString()}`);
   if (state.engravingBand) lines.push(`戒台刻字：${state.engravingBand}`);
+  if (state.engravingRemark) lines.push(`備註：${state.engravingRemark}`);
   if (state.engravingGirdle) lines.push(`腰圍刻字：${state.engravingGirdle}`);
   lines.push('', '請協助確認報價與交期，謝謝。');
   return lines;
@@ -4294,6 +4319,7 @@ function orderApiRowToEditConfig(o) {
     carat: o.carat,
     ringSize: o.ring_size,
     engravingBand: o.engraving_band || '',
+    engravingRemark: o.engraving_remark || '',
     engravingGirdle: o.engraving_girdle || '',
     diamondKind: o.diamond_kind || 'white',
     fancyColor: o.fancy_color,
@@ -4336,6 +4362,7 @@ function restoreShopConfig(cfg) {
   }
 
   state.engravingBand = cfg.engravingBand || '';
+  state.engravingRemark = cfg.engravingRemark || '';
   state.engravingGirdle = cfg.engravingGirdle || '';
   state.lengthCm = cfg.lengthCm != null ? cfg.lengthCm : null;
   state.includeChain = !!cfg.includeChain;

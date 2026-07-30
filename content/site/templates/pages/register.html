@@ -1,4 +1,4 @@
-﻿{% extends "layouts/base-auth.html" %}
+{% extends "layouts/base-auth.html" %}
 {% block extra_css %}
 <link rel="stylesheet" href="/static/css/auth.css?v=5">
 {% endblock %}
@@ -9,7 +9,12 @@
     <h1>加入會員</h1>
     <p>註冊會員即可查詢您的訂製進度、保留聯絡資料，讓顧問更快為您服務。</p>
   </div>
-  <form class="login-form" id="registerForm" novalidate>
+  <div id="auth-form-msg"></div>
+  <form class="login-form" id="registerForm" novalidate
+    hx-post="/htmx/auth/register"
+    hx-target="#auth-form-msg"
+    hx-swap="innerHTML"
+    hx-disabled-elt="button[type=submit]">
     <div class="form-field">
       <input type="text" id="rName" name="fullName" placeholder=" " autocomplete="name" required>
       <label for="rName">姓名</label>
@@ -21,12 +26,11 @@
     <div class="form-field">
       <input type="email" id="rEmail" name="email" placeholder=" " autocomplete="username" required>
       <label for="rEmail">電子郵件</label>
-      <span class="error-message" hidden>請輸入有效的電子郵件</span>
     </div>
-    {{ auth_password_field('rPassword', label='密碼（至少 6 碼）', autocomplete='new-password', minlength=6) }}
-    {{ auth_password_field('rPasswordConfirm', label='確認密碼', autocomplete='new-password', minlength=6, name='passwordConfirm') }}
+    {{ auth_password_field('rPassword', label='密碼（至少 8 碼）', autocomplete='new-password', minlength=8) }}
+    {{ auth_password_field('rPasswordConfirm', label='確認密碼', autocomplete='new-password', minlength=8, name='passwordConfirm') }}
     <label class="partner-check">
-      <input type="checkbox" id="rIsPartner" data-auth-partner-toggle>
+      <input type="checkbox" id="rIsPartner" name="isPartner" value="1" data-auth-partner-toggle>
       <span class="checkmark"></span>
       我是合作廠商
     </label>
@@ -40,7 +44,7 @@
     </div>
 
     <label class="partner-check terms-check" id="registerTermsTrigger">
-      <input type="checkbox" id="rAcceptTerms" name="acceptTerms" required>
+      <input type="checkbox" id="rAcceptTerms" name="acceptTerms" value="1" required>
       <span class="checkmark" aria-hidden="true"></span>
       <span class="terms-check-label">
         我已閱讀並同意
@@ -52,63 +56,30 @@
     <p class="terms-check-hint">需開啟條款並捲動至底部後才能勾選同意</p>
 
     <button type="submit" class="login-button" id="registerSubmitBtn">建立會員帳號</button>
-    <p class="form-msg" id="registerFormMsg" role="status" aria-live="polite"></p>
   </form>
   <p class="signup-prompt">已經是會員了？<a href="/login.html">直接登入</a></p>
 {% endcall %}
 
-<dialog id="register-terms-dialog" class="register-terms-dialog" aria-labelledby="register-terms-title" aria-describedby="register-terms-desc">
+<dialog id="register-terms-dialog" class="register-terms-dialog" aria-labelledby="register-terms-title">
   <header class="register-terms-header">
     <h2 id="register-terms-title">會員服務條款與隱私權政策</h2>
-    <p id="register-terms-desc" class="register-terms-desc">請詳閱以下內容；需捲動至底部後才能同意。</p>
   </header>
   <div class="register-terms-scroll">
     <article class="register-terms-sections">
       <section class="register-terms-section">
-        <p><strong>一、服務性質</strong></p>
-        <p>銘印鑽石提供預約制、一對一顧問服務，將客戶提供的毛髮或骨灰樣本，於台灣在地實驗室培育為客製化紀念鑽石。會員帳號用於查詢訂製進度、保留聯絡資料與訂單相關服務。</p>
-      </section>
-      <section class="register-terms-section">
-        <p><strong>二、會員資料</strong></p>
-        <p>註冊時您需提供姓名、電話、Email 與密碼。我們僅將資料用於會員帳號管理、訂單聯繫與客服回覆。詳見完整<a href="/privacy.html" target="_blank" rel="noopener">隱私權政策</a>。</p>
-      </section>
-      <section class="register-terms-section">
-        <p><strong>三、訂購與價格</strong></p>
-        <p>線上試算與報價僅供參考；最終價格、製作時程與樣本需求以顧問確認為準。完整服務說明見<a href="/terms.html" target="_blank" rel="noopener">服務條款</a>。</p>
-      </section>
-      <section class="register-terms-section">
-        <p><strong>四、帳號安全</strong></p>
-        <p>請妥善保管帳號與密碼。若發現異常登入，請立即聯絡我們並重設密碼。</p>
-      </section>
-      <section class="register-terms-section">
-        <p><strong>五、Google 登入</strong></p>
-        <p>若之後改用 Google 登入，我們僅取得已驗證的 Email、顯示名稱與 Google 帳戶識別碼。電話與地址僅在您另行同意匯入或自行填寫時蒐集。</p>
-      </section>
-      <section class="register-terms-section">
-        <p><strong>六、同意效力</strong></p>
-        <p>點選「我同意」即表示您已閱讀並接受本摘要所述之服務條款與隱私權政策。完整條款與政策以網站正式頁面為準；草稿段落仍待法務審閱。</p>
-      </section>
-      <section class="register-terms-section">
-        <p><strong>七、聯絡方式</strong></p>
-        <p>如有疑問，請透過官方 LINE 與我們聯繫。</p>
+        <p>請詳閱網站<a href="/terms.html" target="_blank" rel="noopener">服務條款</a>與<a href="/privacy.html" target="_blank" rel="noopener">隱私權政策</a>全文後再同意。</p>
       </section>
     </article>
   </div>
   <footer class="register-terms-footer">
-    <p class="register-terms-scroll-hint" id="register-terms-scroll-hint">請捲動閱讀完整內容後再同意</p>
     <div class="register-terms-actions">
       <button type="button" class="register-terms-btn register-terms-btn--outline" id="register-terms-decline">稍後再說</button>
-      <button type="button" class="register-terms-btn register-terms-btn--primary" id="register-terms-agree" disabled>我同意</button>
+      <button type="button" class="register-terms-btn register-terms-btn--primary" id="register-terms-agree">我同意</button>
     </div>
   </footer>
 </dialog>
 {% endblock %}
 {% block extra_scripts %}
-<script src="/static/js/api-client.js"></script>
 <script src="/static/js/auth-shell.js"></script>
 <script src="/static/js/register-terms.js?v=1"></script>
-<script src="/static/js/mvc/core.js"></script>
-<script src="/static/js/mvc/models/register-model.js"></script>
-<script src="/static/js/mvc/views/register-view.js?v=2"></script>
-<script src="/static/js/mvc/controllers/register-controller.js?v=3"></script>
 {% endblock %}

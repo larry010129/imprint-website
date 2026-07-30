@@ -27,6 +27,7 @@
   .nav-burger.mobile-menu-toggle{ display:flex; align-items:center; justify-content:center; }
   /* Drawer open: hide header CTAs so they don't stack over the menu */
   .nav.is-mobile-menu-open .nav-cta .gradient-button,
+  .nav.is-mobile-menu-open .nav-cta .nav-gradient-cta,
   .nav.is-mobile-menu-open .nav-cta .btn-dark{
     visibility:hidden;
     pointer-events:none;
@@ -44,7 +45,8 @@
   .nav-cta .btn-contact{ display:none; }
   /* Mobile header CTA: 價格試算 — !important beats stale page React CSS
      (price.css/checkout.css/…) that still ship display:none after src.css. */
-  .nav-cta .gradient-button{
+  .nav-cta .gradient-button,
+  .nav-cta .nav-gradient-cta{
     display:inline-flex !important;
     flex-shrink:0;
   }

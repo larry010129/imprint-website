@@ -196,6 +196,7 @@
               specItem('鑽石顏色', diamondLabel(o)) + specItem('計價金價', formatMoney(o.gold_rate_per_gram)) +
               specItem('重量 (克)', o.weight_grams != null ? Number(o.weight_grams).toFixed(3) : '-') +
               specItem('戒圍', o.ring_size || '-') + specItem('戒圈刻字', o.engraving_band || '-') +
+              specItem('備註', o.engraving_remark || '-') +
               (o.engraving_girdle
                 ? specItemHtml('腰圍刻字', girdleDisplayHtml(o.engraving_girdle))
                 : specItem('腰圍刻字', '-')) +

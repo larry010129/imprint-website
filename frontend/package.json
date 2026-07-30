@@ -2,10 +2,11 @@
   "name": "imprint-frontend",
   "private": true,
   "type": "module",
+  "description": "Admin-only React island (admin-tables). Public site is Jinja + HTMX.",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build && vite build --config vite.footer.config.ts && vite build --config vite.nav.config.ts && vite build --config vite.stories.config.ts && vite build --config vite.price.config.ts && vite build --config vite.checkout.config.ts && vite build --config vite.profile.config.ts && vite build --config vite.dna-diamond.config.ts && vite build --config vite.admin-tables.config.ts && vite build --config vite.auth.config.ts && vite build --config vite.account.config.ts",
-    "preview": "vite preview"
+    "dev": "vite --config vite.admin-tables.config.ts",
+    "build": "tsc -b && vite build --config vite.admin-tables.config.ts",
+    "preview": "vite preview --config vite.admin-tables.config.ts"
   },
   "dependencies": {
     "@ark-ui/react": "^5.37.2",

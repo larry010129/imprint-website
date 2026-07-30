@@ -16,6 +16,7 @@ from config.settings import settings
 router = APIRouter(prefix="/admin", tags=["admin-cms"])
 
 _ALLOWED_IMAGE_EXT = {".png", ".jpg", ".jpeg", ".webp"}
+_ALLOWED_IMAGE_MIME = {"image/png", "image/jpeg", "image/webp"}
 _MAX_IMAGE_BYTES = 1 * 1024 * 1024
 _MEDIA_UPLOAD_DIR = settings.static_dir / "uploads" / "cms-media"
 
@@ -52,6 +53,24 @@ def _image_signature_matches(data: bytes, ext: str) -> bool:
     if ext == ".webp":
         return len(data) >= 12 and data[:4] == b"RIFF" and data[8:12] == b"WEBP"
     return False
+
+
+def _image_upload_error(file: UploadFile, data: bytes, ext: str) -> str | None:
+    if ext not in _ALLOWED_IMAGE_EXT:
+        return "僅支援 PNG / JPG / JPEG / WEBP"
+    ct = (file.content_type or "").split(";")[0].strip().lower()
+    if ct and ct not in _ALLOWED_IMAGE_MIME and ct not in {
+        "application/octet-stream",
+        "binary/octet-stream",
+    }:
+        return "僅支援 PNG / JPG / JPEG / WEBP"
+    if not data:
+        return "empty file"
+    if len(data) > _MAX_IMAGE_BYTES:
+        return "圖片需小於 1MB"
+    if not _image_signature_matches(data, ext):
+        return "圖片內容與副檔名不符"
+    return None
 
 
 _CMS_SCHEMA_READY = False
@@ -511,15 +530,10 @@ async def cms_media_upload(request: Request, file: UploadFile = File(...)) -> JS
     if not file.filename:
         return JSONResponse(status_code=400, content={"error": "missing file"})
     ext = Path(file.filename).suffix.lower()
-    if ext not in _ALLOWED_IMAGE_EXT:
-        return JSONResponse(status_code=400, content={"error": "僅支援 PNG / JPG / JPEG / WEBP"})
     data = await file.read()
-    if not data:
-        return JSONResponse(status_code=400, content={"error": "empty file"})
-    if len(data) > _MAX_IMAGE_BYTES:
-        return JSONResponse(status_code=400, content={"error": "圖片需小於 1MB"})
-    if not _image_signature_matches(data, ext):
-        return JSONResponse(status_code=400, content={"error": "圖片內容與副檔名不符"})
+    err = _image_upload_error(file, data, ext)
+    if err:
+        return JSONResponse(status_code=400, content={"error": err})
     _MEDIA_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     name = f"{uuid.uuid4().hex}{ext}"
     (_MEDIA_UPLOAD_DIR / name).write_bytes(data)

@@ -4,7 +4,7 @@ Client-submitted prices (`clientPricing`) must never be trusted when writing to
 cart_items/orders; this module recomputes the price from the DB catalog + live
 gold rate. See shop_controller.add_to_cart, which is the sole write path.
 
-Thin client preview: public/js/shop-pricing-local.js must stay formula-aligned.
+Parity fixture for formula tests: public/js/shop-pricing-local.js (calculator uses server /htmx/shop/quote).
 """
 
 from __future__ import annotations

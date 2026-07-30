@@ -1,0 +1,11 @@
+{# Desktop nav cart — rendered only when logged in #}
+<a id="site-nav-cart" class="nav-cart-link" href="/cart.html" aria-label="購物車"
+  hx-get="/htmx/cart-badge" hx-trigger="load, every 60s" hx-target="#nav-cart-badge" hx-swap="outerHTML">
+  <svg class="nav-cart-icon" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false">
+    <path d="M6 6h15l-1.5 9h-12z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M6 6L5 3H2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="9" cy="20" r="1.25" fill="currentColor"/>
+    <circle cx="18" cy="20" r="1.25" fill="currentColor"/>
+  </svg>
+  {% with oob=False %}{% include "partials/htmx/cart_badge.html" %}{% endwith %}
+</a>

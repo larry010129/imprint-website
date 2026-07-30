@@ -1,0 +1,51 @@
+{% if error %}
+<p class="form-msg is-error shop-quote-error" role="alert">{{ error }}</p>
+{% elif pricing and pricing.ready %}
+<div class="shop-quote-summary" data-price-source="{{ pricing.priceSource or 'server' }}">
+  <dl class="shop-price-lines">
+    {% if pricing.diamondPrice is not none %}
+    <div class="shop-price-line">
+      <dt>鑽石</dt>
+      <dd>{{ format_twd(pricing.diamondPrice) }}</dd>
+    </div>
+    {% endif %}
+    {% if pricing.sideStonePrice %}
+    <div class="shop-price-line">
+      <dt>配石</dt>
+      <dd>{{ format_twd(pricing.sideStonePrice) }}</dd>
+    </div>
+    {% endif %}
+    {% if pricing.taijinPrice %}
+    <div class="shop-price-line">
+      <dt>台金</dt>
+      <dd>{{ format_twd(pricing.taijinPrice) }}</dd>
+    </div>
+    {% endif %}
+    {% if pricing.laborPrice %}
+    <div class="shop-price-line">
+      <dt>工費</dt>
+      <dd>{{ format_twd(pricing.laborPrice) }}</dd>
+    </div>
+    {% endif %}
+    {% if pricing.chainPrice %}
+    <div class="shop-price-line">
+      <dt>鏈條</dt>
+      <dd>{{ format_twd(pricing.chainPrice) }}</dd>
+    </div>
+    {% endif %}
+    {% if pricing.manualOverride %}
+    <div class="shop-price-line">
+      <dt>定價</dt>
+      <dd>{{ format_twd(pricing.total) }}</dd>
+    </div>
+    {% endif %}
+  </dl>
+  <p class="shop-quote-total">
+    <span>預估總價</span>
+    <strong>{{ format_twd(pricing.total) }}</strong>
+  </p>
+  <p class="shop-quote-note">價格為預估價；實際金額可能因市場浮動有 ±10%。</p>
+</div>
+{% else %}
+<p class="shop-quote-placeholder">選擇規格後顯示試算。</p>
+{% endif %}

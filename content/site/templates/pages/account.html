@@ -1,25 +1,16 @@
-﻿{% extends "layouts/base.html" %}
+{% extends "layouts/base.html" %}
 {% block extra_css %}
 <link rel="stylesheet" href="/static/css/member-app.css?v=2">
-{% include "partials/account-react-css.html" %}
-{% endblock %}
-{% block extra_head %}
-{% if google_client_id %}
-<script src="https://accounts.google.com/gsi/client" async defer></script>
-<script>window.IMPRINT_GOOGLE_CLIENT_ID = {{ google_client_id | tojson }};</script>
-{% endif %}
 {% endblock %}
 {% block content %}
 <section class="account-section" id="view-account" aria-label="我的帳戶">
   <div class="container account-grid">
-    <div data-account-root class="account-react-root"></div>
+    <div id="htmx-account" class="account-htmx-root price-reference member-panel"
+      hx-get="/htmx/account"
+      hx-trigger="load"
+      hx-swap="innerHTML">
+      <div class="skel-panel" aria-busy="true"><span class="skel-line skel-line--long"></span></div>
+    </div>
   </div>
 </section>
-{% endblock %}
-{% block extra_scripts %}
-<script src="/static/js/api-client.js?v=11"></script>
-{% if google_client_id %}
-<script src="/static/js/google-profile-import.js?v=1"></script>
-{% endif %}
-{% include "partials/account-react-js.html" %}
 {% endblock %}

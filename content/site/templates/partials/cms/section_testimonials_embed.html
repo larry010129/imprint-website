@@ -1,0 +1,23 @@
+<section class="cms-section cms-embed" data-cms-reveal data-cms-section-id="{{ section.id }}" data-cms-section-type="testimonials_embed">
+  <div class="container">
+    <h2>客戶見證</h2>
+    <div class="cms-testimonials">
+      {% set items = cms_testimonials or [] %}
+      {% for t in items[:props.limit|default(6)] %}
+      <article class="cms-testimonial">
+        {% if t.image_url %}
+        <img src="{{ t.image_url }}" width="640" height="640" alt="{{ t.name }}" loading="lazy" fetchpriority="low" decoding="async">
+        {% endif %}
+        <p class="cms-testimonial__name">{{ t.name }}</p>
+        <p class="cms-testimonial__role">{{ t.role }}</p>
+        <p>{{ t.text }}</p>
+      </article>
+      {% else %}
+      <p class="cms-body">目前尚無見證。</p>
+      {% endfor %}
+    </div>
+    <div class="cms-actions">
+      <a class="cms-btn" href="/stories.html">閱讀更多見證</a>
+    </div>
+  </div>
+</section>

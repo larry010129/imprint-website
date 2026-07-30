@@ -1,0 +1,23 @@
+{% if nav_user %}
+<div class="account-menu" data-account-menu>
+  <button type="button" class="account-menu-trigger" aria-expanded="false" aria-haspopup="menu" aria-label="{{ nav_user.name }}" data-account-toggle>
+    <span class="account-menu-text"><span class="account-menu-name">{{ nav_user.name[:10] }}</span></span>
+    <span class="account-menu-avatar" aria-hidden="true">{{ nav_user.name[:1] }}</span>
+  </button>
+  <div class="account-menu-panel" role="menu" hidden data-account-panel>
+    <a role="menuitem" class="account-menu-item" href="/account.html">我的帳戶</a>
+    <a role="menuitem" class="account-menu-item" href="/history.html">訂購紀錄</a>
+    <a role="menuitem" class="account-menu-item" href="/cart.html">購物車 {% include "partials/htmx/cart_badge.html" %}</a>
+    {% if nav_user.is_admin %}<a role="menuitem" class="account-menu-item account-menu-admin" href="/admin.html">管理後台</a>{% endif %}
+    <button type="button" role="menuitem" class="account-menu-item account-menu-logout"
+      hx-post="/htmx/logout" hx-swap="none">登出</button>
+  </div>
+</div>
+{% else %}
+<div class="account-menu">
+  <a href="/login.html" class="account-menu-trigger account-menu-trigger--guest" aria-label="會員登入">
+    <span class="account-menu-text"><span class="account-menu-name">會員登入</span></span>
+    <span class="account-menu-avatar account-menu-avatar--guest" aria-hidden="true">登</span>
+  </a>
+</div>
+{% endif %}

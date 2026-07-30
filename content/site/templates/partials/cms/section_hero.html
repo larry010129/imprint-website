@@ -1,0 +1,35 @@
+{% set is_lcp = cms_lcp_section_id|default('') == section.id %}
+<section class="cms-section cms-hero" data-cms-reveal data-cms-section-id="{{ section.id }}" data-cms-section-type="hero">
+  {% if props.image_url %}
+  <div class="cms-hero__media">
+    <img src="{{ props.image_url }}" srcset="{{ props.image_url }} 1600w" sizes="100vw" width="1600" height="900" alt="{{ props.image_alt or '' }}" loading="{{ 'eager' if is_lcp else 'lazy' }}" fetchpriority="{{ 'high' if is_lcp else 'low' }}" decoding="async" data-cms-editable="image_url" data-cms-prop="image_url">
+    <div class="cms-hero__shade"></div>
+  </div>
+  {% elif cms_inline or site_cms_edit %}
+  <div class="cms-hero__media cms-hero__media--empty">
+    <button type="button" class="cms-image-upload-placeholder cms-image-upload-placeholder--hero" data-cms-editable="image_url" data-cms-prop="image_url">
+      <span>上傳 Hero 圖片</span>
+      <small>點擊選擇背景圖</small>
+    </button>
+  </div>
+  {% endif %}
+  <div class="cms-hero__copy">
+    {% if props.eyebrow or cms_inline or site_cms_edit %}
+    <p class="cms-eyebrow" data-cms-editable="text" data-cms-prop="eyebrow">{{ props.eyebrow or '眉題' }}</p>
+    {% endif %}
+    <h1 data-cms-editable="text" data-cms-prop="title">{{ props.title or cms_page.title }}</h1>
+    {% if props.lead or cms_inline or site_cms_edit %}
+    <p class="cms-lead" data-cms-editable="text" data-cms-prop="lead">{{ props.lead or '在此編輯引言。' }}</p>
+    {% endif %}
+    {% if props.cta_label or props.cta_secondary_label %}
+    <div class="cms-actions">
+      {% if props.cta_label %}
+      <a class="cms-btn cms-btn--solid" href="{{ props.cta_href or '#' }}" data-cms-editable="button" data-cms-prop="cta_label" data-cms-href-prop="cta_href">{{ props.cta_label }}</a>
+      {% endif %}
+      {% if props.cta_secondary_label %}
+      <a class="cms-btn cms-btn--ghost" href="{{ props.cta_secondary_href or '#' }}" data-cms-editable="button" data-cms-prop="cta_secondary_label" data-cms-href-prop="cta_secondary_href">{{ props.cta_secondary_label }}</a>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</section>

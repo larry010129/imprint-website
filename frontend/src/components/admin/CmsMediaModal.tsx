@@ -1,3 +1,5 @@
+import { IMAGE_ACCEPT, validateImageFile } from "@/lib/image-file";
+
 export type CmsMediaItem = { id: string; url: string; alt?: string };
 
 export default function CmsMediaModal({
@@ -6,12 +8,14 @@ export default function CmsMediaModal({
   onDelete,
   onSelect,
   onUpload,
+  onInvalid,
 }: {
   media: CmsMediaItem[];
   onClose: () => void;
   onDelete: (item: CmsMediaItem) => void;
   onSelect: (item: CmsMediaItem) => void;
   onUpload: (file: File) => void;
+  onInvalid?: (message: string) => void;
 }) {
   return (
     <div
@@ -31,11 +35,19 @@ export default function CmsMediaModal({
           上傳圖片
           <input
             type="file"
-            accept="image/png,image/jpeg,image/webp"
+            accept={IMAGE_ACCEPT}
             hidden
             onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) onUpload(file);
+              const input = event.target;
+              const file = input.files?.[0];
+              input.value = "";
+              if (!file) return;
+              const err = validateImageFile(file);
+              if (err) {
+                onInvalid?.(err);
+                return;
+              }
+              onUpload(file);
             }}
           />
         </label>

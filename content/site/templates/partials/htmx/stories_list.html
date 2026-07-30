@@ -1,0 +1,25 @@
+<section class="stories-ssr page-section">
+  <div class="container">
+    <header class="price-reference-head">
+      <p class="eyebrow">STORIES</p>
+      <h1 class="price-reference-title">客戶見證</h1>
+      <p class="price-reference-lead">真實故事，銘印成永恆。</p>
+    </header>
+    {% if not testimonials %}
+    <p>目前尚無公開見證。</p>
+    {% else %}
+    <ul class="stories-ssr-grid" style="list-style:none;padding:0;display:grid;gap:1.5rem;grid-template-columns:repeat(auto-fill,minmax(260px,1fr))">
+      {% for t in testimonials %}
+      <li class="stories-ssr-card" style="border-top:2px solid var(--mint,#5ECFCF);padding-top:1rem">
+        {% if t.text %}
+        <blockquote style="margin:0 0 .75rem;line-height:1.6">「{{ t.text }}」</blockquote>
+        {% endif %}
+        <p style="margin:0;font-weight:600">{{ t.name or '客戶' }}</p>
+        {% if t.role %}<p class="text-faint" style="margin:.25rem 0 0">{{ t.role }}</p>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </div>
+</section>
+{# ponytail: motion/filter UX from Stories React deferred; upgrade = light HTMX filter when category chips needed #}

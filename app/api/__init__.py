@@ -1,1 +1,1 @@
-"""HTTP API package — JSON only. HTML pages migrate to apps/web (Next.js)."""
+"""HTTP API package — JSON only. Public HTML is Jinja/HTMX via web_controller."""

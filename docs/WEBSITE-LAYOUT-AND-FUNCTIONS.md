@@ -1,7 +1,7 @@
 # Imprint Diamond — Website Layout & Functions
 
 Planning reference for the full site: routes, UI shell, user flows, APIs, and data model.  
-Generated from the current FastAPI + Jinja + React-islands codebase (`config/routes.py`, controllers, schema).
+Stack: FastAPI + Jinja + HTMX (`config/routes.py`, controllers, schema). Next.js removed (P5).
 
 ---
 
@@ -9,43 +9,42 @@ Generated from the current FastAPI + Jinja + React-islands codebase (`config/rou
 
 | Layer | Technology | Role |
 |-------|------------|------|
-| Server | **FastAPI** (`main.py` → `app/create_app`) | HTML pages + JSON APIs |
-| Pages | **Jinja2** (`app/views/`) | Server-rendered HTML, SEO metadata |
+| Server | **FastAPI** (`main.py` → `app/create_app`) | HTML pages + JSON APIs + HTMX partials |
+| Pages | **Jinja2** (`content/site/templates/`) | Server-rendered HTML, SEO metadata |
 | Page registry | **`config/routes.py`** | Single source of truth for URLs → templates |
 | Database | **Postgres** (Supabase) | Users, catalog, cart, orders, leads |
-| Global chrome | **React islands** (`frontend/` → `public/react/`) | Nav, footer, price table, stories, FAQ, checkout |
-| Shop | **Vanilla JS** (`public/js/shop.js`) | 3-step jewelry calculator wizard |
-| Member area | **Client MVC** (`public/js/mvc/`) | Cart, login, account, history, etc. |
-| Admin | **Static SPA shell** (`admin.html` + `public/js/admin*.js`) | Staff dashboard, orders, products |
-| Static assets | **`public/`** mounted at `/static/` and `/css/` | CSS, images, built JS |
+| Global chrome | **Jinja partials + HTMX** | Nav, footer, cart badge, auth/member panels |
+| Shop | **HTMX wizard** (`htmx_shop_wizard.py`) | Calculator steps + server quote |
+| Member area | **HTMX partials** (`/htmx/...`) | Cart, login, account, history, etc. |
+| Admin | **Static SPA shell** (`admin.html` + `admin-tables` React) | Staff dashboard, orders, products |
+| Static assets | **`public/`** mounted at `/static/` and `/css/` | CSS, images, admin React |
 
 **Local dev:** `npm run dev` → uvicorn `:8080`  
-**Frontend build:** `npm run build:frontend` → Vite bundles into `public/react/`
+**Frontend build:** `npm run build:frontend` → `public/react/admin-tables.*` only
 
 ---
 
 ## 2. Global page shell
 
-Every marketing / member page (except admin) extends `app/views/layouts/base.html`:
+Every marketing / member page (except admin) extends `content/site/templates/layouts/base.html`:
 
 ```
 ┌─────────────────────────────────────────────┐
 │  topbar.html          (utility links)       │
 ├─────────────────────────────────────────────┤
-│  nav.html + React SiteNav  (main menu)      │
+│  nav.html + HTMX cart/account               │
 ├─────────────────────────────────────────────┤
 │  <main>                                     │
 │    {% block content %}  ← page body         │
 │  </main>                                    │
 ├─────────────────────────────────────────────┤
-│  footer.html + React SiteFooter             │
+│  footer.html (Jinja)                        │
 ├─────────────────────────────────────────────┤
-│  nav-dropdown.js, site-layout.js, main.js   │
-│  + page-specific scripts (MVC / shop / React)│
+│  htmx.min.js, nav-chrome.js, site-layout.js │
 └─────────────────────────────────────────────┘
 ```
 
-**Shared head:** canonical URL, OG/Twitter tags, base CSS (`base`, `nav`, `home`, `pages`, `responsive`), React nav/footer CSS.
+**Shared head:** canonical URL, OG/Twitter tags, base CSS (`base`, `nav`, `home`, `pages`, `responsive`), frozen chrome utility CSS under `public/react/`.
 
 **Auth layout:** `layouts/base-auth.html` — stripped shell for login/register/reset-password.
 
@@ -126,14 +125,14 @@ Static Jinja pages with HTML **fragments** from `app/views/fragments/`:
 
 | URL | Template | Rendering | Purpose |
 |-----|----------|-----------|---------|
-| `/shop/calculator/` | `pages/shop/calculator.html` | Jinja + **`shop.js` wizard** | Configure jewelry (3 steps) |
+| `/shop/calculator/` | `pages/shop/calculator.html` | Jinja + **HTMX wizard** | Configure jewelry (steps) |
 | `/shop/quote-sheet.html` | `pages/shop/quote-sheet.html` | Jinja + quote render JS | Printable quote sheet |
 | `/quote-sheet` | same | alias route | Short URL |
 | `/share/summary.html` | `pages/share/summary.html` | Jinja | Shared config summary |
 | `/s/{token}` | share summary (dynamic) | Jinja | Tokenized share link |
-| `/cart.html` | `pages/cart.html` | Jinja + **MVC cart** | Saved configurations |
-| `/checkout.html` | `pages/checkout.html` | Jinja + **React CheckoutPage** | Contact + fulfillment + submit |
-| `/success.html` | `pages/success.html` | Jinja + MVC | Post-checkout confirmation |
+| `/cart.html` | `pages/cart.html` | Jinja + **HTMX cart** | Saved configurations |
+| `/checkout.html` | `pages/checkout.html` | Jinja + **HTMX checkout** | Contact + fulfillment + submit |
+| `/success.html` | `pages/success.html` | Jinja | Post-checkout confirmation |
 
 ### 4.6 Member area (login required for most)
 
@@ -360,43 +359,26 @@ Full DDL: `backend/schema.sql`
 
 ## 10. Frontend architecture split
 
-### 10.1 React islands (Vite entry configs)
+### 10.1 React (admin only)
 
-| Bundle | Entry config | Mount point | Page(s) |
-|--------|--------------|-------------|---------|
-| `nav.js` | `vite.nav.config.ts` | `#react-nav-root` | All base-layout pages |
-| `footer.js` | `vite.footer.config.ts` | `#react-footer-root` | All base-layout pages |
-| `price.js` | `vite.price.config.ts` | price page root | `/price.html` |
-| `stories.js` | `vite.stories.config.ts` | stories root | `/stories.html` |
-| `checkout.js` | `vite.checkout.config.ts` | `[data-checkout-root]` | `/checkout.html` |
-| `admin-tables.js` | `vite.admin-tables.config.ts` | admin product tables | `/admin.html` |
+| Bundle | Entry config | Mount | Page |
+|--------|--------------|-------|------|
+| `admin-tables.js` | `vite.admin-tables.config.ts` | admin product/CMS tables | `/admin.html` |
 
-Checkout stack: HeroUI Alert/Button, `CheckoutItemDetail`, `checkout-item-display.ts` for spec/breakdown rows.
+Public React islands (nav/footer/checkout/auth/…) removed in P5. Frozen `public/react/src.css` + `footer.css` still linked from `base.html` for chrome utility classes until migrated into `public/css/`.
 
-### 10.2 Client MVC pages
+### 10.2 HTMX public surfaces
 
-Pattern: `public/js/mvc/{models,views,controllers}/{page}-*.js`  
-Bootstrapped via `data-mvc` on `<body>` + `imprintAPI` (`public/js/api-client.js`).
+Partials under `content/site/templates/partials/htmx/`; routes on `htmx_controller` / `htmx_*` modules (`/htmx/...`). Cookie JWT same as JSON APIs.
 
-| MVC page id | Scripts loaded by template |
-|-------------|----------------------------|
-| `cart` | cart-model/view/controller |
-| `login`, `register`, `reset-password` | auth controllers |
-| `account`, `profile`, `history` | member controllers |
-| `favorites`, `notifications` | saved items / alerts |
-| `contact`, `track-order`, `success` | forms & lookup |
-| `error-404` | 404 handler |
-
-### 10.3 Shop (non-React)
+### 10.3 Shop quote-sheet helpers (non-wizard)
 
 | File | Role |
 |------|------|
-| `public/js/shop.js` | Wizard UI, cart/favorite actions, cart_edit restore |
-| `public/js/shop-catalog-data.js` | Static fallback catalog metadata |
-| `public/js/shop-pricing-local.js` | Client pricing engine |
 | `public/js/shop-quote-render.js` | Quote sheet / share summary HTML |
+| `public/js/shop-catalog-data.js` | Static fallback catalog metadata |
+| `public/js/shop-pricing-local.js` | Formula parity fixture (tests; calculator uses server quote) |
 | `public/js/shop-assets.js` | Image path helpers (mirrored server-side in `app/image_urls.py`) |
-| `app/static/js/shop-catalog-data.js` | Served catalog seed |
 
 ### 10.4 Shared utilities
 

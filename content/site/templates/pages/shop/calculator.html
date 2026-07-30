@@ -1,13 +1,18 @@
 {% extends "layouts/base.html" %}
-{% block main_class %} class="main-content shop-calculator-page"{% endblock %}
+{% set q_preview = request.query_params.get('preview', '') in ('1', 'true', 'yes') %}
+{% block title %}{% if q_preview %}預覽模式｜不會送出真實訂單 — {% endif %}{{ title }}{% endblock %}
+{% block main_class %} class="main-content shop-calculator-page{% if q_preview %} is-shop-preview{% endif %}"{% endblock %}
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/shop.css?v=6.26">
-<link rel="stylesheet" href="/static/css/shop-wizard.css?v=19">
+<link rel="stylesheet" href="/static/css/shop.css?v=6.27">
+<link rel="stylesheet" href="/static/css/shop-wizard.css?v=22">
 {% include "partials/shop-tour-react-css.html" %}
+{% if q_preview %}
+<meta name="robots" content="noindex, nofollow">
+{% endif %}
 {% endblock %}
 {% block content %}
   <div class="container shop-calculator-wrap">
-<div class="shop-page shop-fit shop-wizard" id="shop-page">
+<div class="shop-page shop-fit shop-wizard" id="shop-page"{% if q_preview %} data-shop-preview="1"{% endif %}>
 
   <header class="shop-wizard-header" id="shop-wizard-header">
     <nav class="shop-stepper" id="shop-step-rail" aria-label="訂製步驟">
@@ -60,30 +65,39 @@
       <section id="shop-styles" class="shop-section shop-section--focus hidden">
         <button type="button" class="shop-back" id="back-to-catalog" data-i18n="shop_back_catalog">← 返回品項</button>
         <h2 class="shop-section-title" id="shop-category-title"></h2>
-        <details class="catalog-filters-wrap" id="catalog-filters-wrap">
-          <summary class="catalog-filters-toggle">篩選款式（選填）</summary>
-        <div class="catalog-filters" id="catalog-filters">
-          <label class="catalog-search">
-            <span class="sr-only" data-i18n="catalog_search_label">搜尋款式</span>
-            <input type="search" id="catalog-search-input" placeholder="搜尋款式" data-i18n-placeholder="catalog_search_placeholder">
-          </label>
-          <select id="catalog-metal-filter" aria-label="金屬篩選">
-            <option value="" data-i18n="catalog_all_metals">所有金屬</option>
-            <option value="9k">9K</option>
-            <option value="14k">14K</option>
-            <option value="18k">18K</option>
-            <option value="pt950">Pt950</option>
-            <option value="s925">S925</option>
-          </select>
-          <select id="catalog-price-filter" aria-label="價格篩選">
-            <option value="" data-i18n="catalog_all_prices">所有價格</option>
-            <option value="under30000">NT$ 30,000 以下</option>
-            <option value="30000to80000">NT$ 30,000–80,000</option>
-            <option value="over80000">NT$ 80,000 以上</option>
-          </select>
-          <button type="button" id="catalog-filter-clear" data-i18n="catalog_clear_filters">清除</button>
+        <div class="catalog-filters-bar">
+          <div class="catalog-filters-toolbar" role="group" aria-label="款式篩選" data-i18n-aria="catalog_filters_group">
+            <details class="catalog-filters-wrap" id="catalog-filters-wrap">
+              <summary class="catalog-filters-toggle">
+                <span class="catalog-filters-toggle-text" data-i18n="catalog_filters_toggle">篩選款式（選填）</span>
+              </summary>
+              <div class="catalog-filters" id="catalog-filters">
+                <label class="catalog-search">
+                  <span class="sr-only" data-i18n="catalog_search_label">搜尋款式</span>
+                  <input type="search" id="catalog-search-input" placeholder="搜尋款式" data-i18n-placeholder="catalog_search_placeholder">
+                </label>
+                <select id="catalog-metal-filter" aria-label="金屬篩選">
+                  <option value="" data-i18n="catalog_all_metals">所有金屬</option>
+                  <option value="9k">9K</option>
+                  <option value="14k">14K</option>
+                  <option value="18k">18K</option>
+                  <option value="pt950">Pt950</option>
+                  <option value="s925">S925</option>
+                </select>
+                <select id="catalog-price-filter" aria-label="價格篩選">
+                  <option value="" data-i18n="catalog_all_prices">所有價格</option>
+                  <option value="under30000">NT$ 30,000 以下</option>
+                  <option value="30000to80000">NT$ 30,000–80,000</option>
+                  <option value="over80000">NT$ 80,000 以上</option>
+                </select>
+                <button type="button" id="catalog-filter-clear" data-i18n="catalog_clear_filters">清除</button>
+              </div>
+            </details>
+            <select id="catalog-carat-filter" class="catalog-carat-filter" aria-label="克拉篩選">
+              <option value="" data-i18n="catalog_all_carats">所有克拉</option>
+            </select>
+          </div>
         </div>
-        </details>
         <div class="type-grid" id="type-grid"></div>
         <div class="catalog-filter-empty hidden" id="catalog-filter-empty">
           <p data-i18n="catalog_no_matches">找不到符合條件的款式。</p>
@@ -170,12 +184,16 @@
             <div class="variant-group" id="carat-step">
               <h3 class="variant-label" data-i18n="step_carat">選擇克拉數</h3>
               <select class="carat-select" id="carat-select" aria-label="選擇克拉數">
-                <option value="" data-i18n="carat_placeholder">— 請選擇克拉數 —</option>
+                <option value="" data-i18n="carat_placeholder">選擇克拉</option>
               </select>
             </div>
 
             <div class="variant-group" id="fancy-diamond-step">
-              <h3 class="variant-label" data-i18n="step_diamond_color">選擇鑽石顏色</h3>
+              <div class="variant-label-row fancy-color-label-row">
+                <h3 class="variant-label" data-i18n="step_diamond_color">選擇鑽石顏色</h3>
+                <p class="diamond-shape-hint diamond-shape-hint--inline" id="diamond-fancy-min-carat-notice" role="note"
+                   data-i18n="diamond_fancy_min_carat">彩鑽只有 0.3 克拉（30 分）以上</p>
+              </div>
               <div class="diamond-carousel-wrap">
                 <button type="button" class="diamond-carousel-nav" id="fancy-color-prev" aria-label="Previous" hidden>‹</button>
                 <div class="diamond-carousel" id="fancy-color-carousel"></div>
@@ -289,6 +307,14 @@
                      data-i18n-placeholder="engraving_placeholder" placeholder="選填，最多 10 個字">
             </div>
 
+            <div class="variant-group hidden" id="engraving-remark-step">
+              <h3 class="variant-label" data-i18n="step_engraving_remark">備註欄</h3>
+              <input id="engraving-remark-input" class="engraving-input" type="text" maxlength="30"
+                     data-i18n-placeholder="engraving_remark_placeholder"
+                     placeholder="選填，例如手鍊本體刻字：Bear Bear">
+              <p class="cfg-engrave-hint" data-i18n="engraving_remark_hint">可註記金屬本體刻字內容（如手鍊鋼印字樣）</p>
+            </div>
+
             <div class="variant-group hidden" id="engraving-girdle-step">
               <h3 class="variant-label" data-i18n="step_engraving_girdle">鑽石腰圍刻字</h3>
               <div class="cfg-engrave shop-girdle-engrave">
@@ -324,14 +350,6 @@
                 <button type="button" class="variant-chip pendant-chain-toggle" data-include-chain="true" data-i18n="pendant_with_chain">含鍊</button>
               </div>
               <div class="pendant-chain-options hidden" id="pendant-chain-options">
-                <div class="variant-group pendant-chain-metal">
-                  <h3 class="variant-label" data-i18n="step_metal">選擇材質</h3>
-                  <div class="variant-chips" id="pendant-chain-metal-row"></div>
-                </div>
-                <div class="variant-group pendant-chain-color" id="pendant-chain-color-step">
-                  <h3 class="variant-label" id="pendant-chain-color-label" data-i18n="step_color">選擇金屬顏色</h3>
-                  <div class="variant-chips" id="pendant-chain-color-row"></div>
-                </div>
                 <div class="variant-group pendant-chain-length">
                   <h3 class="variant-label" data-i18n="step_chain_length">選擇鏈條長度</h3>
                   <select id="pendant-chain-length-select" class="ring-size-select" aria-label="Chain length">
@@ -759,6 +777,21 @@
 <div data-shop-tour-root></div>
 {% endblock %}
 {% block extra_scripts %}
+{% if q_preview %}
+<script>
+(function () {
+  document.cookie = "shop_preview=1; path=/; max-age=7200; SameSite=Lax";
+})();
+</script>
+{% else %}
+<script>
+(function () {
+  if (document.cookie.indexOf("shop_preview=") !== -1) {
+    document.cookie = "shop_preview=; path=/; max-age=0; SameSite=Lax";
+  }
+})();
+</script>
+{% endif %}
 {% include "partials/shop-tour-react-js.html" %}
 <script src="/static/js/api-client.js"></script>
 <script>
@@ -771,13 +804,14 @@
     successUrl: '/success.html',
     quoteSheetUrl: '/quote-sheet',
     shareBaseUrl: '/s/TOKEN',
+    preview: {% if q_preview %}true{% else %}false{% endif %},
   }, window.shopConfig || {});
 </script>
 <script src="/static/js/shop-assets.js?v=13"></script>
 <script src="/static/js/shop-catalog-data.js?v=6"></script>
 <script src="/static/js/shop-pricing-local.js?v=11"></script>
-<script src="/static/js/shop-i18n.js?v=10"></script>
+<script src="/static/js/shop-i18n.js?v=12"></script>
 <script src="/static/js/girdle-engrave.js?v=24"></script>
 <script src="/static/js/shop-terms.js?v=4"></script>
-<script src="/static/js/shop.js?v=112"></script>
+<script src="/static/js/shop.js?v=113"></script>
 {% endblock %}

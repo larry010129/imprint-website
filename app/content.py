@@ -39,15 +39,25 @@ TAIWAN_CITIES = (
     "澎湖縣",
     "金門縣",
     "連江縣",
+    "其他",
 )
 
 
-def build_testimonial_role(category: str, city: str) -> str:
-    cat = (category or "").strip()
+def location_label_for_testimonial(city: str, country: str = "") -> str:
+    """Public location: Taiwan city as-is;「其他」shows typed country."""
     cty = (city or "").strip()
-    if cat and cty:
-        return f"{cat}・{cty}"
-    return cat or cty
+    ctry = (country or "").strip()
+    if cty == "其他" and ctry:
+        return ctry
+    return cty
+
+
+def build_testimonial_role(category: str, city: str, country: str = "") -> str:
+    cat = (category or "").strip()
+    loc = location_label_for_testimonial(city, country)
+    if cat and loc:
+        return f"{cat}・{loc}"
+    return cat or loc
 
 
 def split_display_name(full: str) -> tuple[str, str]:
@@ -75,10 +85,14 @@ def parse_testimonial_payload(body: dict | None) -> tuple[dict | None, str | Non
     honorific = str(body.get("honorific") or "小姐").strip()
     name = combine_display_name(name_part, honorific)
     category = str(body.get("category") or "").strip()
-    city = str(body.get("city") or "").strip()
+    city = str(body.get("city") or "").strip().replace("臺", "台")
+    country = str(body.get("country") or "").strip()
     text = str(body.get("text") or "").strip()
     image_url = str(body.get("imageUrl") or body.get("image_url") or "").strip()
     is_published = bool(body.get("isPublished") if body.get("isPublished") is not None else True)
+
+    if city != "其他":
+        country = ""
 
     errors: list[str] = []
     if not name_part:
@@ -87,6 +101,12 @@ def parse_testimonial_payload(body: dict | None) -> tuple[dict | None, str | Non
         errors.append("請選擇分類")
     if not city:
         errors.append("請選擇城市")
+    elif city not in TAIWAN_CITIES:
+        errors.append("請從清單選擇城市（縣市）")
+    if city == "其他" and not country:
+        errors.append("請填寫國家 / 地區")
+    if len(country) > 40:
+        errors.append("國家 / 地區過長")
     if not text:
         errors.append("請填寫見證內容")
     if not image_url:
@@ -96,9 +116,10 @@ def parse_testimonial_payload(body: dict | None) -> tuple[dict | None, str | Non
 
     cleaned = {
         "name": name,
-        "role": build_testimonial_role(category, city),
+        "role": build_testimonial_role(category, city, country),
         "category": category,
         "city": city,
+        "country": country,
         "text": text,
         "image_url": image_url,
         "rating": 5,
@@ -184,9 +205,15 @@ def serialize_testimonial(row: dict) -> dict:
         out["rating"] = int(out["rating"])
     if out.get("sort_order") is not None:
         out["sort_order"] = int(out["sort_order"])
-    role = (out.get("role") or "").strip()
-    if not role:
-        out["role"] = build_testimonial_role(out.get("category") or "", out.get("city") or "")
+    if out.get("country") is None:
+        out["country"] = ""
+    else:
+        out["country"] = str(out.get("country") or "").strip()
+    out["role"] = build_testimonial_role(
+        out.get("category") or "",
+        out.get("city") or "",
+        out.get("country") or "",
+    )
     name_part, honorific = split_display_name(out.get("name") or "")
     out["name_part"] = name_part
     out["honorific"] = honorific
@@ -314,6 +341,13 @@ def ensure_banner_mobile_column(cur) -> None:
     """Idempotent: add image_url_mobile to home_banners if it doesn't exist yet."""
     cur.execute(
         "alter table home_banners add column if not exists image_url_mobile text not null default ''"
+    )
+
+
+def ensure_testimonial_country_column(cur) -> None:
+    """Idempotent: add country for「其他」city free-text region."""
+    cur.execute(
+        "alter table testimonials add column if not exists country text not null default ''"
     )
 
 

@@ -57,7 +57,11 @@ def _validate_config(body: dict[str, Any]) -> str | None:
 
 def _strip_disallowed_engraving(cur, body: dict[str, Any]) -> None:
     """Clear engraving fields when the selected product does not allow 刻字."""
-    if not body.get("engravingBand") and not body.get("engravingGirdle"):
+    if (
+        not body.get("engravingBand")
+        and not body.get("engravingGirdle")
+        and not body.get("engravingRemark")
+    ):
         return
     product_id = resolve_product_id(
         cur,
@@ -71,6 +75,7 @@ def _strip_disallowed_engraving(cur, body: dict[str, Any]) -> None:
     row = cur.fetchone()
     if row and row.get("allows_engraving") is False:
         body["engravingBand"] = ""
+        body["engravingRemark"] = ""
         body["engravingGirdle"] = ""
 
 
@@ -336,14 +341,19 @@ async def update_my_order(request: Request) -> dict:
     return {"ok": True, "orderNumber": order["order_number"]}
 
 
-@router.get("/cart")
-async def get_cart(request: Request) -> dict:
-    user_id = _user_id(request)
+def fetch_cart_items(user_id: str, item_ids: list[str] | None = None) -> list[dict]:
+    """Shared cart loader for JSON API + HTMX partials."""
     with get_connection() as conn, conn.cursor() as cur:
-        cur.execute(
-            "select * from cart_items where user_id = %s order by created_at asc",
-            (user_id,),
-        )
+        if item_ids:
+            cur.execute(
+                "select * from cart_items where user_id = %s and id = any(%s) order by created_at asc",
+                (user_id, item_ids),
+            )
+        else:
+            cur.execute(
+                "select * from cart_items where user_id = %s order by created_at asc",
+                (user_id,),
+            )
         items = cur.fetchall()
         for item in items:
             config = item.get("config_json") or {}
@@ -353,7 +363,13 @@ async def get_cart(request: Request) -> dict:
                 style_type=item.get("style_type"),
                 category=item.get("category"),
             )
-    return {"items": items}
+    return items
+
+
+@router.get("/cart")
+async def get_cart(request: Request) -> dict:
+    user_id = _user_id(request)
+    return {"items": fetch_cart_items(user_id)}
 
 
 @router.post("/cart")
@@ -487,8 +503,11 @@ async def cart_item(request: Request) -> dict:
 async def coupon_validate(request: Request) -> dict:
     user_id = _user_id(request)
     body = await request.json()
-    if not isinstance(body, dict):
-        body = {}
+    return await validate_coupon_body(user_id, body if isinstance(body, dict) else {})
+
+
+async def validate_coupon_body(user_id: str, body: dict[str, Any]) -> dict:
+    """Shared coupon validate for JSON API + HTMX (no duplicate pricing SQL)."""
     code = body.get("code") or body.get("couponCode") or ""
     item_ids = body.get("itemIds")
 
@@ -533,6 +552,16 @@ async def coupon_validate(request: Request) -> dict:
         }
 
 
+def _request_is_shop_preview(request: Request, body: dict[str, Any] | None = None) -> bool:
+    from app.controllers.htmx_common import form_bool, is_shop_preview
+
+    if is_shop_preview(request):
+        return True
+    if body is not None and form_bool(body.get("preview")):
+        return True
+    return False
+
+
 @router.post("/cart-checkout")
 async def cart_checkout(request: Request) -> dict:
     import logging
@@ -547,11 +576,14 @@ async def cart_checkout(request: Request) -> dict:
         return _err(500, "訂單建立失敗，請稍後再試或聯絡客服")
 
 
-async def _cart_checkout_impl(request: Request) -> dict:
+async def _cart_checkout_impl(request: Request, body: dict[str, Any] | None = None) -> dict:
+    if body is None:
+        raw = await request.json()
+        body = raw if isinstance(raw, dict) else {}
+    # Preview gate before auth — never create real orders from admin product preview.
+    if _request_is_shop_preview(request, body):
+        return _err(403, "預覽模式無法送出真實訂單")
     user_id = _user_id(request)
-    body = await request.json()
-    if not isinstance(body, dict):
-        body = {}
     item_ids = body.get("itemIds")
     coupon_code_raw = body.get("couponCode") or body.get("code") or ""
 

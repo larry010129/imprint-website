@@ -31,6 +31,36 @@
   var METAL_SLOT_VALUES = METAL_SLOT_OPTIONS.map(function (o) { return o.value; });
   var DIAMOND_SLOT_VALUES = DIAMOND_SLOT_OPTIONS.map(function (o) { return o.value; });
 
+  // Match server _ALLOWED_IMAGE_EXT / UI copy: PNG / JPG / WEBP, 1MB.
+  var IMAGE_ACCEPT = 'image/png,image/jpeg,image/webp';
+  var IMAGE_MIME_OK = { 'image/png': 1, 'image/jpeg': 1, 'image/webp': 1 };
+  var IMAGE_EXT_OK = { '.png': 1, '.jpg': 1, '.jpeg': 1, '.webp': 1 };
+  var MAX_IMAGE_BYTES = 1 * 1024 * 1024;
+
+  function imageFileExt(name) {
+    var m = String(name || '').toLowerCase().match(/\.[a-z0-9]+$/);
+    return m ? m[0] : '';
+  }
+
+  function isAllowedImageFile(file) {
+    if (!file) return false;
+    var ext = imageFileExt(file.name);
+    if (!IMAGE_EXT_OK[ext]) return false;
+    if (file.type && !IMAGE_MIME_OK[file.type]) return false;
+    return true;
+  }
+
+  /** Returns error string, or '' if all files ok. */
+  function validateImageFiles(files) {
+    var list = Array.from(files || []);
+    if (!list.length) return '';
+    for (var i = 0; i < list.length; i++) {
+      if (!isAllowedImageFile(list[i])) return '僅支援 PNG / JPG / WEBP';
+      if (list[i].size > MAX_IMAGE_BYTES) return '圖片需小於 1MB';
+    }
+    return '';
+  }
+
   // Image slots are metal × diamond. Legacy 3-part keys (metal-diamond-chainMetal)
   // still parse for folding into metal-diamond; calculator no longer picks chain color.
   function buildSlotKey(metal, diamond, chainMetal) {
@@ -99,6 +129,27 @@
       return window.AdminImageUrls.productPhoto(path, color);
     }
     return window.AdminImageUrls ? window.AdminImageUrls.resolve(path) : path;
+  }
+
+  /** blob:/data: are tab-local — never persist or preview as SoT. */
+  function isBrowserLocalImageUrl(url) {
+    return /^(?:blob:|data:)/i.test(String(url || '').trim());
+  }
+
+  /** Seed SVG /styles paths 404; shop-product rasters are SoT. */
+  function isDeadCatalogPlaceholder(url) {
+    var path = String(url || '').split('?', 1)[0].toLowerCase();
+    return /\.svg$/i.test(path) || /\/images\/shop\/styles\//i.test(path);
+  }
+
+  /** Persistable URL for editor data-url + SQL (raster server path only). */
+  function persistableImageUrl(path, color) {
+    if (!path || isBrowserLocalImageUrl(path)) return '';
+    var resolved = imageUrl(path, color) || path;
+    if (!resolved || isBrowserLocalImageUrl(resolved) || isDeadCatalogPlaceholder(resolved)) {
+      return '';
+    }
+    return resolved;
   }
 
   function imageCoversDefaultColor(imageColor, defaultColor) {
@@ -187,7 +238,7 @@
             '</div>' +
             '<label class="btn-sm ap-category-thumb-upload">' +
               '更換圖片' +
-              '<input type="file" accept="image/png,image/jpeg,image/webp" hidden id="apCategoryThumbInput">' +
+              '<input type="file" accept="' + IMAGE_ACCEPT + '" hidden id="apCategoryThumbInput">' +
             '</label>' +
           '</div>' +
           '<button type="button" class="btn-sm ap-category-delete-btn" id="apDeleteCategoryBtn" data-slug="' + esc(cat) + '" data-label="' + esc(label) + '">刪除此品項</button>' +
@@ -542,6 +593,11 @@
       var file = input.files && input.files[0];
       input.value = '';
       if (!file) return;
+      var bad = validateImageFiles([file]);
+      if (bad) {
+        alert(bad);
+        return;
+      }
       var cat = state.activeTab.replace('cat-', '');
       api.admin.uploadProductCategoryThumb(cat, file).then(function (res) {
         if (res.error) {
@@ -648,13 +704,16 @@
   }
 
   function imageSlideHtml(url, color) {
-    var src = imageUrl(url, color);
+    var persistUrl = persistableImageUrl(url, color) || String(url || '');
+    var src = persistableImageUrl(url, color) || imageUrl(url, color);
+    if (!src || isBrowserLocalImageUrl(src)) return '';
+    // Eager src — deferred data-src left empty <img> showing broken icon in carousel.
     return (
-      '<div class="ap-carousel-item" data-url="' + esc(url) + '">' +
+      '<div class="ap-carousel-item" data-url="' + esc(persistUrl) + '" data-color="' + esc(color || '') + '">' +
         '<div class="ap-carousel-card">' +
           '<div class="ap-carousel-card-media">' +
-            '<img class="ap-carousel-img" data-src="' + esc(src) + '" alt="" data-fallback="' + esc(src) +
-              '" loading="lazy" decoding="async" fetchpriority="low" width="180" height="180">' +
+            '<img class="ap-carousel-img" src="' + esc(src) + '" alt="" data-fallback="' + esc(src) +
+              '" loading="eager" decoding="async" width="180" height="180">' +
             '<button type="button" class="ap-remove-image" aria-label="移除">X</button>' +
           '</div>' +
         '</div>' +
@@ -722,8 +781,11 @@
     var groups = {};
     (images || []).forEach(function (img) {
       var color = img.color || 'white';
+      var raw = img.file_path || img.url;
+      var url = persistableImageUrl(raw, color);
+      if (!url) return;
       if (!groups[color]) groups[color] = [];
-      groups[color].push(img.file_path || img.url);
+      if (groups[color].indexOf(url) < 0) groups[color].push(url);
     });
     return groups;
   }
@@ -806,7 +868,7 @@
                     '</span>' +
                     '<span class="ap-upload-title">上傳圖片</span>' +
                     '<span class="ap-upload-hint">或點擊瀏覽<br>PNG / JPG / WEBP，1MB 內</span>' +
-                    '<input type="file" class="ap-image-input" accept="image/png,image/jpeg,image/webp" multiple hidden>' +
+                    '<input type="file" class="ap-image-input" accept="' + IMAGE_ACCEPT + '" multiple hidden>' +
                   '</label>' +
                   '<div class="ap-upload-progress" hidden><div class="ap-upload-progress-bar"></div></div>' +
                   '<span class="ap-uploading" hidden>上傳中…</span>' +
@@ -926,6 +988,11 @@
         xhr.onerror = function () { resolve({ error: 'network' }); };
         var fd = new FormData();
         fd.append('file', file);
+        // Existing product: persist URL into product_images immediately (SQL SoT).
+        if (state.editingId) {
+          fd.append('product_id', state.editingId);
+          fd.append('color', color);
+        }
         xhr.send(fd);
       });
     }
@@ -939,13 +1006,14 @@
       if (progressBar) progressBar.style.width = '0%';
       var hadError = false;
       results.forEach(function (res) {
-        if (res.error || !res.url) { hadError = true; return; }
+        if (res.error || !res.url || isBrowserLocalImageUrl(res.url)) { hadError = true; return; }
         var wrap = document.createElement('div');
         wrap.innerHTML = imageSlideHtml(res.url, color);
         var item = wrap.firstElementChild;
+        if (!item) { hadError = true; return; }
         item.dataset.url = res.url;
+        item.dataset.color = color;
         track.insertBefore(item, uploadItem);
-        observeDeferredImages(item);
         item.querySelector('.ap-remove-image')?.addEventListener('click', function () {
           item.remove();
           var carousel = slot.querySelector('[data-carousel]');
@@ -1036,8 +1104,13 @@
 
       input?.addEventListener('change', function () {
         var files = Array.from(input.files || []);
-        uploadFilesToSlot(files, slot, form);
         input.value = '';
+        var bad = validateImageFiles(files);
+        if (bad) {
+          alert(bad);
+          return;
+        }
+        uploadFilesToSlot(files, slot, form);
       });
 
       if (dropzone) {
@@ -1051,9 +1124,12 @@
         dropzone.addEventListener('drop', function (e) {
           e.preventDefault();
           dropzone.classList.remove('is-dragover');
-          var files = Array.from((e.dataTransfer && e.dataTransfer.files) || []).filter(function (f) {
-            return /^image\//.test(f.type);
-          });
+          var files = Array.from((e.dataTransfer && e.dataTransfer.files) || []);
+          var bad = validateImageFiles(files);
+          if (bad) {
+            alert(bad);
+            return;
+          }
           uploadFilesToSlot(files, slot, form);
         });
       }
@@ -1117,29 +1193,46 @@
     );
   }
 
-  function pendantSellModeTogglesHtml(product, category) {
+  /** Exclusive sell mode: 'only' (left) or 'chain' (right). Both-true → chain. */
+  function resolvePendantSellMode(product) {
     var allowOnly = !product || product.allows_pendant_only !== false;
     var allowChain = !product || product.allows_with_chain !== false;
+    if (allowChain) return 'chain';
+    if (allowOnly) return 'only';
+    return 'chain';
+  }
+
+  function syncPendantSellModeUi(root) {
+    var dual = (root || document).querySelector('.ap-sell-mode-dual');
+    var input = dual && dual.querySelector('[name="pendantSellModeChain"]');
+    if (!dual || !input) return;
+    var chainOn = !!input.checked;
+    dual.classList.toggle('is-chain', chainOn);
+    dual.setAttribute('data-mode', chainOn ? 'chain' : 'only');
+    var left = dual.querySelector('[data-side="only"]');
+    var right = dual.querySelector('[data-side="chain"]');
+    if (left) left.setAttribute('aria-pressed', String(!chainOn));
+    if (right) right.setAttribute('aria-pressed', String(chainOn));
+  }
+
+  function pendantSellModeTogglesHtml(product, category) {
+    var mode = resolvePendantSellMode(product);
+    var chainOn = mode === 'chain';
     var hiddenAttr = category === 'pendant' ? '' : ' hidden';
     return (
       '<div class="ap-pendant-sell-modes ap-field-wide" id="apPendantSellModes"' + hiddenAttr + '>' +
-        '<div class="ap-switch-wrap">' +
-          '<label class="ap-switch">' +
-            '<input type="checkbox" class="ap-switch-input" name="allowsPendantOnly"' +
-              (allowOnly ? ' checked' : '') + '>' +
-            '<span class="ap-switch-track" aria-hidden="true"><span class="ap-switch-thumb"></span></span>' +
-            '<span class="ap-switch-label">可僅墜子賣</span>' +
+        '<div class="ap-sell-mode-dual' + (chainOn ? ' is-chain' : '') + '" role="group" aria-label="項墜販售方式" data-mode="' + mode + '">' +
+          '<button type="button" class="ap-sell-mode-side" data-side="only" aria-pressed="' + (!chainOn) + '">僅墜子賣</button>' +
+          '<label class="ap-switch ap-cine-switch">' +
+            '<input type="checkbox" class="ap-switch-input" name="pendantSellModeChain"' +
+              (chainOn ? ' checked' : '') + ' aria-label="項墜販售方式：左僅墜子賣，右可含鍊">' +
+            '<span class="ap-cine-track" aria-hidden="true">' +
+              '<span class="ap-cine-thumb"></span>' +
+            '</span>' +
           '</label>' +
+          '<button type="button" class="ap-sell-mode-side" data-side="chain" aria-pressed="' + chainOn + '">可含鍊</button>' +
         '</div>' +
-        '<div class="ap-switch-wrap">' +
-          '<label class="ap-switch">' +
-            '<input type="checkbox" class="ap-switch-input" name="allowsWithChain"' +
-              (allowChain ? ' checked' : '') + '>' +
-            '<span class="ap-switch-track" aria-hidden="true"><span class="ap-switch-thumb"></span></span>' +
-            '<span class="ap-switch-label">可含鍊賣</span>' +
-          '</label>' +
-        '</div>' +
-        '<p class="ap-section-hint ap-pendant-sell-hint">項墜販售方式：兩者皆勾＝試算可選僅墜子／含鍊；只勾含鍊＝隱藏僅墜子；只勾僅墜子＝不顯示鏈條選項。</p>' +
+        '<p class="ap-section-hint ap-pendant-sell-hint">項墜販售方式（二選一）：「僅墜子賣」＝試算不顯示鏈條；「可含鍊」＝必須搭配鏈條。</p>' +
       '</div>'
     );
   }
@@ -1273,7 +1366,8 @@
         form.querySelectorAll('.ap-image-slot').forEach(function (slot) {
           var color = slotColorKey(slot);
           slot.querySelectorAll('.ap-carousel-item[data-url]').forEach(function (item) {
-            if (item.dataset.url) currentImages.push({ color: color, file_path: item.dataset.url });
+            var url = persistableImageUrl(item.dataset.url, color);
+            if (url) currentImages.push({ color: color, file_path: url });
           });
         });
         _slotCounter = 0;
@@ -1288,6 +1382,22 @@
       var sellModes = document.getElementById('apPendantSellModes');
       if (sellModes) sellModes.hidden = cat !== 'pendant';
     });
+
+    var sellModeHost = document.getElementById('apPendantSellModes');
+    if (sellModeHost) {
+      sellModeHost.addEventListener('change', function (e) {
+        if (e.target && e.target.name === 'pendantSellModeChain') syncPendantSellModeUi(sellModeHost);
+      });
+      sellModeHost.addEventListener('click', function (e) {
+        var sideBtn = e.target.closest('.ap-sell-mode-side');
+        if (!sideBtn || !sellModeHost.contains(sideBtn)) return;
+        var input = sellModeHost.querySelector('[name="pendantSellModeChain"]');
+        if (!input) return;
+        input.checked = sideBtn.getAttribute('data-side') === 'chain';
+        syncPendantSellModeUi(sellModeHost);
+      });
+      syncPendantSellModeUi(sellModeHost);
+    }
 
     form.addEventListener('submit', function (e) {
       e.preventDefault();
@@ -1344,19 +1454,16 @@
       var color = slotColorKey(slot);
       if (!color) return;
       slot.querySelectorAll('.ap-carousel-item[data-url]').forEach(function (item) {
-        var url = item.dataset.url;
+        var url = persistableImageUrl(item.dataset.url, color);
         if (url) images.push({ color: color, url: url });
       });
     });
     var allowsEngravingInput = form.querySelector('[name="allowsEngraving"]');
-    var allowsPendantOnlyInput = form.querySelector('[name="allowsPendantOnly"]');
-    var allowsWithChainInput = form.querySelector('[name="allowsWithChain"]');
-    var allowsPendantOnly = category === 'pendant'
-      ? !!(allowsPendantOnlyInput && allowsPendantOnlyInput.checked)
-      : true;
-    var allowsWithChain = category === 'pendant'
-      ? !!(allowsWithChainInput && allowsWithChainInput.checked)
-      : true;
+    // Exclusive dual control: unchecked = 僅墜子賣, checked = 可含鍊.
+    var sellModeChainInput = form.querySelector('[name="pendantSellModeChain"]');
+    var withChain = !!(sellModeChainInput && sellModeChainInput.checked);
+    var allowsPendantOnly = category === 'pendant' ? !withChain : true;
+    var allowsWithChain = category === 'pendant' ? withChain : true;
     return {
       category: category,
       nameZh: String(fd.get('nameZh') || '').trim(),
@@ -1393,10 +1500,10 @@
 
       if (payload.category === 'pendant' && !payload.allowsPendantOnly && !payload.allowsWithChain) {
         if (errEl) {
-          errEl.textContent = '項墜請至少勾選「可僅墜子賣」或「可含鍊賣」';
+          errEl.textContent = '項墜請選擇「僅墜子賣」或「可含鍊」';
           errEl.hidden = false;
         }
-        form.querySelector('[name="allowsPendantOnly"]')?.focus();
+        form.querySelector('[name="pendantSellModeChain"]')?.focus();
         return;
       }
 

@@ -204,11 +204,29 @@ body.shop-mobile-bar {
   box-shadow: 0 0 0 1px var(--color-accent);
 }
 
-/* Style grid — smart layout by item count (see applyTypeGridLayout in script.js) */
+/* Style grid — smart layout by item count (HTMX sets type-grid--size-* server-side) */
 #shop-styles .type-grid {
   display: grid;
   gap: clamp(0.75rem, 1.2vw, 1.25rem);
   width: 100%;
+  /* Fallback when size class missing — avoid single-column / 200px-attr cards */
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+}
+
+#shop-styles .type-card img,
+#shop-styles .type-card .type-card__img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+#shop-styles .type-card .type-name,
+#shop-styles .type-card .type-card__name {
+  padding: 12px 14px 16px;
+  font-weight: 600;
 }
 
 #shop-styles .type-grid.type-grid--size-xl,
@@ -4100,6 +4118,25 @@ body.app-shell .mobile-buy-actions .shop-cta--secondary:hover:not(:disabled) {
   color: var(--color-text);
   text-align: center;
   font-size: 0.875rem;
+}
+
+.shop-calculator-page.is-shop-preview .shop-preview-banner {
+  position: sticky;
+  top: 0;
+  z-index: 90;
+  width: 100%;
+  max-width: none;
+  margin: 0 0 1rem;
+  border-radius: 0;
+  border-left: none;
+  border-right: none;
+  font-weight: 600;
+}
+
+.shop-cta--disabled {
+  opacity: 0.45;
+  pointer-events: none;
+  cursor: not-allowed;
 }
 
 .shop-preview-back {

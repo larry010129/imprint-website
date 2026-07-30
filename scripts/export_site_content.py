@@ -1,12 +1,11 @@
-"""One-shot (re-runnable) export: Jinja pages → static bodies + page registry for Next.
+"""Export Jinja pages → static bodies + page registry (slot seed / tooling).
 
 Outputs:
   content/site/bodies/<key>.html
   content/site/fragments/** (copy)
   content/site/page-registry.json
-  apps/web/src/lib/page-registry.json (copy for Next import)
 
-Run from repo root while Jinja templates still exist:
+Run from repo root:
   python scripts/export_site_content.py
 """
 
@@ -29,7 +28,6 @@ OUT = ROOT / "content" / "site"
 BODIES = OUT / "bodies"
 FRAGMENTS_OUT = OUT / "fragments"
 REGISTRY_OUT = OUT / "page-registry.json"
-NEXT_REGISTRY = ROOT / "apps" / "web" / "src" / "lib" / "page-registry.json"
 
 BASE_CSS = {
     "/static/css/base.css",
@@ -44,13 +42,13 @@ BASE_CSS = {
     "/favicon.svg",
 }
 BASE_JS_PREFIXES = (
+    "/static/js/htmx.min.js",
     "/static/js/nav-dropdown.js",
+    "/static/js/nav-chrome.js",
     "/static/js/skeleton-ui.js",
     "/static/js/site-layout.js",
     "/static/js/main.js",
     "/static/js/social-fab.js",
-    "/static/react/nav.js",
-    "/static/react/footer.js",
 )
 
 
@@ -168,7 +166,6 @@ def export_page(env: Environment, meta: PageMeta) -> dict:
     if layout == "bare":
         # Full document → keep body inner + head assets as extras
         html = template_src
-        # Replace nothing — bare pages have no Jinja
         soup = BeautifulSoup(html, "html.parser")
         body = soup.body
         main = soup.find("main")
@@ -198,10 +195,6 @@ def export_page(env: Environment, meta: PageMeta) -> dict:
 
     main = soup.find("main")
     if main:
-        main_class = main.get("class")
-        if main_class:
-            entry["main_class"] = " ".join(main_class) if isinstance(main_class, list) else str(main_class)
-        # Also capture attribute string like class="..."
         class_attr = main.get("class")
         if class_attr:
             entry["main_class"] = " ".join(class_attr)
@@ -209,7 +202,6 @@ def export_page(env: Environment, meta: PageMeta) -> dict:
     else:
         body_html = ""
 
-    # Auth pages: whole main content
     if layout == "auth" and main:
         body_html = "".join(str(c) for c in main.children)
 
@@ -226,7 +218,6 @@ def export_page(env: Environment, meta: PageMeta) -> dict:
         src = s.get("src")
         text = s.string or "".join(s.strings) or ""
         if not src:
-            # Keep page-specific inlines (React island loaders, Google boot, etc.)
             if not text.strip():
                 continue
             stype = (s.get("type") or "").lower()
@@ -253,7 +244,6 @@ def export_page(env: Environment, meta: PageMeta) -> dict:
         scripts.append(item)
 
     extra_css, extra_scripts = strip_base_assets(links, scripts)
-    # google gsi client
     for s in soup.find_all("script", src=True):
         if "accounts.google.com" in s["src"]:
             extra_scripts.insert(0, {"src": s["src"], "async": True, "defer": True})
@@ -263,7 +253,6 @@ def export_page(env: Environment, meta: PageMeta) -> dict:
     if layout == "auth":
         entry["robots"] = "noindex, nofollow"
 
-    # Capture preload from head that aren't LCP generic
     for link in soup.find_all("link", rel=True):
         rel = link.get("rel")
         if rel and "preload" in rel and link.get("as") == "image":
@@ -278,7 +267,6 @@ def export_page(env: Environment, meta: PageMeta) -> dict:
                 }
             )
 
-    # main_class from template block (shop calculator)
     m = re.search(
         r'\{%\s*block\s+main_class\s*%\}\s*class="([^"]+)"',
         template_src,
@@ -317,10 +305,6 @@ def main() -> None:
     )
 
     REGISTRY_OUT.write_text(
-        json.dumps(registry, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
-    NEXT_REGISTRY.parent.mkdir(parents=True, exist_ok=True)
-    NEXT_REGISTRY.write_text(
         json.dumps(registry, ensure_ascii=False, indent=2), encoding="utf-8"
     )
     print(f"Wrote {len(registry)} entries → {REGISTRY_OUT}")

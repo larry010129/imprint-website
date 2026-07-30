@@ -66,6 +66,7 @@ def hydrate_order(order: dict) -> dict:
         order.setdefault("diamond_shape", config.get("diamondShape") or "round")
         order.setdefault("ring_size", config.get("ringSize"))
         order.setdefault("engraving_band", config.get("engravingBand"))
+        order.setdefault("engraving_remark", config.get("engravingRemark"))
         order.setdefault("engraving_girdle", config.get("engravingGirdle"))
         order.setdefault("include_chain", bool(config.get("includeChain")))
         order.setdefault("chain_gold", config.get("chainGold"))

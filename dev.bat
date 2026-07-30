@@ -10,12 +10,8 @@ if not exist ".venv\Scripts\python.exe" (
   call .venv\Scripts\activate.bat
 )
 
-echo Starting FastAPI API on http://127.0.0.1:8080
-echo Starting Next.js site on http://127.0.0.1:3000
-echo Open the site at http://127.0.0.1:3000/  (not :8080)
+echo Starting FastAPI + Jinja SSR on http://127.0.0.1:8080
+echo Open the site at http://127.0.0.1:8080/
 echo.
 
-start "imprint-api" /D "%~dp0" cmd /k "call .venv\Scripts\activate.bat && python -m uvicorn main:app --reload --host 127.0.0.1 --port 8080"
-start "imprint-web" /D "%~dp0" cmd /k "npm run dev:web"
-
-echo Both windows launched. Browse http://127.0.0.1:3000/
+python -m uvicorn main:app --reload --host 127.0.0.1 --port 8080

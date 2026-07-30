@@ -6,7 +6,9 @@
 <p class="eyebrow">ACCOUNT</p>
 <h1 class="price-reference-title">帳戶設定</h1>
 </div>
-<div data-profile-root=""></div>
+<div hx-get="/htmx/profile" hx-swap="innerHTML" hx-trigger="load" id="htmx-profile">
+<div aria-busy="true" class="skel-panel"><span class="skel-line skel-line--medium"></span></div>
+</div>
 </div>
 </div>
 </section>

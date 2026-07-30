@@ -1,0 +1,37 @@
+{% if guest %}
+<div class="member-state member-state--empty">
+  <p>請先登入。</p>
+  <a href="/login.html?next=/profile.html" class="btn btn-mint">會員登入</a>
+</div>
+{% else %}
+{% if saved %}<p class="form-msg is-ok" role="status">已儲存。</p>{% endif %}
+{% if error %}<p class="form-msg is-error" role="alert">{{ error }}</p>{% endif %}
+<form class="login-form"
+  hx-post="/htmx/profile"
+  hx-target="#htmx-profile"
+  hx-swap="innerHTML">
+  <div class="form-field">
+    <label for="fullName">姓名</label>
+    <input id="fullName" name="fullName" value="{{ profile.full_name or '' }}" autocomplete="name">
+  </div>
+  <div class="form-field">
+    <label for="phone">電話</label>
+    <input id="phone" name="phone" type="tel" value="{{ profile.phone or '' }}" autocomplete="tel">
+  </div>
+  <div class="form-field">
+    <label for="shippingPostal">郵遞區號</label>
+    <input id="shippingPostal" name="shippingPostal" value="{{ profile.shipping_postal or '' }}">
+  </div>
+  <div class="form-field">
+    <label for="shippingCity">縣市</label>
+    <input id="shippingCity" name="shippingCity" value="{{ profile.shipping_city or '' }}">
+  </div>
+  <div class="form-field">
+    <label for="shippingAddress">地址</label>
+    <input id="shippingAddress" name="shippingAddress" value="{{ profile.shipping_address or '' }}">
+  </div>
+  <p class="text-faint">Email：{{ user.email }}（無法在此變更）</p>
+  <button type="submit" class="btn btn-dark">儲存</button>
+</form>
+{# ponytail: Google People import + password change deferred; upgrade = wire GSI enrich + /api/auth endpoints into this partial #}
+{% endif %}

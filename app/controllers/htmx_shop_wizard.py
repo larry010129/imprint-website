@@ -1,0 +1,459 @@
+"""HTMX shop calculator wizard — catalog → styles → configure → quote → cart.
+
+Reuses app.catalog + app.pricing.compute_order_pricing (no client pricing math).
+ponytail: fancy color carousel, engraving girdle/band UI, pendant+chain picker,
+full shop.js gallery/lightbox — ship core path first.
+"""
+
+from __future__ import annotations
+
+import json
+from typing import Any
+from urllib.parse import quote
+
+from fastapi import APIRouter, Request
+from fastapi.responses import HTMLResponse, Response
+from psycopg.types.json import Jsonb
+
+from app.auth import get_user_id, is_admin
+from app.catalog import build_catalog_response, fetch_catalog_rows, load_product_children
+from app.controllers.htmx_common import (
+    cart_count,
+    form_bool,
+    html,
+    hx_redirect,
+    is_shop_preview,
+    templates,
+)
+from app.controllers.shop_controller import (
+    _clamp_pendant_chain_sell_mode,
+    _strip_disallowed_engraving,
+    _summary,
+    _validate_config,
+)
+from app.database import get_connection
+from app.image_urls import category_image_url, shop_product_image_url, shop_style_thumb_url
+from app.pricing import compute_order_pricing
+from app.product_categories import fetch_categories
+
+router = APIRouter(prefix="/shop", tags=["htmx-shop-wizard"])
+
+GOLD_LABELS = {
+    "9k": "9K",
+    "14k": "14K",
+    "18k": "18K",
+    "pt950": "Pt950",
+    "s925": "S925",
+}
+CHAIN_LENGTHS_CM = [36, 41, 46, 51, 61, 76, 80]
+BRACELET_LENGTHS_CM = [15, 16, 17, 18, 19, 20, 21]
+DIAMOND_CARATS = [
+    "0.1", "0.2", "0.3", "0.5", "0.6", "0.7", "0.8", "0.9", "1.0", "1.5", "2.0", "3.0",
+]
+# Static memorial diamond styles (not in products table) — mirrors shop-catalog-data.js.
+DIAMOND_STYLES: list[dict[str, Any]] = [
+    {
+        "id": "diamond-first-love",
+        "styleKey": "diamond-first-love",
+        "nameZh": "滿月鑽石",
+        "descriptionZh": "以寶寶胎髮培育的紀念鑽石（裸鑽試算，不含鑲嵌）",
+        "golds": [],
+        "carats": DIAMOND_CARATS,
+        "images": {"white": ["/static/images/hero/imprint-diamond-newborn-baby-necklace.jpg"]},
+    },
+    {
+        "id": "diamond-pet",
+        "styleKey": "diamond-pet",
+        "nameZh": "寵物鑽石",
+        "descriptionZh": "以毛孩毛髮培育的紀念鑽石（裸鑽試算，不含鑲嵌）",
+        "golds": [],
+        "carats": DIAMOND_CARATS,
+        "images": {"white": ["/static/images/hero/imprint-diamond-pet-memorial-cat.jpg"]},
+    },
+    {
+        "id": "diamond-love",
+        "styleKey": "diamond-love",
+        "nameZh": "結髮鑽石",
+        "descriptionZh": "以夫妻髮絲共同培育的紀念鑽石（裸鑽試算，不含鑲嵌）",
+        "golds": [],
+        "carats": DIAMOND_CARATS,
+        "images": {"white": ["/static/images/hero/imprint-diamond-wedding-couple-ring.jpg"]},
+    },
+    {
+        "id": "diamond-family",
+        "styleKey": "diamond-family",
+        "nameZh": "全家福鑽石",
+        "descriptionZh": "集合全家人髮絲培育的紀念鑽石（裸鑽試算，不含鑲嵌）",
+        "golds": [],
+        "carats": DIAMOND_CARATS,
+        "images": {"white": ["/static/images/hero/imprint-diamond-family-portrait-jewelry.jpg"]},
+    },
+    {
+        "id": "diamond-heirloom",
+        "styleKey": "diamond-heirloom",
+        "nameZh": "生命鑽石",
+        "descriptionZh": "以親人毛髮或骨灰培育的紀念鑽石（裸鑽試算，不含鑲嵌）",
+        "golds": [],
+        "carats": DIAMOND_CARATS,
+        "images": {"white": ["/static/images/hero/imprint-diamond-heirloom-memorial.jpg"]},
+    },
+]
+
+
+def _product_thumb(product: dict[str, Any]) -> str:
+    images = product.get("images") or {}
+    for urls in images.values():
+        if isinstance(urls, list) and urls:
+            return str(urls[0])
+    style_key = product.get("styleKey")
+    return (
+        shop_product_image_url(style_key, "white")
+        or shop_style_thumb_url(style_key)
+        or ""
+    )
+
+
+def _type_grid_layout(count: int) -> dict[str, Any]:
+    """Mirror retired shop.js applyTypeGridLayout — size classes drive shop.css columns."""
+    if count <= 1:
+        size, cols = "xl", 1
+    elif count <= 3:
+        size, cols = "lg", count
+    elif count <= 6:
+        size, cols = "md", min(3, count)
+    elif count <= 12:
+        size, cols = "sm", 3
+    else:
+        size, cols = "xs", None
+    return {"type_grid_size": size, "type_grid_cols": cols, "type_grid_count": count}
+
+
+def _load_catalog(*, include_drafts: bool = False) -> dict[str, Any]:
+    with get_connection() as conn, conn.cursor() as cur:
+        products = fetch_catalog_rows(cur, include_drafts=include_drafts)
+        variants, images = load_product_children(cur, [row["id"] for row in products])
+        category_rows = fetch_categories(cur)
+        cat_order = [row["slug"] for row in category_rows]
+        cat_meta = {
+            row["slug"]: {
+                "labelZh": row["label_zh"],
+                "labelEn": row.get("label_en"),
+                "thumbUrl": row.get("thumbUrl") or category_image_url(row["slug"]),
+            }
+            for row in category_rows
+        }
+    catalog = build_catalog_response(
+        products,
+        variants,
+        images,
+        category_order=cat_order,
+        category_meta=cat_meta,
+    )
+    categories = dict(catalog.get("categories") or {})
+    categories["diamond"] = DIAMOND_STYLES
+    order = ["diamond"] + [c for c in (catalog.get("categoryOrder") or []) if c != "diamond"]
+    meta = dict(catalog.get("categoryMeta") or {})
+    diamond_thumb = _product_thumb(DIAMOND_STYLES[0]) if DIAMOND_STYLES else ""
+    meta.setdefault(
+        "diamond",
+        {
+            "labelZh": "紀念鑽石",
+            "labelEn": "Memorial diamond",
+            "thumbUrl": diamond_thumb or category_image_url("diamond"),
+        },
+    )
+    for slug, info in meta.items():
+        if not info.get("thumbUrl"):
+            info["thumbUrl"] = category_image_url(slug)
+    return {"categories": categories, "categoryOrder": order, "categoryMeta": meta}
+
+
+def _find_product(catalog: dict[str, Any], category: str, type_ref: str) -> dict[str, Any] | None:
+    for product in catalog.get("categories", {}).get(category) or []:
+        if str(product.get("id")) == type_ref or str(product.get("styleKey")) == type_ref:
+            return product
+    return None
+
+
+def _config_from_form(form: Any) -> dict[str, Any]:
+    category = str(form.get("category") or "").strip()
+    type_ref = str(form.get("type") or "").strip()
+    carat = str(form.get("carat") or "").strip()
+    gold = str(form.get("gold") or "").strip() or None
+    length_raw = str(form.get("lengthCm") or "").strip()
+    length_cm: float | None = None
+    if length_raw:
+        try:
+            length_cm = float(length_raw)
+        except ValueError:
+            length_cm = None
+    name = str(form.get("summaryZh") or "").strip()
+    return {
+        "category": category,
+        "type": type_ref,
+        "carat": carat,
+        "gold": gold,
+        "lengthCm": length_cm,
+        "diamondKind": str(form.get("diamondKind") or "white").strip() or "white",
+        "diamondShape": str(form.get("diamondShape") or "round").strip() or "round",
+        "fancyColor": str(form.get("fancyColor") or "").strip() or None,
+        "includeChain": form_bool(form.get("includeChain")),
+        "summaryZh": name,
+        # ponytail: chainProductId / chainGold / chainLength / engraving* not in HTMX core path
+    }
+
+
+def _with_badge_oob(resp: HTMLResponse, request: Request, user_id: str | None) -> HTMLResponse:
+    badge = templates.get_template("partials/htmx/cart_badge.html").render(
+        {"request": request, "count": cart_count(user_id), "oob": True}
+    )
+    body = resp.body.decode(resp.charset) + badge
+    resp.body = body.encode(resp.charset)
+    resp.headers["content-length"] = str(len(resp.body))
+    return resp
+
+
+def _preview_ctx(request: Request) -> dict[str, Any]:
+    preview = is_shop_preview(request)
+    return {"preview": preview, "preview_qs": "preview=1" if preview else ""}
+
+
+def _catalog_for_request(request: Request) -> dict[str, Any]:
+    preview = is_shop_preview(request)
+    include_drafts = bool(preview and is_admin(get_user_id(request)))
+    return _load_catalog(include_drafts=include_drafts)
+
+
+def _step_ctx(
+    request: Request,
+    *,
+    step: str,
+    category: str = "",
+    category_label: str = "",
+    product: dict | None = None,
+    **extra: Any,
+) -> dict[str, Any]:
+    return {
+        "step": step,
+        "category": category,
+        "category_label": category_label,
+        "product": product,
+        "gold_labels": GOLD_LABELS,
+        **_preview_ctx(request),
+        **extra,
+    }
+
+
+@router.get("/step/catalog", response_class=HTMLResponse)
+async def shop_step_catalog(request: Request) -> HTMLResponse:
+    catalog = _catalog_for_request(request)
+    tiles = []
+    for slug in catalog["categoryOrder"]:
+        products = catalog["categories"].get(slug) or []
+        if not products and slug != "diamond":
+            continue
+        meta = catalog["categoryMeta"].get(slug) or {}
+        thumb = meta.get("thumbUrl") or _product_thumb(products[0]) if products else category_image_url(slug)
+        tiles.append(
+            {
+                "slug": slug,
+                "label": meta.get("labelZh") or slug,
+                "thumb": thumb or "",
+            }
+        )
+    return html(request, "shop_catalog.html", _step_ctx(request, step="catalog", tiles=tiles))
+
+
+@router.get("/step/styles", response_class=HTMLResponse)
+async def shop_step_styles(request: Request) -> HTMLResponse:
+    category = str(request.query_params.get("category") or "").strip()
+    if not category:
+        return await shop_step_catalog(request)
+    catalog = _catalog_for_request(request)
+    meta = catalog["categoryMeta"].get(category) or {}
+    products = []
+    for product in catalog["categories"].get(category) or []:
+        products.append({**product, "thumb": _product_thumb(product)})
+    return html(
+        request,
+        "shop_styles.html",
+        _step_ctx(
+            request,
+            step="styles",
+            category=category,
+            category_label=meta.get("labelZh") or category,
+            products=products,
+            **_type_grid_layout(len(products)),
+        ),
+    )
+
+
+@router.get("/step/configure", response_class=HTMLResponse)
+async def shop_step_configure(request: Request) -> HTMLResponse:
+    category = str(request.query_params.get("category") or "").strip()
+    type_ref = str(request.query_params.get("type") or "").strip()
+    if not category:
+        return await shop_step_catalog(request)
+    if not type_ref:
+        return await shop_step_styles(request)
+    catalog = _catalog_for_request(request)
+    product = _find_product(catalog, category, type_ref)
+    if not product:
+        products = [
+            {**p, "thumb": _product_thumb(p)}
+            for p in (catalog["categories"].get(category) or [])
+        ]
+        return html(
+            request,
+            "shop_styles.html",
+            _step_ctx(
+                request,
+                step="styles",
+                category=category,
+                category_label=(catalog["categoryMeta"].get(category) or {}).get("labelZh") or category,
+                products=products,
+                error="找不到此款式，請重新選擇。",
+                **_type_grid_layout(len(products)),
+            ),
+            404,
+        )
+    meta = catalog["categoryMeta"].get(category) or {}
+    golds = list(product.get("golds") or [])
+    carats = [str(c) for c in (product.get("carats") or [])]
+    lengths = []
+    if category == "chain":
+        lengths = CHAIN_LENGTHS_CM
+    elif category == "bracelet":
+        lengths = BRACELET_LENGTHS_CM
+    defaults = {
+        "carat": carats[0] if carats else "",
+        "gold": golds[0] if golds else "",
+        "lengthCm": 46 if category == "chain" else (18 if category == "bracelet" else ""),
+        "diamondKind": "white",
+    }
+    preview = is_shop_preview(request)
+    require_published = category != "diamond" and not (
+        preview and is_admin(get_user_id(request))
+    )
+    pricing = None
+    if defaults["carat"] and (category == "diamond" or defaults["gold"]):
+        cfg = {
+            "category": category,
+            "type": str(product["id"]),
+            "carat": defaults["carat"],
+            "gold": defaults["gold"] or None,
+            "lengthCm": defaults["lengthCm"] or None,
+            "diamondKind": "white",
+            "diamondShape": "round",
+            "summaryZh": product.get("nameZh") or "",
+        }
+        with get_connection() as conn, conn.cursor() as cur:
+            pricing = compute_order_pricing(cur, cfg, require_published=require_published)
+    return html(
+        request,
+        "shop_configure.html",
+        _step_ctx(
+            request,
+            step="product",
+            category=category,
+            category_label=meta.get("labelZh") or category,
+            product={**product, "thumb": _product_thumb(product)},
+            golds=golds,
+            carats=carats,
+            lengths=lengths,
+            defaults=defaults,
+            pricing=pricing,
+            quote_error=None,
+            cart_msg=None,
+            cart_ok=False,
+        ),
+    )
+
+
+@router.post("/quote", response_class=HTMLResponse)
+async def shop_quote_partial(request: Request) -> HTMLResponse:
+    form = await request.form()
+    config = _config_from_form(form)
+    err = _validate_config(config)
+    if err:
+        return html(request, "shop_quote.html", {"pricing": None, "error": err}, 400)
+    preview = is_shop_preview(request, form)
+    require_published = config.get("category") != "diamond" and not (
+        preview and is_admin(get_user_id(request))
+    )
+    with get_connection() as conn, conn.cursor() as cur:
+        if config.get("category") != "diamond":
+            chain_err = _clamp_pendant_chain_sell_mode(cur, config)
+            if chain_err:
+                return html(request, "shop_quote.html", {"pricing": None, "error": chain_err}, 400)
+            _strip_disallowed_engraving(cur, config)
+        pricing = compute_order_pricing(cur, config, require_published=require_published)
+    if not pricing.get("ready"):
+        return html(
+            request,
+            "shop_quote.html",
+            {"pricing": None, "error": pricing.get("error") or "無法計算價格，請確認選項"},
+            400,
+        )
+    return html(request, "shop_quote.html", {"pricing": pricing, "error": None})
+
+
+@router.post("/cart", response_class=HTMLResponse)
+async def shop_cart_add(request: Request) -> Response:
+    form = await request.form()
+    if is_shop_preview(request, form):
+        return html(
+            request,
+            "shop_cart_msg.html",
+            {"ok": False, "message": "預覽模式無法加入購物車，請從正式訂製頁操作。"},
+            403,
+        )
+    user_id = get_user_id(request)
+    if not user_id:
+        next_url = quote("/shop/calculator/", safe="")
+        return hx_redirect(f"/login.html?next={next_url}")
+    config = _config_from_form(form)
+    err = _validate_config(config)
+    if err:
+        return html(request, "shop_cart_msg.html", {"ok": False, "message": err}, 400)
+
+    with get_connection() as conn, conn.cursor() as cur:
+        if config.get("category") != "diamond":
+            chain_err = _clamp_pendant_chain_sell_mode(cur, config)
+            if chain_err:
+                return html(request, "shop_cart_msg.html", {"ok": False, "message": chain_err}, 400)
+            _strip_disallowed_engraving(cur, config)
+        require_published = config.get("category") != "diamond"
+        pricing = compute_order_pricing(cur, config, require_published=require_published)
+        if not pricing.get("ready"):
+            return html(
+                request,
+                "shop_cart_msg.html",
+                {"ok": False, "message": "無法計算價格，請重新整理後再試"},
+                400,
+            )
+        config["clientPricing"] = pricing
+        summary = _summary(config)
+        config_json = json.loads(json.dumps(config, default=str))
+        cur.execute(
+            """
+            insert into cart_items (user_id, category, style_type, config_json, summary_zh, total_price)
+            values (%s, %s, %s, %s, %s, %s)
+            returning id
+            """,
+            (
+                user_id,
+                config["category"],
+                config["type"],
+                Jsonb(config_json),
+                summary,
+                pricing.get("total"),
+            ),
+        )
+        cur.fetchone()
+    resp = html(
+        request,
+        "shop_cart_msg.html",
+        {"ok": True, "message": "已加入購物車", "total": pricing.get("total")},
+    )
+    return _with_badge_oob(resp, request, user_id)

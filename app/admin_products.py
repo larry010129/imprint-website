@@ -4,6 +4,14 @@ from __future__ import annotations
 
 import re
 from datetime import datetime, timezone
+from urllib.parse import unquote
+
+from app.image_urls import (
+    resolve_product_image_url,
+    shop_product_image_url,
+    static_url_exists,
+    style_key_from_path,
+)
 
 VALID_CATEGORIES = {"pendant", "ring", "earring", "bracelet", "chain"}
 VALID_CARATS = {
@@ -16,6 +24,11 @@ VALID_COLORS = {"white", "yellow", "rose"}
 IMAGE_COLOR_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,31}$")
 PRODUCT_NAME_MAX = 150
 PRODUCT_DESC_MAX = 2000
+_BROWSER_LOCAL_URL_RE = re.compile(r"^(?:blob:|data:)", re.I)
+_DEAD_CATALOG_PLACEHOLDER_RE = re.compile(
+    r"(?:\.svg(?:$|\?))|/images/shop/styles/",
+    re.I,
+)
 
 CATEGORY_LABELS = {
     "pendant": "項墜",
@@ -25,11 +38,72 @@ CATEGORY_LABELS = {
     "chain": "鏈條",
 }
 
+# Idempotent schema ensure — migrations may lag local/prod DBs.
+_PRODUCT_SELL_MODE_COLUMNS = (
+    ("allows_pendant_only", "boolean not null default true"),
+    ("allows_with_chain", "boolean not null default true"),
+)
+
+
+def ensure_product_sell_mode_columns(cur) -> None:
+    """Add pendant sell-mode columns if missing (see migration 20260730140000)."""
+    for name, col_type in _PRODUCT_SELL_MODE_COLUMNS:
+        cur.execute(f"alter table products add column if not exists {name} {col_type}")
+
 
 def valid_image_color(color: str) -> bool:
     if color in VALID_COLORS:
         return True
     return bool(IMAGE_COLOR_RE.match(color))
+
+
+def is_browser_local_image_url(url: str | None) -> bool:
+    """blob:/data: URLs are tab-local and must never be persisted to SQL."""
+    return bool(url and _BROWSER_LOCAL_URL_RE.match(str(url).strip()))
+
+
+def is_dead_catalog_placeholder(url: str | None) -> bool:
+    """Seed SVG /styles paths 404 — shop-product rasters are the real assets."""
+    if not url:
+        return False
+    path = unquote(str(url).strip().split("?", 1)[0])
+    return bool(_DEAD_CATALOG_PLACEHOLDER_RE.search(path))
+
+
+def normalize_product_image_url(url: str | None, color: str | None = None) -> str | None:
+    """Return a persistable server URL, or None if the value must be dropped."""
+    raw = str(url or "").strip()
+    if not raw or is_browser_local_image_url(raw):
+        return None
+    resolved = resolve_product_image_url(raw) or raw
+    missing_static = resolved.startswith("/static/") and not static_url_exists(resolved)
+    if (
+        not is_dead_catalog_placeholder(resolved)
+        and not is_dead_catalog_placeholder(raw)
+        and not missing_static
+    ):
+        return resolved
+    style_key = style_key_from_path(raw) or style_key_from_path(resolved)
+    if not style_key:
+        # Missing upload with no style hint (e.g. /static/uploads/.../test.png) — drop.
+        return None
+    parts = str(color or "").strip().lower().split("-")
+    metal = parts[0] if parts and parts[0] in VALID_COLORS else "white"
+    diamond = parts[1] if len(parts) > 1 else "white"
+    chain = parts[2] if len(parts) > 2 and parts[2] in VALID_COLORS else None
+    raster = shop_product_image_url(
+        style_key,
+        metal,
+        diamond_color=diamond,
+        chain_color=chain,
+    )
+    if (
+        raster
+        and not is_dead_catalog_placeholder(raster)
+        and (not raster.startswith("/static/") or static_url_exists(raster))
+    ):
+        return raster
+    return None
 
 
 def image_covers_default_color(image_color: str, default_color: str) -> bool:
@@ -95,7 +169,7 @@ def validate_product_fields(body: dict | None, *, valid_categories: set[str] | N
         allows_pendant_only = bool(body.get("allowsPendantOnly", True))
         allows_with_chain = bool(body.get("allowsWithChain", True))
         if not allows_pendant_only and not allows_with_chain:
-            errors.append("pendant must allow 僅墜子 and/or 含鍊賣")
+            errors.append("pendant must select 僅墜子賣 or 可含鍊")
         cleaned["allowsPendantOnly"] = allows_pendant_only
         cleaned["allowsWithChain"] = allows_with_chain
     else:
@@ -180,7 +254,11 @@ def validate_product_fields(body: dict | None, *, valid_categories: set[str] | N
         if not valid_image_color(color):
             errors.append(f"invalid image option: {color or '(empty)'}")
             continue
-        images.append({"color": color, "url": img["url"]})
+        url = normalize_product_image_url(img.get("url"), color)
+        if not url:
+            # Drop blob:/data:/dead SVG quietly; publish gate still requires real images.
+            continue
+        images.append({"color": color, "url": url})
     final_colors = {img["color"] for img in images}
     if not final_colors:
         if is_published:
@@ -201,7 +279,8 @@ def _format_product_errors(errors: list[str]) -> str:
         "invalid category": "品項無效",
         "nameZh is required": "請填寫中文名稱",
         "invalid defaultColor": "預設顏色無效",
-        "pendant must allow 僅墜子 and/or 含鍊賣": "項墜請至少勾選「可僅墜子賣」或「可含鍊賣」",
+        "pendant must select 僅墜子賣 or 可含鍊": "項墜請選擇「僅墜子賣」或「可含鍊」",
+        "pendant must allow 僅墜子 and/or 含鍊賣": "項墜請選擇「僅墜子賣」或「可含鍊」",
         "at least one variant is required": "請至少新增一個款式選項（金屬／克拉／蠟重）",
         "at least one product image is required": "請至少上傳一張商品照片",
         "default color must have at least one image": "預設顏色必須至少有一張商品照片",
@@ -244,8 +323,37 @@ def _format_product_errors(errors: list[str]) -> str:
         if err.startswith("invalid image option"):
             parts.append("圖片選項代碼無效")
             continue
+        if err.startswith("image URL must be a server path"):
+            parts.append("圖片必須經伺服器上傳後儲存，不可使用瀏覽器暫存網址")
+            continue
         parts.append(err)
     return "；".join(parts)
+
+
+def append_product_image(cur, product_id: str, color: str, file_path: str) -> dict | None:
+    """Insert one image row for an existing product (upload-time SQL persist)."""
+    color_key = str(color or "").strip().lower()
+    path = normalize_product_image_url(file_path, color_key)
+    if not path or not valid_image_color(color_key):
+        return None
+    cur.execute("select id from products where id = %s", (product_id,))
+    if not cur.fetchone():
+        return None
+    cur.execute(
+        "select coalesce(max(sort_order), -1) + 1 as next_sort from product_images where product_id = %s",
+        (product_id,),
+    )
+    next_sort = int((cur.fetchone() or {}).get("next_sort") or 0)
+    cur.execute(
+        """
+        insert into product_images (product_id, color, file_path, sort_order)
+        values (%s, %s, %s, %s)
+        returning id, product_id, color, file_path, sort_order
+        """,
+        (product_id, color_key, path, next_sort),
+    )
+    row = cur.fetchone()
+    return dict(row) if row else None
 
 
 def serialize_product_row(row: dict) -> dict:

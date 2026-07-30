@@ -1,6 +1,6 @@
 {% extends "layouts/base.html" %}
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/home-ghibli.css?v=28">
+<link rel="stylesheet" href="/static/css/home-ghibli.css?v=29">
 {% endblock %}
 {% block extra_head %}
 <link rel="preload" as="image" href="/static/images/hero/imprint-diamond-family-memorial.webp" type="image/webp" fetchpriority="high">
@@ -453,7 +453,11 @@
   <p class="gh-script reveal" data-cms-text="faq-script">FAQ</p>
   <h2 class="gh-section__title reveal reveal-d1" data-cms-text="faq-title">常見問題</h2>
   <div class="faq-list reveal reveal-d2">
-    <div data-faq-root data-variant="teaser"></div>
+    {# SSR teaser — mirrors former React FAQ_ITEMS_TEASER #}
+    <div class="faq-item"><details><summary class="faq-q">需要準備多少毛髮或骨灰，才能製作 DNA 鑽石？</summary><div class="faq-a-inner">骨灰約需 3 至 5 公克；毛髮約需養樂多瓶 8 分滿或一顆雞蛋的大小。若份量不足，可加入您自己或家人的頭髮補充。若不確定是否足夠，請先透過官方 LINE 與顧問確認——不需要先寄送樣本。每一份樣本都以單一客戶、單一培育流程處理。</div></details></div>
+    <div class="faq-item"><details><summary class="faq-q">DNA 紀念鑽石的價格怎麼計算？</summary><div class="faq-a-inner">價格依克拉數計算：0.10 克拉 NT$24,000 起、0.50 克拉 NT$98,000、1.00 克拉 NT$250,000（圓形明亮式切工／白鑽）。非圓形切工加價 10%，且需 0.30 克拉以上；彩鑽最低 0.30 克拉，報價依顏色稀有度而定；3.00 克拉以上請洽官方 LINE 專屬報價。完整價目請見 <a href="/price.html">價格試算・價格總覽</a>。</div></details></div>
+    <div class="faq-item"><details><summary class="faq-q">完工後我會收到什麼？</summary><div class="faq-a-inner">您會收到：專屬培育的 DNA 鑽石（或已鑲嵌完成的飾品）、銘印保證卡，以及專屬影音紀念盒——封存這顆鑽石從樣本到成品的珍貴過程。</div></details></div>
+    <div class="faq-item"><details><summary class="faq-q">如何開始訂製？</summary><div class="faq-a-inner">線上客製試算 — 前往 <a href="/shop/calculator/">客製試算頁</a>，依步驟選擇品項、款式、金屬與鑽石規格，系統即時試算價格；確認後可加入購物車並送出訂單。預約顧問 — 也可透過官方 LINE 預約。門市：新北市三重區福德南路 43 號 1 樓（預約制）。</div></details></div>
   </div>
   <div class="faq-more reveal">
     <a class="btn btn-line" href="/faq.html" data-cms-button="faq-more">查看全部常見問題</a>
@@ -485,7 +489,6 @@
 </div>
 {% endblock %}
 {% block extra_scripts %}
-{% include "partials/faq-react-js.html" %}
-{% include "partials/stories-react-js.html" %}
+<script src="/static/js/home-wall.js?v=2" defer></script>
 <script src="/static/js/home-banners.js?v=2" defer></script>
 {% endblock %}

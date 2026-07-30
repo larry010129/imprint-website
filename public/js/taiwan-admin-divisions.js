@@ -141,6 +141,9 @@
     '澎湖縣', '金門縣', '屏東縣', '台東縣', '花蓮縣', '連江縣',
   ];
 
+  // Testimonials only: non-Taiwan customers pick「其他」(not a shipping address city).
+  var TESTIMONIAL_CITY_NAMES = CITY_NAMES.concat(['其他']);
+
   function districtsFor(city) {
     var rows = CITIES[city];
     if (!rows) return [];
@@ -208,6 +211,7 @@
 
   global.ImprintTaiwanAdminDivisions = {
     cities: CITY_NAMES.slice(),
+    testimonialCities: TESTIMONIAL_CITY_NAMES.slice(),
     districtsFor: districtsFor,
     postalFor: postalFor,
     parseCityDistrict: parseCityDistrict,

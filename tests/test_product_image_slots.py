@@ -105,3 +105,53 @@ def test_backfill_preserves_originals_and_populates_empty_slots():
         "rose-white",
     }
     assert all(Path(unquote(path.removeprefix("/static/"))).suffix == ".png" for _, _, path, _ in cursor.inserts)
+
+
+class _MissingImageCursor(_CatalogCursor):
+    def execute(self, query, params=None):
+        normalized = " ".join(query.split()).lower()
+        if normalized.startswith("select id, category, name_zh"):
+            self.rows = [
+                {
+                    "id": "product-1",
+                    "category": "pendant",
+                    "name_zh": "四爪項墜",
+                    "sort_order": 0,
+                }
+            ]
+        elif normalized.startswith("select id, product_id, color"):
+            self.rows = [
+                {
+                    "id": "image-dead",
+                    "product_id": "product-1",
+                    "color": "white-white",
+                    "file_path": "/static/uploads/products/test.png",
+                    "sort_order": 0,
+                }
+            ]
+        elif normalized.startswith("update product_images"):
+            self.updates.append(params)
+        elif normalized.startswith("insert into product_images"):
+            self.inserts.append(params)
+        else:
+            raise AssertionError(f"Unexpected query: {normalized}")
+
+
+def test_backfill_replaces_missing_on_disk_upload():
+    cursor = _MissingImageCursor()
+    seed_rows = [
+        {
+            "category": "pendant",
+            "style": "A",
+            "nameZh": "四爪項墜",
+        }
+    ]
+
+    normalized, inserted = backfill_catalog_image_slots(cursor, seed_rows)
+
+    assert normalized >= 1
+    assert any(
+        str(params[0]).startswith("/static/images/shop-product/")
+        for params in cursor.updates
+    )
+    assert inserted >= 40

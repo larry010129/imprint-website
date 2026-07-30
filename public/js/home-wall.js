@@ -26,7 +26,8 @@
 
   function cardHtml(t, hidden) {
     var quote = '「' + excerpt(t.text) + '」';
-    var role = t.role || ((t.category || '') + (t.city ? '・' + t.city : ''));
+    var loc = (t.city === '其他' && t.country) ? t.country : t.city;
+    var role = t.role || ((t.category || '') + (loc ? '・' + loc : ''));
     var photo = t.image_url
       ? '<div class="gh-wall__photo"><img src="' + esc(t.image_url) + '" alt="" loading="lazy" decoding="async"></div>'
       : '';

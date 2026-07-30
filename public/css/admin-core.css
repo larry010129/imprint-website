@@ -299,13 +299,85 @@ button:not(.btn-sm):not(.ap-tab-btn):not([data-slot="button-1"]):not([data-granu
 .ap-delete-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px;}
 .ap-form-error{color:#B5523D;font-size:13px;margin-bottom:12px;}
 .ap-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;}
-.ap-form-grid label{display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:var(--ink-soft);}
+.ap-form-grid label,
+.ap-form-grid > .ap-field{display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:var(--ink-soft);}
 .ap-form-grid label.ap-field--full,.ap-form-grid div.ap-field--full{grid-column:1 / -1;}
 .ap-form-grid label.ap-field--check{flex-direction:row;align-items:center;gap:8px;margin-top:8px;}
 .ac-code-row{display:flex;gap:8px;align-items:center;}
 .ac-code-row input{flex:1;min-width:0;}
 .ap-form-grid input,.ap-form-grid select{
   font-family:inherit;font-size:13.5px;padding:8px 10px;border:1px solid #DDD5CC;border-radius:6px;color:var(--ink);
+}
+
+/* BasicDropdown-style combobox (vanilla) — testimonials 城市 etc. */
+.ap-combo{position:relative;width:100%;}
+.ap-combo__trigger{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  width:100%;box-sizing:border-box;padding:8px 16px;margin:0;
+  border:1px solid #DDD5CC;border-radius:8px;background:#fff;
+  font:inherit;font-size:13.5px;color:var(--ink,#2B2320);cursor:pointer;text-align:left;
+  transition:border-color .15s ease,box-shadow .15s ease;
+}
+.ap-combo__trigger:hover{border-color:#C9C0B6;}
+.ap-combo__trigger:focus-visible,
+.ap-combo.is-open .ap-combo__trigger{
+  outline:none;border-color:#8eb8e8;box-shadow:0 0 0 3px rgba(108,155,209,.22);
+}
+.ap-combo__label{
+  flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.ap-combo__label.is-placeholder{color:rgba(138,129,123,.72);}
+.ap-combo__chevron{
+  flex-shrink:0;color:var(--ink-faint,#9A9188);
+  transition:transform .22s cubic-bezier(.34,1.4,.64,1);
+}
+.ap-combo.is-open .ap-combo__chevron{transform:rotate(180deg);}
+.ap-combo__panel{
+  position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:60;
+  display:flex;flex-direction:column;max-height:260px;
+  background:#fff;border:1px solid #DDD5CC;border-radius:8px;
+  box-shadow:0 10px 28px rgba(43,35,32,.12),0 2px 6px rgba(43,35,32,.06);
+  opacity:0;visibility:hidden;pointer-events:none;
+  transform:scale(.96) translateY(-6px);transform-origin:top center;
+  transition:
+    opacity .2s cubic-bezier(.34,1.4,.64,1),
+    transform .28s cubic-bezier(.34,1.4,.64,1),
+    visibility 0s linear .28s;
+}
+.ap-combo.is-open .ap-combo__panel{
+  opacity:1;visibility:visible;pointer-events:auto;
+  transform:scale(1) translateY(0);
+  transition:
+    opacity .2s cubic-bezier(.34,1.4,.64,1),
+    transform .28s cubic-bezier(.34,1.4,.64,1),
+    visibility 0s;
+}
+.ap-combo__search{
+  width:100%;box-sizing:border-box;margin:0;border:0;border-bottom:1px solid #EDE7E0;
+  border-radius:8px 8px 0 0!important;padding:10px 14px!important;
+  font:inherit;font-size:13px;background:#FAF8F5;color:var(--ink,#2B2320);
+}
+.ap-combo__search:focus{outline:none;background:#fff;}
+.ap-combo__list{
+  list-style:none;margin:0;padding:4px;overflow-y:auto;flex:1;min-height:0;
+}
+.ap-combo__option{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:8px 12px;border-radius:6px;cursor:pointer;
+  font-size:13.5px;color:var(--ink,#2B2320);
+  transition:background .12s ease;
+}
+.ap-combo__option:hover,
+.ap-combo__option.is-active{background:rgba(43,35,32,.06);}
+.ap-combo__option.is-selected{
+  background:rgba(108,155,209,.12);font-weight:600;
+}
+.ap-combo__option.is-selected:hover,
+.ap-combo__option.is-selected.is-active{background:rgba(108,155,209,.18);}
+.ap-combo__option-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ap-combo__check{flex-shrink:0;color:var(--ink,#2B2320);}
+.ap-combo__empty{
+  padding:14px 12px;text-align:center;font-size:12.5px;color:var(--ink-faint,#9A9188);
 }
 .ap-textarea{
   display:block;min-height:80px;width:100%;font-family:inherit;font-size:13px;line-height:1.5;
@@ -352,11 +424,46 @@ button:not(.btn-sm):not(.ap-tab-btn):not([data-slot="button-1"]):not([data-granu
 }
 .ap-switch-label{letter-spacing:.04em;}
 .ap-pendant-sell-modes{
-  grid-column:1/-1;display:flex;flex-wrap:wrap;gap:10px 18px;align-items:flex-start;
+  grid-column:1/-1;display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;
   margin-top:4px;
 }
-.ap-pendant-sell-modes .ap-switch-wrap{grid-column:auto;margin-top:0;}
 .ap-pendant-sell-modes .ap-pendant-sell-hint{flex:1 1 100%;margin:0;}
+/* Flat dual sell-mode control — left 僅墜子賣 / right 可含鍊 (dark track, white thumb, no glow) */
+.ap-sell-mode-dual{
+  display:inline-flex;align-items:center;gap:12px;
+}
+.ap-sell-mode-side{
+  appearance:none;border:0;background:transparent;padding:0;margin:0;cursor:pointer;
+  font:inherit;font-size:13px;font-weight:500;letter-spacing:.06em;
+  color:var(--ink-faint,#9A9188);transition:color .2s ease,font-weight .2s ease;
+}
+.ap-sell-mode-dual:not(.is-chain) .ap-sell-mode-side[data-side="only"],
+.ap-sell-mode-dual.is-chain .ap-sell-mode-side[data-side="chain"]{
+  font-weight:700;color:var(--ink,#2B2320);
+}
+.ap-cine-switch{gap:0;color:var(--ink,#2B2320);}
+.ap-cine-track{
+  position:relative;display:inline-block;width:52px;height:28px;flex-shrink:0;
+  border-radius:999px;background:#3f3f46;border:1px solid #27272a;
+  transition:background .2s ease,border-color .2s ease;
+  overflow:hidden;
+}
+.ap-cine-thumb{
+  position:absolute;top:50%;left:3px;width:22px;height:22px;border-radius:50%;
+  background:#fff;
+  transform:translateY(-50%);
+  transition:transform .25s ease;
+}
+.ap-cine-switch .ap-switch-input:checked + .ap-cine-track{
+  background:#3f3f46;border-color:#27272a;
+}
+.ap-cine-switch .ap-switch-input:checked + .ap-cine-track .ap-cine-thumb{
+  transform:translate(24px,-50%);
+  background:#fff;
+}
+.ap-cine-switch .ap-switch-input:focus-visible + .ap-cine-track{
+  outline:2px solid var(--mint-deep,#5ECFCF);outline-offset:2px;
+}
 .ap-section-title{font-size:13px;letter-spacing:.1em;margin:18px 0 10px;color:var(--ink);}
 .ap-variant-block{width:100%;overflow-x:auto;padding-bottom:2px;}
 .ap-variant-head,.ap-variant-row{

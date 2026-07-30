@@ -1,0 +1,118 @@
+<div class="shop-page shop-fit shop-wizard" id="shop-page" data-shop-htmx="1"{% if preview %} data-shop-preview="1"{% endif %}>
+  <header class="shop-wizard-header" id="shop-wizard-header">
+    {% include "partials/htmx/shop_stepper.html" %}
+    <div class="shop-wizard-guide" id="shop-wizard-guide">
+      <p class="shop-wizard-eyebrow">步驟 3 / 3{% if preview %} · 預覽{% endif %}</p>
+      <h1 class="shop-wizard-title">{{ product.nameZh or '配置下單' }}</h1>
+      <p class="shop-wizard-desc">{% if preview %}預覽試算 — 無法加入購物車或送出訂單。{% else %}選擇規格，右側即時顯示伺服器試算價格。{% endif %}</p>
+    </div>
+  </header>
+
+  <section id="shop-product" class="shop-section shop-section--configure">
+    <button
+      type="button"
+      class="shop-back"
+      hx-get="/htmx/shop/step/styles?category={{ category }}{% if preview %}&preview=1{% endif %}"
+      hx-target="#shop-htmx-root"
+      hx-swap="innerHTML"
+    >← 更換款式</button>
+
+    <div class="product-layout product-layout--wizard">
+      <div class="product-gallery-col">
+        <div class="product-preview">
+          {% if product.thumb %}
+          <img id="large-image" src="{{ product.thumb }}" alt="{{ product.nameZh or '' }}" loading="eager">
+          {% endif %}
+        </div>
+        {% if product.descriptionZh %}
+        <p class="product-description">{{ product.descriptionZh }}</p>
+        {% endif %}
+        {# ponytail: fancy diamond carousel + engraving UI + pendant chain picker #}
+        <p class="shop-htmx-ponytail-note">進階選項（彩鑽、刻字、墜鍊搭配）仍可於顧問確認時調整。</p>
+      </div>
+
+      <div class="product-buy-col">
+        <header class="product-info-header">
+          <p class="product-subtitle">{{ category_label }}</p>
+          <h2 class="product-title">{{ product.nameZh or '—' }}</h2>
+        </header>
+
+        <form
+          id="shop-config-form"
+          class="product-options-section"
+          hx-post="/htmx/shop/quote{% if preview %}?preview=1{% endif %}"
+          hx-target="#shop-quote"
+          hx-trigger="change"
+          hx-swap="innerHTML"
+        >
+          <input type="hidden" name="category" value="{{ category }}">
+          <input type="hidden" name="type" value="{{ product.id }}">
+          <input type="hidden" name="summaryZh" value="{{ product.nameZh or '' }}">
+          <input type="hidden" name="diamondKind" value="{{ defaults.diamondKind or 'white' }}">
+          <input type="hidden" name="diamondShape" value="round">
+          {% if preview %}<input type="hidden" name="preview" value="1">{% endif %}
+
+          {% if carats %}
+          <div class="variant-group">
+            <label class="variant-label" for="htmx-carat">選擇克拉數</label>
+            <select class="carat-select" id="htmx-carat" name="carat" required>
+              {% for c in carats %}
+              <option value="{{ c }}"{% if c == defaults.carat %} selected{% endif %}>{{ c }} ct</option>
+              {% endfor %}
+            </select>
+          </div>
+          {% endif %}
+
+          {% if golds %}
+          <div class="variant-group">
+            <label class="variant-label" for="htmx-gold">選擇金屬</label>
+            <select id="htmx-gold" name="gold" required>
+              {% for g in golds %}
+              <option value="{{ g }}"{% if g == defaults.gold %} selected{% endif %}>{{ gold_labels.get(g, g) }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          {% endif %}
+
+          {% if lengths %}
+          <div class="variant-group">
+            <label class="variant-label" for="htmx-length">選擇長度</label>
+            <select id="htmx-length" name="lengthCm" required>
+              {% for n in lengths %}
+              <option value="{{ n }}"{% if n == defaults.lengthCm %} selected{% endif %}>{{ n }} cm</option>
+              {% endfor %}
+            </select>
+          </div>
+          {% endif %}
+        </form>
+
+        <aside class="shop-price-panel" id="shop-price-panel">
+          <h3 class="shop-price-panel__title">試算價格</h3>
+          <div id="shop-quote">
+            {% with pricing=pricing, error=quote_error %}
+              {% include "partials/htmx/shop_quote.html" %}
+            {% endwith %}
+          </div>
+          <div class="shop-cta-row">
+            {% if preview %}
+            <button type="button" class="shop-cta shop-cta--secondary" id="cart-btn" disabled title="預覽模式無法加入購物車">預覽中・無法加入購物車</button>
+            <span class="shop-cta shop-cta--disabled" aria-disabled="true">前往購物車（已停用）</span>
+            {% else %}
+            <button
+              type="button"
+              class="shop-cta shop-cta--secondary"
+              id="cart-btn"
+              hx-post="/htmx/shop/cart"
+              hx-include="#shop-config-form"
+              hx-target="#shop-cart-msg"
+              hx-swap="innerHTML"
+            >加入購物車</button>
+            <a class="shop-cta" href="/cart.html">前往購物車</a>
+            {% endif %}
+          </div>
+          <div id="shop-cart-msg">{% if cart_msg %}<p class="form-msg">{{ cart_msg }}</p>{% elif preview %}<p class="form-msg">預覽模式｜不會送出真實訂單</p>{% endif %}</div>
+        </aside>
+      </div>
+    </div>
+  </section>
+</div>

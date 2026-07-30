@@ -7,15 +7,12 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="/static/css/member-app.css?v=2">
-{% include "partials/checkout-react-css.html" %}
 <link rel="stylesheet" href="/static/css/checkout-page.css?v=12">
 {% endblock %}
 
 {% block content %}
-
 <section class="page-section member-app checkout-page" aria-label="確認訂單">
   <div class="container checkout-container">
-
     <nav class="checkout-stepper" aria-label="結帳步驟">
       <div class="checkout-stepper-step is-done">
         <span class="checkout-stepper-bar" aria-hidden="true"></span>
@@ -31,12 +28,13 @@
       </div>
     </nav>
 
-    <div data-checkout-root></div>
+    <div id="htmx-checkout"
+      hx-get="/htmx/checkout"
+      hx-trigger="load"
+      hx-swap="innerHTML"
+      hx-vals='js:{items: new URLSearchParams(location.search).get("items") || new URLSearchParams(location.search).get("item") || ""}'>
+      <div class="checkout-skel" aria-busy="true"><p>載入訂單…</p></div>
+    </div>
   </div>
 </section>
-
-{% endblock %}
-
-{% block extra_scripts %}
-{% include "partials/checkout-react-js.html" %}
 {% endblock %}

@@ -20,6 +20,7 @@ from app.image_urls import (
     is_uuid,
     resolve_product_image_url,
     shop_product_image_url,
+    static_url_exists,
 )
 
 
@@ -104,21 +105,33 @@ def build_catalog_product(product: dict, variants: list[dict], images: list[dict
     images_by_color: dict[str, list[str]] = {}
     for image in images:
         url = resolve_product_image_url(image.get("file_path"))
-        # Seed SVG placeholders under /shop/styles/ 404 — prefer shop-product raster.
-        if url and not _is_raster_url(url) and style_key:
-            slot = str(image.get("color") or "")
-            parts = slot.split("-")
-            metal = parts[0] if parts else product.get("default_color") or "white"
-            diamond = parts[1] if len(parts) > 1 else "white"
-            chain = parts[2] if len(parts) > 2 else None
+        slot = str(image.get("color") or "")
+        parts = slot.split("-")
+        metal = parts[0] if parts else product.get("default_color") or "white"
+        diamond = parts[1] if len(parts) > 1 else "white"
+        chain = parts[2] if len(parts) > 2 else None
+        needs_raster = bool(url) and (
+            not _is_raster_url(url)
+            or (url.startswith("/static/") and not static_url_exists(url))
+        )
+        # Dead SVG / missing upload — prefer shop-product raster for the slot.
+        if needs_raster and style_key:
             url = shop_product_image_url(
                 style_key,
                 metal,
                 default_color=product.get("default_color"),
                 diamond_color=diamond,
                 chain_color=chain,
+                pendant_only=(
+                    (product.get("category") or "").strip().lower() == "pendant"
+                    and not chain
+                ),
             )
-        if url and _is_raster_url(url):
+        if (
+            url
+            and _is_raster_url(url)
+            and (not url.startswith("/static/") or static_url_exists(url))
+        ):
             images_by_color.setdefault(image["color"], []).append(url)
 
     return {

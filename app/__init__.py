@@ -17,6 +17,7 @@ from app.controllers import (
     api_controller,
     auth_controller,
     cms_admin_controller,
+    htmx_controller,
     notifications_controller,
     shop_controller,
     web_controller,
@@ -47,17 +48,13 @@ HTML_CONTENT_SECURITY_POLICY = (
 
 def _startup_banner() -> None:
     api = settings.public_base_url
-    site = settings.next_public_origin or (
-        "http://127.0.0.1:3000" if not settings.is_render else api
-    )
     label = "Diamond v3 on Render" if settings.is_render else "Diamond v3 local dev"
     print("")
     print(f"  {label}")
-    print(f"  Site (Next): {site}/")
-    print(f"  API (FastAPI): {api}/api/bot-gold")
+    print(f"  Site (Jinja SSR): {api}/")
+    print(f"  API: {api}/api/bot-gold")
     if not settings.is_render:
-        print("  HTML pages are on Next :3000 — run: npm run dev:web")
-        print("  FastAPI :8080 is JSON + /static + /admin.html only")
+        print("  Browse http://127.0.0.1:8080/ — Next not required")
     print("")
 
 
@@ -71,13 +68,18 @@ def _startup_seed_mode() -> str:
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    from app.admin_products import ensure_product_sell_mode_columns
     from app.auth import ensure_google_id_column
     from app.database import get_connection
     from app.cms_copy_slots import ensure_page_copy_slots_schema, seed_page_copy_slots
     from app.cms_media import ensure_cms_media_schema
     from app.cms_pages import ensure_cms_pages_schema
     from app.cms_seed import remove_legacy_seeded_pages
-    from app.content import ensure_banner_mobile_column, ensure_page_images_schema
+    from app.content import (
+        ensure_banner_mobile_column,
+        ensure_page_images_schema,
+        ensure_testimonial_country_column,
+    )
     from app.membership_config import ensure_membership_schema
     from app.profile_schema import ensure_profile_address_columns
     from app.seed_catalog import seed_catalog_if_empty
@@ -86,11 +88,18 @@ async def lifespan(_app: FastAPI):
     _startup_banner()
     ensure_profile_address_columns()
     ensure_google_id_column()
+    # Sell-mode columns must not ride the silent try below — missing cols = product-update 500.
+    try:
+        with get_connection() as conn, conn.cursor() as cur:
+            ensure_product_sell_mode_columns(cur)
+    except Exception:
+        log.exception("ensure_product_sell_mode_columns failed")
     try:
         with get_connection() as conn, conn.cursor() as cur:
             ensure_membership_schema(cur)
             ensure_page_images_schema(cur)
             ensure_banner_mobile_column(cur)
+            ensure_testimonial_country_column(cur)
             ensure_cms_pages_schema(cur)
             ensure_page_copy_slots_schema(cur)
             ensure_cms_media_schema(cur)
@@ -176,7 +185,7 @@ def create_app() -> FastAPI:
             )
         return response
 
-    # Legacy JSON mounts (keep until Next clients + any public JS switch to /api/v1).
+    # Legacy + versioned JSON mounts (public HTML is Jinja/HTMX, not JSON clients).
     application.include_router(api_controller.router, prefix="/api")
     application.include_router(auth_controller.router, prefix="/api")
     application.include_router(notifications_controller.router, prefix="/api")
@@ -184,12 +193,14 @@ def create_app() -> FastAPI:
     application.include_router(admin_controller.router, prefix="/api")
     application.include_router(cms_admin_controller.router, prefix="/api")
 
-    # Versioned JSON surface for Next.js (apps/web). Handlers re-exported; Jinja not used here.
     from app.api.v1 import build_v1_router
 
     application.include_router(build_v1_router(), prefix="/api/v1")
 
-    # HTML owned by Next.js (apps/web). FastAPI keeps static + admin + CMS proxy.
+    # HTMX HTML partials (chrome / auth / cart / member).
+    application.include_router(htmx_controller.router)
+
+    # Public HTML via Jinja SSR; static + admin shell.
     web_controller.register_pages(application)
     web_controller.mount_static(application)
     return application

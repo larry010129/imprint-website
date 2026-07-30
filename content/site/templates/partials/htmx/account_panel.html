@@ -1,0 +1,23 @@
+{% if guest %}
+<div class="member-state member-state--empty">
+  <p>請先登入。</p>
+  <a href="/login.html?next=/account.html" class="btn btn-mint">會員登入</a>
+</div>
+{% else %}
+<div class="account-htmx-panel">
+  <header class="price-reference-head">
+    <p class="eyebrow">ACCOUNT</p>
+    <h1 class="price-reference-title">{{ profile.full_name if profile and profile.full_name else user.email }}</h1>
+    <p class="price-reference-lead">{{ user.email }}</p>
+  </header>
+  <nav class="account-quick-links" aria-label="帳戶選單">
+    <a class="btn btn-line" href="/profile.html">帳戶設定</a>
+    <a class="btn btn-line" href="/cart.html">購物車</a>
+    <a class="btn btn-line" href="/history.html">訂購紀錄</a>
+    <a class="btn btn-line" href="/favorites.html">收藏款式</a>
+    <a class="btn btn-line" href="/notifications.html">通知</a>
+    {% if is_admin %}<a class="btn btn-dark" href="/admin.html">管理後台</a>{% endif %}
+  </nav>
+  {# ponytail: membership ladder / Google import UI deferred; upgrade = port AccountPage React tabs when membership schema UX needed #}
+</div>
+{% endif %}

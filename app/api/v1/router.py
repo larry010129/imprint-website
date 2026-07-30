@@ -8,12 +8,11 @@ from app.api.v1.endpoints import admin as admin_ep
 from app.api.v1.endpoints import auth as auth_ep
 from app.api.v1.endpoints import catalog as catalog_ep
 from app.api.v1.endpoints import notifications as notifications_ep
-from app.api.v1.endpoints import page_context as page_context_ep
 from app.api.v1.endpoints import shop as shop_ep
 
 
 def build_v1_router() -> APIRouter:
-    """Same handlers as /api — also available under /api/v1 for Next clients."""
+    """Same handlers as /api — also available under /api/v1."""
     router = APIRouter()
     # catalog_ep.router == api_controller.router (pricing, catalog, gold, …)
     router.include_router(catalog_ep.router)
@@ -22,5 +21,4 @@ def build_v1_router() -> APIRouter:
     router.include_router(shop_ep.router)
     router.include_router(admin_ep.admin_router)
     router.include_router(admin_ep.cms_admin_router)
-    router.include_router(page_context_ep.router)
     return router

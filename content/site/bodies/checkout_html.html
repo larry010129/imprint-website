@@ -15,6 +15,8 @@
 <span class="checkout-stepper-label">完成</span>
 </div>
 </nav>
-<div data-checkout-root=""></div>
+<div hx-get="/htmx/checkout" hx-swap="innerHTML" hx-trigger="load" hx-vals='js:{items: new URLSearchParams(location.search).get("items") || new URLSearchParams(location.search).get("item") || ""}' id="htmx-checkout">
+<div aria-busy="true" class="checkout-skel"><p>載入訂單…</p></div>
+</div>
 </div>
 </section>

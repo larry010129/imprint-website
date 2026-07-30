@@ -1,0 +1,52 @@
+<div class="shop-page shop-fit shop-wizard" id="shop-page" data-shop-htmx="1"{% if preview %} data-shop-preview="1"{% endif %}>
+  <header class="shop-wizard-header" id="shop-wizard-header">
+    {% include "partials/htmx/shop_stepper.html" %}
+    <div class="shop-wizard-guide" id="shop-wizard-guide">
+      <p class="shop-wizard-eyebrow">步驟 2 / 3{% if preview %} · 預覽{% endif %}</p>
+      <h1 class="shop-wizard-title">選擇{{ category_label }}款式</h1>
+      <p class="shop-wizard-desc">點選一款開始配置與試算。</p>
+    </div>
+  </header>
+
+  <section id="shop-styles" class="shop-section shop-section--focus">
+    <button
+      type="button"
+      class="shop-back"
+      hx-get="/htmx/shop/step/catalog{% if preview %}?preview=1{% endif %}"
+      hx-target="#shop-htmx-root"
+      hx-swap="innerHTML"
+    >← 返回品項</button>
+    <h2 class="shop-section-title">{{ category_label }}</h2>
+    {% if error %}<p class="form-msg is-error" role="alert">{{ error }}</p>{% endif %}
+    {% if products %}
+    <div
+      class="type-grid type-grid--size-{{ type_grid_size or 'sm' }}"
+      id="type-grid"
+      data-count="{{ type_grid_count or products|length }}"
+      {% if type_grid_cols %}style="--type-cols: {{ type_grid_cols }}"{% endif %}
+    >
+      {% for p in products %}
+      <button
+        type="button"
+        class="type-card"
+        hx-get="/htmx/shop/step/configure?category={{ category }}&type={{ p.id }}{% if preview %}&preview=1{% endif %}"
+        hx-target="#shop-htmx-root"
+        hx-swap="innerHTML"
+      >
+        {% if p.thumb %}
+        <img class="type-card__img" src="{{ p.thumb }}" alt="" loading="lazy" width="200" height="200">
+        {% endif %}
+        <span class="type-name type-card__name">{{ p.nameZh or p.id }}</span>
+        {% if preview and p.draft %}
+        <span class="type-draft-badge">草稿</span>
+        {% endif %}
+      </button>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="catalog-filter-empty">
+      <p>此品項暫無上架款式。</p>
+    </div>
+    {% endif %}
+  </section>
+</div>

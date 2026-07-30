@@ -49,9 +49,6 @@ function CmsPagesPanelInner({ api }: CmsPagesPanelProps) {
       <p className="adx-panel-note">
         選擇現有官網頁面，修改文字與圖片。不可新建頁面。試算、上架、價格表、購物車、登入不在此編輯。
       </p>
-      <p className="note warn" role="status">
-        Beta 測試功能：開發中，資料與版面可能不穩，使用請自負風險。
-      </p>
       <h3 className="cms-page-section-title">
         現有官網頁面
         <span className="adx-risk-tag" title="測試功能，開發中，使用請自負風險">

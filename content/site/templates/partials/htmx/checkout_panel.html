@@ -1,0 +1,94 @@
+{% set ids_csv = item_ids|join(',') %}
+<header class="checkout-head">
+  <h1 class="checkout-title">確認訂單資訊</h1>
+  <p class="checkout-lead">請填寫收件人資訊與取貨方式，確認無誤後送出訂單。線上送出僅代表收到訂製申請，仍需顧問確認。</p>
+  {% if form_error %}<p class="form-msg is-error" role="alert">{{ form_error }}</p>{% endif %}
+</header>
+
+<form class="checkout-layout"
+  hx-post="/htmx/checkout/submit"
+  hx-target="#htmx-checkout"
+  hx-swap="innerHTML"
+  hx-disabled-elt="button[type=submit]">
+  <input type="hidden" name="itemIds" value="{{ ids_csv }}">
+  <input type="hidden" name="couponCode" id="checkout-coupon-code" value="{{ coupon.code if coupon else '' }}">
+
+  <div class="checkout-main">
+    <section class="checkout-block">
+      <h2>訂製品項</h2>
+      <ul class="member-cart-list">
+        {% for item in items %}
+        <li class="member-cart-item">
+          {% if item.image_url %}<img class="member-cart-item__thumb" src="{{ item.image_url }}" alt="" width="64" height="64">{% endif %}
+          <div class="member-cart-item__body">
+            <p>{{ item.summary_zh or '訂製品項' }}</p>
+            <strong>{{ format_twd(item.total_price) }}</strong>
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+    </section>
+
+    <section class="checkout-block">
+      <h2>聯絡資訊</h2>
+      <div class="form-field">
+        <label for="customerName">收件人姓名</label>
+        <input id="customerName" name="customerName" required value="{{ profile.full_name or '' }}">
+      </div>
+      <div class="form-field">
+        <label for="customerPhone">聯絡電話</label>
+        <input id="customerPhone" name="customerPhone" type="tel" required value="{{ profile.phone or '' }}">
+      </div>
+      <div class="form-field">
+        <label for="customerEmail">Email</label>
+        <input id="customerEmail" name="customerEmail" type="email" value="{{ profile.email or '' }}">
+      </div>
+    </section>
+
+    <section class="checkout-block">
+      <h2>取貨方式</h2>
+      <label><input type="radio" name="fulfillmentMethod" value="pickup" {% if fulfillment != 'delivery' %}checked{% endif %}> 門市自取</label>
+      <label><input type="radio" name="fulfillmentMethod" value="delivery" {% if fulfillment == 'delivery' %}checked{% endif %}> 宅配</label>
+      <div class="form-field">
+        <label for="shippingPostal">郵遞區號</label>
+        <input id="shippingPostal" name="shippingPostal" value="{{ profile.shipping_postal or '' }}">
+      </div>
+      <div class="form-field">
+        <label for="shippingCity">縣市</label>
+        <input id="shippingCity" name="shippingCity" value="{{ profile.shipping_city or '' }}">
+      </div>
+      <div class="form-field">
+        <label for="shippingAddress">地址</label>
+        <input id="shippingAddress" name="shippingAddress" value="{{ profile.shipping_address or '' }}">
+      </div>
+      <div class="form-field">
+        <label for="orderNote">備註（最多 100 字）</label>
+        <textarea id="orderNote" name="orderNote" maxlength="100" rows="3">{{ order_note or '' }}</textarea>
+      </div>
+    </section>
+  </div>
+
+  <aside class="checkout-summary">
+    <h2>金額摘要</h2>
+    <p>小計 <strong>{{ format_twd(subtotal) }}</strong></p>
+    <div id="checkout-coupon-slot">
+      {% include "partials/htmx/checkout_coupon_result.html" %}
+    </div>
+    <div class="form-field" style="display:flex;gap:.5rem;align-items:flex-end">
+      <div style="flex:1">
+        <label for="couponInput">優惠碼</label>
+        <input id="couponInput" name="couponInput" value="{{ coupon.code if coupon else '' }}"
+          hx-post="/htmx/checkout/coupon"
+          hx-target="#checkout-coupon-slot"
+          hx-include="[name='itemIds']"
+          hx-vals='js:{couponCode: document.getElementById("couponInput").value, itemIds: "{{ ids_csv }}"}'
+          hx-trigger="keyup changed delay:500ms">
+      </div>
+      <button type="button" class="btn btn-line"
+        hx-post="/htmx/checkout/coupon"
+        hx-target="#checkout-coupon-slot"
+        hx-vals='js:{couponCode: document.getElementById("couponInput").value, itemIds: "{{ ids_csv }}"}'>套用</button>
+    </div>
+    <button type="submit" class="btn btn-dark" style="width:100%;margin-top:1rem">送出訂製申請</button>
+  </aside>
+</form>

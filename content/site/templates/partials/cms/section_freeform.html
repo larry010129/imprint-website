@@ -1,0 +1,86 @@
+{# Fluid Engine–style freeform canvas (blocks positioned in %). #}
+{% set height = props.height or 480 %}
+{% set blocks = props.blocks if props.blocks is iterable and props.blocks is not string else [] %}
+{% set mobile = props.blocks_mobile if props.blocks_mobile is iterable and props.blocks_mobile is not string else [] %}
+{% set has_mobile = mobile|length > 0 %}
+{% set edit = cms_inline or site_cms_edit %}
+<section
+  class="cms-section cms-freeform{% if has_mobile %} cms-freeform--has-mobile{% endif %}"
+  data-cms-reveal
+  data-cms-section-id="{{ section.id }}"
+  data-cms-section-type="freeform"
+  style="--cms-freeform-h: {{ height }}px"
+  {% if props.anchor and props.anchor != 'end' %}id="{{ props.anchor }}"{% endif %}
+>
+  <div class="cms-freeform__canvas" data-cms-freeform-canvas="1">
+    <div class="cms-freeform__layer cms-freeform__layer--desktop" data-cms-freeform-layer="desktop">
+      {% for block in blocks %}
+      <div
+        class="cms-freeform__block cms-freeform__block--{{ block.kind }}"
+        data-cms-freeform-block="{{ block.id }}"
+        data-cms-block-kind="{{ block.kind }}"
+        data-cms-freeform-device="desktop"
+        style="left: {{ block.x }}%; top: {{ block.y }}%; width: {{ block.w }}%; min-height: {{ block.h }}%; z-index: {{ block.z|default(1) }};"
+      >
+        {% if edit %}
+        <button type="button" class="cms-freeform__drag" data-cms-freeform-drag aria-label="拖曳元素" title="拖曳移動"></button>
+        <button type="button" class="cms-freeform__resize" data-cms-freeform-resize aria-label="調整大小" title="拖曳縮放"></button>
+        {% endif %}
+        {% if block.kind == 'heading' %}
+        <h2 data-cms-editable="text" data-cms-prop="blocks" data-cms-block-id="{{ block.id }}" data-cms-block-field="text">{{ block.text or '標題' }}</h2>
+        {% elif block.kind == 'text' %}
+        <p data-cms-editable="text" data-cms-prop="blocks" data-cms-block-id="{{ block.id }}" data-cms-block-field="text">{{ block.text or '文字' }}</p>
+        {% elif block.kind == 'button' %}
+        <a class="cms-btn cms-btn--solid" href="{{ block.href or '#' }}" data-cms-editable="button" data-cms-prop="blocks" data-cms-block-id="{{ block.id }}" data-cms-block-field="text" data-cms-href-prop="href">{{ block.text or '按鈕' }}</a>
+        {% elif block.kind == 'image' %}
+          {% if block.image_url %}
+          <img src="{{ block.image_url }}" alt="{{ block.image_alt or '' }}" loading="lazy" decoding="async" data-cms-editable="image_url" data-cms-prop="blocks" data-cms-block-id="{{ block.id }}" data-cms-block-field="image_url">
+          {% elif edit %}
+          <button type="button" class="cms-image-upload-placeholder cms-freeform__image-ph" data-cms-editable="image_url" data-cms-prop="blocks" data-cms-block-id="{{ block.id }}" data-cms-block-field="image_url">
+            <span>上傳圖片</span>
+            <small>點擊選擇</small>
+          </button>
+          {% endif %}
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% if has_mobile %}
+    <div class="cms-freeform__layer cms-freeform__layer--mobile" data-cms-freeform-layer="mobile">
+      {% for block in mobile %}
+      <div
+        class="cms-freeform__block cms-freeform__block--{{ block.kind }}"
+        data-cms-freeform-block="{{ block.id }}"
+        data-cms-block-kind="{{ block.kind }}"
+        data-cms-freeform-device="mobile"
+        style="left: {{ block.x }}%; top: {{ block.y }}%; width: {{ block.w }}%; min-height: {{ block.h }}%; z-index: {{ block.z|default(1) }};"
+      >
+        {% if edit %}
+        <button type="button" class="cms-freeform__drag" data-cms-freeform-drag aria-label="拖曳元素" title="拖曳移動"></button>
+        <button type="button" class="cms-freeform__resize" data-cms-freeform-resize aria-label="調整大小" title="拖曳縮放"></button>
+        {% endif %}
+        {% if block.kind == 'heading' %}
+        <h2 data-cms-editable="text" data-cms-prop="blocks" data-cms-block-id="{{ block.id }}" data-cms-block-field="text">{{ block.text or '標題' }}</h2>
+        {% elif block.kind == 'text' %}
+        <p data-cms-editable="text" data-cms-prop="blocks" data-cms-block-id="{{ block.id }}" data-cms-block-field="text">{{ block.text or '文字' }}</p>
+        {% elif block.kind == 'button' %}
+        <a class="cms-btn cms-btn--solid" href="{{ block.href or '#' }}" data-cms-editable="button" data-cms-prop="blocks" data-cms-block-id="{{ block.id }}" data-cms-block-field="text" data-cms-href-prop="href">{{ block.text or '按鈕' }}</a>
+        {% elif block.kind == 'image' %}
+          {% if block.image_url %}
+          <img src="{{ block.image_url }}" alt="{{ block.image_alt or '' }}" loading="lazy" decoding="async" data-cms-editable="image_url" data-cms-prop="blocks" data-cms-block-id="{{ block.id }}" data-cms-block-field="image_url">
+          {% elif edit %}
+          <button type="button" class="cms-image-upload-placeholder cms-freeform__image-ph" data-cms-editable="image_url" data-cms-prop="blocks" data-cms-block-id="{{ block.id }}" data-cms-block-field="image_url">
+            <span>上傳圖片</span>
+            <small>點擊選擇</small>
+          </button>
+          {% endif %}
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% if edit and not blocks and not mobile %}
+    <p class="cms-freeform__empty">從此區塊右側工具列新增可拖曳元素。</p>
+    {% endif %}
+  </div>
+</section>
