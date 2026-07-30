@@ -33,14 +33,27 @@ Open the site at `http://127.0.0.1:8080/`.
 3. Run `backend/schema.sql` once on the database
 4. **Start Command** must be `bash scripts/render-start.sh`
 
-## Cloudflare Workers (experimental only)
+## Cloudflare Workers (stub only)
 
-`wrangler.toml` → `src/entry.py` (ASGI bridge). **Do not use for full production** — Workers/Pyodide cannot run `psycopg`, disk uploads, and most of this stack. Production stays on Render.
+`src/entry.py` is a **JSON health stub** so Cloudflare Git/`wrangler deploy` succeeds.
+It is **not** the FastAPI site (`psycopg`, uploads, Jinja will not run on Workers/Pyodide).
+
+| Host | What runs |
+|------|-----------|
+| **Render** (`render.yaml`) | Real site + API |
+| **Cloudflare Worker** | Stub `{"ok":true,...}` only |
+
+Dashboard deploy command (current Git integration):
 
 ```bash
-# needs Node + uv (https://docs.astral.sh/uv/)
-uvx --from workers-py pywrangler dev
-uvx --from workers-py pywrangler deploy
+npx wrangler deploy
 ```
 
-Plain `npx wrangler deploy` will fail or mis-handle Python packages — use **pywrangler**.
+Requires `compatibility_flags = ["python_workers", "disable_python_external_sdk"]` (already in `wrangler.toml`).
+
+Optional local package tooling (still not the full app):
+
+```bash
+uv sync
+uv run pywrangler deploy
+```

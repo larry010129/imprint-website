@@ -1,30 +1,36 @@
-"""Cloudflare Python Workers entry — ASGI bridge to FastAPI.
+"""Cloudflare Python Worker entry (plain wrangler-compatible stub).
 
-Deploy with:
-  uvx --from workers-py pywrangler deploy
+Cloudflare Git deploy runs `wrangler deploy`, which does NOT bundle the full
+FastAPI app (psycopg / disk / Jinja). This stub deploys so the Worker exists.
 
-Local:
-  uvx --from workers-py pywrangler dev
+Full site stays on Render: `bash scripts/render-start.sh`
 
-NOTE: This imprint app needs Postgres (psycopg), local disk uploads, Jinja
-templates, and several native packages. Cloudflare Python Workers (Pyodide)
-cannot run the full production stack. Keep production on Render
-(`scripts/render-start.sh`). This entry exists so wrangler finds `main` and
-for a future slim Worker / Containers path — not a drop-in Render replacement.
+To run a real FastAPI Worker later (limited packages only):
+  uv sync
+  uv run pywrangler deploy
+and restore an ASGI bridge that imports a Workers-safe app — not `app.create_app()`.
 """
 
 from __future__ import annotations
 
-from workers import WorkerEntrypoint
-
-import asgi
-
-# Prefer the same factory as main.py / gunicorn.
-from app import create_app
-
-app = create_app()
+from js import Response
 
 
-class Default(WorkerEntrypoint):
-    async def fetch(self, request):
-        return await asgi.fetch(app, request, self.env)
+async def on_fetch(request):
+    """Minimal handler — no `workers` SDK import (CI has no workers-py bundle)."""
+    url = str(getattr(request, "url", "") or "")
+    body = (
+        '{"ok":true,'
+        '"service":"imprint-website",'
+        '"mode":"cloudflare-worker-stub",'
+        '"message":"Full FastAPI site runs on Render, not this Worker."}'
+    )
+    if url.rstrip("/").endswith("/health"):
+        body = '{"ok":true}'
+    return Response.new(
+        body,
+        {
+            "status": 200,
+            "headers": {"content-type": "application/json; charset=utf-8"},
+        },
+    )

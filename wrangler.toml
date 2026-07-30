@@ -1,14 +1,15 @@
-# Cloudflare Python Workers config.
-# Production site still deploys on Render — see scripts/render-start.sh / README.
+# Cloudflare Worker stub only — full imprint site deploys on Render.
+# See README "Deploy (Render)" and "Cloudflare Workers".
 #
-# Commands (use pywrangler for Python Workers, not plain `wrangler deploy`):
-#   uvx --from workers-py pywrangler dev
-#   uvx --from workers-py pywrangler deploy
+# Cloudflare dashboard / Git integration typically runs:
+#   npx wrangler deploy
+# which works with this stub + disable_python_external_sdk.
 #
-# Requires: Node + uv (https://docs.astral.sh/uv/)
+# For package-aware Python Workers (not this full app):
+#   uv sync && uv run pywrangler deploy
 
 name = "imprint-website"
 main = "src/entry.py"
-# Must not be ahead of Cloudflare UTC "today" (TW midnight can still be prior UTC day).
+# Must not be ahead of Cloudflare UTC "today".
 compatibility_date = "2026-07-30"
-compatibility_flags = ["python_workers"]
+compatibility_flags = ["python_workers", "disable_python_external_sdk"]
