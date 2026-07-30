@@ -43,11 +43,15 @@ function resolveError(error: ImageUploadResult["error"]) {
 async function resolveUploadFile(
   previewUrl: string,
   crop: CropPercent,
-  cropTouched: boolean,
   sourceFile: File | null,
+  maxWidth?: number,
 ) {
-  if (sourceFile && !cropTouched) return sourceFile;
-  return cropImageToFile(previewUrl, crop, sourceFile);
+  return cropImageToFile(previewUrl, crop, sourceFile, {
+    maxWidth,
+    maxBytes: 1024 * 1024,
+    mimeType: "image/webp",
+    quality: 0.82,
+  });
 }
 
 export function ImageUploadField({
@@ -115,8 +119,8 @@ export function ImageUploadField({
       const uploadFile = await resolveUploadFile(
         previewUrl,
         crop,
-        cropTouched,
         file,
+        targetW,
       );
       const res = await onUpload(uploadFile);
       if (res.error || !res.url) {
@@ -142,6 +146,7 @@ export function ImageUploadField({
     onValidationError,
     previewUrl,
     setRemotePreview,
+    targetW,
   ]);
 
   const showDropZone = !hasPreview || uploading;

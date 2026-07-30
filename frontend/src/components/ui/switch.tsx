@@ -103,11 +103,11 @@ function SwitchControl({
         disabled={disabled}
         checked={checked}
         onChange={() => context?.setValue(value)}
-        className="hidden"
+        className="peer sr-only"
       />
       <span
         className={cn(
-          "flex flex-1 cursor-pointer items-center justify-center font-sans font-medium duration-150",
+          "flex flex-1 cursor-pointer items-center justify-center font-sans font-medium duration-150 peer-focus-visible:outline-none peer-focus-visible:ring-2 peer-focus-visible:ring-stone-500",
           checked
             ? "rounded-sm bg-white text-stone-900 shadow-sm"
             : "text-stone-600 hover:text-stone-900",

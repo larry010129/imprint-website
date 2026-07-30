@@ -121,7 +121,7 @@ def test_create_page_image_from_registry_inserts_missing_slot():
     assert dup_error == "此區塊已存在"
 
 
-def test_page_image_loader_reuses_bulk_cache(monkeypatch):
+def test_page_image_loader_reuses_per_route_cache(monkeypatch):
     calls = []
 
     class Resource:
@@ -134,19 +134,22 @@ def test_page_image_loader_reuses_bulk_cache(monkeypatch):
         def cursor(self):
             return self
 
-    def fetch_all_page_images(_cur):
-        calls.append("query")
-        return [
+    rows = [
             {"page_key": "/series/pet/", "slot_key": "hero"},
             {"page_key": "/series/pet/", "slot_key": "intro"},
             {"page_key": "/series/love/", "slot_key": "hero"},
-        ]
+    ]
 
+    def fetch_page_images(_cur, route):
+        calls.append(route)
+        return [row for row in rows if row["page_key"] == route]
+
+    monkeypatch.setattr(web_controller, "monotonic", lambda: 120)
     monkeypatch.setattr("app.database.get_connection", Resource)
-    monkeypatch.setattr("app.content.fetch_all_page_images", fetch_all_page_images)
+    monkeypatch.setattr("app.content.fetch_page_images", fetch_page_images)
     web_controller.clear_page_image_cache()
     assert len(web_controller._load_page_images("/series/pet/")) == 2
     assert web_controller._load_page_image("/series/pet/")["slot_key"] == "hero"
     assert web_controller._load_page_image("/series/love/")["slot_key"] == "hero"
-    assert calls == ["query"]
+    assert calls == ["/series/pet/", "/series/love/"]
     web_controller.clear_page_image_cache()

@@ -296,10 +296,16 @@
   </div>
 </section>
 
+{% set cms_anchor = 'before-series' %}
+{% include "partials/cms/site_section_stack.html" %}
+
 <section class="gh-section" id="series">
   <p class="gh-script reveal" data-cms-text="series-script">Five Collections</p>
   <h2 class="gh-section__title reveal reveal-d1" data-cms-text="series-title">選擇屬於您的系列</h2>
   <p class="gh-section__lead reveal reveal-d2" data-cms-text="series-lead">每一種羈絆，都有屬於它的光。先<a href="/series.html">了解五大系列</a>代表的意義，再點進系列頁選擇克拉數、形狀與飾品款式。</p>
+
+{% set cms_anchor = 'series-top' %}
+  {% include "partials/cms/site_section_stack.html" %}
 
   <div class="gh-series-cards">
     <a class="gh-series-card reveal" href="/series/first-love/">
@@ -378,8 +384,15 @@
     </a>
   </div>
 
+  {% set cms_anchor = 'series-mid' %}
+  {% include "partials/cms/site_section_stack.html" %}
+
   <a class="gh-btn gh-btn--primary reveal" href="/series.html" data-cms-button="series-cta">查看系列總覽</a>
 </section>
+
+{% set cms_anchor = 'after-series' %}
+{% include "partials/cms/site_section_stack.html" %}
+
 
 <section class="gh-wall">
   <div class="container gh-wall__head">

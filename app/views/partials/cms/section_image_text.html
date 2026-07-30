@@ -1,16 +1,21 @@
-<section class="cms-section cms-image-text cms-image-text--{{ props.layout or 'left' }}" data-cms-section-id="{{ section.id }}" data-cms-section-type="image_text">
+<section class="cms-section cms-image-text cms-image-text--{{ props.layout or 'stack' }}" data-cms-reveal data-cms-section-id="{{ section.id }}" data-cms-section-type="image_text">
   <div class="container cms-image-text__grid">
     <figure class="cms-image-text__media">
       {% if props.image_url %}
-      <img src="{{ props.image_url }}" alt="{{ props.image_alt or '' }}" loading="lazy" decoding="async" data-cms-editable="image_url" data-cms-prop="image_url">
+      <img src="{{ props.image_url }}" srcset="{{ props.image_url }} 1200w" sizes="(max-width: 800px) 100vw, 50vw" width="1200" height="900" alt="{{ props.image_alt or '' }}" loading="lazy" fetchpriority="low" decoding="async" data-cms-editable="image_url" data-cms-prop="image_url">
+      {% elif cms_inline or site_cms_edit %}
+      <button type="button" class="cms-image-upload-placeholder" data-cms-editable="image_url" data-cms-prop="image_url">
+        <span>上傳圖片</span>
+        <small>點擊選擇或拖曳檔案</small>
+      </button>
       {% endif %}
     </figure>
     <div class="cms-image-text__copy">
-      {% if props.title %}
-      <h2 data-cms-editable="text" data-cms-prop="title">{{ props.title }}</h2>
+      {% if props.title or cms_inline or site_cms_edit %}
+      <h2 data-cms-editable="text" data-cms-prop="title">{{ props.title or '圖文標題' }}</h2>
       {% endif %}
-      {% if props.body %}
-      <div class="cms-body" data-cms-editable="text" data-cms-prop="body">{{ props.body }}</div>
+      {% if props.body or cms_inline or site_cms_edit %}
+      <div class="cms-body" data-cms-editable="text" data-cms-prop="body">{{ props.body or '在此編輯說明文字。' }}</div>
       {% endif %}
       {% if props.cta_label %}
       <div class="cms-actions">

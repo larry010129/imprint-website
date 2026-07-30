@@ -433,6 +433,16 @@ _ALLOWED_IMAGE_EXT = {".png", ".jpg", ".jpeg", ".webp"}
 _MAX_IMAGE_BYTES = 1 * 1024 * 1024
 
 
+def _image_signature_matches(data: bytes, ext: str) -> bool:
+    if ext == ".png":
+        return data.startswith(b"\x89PNG\r\n\x1a\n")
+    if ext in {".jpg", ".jpeg"}:
+        return data.startswith(b"\xff\xd8\xff")
+    if ext == ".webp":
+        return len(data) >= 12 and data[:4] == b"RIFF" and data[8:12] == b"WEBP"
+    return False
+
+
 @router.post("/product-upload")
 async def product_upload(request: Request, file: UploadFile = File(...)) -> JSONResponse:
     _require_admin(request)
@@ -2095,6 +2105,8 @@ async def page_image_upload(request: Request, file: UploadFile = File(...)) -> J
         return JSONResponse(status_code=400, content={"error": "empty file"})
     if len(data) > _MAX_IMAGE_BYTES:
         return JSONResponse(status_code=400, content={"error": "圖片需小於 1MB"})
+    if not _image_signature_matches(data, ext):
+        return JSONResponse(status_code=400, content={"error": "圖片格式與副檔名不符"})
     _PAGE_IMAGE_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     name = f"{uuid.uuid4().hex}{ext}"
     (_PAGE_IMAGE_UPLOAD_DIR / name).write_bytes(data)
@@ -2120,34 +2132,53 @@ async def admin_page_image_update(request: Request) -> JSONResponse:
     slot_key = fields["slot_key"]
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute(
-            "select page_key from page_images where page_key = %s and slot_key = %s",
+            "select * from page_images where page_key = %s and slot_key = %s",
             (page_key, slot_key),
         )
-        if not cur.fetchone():
+        existing = cur.fetchone()
+        if not existing:
             return JSONResponse(status_code=404, content={"error": "找不到頁面圖片設定"})
-        sets = [
-            "image_url = %s",
-            "image_alt = %s",
-            "is_published = %s",
-            "updated_at = now()",
-        ]
-        params: list = [fields["image_url"], fields["image_alt"], fields["is_published"]]
-        if "image_webp" in fields:
-            sets.insert(1, "image_webp = %s")
-            params.insert(1, fields["image_webp"])
-        params.extend((page_key, slot_key))
-        cur.execute(
-            f"""
-            update page_images set {', '.join(sets)}
-            where page_key = %s and slot_key = %s
-            returning *
-            """,
-            params,
-        )
-        row = serialize_page_image(cur.fetchone())
-    from app.controllers.web_controller import clear_page_image_cache
+        if existing.get("group_key") == "cms-section":
+            from app.cms_section_images import update_section_from_page_image
+
+            update_section_from_page_image(
+                cur,
+                page_key=page_key,
+                slot_key=slot_key,
+                image_url=fields["image_url"] if fields["is_published"] else "",
+                image_alt=fields["image_alt"],
+                image_webp=fields.get("image_webp"),
+            )
+            cur.execute(
+                "select * from page_images where page_key = %s and slot_key = %s",
+                (page_key, slot_key),
+            )
+            row = serialize_page_image(cur.fetchone())
+        else:
+            sets = [
+                "image_url = %s",
+                "image_alt = %s",
+                "is_published = %s",
+                "updated_at = now()",
+            ]
+            params: list = [fields["image_url"], fields["image_alt"], fields["is_published"]]
+            if "image_webp" in fields:
+                sets.insert(1, "image_webp = %s")
+                params.insert(1, fields["image_webp"])
+            params.extend((page_key, slot_key))
+            cur.execute(
+                f"""
+                update page_images set {', '.join(sets)}
+                where page_key = %s and slot_key = %s
+                returning *
+                """,
+                params,
+            )
+            row = serialize_page_image(cur.fetchone())
+    from app.controllers.web_controller import clear_page_image_cache, clear_site_cms_cache
 
     clear_page_image_cache()
+    clear_site_cms_cache()
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute("select email from users where id = %s", (user_id,))
         actor = cur.fetchone()
@@ -2177,7 +2208,30 @@ async def admin_page_image_action(request: Request) -> JSONResponse:
     from app.content import serialize_page_image
 
     with get_connection() as conn, conn.cursor() as cur:
-        if action == "publish":
+        cur.execute(
+            "select * from page_images where page_key = %s and slot_key = %s",
+            (page_key, slot_key),
+        )
+        existing = cur.fetchone()
+        if not existing:
+            return JSONResponse(status_code=404, content={"error": "找不到頁面圖片設定"})
+        if existing.get("group_key") == "cms-section":
+            from app.cms_section_images import update_section_from_page_image
+
+            keep_image = action == "publish"
+            update_section_from_page_image(
+                cur,
+                page_key=page_key,
+                slot_key=slot_key,
+                image_url=existing.get("image_url") if keep_image else "",
+                image_alt=existing.get("image_alt") or "",
+                image_webp=existing.get("image_webp") if keep_image else None,
+            )
+            cur.execute(
+                "select * from page_images where page_key = %s and slot_key = %s",
+                (page_key, slot_key),
+            )
+        elif action == "publish":
             cur.execute(
                 """
                 update page_images
@@ -2214,9 +2268,10 @@ async def admin_page_image_action(request: Request) -> JSONResponse:
         if not row:
             return JSONResponse(status_code=404, content={"error": "找不到頁面圖片設定"})
         payload = serialize_page_image(row)
-    from app.controllers.web_controller import clear_page_image_cache
+    from app.controllers.web_controller import clear_page_image_cache, clear_site_cms_cache
 
     clear_page_image_cache()
+    clear_site_cms_cache()
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute("select email from users where id = %s", (user_id,))
         actor = cur.fetchone()

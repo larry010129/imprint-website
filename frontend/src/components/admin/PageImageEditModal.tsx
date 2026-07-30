@@ -41,7 +41,7 @@ export type PageImageEditRow = {
 export type PageImageEditModalProps = {
   row: PageImageEditRow;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (result?: { slotKey: string; imageUrl: string; imageAlt: string }) => void;
   uploadImage: (file: File) => Promise<ImageUploadResult>;
   updatePageImage: (fields: {
     pageKey: string;
@@ -64,10 +64,15 @@ async function resolveUploadFile(
   crop: CropPercent,
   cropTouched: boolean,
   sourceFile: File | null,
+  maxWidth: number,
 ) {
-  if (sourceFile && !cropTouched) return sourceFile;
   if (!sourceFile && !cropTouched && isFullCrop(crop)) return null;
-  return cropImageToFile(previewUrl, crop, sourceFile);
+  return cropImageToFile(previewUrl, crop, sourceFile, {
+    maxWidth,
+    maxBytes: 1024 * 1024,
+    mimeType: "image/webp",
+    quality: 0.82,
+  });
 }
 
 export default function PageImageEditModal({
@@ -135,6 +140,7 @@ export default function PageImageEditModal({
           crop,
           cropTouched,
           file,
+          row.target_w,
         );
         if (!uploadFile) {
           setValidationError("請選擇圖片");
@@ -165,7 +171,11 @@ export default function PageImageEditModal({
         return;
       }
 
-      onSaved();
+      onSaved({
+        slotKey: row.slot_key,
+        imageUrl: nextUrl,
+        imageAlt: row.image_alt || "",
+      });
     } catch (error) {
       setValidationError(error instanceof Error ? error.message : "裁切失敗");
     } finally {
@@ -184,6 +194,7 @@ export default function PageImageEditModal({
     row.is_published,
     row.page_key,
     row.slot_key,
+    row.target_w,
     updatePageImage,
     uploadImage,
   ]);

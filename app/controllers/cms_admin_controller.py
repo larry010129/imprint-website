@@ -81,9 +81,106 @@ async def cms_pages_list(request: Request) -> dict:
         pages = fetch_all_pages(cur)
         for page in pages:
             slug = str(page.get("slug") or "")
-            page["site_route"] = f"/p/{slug}"
             page["cms_path"] = f"/p/{slug}"
+            # Keep DB site_route (host pages); modular pages stay null.
+            if not page.get("site_route"):
+                page["site_route"] = None
         return {"pages": pages, "site_pages": list(EDITABLE_SITE_PAGES)}
+
+
+@router.get("/cms-site-page")
+async def cms_site_page_get(request: Request) -> JSONResponse:
+    """Ensure host page for a fixed site route; return page + sections."""
+    _require_admin(request)
+    route = str(request.query_params.get("route") or "").strip()
+    from app.cms_copy_slot_specs import EDITABLE_SITE_PAGES
+    from app.cms_pages import ensure_site_route_page, fetch_sections
+
+    title_map = {item["route"]: item["title"] for item in EDITABLE_SITE_PAGES}
+    if route not in title_map:
+        return JSONResponse(status_code=400, content={"error": "route 無效或不可編輯"})
+    with get_connection() as conn, conn.cursor() as cur:
+        _ensure_all(cur)
+        try:
+            page = ensure_site_route_page(cur, route, title_map[route])
+        except ValueError as exc:
+            return JSONResponse(status_code=400, content={"error": str(exc)})
+        sections = fetch_sections(cur, page["id"], visible_only=False)
+    page["cms_path"] = f"/p/{page['slug']}"
+    return JSONResponse(content={"page": page, "sections": sections})
+
+
+@router.post("/cms-section-page-image")
+async def cms_section_page_image_sync(request: Request) -> JSONResponse:
+    """Upsert or clear page_images row for a CMS section media slot."""
+    user_id = _require_admin(request)
+    body = await request.json()
+    if not isinstance(body, dict):
+        body = {}
+    section_id = str(body.get("sectionId") or body.get("section_id") or "").strip()
+    action = str(body.get("action") or "upsert").strip()
+    if not _valid_uuid(section_id) or action not in {"upsert", "delete", "hide"}:
+        return JSONResponse(status_code=400, content={"error": "invalid sectionId/action"})
+    from app.cms_pages import (
+        delete_section_page_image,
+        fetch_page_by_id,
+        page_key_for_cms_page,
+        serialize_section,
+        upsert_section_page_image,
+    )
+    from app.controllers.web_controller import clear_page_image_cache
+
+    with get_connection() as conn, conn.cursor() as cur:
+        _ensure_all(cur)
+        cur.execute("select * from cms_page_sections where id = %s", (section_id,))
+        section_row = cur.fetchone()
+        if not section_row:
+            return JSONResponse(status_code=404, content={"error": "找不到區塊"})
+        section = serialize_section(section_row)
+        page = fetch_page_by_id(cur, str(section["page_id"]))
+        if not page:
+            return JSONResponse(status_code=404, content={"error": "找不到頁面"})
+        page_key = page_key_for_cms_page(page)
+        if not page_key:
+            return JSONResponse(status_code=400, content={"error": "page_key 無效"})
+        try:
+            if action in {"delete", "hide"}:
+                ok = delete_section_page_image(
+                    cur, page_key=page_key, section_id=section_id, hide=action == "hide"
+                )
+                clear_page_image_cache()
+                log_admin_action(
+                    _actor_email(user_id),
+                    f"cms_section_page_image_{action}",
+                    {"section_id": section_id, "page_key": page_key},
+                )
+                return JSONResponse(content={"ok": ok})
+            props = section.get("props") or {}
+            image_url = body.get("imageUrl") if "imageUrl" in body else body.get("image_url")
+            if image_url is None:
+                image_url = props.get("image_url") or ""
+            image_alt = body.get("imageAlt") if "imageAlt" in body else body.get("image_alt")
+            if image_alt is None:
+                image_alt = props.get("image_alt") or ""
+            image_webp = body.get("imageWebp") if "imageWebp" in body else body.get("image_webp")
+            row = upsert_section_page_image(
+                cur,
+                page_key=page_key,
+                section_id=section_id,
+                section_type=str(section.get("type") or ""),
+                image_url=str(image_url or ""),
+                image_alt=str(image_alt or ""),
+                image_webp=None if image_webp is None else str(image_webp or ""),
+            )
+        except ValueError as exc:
+            return JSONResponse(status_code=400, content={"error": str(exc)})
+    clear_page_image_cache()
+    log_admin_action(
+        _actor_email(user_id),
+        "cms_section_page_image_upsert",
+        {"section_id": section_id, "page_key": page_key},
+    )
+    return JSONResponse(content={"ok": True, "pageImage": row})
 
 
 @router.post("/cms-pages")
@@ -206,6 +303,68 @@ async def cms_section_create(request: Request, page_id: str) -> JSONResponse:
     return JSONResponse(content={"section": section})
 
 
+@router.get("/cms-sections/{section_id}/html")
+async def cms_section_html(request: Request, section_id: str) -> JSONResponse:
+    """Render one section partial for soft preview patching (admin edit mode)."""
+    _require_admin(request)
+    if not _valid_uuid(section_id):
+        return JSONResponse(status_code=400, content={"error": "id 無效"})
+    from app.cms_pages import SECTION_TYPES, fetch_page_by_id, serialize_section
+    from app.controllers.web_controller import templates
+
+    with get_connection() as conn, conn.cursor() as cur:
+        _ensure_all(cur)
+        cur.execute("select * from cms_page_sections where id = %s", (section_id,))
+        row = cur.fetchone()
+        if not row:
+            return JSONResponse(status_code=404, content={"error": "找不到區塊"})
+        section = serialize_section(row)
+        if section.get("type") not in SECTION_TYPES:
+            return JSONResponse(status_code=400, content={"error": "不支援的區塊類型"})
+        page = fetch_page_by_id(cur, str(section["page_id"]))
+        if not page:
+            return JSONResponse(status_code=404, content={"error": "找不到頁面"})
+        context = {
+            "section": section,
+            "props": section.get("props") or {},
+            "cms_page": page,
+            "cms_inline": True,
+            "site_cms_edit": True,
+            "cms_faq_items": [],
+            "cms_faq_all_items": [],
+            "cms_faq_by_category": {},
+            "cms_testimonials": [],
+        }
+        if section.get("type") in {"faq_embed", "testimonials_embed"}:
+            from app.content import fetch_faq_public, fetch_published_testimonials
+
+            faq = fetch_faq_public(cur)
+            testimonials = fetch_published_testimonials(cur)
+            faq_items = faq.get("teaser") or []
+            if not faq_items:
+                faq_items = [
+                    item
+                    for cat in (faq.get("categories") or [])
+                    for item in (cat.get("items") or [])
+                ]
+            context["cms_faq_items"] = faq_items
+            context["cms_faq_all_items"] = faq.get("items") or []
+            context["cms_faq_by_category"] = {
+                str(cat.get("id")): cat.get("items") or []
+                for cat in (faq.get("categories") or [])
+            }
+            context["cms_testimonials"] = testimonials
+    try:
+        html = templates.env.get_template(
+            f"partials/cms/section_{section['type']}.html"
+        ).render(context)
+    except Exception as exc:
+        return JSONResponse(
+            status_code=500, content={"error": f"區塊渲染失敗：{exc}"}
+        )
+    return JSONResponse(content={"html": html, "section": section})
+
+
 @router.post("/cms-section-update")
 async def cms_section_update(request: Request) -> JSONResponse:
     user_id = _require_admin(request)
@@ -215,11 +374,17 @@ async def cms_section_update(request: Request) -> JSONResponse:
     section_id = str(body.get("id") or "").strip()
     if not _valid_uuid(section_id):
         return JSONResponse(status_code=400, content={"error": "id 無效"})
-    from app.cms_pages import parse_section_payload, update_section
+    from app.cms_pages import (
+        fetch_page_by_id,
+        parse_section_payload,
+        sync_section_page_image_from_props,
+        update_section,
+    )
+    from app.controllers.web_controller import clear_page_image_cache
 
     with get_connection() as conn, conn.cursor() as cur:
         _ensure_all(cur)
-        cur.execute("select type from cms_page_sections where id = %s", (section_id,))
+        cur.execute("select type, page_id from cms_page_sections where id = %s", (section_id,))
         existing = cur.fetchone()
         if not existing:
             return JSONResponse(status_code=404, content={"error": "找不到區塊"})
@@ -242,6 +407,11 @@ async def cms_section_update(request: Request) -> JSONResponse:
         if "isVisible" in body or "is_visible" in body:
             patch["is_visible"] = fields["is_visible"]
         section = update_section(cur, section_id, patch)
+        if section and props is not None:
+            page = fetch_page_by_id(cur, str(existing["page_id"]))
+            if page:
+                sync_section_page_image_from_props(cur, section, page)
+                clear_page_image_cache()
     if not section:
         return JSONResponse(status_code=404, content={"error": "找不到區塊"})
     log_admin_action(_actor_email(user_id), "cms_section_updated", {"id": section_id})
@@ -256,14 +426,36 @@ async def cms_section_action(request: Request) -> JSONResponse:
     action = str((body or {}).get("action") or "").strip()
     if not _valid_uuid(section_id) or action not in {"delete", "show", "hide"}:
         return JSONResponse(status_code=400, content={"error": "invalid id/action"})
-    from app.cms_pages import delete_section, update_section
+    from app.cms_pages import (
+        delete_section,
+        delete_section_page_image,
+        fetch_page_by_id,
+        page_key_for_cms_page,
+        update_section,
+    )
+    from app.controllers.web_controller import clear_page_image_cache
 
     with get_connection() as conn, conn.cursor() as cur:
         _ensure_all(cur)
         if action == "delete":
+            cur.execute(
+                "select page_id, type from cms_page_sections where id = %s",
+                (section_id,),
+            )
+            existing = cur.fetchone()
+            if not existing:
+                return JSONResponse(status_code=404, content={"error": "找不到區塊"})
+            page = fetch_page_by_id(cur, str(existing["page_id"]))
             ok = delete_section(cur, section_id)
             if not ok:
                 return JSONResponse(status_code=404, content={"error": "找不到區塊"})
+            if page:
+                page_key = page_key_for_cms_page(page)
+                if page_key:
+                    delete_section_page_image(
+                        cur, page_key=page_key, section_id=section_id, hide=False
+                    )
+                    clear_page_image_cache()
         else:
             section = update_section(cur, section_id, {"is_visible": action == "show"})
             if not section:

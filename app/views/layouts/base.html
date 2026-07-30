@@ -35,6 +35,9 @@
 {% include "partials/nav-react-css.html" %}
 {% include "partials/footer-react-css.html" %}
 {% block extra_css %}{% endblock %}
+{% if site_cms_sections or site_cms_edit %}
+<link rel="stylesheet" href="/static/css/cms-sections.css?v=5">
+{% endif %}
 
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"Organization","@id":"https://www.imprint-diamond.com/#organization","name":"銘印鑽石 IMPRINT DIAMOND","legalName":"心之銘印鑽石有限公司","url":"https://www.imprint-diamond.com/","telephone":"+886-2-2977-0268","address":{"@type":"PostalAddress","streetAddress":"福德南路43號1樓","addressLocality":"三重區","addressRegion":"新北市","addressCountry":"TW"},"contactPoint":[{"@type":"ContactPoint","telephone":"+886-2-2977-0268","contactType":"customer service","areaServed":"TW","availableLanguage":["zh-Hant"]}],"sameAs":["https://www.facebook.com/Imprintdiamond/","https://lin.ee/ktVBtmx"]}
@@ -56,12 +59,17 @@
 
 <main{% block main_class %}{% endblock %}>
 {% block content %}{% endblock %}
+{% set cms_anchor = 'end' %}
+{% include "partials/cms/site_section_stack.html" %}
 </main>
 
 {% include "partials/footer.html" %}
 <script src="/static/js/nav-dropdown.js?v=1"></script>
 <script src="/static/js/skeleton-ui.js?v=1"></script>
 {% block extra_scripts %}{% endblock %}
+{% if site_cms_sections %}
+<script src="/js/cms-sections.js?v=1" defer></script>
+{% endif %}
 {% include "partials/footer-react-js.html" %}
 <script src="/static/js/site-layout.js?v=2"></script>
 <script src="/static/js/main.js?v=2.3"></script>

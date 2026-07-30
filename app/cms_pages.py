@@ -2,14 +2,27 @@
 
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from typing import Any
 from urllib.parse import urlsplit
-from uuid import uuid4
-
-from psycopg.types.json import Jsonb
 
 from app.cms_boundary import validate_cms_slug
+from app.cms_section_images import (
+    SECTION_IMAGE_LABELS,
+    SECTION_IMAGE_TARGETS,
+    SECTION_IMAGE_TYPES,
+    delete_section_page_image,
+    section_page_image_slot_key,
+    sync_section_page_image_from_props,
+    upsert_section_page_image,
+)
+from app.cms_site_pages import (
+    ensure_site_route_page,
+    fetch_page_by_site_route,
+    page_key_for_cms_page,
+    site_route_to_slug,
+)
 
 SECTION_TYPES = (
     "hero",
@@ -24,6 +37,7 @@ SECTION_TYPES = (
 
 DEFAULT_PROPS: dict[str, dict[str, Any]] = {
     "hero": {
+        "anchor": "end",
         "eyebrow": "",
         "title": "新頁面標題",
         "lead": "",
@@ -34,33 +48,38 @@ DEFAULT_PROPS: dict[str, dict[str, Any]] = {
         "cta_secondary_label": "",
         "cta_secondary_href": "",
     },
-    "rich_text": {"title": "", "body": "", "columns": 1},
+    "rich_text": {"anchor": "end", "title": "", "body": "", "columns": 1},
     "image_text": {
+        "anchor": "end",
         "title": "",
         "body": "",
         "image_url": "",
         "image_alt": "",
-        "layout": "left",
+        "layout": "stack",
         "cta_label": "",
         "cta_href": "",
     },
     "cta_band": {
+        "anchor": "end",
         "title": "準備好開始了嗎？",
         "lead": "",
+        "image_url": "",
+        "image_alt": "",
         "cta_label": "客製試算",
         "cta_href": "/shop/calculator/",
         "cta_secondary_label": "聯絡我們",
         "cta_secondary_href": "/contact.html",
     },
-    "faq_embed": {"mode": "teaser", "category_id": "", "limit": 6},
-    "testimonials_embed": {"limit": 6},
+    "faq_embed": {"anchor": "end", "mode": "teaser", "category_id": "", "limit": 6},
+    "testimonials_embed": {"anchor": "end", "limit": 6},
     "button_row": {
+        "anchor": "end",
         "buttons": [
             {"label": "客製試算", "href": "/shop/calculator/"},
             {"label": "查看價格", "href": "/price.html"},
         ]
     },
-    "spacer": {"size": "md"},
+    "spacer": {"anchor": "end", "size": "md"},
 }
 
 _PROP_KEYS = {section_type: frozenset(props) for section_type, props in DEFAULT_PROPS.items()}
@@ -93,6 +112,14 @@ def ensure_cms_pages_schema(cur) -> None:
           created_at timestamptz not null default now(),
           updated_at timestamptz not null default now()
         )
+        """
+    )
+    cur.execute("alter table cms_pages add column if not exists site_route text")
+    cur.execute(
+        """
+        create unique index if not exists cms_pages_site_route_uidx
+          on cms_pages (site_route)
+          where site_route is not null
         """
     )
     cur.execute(
@@ -244,9 +271,13 @@ def _normalize_section_props(section_type: str, props: dict) -> dict[str, Any]:
     for key in _URL_KEYS:
         if key in out:
             out[key] = validate_public_url(out[key], key, image=key == "image_url")
+    anchor = str(out.get("anchor") or "end").strip().lower()
+    if not re.fullmatch(r"[a-z0-9-]{1,64}", anchor or ""):
+        anchor = "end"
+    out["anchor"] = anchor
     if section_type == "image_text":
-        layout = str(out.get("layout") or "left").strip()
-        out["layout"] = layout if layout in ("left", "right") else "left"
+        layout = str(out.get("layout") or "stack").strip()
+        out["layout"] = layout if layout in ("left", "right", "stack") else "stack"
     if section_type == "rich_text":
         try:
             cols = int(out.get("columns") or 1)
@@ -335,7 +366,7 @@ def fetch_sections(cur, page_id: str, *, visible_only: bool = False) -> list[dic
             """
             select * from cms_page_sections
             where page_id = %s and is_visible = true
-            order by sort_order asc, created_at asc
+            order by sort_order asc, id asc
             """,
             (page_id,),
         )
@@ -344,7 +375,7 @@ def fetch_sections(cur, page_id: str, *, visible_only: bool = False) -> list[dic
             """
             select * from cms_page_sections
             where page_id = %s
-            order by sort_order asc, created_at asc
+            order by sort_order asc, id asc
             """,
             (page_id,),
         )
@@ -369,130 +400,12 @@ def next_section_sort(cur, page_id: str) -> int:
     return int(cur.fetchone()["next"])
 
 
-def create_page(cur, fields: dict) -> dict:
-    page_id = str(uuid4())
-    cur.execute(
-        """
-        insert into cms_pages (id, slug, title, meta_description, status)
-        values (%s, %s, %s, %s, %s)
-        returning *
-        """,
-        (
-            page_id,
-            fields["slug"],
-            fields.get("title") or "未命名頁面",
-            fields.get("meta_description") or "",
-            fields.get("status") or "draft",
-        ),
-    )
-    return serialize_page(cur.fetchone(), sections=[])
-
-
-def update_page(cur, page_id: str, fields: dict) -> dict | None:
-    sets = []
-    vals: list[Any] = []
-    for col in ("slug", "title", "meta_description", "status"):
-        if col in fields:
-            sets.append(f"{col} = %s")
-            vals.append(fields[col])
-    if not sets:
-        return fetch_page_by_id(cur, page_id)
-    sets.append("updated_at = now()")
-    vals.append(page_id)
-    cur.execute(
-        f"update cms_pages set {', '.join(sets)} where id = %s returning *",
-        vals,
-    )
-    row = cur.fetchone()
-    return serialize_page(row) if row else None
-
-
-def delete_page(cur, page_id: str) -> bool:
-    cur.execute("delete from cms_pages where id = %s returning id", (page_id,))
-    return bool(cur.fetchone())
-
-
-def create_section(cur, page_id: str, fields: dict) -> dict:
-    sort_order = fields.get("sort_order")
-    if sort_order is None:
-        sort_order = next_section_sort(cur, page_id)
-    cur.execute(
-        """
-        insert into cms_page_sections (page_id, sort_order, type, props, is_visible)
-        values (%s, %s, %s, %s, %s)
-        returning *
-        """,
-        (
-            page_id,
-            sort_order,
-            fields["type"],
-            Jsonb(fields.get("props") or {}),
-            fields.get("is_visible", True),
-        ),
-    )
-    row = cur.fetchone()
-    cur.execute("update cms_pages set updated_at = now() where id = %s", (page_id,))
-    return serialize_section(row)
-
-
-def update_section(cur, section_id: str, fields: dict) -> dict | None:
-    cur.execute("select page_id from cms_page_sections where id = %s", (section_id,))
-    existing = cur.fetchone()
-    if not existing:
-        return None
-    sets = []
-    vals: list[Any] = []
-    if "type" in fields:
-        sets.append("type = %s")
-        vals.append(fields["type"])
-    if "props" in fields:
-        sets.append("props = %s")
-        vals.append(Jsonb(fields["props"]))
-    if "is_visible" in fields:
-        sets.append("is_visible = %s")
-        vals.append(bool(fields["is_visible"]))
-    if "sort_order" in fields:
-        sets.append("sort_order = %s")
-        vals.append(int(fields["sort_order"]))
-    if not sets:
-        cur.execute("select * from cms_page_sections where id = %s", (section_id,))
-        return serialize_section(cur.fetchone())
-    sets.append("updated_at = now()")
-    vals.append(section_id)
-    cur.execute(
-        f"update cms_page_sections set {', '.join(sets)} where id = %s returning *",
-        vals,
-    )
-    row = cur.fetchone()
-    cur.execute(
-        "update cms_pages set updated_at = now() where id = %s",
-        (str(existing["page_id"]),),
-    )
-    return serialize_section(row) if row else None
-
-
-def delete_section(cur, section_id: str) -> bool:
-    cur.execute(
-        "delete from cms_page_sections where id = %s returning page_id",
-        (section_id,),
-    )
-    row = cur.fetchone()
-    if not row:
-        return False
-    cur.execute("update cms_pages set updated_at = now() where id = %s", (str(row["page_id"]),))
-    return True
-
-
-def reorder_sections(cur, page_id: str, ordered_ids: list[str]) -> list[dict]:
-    cur.execute("select id from cms_page_sections where page_id = %s", (page_id,))
-    existing = {str(r["id"]) for r in cur.fetchall()}
-    ids = [str(i) for i in ordered_ids]
-    if len(ids) != len(existing) or len(set(ids)) != len(ids) or set(ids) != existing:
-        raise ValueError("sectionIds 必須完整且不可重複")
-    for index, sid in enumerate(ids):
-        cur.execute(
-            "update cms_page_sections set sort_order = %s, updated_at = now() where id = %s",
-            (index, sid),
-        )
-    cur.execute("update cms_pages set updated_at = now() where id = %s", (page_id,))
-    return fetch_sections(cur, page_id)
+from app.cms_page_mutations import (  # noqa: E402
+    create_page,
+    create_section,
+    delete_page,
+    delete_section,
+    reorder_sections,
+    update_page,
+    update_section,
+)

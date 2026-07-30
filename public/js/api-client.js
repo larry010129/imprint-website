@@ -232,6 +232,9 @@
       },
       listCmsPages: function () { return request('/api/admin/cms-pages'); },
       getCmsPage: function (id) { return request('/api/admin/cms-pages/' + encodeURIComponent(id)); },
+      getCmsSitePage: function (route) {
+        return request('/api/admin/cms-site-page?route=' + encodeURIComponent(route || ''));
+      },
       createCmsPage: function (fields) { return request('/api/admin/cms-pages', { method: 'POST', body: fields }); },
       updateCmsPage: function (fields) { return request('/api/admin/cms-page-update', { method: 'POST', body: fields }); },
       cmsPageAction: function (id, action) {
@@ -246,6 +249,9 @@
       updateCmsSection: function (fields) {
         return request('/api/admin/cms-section-update', { method: 'POST', body: fields });
       },
+      getCmsSectionHtml: function (id) {
+        return request('/api/admin/cms-sections/' + encodeURIComponent(id) + '/html');
+      },
       cmsSectionAction: function (id, action) {
         return request('/api/admin/cms-section-action', { method: 'POST', body: { id: id, action: action } });
       },
@@ -253,6 +259,18 @@
         return request('/api/admin/cms-pages/' + encodeURIComponent(pageId) + '/sections/reorder', {
           method: 'PATCH',
           body: { sectionIds: sectionIds },
+        });
+      },
+      syncCmsSectionPageImage: function (fields) {
+        return request('/api/admin/cms-section-page-image', {
+          method: 'POST',
+          body: Object.assign({ action: 'upsert' }, fields || {}),
+        });
+      },
+      removeCmsSectionPageImage: function (fields) {
+        return request('/api/admin/cms-section-page-image', {
+          method: 'POST',
+          body: Object.assign({ action: 'delete' }, fields || {}),
         });
       },
       getPageCopySlots: function () { return request('/api/admin/page-copy-slots'); },

@@ -35,6 +35,10 @@ def test_reserved_page_keys_block_shop_jewelry_price():
 def test_section_types_and_layout_variants():
     assert "hero" in SECTION_TYPES
     assert "calculator_embed" not in SECTION_TYPES
+    assert DEFAULT_PROPS["image_text"]["layout"] == "stack"
+    fields, err = parse_section_payload({"type": "image_text", "props": {}})
+    assert err is None
+    assert fields["props"]["layout"] == "stack"
     fields, err = parse_section_payload(
         {"type": "image_text", "props": {**DEFAULT_PROPS["image_text"], "layout": "right"}}
     )

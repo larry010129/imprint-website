@@ -1,6 +1,6 @@
 {% extends layout %}
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/cms-sections.css?v=3">
+<link rel="stylesheet" href="/static/css/cms-sections.css?v=5">
 {% if cms_preview or cms_inline %}
 <style>
   .cms-preview-banner {
@@ -36,6 +36,8 @@
 {% endblock %}
 {% block extra_scripts %}
 {% if cms_inline %}
-<script src="/js/cms-inline-edit.js?v=3"></script>
+<script src="/js/cms-inline-edit.js?v=10"></script>
+{% elif not cms_preview %}
+<script src="/js/cms-sections.js?v=1" defer></script>
 {% endif %}
 {% endblock %}

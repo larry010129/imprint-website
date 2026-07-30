@@ -3,32 +3,34 @@ import { useCallback, useEffect, useState } from "react";
 import CmsPageEditor, { type CmsPageEditorProps } from "@/components/admin/CmsPageEditor";
 import ExistingSitePageEditor, {
   type CopySlot,
+  type ExistingSitePageEditorProps,
   type SitePage,
 } from "@/components/admin/ExistingSitePageEditor";
 import type { CmsPage } from "@/components/admin/cmsSectionMeta";
 import { ToastProvider, useToast } from "@/components/ui/toast-1";
 
 export type CmsPagesPanelProps = {
-  api: CmsPageEditorProps["api"] & {
-    listPages: () => Promise<{
-      pages?: CmsPage[];
-      site_pages?: SitePage[];
-      error?: string;
-    }>;
-    createPage: (fields: {
-      slug: string;
-      title: string;
-    }) => Promise<{ page?: CmsPage; error?: string }>;
-    getCopySlots: () => Promise<{
-      slots?: CopySlot[];
-      pages?: SitePage[];
-      error?: string;
-    }>;
-    updateCopySlot: (fields: Record<string, unknown>) => Promise<{
-      slot?: CopySlot;
-      error?: string;
-    }>;
-  };
+  api: CmsPageEditorProps["api"] &
+    ExistingSitePageEditorProps["api"] & {
+      listPages: () => Promise<{
+        pages?: CmsPage[];
+        site_pages?: SitePage[];
+        error?: string;
+      }>;
+      createPage: (fields: {
+        slug: string;
+        title: string;
+      }) => Promise<{ page?: CmsPage; error?: string }>;
+      getCopySlots: () => Promise<{
+        slots?: CopySlot[];
+        pages?: SitePage[];
+        error?: string;
+      }>;
+      updateCopySlot: (fields: Record<string, unknown>) => Promise<{
+        slot?: CopySlot;
+        error?: string;
+      }>;
+    };
 };
 
 type CmsPageRow = CmsPage & { site_route?: string; cms_path?: string };
@@ -94,8 +96,8 @@ function CmsPagesPanelInner({ api }: CmsPagesPanelProps) {
   return (
     <div className="cms-pages-panel">
       <p className="adx-panel-note">
-        「現有官網頁面」會載入真正網址與原本版面。下方「新建活動頁」才使用 /p/slug
-        區塊編輯器。試算、上架、價格表、購物車、登入不在此編輯。
+        「現有官網頁面」會載入真正網址與原本版面，並可在頁尾新增模組區塊。下方「新建活動頁」使用
+        /p/slug 區塊編輯器。試算、上架、價格表、購物車、登入不在此編輯。
       </p>
       <h3 className="cms-page-section-title">現有官網頁面</h3>
       <div className="cms-page-list">
@@ -164,9 +166,7 @@ function CmsPagesPanelInner({ api }: CmsPagesPanelProps) {
             onClick={() => setEditingId(page.id)}
           >
             <span className="cms-page-row__title">{page.title}</span>
-            <span className="cms-page-row__slug">
-              /p/{page.slug}
-            </span>
+            <span className="cms-page-row__slug">/p/{page.slug}</span>
             <span className="cms-page-row__status">
               {page.status === "published" ? "已發布" : "草稿"}
             </span>

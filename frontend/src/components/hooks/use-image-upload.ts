@@ -8,7 +8,8 @@ import {
 } from "react";
 
 const DEFAULT_ACCEPT = "image/png,image/jpeg,image/webp";
-const DEFAULT_MAX_BYTES = 1024 * 1024;
+// Selected sources are resized and compressed before upload.
+const DEFAULT_MAX_BYTES = 20 * 1024 * 1024;
 
 function isAcceptedType(file: File, accept: string) {
   const tokens = accept.split(",").map((t) => t.trim()).filter(Boolean);
@@ -28,21 +29,6 @@ export type UseImageUploadOptions = {
   onValidationError?: (message: string) => void;
 };
 
-function readFileAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        resolve(reader.result);
-        return;
-      }
-      reject(new Error("無法讀取圖片"));
-    };
-    reader.onerror = () => reject(new Error("無法讀取圖片"));
-    reader.readAsDataURL(file);
-  });
-}
-
 export function useImageUpload({
   accept = DEFAULT_ACCEPT,
   maxSizeBytes = DEFAULT_MAX_BYTES,
@@ -51,7 +37,6 @@ export function useImageUpload({
 }: UseImageUploadOptions = {}) {
   const inputRef = useRef<HTMLInputElement>(null);
   const objectUrlRef = useRef<string | null>(null);
-  const readSeqRef = useRef(0);
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState(initialPreviewUrl);
   const [isDragging, setIsDragging] = useState(false);
@@ -79,7 +64,6 @@ export function useImageUpload({
   const assignFile = useCallback(
     (next: File | null) => {
       cleanupObjectUrl();
-      readSeqRef.current += 1;
       if (!next) {
         setFile(null);
         setPreviewUrl(initialPreviewUrl);
@@ -90,20 +74,13 @@ export function useImageUpload({
         return;
       }
       if (next.size > maxSizeBytes) {
-        reportError("檔案需小於 1MB");
+        reportError("來源圖片需小於 20MB");
         return;
       }
-      const readSeq = readSeqRef.current;
-      void readFileAsDataUrl(next)
-        .then((dataUrl) => {
-          if (readSeq !== readSeqRef.current) return;
-          setFile(next);
-          setPreviewUrl(dataUrl);
-        })
-        .catch((error: unknown) => {
-          if (readSeq !== readSeqRef.current) return;
-          reportError(error instanceof Error ? error.message : "無法讀取圖片");
-        });
+      const objectUrl = URL.createObjectURL(next);
+      objectUrlRef.current = objectUrl;
+      setFile(next);
+      setPreviewUrl(objectUrl);
     },
     [accept, cleanupObjectUrl, initialPreviewUrl, maxSizeBytes, reportError],
   );

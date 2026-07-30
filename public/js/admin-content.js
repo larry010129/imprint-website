@@ -246,16 +246,39 @@
       listPages: function () { return api.admin.listCmsPages(); },
       createPage: function (fields) { return api.admin.createCmsPage(fields); },
       getPage: function (id) { return api.admin.getCmsPage(id); },
+      getCmsSitePage: function (route) { return api.admin.getCmsSitePage(route); },
       updatePage: function (fields) { return api.admin.updateCmsPage(fields); },
       pageAction: function (id, action) { return api.admin.cmsPageAction(id, action); },
       createSection: function (pageId, body) { return api.admin.createCmsSection(pageId, body); },
       updateSection: function (fields) { return api.admin.updateCmsSection(fields); },
+      getSectionHtml: function (id) { return api.admin.getCmsSectionHtml(id); },
       sectionAction: function (id, action) { return api.admin.cmsSectionAction(id, action); },
       reorderSections: function (pageId, sectionIds) { return api.admin.reorderCmsSections(pageId, sectionIds); },
       getMedia: function () { return api.admin.getCmsMedia(); },
       getFaqCategories: function () { return api.admin.getFaqCategories(); },
       uploadMedia: function (file) { return api.admin.uploadCmsMedia(file); },
       deleteMedia: function (id) { return api.admin.cmsMediaAction(id, 'delete'); },
+      uploadPageImage: function (file) { return api.admin.uploadPageImage(file); },
+      getPageImages: function () { return api.admin.getPageImages(); },
+      updatePageImage: function (fields) { return api.admin.updatePageImage(fields); },
+      syncSectionPageImage: function (fields) {
+        return api.admin.syncCmsSectionPageImage({
+          sectionId: fields.sectionId,
+          section_id: fields.sectionId,
+          imageUrl: fields.imageUrl,
+          image_url: fields.imageUrl,
+          imageAlt: fields.imageAlt,
+          image_alt: fields.imageAlt,
+          action: 'upsert',
+        });
+      },
+      removeSectionPageImage: function (fields) {
+        return api.admin.removeCmsSectionPageImage({
+          sectionId: fields.sectionId,
+          section_id: fields.sectionId,
+          action: 'delete',
+        });
+      },
       getCopySlots: function () { return api.admin.getPageCopySlots(); },
       updateCopySlot: function (fields) { return api.admin.updatePageCopySlot(fields); },
     };

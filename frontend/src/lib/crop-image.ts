@@ -121,9 +121,30 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 
 export type CropToFileOptions = {
   maxWidth?: number;
+  maxBytes?: number;
   mimeType?: string;
   quality?: number;
 };
+
+function canvasToBlob(
+  canvas: HTMLCanvasElement,
+  mimeType: string,
+  quality: number,
+): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (!blob || blob.size < 1) {
+          reject(new Error("圖片處理失敗"));
+          return;
+        }
+        resolve(blob);
+      },
+      mimeType,
+      quality,
+    );
+  });
+}
 
 export async function cropImageToBlob(
   src: string,
@@ -131,6 +152,7 @@ export async function cropImageToBlob(
   mimeType: string,
   quality = 0.92,
   maxWidth?: number,
+  maxBytes?: number,
 ): Promise<Blob> {
   const img = await loadImage(src);
   if (!img.naturalWidth || !img.naturalHeight) {
@@ -147,7 +169,7 @@ export async function cropImageToBlob(
     outW = maxWidth;
     outH = Math.max(1, Math.round(outH * scale));
   }
-  const canvas = document.createElement("canvas");
+  let canvas = document.createElement("canvas");
   canvas.width = outW;
   canvas.height = outH;
   const ctx = canvas.getContext("2d");
@@ -163,20 +185,27 @@ export async function cropImageToBlob(
     outW,
     outH,
   );
-  const type = mimeType || "image/jpeg";
-  return new Promise((resolve, reject) => {
-    canvas.toBlob(
-      (blob) => {
-        if (!blob || blob.size < 1) {
-          reject(new Error("裁切失敗"));
-          return;
-        }
-        resolve(blob);
-      },
-      type,
-      quality,
-    );
-  });
+  const type = mimeType || "image/webp";
+  let encodeQuality = quality;
+  let blob = await canvasToBlob(canvas, type, encodeQuality);
+  while (maxBytes && blob.size > maxBytes && encodeQuality > 0.48) {
+    encodeQuality = Math.max(0.48, encodeQuality - 0.08);
+    blob = await canvasToBlob(canvas, type, encodeQuality);
+  }
+  while (maxBytes && blob.size > maxBytes && canvas.width > 640) {
+    const smaller = document.createElement("canvas");
+    smaller.width = Math.max(640, Math.round(canvas.width * 0.84));
+    smaller.height = Math.max(1, Math.round(canvas.height * (smaller.width / canvas.width)));
+    const smallerContext = smaller.getContext("2d");
+    if (!smallerContext) throw new Error("無法建立圖片處理畫布");
+    smallerContext.drawImage(canvas, 0, 0, smaller.width, smaller.height);
+    canvas = smaller;
+    blob = await canvasToBlob(canvas, type, encodeQuality);
+  }
+  if (maxBytes && blob.size > maxBytes) {
+    throw new Error("圖片最佳化後仍超過 1MB，請選擇較小的來源圖片");
+  }
+  return blob;
 }
 
 export async function cropImageToFile(
@@ -186,7 +215,7 @@ export async function cropImageToFile(
   options?: CropToFileOptions,
 ): Promise<File> {
   if (!src) throw new Error("請選擇圖片");
-  const mime = options?.mimeType || sourceFile?.type || "image/jpeg";
+  const mime = options?.mimeType || "image/webp";
   const ext =
     mime === "image/png" ? "png" : mime === "image/webp" ? "webp" : "jpg";
   const baseName = sourceFile?.name?.replace(/\.[^.]+$/, "") || "cropped";
@@ -196,6 +225,7 @@ export async function cropImageToFile(
     mime,
     options?.quality ?? 0.9,
     options?.maxWidth,
+    options?.maxBytes,
   );
   return new File([blob], `${baseName}-cropped.${ext}`, { type: mime });
 }

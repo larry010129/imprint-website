@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from copy import deepcopy
 from functools import lru_cache
 from pathlib import Path
 from time import monotonic
@@ -43,8 +44,6 @@ def _strip_public_phone_metadata(block: str) -> str:
         return value
 
     return json.dumps(clean(payload), ensure_ascii=False, indent=2)
-
-
 def load_featured_video() -> dict | None:
     """Pinned About-page video (fixed ID from JSON)."""
     if not _FEATURED_VIDEO_PATH.is_file():
@@ -56,8 +55,6 @@ def load_featured_video() -> dict | None:
     if not data.get("enabled") or not data.get("youtube_id"):
         return None
     return data
-
-
 def load_youtube_latest_video() -> dict | None:
     """Latest upload from the configured YouTube channel."""
     if not _FEATURED_YOUTUBE_LATEST_PATH.is_file():
@@ -87,60 +84,42 @@ def load_youtube_latest_video() -> dict | None:
     if not data.get("youtube_id"):
         return None
     return data
-
-
 @lru_cache(maxsize=None)
 def _load_fragment(relpath: str) -> str:
     return (_FRAGMENTS_DIR / relpath).read_text(encoding="utf-8")
-
-
-@lru_cache(maxsize=2)
-def _fetch_page_images_cached(_time_bucket: int) -> dict[str, list[dict]]:
-    from app.content import fetch_all_page_images
+@lru_cache(maxsize=512)
+def _fetch_page_images_cached(route: str, _time_bucket: int) -> list[dict]:
+    from app.content import fetch_page_images
     from app.database import get_connection
 
     with get_connection() as conn, conn.cursor() as cur:
-        grouped: dict[str, list[dict]] = {}
-        for row in fetch_all_page_images(cur):
-            grouped.setdefault(row["page_key"], []).append(row)
-        return grouped
-
-
+        return fetch_page_images(cur, route)
 def _load_page_images(route: str) -> list[dict]:
     try:
         time_bucket = int(monotonic() // _PAGE_IMAGE_CACHE_TTL_SECONDS)
-        return _fetch_page_images_cached(time_bucket).get(route, [])
+        return deepcopy(_fetch_page_images_cached(route, time_bucket))
     except Exception:
         return []
-
-
-def _load_page_image(route: str) -> dict | None:
+def _load_page_image(route: str, rows: list[dict] | None = None) -> dict | None:
     """Backward-compatible primary slot used by existing Jinja templates."""
-    rows = _load_page_images(route)
+    rows = rows if rows is not None else _load_page_images(route)
     preferred = "cinema" if route == "/about.html" else "hero"
     return next((row for row in rows if row.get("slot_key") == preferred), None)
-
-
 def clear_page_image_cache() -> None:
     _fetch_page_images_cached.cache_clear()
-
-
-@lru_cache(maxsize=2)
-def _fetch_page_copy_cached(_time_bucket: int) -> dict[str, list[dict]]:
-    from app.cms_copy_slots import fetch_all_copy_slots
+@lru_cache(maxsize=512)
+def _fetch_page_copy_cached(route: str, _time_bucket: int) -> list[dict]:
+    from app.cms_copy_slots import fetch_copy_slots_for_page
     from app.database import get_connection
 
     with get_connection() as conn, conn.cursor() as cur:
-        grouped: dict[str, list[dict]] = {}
-        for row in fetch_all_copy_slots(cur):
-            grouped.setdefault(row["page_key"], []).append(row)
-        return grouped
+        return fetch_copy_slots_for_page(cur, route)
 
 
 def _load_page_copy_slots(route: str) -> list[dict]:
     try:
         time_bucket = int(monotonic() // _PAGE_IMAGE_CACHE_TTL_SECONDS)
-        return _fetch_page_copy_cached(time_bucket).get(route, [])
+        return deepcopy(_fetch_page_copy_cached(route, time_bucket))
     except Exception:
         return []
 
@@ -149,9 +128,140 @@ def clear_page_copy_cache() -> None:
     _fetch_page_copy_cached.cache_clear()
 
 
+def _editable_site_routes() -> set[str]:
+    from app.cms_copy_slot_specs import EDITABLE_SITE_PAGES
+
+    return {item["route"] for item in EDITABLE_SITE_PAGES}
+
+
+def _empty_cms_bundle(route: str) -> dict:
+    return {
+        "cms_page": {"title": "", "slug": "", "site_route": route},
+        "site_cms_sections": [],
+        "site_cms_sections_by_anchor": {},
+        "cms_faq_items": [],
+        "cms_faq_all_items": [],
+        "cms_faq_by_category": {},
+        "cms_testimonials": [],
+    }
+
+
+def _fetch_site_cms_bundle(route: str, *, visible_only: bool) -> dict:
+    """Load one host-page stack with only the embed data it actually uses."""
+    from app.cms_pages import SECTION_TYPES, fetch_page_by_site_route, fetch_sections
+    from app.database import get_connection
+
+    empty = _empty_cms_bundle(route)
+    with get_connection() as conn, conn.cursor() as cur:
+        page = fetch_page_by_site_route(cur, route)
+        if not page:
+            return empty
+        sections = [
+            section
+            for section in fetch_sections(cur, page["id"], visible_only=visible_only)
+            if section.get("type") in SECTION_TYPES
+        ]
+        by_anchor: dict[str, list] = {}
+        for section in sections:
+            props = section.get("props") if isinstance(section.get("props"), dict) else {}
+            anchor = str(props.get("anchor") or "end").strip().lower() or "end"
+            by_anchor.setdefault(anchor, []).append(section)
+        bundle = {
+            **empty,
+            "cms_page": page,
+            "site_cms_sections": sections,
+            "site_cms_sections_by_anchor": by_anchor,
+        }
+        section_types = {section.get("type") for section in sections}
+        if "faq_embed" in section_types:
+            from app.content import fetch_faq_public
+
+            faq = fetch_faq_public(cur)
+            faq_items = faq.get("teaser") or [
+                item
+                for cat in (faq.get("categories") or [])
+                for item in (cat.get("items") or [])
+            ]
+            bundle.update(
+                {
+                    "cms_faq_items": faq_items,
+                    "cms_faq_all_items": faq.get("items") or [],
+                    "cms_faq_by_category": {
+                        str(cat.get("id")): cat.get("items") or []
+                        for cat in (faq.get("categories") or [])
+                    },
+                }
+            )
+        if "testimonials_embed" in section_types:
+            from app.content import fetch_published_testimonials
+
+            bundle["cms_testimonials"] = fetch_published_testimonials(cur)
+        return bundle
+
+
+@lru_cache(maxsize=512)
+def _fetch_site_cms_bundle_cached(route: str, _time_bucket: int) -> dict:
+    return _fetch_site_cms_bundle(route, visible_only=True)
+
+
+def _load_site_cms_bundle(route: str, *, visible_only: bool) -> dict:
+    if route not in _editable_site_routes():
+        return _empty_cms_bundle(route)
+    try:
+        if not visible_only:
+            return _fetch_site_cms_bundle(route, visible_only=False)
+        time_bucket = int(monotonic() // _PAGE_IMAGE_CACHE_TTL_SECONDS)
+        return deepcopy(_fetch_site_cms_bundle_cached(route, time_bucket))
+    except Exception:
+        return _empty_cms_bundle(route)
+
+
+def clear_site_cms_cache() -> None:
+    _fetch_site_cms_bundle_cached.cache_clear()
+    _fetch_public_cms_page_cached.cache_clear()
+
+
+def _fetch_public_cms_page(slug: str, *, visible_only: bool) -> dict | None:
+    from app.cms_pages import SECTION_TYPES, fetch_page_with_sections
+    from app.database import get_connection
+
+    with get_connection() as conn, conn.cursor() as cur:
+        page = fetch_page_with_sections(cur, slug=slug, visible_only=visible_only)
+        if not page:
+            return None
+        page["sections"] = [
+            section
+            for section in (page.get("sections") or [])
+            if section.get("type") in SECTION_TYPES
+        ]
+        bundle = {
+            "page": page,
+            "faq": {"categories": [], "teaser": [], "items": []},
+            "testimonials": [],
+        }
+        section_types = {section.get("type") for section in page["sections"]}
+        if "faq_embed" in section_types:
+            from app.content import fetch_faq_public
+
+            bundle["faq"] = fetch_faq_public(cur)
+        if "testimonials_embed" in section_types:
+            from app.content import fetch_published_testimonials
+
+            bundle["testimonials"] = fetch_published_testimonials(cur)
+        return bundle
+
+
+@lru_cache(maxsize=512)
+def _fetch_public_cms_page_cached(slug: str, _time_bucket: int) -> dict | None:
+    bundle = _fetch_public_cms_page(slug, visible_only=True)
+    if not bundle or bundle["page"].get("status") != "published":
+        return None
+    return bundle
+
+
 def _context(request: Request, meta: PageMeta) -> dict:
     page_images = _load_page_images(meta.route)
-    page_image = _load_page_image(meta.route)
+    page_image = _load_page_image(meta.route, page_images)
     page_copy_slots = _load_page_copy_slots(meta.route)
     lcp_image = None
     if page_image and meta.route not in {"/", "/about.html"}:
@@ -173,6 +283,14 @@ def _context(request: Request, meta: PageMeta) -> dict:
         "page_copy_slots": page_copy_slots,
         "lcp_image": lcp_image,
         "lcp_image_type": "image/webp" if lcp_image and lcp_image.endswith(".webp") else None,
+        "site_cms_sections": [],
+        "site_cms_sections_by_anchor": {},
+        "site_cms_edit": False,
+        "cms_page": {"title": meta.title, "slug": "", "site_route": meta.route},
+        "cms_faq_items": [],
+        "cms_faq_all_items": [],
+        "cms_faq_by_category": {},
+        "cms_testimonials": [],
     }
     if meta.content_fragment:
         context["content_html"] = _load_fragment(meta.content_fragment)
@@ -189,26 +307,30 @@ def _make_handler(meta: PageMeta, status_code: int = 200):
         from app.cms_copy_slots import apply_page_copy_slots
         from app.page_image_slots import apply_page_image_slots
 
+        site_edit = (
+            str(request.query_params.get("cms_edit") or "").lower() in {"1", "true", "yes"}
+            and is_admin(get_user_id(request))
+        )
         context = _context(request, meta)
+        context["site_cms_edit"] = site_edit
+        context.update(_load_site_cms_bundle(meta.route, visible_only=not site_edit))
         response = templates.TemplateResponse(
             request, meta.template, context, status_code=status_code
         )
         html = response.body.decode(response.charset)
         html = apply_page_image_slots(html, meta.route, context["page_images"])
         html = apply_page_copy_slots(html, meta.route, context["page_copy_slots"])
-        site_edit = (
-            str(request.query_params.get("cms_edit") or "").lower() in {"1", "true", "yes"}
-            and is_admin(get_user_id(request))
-        )
         if site_edit:
             page_key = json.dumps(meta.route)
             edit_boot = (
                 f"<script>window.__CMS_SITE_PAGE_KEY__={page_key};</script>"
-                '<script src="/js/site-inline-edit.js?v=1"></script>'
+                '<script src="/js/site-inline-edit.js?v=6"></script>'
+                '<script src="/js/cms-inline-edit.js?v=10"></script>'
             )
             html = html.replace(
                 "<body ",
-                f'<body data-cms-site-edit="1" data-cms-page-key={json.dumps(meta.route)} ',
+                f'<body data-cms-site-edit="1" data-cms-inline="1" '
+                f'data-cms-page-key={json.dumps(meta.route)} ',
                 1,
             )
             html = html.replace("</body>", f"{edit_boot}</body>", 1)
@@ -264,9 +386,6 @@ def register_pages(app: FastAPI) -> None:
     async def cms_public_page(request: Request, slug: str) -> HTMLResponse:
         from app.auth import get_user_id, is_admin
         from app.cms_boundary import is_reserved_cms_slug, normalize_cms_slug
-        from app.cms_pages import SECTION_TYPES, ensure_cms_pages_schema, fetch_page_with_sections
-        from app.content import fetch_faq_public, fetch_published_testimonials
-        from app.database import get_connection
 
         clean = normalize_cms_slug(slug)
         if not clean or is_reserved_cms_slug(clean):
@@ -279,23 +398,23 @@ def register_pages(app: FastAPI) -> None:
             raise StarletteHTTPException(status_code=404, detail="Not Found")
 
         try:
-            with get_connection() as conn, conn.cursor() as cur:
-                ensure_cms_pages_schema(cur)
-                page = fetch_page_with_sections(cur, slug=clean, visible_only=not preview)
-                faq = fetch_faq_public(cur)
-                testimonials = fetch_published_testimonials(cur)
+            if preview:
+                bundle = _fetch_public_cms_page(clean, visible_only=False)
+            else:
+                time_bucket = int(monotonic() // _PAGE_IMAGE_CACHE_TTL_SECONDS)
+                bundle = deepcopy(_fetch_public_cms_page_cached(clean, time_bucket))
         except Exception:
             raise StarletteHTTPException(status_code=404, detail="Not Found") from None
 
+        if not bundle:
+            raise StarletteHTTPException(status_code=404, detail="Not Found")
+        page = bundle["page"]
+        faq = bundle["faq"]
+        testimonials = bundle["testimonials"]
         if not page:
             raise StarletteHTTPException(status_code=404, detail="Not Found")
         if page.get("status") != "published" and not (preview and admin_ok):
             raise StarletteHTTPException(status_code=404, detail="Not Found")
-        page["sections"] = [
-            section
-            for section in (page.get("sections") or [])
-            if section.get("type") in SECTION_TYPES
-        ]
 
         faq_items = faq.get("teaser") or []
         if not faq_items:
@@ -312,6 +431,19 @@ def register_pages(app: FastAPI) -> None:
         # Admin editor iframe: bare shell (no site nav/footer) so each page
         # preview is unique content only. Public /p/{slug} keeps full site chrome.
         embed = preview or inline
+        sections = page.get("sections") or []
+        first_section = sections[0] if sections else None
+        first_props = first_section.get("props") if isinstance(first_section, dict) else {}
+        lcp_section_id = (
+            str(first_section.get("id"))
+            if first_section
+            and first_section.get("type") == "hero"
+            and isinstance(first_props, dict)
+            and first_props.get("image_url")
+            and not embed
+            else None
+        )
+        lcp_image = first_props.get("image_url") if lcp_section_id else None
         context = {
             "request": request,
             "layout": "layouts/cms-embed.html" if embed else "layouts/base.html",
@@ -327,10 +459,11 @@ def register_pages(app: FastAPI) -> None:
             "extra_head_blocks": [],
             "page_image": None,
             "page_images": [],
-            "lcp_image": None,
-            "lcp_image_type": None,
+            "lcp_image": lcp_image,
+            "lcp_image_type": "image/webp" if lcp_image and lcp_image.endswith(".webp") else None,
+            "cms_lcp_section_id": lcp_section_id,
             "cms_page": page,
-            "cms_sections": page.get("sections") or [],
+            "cms_sections": sections,
             "cms_preview": preview,
             "cms_inline": inline,
             "cms_faq_items": faq_items,

@@ -1,41 +1,51 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   DndContext,
+  DragOverlay,
   KeyboardSensor,
   PointerSensor,
   closestCenter,
+  pointerWithin,
   useSensor,
   useSensors,
+  type CollisionDetection,
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
 import {
-  SortableContext,
-  arrayMove,
   sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 
 import {
   CMS_CANVAS_DROP_ID,
+  CMS_TRASH_DROP_ID,
   CmsCanvasDropTarget,
-  CmsPaletteButton,
-  CmsSortableRow,
+  CmsDragOverlayCard,
 } from "@/components/admin/CmsEditorDnd";
+import CmsEditorTopbar from "@/components/admin/CmsEditorTopbar";
+import CmsEditorTools from "@/components/admin/CmsEditorTools";
 import CmsMediaModal from "@/components/admin/CmsMediaModal";
-import CmsSectionPropsForm, {
-  CmsPageMetaForm,
-} from "@/components/admin/CmsSectionPropsForm";
 import {
-  SECTION_PALETTE,
+  sectionImagePropKey,
   sectionLabel,
   type CmsPage,
   type CmsSection,
   type CmsSectionType,
 } from "@/components/admin/cmsSectionMeta";
+import {
+  syncSectionPageImage,
+  type SyncSectionPageImageApi,
+} from "@/components/admin/syncSectionPageImage";
+import { createCmsPreviewBridge, softOrHard } from "@/components/admin/cmsPreviewBridge";
+import useCmsEditorCommands, {
+  copyCmsProps,
+  type SectionRef,
+} from "@/components/admin/useCmsEditorCommands";
+import useCmsEditorHistory from "@/components/admin/useCmsEditorHistory";
 import useCmsSectionSaves from "@/components/admin/useCmsSectionSaves";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/toast-1";
+import type { ImageUploadResult } from "@/components/ui/image-upload";
 
 export type CmsPageEditorProps = {
   pageId: string | null;
@@ -45,9 +55,10 @@ export type CmsPageEditorProps = {
     pageAction: (id: string, action: string) => Promise<{ ok?: boolean; error?: string }>;
     createSection: (
       pageId: string,
-      body: { type: string }
+      body: { type: string; props?: Record<string, unknown> }
     ) => Promise<{ section?: CmsSection; error?: string }>;
     updateSection: (fields: Record<string, unknown>) => Promise<{ section?: CmsSection; error?: string }>;
+    getSectionHtml?: (id: string) => Promise<{ html?: string; error?: string }>;
     sectionAction: (id: string, action: string) => Promise<{ ok?: boolean; error?: string }>;
     reorderSections: (
       pageId: string,
@@ -60,9 +71,39 @@ export type CmsPageEditorProps = {
     }>;
     uploadMedia: (file: File) => Promise<{ media?: { id: string; url: string }; url?: string; error?: string }>;
     deleteMedia: (id: string) => Promise<{ ok?: boolean; error?: string }>;
-  };
+    uploadPageImage?: (file: File) => Promise<ImageUploadResult>;
+  } & SyncSectionPageImageApi;
   onBack: () => void;
   onDeleted?: () => void;
+};
+
+function changedPropKey(
+  before: Record<string, unknown>,
+  after: Record<string, unknown>
+) {
+  const keys = new Set([...Object.keys(before), ...Object.keys(after)]);
+  const changed = [...keys].filter(
+    (key) => JSON.stringify(before[key]) !== JSON.stringify(after[key])
+  );
+  return changed.length === 1 ? changed[0] : "all";
+}
+
+function isEditableTarget(target: EventTarget | null) {
+  const element = target as HTMLElement | null;
+  return Boolean(
+    element?.closest("input, textarea, select, [contenteditable='true']")
+  );
+}
+
+const cmsCollisionDetection: CollisionDetection = (args) => {
+  const pointerHits = pointerWithin(args);
+  const trashHit = pointerHits.find((collision) => collision.id === CMS_TRASH_DROP_ID);
+  if (trashHit) return [trashHit];
+  const canvasHit = pointerHits.find((collision) => collision.id === CMS_CANVAS_DROP_ID);
+  if (canvasHit && args.active.data.current?.source === "palette") {
+    return [canvasHit];
+  }
+  return closestCenter(args).filter((collision) => collision.id !== CMS_TRASH_DROP_ID);
 };
 
 export default function CmsPageEditor({ pageId, api, onBack, onDeleted }: CmsPageEditorProps) {
@@ -71,15 +112,20 @@ export default function CmsPageEditor({ pageId, api, onBack, onDeleted }: CmsPag
   const [sections, setSections] = useState<CmsSection[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
-  const [busy, setBusy] = useState(false);
+  const [actionBusy, setActionBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [media, setMedia] = useState<{ id: string; url: string; alt?: string }[]>([]);
   const [faqCategories, setFaqCategories] = useState<{ id: string; title: string }[]>([]);
   const [mediaOpen, setMediaOpen] = useState(false);
   const [mediaProp, setMediaProp] = useState("image_url");
-  const [previewTick, setPreviewTick] = useState(0);
-  const [paletteDragging, setPaletteDragging] = useState(false);
+  const [previewNonce, setPreviewNonce] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const [dragLabel, setDragLabel] = useState<string | null>(null);
+  const [dragType, setDragType] = useState<string | undefined>(undefined);
   const previewRef = useRef<HTMLIFrameElement>(null);
+  const dropTargetRef = useRef<{ anchor: string; index: number } | null>(null);
+  const sectionRefs = useRef(new Map<string, SectionRef>());
+  const deleteSectionRef = useRef<(section: CmsSection) => Promise<void>>(async () => undefined);
 
   const notify = useCallback(
     (message: string, type: "success" | "error" | "warning" | "info" = "info") => {
@@ -93,12 +139,38 @@ export default function CmsPageEditor({ pageId, api, onBack, onDeleted }: CmsPag
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
+  const history = useCmsEditorHistory((message) => notify(message, "error"));
+  const busy = actionBusy || history.busy;
   const selected = useMemo(
     () => sections.find((s) => s.id === selectedId) || null,
     [sections, selectedId]
   );
-  const refreshPreview = useCallback(() => setPreviewTick((n) => n + 1), []);
-  const { mergePending, queueSave } = useCmsSectionSaves({
+  const hardRefreshPreview = useCallback(() => {
+    const frame = previewRef.current;
+    try {
+      if (frame?.contentWindow) {
+        frame.contentWindow.location.reload();
+        return;
+      }
+    } catch {
+      /* cross-origin or unloaded */
+    }
+    setPreviewNonce((n) => n + 1);
+  }, []);
+  const fetchSectionHtml = api.getSectionHtml;
+  const preview = useMemo(
+    () =>
+      createCmsPreviewBridge({
+        iframeRef: previewRef,
+        hardRefresh: hardRefreshPreview,
+        fetchSectionHtml: async (sectionId) => {
+          if (!fetchSectionHtml) return { error: "缺少區塊預覽 API" };
+          return fetchSectionHtml(sectionId);
+        },
+      }),
+    [fetchSectionHtml, hardRefreshPreview]
+  );
+  const { discardPending, flushPending, mergePending, pendingIds, queueSave } = useCmsSectionSaves({
     updateSection: api.updateSection,
     setSections,
     setMessage: (value) => {
@@ -109,26 +181,39 @@ export default function CmsPageEditor({ pageId, api, onBack, onDeleted }: CmsPag
         showToast(String(text), "error", "top-right");
       }
     },
-    refreshPreview,
+    onSectionSaved: (sectionId) => preview.syncSection(sectionId),
+    hardRefreshPreview,
   });
+  const getSectionRef = useCallback((id: string) => {
+    const existing = sectionRefs.current.get(id);
+    if (existing) return existing;
+    const reference = { key: id, currentId: id };
+    sectionRefs.current.set(id, reference);
+    return reference;
+  }, []);
 
   const load = useCallback(async () => {
     if (!pageId) return;
-    setBusy(true);
+    setActionBusy(true);
     const res = await api.getPage(pageId);
-    setBusy(false);
+    setActionBusy(false);
     if (res.error || !res.page) {
       notify(String(res.error || "載入失敗"), "error");
       return;
     }
     setPage(res.page);
-    setSections(mergePending(res.page.sections || []));
-    if (!selectedId && res.page.sections?.[0]) {
-      setSelectedId(res.page.sections[0].id);
-    }
-  }, [api, mergePending, notify, pageId, selectedId]);
+    const incoming = mergePending(res.page.sections || []);
+    incoming.forEach((section) => getSectionRef(section.id));
+    setSections(incoming);
+    setSelectedId((current) =>
+      incoming.some((section) => section.id === current)
+        ? current
+        : incoming[0]?.id || null
+    );
+  }, [api, getSectionRef, mergePending, notify, pageId]);
 
   useEffect(() => {
+    history.clear();
     void load();
   }, [pageId]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -141,6 +226,58 @@ export default function CmsPageEditor({ pageId, api, onBack, onDeleted }: CmsPag
     });
   }, [api]);
 
+  const prepareSection = useCallback(
+    async (id: string) => {
+      const saved = await flushPending(id);
+      if (!saved) throw new Error("尚有內容未能儲存，已取消這次操作");
+      discardPending(id);
+    },
+    [discardPending, flushPending]
+  );
+
+  const applyProps = useCallback(
+    async (reference: SectionRef, props: Record<string, unknown>) => {
+      await prepareSection(reference.currentId);
+      const res = await api.updateSection({
+        id: reference.currentId,
+        props: copyCmsProps(props),
+      });
+      if (res.error || !res.section) throw new Error(String(res.error || "內容儲存失敗"));
+      setSections((current) =>
+        current.map((section) =>
+          section.id === reference.currentId ? res.section! : section
+        )
+      );
+      await softOrHard(
+        () => preview.syncSection(reference.currentId),
+        hardRefreshPreview
+      );
+    },
+    [api, hardRefreshPreview, prepareSection, preview]
+  );
+
+  const saveSectionProps = useCallback(
+    (
+      section: CmsSection,
+      props: Record<string, unknown>,
+      options?: { skipPreview?: boolean }
+    ) => {
+      if (busy) return;
+      const before = copyCmsProps(section.props);
+      const after = copyCmsProps(props);
+      if (JSON.stringify(before) === JSON.stringify(after)) return;
+      const reference = getSectionRef(section.id);
+      history.record({
+        label: "編輯區塊",
+        coalesceKey: `props:${reference.key}:${changedPropKey(before, after)}`,
+        undo: () => applyProps(reference, before),
+        redo: () => applyProps(reference, after),
+      });
+      queueSave(section.id, after, options);
+    },
+    [applyProps, busy, getSectionRef, history, queueSave]
+  );
+
   useEffect(() => {
     function onMessage(event: MessageEvent) {
       if (event.origin !== window.location.origin) return;
@@ -150,7 +287,15 @@ export default function CmsPageEditor({ pageId, api, onBack, onDeleted }: CmsPag
       if (data.type === "select-section" && data.sectionId) {
         setSelectedId(String(data.sectionId));
       }
+      if (data.type === "delete-section" && data.sectionId) {
+        if (busy) return;
+        const section = sections.find((s) => s.id === data.sectionId);
+        if (!section) return;
+        if (!confirm("刪除此區塊？")) return;
+        void deleteSectionRef.current(section);
+      }
       if (data.type === "inline-edit" && data.sectionId && data.prop) {
+        if (busy) return;
         const section = sections.find((s) => s.id === data.sectionId);
         if (!section) return;
         const nextProps: Record<string, unknown> = { ...section.props };
@@ -169,221 +314,258 @@ export default function CmsPageEditor({ pageId, api, onBack, onDeleted }: CmsPag
             nextProps[String(data.hrefProp)] = data.href;
           }
         }
-        queueSave(section.id, nextProps);
+        saveSectionProps(section, nextProps, { skipPreview: true });
       }
-      if (data.type === "edit-image" && data.sectionId && data.prop) {
+      if (data.type === "edit-image" && data.sectionId) {
         setSelectedId(String(data.sectionId));
-        setMediaProp(String(data.prop));
-        setMediaOpen(true);
+        if (data.prop) setMediaProp(String(data.prop));
+      }
+      if (data.type === "drop-index") {
+        const indexOk =
+          typeof data.index === "number" && Number.isFinite(data.index);
+        const anchorRaw =
+          typeof data.anchor === "string" ? data.anchor.trim().toLowerCase() : "";
+        const anchor = anchorRaw || "end";
+        dropTargetRef.current = indexOk
+          ? { anchor, index: Math.max(0, Math.floor(data.index)) }
+          : null;
       }
     }
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [queueSave, sections]);
+  }, [busy, saveSectionProps, sections]);
 
   async function saveMeta(patch: Partial<CmsPage>) {
     if (!page) return;
-    setBusy(true);
+    setActionBusy(true);
     const res = await api.updatePage({ id: page.id, ...patch });
-    setBusy(false);
+    setActionBusy(false);
     if (res.error || !res.page) {
       notify(String(res.error || "儲存失敗"), "error");
       return;
     }
     setPage(res.page);
     notify("頁面資料已儲存", "success");
-    setPreviewTick((n) => n + 1);
+    hardRefreshPreview();
   }
 
-  async function addSection(type: CmsSectionType, insertAt = sections.length) {
-    if (!page) return;
-    setBusy(true);
-    const res = await api.createSection(page.id, { type });
-    if (res.error || !res.section) {
-      setBusy(false);
-      notify(String(res.error || "新增失敗"), "error");
-      return;
-    }
-    const next = [...sections];
-    next.splice(Math.max(0, Math.min(insertAt, next.length)), 0, res.section);
-    if (insertAt < sections.length) {
-      const reordered = await api.reorderSections(
-        page.id,
-        next.map((section) => section.id)
-      );
-      if (reordered.error || !reordered.sections) {
-        setSections([...sections, res.section]);
-        setBusy(false);
-        notify(String(reordered.error || "區塊已新增，但插入位置儲存失敗"), "warning");
+  const pageKey = page?.site_route || (page ? `/p/${page.slug}` : "");
+
+  const { addSection, deleteSection, reorder, toggleVisibility } =
+    useCmsEditorCommands({
+      page,
+      pageKey,
+      sections,
+      selected,
+      api,
+      setSections,
+      setSelectedId,
+      setBusy: setActionBusy,
+      getSectionRef,
+      registerSectionRef: (id, reference) => sectionRefs.current.set(id, reference),
+      prepareSection,
+      pendingSectionIds: pendingIds,
+      record: history.record,
+      notify,
+      preview,
+    });
+  deleteSectionRef.current = deleteSection;
+
+  const uploadSectionImage = useCallback(
+    async (file: File): Promise<ImageUploadResult> => {
+      if (api.uploadPageImage) return api.uploadPageImage(file);
+      const res = await api.uploadMedia(file);
+      if (res.error) return { error: res.error };
+      return { url: res.url || res.media?.url };
+    },
+    [api]
+  );
+
+  const handleSectionImageUploaded = useCallback(
+    async (section: CmsSection, url: string, alt: string) => {
+      const imageProp = sectionImagePropKey(section.type, section.props);
+      if (!imageProp) return;
+      const nextProps = { ...section.props, [imageProp]: url, image_alt: alt };
+      saveSectionProps(section, nextProps);
+      if (!pageKey) return;
+      const sync = await syncSectionPageImage(api, {
+        pageKey,
+        sectionId: section.id,
+        sectionType: section.type,
+        imageUrl: url,
+        imageAlt: alt,
+      });
+      if (!sync.ok) {
+        notify(sync.error || "已更新區塊圖片，但尚未同步到頁面圖片", "warning");
         return;
       }
-      setSections(reordered.sections);
-    } else {
-      setSections(next);
-    }
-    setBusy(false);
-    setSelectedId(res.section.id);
-    notify(`已新增「${sectionLabel(type)}」區塊`, "success");
-    refreshPreview();
+      notify("圖片已更新，並同步到頁面圖片", "success");
+    },
+    [api, notify, pageKey, saveSectionProps]
+  );
+
+  function endPaletteDropUi() {
+    preview.hideDropGaps();
+    dropTargetRef.current = null;
+    setDragging(false);
+    setDragLabel(null);
+    setDragType(undefined);
   }
 
   function onDragStart(event: DragStartEvent) {
-    setPaletteDragging(event.active.data.current?.source === "palette");
+    if (busy) return;
+    setDragging(true);
+    const data = event.active.data.current;
+    if (typeof data?.label === "string") {
+      setDragLabel(data.label);
+    } else if (data?.source === "palette" && data.type) {
+      setDragLabel(sectionLabel(String(data.type)));
+    } else {
+      setDragLabel("拖曳中");
+    }
+    setDragType(typeof data?.type === "string" ? data.type : undefined);
+    if (data?.source === "palette") {
+      dropTargetRef.current = { anchor: "end", index: sections.length };
+      preview.showDropGaps();
+    }
   }
 
   async function onDragEnd(event: DragEndEvent) {
     const { active, over } = event;
-    setPaletteDragging(false);
-    if (!over || !page) return;
-    if (active.data.current?.source === "palette") {
-      const type = active.data.current.type as CmsSectionType;
+    const source = active.data.current?.source;
+    const gapTarget = dropTargetRef.current;
+    endPaletteDropUi();
+    if (busy || !over || !page) return;
+    if (over.id === CMS_TRASH_DROP_ID) {
+      if (source === "section") {
+        const section = sections.find((item) => item.id === active.id);
+        if (section) await deleteSection(section);
+      }
+      return;
+    }
+    if (source === "palette") {
+      const type = active.data.current?.type as CmsSectionType;
       const overIndex = sections.findIndex((section) => section.id === over.id);
-      const insertAt = over.id === CMS_CANVAS_DROP_ID || overIndex < 0
-        ? sections.length
-        : overIndex;
-      await addSection(type, insertAt);
+      if (overIndex >= 0) {
+        await addSection(type, overIndex);
+        return;
+      }
+      if (over.id === CMS_CANVAS_DROP_ID) {
+        await addSection(type, {
+          anchor: gapTarget?.anchor || "end",
+          index: gapTarget?.index ?? sections.length,
+        });
+        return;
+      }
+      await addSection(type, sections.length);
       return;
     }
     if (active.id === over.id) return;
-    const oldIndex = sections.findIndex((s) => s.id === active.id);
-    const newIndex = sections.findIndex((s) => s.id === over.id);
-    if (oldIndex < 0 || newIndex < 0) return;
-    const next = arrayMove(sections, oldIndex, newIndex);
-    setSections(next);
-    const res = await api.reorderSections(
-      page.id,
-      next.map((s) => s.id)
-    );
-    if (res.error || !res.sections) {
-      setSections(sections);
-      notify(String(res.error || "排序儲存失敗"), "error");
-      return;
-    }
-    setSections(res.sections);
-    notify("區塊順序已更新", "success");
-    refreshPreview();
+    const oldIndex = sections.findIndex((item) => item.id === active.id);
+    const newIndex = sections.findIndex((item) => item.id === over.id);
+    if (oldIndex >= 0 && newIndex >= 0) await reorder(oldIndex, newIndex);
   }
 
-  function saveProps(props: Record<string, unknown>) {
-    if (!selected) return;
-    queueSave(selected.id, props);
-  }
+  useEffect(() => {
+    if (!dragging || dragType == null) return;
+    function onPointerMove(event: PointerEvent) {
+      const frame = previewRef.current;
+      if (!frame) return;
+      const rect = frame.getBoundingClientRect();
+      if (
+        event.clientX < rect.left ||
+        event.clientX > rect.right ||
+        event.clientY < rect.top ||
+        event.clientY > rect.bottom
+      ) {
+        return;
+      }
+      preview.hoverDrop(event.clientY - rect.top);
+    }
+    window.addEventListener("pointermove", onPointerMove);
+    return () => window.removeEventListener("pointermove", onPointerMove);
+  }, [dragType, dragging, preview]);
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (busy || isEditableTarget(event.target)) return;
+      if (event.key === "Delete" && selected) {
+        event.preventDefault();
+        if (confirm("刪除此區塊？")) void deleteSection(selected);
+        return;
+      }
+      if (!(event.ctrlKey || event.metaKey)) return;
+      const key = event.key.toLowerCase();
+      const wantsUndo = key === "z" && !event.shiftKey;
+      const wantsRedo = (key === "z" && event.shiftKey) || key === "y";
+      if (!wantsUndo && !wantsRedo) return;
+      event.preventDefault();
+      void (wantsUndo ? history.undo() : history.redo());
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [busy, deleteSection, history, selected]);
+
+  useEffect(() => {
+    preview.selectSection(selectedId);
+  }, [preview, selectedId]);
 
   if (!pageId) {
     return <p className="note">請選擇頁面。</p>;
   }
 
   const previewUrl = page
-    ? `/p/${encodeURIComponent(page.slug)}?preview=1&inline=1&t=${previewTick}`
+    ? `/p/${encodeURIComponent(page.slug)}?preview=1&inline=1${previewNonce ? `&t=${previewNonce}` : ""}`
     : "";
   const openPreviewUrl = page
     ? `/p/${encodeURIComponent(page.slug)}?preview=1`
     : "";
 
   return (
-    <div className="cms-editor">
-      <div className="cms-editor__top">
-        <button type="button" className="btn-sm" onClick={onBack}>
-          ← 返回列表
-        </button>
-        <input
-          className="cms-editor__title"
-          value={page?.title || ""}
-          onChange={(e) => setPage((p) => (p ? { ...p, title: e.target.value } : p))}
-          onBlur={() => page && void saveMeta({ title: page.title })}
-        />
-        <input
-          className="cms-editor__slug"
-          value={page?.slug || ""}
-          onChange={(e) => setPage((p) => (p ? { ...p, slug: e.target.value } : p))}
-          onBlur={() => page && void saveMeta({ slug: page.slug })}
-          title="slug"
-        />
-        <span className="cms-status">{page?.status === "published" ? "已發布" : "草稿"}</span>
-        <button
-          type="button"
-          className="btn-sm"
-          disabled={busy || !page}
-          onClick={() =>
-            page &&
-            void api.pageAction(page.id, page.status === "published" ? "unpublish" : "publish").then(
-              (res) => {
-                if (res.error) {
-                  notify(String(res.error), "error");
-                  return;
-                }
-                notify(
-                  page.status === "published" ? "已取消發布（改為草稿）" : "頁面已發布",
-                  "success"
-                );
-                void load();
-              }
-            )
-          }
-        >
-          {page?.status === "published" ? "取消發布" : "發布"}
-        </button>
-        <a className="btn-sm" href={openPreviewUrl || "#"} target="_blank" rel="noreferrer">
-          開新分頁預覽
-        </a>
-        <button
-          type="button"
-          className="btn-sm"
-          onClick={() => {
-            if (!page || !confirm("確定刪除此頁？")) return;
-            void api.pageAction(page.id, "delete").then((res) => {
-              if (res.error) {
-                notify(String(res.error), "error");
-                return;
-              }
-              showToast("頁面已刪除", "success", "top-right");
-              onDeleted?.();
+    <div className={`cms-editor${dragging ? " is-dragging" : ""}`}>
+      <CmsEditorTopbar
+        page={page}
+        busy={busy}
+        message={msg}
+        canUndo={history.canUndo}
+        canRedo={history.canRedo}
+        previewUrl={openPreviewUrl}
+        onBack={onBack}
+        onUndo={() => void history.undo()}
+        onRedo={() => void history.redo()}
+        onChangePage={setPage}
+        onSaveMeta={(patch) => void saveMeta(patch)}
+        onTogglePublish={() => {
+          if (!page) return;
+          void api
+            .pageAction(page.id, page.status === "published" ? "unpublish" : "publish")
+            .then((res) => {
+              if (res.error) return notify(String(res.error), "error");
+              notify(page.status === "published" ? "已取消發布（改為草稿）" : "頁面已發布", "success");
+              void load();
             });
-          }}
-        >
-          刪除
-        </button>
-        {msg ? <span className="cms-msg">{msg}</span> : null}
-      </div>
+        }}
+        onDeletePage={() => {
+          if (!page || !confirm("確定刪除此頁？")) return;
+          void api.pageAction(page.id, "delete").then((res) => {
+            if (res.error) return notify(String(res.error), "error");
+            showToast("頁面已刪除", "success", "top-right");
+            onDeleted?.();
+          });
+        }}
+      />
 
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCenter}
+        collisionDetection={cmsCollisionDetection}
         onDragStart={onDragStart}
-        onDragCancel={() => setPaletteDragging(false)}
+        onDragCancel={() => endPaletteDropUi()}
         onDragEnd={(event) => void onDragEnd(event)}
       >
       <div className="cms-editor__body">
-        <aside className="cms-editor__palette">
-          <h3>新增區塊</h3>
-          <div className="cms-palette-grid">
-            {SECTION_PALETTE.map((item) => (
-              <CmsPaletteButton
-                key={item.type}
-                type={item.type}
-                label={item.label}
-                onAdd={() => void addSection(item.type)}
-              />
-            ))}
-          </div>
-          <h3>圖層</h3>
-          <SortableContext items={sections.map((s) => s.id)} strategy={verticalListSortingStrategy}>
-            <div className="cms-layers">
-              {sections.map((section) => (
-                <CmsSortableRow
-                  key={section.id}
-                  section={section}
-                  selected={section.id === selectedId}
-                  onSelect={() => setSelectedId(section.id)}
-                />
-              ))}
-            </div>
-          </SortableContext>
-        </aside>
-
         <CmsCanvasDropTarget
-          className={`cms-editor__canvas cms-editor__canvas--${device}`}
-          active={paletteDragging}
+          className={`cms-editor__canvas cms-editor__canvas--${device}${busy ? " is-busy" : ""}`}
+          active={dragging}
         >
           <div className="cms-device-toggle">
             <Switch
@@ -401,7 +583,6 @@ export default function CmsPageEditor({ pageId, api, onBack, onDeleted }: CmsPag
           {previewUrl ? (
             <iframe
               ref={previewRef}
-              key={previewUrl}
               title="CMS preview"
               className="cms-preview-frame"
               src={previewUrl}
@@ -409,69 +590,38 @@ export default function CmsPageEditor({ pageId, api, onBack, onDeleted }: CmsPag
           ) : null}
         </CmsCanvasDropTarget>
 
-        <aside className="cms-editor__props">
-          <h3>區塊設定</h3>
-          {selected ? (
-            <>
-              <p className="cms-hint">{sectionLabel(selected.type)}</p>
-              <CmsSectionPropsForm
-                section={selected}
-                media={media}
-                faqCategories={faqCategories}
-                onChange={(props) => void saveProps(props)}
-                onPickMedia={(prop) => {
-                  setMediaProp(prop);
-                  setMediaOpen(true);
-                }}
-              />
-              <div className="cms-props-actions">
-                <button
-                  type="button"
-                  className="btn-sm"
-                  onClick={() =>
-                    void api
-                      .sectionAction(selected.id, selected.is_visible ? "hide" : "show")
-                      .then((res) => {
-                        if (res.error) {
-                          notify(String(res.error), "error");
-                          return;
-                        }
-                        notify(selected.is_visible ? "區塊已隱藏" : "區塊已顯示", "success");
-                        void load();
-                      })
-                  }
-                >
-                  {selected.is_visible ? "隱藏" : "顯示"}
-                </button>
-                <button
-                  type="button"
-                  className="btn-sm"
-                  onClick={() => {
-                    if (!confirm("刪除此區塊？")) return;
-                    void api.sectionAction(selected.id, "delete").then((res) => {
-                      if (res.error) {
-                        notify(String(res.error), "error");
-                        return;
-                      }
-                      notify("區塊已刪除", "success");
-                      setSelectedId(null);
-                      void load();
-                    });
-                  }}
-                >
-                  刪除區塊
-                </button>
-              </div>
-            </>
-          ) : (
-            <p className="cms-hint">點選圖層或預覽中的區塊以編輯。</p>
-          )}
-          <CmsPageMetaForm
-            page={page}
-            onSave={(meta) => void saveMeta(meta)}
-          />
-        </aside>
+        <CmsEditorTools
+          page={page}
+          sections={sections}
+          selected={selected}
+          selectedId={selectedId}
+          media={media}
+          faqCategories={faqCategories}
+          disabled={busy}
+          onAdd={() => {
+            notify("拖曳到預覽中的插入線放置", "info");
+          }}
+          onSelect={setSelectedId}
+          onChangeProps={(props) => selected && saveSectionProps(selected, props)}
+          onPickMedia={(prop) => {
+            setMediaProp(prop);
+            setMediaOpen(true);
+          }}
+          onToggleVisibility={() => void toggleVisibility()}
+          onDelete={(section) => {
+            const target = section || selected;
+            if (target) void deleteSection(target);
+          }}
+          onSaveMeta={(meta) => void saveMeta(meta)}
+          uploadImage={uploadSectionImage}
+          onImageUploaded={(url, alt) =>
+            selected ? handleSectionImageUploaded(selected, url, alt) : undefined
+          }
+        />
       </div>
+      <DragOverlay dropAnimation={null}>
+        {dragLabel ? <CmsDragOverlayCard label={dragLabel} type={dragType} /> : null}
+      </DragOverlay>
       </DndContext>
 
       {mediaOpen ? (
@@ -489,8 +639,19 @@ export default function CmsPageEditor({ pageId, api, onBack, onDeleted }: CmsPag
             });
           }}
           onSelect={(item) => {
-            if (selected) saveProps({ ...selected.props, [mediaProp]: item.url });
-            notify("已套用圖片", "success");
+            if (selected) {
+              const next = { ...selected.props, [mediaProp]: item.url };
+              if (mediaProp === "image_url" || sectionImagePropKey(selected.type, next)) {
+                void handleSectionImageUploaded(
+                  selected,
+                  item.url,
+                  String(next.image_alt || item.alt || "")
+                );
+              } else {
+                saveSectionProps(selected, next);
+                notify("已套用圖片", "success");
+              }
+            }
             setMediaOpen(false);
           }}
           onDelete={(item) => {
