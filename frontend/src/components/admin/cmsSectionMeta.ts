@@ -47,6 +47,182 @@ export type CmsPaletteItem = {
   icon: LucideIcon;
 };
 
+export type CmsSectionTemplateCategory =
+  | "blank"
+  | "wireframe"
+  | "designed"
+  | "content";
+
+export type CmsSectionTemplate = {
+  id: string;
+  category: CmsSectionTemplateCategory;
+  type: CmsSectionType;
+  label: string;
+  description: string;
+  props: Record<string, unknown>;
+  previewKind: "hero" | "text" | "split" | "banner" | "list" | "buttons" | "space";
+};
+
+export const SECTION_TEMPLATE_CATEGORIES: {
+  id: CmsSectionTemplateCategory;
+  label: string;
+}[] = [
+  { id: "blank", label: "空白" },
+  { id: "wireframe", label: "線框" },
+  { id: "designed", label: "設計" },
+  { id: "content", label: "內容" },
+];
+
+export const SECTION_TEMPLATES: CmsSectionTemplate[] = [
+  {
+    id: "blank-text",
+    category: "blank",
+    type: "rich_text",
+    label: "空白文字",
+    description: "從標題與內文開始",
+    props: { title: "", body: "", columns: 1 },
+    previewKind: "text",
+  },
+  {
+    id: "blank-image-text",
+    category: "blank",
+    type: "image_text",
+    label: "空白圖文",
+    description: "圖片與內容的自由起點",
+    props: { title: "", body: "", image_url: "", image_alt: "", layout: "stack" },
+    previewKind: "split",
+  },
+  {
+    id: "wireframe-hero",
+    category: "wireframe",
+    type: "hero",
+    label: "主視覺線框",
+    description: "標題、說明與雙按鈕",
+    props: {
+      eyebrow: "EYEBROW",
+      title: "輸入主標題",
+      lead: "輸入一段簡短說明。",
+      image_url: "",
+      image_alt: "",
+      cta_label: "主要行動",
+      cta_href: "/contact.html",
+      cta_secondary_label: "次要行動",
+      cta_secondary_href: "/",
+    },
+    previewKind: "hero",
+  },
+  {
+    id: "wireframe-split",
+    category: "wireframe",
+    type: "image_text",
+    label: "左右圖文",
+    description: "桌面雙欄、手機自動堆疊",
+    props: {
+      title: "段落標題",
+      body: "在此輸入內容。",
+      image_url: "",
+      image_alt: "",
+      layout: "left",
+      cta_label: "",
+      cta_href: "",
+    },
+    previewKind: "split",
+  },
+  {
+    id: "wireframe-buttons",
+    category: "wireframe",
+    type: "button_row",
+    label: "雙按鈕",
+    description: "並列的快速行動入口",
+    props: {
+      buttons: [
+        { label: "第一個連結", href: "/" },
+        { label: "第二個連結", href: "/contact.html" },
+      ],
+    },
+    previewKind: "buttons",
+  },
+  {
+    id: "designed-story",
+    category: "designed",
+    type: "rich_text",
+    label: "品牌故事",
+    description: "雙欄敘事版面",
+    props: {
+      title: "一段值得被好好說出的故事",
+      body: "在這裡寫下品牌、服務或重要理念，讓讀者自然走進內容。",
+      columns: 2,
+    },
+    previewKind: "text",
+  },
+  {
+    id: "designed-cta",
+    category: "designed",
+    type: "cta_band",
+    label: "深色行動橫幅",
+    description: "適合頁尾轉換與聯絡入口",
+    props: {
+      title: "準備好開始了嗎？",
+      lead: "我們會依照您的步調，陪您了解下一步。",
+      image_url: "",
+      image_alt: "",
+      cta_label: "聯絡我們",
+      cta_href: "/contact.html",
+      cta_secondary_label: "了解更多",
+      cta_secondary_href: "/about.html",
+    },
+    previewKind: "banner",
+  },
+  {
+    id: "content-faq",
+    category: "content",
+    type: "faq_embed",
+    label: "常見問題",
+    description: "嵌入後台精選 FAQ",
+    props: { mode: "teaser", category_id: "", limit: 6 },
+    previewKind: "list",
+  },
+  {
+    id: "content-testimonials",
+    category: "content",
+    type: "testimonials_embed",
+    label: "客戶見證",
+    description: "嵌入已發布見證",
+    props: { limit: 6 },
+    previewKind: "list",
+  },
+  {
+    id: "content-spacer",
+    category: "content",
+    type: "spacer",
+    label: "段落留白",
+    description: "建立舒適的內容節奏",
+    props: { size: "md" },
+    previewKind: "space",
+  },
+];
+
+export function defaultTemplateForType(type: CmsSectionType): CmsSectionTemplate {
+  return (
+    SECTION_TEMPLATES.find((template) => template.type === type) || {
+      id: `blank-${type}`,
+      category: "blank",
+      type,
+      label: sectionLabel(type),
+      description: sectionDescription(type),
+      props: {},
+      previewKind: "text",
+    }
+  );
+}
+
+export function sectionPrimaryProp(type: CmsSectionType): string {
+  if (type === "button_row") return "buttons";
+  if (type === "spacer") return "size";
+  if (type === "faq_embed" || type === "testimonials_embed") return "limit";
+  return "title";
+}
+
 export const SECTION_PALETTE: CmsPaletteItem[] = [
   {
     type: "hero",

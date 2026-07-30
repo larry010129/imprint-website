@@ -1245,11 +1245,13 @@ function updateProductHeader() {
   if (!title) return;
   const product = getSelectedProduct();
   if (product) {
-    title.textContent = productName(product);
+    // Diamond-only skips style pick; catalog fallback is first series SKU (滿月鑽石).
+    // Step 3 title should stay the category label「紀念鑽石」, not that series name.
+    title.textContent = isDiamondOnlyCategory() ? tr('cat_diamond') : productName(product);
     if (subtitle) {
-      let sub = tr('cat_' + state.category);
+      let sub = isDiamondOnlyCategory() ? '' : tr('cat_' + state.category);
       const badge = stoneCountBadgeText();
-      if (badge) sub = `${sub} · ${badge}`;
+      if (badge) sub = sub ? `${sub} · ${badge}` : badge;
       subtitle.textContent = sub;
     }
     if (description) {
@@ -1918,7 +1920,7 @@ function diamondMetaLabel(item) {
 
 function diamondAssetUrl(relativePath) {
   if (!relativePath) return '';
-  return `/static/images/${relativePath}?v=19`;
+  return `/static/images/${relativePath}?v=21`;
 }
 
 function diamondMatrixImagePath(shapeId, colorId) {
@@ -2672,6 +2674,8 @@ async function refreshQuotePrices() {
     }
     if (diamondRow) diamondRow.style.display = state.category === 'chain' ? 'none' : '';
     chainRow?.classList.add('hidden');
+    document.getElementById('sum-side-stone-row')?.classList.add('hidden');
+    document.getElementById('sum-side-stone-cts-row')?.classList.add('hidden');
     document.getElementById('sum-diamond-price').textContent = state.carat ? '-' : '0';
     document.getElementById('sum-metalwork-price').textContent = '-';
     const chainPriceEl = document.getElementById('sum-chain-price');
@@ -2683,14 +2687,33 @@ async function refreshQuotePrices() {
     return;
   }
 
+  const sideStoneRow = document.getElementById('sum-side-stone-row');
+  const sideStoneCtsRow = document.getElementById('sum-side-stone-cts-row');
   if (quote.manualOverride) {
     if (diamondRow) diamondRow.style.display = 'none';
+    sideStoneRow?.classList.add('hidden');
+    sideStoneCtsRow?.classList.add('hidden');
     chainRow?.classList.add('hidden');
     document.getElementById('sum-metalwork-price').textContent = '—';
   } else {
     if (diamondRow) diamondRow.style.display = state.category === 'chain' ? 'none' : '';
     if (quote.diamondPrice != null) {
       document.getElementById('sum-diamond-price').textContent = Math.round(quote.diamondPrice).toLocaleString();
+    }
+    const showSideStoneCts = quote.sideStoneCarat != null && Number(quote.sideStoneCarat) > 0;
+    sideStoneCtsRow?.classList.toggle('hidden', !showSideStoneCts);
+    if (showSideStoneCts) {
+      const ctsEl = document.getElementById('sum-side-stone-cts');
+      if (ctsEl) {
+        const n = Number(quote.sideStoneCarat);
+        ctsEl.textContent = Number.isInteger(n) ? String(n) : String(Math.round(n * 100) / 100);
+      }
+    }
+    const showSideStone = quote.sideStonePrice != null && Number(quote.sideStonePrice) > 0;
+    sideStoneRow?.classList.toggle('hidden', !showSideStone);
+    if (showSideStone) {
+      const sideEl = document.getElementById('sum-side-stone-price');
+      if (sideEl) sideEl.textContent = Math.round(quote.sideStonePrice).toLocaleString();
     }
     const metalworkRow = document.getElementById('sum-metalwork-price')?.closest('.summary-row');
     if (isDiamondOnlyCategory()) {
@@ -2739,11 +2762,18 @@ function caratAllowsChineseEngraving() {
   return !Number.isNaN(n) && n >= 0.3;
 }
 
+function productAllowsEngraving() {
+  const product = getProduct(state.category, state.type);
+  if (!product) return false;
+  return product.allowsEngraving !== false;
+}
+
 function updateEngravingSteps() {
   const bandStep = document.getElementById('engraving-band-step');
   const girdleStep = document.getElementById('engraving-girdle-step');
-  const hasBand = state.category === 'ring';
-  const hasGirdle = state.category !== 'chain';
+  const allows = productAllowsEngraving();
+  const hasBand = allows && state.category === 'ring';
+  const hasGirdle = allows && state.category !== 'chain';
   bandStep?.classList.toggle('hidden', !hasBand);
   girdleStep?.classList.toggle('hidden', !hasGirdle);
   if (!hasBand) state.engravingBand = '';

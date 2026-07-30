@@ -6,7 +6,10 @@ import re
 from datetime import datetime, timezone
 
 VALID_CATEGORIES = {"pendant", "ring", "earring", "bracelet", "chain"}
-VALID_CARATS = {"0.1", "0.2", "0.3", "0.5", "0.6", "0.7", "0.8", "0.9", "1.0", "1.5", "2.0"}
+VALID_CARATS = {
+    "0.1", "0.2", "0.3", "0.5", "0.6", "0.7", "0.8", "0.9", "1.0",
+    "1.5", "2.0", "3.0",
+}
 VALID_CARATS_CHAIN = {"1.0mm", "1.5mm", "2.0mm", "2.5mm", "3.0mm"}
 VALID_GOLDS = {"9k", "14k", "18k", "pt950", "s925"}
 VALID_COLORS = {"white", "yellow", "rose"}
@@ -85,6 +88,8 @@ def validate_product_fields(body: dict | None, *, valid_categories: set[str] | N
     else:
         cleaned["defaultColor"] = default_color
 
+    cleaned["allowsEngraving"] = bool(body.get("allowsEngraving", True))
+
     valid_carats = VALID_CARATS_CHAIN if category == "chain" else VALID_CARATS
     variants: list[dict] = []
     seen_keys: set[str] = set()
@@ -115,13 +120,40 @@ def validate_product_fields(body: dict | None, *, valid_categories: set[str] | N
             if manual_price < 0:
                 errors.append(f"invalid manual price for {gold}/{carat}")
                 continue
+        side_stone_price = None
+        if variant.get("sideStonePriceTwd") not in (None, ""):
+            try:
+                side_stone_price = float(variant.get("sideStonePriceTwd"))
+            except (TypeError, ValueError):
+                errors.append(f"invalid side stone price for {gold}/{carat}")
+                continue
+            if side_stone_price < 0:
+                errors.append(f"invalid side stone price for {gold}/{carat}")
+                continue
+        side_stone_carat = None
+        if variant.get("sideStoneCarat") not in (None, ""):
+            try:
+                side_stone_carat = float(variant.get("sideStoneCarat"))
+            except (TypeError, ValueError):
+                errors.append(f"invalid side stone carat for {gold}/{carat}")
+                continue
+            if side_stone_carat < 0:
+                errors.append(f"invalid side stone carat for {gold}/{carat}")
+                continue
         key = f"{gold}:{carat}"
         if key in seen_keys:
             errors.append(f"duplicate variant: {gold} / {carat}")
             continue
         seen_keys.add(key)
         variants.append(
-            {"gold": gold, "carat": carat, "weightChin": weight_chin, "manualPriceTwd": manual_price}
+            {
+                "gold": gold,
+                "carat": carat,
+                "weightChin": weight_chin,
+                "manualPriceTwd": manual_price,
+                "sideStonePriceTwd": side_stone_price,
+                "sideStoneCarat": side_stone_carat,
+            }
         )
 
     if not variants and is_published:
@@ -187,6 +219,12 @@ def _format_product_errors(errors: list[str]) -> str:
         if err.startswith("invalid manual price for"):
             parts.append("款式選項：手動定價無效")
             continue
+        if err.startswith("invalid side stone price for"):
+            parts.append("款式選項：配鑽價錢無效")
+            continue
+        if err.startswith("invalid side stone carat for"):
+            parts.append("款式選項：配鑽克拉無效")
+            continue
         if err.startswith("duplicate variant"):
             parts.append("款式選項重複：" + err.split(": ", 1)[-1])
             continue
@@ -214,8 +252,11 @@ def save_product_children(cur, product_id: str, cleaned: dict) -> None:
     for variant in cleaned["variants"]:
         cur.execute(
             """
-            insert into product_variants (product_id, gold, carat, weight_chin, manual_price_twd)
-            values (%s, %s, %s, %s, %s)
+            insert into product_variants (
+                product_id, gold, carat, weight_chin, manual_price_twd,
+                side_stone_price_twd, side_stone_carat
+            )
+            values (%s, %s, %s, %s, %s, %s, %s)
             """,
             (
                 product_id,
@@ -223,6 +264,8 @@ def save_product_children(cur, product_id: str, cleaned: dict) -> None:
                 variant["carat"],
                 variant["weightChin"],
                 variant["manualPriceTwd"],
+                variant.get("sideStonePriceTwd"),
+                variant.get("sideStoneCarat"),
             ),
         )
 

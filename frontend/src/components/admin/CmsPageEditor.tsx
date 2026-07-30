@@ -24,12 +24,15 @@ import {
 } from "@/components/admin/CmsEditorDnd";
 import CmsEditorTopbar from "@/components/admin/CmsEditorTopbar";
 import CmsEditorTools from "@/components/admin/CmsEditorTools";
+import type { CmsInsertTarget } from "@/components/admin/CmsAddSectionGallery";
 import CmsMediaModal from "@/components/admin/CmsMediaModal";
 import {
   sectionImagePropKey,
   sectionLabel,
+  sectionPrimaryProp,
   type CmsPage,
   type CmsSection,
+  type CmsSectionTemplate,
   type CmsSectionType,
 } from "@/components/admin/cmsSectionMeta";
 import {
@@ -122,10 +125,22 @@ export default function CmsPageEditor({ pageId, api, onBack, onDeleted }: CmsPag
   const [dragging, setDragging] = useState(false);
   const [dragLabel, setDragLabel] = useState<string | null>(null);
   const [dragType, setDragType] = useState<string | undefined>(undefined);
+  const [insertTarget, setInsertTarget] = useState<CmsInsertTarget | null>(null);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [focusedProp, setFocusedProp] = useState<string | null>(null);
   const previewRef = useRef<HTMLIFrameElement>(null);
   const dropTargetRef = useRef<{ anchor: string; index: number } | null>(null);
   const sectionRefs = useRef(new Map<string, SectionRef>());
   const deleteSectionRef = useRef<(section: CmsSection) => Promise<void>>(async () => undefined);
+  const duplicateSectionRef = useRef<(section: CmsSection) => Promise<unknown>>(
+    async () => undefined
+  );
+  const moveSectionRef = useRef<
+    (section: CmsSection, direction: "up" | "down") => Promise<void>
+  >(async () => undefined);
+  const toggleSectionRef = useRef<(section: CmsSection) => Promise<void>>(
+    async () => undefined
+  );
 
   const notify = useCallback(
     (message: string, type: "success" | "error" | "warning" | "info" = "info") => {
@@ -284,8 +299,51 @@ export default function CmsPageEditor({ pageId, api, onBack, onDeleted }: CmsPag
       if (event.source !== previewRef.current?.contentWindow) return;
       const data = event.data;
       if (!data || data.source !== "cms-inline") return;
+      if (data.type === "preview-ack") {
+        preview.handleAck(data);
+        return;
+      }
+      if (data.type === "open-add") {
+        const index =
+          typeof data.index === "number" && Number.isFinite(data.index)
+            ? Math.max(0, Math.floor(data.index))
+            : Infinity;
+        setInsertTarget({
+          anchor: typeof data.anchor === "string" && data.anchor ? data.anchor : "end",
+          index,
+          beforeId: typeof data.beforeId === "string" ? data.beforeId : undefined,
+        });
+        setGalleryOpen(true);
+        return;
+      }
       if (data.type === "select-section" && data.sectionId) {
+        const nextId = String(data.sectionId);
+        if (selectedId !== nextId) setFocusedProp(null);
+        setSelectedId(nextId);
+      }
+      if (data.type === "focus-prop" && data.sectionId) {
         setSelectedId(String(data.sectionId));
+        setFocusedProp(typeof data.prop === "string" ? data.prop : "title");
+      }
+      if (data.type === "duplicate-section" && data.sectionId) {
+        const section = sections.find((item) => item.id === data.sectionId);
+        if (section && !busy) void duplicateSectionRef.current(section);
+      }
+      if (data.type === "move-section" && data.sectionId) {
+        const section = sections.find((item) => item.id === data.sectionId);
+        const direction =
+          data.direction === -1 || data.direction === "up"
+            ? "up"
+            : data.direction === 1 || data.direction === "down"
+              ? "down"
+              : null;
+        if (section && direction && !busy) {
+          void moveSectionRef.current(section, direction);
+        }
+      }
+      if (data.type === "toggle-section" && data.sectionId) {
+        const section = sections.find((item) => item.id === data.sectionId);
+        if (section && !busy) void toggleSectionRef.current(section);
       }
       if (data.type === "delete-section" && data.sectionId) {
         if (busy) return;
@@ -333,7 +391,7 @@ export default function CmsPageEditor({ pageId, api, onBack, onDeleted }: CmsPag
     }
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [busy, saveSectionProps, sections]);
+  }, [busy, preview, saveSectionProps, sections, selectedId]);
 
   async function saveMeta(patch: Partial<CmsPage>) {
     if (!page) return;
@@ -351,7 +409,14 @@ export default function CmsPageEditor({ pageId, api, onBack, onDeleted }: CmsPag
 
   const pageKey = page?.site_route || (page ? `/p/${page.slug}` : "");
 
-  const { addSection, deleteSection, reorder, toggleVisibility } =
+  const {
+    addSection,
+    deleteSection,
+    duplicateSection,
+    moveSection,
+    reorder,
+    toggleVisibility,
+  } =
     useCmsEditorCommands({
       page,
       pageKey,
@@ -370,6 +435,9 @@ export default function CmsPageEditor({ pageId, api, onBack, onDeleted }: CmsPag
       preview,
     });
   deleteSectionRef.current = deleteSection;
+  duplicateSectionRef.current = duplicateSection;
+  moveSectionRef.current = moveSection;
+  toggleSectionRef.current = (section) => toggleVisibility(section);
 
   const uploadSectionImage = useCallback(
     async (file: File): Promise<ImageUploadResult> => {
@@ -445,19 +513,24 @@ export default function CmsPageEditor({ pageId, api, onBack, onDeleted }: CmsPag
     }
     if (source === "palette") {
       const type = active.data.current?.type as CmsSectionType;
+      const initialProps =
+        active.data.current?.initialProps &&
+        typeof active.data.current.initialProps === "object"
+          ? (active.data.current.initialProps as Record<string, unknown>)
+          : {};
       const overIndex = sections.findIndex((section) => section.id === over.id);
       if (overIndex >= 0) {
-        await addSection(type, overIndex);
+        await addSection(type, overIndex, initialProps);
         return;
       }
       if (over.id === CMS_CANVAS_DROP_ID) {
         await addSection(type, {
           anchor: gapTarget?.anchor || "end",
           index: gapTarget?.index ?? sections.length,
-        });
+        }, initialProps);
         return;
       }
-      await addSection(type, sections.length);
+      await addSection(type, sections.length, initialProps);
       return;
     }
     if (active.id === over.id) return;
@@ -520,6 +593,29 @@ export default function CmsPageEditor({ pageId, api, onBack, onDeleted }: CmsPag
   const openPreviewUrl = page
     ? `/p/${encodeURIComponent(page.slug)}?preview=1`
     : "";
+
+  async function chooseTemplate(template: CmsSectionTemplate) {
+    const created = await addSection(
+      template.type,
+      insertTarget || sections.length,
+      template.props
+    );
+    if (!created) return;
+    setGalleryOpen(false);
+    setInsertTarget(null);
+    setFocusedProp(sectionPrimaryProp(template.type));
+  }
+
+  function closeGallery() {
+    setGalleryOpen(false);
+    if (insertTarget) {
+      preview.focusAddTarget(
+        insertTarget.anchor,
+        Number.isFinite(insertTarget.index) ? insertTarget.index : sections.length
+      );
+    }
+    setInsertTarget(null);
+  }
 
   return (
     <div className={`cms-editor${dragging ? " is-dragging" : ""}`}>
@@ -598,10 +694,16 @@ export default function CmsPageEditor({ pageId, api, onBack, onDeleted }: CmsPag
           media={media}
           faqCategories={faqCategories}
           disabled={busy}
-          onAdd={() => {
-            notify("拖曳到預覽中的插入線放置", "info");
+          focusedProp={focusedProp}
+          galleryOpen={galleryOpen}
+          insertTarget={insertTarget}
+          onOpenGallery={() => setGalleryOpen(true)}
+          onCloseGallery={closeGallery}
+          onChooseTemplate={chooseTemplate}
+          onSelect={(id) => {
+            setSelectedId(id);
+            setFocusedProp(null);
           }}
-          onSelect={setSelectedId}
           onChangeProps={(props) => selected && saveSectionProps(selected, props)}
           onPickMedia={(prop) => {
             setMediaProp(prop);

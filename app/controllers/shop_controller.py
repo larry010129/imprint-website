@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 from psycopg.types.json import Jsonb
 
 from app.auth import get_user_id
+from app.catalog import resolve_product_id
 from app.coupons import apply_discount_split, record_redemptions, validate_coupon
 from app.database import get_connection, get_transaction
 from app.image_urls import config_image_url
@@ -50,6 +51,25 @@ def _validate_config(body: dict[str, Any]) -> str | None:
     if body.get("category") != "diamond" and not body.get("gold"):
         return "缺少欄位：gold"
     return None
+
+
+def _strip_disallowed_engraving(cur, body: dict[str, Any]) -> None:
+    """Clear engraving fields when the selected product does not allow 刻字."""
+    if not body.get("engravingBand") and not body.get("engravingGirdle"):
+        return
+    product_id = resolve_product_id(
+        cur,
+        category=str(body.get("category") or ""),
+        type_ref=str(body.get("type") or body.get("productId") or ""),
+        require_published=False,
+    )
+    if not product_id:
+        return
+    cur.execute("select allows_engraving from products where id = %s", (product_id,))
+    row = cur.fetchone()
+    if row and row.get("allows_engraving") is False:
+        body["engravingBand"] = ""
+        body["engravingGirdle"] = ""
 
 
 def _profile(cur, user_id: str) -> dict[str, Any] | None:
@@ -314,6 +334,7 @@ async def add_to_cart(request: Request) -> dict:
     summary = _summary(body)
 
     with get_connection() as conn, conn.cursor() as cur:
+        _strip_disallowed_engraving(cur, body)
         pricing = compute_order_pricing(cur, body)
         if not pricing.get("ready"):
             return _err(400, "無法計算價格，請重新整理後再試")
@@ -366,6 +387,7 @@ async def cart_item(request: Request) -> dict:
             error = _validate_config(body)
             if error:
                 return _err(400, error)
+            _strip_disallowed_engraving(cur, body)
             pricing = compute_order_pricing(cur, body)
             if not pricing.get("ready"):
                 return _err(400, "無法計算價格，請重新整理後再試")

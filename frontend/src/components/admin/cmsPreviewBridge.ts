@@ -8,10 +8,13 @@ export type CmsPreviewBridge = {
     beforeId?: string | null,
     anchor?: string | null
   ) => Promise<boolean>;
-  removeSection: (sectionId: string) => boolean;
-  reorderSections: (sectionIds: string[]) => boolean;
-  setVisible: (sectionId: string, visible: boolean) => boolean;
+  removeSection: (sectionId: string) => Promise<boolean>;
+  reorderSections: (sectionIds: string[]) => Promise<boolean>;
+  setVisible: (sectionId: string, visible: boolean) => Promise<boolean>;
   selectSection: (sectionId: string | null) => void;
+  focusSection: (sectionId: string) => void;
+  focusAddTarget: (anchor: string, index: number) => void;
+  handleAck: (payload: Record<string, unknown>) => boolean;
   showDropGaps: () => boolean;
   hideDropGaps: () => boolean;
   hoverDrop: (relativeY: number) => boolean;
@@ -29,11 +32,47 @@ export function createCmsPreviewBridge(options: {
   fetchSectionHtml: FetchSectionHtml;
 }): CmsPreviewBridge {
   const { iframeRef, hardRefresh, fetchSectionHtml } = options;
+  let requestSequence = 0;
+  const pending = new Map<
+    string,
+    { action: string; resolve: (ok: boolean) => void; timer: number }
+  >();
 
   function post(payload: Record<string, unknown>) {
     const win = iframeRef.current?.contentWindow;
     if (!win) return false;
     win.postMessage({ source: "cms-editor", ...payload }, window.location.origin);
+    return true;
+  }
+
+  function postWithAck(
+    action: string,
+    payload: Record<string, unknown>,
+    timeoutMs = 500,
+  ): Promise<boolean> {
+    const requestId = `cms-${Date.now()}-${++requestSequence}`;
+    return new Promise((resolve) => {
+      const timer = window.setTimeout(() => {
+        pending.delete(requestId);
+        resolve(false);
+      }, timeoutMs);
+      pending.set(requestId, { action, resolve, timer });
+      if (!post({ ...payload, requestId })) {
+        window.clearTimeout(timer);
+        pending.delete(requestId);
+        resolve(false);
+      }
+    });
+  }
+
+  function handleAck(payload: Record<string, unknown>) {
+    if (payload.type !== "preview-ack") return false;
+    const requestId = String(payload.replyTo || payload.requestId || "");
+    const item = pending.get(requestId);
+    if (!item || (payload.action && payload.action !== item.action)) return false;
+    window.clearTimeout(item.timer);
+    pending.delete(requestId);
+    item.resolve(payload.ok !== false);
     return true;
   }
 
@@ -44,31 +83,43 @@ export function createCmsPreviewBridge(options: {
       try {
         const res = await fetchSectionHtml(sectionId);
         if (res.error || !res.html) return false;
-        const sent = post({
+        return postWithAck("apply-section", {
           type: "apply-section",
           sectionId,
           html: res.html,
           beforeId: beforeId || null,
           anchor: anchor || null,
         });
-        if (!sent) return false;
-        return true;
       } catch {
         return false;
       }
     },
     removeSection(sectionId) {
-      return post({ type: "remove-section", sectionId });
+      return postWithAck("remove-section", { type: "remove-section", sectionId });
     },
     reorderSections(sectionIds) {
-      return post({ type: "reorder-sections", sectionIds });
+      return postWithAck("reorder-sections", {
+        type: "reorder-sections",
+        sectionIds,
+      });
     },
     setVisible(sectionId, visible) {
-      return post({ type: "set-visible", sectionId, visible });
+      return postWithAck("set-visible", {
+        type: "set-visible",
+        sectionId,
+        visible,
+      });
     },
     selectSection(sectionId) {
       post({ type: "select-section", sectionId });
     },
+    focusSection(sectionId) {
+      post({ type: "focus-section", sectionId });
+    },
+    focusAddTarget(anchor, index) {
+      post({ type: "focus-add-target", anchor, index });
+    },
+    handleAck,
     showDropGaps() {
       return post({ type: "show-drop-gaps" });
     },

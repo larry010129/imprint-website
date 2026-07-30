@@ -423,7 +423,14 @@ def compute_order_pricing(cur, data: dict[str, Any], *, require_published: bool 
         if diamond_price is None:
             return {"ready": False}
 
-    total = (diamond_price or 0) + taijin_display + labor_display
+    side_stone_price = None
+    if category != "chain" and variant.get("side_stone_price_twd") is not None:
+        side_stone_price = float(variant["side_stone_price_twd"])
+    side_stone_carat = None
+    if category != "chain" and variant.get("side_stone_carat") is not None:
+        side_stone_carat = float(variant["side_stone_carat"])
+
+    total = (diamond_price or 0) + (side_stone_price or 0) + taijin_display + labor_display
     chain_display = None
 
     if category == "pendant" and include_chain and chain_product_id and chain_gold and chain_length:
@@ -439,6 +446,8 @@ def compute_order_pricing(cur, data: dict[str, Any], *, require_published: bool 
     return {
         "ready": True,
         "diamondPrice": diamond_price,
+        "sideStonePrice": side_stone_price,
+        "sideStoneCarat": side_stone_carat,
         "taijinPrice": taijin_display,
         "laborPrice": labor_display,
         "metalworkPrice": taijin_display + labor_display,

@@ -10,11 +10,16 @@ import CmsSectionPropsForm, {
   CmsPageMetaForm,
 } from "@/components/admin/CmsSectionPropsForm";
 import {
+  defaultTemplateForType,
   SECTION_PALETTE,
   sectionLabel,
   type CmsPage,
   type CmsSection,
+  type CmsSectionTemplate,
 } from "@/components/admin/cmsSectionMeta";
+import CmsAddSectionGallery, {
+  type CmsInsertTarget,
+} from "@/components/admin/CmsAddSectionGallery";
 import { Switch } from "@/components/ui/switch";
 import type { ImageUploadResult } from "@/components/ui/image-upload";
 
@@ -26,7 +31,12 @@ type Props = {
   media: { id: string; url: string; alt?: string }[];
   faqCategories: { id: string; title: string }[];
   disabled: boolean;
-  onAdd: () => void;
+  focusedProp?: string | null;
+  galleryOpen: boolean;
+  insertTarget: CmsInsertTarget | null;
+  onOpenGallery: () => void;
+  onCloseGallery: () => void;
+  onChooseTemplate: (template: CmsSectionTemplate) => void | Promise<void>;
   onSelect: (id: string) => void;
   onChangeProps: (props: Record<string, unknown>) => void;
   onPickMedia: (prop: string) => void;
@@ -72,6 +82,7 @@ export default function CmsEditorTools(props: Props) {
                 onPickMedia={props.onPickMedia}
                 uploadImage={props.uploadImage}
                 onImageUploaded={props.onImageUploaded}
+                focusProp={props.focusedProp}
               />
               <div className="cms-props-actions">
                 <button
@@ -101,16 +112,28 @@ export default function CmsEditorTools(props: Props) {
         </>
       ) : (
         <div className="cms-tools-add">
-          <p className="cms-hint">拖曳到預覽中的藍色插入線放置（點擊僅提示）。</p>
+          <p className="cms-hint">點擊立即加入目前位置，或拖曳到預覽中的插入線。</p>
+          <button
+            type="button"
+            className="btn-sm btn-primary cms-open-gallery"
+            disabled={props.disabled}
+            onClick={props.onOpenGallery}
+          >
+            瀏覽區塊範本
+          </button>
           <div className="cms-palette-grid">
-            {SECTION_PALETTE.map((item) => (
+            {SECTION_PALETTE.map((item) => {
+              const template = defaultTemplateForType(item.type);
+              return (
               <CmsPaletteButton
                 key={item.type}
                 type={item.type}
+                template={template}
                 disabled={props.disabled}
-                onAdd={props.onAdd}
+                onAdd={() => void props.onChooseTemplate(template)}
               />
-            ))}
+              );
+            })}
           </div>
           <details className="cms-ordering" open>
             <summary>區塊排序（{props.sections.length}）</summary>
@@ -138,6 +161,13 @@ export default function CmsEditorTools(props: Props) {
         </div>
       )}
       <CmsTrashDropTarget />
+      <CmsAddSectionGallery
+        open={props.galleryOpen}
+        disabled={props.disabled}
+        target={props.insertTarget}
+        onClose={props.onCloseGallery}
+        onChoose={props.onChooseTemplate}
+      />
     </aside>
   );
 }

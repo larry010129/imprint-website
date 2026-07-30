@@ -7,7 +7,10 @@
  */
 
 const VALID_CATEGORIES = new Set(['pendant', 'ring', 'earring', 'bracelet', 'chain']);
-const VALID_CARATS = new Set(['0.1', '0.2', '0.3', '0.5', '0.6', '0.7', '0.8', '0.9', '1.0', '1.5', '2.0']);
+const VALID_CARATS = new Set([
+  '0.1', '0.2', '0.3', '0.5', '0.6', '0.7', '0.8', '0.9', '1.0',
+  '1.5', '2.0', '3.0',
+]);
 const VALID_CARATS_CHAIN = new Set(['1.0mm', '1.5mm', '2.0mm', '2.5mm', '3.0mm']);
 const VALID_GOLDS = new Set(['9k', '14k', '18k', 'pt950', 's925']);
 const GOLDS_REQUIRING_COLOR = new Set(['14k', '18k']);
@@ -294,6 +297,7 @@ function validateProductFields(body) {
   else cleaned.defaultColor = defaultColor;
 
   cleaned.isPublished = !!body.isPublished;
+  cleaned.allowsEngraving = body.allowsEngraving !== false;
 
   const validCarats = category === 'chain' ? VALID_CARATS_CHAIN : VALID_CARATS;
   const variants = [];
@@ -311,10 +315,22 @@ function validateProductFields(body) {
       if (!(p >= 0)) { errors.push(`invalid manual price for ${gold}/${carat}`); continue; }
       manualPriceTwd = p;
     }
+    let sideStonePriceTwd = null;
+    if (v.sideStonePriceTwd != null && v.sideStonePriceTwd !== '') {
+      const s = Number(v.sideStonePriceTwd);
+      if (!(s >= 0)) { errors.push(`invalid side stone price for ${gold}/${carat}`); continue; }
+      sideStonePriceTwd = s;
+    }
+    let sideStoneCarat = null;
+    if (v.sideStoneCarat != null && v.sideStoneCarat !== '') {
+      const c = Number(v.sideStoneCarat);
+      if (!(c >= 0)) { errors.push(`invalid side stone carat for ${gold}/${carat}`); continue; }
+      sideStoneCarat = c;
+    }
     const key = `${gold}:${carat}`;
     if (seenKeys.has(key)) { errors.push(`duplicate variant: ${gold} / ${carat}`); continue; }
     seenKeys.add(key);
-    variants.push({ gold, carat, weightChin, manualPriceTwd });
+    variants.push({ gold, carat, weightChin, manualPriceTwd, sideStonePriceTwd, sideStoneCarat });
   }
   if (!variants.length) errors.push('at least one variant is required');
   cleaned.variants = variants;

@@ -286,7 +286,18 @@
       if (diamondPrice == null) return { ready: false };
     }
 
-    var total = (diamondPrice || 0) + taijinDisplay + laborDisplay;
+    var sideStonePrice = null;
+    var sideTable = product.sideStonePrices && product.sideStonePrices[gold];
+    if (category !== 'chain' && sideTable && sideTable[carat] != null) {
+      sideStonePrice = Number(sideTable[carat]);
+    }
+    var sideStoneCarat = null;
+    var sideCaratTable = product.sideStoneCarats && product.sideStoneCarats[gold];
+    if (category !== 'chain' && sideCaratTable && sideCaratTable[carat] != null) {
+      sideStoneCarat = Number(sideCaratTable[carat]);
+    }
+
+    var total = (diamondPrice || 0) + (sideStonePrice || 0) + taijinDisplay + laborDisplay;
     var chainDisplay = null;
 
     if (category === 'pendant' && includeChain && chainProductId && chainGold && chainLength) {
@@ -303,6 +314,8 @@
       ready: true,
       manualOverride: false,
       diamondPrice: diamondPrice,
+      sideStonePrice: sideStonePrice,
+      sideStoneCarat: sideStoneCarat,
       taijinPrice: taijinDisplay,
       laborPrice: laborDisplay,
       metalworkPrice: taijinDisplay + laborDisplay,

@@ -82,12 +82,18 @@ def build_catalog_product(product: dict, variants: list[dict], images: list[dict
 
     weights: dict[str, dict[str, float]] = {}
     manual_prices: dict[str, dict[str, float]] = {}
+    side_stone_prices: dict[str, dict[str, float]] = {}
+    side_stone_carats: dict[str, dict[str, float]] = {}
     for variant in variants:
         gold = variant["gold"]
         carat = variant["carat"]
         weights.setdefault(gold, {})[carat] = float(variant["weight_chin"])
         if variant.get("manual_price_twd") is not None:
             manual_prices.setdefault(gold, {})[carat] = float(variant["manual_price_twd"])
+        if variant.get("side_stone_price_twd") is not None:
+            side_stone_prices.setdefault(gold, {})[carat] = float(variant["side_stone_price_twd"])
+        if variant.get("side_stone_carat") is not None:
+            side_stone_carats.setdefault(gold, {})[carat] = float(variant["side_stone_carat"])
 
     images_by_color: dict[str, list[str]] = {}
     for image in images:
@@ -101,12 +107,15 @@ def build_catalog_product(product: dict, variants: list[dict], images: list[dict
         "descriptionZh": product["description_zh"],
         "descriptionEn": product["description_en"],
         "defaultColor": product["default_color"],
+        "allowsEngraving": bool(product.get("allows_engraving", True)),
         "golds": golds,
         "carats": carats,
         "colors": sorted(images_by_color.keys()),
         "images": images_by_color,
         "weights": weights,
         "manualPrices": manual_prices,
+        "sideStonePrices": side_stone_prices,
+        "sideStoneCarats": side_stone_carats,
         "draft": not product["is_published"],
     }
 

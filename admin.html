@@ -6,13 +6,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>銘印鑽石｜管理後台</title>
 <meta name="robots" content="noindex">
-<link rel="stylesheet" href="/css/admin-core.css?v=18">
+<link rel="stylesheet" href="/css/admin-core.css?v=20">
 <link rel="stylesheet" href="/css/skeleton.css?v=1">
 <link rel="stylesheet" href="/css/admin-shell.css">
 <link rel="stylesheet" href="/css/admin-orders.css?v=9">
 <link rel="stylesheet" href="/css/admin-tables.css?v=27">
 <link rel="stylesheet" href="/static/react/admin-tables.css?v=33">
-<link rel="stylesheet" href="/css/cms-editor.css?v=8">
+<link rel="stylesheet" href="/css/cms-editor.css?v=9">
 <link rel="stylesheet" href="/css/toast.css?v=1">
 <!-- 上線時建議打開 Google Fonts:
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -435,7 +435,7 @@
 <script src="js/girdle-engrave.js?v=11"></script>
 <script src="js/admin-orders.js?v=14"></script>
 <script src="js/order-detail.js"></script>
-<script src="js/admin-products.js?v=25"></script>
+<script src="js/admin-products.js?v=28"></script>
 <script src="js/admin-accounts.js?v=11"></script>
 <script src="js/admin-member-search.js?v=3"></script>
 <script src="js/admin-invites.js?v=12"></script>
@@ -489,9 +489,10 @@
   if (!window.ImprintPricing) return;
 
   var CARAT_ROWS = [
-    ['0.10','0.10 克拉'], ['0.20','0.20 克拉'], ['0.30','0.30 克拉'], ['0.50','0.50 克拉'],
-    ['0.60','0.60 克拉'], ['0.70','0.70 克拉'], ['0.80','0.80 克拉'], ['0.90','0.90 克拉'],
-    ['1.00','1.00 克拉'], ['1.50','1.50 克拉'], ['2.00','2.00 克拉'], ['3.00','3.00 克拉']
+    ['0.10','0.10 克拉'], ['0.20','0.20 克拉'], ['0.30','0.30 克拉'],
+    ['0.50','0.50 克拉'], ['0.60','0.60 克拉'], ['0.70','0.70 克拉'], ['0.80','0.80 克拉'],
+    ['0.90','0.90 克拉'], ['1.00','1.00 克拉'], ['1.50','1.50 克拉'], ['2.00','2.00 克拉'],
+    ['3.00','3.00 克拉']
   ];
   var MOUNTING_ROWS = [
     ['necklace','項鍊'], ['ring','戒指'], ['earring','耳環'], ['bracelet','手鍊']

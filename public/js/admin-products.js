@@ -8,9 +8,8 @@
   var CATEGORY_ORDER = ['pendant', 'ring', 'earring', 'bracelet', 'chain'];
   var GOLDS = ['9k', '14k', '18k', 'pt950', 's925'];
   var CARATS = [
-    '0.1', '0.2', '0.3', '0.4', '0.5', '0.6', '0.7', '0.8', '0.9', '1.0',
-    '1.1', '1.2', '1.3', '1.4', '1.5', '1.6', '1.7', '1.8', '1.9', '2.0',
-    '2.1', '2.2', '2.3', '2.4', '2.5', '2.6', '2.7', '2.8', '2.9', '3.0',
+    '0.1', '0.2', '0.3', '0.5', '0.6', '0.7', '0.8', '0.9', '1.0',
+    '1.5', '2.0', '3.0',
   ];
   var CHAIN_CARATS = ['1.0mm', '1.5mm', '2.0mm', '2.5mm', '3.0mm'];
   var COLORS = ['white', 'yellow', 'rose'];
@@ -632,13 +631,23 @@
     }).join('');
     var weight = variant ? variant.weight_chin : '';
     var price = variant && variant.manual_price_twd != null ? variant.manual_price_twd : '';
+    var sideStone = variant && variant.side_stone_price_twd != null ? variant.side_stone_price_twd : '';
+    var sideStoneCts = variant && variant.side_stone_carat != null ? variant.side_stone_carat : '';
     var gold = (variant && variant.gold) || GOLDS[0];
     var weightPlaceholder = category === 'chain' ? '46cm 蠟重（錢）' : '蠟重（錢）';
+    var sideStoneCtsCell = category === 'chain'
+      ? '<span class="ap-metal-weight-out" aria-hidden="true">—</span>'
+      : '<input type="number" name="sideStoneCarat" step="0.01" min="0" placeholder="配鑽 cts" value="' + esc(sideStoneCts) + '">';
+    var sideStoneCell = category === 'chain'
+      ? '<span class="ap-metal-weight-out" aria-hidden="true">—</span>'
+      : '<input type="number" name="sideStonePrice" step="1" min="0" placeholder="配鑽價錢" value="' + esc(sideStone) + '">';
     return '<div class="ap-variant-row">' +
       '<select name="gold">' + goldOpts + '</select>' +
       '<select name="carat">' + caratOpts + '</select>' +
       '<input type="number" name="weight" step="0.0001" min="0.0001" placeholder="' + weightPlaceholder + '" value="' + esc(weight) + '">' +
       '<output class="ap-metal-weight-out" name="metalWeight">' + metalWeightLabel(weight, gold) + '</output>' +
+      sideStoneCtsCell +
+      sideStoneCell +
       '<input type="number" name="price" step="1" min="0" placeholder="手動定價" value="' + esc(price) + '">' +
       '<button type="button" class="ap-remove-row" aria-label="移除">✕</button></div>';
   }
@@ -1109,6 +1118,21 @@
     );
   }
 
+  function allowsEngravingToggleHtml(product) {
+    // Default on for new products / legacy rows without the column yet.
+    var on = !product || product.allows_engraving !== false;
+    var checked = on ? ' checked' : '';
+    return (
+      '<div class="ap-switch-wrap">' +
+        '<label class="ap-switch">' +
+          '<input type="checkbox" class="ap-switch-input" name="allowsEngraving"' + checked + '>' +
+          '<span class="ap-switch-track" aria-hidden="true"><span class="ap-switch-thumb"></span></span>' +
+          '<span class="ap-switch-label">可刻字</span>' +
+        '</label>' +
+      '</div>'
+    );
+  }
+
   function editorFormHtml(product, defaultCategory) {
     var isEdit = !!product;
     var category = (product && product.category) || defaultCategory || 'ring';
@@ -1145,10 +1169,11 @@
               '<label class="ap-field-wide"><span>中文描述</span><textarea class="ap-textarea" name="descriptionZh" rows="3" placeholder="商品中文說明…">' + esc(product && product.description_zh) + '</textarea></label>' +
               '<label class="ap-field-wide"><span>英文描述</span><textarea class="ap-textarea" name="descriptionEn" rows="3" placeholder="Product description…">' + esc(product && product.description_en) + '</textarea></label>' +
               saveForLaterToggleHtml(product) +
+              allowsEngravingToggleHtml(product) +
             '</div>' +
             '<h4 class="ap-section-title">款式選項</h4>' +
             '<div class="ap-variant-block">' +
-              '<div class="ap-variant-head"><span>金屬</span><span>' + (category === 'chain' ? '厚度' : '克拉') + '</span><span>' + (category === 'chain' ? '46cm 蠟重（錢）' : '蠟重（錢）') + '</span><span>預估金重</span><span>手動定價</span><span></span></div>' +
+              '<div class="ap-variant-head"><span>金屬</span><span>' + (category === 'chain' ? '厚度' : '克拉') + '</span><span>' + (category === 'chain' ? '46cm 蠟重（錢）' : '蠟重（錢）') + '</span><span>預估金重</span><span>配鑽 cts</span><span>配鑽價錢</span><span>手動定價</span><span></span></div>' +
               '<div id="apVariantGrid">' + variants + '</div>' +
             '</div>' +
             '<button type="button" class="btn-sm" id="apAddVariant">+ 新增款式</button>' +
@@ -1288,12 +1313,16 @@
       var carat = row.querySelector('[name="carat"]')?.value;
       var weight = row.querySelector('[name="weight"]')?.value;
       var price = row.querySelector('[name="price"]')?.value;
+      var sideStone = row.querySelector('[name="sideStonePrice"]')?.value;
+      var sideStoneCts = row.querySelector('[name="sideStoneCarat"]')?.value;
       if (!gold || !carat || !weight) return;
       variants.push({
         gold: gold,
         carat: carat,
         weightChin: parseFloat(weight),
-        manualPriceTwd: price === '' ? null : parseFloat(price),
+        manualPriceTwd: price === '' || price == null ? null : parseFloat(price),
+        sideStonePriceTwd: sideStone === '' || sideStone == null ? null : parseFloat(sideStone),
+        sideStoneCarat: sideStoneCts === '' || sideStoneCts == null ? null : parseFloat(sideStoneCts),
       });
     });
     var images = [];
@@ -1305,6 +1334,7 @@
         if (url) images.push({ color: color, url: url });
       });
     });
+    var allowsEngravingInput = form.querySelector('[name="allowsEngraving"]');
     return {
       category: category,
       nameZh: String(fd.get('nameZh') || '').trim(),
@@ -1312,6 +1342,7 @@
       descriptionZh: String(fd.get('descriptionZh') || '').trim(),
       descriptionEn: String(fd.get('descriptionEn') || '').trim(),
       defaultColor: fd.get('defaultColor') || 'white',
+      allowsEngraving: !!(allowsEngravingInput && allowsEngravingInput.checked),
       isPublished: !isSaveForLater(form),
       variants: variants,
       images: images,

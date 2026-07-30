@@ -455,7 +455,7 @@
   var GIRDLE_ZOOM_BASE = '/static/images/shop/girdle/girdle-zoom';
   var GIRDLE_ZOOM_VERSION = '7';
   var GIRDLE_MATRIX_BASE = '/static/images/diamonds/girdle-matrix';
-  var GIRDLE_MATRIX_VERSION = '5';
+  var GIRDLE_MATRIX_VERSION = '7';
   var GIRDLE_PREVIEW_BY_COLOR = {
     white: GIRDLE_ZOOM_BASE + '-white.jpg?v=' + GIRDLE_ZOOM_VERSION,
     yellow: GIRDLE_ZOOM_BASE + '-yellow.jpg?v=' + GIRDLE_ZOOM_VERSION,

@@ -281,7 +281,16 @@ async function computeOrderPricing(sql, data, { requirePublished = true } = {}) 
     if (diamondPrice == null) return { ready: false };
   }
 
-  let total = (diamondPrice || 0) + taijinDisplay + laborDisplay;
+  let sideStonePrice = null;
+  if (category !== 'chain' && variant.side_stone_price_twd != null) {
+    sideStonePrice = Number(variant.side_stone_price_twd);
+  }
+  let sideStoneCarat = null;
+  if (category !== 'chain' && variant.side_stone_carat != null) {
+    sideStoneCarat = Number(variant.side_stone_carat);
+  }
+
+  let total = (diamondPrice || 0) + (sideStonePrice || 0) + taijinDisplay + laborDisplay;
   let chainDisplay = null;
   let chainPreTax = null;
   let chainVariant = null;
@@ -304,6 +313,8 @@ async function computeOrderPricing(sql, data, { requirePublished = true } = {}) 
   return {
     ready: true,
     diamondPrice,
+    sideStonePrice,
+    sideStoneCarat,
     taijinPreTax, taijinDisplay,
     laborPreTax, laborDisplay,
     chainDisplay, chainPreTax, chainVariant, chainWeightChin,

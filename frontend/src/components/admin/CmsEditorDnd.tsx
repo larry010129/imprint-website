@@ -9,6 +9,7 @@ import {
   sectionDescription,
   sectionLabel,
   sectionMeta,
+  type CmsSectionTemplate,
   type CmsSection,
   type CmsSectionType,
 } from "@/components/admin/cmsSectionMeta";
@@ -60,15 +61,16 @@ export function CmsSortableRow({
 
 export function CmsPaletteButton({
   type,
+  template,
   label,
   description,
   onAdd,
   disabled = false,
 }: {
   type: CmsSectionType;
+  template?: CmsSectionTemplate;
   label?: string;
   description?: string;
-  /** Click hint only — sections are created on canvas drop. */
   onAdd: () => void;
   disabled?: boolean;
 }) {
@@ -76,10 +78,18 @@ export function CmsPaletteButton({
   const title = label || meta?.label || type;
   const hint = description || meta?.description || "";
   const Icon = meta?.icon || SECTION_FALLBACK_ICON;
+  const templateId = template?.id || `blank-${type}`;
+  const initialProps = template?.props || {};
   const skipClickRef = useRef(false);
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: `palette:${type}`,
-    data: { source: "palette", type, label: title },
+    id: `palette:${templateId}`,
+    data: {
+      source: "palette",
+      type,
+      label: title,
+      templateId,
+      initialProps,
+    },
     disabled,
   });
   useEffect(() => {

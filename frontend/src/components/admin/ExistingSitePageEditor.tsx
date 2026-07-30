@@ -24,13 +24,16 @@ import {
 import PageImageEditModal, {
   type PageImageEditRow,
 } from "@/components/admin/PageImageEditModal";
+import type { CmsInsertTarget } from "@/components/admin/CmsAddSectionGallery";
 import SiteEditorTools from "@/components/admin/SiteEditorTools";
 import {
   sectionAnchor,
   sectionImagePropKey,
   sectionLabel,
+  sectionPrimaryProp,
   type CmsPage,
   type CmsSection,
+  type CmsSectionTemplate,
   type CmsSectionType,
 } from "@/components/admin/cmsSectionMeta";
 import {
@@ -179,6 +182,9 @@ export default function ExistingSitePageEditor({
   const [dragging, setDragging] = useState(false);
   const [dragLabel, setDragLabel] = useState<string | null>(null);
   const [dragType, setDragType] = useState<string | undefined>(undefined);
+  const [insertTarget, setInsertTarget] = useState<CmsInsertTarget | null>(null);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [focusedProp, setFocusedProp] = useState<string | null>(null);
   const [faqCategories, setFaqCategories] = useState<{ id: string; title: string }[]>([]);
   const [pageImageEdit, setPageImageEdit] = useState<PageImageEditRow | null>(null);
   const previewRef = useRef<HTMLIFrameElement>(null);
@@ -190,6 +196,15 @@ export default function ExistingSitePageEditor({
   const slotSaveChains = useRef(new Map<string, Promise<void>>());
   const sectionRefs = useRef(new Map<string, SectionRef>());
   const deleteSectionRef = useRef<(section: CmsSection) => Promise<void>>(async () => undefined);
+  const duplicateSectionRef = useRef<(section: CmsSection) => Promise<unknown>>(
+    async () => undefined
+  );
+  const moveSectionRef = useRef<
+    (section: CmsSection, direction: "up" | "down") => Promise<void>
+  >(async () => undefined);
+  const toggleSectionRef = useRef<(section: CmsSection) => Promise<void>>(
+    async () => undefined
+  );
 
   const history = useCmsEditorHistory((message) =>
     showToast(message, "error", "top-right")
@@ -479,7 +494,14 @@ export default function ExistingSitePageEditor({
   );
 
   const pageKey = page.route;
-  const { addSection, deleteSection, reorder, toggleVisibility } = useCmsEditorCommands({
+  const {
+    addSection,
+    deleteSection,
+    duplicateSection,
+    moveSection,
+    reorder,
+    toggleVisibility,
+  } = useCmsEditorCommands({
     page: hostPage,
     pageKey,
     sections,
@@ -497,6 +519,9 @@ export default function ExistingSitePageEditor({
     preview,
   });
   deleteSectionRef.current = deleteSection;
+  duplicateSectionRef.current = duplicateSection;
+  moveSectionRef.current = moveSection;
+  toggleSectionRef.current = (section) => toggleVisibility(section);
 
   const uploadSectionImage = useCallback(
     async (file: File): Promise<ImageUploadResult> => {
@@ -560,9 +585,55 @@ export default function ExistingSitePageEditor({
       if (!data) return;
 
       if (data.source === "cms-inline") {
+        if (data.type === "preview-ack") {
+          preview.handleAck(data);
+          return;
+        }
+        if (data.type === "open-add") {
+          const index =
+            typeof data.index === "number" && Number.isFinite(data.index)
+              ? Math.max(0, Math.floor(data.index))
+              : Infinity;
+          setInsertTarget({
+            anchor:
+              typeof data.anchor === "string" && data.anchor ? data.anchor : "end",
+            index,
+            beforeId:
+              typeof data.beforeId === "string" ? data.beforeId : undefined,
+          });
+          setGalleryOpen(true);
+          return;
+        }
         if (data.type === "select-section" && data.sectionId) {
+          const nextId = String(data.sectionId);
+          if (selectedSectionId !== nextId) setFocusedProp(null);
+          setSelectedSectionId(nextId);
+          setSelectedSlotKey(null);
+        }
+        if (data.type === "focus-prop" && data.sectionId) {
           setSelectedSectionId(String(data.sectionId));
           setSelectedSlotKey(null);
+          setFocusedProp(typeof data.prop === "string" ? data.prop : "title");
+        }
+        if (data.type === "duplicate-section" && data.sectionId) {
+          const section = sections.find((item) => item.id === data.sectionId);
+          if (section && !busy) void duplicateSectionRef.current(section);
+        }
+        if (data.type === "move-section" && data.sectionId) {
+          const section = sections.find((item) => item.id === data.sectionId);
+          const direction =
+            data.direction === -1 || data.direction === "up"
+              ? "up"
+              : data.direction === 1 || data.direction === "down"
+                ? "down"
+                : null;
+          if (section && direction && !busy) {
+            void moveSectionRef.current(section, direction);
+          }
+        }
+        if (data.type === "toggle-section" && data.sectionId) {
+          const section = sections.find((item) => item.id === data.sectionId);
+          if (section && !busy) void toggleSectionRef.current(section);
         }
         if (data.type === "delete-section" && data.sectionId) {
           if (busy) return;
@@ -636,7 +707,16 @@ export default function ExistingSitePageEditor({
     }
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [busy, commitSlot, openFixedPageImage, page.route, saveSectionProps, sections]);
+  }, [
+    busy,
+    commitSlot,
+    openFixedPageImage,
+    page.route,
+    preview,
+    saveSectionProps,
+    selectedSectionId,
+    sections,
+  ]);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -710,6 +790,11 @@ export default function ExistingSitePageEditor({
     if (source === "palette") {
       const type = active.data.current?.type as CmsSectionType | undefined;
       if (!type) return;
+      const initialProps =
+        active.data.current?.initialProps &&
+        typeof active.data.current.initialProps === "object"
+          ? (active.data.current.initialProps as Record<string, unknown>)
+          : {};
       if (!hostPage) {
         notify("固定頁主機尚未就緒，請稍後再試", "warning");
         return;
@@ -724,17 +809,17 @@ export default function ExistingSitePageEditor({
         await addSection(type, {
           anchor,
           index: localIndex >= 0 ? localIndex : Infinity,
-        });
+        }, initialProps);
         return;
       }
       if (over.id === CMS_CANVAS_DROP_ID) {
         await addSection(type, {
           anchor: gapTarget?.anchor || "end",
           index: gapTarget?.index ?? Infinity,
-        });
+        }, initialProps);
         return;
       }
-      await addSection(type, { anchor: "end", index: Infinity });
+      await addSection(type, { anchor: "end", index: Infinity }, initialProps);
       return;
     }
     if (source === "section" && active.id !== over.id) {
@@ -783,8 +868,33 @@ export default function ExistingSitePageEditor({
     error: "儲存失敗",
   }[saveStatus];
 
-  function onPaletteAdd() {
-    notify("拖曳到預覽中的插入線放置", "info");
+  async function chooseTemplate(template: CmsSectionTemplate) {
+    if (!hostPage) return;
+    const target =
+      insertTarget || {
+        anchor: "end",
+        index: sections.filter((section) => sectionAnchor(section) === "end").length,
+      };
+    const created = await addSection(template.type, target, template.props);
+    if (!created) return;
+    setGalleryOpen(false);
+    setInsertTarget(null);
+    setFocusedProp(sectionPrimaryProp(template.type));
+  }
+
+  function closeGallery() {
+    setGalleryOpen(false);
+    if (insertTarget) {
+      preview.focusAddTarget(
+        insertTarget.anchor,
+        Number.isFinite(insertTarget.index)
+          ? insertTarget.index
+          : sections.filter(
+              (section) => sectionAnchor(section) === insertTarget.anchor
+            ).length
+      );
+    }
+    setInsertTarget(null);
   }
 
   return (
@@ -870,13 +980,21 @@ export default function ExistingSitePageEditor({
             faqCategories={faqCategories}
             disabled={busy || !hostPage}
             saving={saveStatus === "saving"}
+            focusedProp={focusedProp}
+            galleryOpen={galleryOpen}
+            insertTarget={insertTarget}
+            onOpenGallery={() => setGalleryOpen(true)}
+            onCloseGallery={closeGallery}
+            onChooseTemplate={chooseTemplate}
             onSelectSlot={(key) => {
               setSelectedSlotKey(key);
               setSelectedSectionId(null);
+              setFocusedProp(null);
             }}
             onSelectSection={(id) => {
               setSelectedSectionId(id);
               setSelectedSlotKey(null);
+              setFocusedProp(null);
             }}
             onChangeSelectedSlot={(next) => {
               slotsRef.current = slotsRef.current.map((slot) =>
@@ -905,7 +1023,6 @@ export default function ExistingSitePageEditor({
               const target = section || selectedSection;
               if (target) void deleteSection(target);
             }}
-            onPaletteAdd={onPaletteAdd}
             uploadImage={uploadSectionImage}
             onImageUploaded={(url, alt) =>
               selectedSection

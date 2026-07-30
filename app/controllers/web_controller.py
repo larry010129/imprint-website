@@ -326,6 +326,7 @@ def _make_handler(meta: PageMeta, status_code: int = 200):
                 f"<script>window.__CMS_SITE_PAGE_KEY__={page_key};</script>"
                 '<script src="/js/site-inline-edit.js?v=6"></script>'
                 '<script src="/js/cms-inline-edit.js?v=10"></script>'
+                '<script src="/js/cms-canvas-controls.js?v=1"></script>'
             )
             html = html.replace(
                 "<body ",

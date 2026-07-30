@@ -27,6 +27,7 @@ export type AddSectionTarget =
       anchor?: string;
       /** Local index within the anchor host (append when omitted / Infinity). */
       index?: number;
+      beforeId?: string | null;
     };
 
 type Api = {
@@ -94,6 +95,14 @@ function resolveAddTarget(
     return { anchor, localIndex: at >= 0 ? at : group.length };
   }
   const anchor = String(target.anchor || "end").trim().toLowerCase() || "end";
+  if (target.beforeId) {
+    const neighbor = sections.find((section) => section.id === target.beforeId);
+    if (neighbor && sectionAnchor(neighbor) === anchor) {
+      const group = sections.filter((section) => sectionAnchor(section) === anchor);
+      const at = group.findIndex((section) => section.id === neighbor.id);
+      if (at >= 0) return { anchor, localIndex: at };
+    }
+  }
   const raw = target.index;
   const localIndex =
     raw == null || !Number.isFinite(raw)
@@ -198,8 +207,8 @@ export default function useCmsEditorCommands(options: Options) {
       const anchor = sectionAnchor(updated.section);
       await softOrHard(async () => {
         const synced = await preview.syncSection(newId, beforeId, anchor);
-        if (synced) preview.reorderSections(ids);
-        return synced;
+        if (!synced) return false;
+        return preview.reorderSections(ids);
       }, preview.hardRefresh);
     } catch (error) {
       await api.sectionAction(newId, "delete");
@@ -209,22 +218,30 @@ export default function useCmsEditorCommands(options: Options) {
 
   async function addSection(
     type: CmsSectionType,
-    target: AddSectionTarget = sections.length
-  ) {
+    target: AddSectionTarget = sections.length,
+    initialProps: Record<string, unknown> = {},
+    historyLabel = "新增區塊",
+  ): Promise<CmsSection | undefined> {
     if (!page) return;
     setBusy(true);
     try {
       const { anchor, localIndex } = resolveAddTarget(sections, target);
       const res = await api.createSection(page.id, {
         type,
-        props: { anchor },
+        props: { ...copyCmsProps(initialProps), anchor },
       });
       if (res.error || !res.section) throw new Error(String(res.error || "新增失敗"));
 
-      const created: CmsSection = {
-        ...res.section,
-        props: { ...res.section.props, anchor },
-      };
+      const normalized = await api.updateSection({
+        id: res.section.id,
+        props: { ...copyCmsProps(initialProps), anchor },
+        isVisible: true,
+      });
+      if (normalized.error || !normalized.section) {
+        await api.sectionAction(res.section.id, "delete");
+        throw new Error(String(normalized.error || "範本內容套用失敗"));
+      }
+      const created = normalized.section;
       const next = buildOrderWithAnchor(sections, created, anchor, localIndex);
       const nextIds = next.map((item) => item.id);
       const appendOnly =
@@ -251,11 +268,16 @@ export default function useCmsEditorCommands(options: Options) {
       setSections(persisted);
       setSelectedId(res.section.id);
       record({
-        label: "新增區塊",
+        label: historyLabel,
         undo: () => deletePersisted(reference),
         redo: () => recreate(snapshot, reference, order),
       });
-      notify(`已新增「${sectionLabel(type)}」區塊`, "success");
+      notify(
+        historyLabel === "複製區塊"
+          ? `已複製「${sectionLabel(type)}」區塊`
+          : `已新增「${sectionLabel(type)}」區塊`,
+        "success",
+      );
       const persistedIndex = persisted.findIndex((item) => item.id === res.section!.id);
       const beforeId =
         persistedIndex >= 0 && persistedIndex < persisted.length - 1
@@ -274,11 +296,58 @@ export default function useCmsEditorCommands(options: Options) {
           anchor
         );
         if (synced && !appendOnly) {
-          preview.reorderSections(persisted.map((item) => item.id));
+          return preview.reorderSections(persisted.map((item) => item.id));
         }
         return synced;
       }, preview.hardRefresh);
       preview.selectSection(sectionId);
+      preview.focusSection(sectionId);
+      return snapshot;
+    } catch (error) {
+      notify(String(error), "error");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function duplicateSection(section: CmsSection) {
+    const anchor = sectionAnchor(section);
+    const group = sections.filter((item) => sectionAnchor(item) === anchor);
+    const localIndex = group.findIndex((item) => item.id === section.id);
+    return addSection(
+      section.type,
+      { anchor, index: localIndex < 0 ? group.length : localIndex + 1 },
+      copyCmsProps(section.props),
+      "複製區塊",
+    );
+  }
+
+  async function moveSection(section: CmsSection, direction: "up" | "down") {
+    const anchor = sectionAnchor(section);
+    const group = sections.filter((item) => sectionAnchor(item) === anchor);
+    const localIndex = group.findIndex((item) => item.id === section.id);
+    const targetIndex = localIndex + (direction === "up" ? -1 : 1);
+    if (localIndex < 0 || targetIndex < 0 || targetIndex >= group.length) {
+      notify("已在此區域的邊界", "info");
+      return;
+    }
+    const neighbor = group[targetIndex];
+    const from = sections.findIndex((item) => item.id === section.id);
+    const to = sections.findIndex((item) => item.id === neighbor.id);
+    const before = sections.map((item) => getSectionRef(item.id));
+    const after = arrayMove(before, from, to);
+    setBusy(true);
+    try {
+      await applyOrder(after);
+      record({
+        label: direction === "up" ? "區塊上移" : "區塊下移",
+        undo: () => applyOrder(before),
+        redo: () => applyOrder(after),
+      });
+      setSelectedId(section.id);
+      preview.selectSection(section.id);
+      preview.focusSection(section.id);
+      notify(direction === "up" ? "區塊已上移" : "區塊已下移", "success");
     } catch (error) {
       notify(String(error), "error");
     } finally {
@@ -325,10 +394,10 @@ export default function useCmsEditorCommands(options: Options) {
     }
   }
 
-  async function toggleVisibility() {
-    if (!selected) return;
-    const reference = getSectionRef(selected.id);
-    const before = selected.is_visible;
+  async function toggleVisibility(target: CmsSection | null = selected) {
+    if (!target) return;
+    const reference = getSectionRef(target.id);
+    const before = target.is_visible;
     const apply = async (isVisible: boolean) => {
       await prepareSection(reference.currentId);
       const res = await api.updateSection({ id: reference.currentId, isVisible });
@@ -357,5 +426,12 @@ export default function useCmsEditorCommands(options: Options) {
     }
   }
 
-  return { addSection, deleteSection, reorder, toggleVisibility };
+  return {
+    addSection,
+    deleteSection,
+    duplicateSection,
+    moveSection,
+    reorder,
+    toggleVisibility,
+  };
 }

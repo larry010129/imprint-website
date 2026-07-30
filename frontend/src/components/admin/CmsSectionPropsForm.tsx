@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 
 import CmsSectionImageField from "@/components/admin/CmsSectionImageField";
 import PageLinkSelect from "@/components/admin/PageLinkSelect";
@@ -19,6 +19,7 @@ type Props = {
   uploadImage?: (file: File) => Promise<ImageUploadResult>;
   onImageUploaded?: (url: string, alt: string) => void | Promise<void>;
   onUploadImage?: (file: File) => Promise<ImageUploadResult>;
+  focusProp?: string | null;
 };
 
 function Field({
@@ -45,16 +46,29 @@ export default function CmsSectionPropsForm({
   uploadImage,
   onImageUploaded,
   onUploadImage,
+  focusProp,
 }: Props) {
+  const formRef = useRef<HTMLDivElement>(null);
   const p = section.props || {};
   const set = (key: string, value: unknown) => onChange({ ...p, [key]: value });
   const imageProp = sectionImagePropKey(section.type, p);
   const uploader = uploadImage || onUploadImage;
+  useEffect(() => {
+    if (!focusProp) return;
+    const control = Array.from(
+      formRef.current?.querySelectorAll<HTMLElement>("[data-cms-prop]") || [],
+    ).find((element) => element.dataset.cmsProp === focusProp);
+    if (!control) return;
+    control.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    requestAnimationFrame(() => control.focus());
+  }, [focusProp, section.id]);
 
   if (section.type === "spacer") {
     return (
+      <div ref={formRef} className="cms-section-props-form">
       <Field label="高度">
         <select
+          data-cms-prop="size"
           value={String(p.size || "md")}
           disabled={disabled}
           onChange={(e) => set("size", e.target.value)}
@@ -64,14 +78,16 @@ export default function CmsSectionPropsForm({
           <option value="lg">大</option>
         </select>
       </Field>
+      </div>
     );
   }
 
   if (section.type === "faq_embed") {
     return (
-      <>
+      <div ref={formRef} className="cms-section-props-form">
         <Field label="顯示筆數">
           <input
+            data-cms-prop="limit"
             type="number"
             min={1}
             max={24}
@@ -82,6 +98,7 @@ export default function CmsSectionPropsForm({
         </Field>
         <Field label="內容範圍">
           <select
+            data-cms-prop="mode"
             value={String(p.mode || "teaser")}
             disabled={disabled}
             onChange={(e) => set("mode", e.target.value)}
@@ -92,6 +109,7 @@ export default function CmsSectionPropsForm({
         </Field>
         <Field label="指定分類">
           <select
+            data-cms-prop="category_id"
             value={String(p.category_id || "")}
             disabled={disabled}
             onChange={(e) => set("category_id", e.target.value)}
@@ -105,15 +123,16 @@ export default function CmsSectionPropsForm({
           </select>
         </Field>
         <p className="cms-hint">FAQ 內容來自後台「內容 → FAQ」，此處僅嵌入。</p>
-      </>
+      </div>
     );
   }
 
   if (section.type === "testimonials_embed") {
     return (
-      <>
+      <div ref={formRef} className="cms-section-props-form">
         <Field label="顯示筆數">
           <input
+            data-cms-prop="limit"
             type="number"
             min={1}
             max={24}
@@ -123,7 +142,7 @@ export default function CmsSectionPropsForm({
           />
         </Field>
         <p className="cms-hint">見證內容來自後台「內容 → 見證」。</p>
-      </>
+      </div>
     );
   }
 
@@ -132,10 +151,26 @@ export default function CmsSectionPropsForm({
       ? (p.buttons as { label: string; href: string }[])
       : [];
     return (
-      <div className="cms-btn-list">
+      <div ref={formRef} className="cms-btn-list cms-section-props-form">
         {buttons.map((btn, index) => (
           <div key={index} className="cms-btn-row">
             <div className="cms-field">
+              <label>
+                <span>按鈕 {index + 1} 文字</span>
+                <input
+                  data-cms-prop="buttons"
+                  value={btn.label || ""}
+                  disabled={disabled}
+                  onChange={(event) => {
+                    const next = buttons.map((item, itemIndex) =>
+                      itemIndex === index
+                        ? { ...item, label: event.target.value }
+                        : item,
+                    );
+                    set("buttons", next);
+                  }}
+                />
+              </label>
               <PageLinkSelect
                 name={`btn-${index}`}
                 label={`按鈕 ${index + 1} 連結`}
@@ -161,11 +196,51 @@ export default function CmsSectionPropsForm({
   }
 
   return (
-    <>
-      <p className="cms-hint">標題、內文與按鈕文字請直接在頁面預覽中編輯。</p>
+    <div ref={formRef} className="cms-section-props-form">
+      <p className="cms-hint">可直接在預覽編輯，也可在此精確調整內容。</p>
+      {(
+        {
+          hero: ["eyebrow", "title", "lead", "cta_label", "cta_secondary_label"],
+          rich_text: ["title", "body"],
+          image_text: ["title", "body", "cta_label"],
+          cta_band: ["title", "lead", "cta_label", "cta_secondary_label"],
+        } as Record<string, string[]>
+      )[section.type]?.map((key) => (
+        <Field
+          key={key}
+          label={
+            {
+              eyebrow: "眉題",
+              title: "標題",
+              lead: "說明",
+              body: "內文",
+              cta_label: "主按鈕文字",
+              cta_secondary_label: "次按鈕文字",
+            }[key] || key
+          }
+        >
+          {key === "body" || key === "lead" ? (
+            <textarea
+              data-cms-prop={key}
+              rows={key === "body" ? 6 : 3}
+              value={String(p[key] || "")}
+              disabled={disabled}
+              onChange={(event) => set(key, event.target.value)}
+            />
+          ) : (
+            <input
+              data-cms-prop={key}
+              value={String(p[key] || "")}
+              disabled={disabled}
+              onChange={(event) => set(key, event.target.value)}
+            />
+          )}
+        </Field>
+      ))}
       {section.type === "rich_text" ? (
         <Field label="欄數">
           <select
+            data-cms-prop="columns"
             value={String(p.columns || 1)}
             disabled={disabled}
             onChange={(e) => set("columns", Number(e.target.value))}
@@ -179,6 +254,7 @@ export default function CmsSectionPropsForm({
       {section.type === "image_text" ? (
         <Field label="圖片位置">
           <select
+            data-cms-prop="layout"
             value={String(p.layout || "stack")}
             disabled={disabled}
             onChange={(e) => set("layout", e.target.value)}
@@ -190,6 +266,7 @@ export default function CmsSectionPropsForm({
         </Field>
       ) : null}
       {imageProp && uploader ? (
+        <div data-cms-prop="image_url" tabIndex={-1}>
         <CmsSectionImageField
           label={section.type === "cta_band" ? "CTA 圖片（選填）" : "區塊圖片"}
           imageUrl={String(p.image_url || "")}
@@ -208,11 +285,13 @@ export default function CmsSectionPropsForm({
             set(imageProp, url);
           }}
         />
+        </div>
       ) : imageProp ? (
         <>
           <Field label="圖片 URL">
             <div className="cms-media-row">
               <input
+                data-cms-prop="image_url"
                 value={String(p.image_url || "")}
                 disabled={disabled}
                 onChange={(e) => set("image_url", e.target.value)}
@@ -229,6 +308,7 @@ export default function CmsSectionPropsForm({
           </Field>
           <Field label="圖片替代文字">
             <input
+              data-cms-prop="image_alt"
               value={String(p.image_alt || "")}
               disabled={disabled}
               onChange={(e) => set("image_alt", e.target.value)}
@@ -268,7 +348,7 @@ export default function CmsSectionPropsForm({
           />
         </div>
       ) : null}
-    </>
+    </div>
   );
 }
 
