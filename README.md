@@ -49,9 +49,9 @@ Dashboard deploy command (current Git integration):
 npx wrangler deploy
 ```
 
-Requires `compatibility_flags = ["python_workers", "disable_python_external_sdk"]` (already in `wrangler.toml`).
+`wrangler.toml` uses `compatibility_date = "2025-08-13"` + `disable_python_external_sdk` so legacy `on_fetch` works with plain `npx wrangler deploy` (avoids error 10068 / missing `workers` SDK).
 
-Optional local package tooling (still not the full app):
+Optional modern path (still not the full app): bump date, use `WorkerEntrypoint`, then:
 
 ```bash
 uv sync

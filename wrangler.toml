@@ -1,15 +1,10 @@
 # Cloudflare Worker stub only — full imprint site deploys on Render.
-# See README "Deploy (Render)" and "Cloudflare Workers".
+# Cloudflare Git integration: npx wrangler deploy
 #
-# Cloudflare dashboard / Git integration typically runs:
-#   npx wrangler deploy
-# which works with this stub + disable_python_external_sdk.
-#
-# For package-aware Python Workers (not this full app):
-#   uv sync && uv run pywrangler deploy
+# compat date ≤ 2025-08-13 keeps legacy `on_fetch` (no workers-py SDK).
+# After 2025-08-14 you must use WorkerEntrypoint + pywrangler.
 
 name = "imprint-website"
 main = "src/entry.py"
-# Must not be ahead of Cloudflare UTC "today".
-compatibility_date = "2026-07-30"
+compatibility_date = "2025-08-13"
 compatibility_flags = ["python_workers", "disable_python_external_sdk"]
