@@ -48,7 +48,7 @@ export function createCmsPreviewBridge(options: {
   function postWithAck(
     action: string,
     payload: Record<string, unknown>,
-    timeoutMs = 500,
+    timeoutMs = 1500,
   ): Promise<boolean> {
     const requestId = `cms-${Date.now()}-${++requestSequence}`;
     return new Promise((resolve) => {
@@ -83,13 +83,17 @@ export function createCmsPreviewBridge(options: {
       try {
         const res = await fetchSectionHtml(sectionId);
         if (res.error || !res.html) return false;
-        return postWithAck("apply-section", {
-          type: "apply-section",
-          sectionId,
-          html: res.html,
-          beforeId: beforeId || null,
-          anchor: anchor || null,
-        });
+        return postWithAck(
+          "apply-section",
+          {
+            type: "apply-section",
+            sectionId,
+            html: res.html,
+            beforeId: beforeId || null,
+            anchor: anchor || null,
+          },
+          1500,
+        );
       } catch {
         return false;
       }

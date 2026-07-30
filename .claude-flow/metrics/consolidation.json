@@ -1,10 +1,11 @@
 {
-  "timestamp": "2026-07-29T11:03:23.617Z",
+  "timestamp": "2026-07-30T11:02:33.709Z",
   "distillationEnabled": true,
   "patternsConsolidated": 0,
   "memoryCleaned": 0,
   "duplicatesRemoved": 0,
   "episodes": 0,
+  "episodeEmbeddings": 0,
   "patternEmbeddings": 0,
   "causalEdges": 0,
   "promoted": 0,

@@ -1,0 +1,695 @@
+
+<div class="container shop-calculator-wrap">
+<div class="shop-page shop-fit shop-wizard" id="shop-page">
+<header class="shop-wizard-header" id="shop-wizard-header">
+<nav aria-label="訂製步驟" class="shop-stepper" id="shop-step-rail">
+<button class="shop-stepper-step is-active" data-step="catalog" id="wizard-step-catalog" type="button">
+<span aria-hidden="true" class="shop-stepper-bar"></span>
+<span class="shop-stepper-label">選品項</span>
+</button>
+<button class="shop-stepper-step" data-step="styles" disabled="" id="wizard-step-styles" type="button">
+<span aria-hidden="true" class="shop-stepper-bar"></span>
+<span class="shop-stepper-label">選款式</span>
+</button>
+<button class="shop-stepper-step" data-step="product" disabled="" id="wizard-step-product" type="button">
+<span aria-hidden="true" class="shop-stepper-bar"></span>
+<span class="shop-stepper-label">配置下單</span>
+</button>
+</nav>
+<div class="shop-wizard-guide" id="shop-wizard-guide">
+<p class="shop-wizard-eyebrow" id="shop-wizard-eyebrow">線上訂製 · 三步完成</p>
+<h1 class="shop-wizard-title" id="shop-wizard-title">先選擇您要的品項</h1>
+<p class="shop-wizard-desc" id="shop-wizard-desc">紀念鑽石、戒指、項墜、耳飾、手鍊或鍊條——點選一個類別即可開始。</p>
+</div>
+</header>
+<nav aria-label="Breadcrumb" class="shop-breadcrumb shop-breadcrumb--compact hidden" id="shop-breadcrumb">
+<ol class="shop-breadcrumb-list">
+<li><span data-i18n="shop_breadcrumb_shop">商品</span></li>
+</ol>
+</nav>
+<div class="shop-scroll">
+<div class="shop-body">
+<div class="shop-main">
+<section class="shop-section shop-section--focus" id="shop-catalog">
+<h2 class="shop-section-title" data-i18n="step_category">選擇品項</h2>
+<div aria-busy="true" class="catalog-grid is-loading" id="catalog-grid">
+<div aria-hidden="true" class="catalog-tile catalog-tile--skeleton"><span class="catalog-tile-skeleton-img"></span><span class="catalog-tile-skeleton-label"></span></div>
+<div aria-hidden="true" class="catalog-tile catalog-tile--skeleton"><span class="catalog-tile-skeleton-img"></span><span class="catalog-tile-skeleton-label"></span></div>
+<div aria-hidden="true" class="catalog-tile catalog-tile--skeleton"><span class="catalog-tile-skeleton-img"></span><span class="catalog-tile-skeleton-label"></span></div>
+<div aria-hidden="true" class="catalog-tile catalog-tile--skeleton"><span class="catalog-tile-skeleton-img"></span><span class="catalog-tile-skeleton-label"></span></div>
+<div aria-hidden="true" class="catalog-tile catalog-tile--skeleton"><span class="catalog-tile-skeleton-img"></span><span class="catalog-tile-skeleton-label"></span></div>
+</div>
+<div class="catalog-filter-empty hidden" id="catalog-empty">
+<p data-i18n="catalog_empty">目前沒有上架商品。</p>
+</div>
+</section>
+<section class="shop-section shop-section--focus hidden" id="shop-styles">
+<button class="shop-back" data-i18n="shop_back_catalog" id="back-to-catalog" type="button">← 返回品項</button>
+<h2 class="shop-section-title" id="shop-category-title"></h2>
+<div class="catalog-filters-bar">
+<div aria-label="款式篩選" class="catalog-filters-toolbar" data-i18n-aria="catalog_filters_group" role="group">
+<details class="catalog-filters-wrap" id="catalog-filters-wrap">
+<summary class="catalog-filters-toggle">
+<span class="catalog-filters-toggle-text" data-i18n="catalog_filters_toggle">篩選款式（選填）</span>
+</summary>
+<div class="catalog-filters" id="catalog-filters">
+<label class="catalog-search">
+<span class="sr-only" data-i18n="catalog_search_label">搜尋款式</span>
+<input data-i18n-placeholder="catalog_search_placeholder" id="catalog-search-input" placeholder="搜尋款式" type="search"/>
+</label>
+<select aria-label="金屬篩選" id="catalog-metal-filter">
+<option data-i18n="catalog_all_metals" value="">所有金屬</option>
+<option value="9k">9K</option>
+<option value="14k">14K</option>
+<option value="18k">18K</option>
+<option value="pt950">Pt950</option>
+<option value="s925">S925</option>
+</select>
+<select aria-label="價格篩選" id="catalog-price-filter">
+<option data-i18n="catalog_all_prices" value="">所有價格</option>
+<option value="under30000">NT$ 30,000 以下</option>
+<option value="30000to80000">NT$ 30,000–80,000</option>
+<option value="over80000">NT$ 80,000 以上</option>
+</select>
+<button data-i18n="catalog_clear_filters" id="catalog-filter-clear" type="button">清除</button>
+</div>
+</details>
+<select aria-label="克拉篩選" class="catalog-carat-filter" id="catalog-carat-filter">
+<option data-i18n="catalog_all_carats" value="">所有克拉</option>
+</select>
+</div>
+</div>
+<div class="type-grid" id="type-grid"></div>
+<div class="catalog-filter-empty hidden" id="catalog-filter-empty">
+<p data-i18n="catalog_no_matches">找不到符合條件的款式。</p>
+<button data-i18n="catalog_clear_filters" id="catalog-filter-empty-clear" type="button">清除篩選</button>
+</div>
+</section>
+<section class="shop-section shop-section--configure hidden" id="shop-product">
+<button class="shop-back" data-i18n="shop_back_styles" id="back-to-styles" type="button">← 更換款式</button>
+<div class="shop-config-notices">
+<div class="ui-alert ui-alert--default" role="alert">
+<svg aria-hidden="true" class="ui-alert__icon" height="16" viewbox="0 0 24 24" width="16">
+<circle cx="12" cy="12" fill="none" r="10" stroke="currentColor" stroke-width="2"></circle>
+<path d="M12 8v4M12 16h.01" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2"></path>
+</svg>
+<p class="ui-alert__description">選擇下方規格，右側會即時顯示試算價格。</p>
+<button class="ui-alert__confirm" data-i18n="ui_alert_confirm" id="shop-config-hint-close" type="button">了解</button>
+</div>
+<div class="ui-alert ui-alert--warning" role="alert">
+<svg aria-hidden="true" class="ui-alert__icon" height="16" viewbox="0 0 24 24" width="16">
+<circle cx="12" cy="12" fill="none" r="10" stroke="currentColor" stroke-width="2"></circle>
+<path d="M12 8v4M12 16h.01" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2"></path>
+</svg>
+<p class="ui-alert__title" data-i18n="shop_preview_color_title" id="product-preview-color-title">鑽石色為示意</p>
+<p class="ui-alert__description" data-i18n="shop_preview_color_desc" id="product-preview-color-desc">畫面僅模擬色調類型，實際成品顏色可能不同。非真實鑽石大小。</p>
+<button class="ui-alert__confirm ui-alert__confirm--warning" data-i18n="ui_alert_confirm" id="shop-config-warning-close" type="button">了解</button>
+</div>
+</div>
+<div class="product-layout product-layout--wizard" id="product-layout">
+<div class="product-gallery-col">
+<div class="product-preview" id="large-image-container">
+<div aria-hidden="true" class="product-preview-composite hidden" id="product-preview-composite">
+<img alt="" class="product-preview-layer product-preview-layer--chain" decoding="async" id="large-image-chain" loading="eager" src=""/>
+<img alt="" class="product-preview-layer product-preview-layer--pendant" decoding="async" id="large-image-pendant" loading="eager" src=""/>
+</div>
+<img alt="" id="large-image" loading="lazy" src=""/>
+<button aria-label="上一張" class="product-gallery-nav product-gallery-prev" hidden="" id="product-gallery-prev" type="button">
+<svg aria-hidden="true" viewbox="0 0 24 24"><path d="M11.03 3.97a.75.75 0 010 1.06l-6.22 6.22H21a.75.75 0 010 1.5H4.81l6.22 6.22a.75.75 0 11-1.06 1.06l-7.5-7.5a.75.75 0 010-1.06l7.5-7.5a.75.75 0 011.06 0z" fill="currentColor"></path></svg>
+</button>
+<button aria-label="下一張" class="product-gallery-nav product-gallery-next" hidden="" id="product-gallery-next" type="button">
+<svg aria-hidden="true" viewbox="0 0 24 24"><path d="M12.97 3.97a.75.75 0 011.06 0l7.5 7.5a.75.75 0 010 1.06l-7.5 7.5a.75.75 0 11-1.06-1.06l6.22-6.22H3a.75.75 0 010-1.5h16.19l-6.22-6.22a.75.75 0 010-1.06z" fill="currentColor"></path></svg>
+</button>
+<span class="product-gallery-counter" hidden="" id="product-gallery-counter"></span>
+<button aria-label="放大圖片" class="product-zoom-btn" hidden="" id="product-zoom-btn" title="放大圖片" type="button">
+<svg aria-hidden="true" height="16" viewbox="0 0 24 24" width="16"><path d="M10.5 3a7.5 7.5 0 015.89 12.13l4.36 4.36a1 1 0 01-1.42 1.42l-4.36-4.36A7.5 7.5 0 1110.5 3zm0 2a5.5 5.5 0 100 11 5.5 5.5 0 000-11z" fill="currentColor"></path></svg>
+<span data-i18n="shop_zoom_image">放大圖片</span>
+</button>
+</div>
+<div class="product-image-thumbs" hidden="" id="product-image-thumbs"></div>
+</div>
+<div class="product-buy-col" id="product-buy-col">
+<header class="product-info-header" id="product-info-header">
+<p class="product-subtitle" id="product-subtitle"></p>
+<div class="product-title-row">
+<h2 class="product-title" id="product-title">—</h2>
+<button aria-label="收藏此配置" class="favorite-toggle" id="favorite-btn" title="收藏此配置" type="button">♡</button>
+</div>
+<div class="config-chips" id="config-chips"></div>
+</header>
+<div class="product-info-tabs product-info-tabs--collapsed" id="product-info-tabs">
+<details class="product-about-details">
+<summary data-i18n="shop_tab_description">商品說明與價格備註</summary>
+<div aria-label="Product information" class="product-tab-nav" hidden="" role="tablist">
+<button aria-selected="true" class="product-tab-btn active" data-i18n="shop_tab_description" data-tab="description" id="product-tab-description" role="tab" type="button">商品說明</button>
+<button aria-selected="false" class="product-tab-btn" data-i18n="shop_tab_pricing" data-tab="pricing" id="product-tab-pricing" role="tab" type="button">價格說明</button>
+</div>
+<div class="product-tab-panels">
+<div class="product-tab-panel active" id="product-panel-description" role="tabpanel">
+<p class="product-description" data-i18n="shop_no_description" id="product-description">此商品暫無說明。</p>
+</div>
+<div class="product-tab-panel" hidden="" id="product-panel-pricing" role="tabpanel">
+<p class="product-tab-copy" data-i18n="shop_price_estimate_notice">價格為預估價；鑽石價格為牌價。實際金額可能因市場浮動有 ±10%。</p>
+</div>
+</div>
+</details>
+</div>
+<div class="product-options-section" id="product-options-section">
+<div class="variant-group" id="carat-step">
+<h3 class="variant-label" data-i18n="step_carat">選擇克拉數</h3>
+<select aria-label="選擇克拉數" class="carat-select" id="carat-select">
+<option data-i18n="carat_placeholder" value="">選擇克拉</option>
+</select>
+</div>
+<div class="variant-group" id="fancy-diamond-step">
+<div class="variant-label-row fancy-color-label-row">
+<h3 class="variant-label" data-i18n="step_diamond_color">選擇鑽石顏色</h3>
+<p class="diamond-shape-hint diamond-shape-hint--inline" data-i18n="diamond_fancy_min_carat" id="diamond-fancy-min-carat-notice" role="note">※ 彩鑽需 0.3ct 以上</p>
+</div>
+<div class="diamond-carousel-wrap">
+<button aria-label="Previous" class="diamond-carousel-nav" hidden="" id="fancy-color-prev" type="button">‹</button>
+<div class="diamond-carousel" id="fancy-color-carousel"></div>
+<button aria-label="Next" class="diamond-carousel-nav" hidden="" id="fancy-color-next" type="button">›</button>
+</div>
+</div>
+<div class="variant-group hidden" id="diamond-shape-step">
+<h3 class="variant-label" data-i18n="step_diamond_shape">選擇鑽石切工</h3>
+<div class="variant-chips" id="diamond-shape-row"></div>
+<div class="diamond-shape-other-wrap" hidden="" id="diamond-shape-other-wrap">
+<span class="variant-label variant-label--sub" data-i18n="step_diamond_shape_other" id="diamond-shape-other-label">選擇形狀</span>
+<div class="diamond-shape-picker" id="diamond-shape-other-picker">
+<button aria-controls="diamond-shape-other-listbox" aria-expanded="false" aria-haspopup="listbox" aria-labelledby="diamond-shape-other-label diamond-shape-other-value" class="diamond-shape-picker__trigger" id="diamond-shape-other-trigger" type="button">
+<span aria-hidden="true" class="diamond-shape-picker__avatar">
+<img alt="" height="28" id="diamond-shape-other-image" src="" width="28"/>
+</span>
+<span class="diamond-shape-picker__text">
+<span class="diamond-shape-picker__value" id="diamond-shape-other-value"></span>
+<span class="diamond-shape-picker__meta" id="diamond-shape-other-meta"></span>
+</span>
+<svg aria-hidden="true" class="diamond-shape-picker__chevrons" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24" width="16">
+<path d="m7 15 5 5 5-5"></path>
+<path d="m7 9 5-5 5 5"></path>
+</svg>
+</button>
+<div class="diamond-shape-picker__popover" hidden="" id="diamond-shape-other-popover">
+<div class="diamond-shape-picker__title" data-i18n="step_diamond_shape_other">選擇形狀</div>
+<div aria-labelledby="diamond-shape-other-label" class="diamond-shape-picker__options" id="diamond-shape-other-listbox" role="listbox"></div>
+</div>
+</div>
+</div>
+<p class="diamond-shape-hint" data-i18n="diamond_shape_min_carat" id="diamond-shape-min-carat-notice" role="note">※ 溫馨提醒：除圓鑽外，其餘切工需 0.3 克拉（30 分）以上方可選擇與製作。</p>
+</div>
+<div class="variant-group hidden" id="stone-count-step">
+<h3 class="variant-label" data-i18n="step_stone_count" id="stone-count-step-label">選擇鑽石顆數</h3>
+<div class="stone-count-stepper" hidden="" id="stone-count-stepper">
+<div aria-labelledby="stone-count-step-label" class="stone-count-field" role="group">
+<button aria-label="減少顆數" class="stone-count-btn stone-count-btn--dec" data-i18n-aria="stone_count_decrease" id="stone-count-dec" type="button">
+<svg aria-hidden="true" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-width="2" viewbox="0 0 24 24" width="16"><path d="M5 12h14"></path></svg>
+</button>
+<input aria-label="鑽石顆數" class="stone-count-input" data-i18n-aria="stone_count_input" id="stone-count-input" inputmode="numeric" max="4" min="1" step="1" type="number" value="1"/>
+<button aria-label="增加顆數" class="stone-count-btn stone-count-btn--inc" data-i18n-aria="stone_count_increase" id="stone-count-inc" type="button">
+<svg aria-hidden="true" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-width="2" viewbox="0 0 24 24" width="16"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>
+</button>
+</div>
+</div>
+<div class="stone-count-discount" id="stone-count-discount">
+<p class="stone-count-discount__title" data-i18n="stone_count_table_title">多顆珍藏方案</p>
+<table aria-describedby="stone-count-discount-note" class="stone-count-discount-table">
+<thead>
+<tr>
+<th data-i18n="stone_count_table_carat" scope="col">克拉</th>
+<th scope="col">2 <span data-i18n="stone_count_table_stones">顆</span></th>
+<th scope="col">3 <span data-i18n="stone_count_table_stones">顆</span></th>
+<th scope="col">4 <span data-i18n="stone_count_table_stones">顆</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th data-i18n="stone_count_table_below" scope="row">0.30 以下</th>
+<td data-i18n="stone_count_disc_95">95 折</td>
+<td data-i18n="stone_count_disc_85">85 折</td>
+<td data-i18n="stone_count_disc_85">85 折</td>
+</tr>
+<tr>
+<th data-i18n="stone_count_table_above" scope="row">0.30 以上</th>
+<td data-i18n="stone_count_disc_85">85 折</td>
+<td data-i18n="stone_count_disc_80">8 折</td>
+<td data-i18n="stone_count_disc_75">75 折</td>
+</tr>
+</tbody>
+</table>
+<p class="stone-count-discount__note cfg-note" data-i18n="stone_count_table_note" id="stone-count-discount-note">（僅供參考）</p>
+</div>
+</div>
+<div class="variant-group" id="metal-step">
+<h3 class="variant-label" data-i18n="step_metal">選擇材質</h3>
+<div class="variant-chips" id="metal-btn-row"></div>
+</div>
+<div class="variant-group hidden" id="color-step">
+<h3 class="variant-label" data-i18n="step_color" id="color-step-label">選擇金屬顏色</h3>
+<div class="variant-chips variant-chips--colors" id="color-btn-row"></div>
+</div>
+<div class="variant-group hidden" id="ringsize-step">
+<h3 class="variant-label" data-i18n="step_ring_size">選擇國際戒圍</h3>
+<select aria-label="Ring size" class="ring-size-select" id="ring-size-select">
+<option data-i18n="ring_size_placeholder" value="">請選擇國際戒圍</option>
+</select>
+</div>
+<div class="variant-group hidden" id="engraving-band-step">
+<h3 class="variant-label" data-i18n="step_engraving_band">戒圈刻字</h3>
+<input class="engraving-input" data-i18n-placeholder="engraving_placeholder" id="engraving-band-input" maxlength="10" placeholder="選填，最多 10 個字" type="text"/>
+</div>
+<div class="variant-group hidden" id="engraving-girdle-step">
+<h3 class="variant-label" data-i18n="step_engraving_girdle">鑽石腰圍刻字</h3>
+<div class="cfg-engrave shop-girdle-engrave">
+<div class="shop-girdle-engrave__form">
+<div aria-label="鑽石腰圍刻字內容" class="cfg-engrave-input" contenteditable="true" data-placeholder="e.g. LOVE / 2024 / initials" id="shop-girdle-engrave-input" role="textbox"></div>
+<span class="cfg-count" id="shop-girdle-engrave-count">0 / 12</span>
+<p class="cfg-engrave-hint" data-i18n="engraving_girdle_hint" id="shop-girdle-engrave-hint">僅限英數字與圖騰，圖騰每個算 2 字，最多 12 字（0.3 克拉以上尚可雕刻中文）</p>
+<p class="cfg-engrave-label">插入圖騰</p>
+<div class="cfg-emblems">
+<button aria-label="插入蝴蝶結圖騰" class="cfg-emblem" data-emblem="bow" type="button"><svg viewbox="0 0 24 24"><path d="M12 12L4 6v12l8-6z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.6"></path><path d="M12 12l8-6v12l-8-6z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.6"></path><circle cx="12" cy="12" fill="currentColor" r="1.6"></circle></svg></button>
+<button aria-label="插入幸運草圖騰" class="cfg-emblem" data-emblem="clover" type="button"><svg viewbox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="7.5" r="3.6"></circle><circle cx="12" cy="16.5" r="3.6"></circle><circle cx="7.5" cy="12" r="3.6"></circle><circle cx="16.5" cy="12" r="3.6"></circle></g></svg></button>
+<button aria-label="插入無限符號圖騰" class="cfg-emblem" data-emblem="infinity" type="button"><svg viewbox="0 0 24 24"><path d="M7 9a3 3 0 100 6 5 5 0 004-2 5 5 0 004 2 3 3 0 100-6 5 5 0 00-4 2 5 5 0 00-4-2z" fill="none" stroke="currentColor" stroke-width="1.6"></path></svg></button>
+<button aria-label="插入愛心圖騰" class="cfg-emblem" data-emblem="heart" type="button"><svg viewbox="0 0 24 24"><path d="M12 20s-7-4.6-9.3-9A5 5 0 0112 6a5 5 0 019.3 5c-2.3 4.4-9.3 9-9.3 9z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.6"></path></svg></button>
+<button aria-label="插入雙愛心圖騰" class="cfg-emblem" data-emblem="hearts" type="button"><svg viewbox="0 0 24 24"><path d="M9 17s-5-3.2-6.6-6.3A3.6 3.6 0 019 8a3.6 3.6 0 016.6 2.7C14 13.8 9 17 9 17z" fill="none" stroke="currentColor" stroke-width="1.4"></path><path d="M16.5 19.2s-4.4-2.8-5.7-5.5a3.1 3.1 0 015.7-2.3 3.1 3.1 0 015.7 2.3c-1.3 2.7-5.7 5.5-5.7 5.5z" fill="none" stroke="currentColor" stroke-width="1.4"></path></svg></button>
+<button aria-label="插入肉球圖騰" class="cfg-emblem" data-emblem="paw" type="button"><svg viewbox="0 0 24 24"><g fill="currentColor"><ellipse cx="12" cy="16.2" rx="5" ry="4"></ellipse><circle cx="5.6" cy="9.2" r="2"></circle><circle cx="10.4" cy="5.8" r="2"></circle><circle cx="13.6" cy="5.8" r="2"></circle><circle cx="18.4" cy="9.2" r="2"></circle></g></svg></button>
+<button aria-label="插入骨頭圖騰" class="cfg-emblem" data-emblem="bone" type="button"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" viewbox="0 0 24 24"><path d="M4.9 4.9a2.5 2.5 0 013.5 0l.7.7a2.5 2.5 0 010 3.6L7.8 10.6l5.6 5.6 1.3-1.4a2.5 2.5 0 013.6 0l.7.7a2.5 2.5 0 01-3.6 3.5l-.7-.7a2.5 2.5 0 010-3.5l-1.3 1.3-5.6-5.6-1.4 1.3a2.5 2.5 0 01-3.5 0l-.7-.7a2.5 2.5 0 010-3.6z"></path></svg></button>
+<button aria-label="插入戒圈圖騰" class="cfg-emblem" data-emblem="ring" type="button"><svg viewbox="0 0 24 24"><circle cx="12" cy="14.5" fill="none" r="6" stroke="currentColor" stroke-width="1.6"></circle><path d="M9.4 8.6L12 4l2.6 4.6" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.6"></path></svg></button>
+</div>
+</div>
+<div class="cfg-engrave-preview shop-girdle-engrave__preview">
+<img alt="" aria-hidden="true" class="cfg-engrave-gem" decoding="async" height="360" loading="lazy" src="/static/images/shop/girdle/girdle-zoom-white.jpg?v=7" width="640"/>
+<div aria-hidden="true" class="cfg-engrave-preview-text" id="shop-girdle-engrave-preview"></div>
+</div>
+</div>
+</div>
+<div class="variant-group hidden" id="pendant-chain-step">
+<h3 class="variant-label" data-i18n="step_pendant_chain">搭配鏈條</h3>
+<div class="variant-chips" id="pendant-chain-toggle-row">
+<button class="variant-chip pendant-chain-toggle" data-i18n="pendant_only" data-include-chain="false" type="button">僅墜子</button>
+<button class="variant-chip pendant-chain-toggle" data-i18n="pendant_with_chain" data-include-chain="true" type="button">含鍊</button>
+</div>
+<div class="pendant-chain-options hidden" id="pendant-chain-options">
+<div class="variant-group pendant-chain-length">
+<h3 class="variant-label" data-i18n="step_chain_length">選擇鏈條長度</h3>
+<select aria-label="Chain length" class="ring-size-select" id="pendant-chain-length-select">
+<option data-i18n="chain_length_placeholder" value="">請選擇鏈條長度</option>
+</select>
+</div>
+</div>
+</div>
+<div class="variant-group hidden" id="chain-length-step">
+<h3 class="variant-label" data-i18n="step_chain_length">選擇鏈條長度</h3>
+<select aria-label="Chain length" class="ring-size-select" id="chain-length-select">
+<option data-i18n="chain_length_placeholder" value="">請選擇鏈條長度</option>
+</select>
+</div>
+</div><!-- /.product-options-section -->
+</div>
+</div>
+</section>
+</div><!-- /.shop-main -->
+<aside aria-live="polite" class="shop-price-panel shop-price-panel--wizard is-loading-prices" id="shop-price-panel">
+<div class="shop-price-panel-head">
+<span class="shop-price-panel-label">試算總價</span>
+<div class="hero-price">
+<span class="hero-price-currency">NT$</span>
+<span class="hero-price-amount" id="sum-total">—</span>
+</div>
+</div>
+<p class="hero-price-hint" data-i18n="shop_complete_options" id="price-hint">請完成選項以查看價格</p>
+<p class="hero-price-disclaimer" data-i18n="shop_price_estimate_notice">價格為預估價；鑽石價格為牌價。實際金額可能因市場浮動有 ±10%。</p>
+<details class="price-breakdown-details" id="price-breakdown-details" open="">
+<summary class="price-breakdown-title" data-i18n="shop_price_breakdown">價格明細</summary>
+<div class="price-breakdown-panel">
+<div class="breakdown-rows">
+<div class="summary-row"><span class="lbl" data-i18n="sum_item">品項</span><span class="colon">：</span><span class="val" id="sum-cat">-</span></div>
+<div class="summary-row" id="sum-type-row"><span class="lbl" data-i18n="sum_style">款式</span><span class="colon">：</span><span class="val" id="sum-type">-</span></div>
+<div class="summary-row"><span class="lbl" data-i18n="sum_material">金屬材質</span><span class="colon">：</span><span class="val" id="sum-material">-</span></div>
+<div class="summary-row" id="sum-carat-row"><span class="lbl" data-i18n="sum_carat">克拉</span><span class="colon">：</span><span class="val" id="sum-carat">-</span></div>
+<div class="summary-row" id="sum-diamond-color-row"><span class="lbl" data-i18n="table_diamond_color">鑽石顏色</span><span class="colon">：</span><span class="val" id="sum-diamond-color">-</span></div>
+<div class="summary-row hidden" id="sum-length-row"><span class="lbl" data-i18n="sum_length">長度</span><span class="colon">：</span><span class="val" id="sum-length">-</span></div>
+<hr/>
+<div class="summary-row" id="sum-diamond-row"><span class="lbl" data-i18n="sum_diamond">鑽石價格</span><span class="colon">：</span><span class="val">NT$ <span id="sum-diamond-price">0</span></span></div>
+<div class="summary-row hidden" id="sum-side-stone-cts-row"><span class="lbl" data-i18n="sum_side_stone_cts">配鑽克拉</span><span class="colon">：</span><span class="val"><span id="sum-side-stone-cts">-</span> ct</span></div>
+<div class="summary-row hidden" id="sum-side-stone-row"><span class="lbl" data-i18n="sum_side_stone_price">配鑽價錢</span><span class="colon">：</span><span class="val">NT$ <span id="sum-side-stone-price">-</span></span></div>
+<div class="summary-row"><span class="lbl" data-i18n="sum_metalwork_price">金工價格</span><span class="colon">：</span><span class="val">NT$ <span id="sum-metalwork-price">-</span></span></div>
+<div class="summary-row hidden" id="sum-chain-row"><span class="lbl" data-i18n="sum_chain_price">搭配鏈條</span><span class="colon">：</span><span class="val">NT$ <span id="sum-chain-price">-</span></span></div>
+</div>
+</div>
+</details>
+<div class="shop-action-row shop-action-row--primary" id="shop-action-row">
+<button class="shop-cta" data-i18n="btn_add_order" id="confirm-btn" type="button">確認訂購</button>
+<button class="shop-cta shop-cta--secondary" data-i18n="btn_add_cart" id="cart-btn" type="button">加入購物車</button>
+</div>
+<div class="shop-secondary-actions shop-secondary-actions--compact">
+<button data-i18n="btn_share_summary" disabled="" id="share-config-btn" type="button">分享</button>
+<button data-i18n="btn_quote_sheet" disabled="" id="quote-sheet-btn" type="button">報價單</button>
+</div>
+</aside>
+</div><!-- /.shop-body -->
+<div class="variant-group variant-group--size-guide shop-options-end hidden" id="ringsize-guide-step">
+<div class="ring-size-guide-inline ring-size-guide-inline--product ring-size-guide-inline--static ring-size-guide-inline--large">
+<p class="ring-size-guide-inline__title" data-i18n="ring_size_inline_title">戒圍量測方式</p>
+<div class="ring-size-guide-inline__content ring-size-guide-inline__layout">
+<div class="ring-size-guide-inline__aside">
+<ol class="ring-size-guide-inline__steps">
+<li data-i18n="ring_size_inline_step_1">用細紙條繞過手指最寬處。</li>
+<li data-i18n="ring_size_inline_step_2">在紙條交會處做記號，勿過緊或過鬆。</li>
+<li data-i18n="ring_size_inline_step_3">攤平量出長度，依內周長對照戒圍。</li>
+</ol>
+<img alt="戒圍尺寸對照表" class="guide-image" loading="lazy" src="/static/images/shop/guides/ring-size-chart.png"/>
+<p class="ring-size-guide-inline__note" data-i18n="ring_size_inline_note">建議測量 2 至 3 次取平均值。寬版戒指可預留較鬆尺寸。</p>
+</div>
+<div class="ring-size-guide-inline__table-col">
+<div aria-label="戒圍尺寸表" class="ring-size-guide-inline__scroll" role="region" tabindex="0">
+<table class="ring-size-guide-inline__table">
+<thead>
+<tr>
+<th data-i18n="ring_size_col_tw" scope="col">國際圍</th>
+<th data-i18n="ring_size_inline_diameter" scope="col">內直徑 cm</th>
+<th data-i18n="ring_size_inline_circumference" scope="col">內周長 cm</th>
+</tr>
+</thead>
+<tbody>
+<tr><th scope="row">#4</th><td>1.30</td><td>4.10</td></tr>
+<tr><th scope="row">#5</th><td>1.35</td><td>4.25</td></tr>
+<tr><th scope="row">#6</th><td>1.40</td><td>4.39</td></tr>
+<tr><th scope="row">#7</th><td>1.45</td><td>4.55</td></tr>
+<tr><th scope="row">#8</th><td>1.50</td><td>4.71</td></tr>
+<tr><th scope="row">#9</th><td>1.55</td><td>4.87</td></tr>
+<tr><th scope="row">#10</th><td>1.60</td><td>5.02</td></tr>
+<tr><th scope="row">#11</th><td>1.65</td><td>5.18</td></tr>
+<tr><th scope="row">#12</th><td>1.70</td><td>5.34</td></tr>
+<tr><th scope="row">#13</th><td>1.75</td><td>5.50</td></tr>
+<tr><th scope="row">#14</th><td>1.80</td><td>5.65</td></tr>
+<tr><th scope="row">#15</th><td>1.85</td><td>5.81</td></tr>
+<tr><th scope="row">#16</th><td>1.90</td><td>5.97</td></tr>
+<tr><th scope="row">#17</th><td>1.95</td><td>6.12</td></tr>
+<tr><th scope="row">#18</th><td>2.00</td><td>6.28</td></tr>
+<tr><th scope="row">#19</th><td>2.05</td><td>6.44</td></tr>
+<tr><th scope="row">#20</th><td>2.10</td><td>6.59</td></tr>
+<tr><th scope="row">#21</th><td>2.15</td><td>6.75</td></tr>
+<tr><th scope="row">#22</th><td>2.20</td><td>6.91</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="shop-options-end hidden" id="chain-length-end">
+<div class="variant-group variant-group--size-guide" id="chain-length-guide-step">
+<div class="ring-size-guide-inline ring-size-guide-inline--product ring-size-guide-inline--static ring-size-guide-inline--large chain-length-guide-inline" id="chain-length-guide-necklace-inline">
+<p class="ring-size-guide-inline__title" data-i18n="chain_length_guide_open">長度參考</p>
+<div class="ring-size-guide-inline__content chain-length-guide-inline__layout">
+<div class="chain-length-guide-inline__aside">
+<p class="chain-length-guide-inline__intro" data-i18n="chain_length_guide_intro">選擇適合您的項鍊長度；實際配戴效果可能因身形而異。</p>
+<p class="chain-length-guide-inline__subtitle" data-i18n="chain_length_guide_necklace_title">項鍊／鏈條長度</p>
+<p class="chain-length-guide-inline__method" data-i18n="chain_length_guide_necklace_method">將鏈條平量總長度，或比對現有項鍊從扣環到墜子連接處的長度。</p>
+<img alt="項鍊尺寸示意圖" class="guide-image" loading="lazy" src="/static/images/shop/guides/necklace-length-guide.png"/>
+</div>
+<div class="chain-length-guide-inline__table-col">
+<div aria-label="項鍊鏈條長度表" class="ring-size-guide-inline__scroll" role="region" tabindex="0">
+<table class="ring-size-guide-inline__table chain-length-guide-inline__table">
+<thead>
+<tr>
+<th data-i18n="chain_length_col_cm" scope="col">長度</th>
+<th data-i18n="chain_length_col_position" scope="col">配戴位置</th>
+</tr>
+</thead>
+<tbody>
+<tr><th scope="row">35 cm</th><td data-i18n="chain_length_35">貼頸／鎖骨上方（短項鍊）</td></tr>
+<tr><th scope="row">40 cm</th><td data-i18n="chain_length_40">鎖骨位置</td></tr>
+<tr><th scope="row">46 cm</th><td data-i18n="chain_length_46">鎖骨下方至胸前（常見）</td></tr>
+<tr><th scope="row">50 cm</th><td data-i18n="chain_length_50">胸前</td></tr>
+<tr><th scope="row">56 cm</th><td data-i18n="chain_length_56">胸前偏下</td></tr>
+<tr><th scope="row">60 cm</th><td data-i18n="chain_length_60">長項鍊／可雙圈</td></tr>
+<tr><th scope="row">66 cm</th><td data-i18n="chain_length_66">中長項鍊</td></tr>
+<tr><th scope="row">70 cm</th><td data-i18n="chain_length_70">中長項鍊</td></tr>
+<tr><th scope="row">76 cm</th><td data-i18n="chain_length_76">長項鍊</td></tr>
+<tr><th scope="row">80 cm</th><td data-i18n="chain_length_80">長項鍊</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+<div class="ring-size-guide-inline ring-size-guide-inline--product ring-size-guide-inline--static ring-size-guide-inline--large chain-length-guide-inline hidden" id="chain-length-guide-bracelet-inline">
+<p class="ring-size-guide-inline__title" data-i18n="chain_length_guide_open">長度參考</p>
+<div class="ring-size-guide-inline__content chain-length-guide-inline__layout">
+<div class="chain-length-guide-inline__aside">
+<p class="chain-length-guide-inline__intro" data-i18n="bracelet_length_guide_intro">選擇適合您的手鍊長度；實際配戴效果可能因腕圍而異。</p>
+<p class="chain-length-guide-inline__subtitle" data-i18n="chain_length_guide_bracelet_title">手鍊長度</p>
+<p class="chain-length-guide-inline__method" data-i18n="chain_length_guide_bracelet_method">用軟尺繞手腕最細處一圈並記錄；手鍊通常比手圍長 1–2 cm 較舒適。</p>
+</div>
+<div class="chain-length-guide-inline__table-col">
+<div aria-label="手鍊長度表" class="ring-size-guide-inline__scroll" role="region" tabindex="0">
+<table class="ring-size-guide-inline__table chain-length-guide-inline__table">
+<thead>
+<tr>
+<th data-i18n="chain_length_col_cm" scope="col">長度</th>
+<th data-i18n="chain_length_col_position" scope="col">配戴位置</th>
+</tr>
+</thead>
+<tbody>
+<tr><th scope="row">15 cm</th><td data-i18n="bracelet_length_15">兒童／細腕</td></tr>
+<tr><th scope="row">16 cm</th><td data-i18n="bracelet_length_16">一般女性（偏緊）</td></tr>
+<tr><th scope="row">17 cm</th><td data-i18n="bracelet_length_17">一般女性</td></tr>
+<tr><th scope="row">18 cm</th><td data-i18n="bracelet_length_18">標準女性（預設參考）</td></tr>
+<tr><th scope="row">19 cm</th><td data-i18n="bracelet_length_19">一般男性／寬腕</td></tr>
+<tr><th scope="row">20 cm</th><td data-i18n="bracelet_length_20">寬腕</td></tr>
+<tr><th scope="row">21 cm</th><td data-i18n="bracelet_length_21">較寬腕圍</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="variant-group variant-group--size-guide hidden" id="pendant-chain-guide-step">
+<div class="ring-size-guide-inline ring-size-guide-inline--product ring-size-guide-inline--static ring-size-guide-inline--large chain-length-guide-inline">
+<p class="ring-size-guide-inline__title" data-i18n="chain_length_guide_open">長度參考</p>
+<div class="ring-size-guide-inline__content chain-length-guide-inline__layout">
+<div class="chain-length-guide-inline__aside">
+<p class="chain-length-guide-inline__intro" data-i18n="chain_length_guide_intro">選擇適合您的項鍊長度；實際配戴效果可能因身形而異。</p>
+<p class="chain-length-guide-inline__subtitle" data-i18n="chain_length_guide_necklace_title">項鍊／鏈條長度</p>
+<p class="chain-length-guide-inline__method" data-i18n="chain_length_guide_necklace_method">將鏈條平量總長度，或比對現有項鍊從扣環到墜子連接處的長度。</p>
+<img alt="項鍊尺寸示意圖" class="guide-image" loading="lazy" src="/static/images/shop/guides/necklace-length-guide.png"/>
+</div>
+<div class="chain-length-guide-inline__table-col">
+<div aria-label="項鍊鏈條長度表" class="ring-size-guide-inline__scroll" role="region" tabindex="0">
+<table class="ring-size-guide-inline__table chain-length-guide-inline__table">
+<thead>
+<tr>
+<th data-i18n="chain_length_col_cm" scope="col">長度</th>
+<th data-i18n="chain_length_col_position" scope="col">配戴位置</th>
+</tr>
+</thead>
+<tbody>
+<tr><th scope="row">35 cm</th><td data-i18n="chain_length_35">貼頸／鎖骨上方（短項鍊）</td></tr>
+<tr><th scope="row">40 cm</th><td data-i18n="chain_length_40">鎖骨位置</td></tr>
+<tr><th scope="row">46 cm</th><td data-i18n="chain_length_46">鎖骨下方至胸前（常見）</td></tr>
+<tr><th scope="row">50 cm</th><td data-i18n="chain_length_50">胸前</td></tr>
+<tr><th scope="row">56 cm</th><td data-i18n="chain_length_56">胸前偏下</td></tr>
+<tr><th scope="row">60 cm</th><td data-i18n="chain_length_60">長項鍊／可雙圈</td></tr>
+<tr><th scope="row">66 cm</th><td data-i18n="chain_length_66">中長項鍊</td></tr>
+<tr><th scope="row">70 cm</th><td data-i18n="chain_length_70">中長項鍊</td></tr>
+<tr><th scope="row">76 cm</th><td data-i18n="chain_length_76">長項鍊</td></tr>
+<tr><th scope="row">80 cm</th><td data-i18n="chain_length_80">長項鍊</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div><!-- /#chain-length-end -->
+</div><!-- /.shop-scroll -->
+</div>
+<dialog aria-describedby="shop-terms-desc" aria-labelledby="shop-terms-title" class="shop-terms-dialog" id="shop-terms-dialog">
+<header class="shop-terms-header">
+<h2 id="shop-terms-title">線上訂製條款與須知</h2>
+<p class="shop-terms-desc" id="shop-terms-desc">使用銘印鑽石 IMPRINT DIAMOND 線上訂製試算前，請詳閱以下條款。</p>
+</header>
+<div class="shop-terms-scroll">
+<article class="shop-terms-sections">
+<section class="shop-terms-section">
+<p><strong>一、條款接受</strong></p>
+<p>進入並使用本訂製試算頁，即表示您已閱讀、理解並同意受本條款約束；若不同意，請停止使用並離開本頁。</p>
+</section>
+<section class="shop-terms-section">
+<p><strong>二、試算價格</strong></p>
+<p>頁面顯示之總價、鑽石價格、金工價格及台銀金價換算結果均為<strong>預估參考</strong>，非最終報價。鑽石牌價、金價及匯率可能浮動，實際金額可能與試算結果有 ±10% 或更大差異，正式金額以顧問書面或系統訂單確認為準。</p>
+</section>
+<section class="shop-terms-section">
+<p><strong>三、鑽石顏色與預覽</strong></p>
+<p>網站所呈現之鑽石顏色、渲染圖及商品預覽僅為<strong>色調類型示意</strong>，受螢幕、光線及拍攝條件影響，<strong>不代表實際成品顏色、淨度、切工或火彩</strong>。實品以實物及出貨檢驗為準。</p>
+</section>
+<section class="shop-terms-section">
+<p><strong>四、訂製品與交期</strong></p>
+<p>本服務所訂製之珠寶屬<strong>客製化商品</strong>，除法律另有規定或本公司書面同意外，<strong>不接受退換貨</strong>。交期、規格變更及可否取消，以個案顧問確認為準。</p>
+</section>
+<section class="shop-terms-section">
+<p><strong>五、訂金與付款</strong></p>
+<p>線上試算不代表訂單成立。正式訂單需經顧問確認規格、報價及<strong>訂金／付款方式</strong>後始生效。訂金比例、尾款期限、取消及退款條件，以雙方確認之合約或訂單條款為準。</p>
+</section>
+<section class="shop-terms-section">
+<p><strong>六、個人資料</strong></p>
+<p>為完成訂製、刻字、DNA 鑽石相關服務及訂單聯繫，我們可能收集您提供之姓名、聯絡方式、尺寸、刻字內容及其他訂製資訊，並依本公司隱私政策及適用法律使用與保存。請勿於刻字欄位輸入不必要之敏感個資。</p>
+</section>
+<section class="shop-terms-section">
+<p><strong>七、責任限制與準據法</strong></p>
+<p>在法律允許範圍內，本公司對因使用試算結果、預覽圖或第三方金價資料所生之間接或衍生損害不負賠償責任。本條款以<strong>中華民國法律</strong>為準據法；如有爭議，以台灣台北地方法院為第一審管轄法院，法律另有強制規定者從其規定。</p>
+</section>
+<section class="shop-terms-section">
+<p><strong>八、條款修訂</strong></p>
+<p>本公司得隨時修訂本條款並於網站公布；修訂後您繼續使用本訂製服務，視為接受新條款。重大變更時，我們將以合理方式通知。</p>
+</section>
+</article>
+</div>
+<footer class="shop-terms-footer">
+<p class="shop-terms-scroll-hint" id="shop-terms-scroll-hint">請捲動閱讀完整條款後再同意</p>
+<div class="shop-terms-actions">
+<button class="shop-terms-btn shop-terms-btn--outline" id="shop-terms-decline" type="button">不同意</button>
+<button class="shop-terms-btn shop-terms-btn--primary" disabled="" id="shop-terms-agree" type="button">我同意</button>
+</div>
+</footer>
+</dialog>
+<dialog class="ring-size-guide-dialog" id="ring-size-guide-dialog">
+<div class="ring-size-guide-header">
+<div>
+<h2 data-i18n="ring_size_guide_title">戒圍對照表</h2>
+<p data-i18n="ring_size_guide_intro">國際圍為台灣常用標準；請以實際配戴手指測量為準。</p>
+</div>
+<button aria-label="Close" class="ring-size-guide-close" id="ring-size-guide-close" type="button">x</button>
+</div>
+<p class="ring-size-guide-method" data-i18n="ring_size_guide_method">用紙條或細線繞手指根部一圈並標記，量出長度後對照下表；建議於傍晚、常溫時測量。</p>
+<div class="guide-method-grid">
+<section class="guide-card">
+<h3 class="guide-section-title" data-i18n="ring_size_guide_steps_title">量測步驟</h3>
+<p class="guide-section-text" data-i18n="ring_size_guide_steps">1. 準備線/紙條與尺 → 2. 繞指根一圈標記 → 3. 量長度(mm) → 4. 對照戒圍表 → 5. 注意時段與溫度影響</p>
+</section>
+<section class="guide-card">
+<h3 class="guide-section-title" data-i18n="ring_size_guide_method2_title">方法二：量現有戒指</h3>
+<p class="guide-section-text" data-i18n="ring_size_guide_method2">拿一枚經常穿戴的戒指，平放在尺上測量內直徑，再對照下表。</p>
+</section>
+</div>
+<section class="guide-section guide-section--chart">
+<h3 class="guide-section-title" data-i18n="ring_size_guide_chart_title">各國戒圍對照</h3>
+<img alt="戒圍尺寸對照表" class="guide-image" loading="lazy" src="/static/images/shop/guides/ring-size-chart.png"/>
+</section>
+<section class="guide-section guide-section--precautions">
+<h3 class="guide-section-title" data-i18n="ring_size_guide_precautions_title">注意事項</h3>
+<ul class="guide-precautions">
+<li data-i18n="ring_size_guide_precaution_1">慣用手通常略大，請量配戴的那隻手。</li>
+<li data-i18n="ring_size_guide_precaution_2">戒圈越寬，同尺寸會感覺越緊。</li>
+<li data-i18n="ring_size_guide_precaution_3">請在體溫與環境溫度適中時測量。</li>
+<li data-i18n="ring_size_guide_precaution_4">傍晚手指較腫，建議傍晚測量。</li>
+<li data-i18n="ring_size_guide_precaution_5">關節較寬者，請量關節與配戴處後取平均。</li>
+<li data-i18n="ring_size_guide_precaution_6">不同品牌尺寸可能略有差異。</li>
+</ul>
+</section>
+<section class="guide-section guide-section--table">
+<h3 class="guide-section-title guide-section-title--sub" data-i18n="ring_size_guide_table_title">數值對照表</h3>
+<div class="ring-size-guide-scroll">
+<table class="ring-size-guide-table">
+<thead>
+<tr>
+<th data-i18n="ring_size_col_tw">國際圍</th>
+<th data-i18n="ring_size_col_diameter">內直徑</th>
+<th data-i18n="ring_size_col_circumference">內圍</th>
+<th data-i18n="ring_size_col_jp">日本圍</th>
+<th data-i18n="ring_size_col_us">美國圍</th>
+<th data-i18n="ring_size_col_eu">歐洲圍</th>
+</tr>
+</thead>
+<tbody id="ring-size-guide-body"></tbody>
+</table>
+</div>
+</section>
+</dialog>
+<dialog class="ring-size-guide-dialog" id="chain-length-guide-dialog">
+<div class="ring-size-guide-header">
+<div>
+<h2 data-i18n="chain_length_guide_title">鏈條長度參考</h2>
+<p data-i18n="chain_length_guide_intro">選擇適合您的項鍊長度；實際配戴效果可能因身形而異。</p>
+</div>
+<button aria-label="Close" class="ring-size-guide-close" id="chain-length-guide-close" type="button">x</button>
+</div>
+<section class="guide-section" id="chain-length-guide-necklace">
+<h3 class="guide-section-title" data-i18n="chain_length_guide_necklace_title">項鍊／鏈條長度</h3>
+<p class="guide-section-text" data-i18n="chain_length_guide_necklace_method">將鏈條平量總長度，或比對現有項鍊從扣環到墜子連接處的長度。</p>
+<img alt="項鍊尺寸示意圖" class="guide-image" loading="lazy" src="/static/images/shop/guides/necklace-length-guide.png"/>
+<div class="ring-size-guide-scroll">
+<table class="ring-size-guide-table chain-length-guide-table">
+<thead>
+<tr>
+<th data-i18n="chain_length_col_cm">長度</th>
+<th data-i18n="chain_length_col_position">配戴位置</th>
+</tr>
+</thead>
+<tbody>
+<tr><td>35 cm</td><td data-i18n="chain_length_35">貼頸／鎖骨上方（短項鍊）</td></tr>
+<tr><td>40 cm</td><td data-i18n="chain_length_40">鎖骨位置</td></tr>
+<tr><td>46 cm</td><td data-i18n="chain_length_46">鎖骨下方至胸前（常見）</td></tr>
+<tr><td>50 cm</td><td data-i18n="chain_length_50">胸前</td></tr>
+<tr><td>56 cm</td><td data-i18n="chain_length_56">胸前偏下</td></tr>
+<tr><td>60 cm</td><td data-i18n="chain_length_60">長項鍊／可雙圈</td></tr>
+<tr><td>66 cm</td><td data-i18n="chain_length_66">中長項鍊</td></tr>
+<tr><td>70 cm</td><td data-i18n="chain_length_70">中長項鍊</td></tr>
+<tr><td>76 cm</td><td data-i18n="chain_length_76">長項鍊</td></tr>
+<tr><td>80 cm</td><td data-i18n="chain_length_80">長項鍊</td></tr>
+</tbody>
+</table>
+</div>
+</section>
+<section class="guide-section hidden" id="chain-length-guide-bracelet">
+<h3 class="guide-section-title" data-i18n="chain_length_guide_bracelet_title">手鍊長度</h3>
+<p class="guide-section-text" data-i18n="chain_length_guide_bracelet_method">用軟尺繞手腕最細處一圈並記錄；手鍊通常比手圍長 1–2 cm 較舒適。</p>
+<div class="ring-size-guide-scroll">
+<table class="ring-size-guide-table chain-length-guide-table">
+<thead>
+<tr>
+<th data-i18n="chain_length_col_cm">長度</th>
+<th data-i18n="chain_length_col_position">配戴位置</th>
+</tr>
+</thead>
+<tbody>
+<tr><td>15 cm</td><td data-i18n="bracelet_length_15">兒童／細腕</td></tr>
+<tr><td>16 cm</td><td data-i18n="bracelet_length_16">一般女性（偏緊）</td></tr>
+<tr><td>17 cm</td><td data-i18n="bracelet_length_17">一般女性</td></tr>
+<tr><td>18 cm</td><td data-i18n="bracelet_length_18">標準女性（預設參考）</td></tr>
+<tr><td>19 cm</td><td data-i18n="bracelet_length_19">一般男性／寬腕</td></tr>
+<tr><td>20 cm</td><td data-i18n="bracelet_length_20">寬腕</td></tr>
+<tr><td>21 cm</td><td data-i18n="bracelet_length_21">較寬腕圍</td></tr>
+</tbody>
+</table>
+</div>
+</section>
+</dialog>
+<div class="mobile-buy-bar hidden" id="mobile-buy-bar">
+<button aria-controls="shop-price-panel" aria-expanded="false" class="mobile-buy-price" id="mobile-price-toggle" type="button">
+<span class="mobile-buy-label" data-i18n="sum_total">總價</span>
+<span class="mobile-buy-amount">NT$ <span id="sum-total-mobile">—</span></span>
+<span class="mobile-buy-detail-hint" data-i18n="shop_price_breakdown">明細</span>
+</button>
+<div class="mobile-buy-actions">
+<button class="shop-cta shop-cta-compact shop-cta--secondary" data-i18n="btn_add_cart" id="cart-btn-mobile" type="button">加入購物車</button>
+<button class="shop-cta shop-cta-compact" data-i18n="btn_add_order" id="confirm-btn-mobile" type="button">訂購</button>
+</div>
+</div>
+<dialog aria-label="放大圖片" class="product-image-lightbox" id="product-image-lightbox">
+<button aria-label="關閉" class="product-lightbox-close" id="product-lightbox-close" type="button">×</button>
+<button aria-label="上一張" class="product-lightbox-nav product-lightbox-prev" hidden="" id="product-lightbox-prev" type="button">
+<svg aria-hidden="true" viewbox="0 0 24 24"><path d="M11.03 3.97a.75.75 0 010 1.06l-6.22 6.22H21a.75.75 0 010 1.5H4.81l6.22 6.22a.75.75 0 11-1.06 1.06l-7.5-7.5a.75.75 0 010-1.06l7.5-7.5a.75.75 0 011.06 0z" fill="currentColor"></path></svg>
+</button>
+<button aria-label="下一張" class="product-lightbox-nav product-lightbox-next" hidden="" id="product-lightbox-next" type="button">
+<svg aria-hidden="true" viewbox="0 0 24 24"><path d="M12.97 3.97a.75.75 0 011.06 0l7.5 7.5a.75.75 0 010 1.06l-7.5 7.5a.75.75 0 11-1.06-1.06l6.22-6.22H3a.75.75 0 010-1.5h16.19l-6.22-6.22a.75.75 0 010-1.06z" fill="currentColor"></path></svg>
+</button>
+<img alt="" id="product-lightbox-img" src=""/>
+</dialog>
+</div><!-- /.shop-calculator-wrap -->
+
+<div data-shop-tour-root=""></div>

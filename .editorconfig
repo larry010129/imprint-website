@@ -7,3 +7,4 @@ insert_final_newline = true
 
 [*.{html,js,css,ts,tsx,json,md}]
 charset = utf-8
+內容設定

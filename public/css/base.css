@@ -78,11 +78,25 @@ input[type="reset"]{
 .btn-ghost-light{ border:1px solid rgba(255,255,255,.5); color:#fff; }
 .btn-ghost-light:hover{ background:rgba(255,255,255,.12); }
 
-/* 進場顯示動畫 */
-.reveal{ opacity:0; transform:translateY(36px); transition:opacity .9s var(--ease), transform .9s var(--ease); }
+/* 進場顯示動畫（transform/opacity only — IntersectionObserver in main.js） */
+.reveal{
+  opacity:0;
+  transform:translate3d(0,28px,0);
+  transition:opacity .85s var(--ease), transform .85s var(--ease);
+}
 .reveal.is-in{ opacity:1; transform:none; }
 .reveal-d1{ transition-delay:.12s; } .reveal-d2{ transition-delay:.24s; }
 .reveal-d3{ transition-delay:.36s; } .reveal-d4{ transition-delay:.48s; }
+
+@media (prefers-reduced-motion: reduce){
+  .reveal,
+  .reveal.is-in{
+    opacity:1;
+    transform:none;
+    transition:none;
+  }
+  .reveal-d1, .reveal-d2, .reveal-d3, .reveal-d4{ transition-delay:0s; }
+}
 
 /* ---------- 頂部公告列 ---------- */
 .topbar{

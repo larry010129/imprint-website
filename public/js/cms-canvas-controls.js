@@ -16,13 +16,15 @@
     faq_embed: 'FAQ',
     testimonials_embed: '見證',
     button_row: '按鈕列',
-    spacer: '間距'
+    spacer: '間距',
+    freeform: '自由版面'
   };
   var primaryProps = {
     button_row: 'buttons',
     spacer: 'size',
     faq_embed: 'limit',
-    testimonials_embed: 'limit'
+    testimonials_embed: 'limit',
+    freeform: 'height'
   };
 
   function post(payload) {

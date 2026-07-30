@@ -230,8 +230,22 @@ def page_image_slot_specs() -> tuple[SlotSpec, ...]:
     return tuple(specs)
 
 
+def _route_body_key(page_key: str) -> str:
+    if page_key == "/":
+        return "home"
+    return page_key.strip("/").replace("/", "__").replace(".html", "_html") or "home"
+
+
 def _read_template(spec: SlotSpec) -> str:
-    return (settings.templates_dir / spec.template).read_text(encoding="utf-8")
+    """Read archived page templates for seed defaults (indexes match Jinja sources)."""
+    archived = settings.templates_dir / spec.template
+    if archived.is_file():
+        return archived.read_text(encoding="utf-8")
+    # Fallback: rendered body (indexes may not match — skip missing in _slot_defaults)
+    bodies = settings.site_content_dir / "bodies" / f"{_route_body_key(spec.page_key)}.html"
+    if bodies.is_file():
+        return bodies.read_text(encoding="utf-8")
+    return ""
 
 
 def _attribute(tag: str, name: str) -> str:
@@ -254,7 +268,12 @@ def _slot_defaults(spec: SlotSpec) -> tuple[str, str, str]:
         return spec.default_url, spec.default_webp, spec.image_alt
     html = _read_template(spec)
     images = list(_IMG_RE.finditer(html))
-    selected = [images[index] for index in spec.image_indexes]
+    selected = []
+    for index in spec.image_indexes:
+        if 0 <= index < len(images):
+            selected.append(images[index])
+    if not selected and not spec.allow_empty:
+        return "", "", spec.image_alt
     url = next((_attribute(item.group(), "src") or _attribute(item.group(), "data-src") for item in selected), "")
     alt = next((_attribute(item.group(), "alt") for item in selected if _attribute(item.group(), "alt")), "")
     webp = next((_picture_webp(html, item) for item in selected if _picture_webp(html, item)), "")

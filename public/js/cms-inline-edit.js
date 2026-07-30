@@ -225,6 +225,23 @@
         });
       }
       el.addEventListener('blur', function () {
+        var blockId = el.getAttribute('data-cms-block-id');
+        var blockField = el.getAttribute('data-cms-block-field');
+        if (blockId && blockField) {
+          var blockPayload = {
+            type: 'block-edit',
+            sectionId: sectionId,
+            blockId: blockId,
+            field: blockField,
+            value: (el.textContent || '').trim(),
+          };
+          var blockHrefProp = el.getAttribute('data-cms-href-prop');
+          if (blockHrefProp && el.tagName === 'A') {
+            blockPayload.href = el.getAttribute('href') || '';
+          }
+          post(blockPayload);
+          return;
+        }
         var payload = {
           type: 'inline-edit',
           sectionId: sectionId,
@@ -251,7 +268,13 @@
       el.addEventListener('click', function (ev) {
         ev.preventDefault();
         ev.stopPropagation();
-        post({ type: 'edit-image', sectionId: sectionId, prop: prop });
+        var blockId = el.getAttribute('data-cms-block-id');
+        post({
+          type: 'edit-image',
+          sectionId: sectionId,
+          prop: prop,
+          blockId: blockId || null,
+        });
       });
     }
   }
@@ -427,13 +450,20 @@
         data.beforeId || null,
         data.anchor || null
       );
-      post({ type: 'preview-ack', action: 'apply-section', sectionId: data.sectionId, ok: ok });
+      post({
+        type: 'preview-ack',
+        action: 'apply-section',
+        replyTo: data.requestId || null,
+        sectionId: data.sectionId,
+        ok: ok
+      });
       return;
     }
     if (data.type === 'remove-section') {
       post({
         type: 'preview-ack',
         action: 'remove-section',
+        replyTo: data.requestId || null,
         sectionId: data.sectionId,
         ok: removeSection(data.sectionId),
       });
@@ -443,6 +473,7 @@
       post({
         type: 'preview-ack',
         action: 'reorder-sections',
+        replyTo: data.requestId || null,
         ok: reorderSections(data.sectionIds || []),
       });
       return;
@@ -455,6 +486,7 @@
       post({
         type: 'preview-ack',
         action: 'set-visible',
+        replyTo: data.requestId || null,
         sectionId: data.sectionId,
         ok: setVisible(data.sectionId, !!data.visible),
       });

@@ -217,6 +217,53 @@ def public_testimonials() -> dict:
         return {"testimonials": fetch_published_testimonials(cur)}
 
 
+@router.get("/cms/pages/{slug}")
+async def cms_page_public(request: Request, slug: str) -> JSONResponse:
+    """Public/admin JSON for Next SSR — page + ordered sections + full props (no HTML)."""
+    from app.cms_boundary import is_reserved_cms_slug, normalize_cms_slug
+    from app.cms_pages import fetch_public_cms_bundle
+
+    clean = normalize_cms_slug(slug)
+    if not clean or is_reserved_cms_slug(clean):
+        return _err(404, "Not Found")
+
+    preview = str(request.query_params.get("preview") or "") in {"1", "true", "yes"}
+    admin_ok = is_admin(get_user_id(request))
+    if preview and not admin_ok:
+        return _err(404, "Not Found")
+
+    try:
+        with get_connection() as conn, conn.cursor() as cur:
+            bundle = fetch_public_cms_bundle(
+                cur, clean, visible_only=not preview
+            )
+    except Exception:
+        return _err(404, "Not Found")
+
+    if not bundle or not bundle.get("page"):
+        return _err(404, "Not Found")
+    page = bundle["page"]
+    if page.get("status") != "published" and not (preview and admin_ok):
+        return _err(404, "Not Found")
+
+    sections = bundle.get("sections") or page.get("sections") or []
+    page_out = dict(page)
+    page_out["sections"] = sections
+    page_out["cms_path"] = f"/p/{page_out.get('slug') or clean}"
+    meta = dict(bundle.get("meta") or {})
+    meta["preview"] = bool(preview)
+    return JSONResponse(
+        content={
+            "page": page_out,
+            "sections": sections,
+            "faq": bundle.get("faq")
+            or {"categories": [], "teaser": [], "items": []},
+            "testimonials": bundle.get("testimonials") or [],
+            "meta": meta,
+        }
+    )
+
+
 @router.get("/faq")
 def public_faq() -> dict:
     from app.content import fetch_faq_public

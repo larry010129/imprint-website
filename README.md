@@ -1,12 +1,13 @@
 # Imprint Diamond (imprint-website)
 
-FastAPI site + API in one repo. Production deploys to **Render** (`render.yaml`).
+Next.js site (`apps/web`) + FastAPI JSON/static API. Production deploys to **Render** (`render.yaml`).
 
 ## Stack
 
 | Piece | Location | Notes |
 |-------|----------|--------|
-| Web + API | `app/controllers/`, `config/`, `main.py` | Jinja views in `app/views/`, static in `public/` |
+| Site (Next) | `apps/web/` | Browse `http://127.0.0.1:3000/` in local dev |
+| API (FastAPI) | `app/`, `main.py` | JSON `/api/...`, `/static`, `admin.html` on `:8080` |
 | Admin | `admin.html` | Product/orders UI (static mockup + `/api/admin/*`) |
 | Database | Postgres (Supabase or local) | `backend/schema.sql`, `docs/SUPABASE.md` |
 | Gold quote | `scripts/fetch_gold_quote.py` | GitHub Actions cron (`.github/workflows/update-gold-quote.yml`) |
@@ -21,10 +22,14 @@ python -m venv .venv
 .venv\Scripts\activate          # Windows
 pip install -r requirements.txt
 cp .env.example .env            # DATABASE_URL, JWT_SECRET, …
-npm run dev                     # uvicorn on :8080
+npm install --prefix apps/web
+dev.bat                         # FastAPI :8080 + Next :3000 (two windows)
+# or manually:
+#   npm run dev                 # uvicorn API on :8080
+#   npm run dev:web             # Next site on :3000
 ```
 
-Open `http://127.0.0.1:8080/`. API is same-origin (`/api/...`).
+Open the site at `http://127.0.0.1:3000/`. API stays on `http://127.0.0.1:8080/api/...`.
 
 ## Deploy (Render)
 

@@ -45,6 +45,8 @@ def _pricing(config: dict[str, Any]) -> dict[str, Any]:
 
 
 def _validate_config(body: dict[str, Any]) -> str | None:
+    # ponytail: required-field only; upgrade = port choice/engraving/length checks
+    # from retired backend/lib/validation.js when bad CMS/cart payloads show up.
     for key in ("category", "type", "carat"):
         if not body.get(key):
             return f"缺少欄位：{key}"
@@ -70,6 +72,35 @@ def _strip_disallowed_engraving(cur, body: dict[str, Any]) -> None:
     if row and row.get("allows_engraving") is False:
         body["engravingBand"] = ""
         body["engravingGirdle"] = ""
+
+
+def _clamp_pendant_chain_sell_mode(cur, body: dict[str, Any]) -> str | None:
+    """Enforce per-product 僅墜子 / 含鍊賣 flags for pendant orders."""
+    if str(body.get("category") or "") != "pendant":
+        return None
+    product_id = resolve_product_id(
+        cur,
+        category="pendant",
+        type_ref=str(body.get("type") or body.get("productId") or ""),
+        require_published=False,
+    )
+    if not product_id:
+        return None
+    cur.execute(
+        "select allows_pendant_only, allows_with_chain from products where id = %s",
+        (product_id,),
+    )
+    row = cur.fetchone()
+    if not row:
+        return None
+    allows_only = row.get("allows_pendant_only", True) is not False
+    allows_chain = row.get("allows_with_chain", True) is not False
+    include_chain = bool(body.get("includeChain"))
+    if include_chain and not allows_chain:
+        return "此商品僅販售墜子，無法搭配鏈條"
+    if (not include_chain) and not allows_only:
+        return "此商品僅販售含鍊款式，請選擇鏈條長度"
+    return None
 
 
 def _profile(cur, user_id: str) -> dict[str, Any] | None:
@@ -289,6 +320,10 @@ async def update_my_order(request: Request) -> dict:
         if order.get("status") != "received":
             return _err(400, "僅「已收到申請」狀態的訂單可修改")
 
+        chain_err = _clamp_pendant_chain_sell_mode(cur, config)
+        if chain_err:
+            return _err(400, chain_err)
+        _strip_disallowed_engraving(cur, config)
         pricing = compute_order_pricing(cur, config)
         if not pricing.get("ready"):
             return _err(400, "無法計算價格，請重新整理後再試")
@@ -334,6 +369,9 @@ async def add_to_cart(request: Request) -> dict:
     summary = _summary(body)
 
     with get_connection() as conn, conn.cursor() as cur:
+        chain_err = _clamp_pendant_chain_sell_mode(cur, body)
+        if chain_err:
+            return _err(400, chain_err)
         _strip_disallowed_engraving(cur, body)
         pricing = compute_order_pricing(cur, body)
         if not pricing.get("ready"):
@@ -387,6 +425,9 @@ async def cart_item(request: Request) -> dict:
             error = _validate_config(body)
             if error:
                 return _err(400, error)
+            chain_err = _clamp_pendant_chain_sell_mode(cur, body)
+            if chain_err:
+                return _err(400, chain_err)
             _strip_disallowed_engraving(cur, body)
             pricing = compute_order_pricing(cur, body)
             if not pricing.get("ready"):
@@ -546,6 +587,9 @@ async def _cart_checkout_impl(request: Request) -> dict:
             err = _validate_config(config)
             if err:
                 return _err(400, err)
+            chain_err = _clamp_pendant_chain_sell_mode(cur, config)
+            if chain_err:
+                return _err(400, chain_err)
             configs.append(config)
             _cfg, _pricing, _pid, _summary, total = pack_order_config(config)
             item_totals.append(float(total or item.get("total_price") or 0))

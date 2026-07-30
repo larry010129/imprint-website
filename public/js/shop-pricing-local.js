@@ -1,4 +1,6 @@
-/* Client-side shop pricing — no API. Mirrors backend/lib/pricing.js for the calculator. */
+/* Client-side shop pricing — no API. Preview only; server uses app/pricing.py. */
+// ponytail: thin calculator mirror of app/pricing.py; upgrade = drop local
+// tables when calculator always hits /api quote for totals.
 (function (global) {
   'use strict';
 
@@ -15,16 +17,7 @@
     '1.5': 494000, '2.0': 910000, '2': 910000, '3.0': 1287000, '3': 1287000,
   };
 
-  var WHITE_MULTI_DIAMOND_PRICE = {
-    '0.1': { 2: 45600, 3: 61200, 4: 81000 },
-    '0.2': { 2: 86400, 3: 122400, 4: 162000 },
-    '0.3': { 2: 142200, 3: 189600, 4: 250000 },
-  };
-
-  var COLORED_MULTI_DIAMOND_PRICE = {
-    '0.3': { 2: 173400, 3: 244800, 4: 322300 },
-  };
-
+  /** Multi-stone memorial discount on unit×qty (not absolute package tables). */
   var MULTI_STONE_ABOVE_03_MULTIPLIER = { 2: 0.85, 3: 0.80, 4: 0.75 };
   var VALID_FANCY_COLORS = { yellow: 1, pink: 1, blue: 1 };
   var VALID_STONE_COUNTS = { 2: 1, 3: 1, 4: 1 };
@@ -75,20 +68,9 @@
     return (diamondShape || 'round') === 'round' ? 0 : NON_ROUND_SHAPE_SURCHARGE;
   }
 
-  function multiStoneTier(caratKey, caratNum, table) {
-    if (table[caratKey] != null) return caratKey;
-    if (caratNum > 0.3) return '0.3_plus';
-    return null;
-  }
-
-  function resolveMultiPrice(table, tier, stoneCount) {
-    if (tier === '0.3_plus') {
-      var row = table['0.3'] || {};
-      var multiplier = MULTI_STONE_ABOVE_03_MULTIPLIER[stoneCount];
-      var baseRow = row[stoneCount];
-      return baseRow != null && multiplier ? Math.round(baseRow * multiplier) : null;
-    }
-    return (table[tier] || {})[stoneCount] ?? null;
+  function asStoneCount(value) {
+    var n = parseInt(value, 10);
+    return VALID_STONE_COUNTS[n] ? n : null;
   }
 
   function computeDiamondListPrice(caratKey, opts) {
@@ -97,11 +79,10 @@
     if (!caratKey || category === 'chain') return null;
     var caratNum = parseFloat(caratKey);
     if (Number.isNaN(caratNum)) return null;
-    var stoneCount = opts.stoneCount;
-    // Memorial loose diamonds: multi-stone package only when qty ≥ 2.
+    // Memorial loose diamonds: unit × qty × multi discount (not package tables).
     // Earrings are one pair and always use exactly two single-diamond prices.
     var earringPair = category === 'earring';
-    var multiStone = category === 'diamond' && VALID_STONE_COUNTS[stoneCount];
+    var multiCount = category === 'diamond' ? asStoneCount(opts.stoneCount) : null;
     if (!isShapeCaratAllowed(caratNum, opts.diamondShape)) return null;
 
     var base = null;
@@ -110,35 +91,27 @@
     var diamondShape = opts.diamondShape || 'round';
 
     if (diamondKind === 'white') {
-      if (multiStone) {
-        var count = VALID_STONE_COUNTS[stoneCount] ? stoneCount : (DEFAULT_STONE_COUNT_BY_CATEGORY[category] || 2);
-        var tier = multiStoneTier(caratKey, caratNum, WHITE_MULTI_DIAMOND_PRICE);
-        if (tier == null) return null;
-        base = resolveMultiPrice(WHITE_MULTI_DIAMOND_PRICE, tier, count);
-      } else {
-        base = DIAMOND_PRICE[caratKey] ?? null;
-      }
+      base = DIAMOND_PRICE[caratKey] ?? null;
     } else if (diamondKind === 'fancy') {
       if (!VALID_FANCY_COLORS[fancyColor]) return null;
       if (caratNum < FANCY_MIN_CARAT) return null;
-      if (multiStone) {
-        var count2 = VALID_STONE_COUNTS[stoneCount] ? stoneCount : (DEFAULT_STONE_COUNT_BY_CATEGORY[category] || 2);
-        var tier2 = multiStoneTier(caratKey, caratNum, COLORED_MULTI_DIAMOND_PRICE);
-        if (tier2 == null) return null;
-        base = resolveMultiPrice(COLORED_MULTI_DIAMOND_PRICE, tier2, count2);
-      } else {
-        base = COLORED_SINGLE_DIAMOND_PRICE[caratKey]
-          ?? (caratKey === '1.0' ? COLORED_SINGLE_DIAMOND_PRICE['1'] : null)
-          ?? null;
-      }
+      base = COLORED_SINGLE_DIAMOND_PRICE[caratKey]
+        ?? (caratKey === '1.0' ? COLORED_SINGLE_DIAMOND_PRICE['1'] : null)
+        ?? null;
     } else {
       return null;
     }
 
     if (base == null) return null;
     var surcharge = shapeSurchargeRate(diamondShape);
-    var singlePrice = surcharge ? Math.round(base * (1 + surcharge)) : base;
-    return earringPair ? singlePrice * 2 : singlePrice;
+    var unitPrice = surcharge ? Math.round(base * (1 + surcharge)) : base;
+    if (earringPair) return unitPrice * 2;
+    if (multiCount) {
+      var discount = MULTI_STONE_ABOVE_03_MULTIPLIER[multiCount];
+      if (!discount) return null;
+      return Math.round(unitPrice * multiCount * discount);
+    }
+    return unitPrice;
   }
 
   function getPerGramPrices() {

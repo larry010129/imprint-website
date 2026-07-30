@@ -1,16 +1,43 @@
-# Render Blueprint — Python Web Service (static site + /api/bot-gold)
-# After push: Dashboard → Blueprints → Sync (updates runtime + build/start commands)
+# Dual Render: Next.js HTML edge + FastAPI JSON/static API
+# Dashboard → Blueprints → Sync after push
 # https://render.com/docs/blueprint-spec
 services:
   - type: web
-    name: imprint-diamond
+    name: imprint-web
+    runtime: node
+    plan: free
+    rootDir: apps/web
+    buildCommand: bash ../../scripts/render-build-web.sh
+    startCommand: bash ../../scripts/render-start-web.sh
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: "22.14.0"
+      - key: API_PROXY_TARGET
+        fromService:
+          name: imprint-api
+          type: web
+          property: host
+      - key: API_INTERNAL_BASE
+        fromService:
+          name: imprint-api
+          type: web
+          property: host
+
+  - type: web
+    name: imprint-api
     runtime: python
     plan: free
     buildCommand: bash scripts/render-build.sh
     startCommand: bash scripts/render-start.sh
-    healthCheckPath: /gold-price.html
+    healthCheckPath: /api/bot-gold
     envVars:
       - key: PYTHON_VERSION
         value: "3.12.8"
       - key: NO_OPEN
         value: "1"
+      - key: NEXT_PUBLIC_ORIGIN
+        fromService:
+          name: imprint-web
+          type: web
+          property: host

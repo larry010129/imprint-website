@@ -69,32 +69,24 @@ def test_upsert_section_page_image_skips_text_only_types(monkeypatch):
     assert result is None
 
 
-def test_section_partial_renders_for_preview_patch():
-    """Admin soft-preview needs section HTML fragments with data-cms-section-id."""
-    from app.controllers.web_controller import templates
+def test_section_html_endpoint_returns_json_not_jinja():
+    """CMS Jinja partials removed — preview sync returns section JSON only."""
+    from app.cms_pages import serialize_section
 
     section_id = str(uuid.uuid4())
-    html = templates.env.get_template("partials/cms/section_hero.html").render(
+    out = serialize_section(
         {
-            "section": {"id": section_id, "type": "hero"},
-            "props": {
-                "title": "預覽標題",
-                "lead": "引言",
-                "eyebrow": "",
-                "image_url": "",
-                "image_alt": "",
-                "cta_label": "",
-                "cta_href": "",
-                "cta_secondary_label": "",
-                "cta_secondary_href": "",
-            },
-            "cms_page": {"title": "頁面", "slug": "x"},
-            "cms_inline": True,
-            "site_cms_edit": True,
+            "id": section_id,
+            "page_id": str(uuid.uuid4()),
+            "sort_order": 0,
+            "type": "hero",
+            "is_visible": True,
+            "props": {"title": "預覽標題", "lead": "引言"},
         }
     )
-    assert f'data-cms-section-id="{section_id}"' in html
-    assert "預覽標題" in html
+    assert out["id"] == section_id
+    assert out["props"]["title"] == "預覽標題"
+    assert "html" not in out
 
 
 def test_ensure_site_route_page_rejects_non_editable_route():

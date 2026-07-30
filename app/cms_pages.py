@@ -1,11 +1,13 @@
-"""Modular CMS pages + ordered section stack (Wix Studio–style)."""
+"""Modular CMS pages + ordered section stack (Fluid Engine–style freeform inside sections)."""
 
 from __future__ import annotations
 
+import math
 import re
 from datetime import datetime
 from typing import Any
 from urllib.parse import urlsplit
+from uuid import uuid4
 
 from app.cms_boundary import validate_cms_slug
 from app.cms_section_images import (
@@ -33,36 +35,48 @@ SECTION_TYPES = (
     "testimonials_embed",
     "button_row",
     "spacer",
+    "freeform",
 )
+
+_FREEFORM_BLOCK_KINDS = frozenset({"heading", "text", "button", "image"})
+_FREEFORM_BLOCK_KEYS = frozenset(
+    {"id", "kind", "x", "y", "w", "h", "z", "text", "href", "image_url", "image_alt"}
+)
+_MAX_FREEFORM_BLOCKS = 24
 
 DEFAULT_PROPS: dict[str, dict[str, Any]] = {
     "hero": {
         "anchor": "end",
-        "eyebrow": "",
+        "eyebrow": "眉題",
         "title": "新頁面標題",
-        "lead": "",
+        "lead": "在此編輯引言。",
         "image_url": "",
         "image_alt": "",
         "cta_label": "了解更多",
         "cta_href": "/contact.html",
-        "cta_secondary_label": "",
-        "cta_secondary_href": "",
+        "cta_secondary_label": "次要行動",
+        "cta_secondary_href": "/",
     },
-    "rich_text": {"anchor": "end", "title": "", "body": "", "columns": 1},
+    "rich_text": {
+        "anchor": "end",
+        "title": "輸入標題",
+        "body": "在此編輯內文。",
+        "columns": 1,
+    },
     "image_text": {
         "anchor": "end",
-        "title": "",
-        "body": "",
+        "title": "圖文標題",
+        "body": "在此編輯說明文字。",
         "image_url": "",
         "image_alt": "",
         "layout": "stack",
-        "cta_label": "",
-        "cta_href": "",
+        "cta_label": "了解更多",
+        "cta_href": "/contact.html",
     },
     "cta_band": {
         "anchor": "end",
         "title": "準備好開始了嗎？",
-        "lead": "",
+        "lead": "在此編輯說明。",
         "image_url": "",
         "image_alt": "",
         "cta_label": "客製試算",
@@ -80,6 +94,46 @@ DEFAULT_PROPS: dict[str, dict[str, Any]] = {
         ]
     },
     "spacer": {"anchor": "end", "size": "md"},
+    # Fluid Engine–style canvas: blocks freely positioned within this section.
+    # blocks_mobile: optional mobile layout (same block shape); empty = reuse desktop blocks.
+    "freeform": {
+        "anchor": "end",
+        "height": 480,
+        "blocks": [
+            {
+                "id": "b-title",
+                "kind": "heading",
+                "x": 8,
+                "y": 16,
+                "w": 56,
+                "h": 16,
+                "z": 2,
+                "text": "自由版面標題",
+            },
+            {
+                "id": "b-body",
+                "kind": "text",
+                "x": 8,
+                "y": 38,
+                "w": 44,
+                "h": 18,
+                "z": 1,
+                "text": "在預覽中拖曳把手移動，拖曳右下角縮放。",
+            },
+            {
+                "id": "b-cta",
+                "kind": "button",
+                "x": 8,
+                "y": 66,
+                "w": 24,
+                "h": 12,
+                "z": 3,
+                "text": "了解更多",
+                "href": "/contact.html",
+            },
+        ],
+        "blocks_mobile": [],
+    },
 }
 
 _PROP_KEYS = {section_type: frozenset(props) for section_type, props in DEFAULT_PROPS.items()}
@@ -323,7 +377,105 @@ def _normalize_section_props(section_type: str, props: dict) -> dict[str, Any]:
             out["limit"] = max(1, min(24, int(out.get("limit") or 6)))
         except (TypeError, ValueError):
             out["limit"] = 6
+    if section_type == "freeform":
+        raw_height = out.get("height")
+        if isinstance(raw_height, bool) or not isinstance(
+            raw_height, (int, float, str, type(None))
+        ):
+            height = 480
+        else:
+            try:
+                height = int(raw_height or 480)
+            except (TypeError, ValueError):
+                height = 480
+        out["height"] = max(240, min(1400, height))
+        out["blocks"] = _normalize_freeform_blocks(out.get("blocks"), field="blocks")
+        mobile = out.get("blocks_mobile")
+        if mobile is None:
+            out["blocks_mobile"] = []
+        else:
+            out["blocks_mobile"] = _normalize_freeform_blocks(mobile, field="blocks_mobile")
     return out
+
+
+def _clamp_pct(value: Any, default: float, *, lo: float = 0.0, hi: float = 100.0) -> float:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        number = default
+    if not math.isfinite(number):
+        number = default
+    return round(max(lo, min(hi, number)), 2)
+
+
+def _new_block_id() -> str:
+    return f"b-{uuid4().hex[:10]}"
+
+
+def _normalize_freeform_blocks(blocks: Any, *, field: str = "blocks") -> list[dict[str, Any]]:
+    if blocks is None:
+        return []
+    if not isinstance(blocks, list):
+        raise ValueError(f"{field} 必須為陣列")
+    cleaned: list[dict[str, Any]] = []
+    seen_ids: set[str] = set()
+    for item in blocks[:_MAX_FREEFORM_BLOCKS]:
+        if not isinstance(item, dict):
+            raise ValueError(f"{field} 項目必須為物件")
+        unknown = set(item) - _FREEFORM_BLOCK_KEYS
+        if unknown:
+            raise ValueError(f"{field} 含不支援欄位：{', '.join(sorted(unknown))}")
+        kind = str(item.get("kind") or "text").strip()
+        if kind not in _FREEFORM_BLOCK_KINDS:
+            raise ValueError(f"{field} block kind 無效")
+        block_id = str(item.get("id") or "").strip()
+        if not re.fullmatch(r"[a-zA-Z0-9_-]{1,40}", block_id or ""):
+            block_id = _new_block_id()
+        if block_id in seen_ids:
+            block_id = _new_block_id()
+        seen_ids.add(block_id)
+        try:
+            z_raw = item.get("z")
+            if isinstance(z_raw, bool):
+                raise ValueError
+            z_index = int(z_raw if z_raw is not None else len(cleaned) + 1)
+        except (TypeError, ValueError):
+            z_index = len(cleaned) + 1
+        block: dict[str, Any] = {
+            "id": block_id,
+            "kind": kind,
+            "x": _clamp_pct(item.get("x"), 8.0, lo=0.0, hi=95.0),
+            "y": _clamp_pct(item.get("y"), 8.0, lo=0.0, hi=95.0),
+            "w": _clamp_pct(item.get("w"), 30.0, lo=8.0, hi=100.0),
+            "h": _clamp_pct(item.get("h"), 12.0, lo=6.0, hi=100.0),
+            "z": max(0, min(999, z_index)),
+        }
+        if kind in ("heading", "text", "button"):
+            text = item.get("text") or ""
+            if not isinstance(text, str):
+                raise ValueError(f"{field} block text 必須為文字")
+            text = text.strip()
+            limit = 300 if kind == "heading" else (160 if kind == "button" else 2000)
+            if len(text) > limit:
+                raise ValueError(f"{field} block text 過長")
+            block["text"] = text or (
+                "標題" if kind == "heading" else ("按鈕" if kind == "button" else "文字")
+            )
+        if kind == "button":
+            block["href"] = validate_public_url(item.get("href") or "", f"{field} block href")
+        if kind == "image":
+            block["image_url"] = validate_public_url(
+                item.get("image_url") or "", f"{field} block image_url", image=True
+            )
+            alt = item.get("image_alt") or ""
+            if not isinstance(alt, str):
+                raise ValueError(f"{field} block image_alt 必須為文字")
+            alt = alt.strip()
+            if len(alt) > 500:
+                raise ValueError(f"{field} block image_alt 過長")
+            block["image_alt"] = alt
+        cleaned.append(block)
+    return cleaned
 
 
 def validate_public_url(value: Any, field: str, *, image: bool = False) -> str:
@@ -390,6 +542,59 @@ def fetch_page_with_sections(
         return None
     page["sections"] = fetch_sections(cur, page["id"], visible_only=visible_only)
     return page
+
+
+def fetch_public_cms_bundle(
+    cur, slug: str, *, visible_only: bool = True
+) -> dict | None:
+    """Page + ordered sections + embed data for Next SSR (JSON only, no HTML)."""
+    page = fetch_page_with_sections(cur, slug=slug, visible_only=visible_only)
+    if not page:
+        return None
+    sections = [
+        section
+        for section in (page.get("sections") or [])
+        if section.get("type") in SECTION_TYPES
+    ]
+    page = {**page, "sections": sections}
+    faq: dict[str, Any] = {"categories": [], "teaser": [], "items": []}
+    testimonials: list[Any] = []
+    section_types = {section.get("type") for section in sections}
+    if "faq_embed" in section_types:
+        from app.content import fetch_faq_public
+
+        faq = fetch_faq_public(cur)
+    if "testimonials_embed" in section_types:
+        from app.content import fetch_published_testimonials
+
+        testimonials = fetch_published_testimonials(cur)
+    first = sections[0] if sections else None
+    first_props = first.get("props") if isinstance(first, dict) else {}
+    lcp_section_id = None
+    lcp_image = None
+    if (
+        first
+        and first.get("type") == "hero"
+        and isinstance(first_props, dict)
+        and first_props.get("image_url")
+    ):
+        lcp_section_id = str(first.get("id") or "") or None
+        lcp_image = first_props.get("image_url") or None
+    return {
+        "page": page,
+        "sections": sections,
+        "faq": faq,
+        "testimonials": testimonials,
+        "meta": {
+            "lcp_section_id": lcp_section_id,
+            "lcp_image": lcp_image,
+            "lcp_image_type": (
+                "image/webp"
+                if isinstance(lcp_image, str) and lcp_image.endswith(".webp")
+                else None
+            ),
+        },
+    }
 
 
 def next_section_sort(cur, page_id: str) -> int:

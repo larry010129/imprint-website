@@ -1,13 +1,45 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from "react";
 
 import CmsSectionImageField from "@/components/admin/CmsSectionImageField";
 import PageLinkSelect from "@/components/admin/PageLinkSelect";
 import {
+  defaultFreeformBlock,
   sectionImagePropKey,
+  type CmsFreeformBlock,
+  type CmsFreeformBlockKind,
   type CmsPage,
   type CmsSection,
 } from "@/components/admin/cmsSectionMeta";
 import type { ImageUploadResult } from "@/components/ui/image-upload";
+
+const FREEFORM_KIND_LABEL: Record<CmsFreeformBlockKind, string> = {
+  heading: "標題",
+  text: "文字",
+  button: "按鈕",
+  image: "圖片",
+};
+
+function reorderZ(blocks: CmsFreeformBlock[], id: string, dir: 1 | -1): CmsFreeformBlock[] {
+  const sorted = [...blocks].sort((a, b) => (a.z || 0) - (b.z || 0));
+  const idx = sorted.findIndex((b) => b.id === id);
+  const swap = idx + dir;
+  if (idx < 0 || swap < 0 || swap >= sorted.length) return blocks;
+  const a = sorted[idx];
+  const b = sorted[swap];
+  const zA = a.z;
+  const zB = b.z;
+  return blocks.map((block) => {
+    if (block.id === a.id) return { ...block, z: zB };
+    if (block.id === b.id) return { ...block, z: zA };
+    return block;
+  });
+}
 
 type Props = {
   section: CmsSection;
@@ -34,6 +66,137 @@ function Field({
       <span>{label}</span>
       {children}
     </label>
+  );
+}
+
+function FreeformPropsEditor({
+  formRef,
+  props: p,
+  disabled,
+  onChange,
+  onPickMedia,
+}: {
+  formRef: RefObject<HTMLDivElement | null>;
+  props: Record<string, unknown>;
+  disabled: boolean;
+  onChange: (props: Record<string, unknown>) => void;
+  onPickMedia: (prop: string) => void;
+}) {
+  const [listMode, setListMode] = useState<"desktop" | "mobile">("desktop");
+  const key = listMode === "mobile" ? "blocks_mobile" : "blocks";
+  const blocks = Array.isArray(p[key]) ? (p[key] as CmsFreeformBlock[]) : [];
+  const setBlocks = (next: CmsFreeformBlock[]) => onChange({ ...p, [key]: next });
+  const sorted = [...blocks].sort((a, b) => (a.z || 0) - (b.z || 0));
+
+  return (
+    <div ref={formRef} className="cms-section-props-form">
+      <p className="cms-hint">
+        預覽拖曳移動／縮放；方向鍵微移；Alt+A/T/C 對齊。此處調高度、圖層與手機版面。
+      </p>
+      <Field label="畫布高度 (px)">
+        <input
+          data-cms-prop="height"
+          type="number"
+          min={240}
+          max={1400}
+          disabled={disabled}
+          value={Number(p.height || 480)}
+          onChange={(e) => onChange({ ...p, height: Number(e.target.value) || 480 })}
+        />
+      </Field>
+      <div className="cms-freeform-add-row">
+        <button
+          type="button"
+          className={`btn-sm${listMode === "desktop" ? " is-active" : ""}`}
+          disabled={disabled}
+          onClick={() => setListMode("desktop")}
+        >
+          電腦區塊
+        </button>
+        <button
+          type="button"
+          className={`btn-sm${listMode === "mobile" ? " is-active" : ""}`}
+          disabled={disabled}
+          onClick={() => setListMode("mobile")}
+        >
+          手機區塊
+        </button>
+      </div>
+      <div className="cms-freeform-add-row">
+        {(Object.keys(FREEFORM_KIND_LABEL) as CmsFreeformBlockKind[]).map((kind) => (
+          <button
+            key={kind}
+            type="button"
+            className="btn-sm"
+            disabled={disabled || blocks.length >= 24}
+            onClick={() => setBlocks([...blocks, defaultFreeformBlock(kind, blocks.length)])}
+          >
+            + {FREEFORM_KIND_LABEL[kind]}
+          </button>
+        ))}
+        {listMode === "mobile" && !blocks.length ? (
+          <button
+            type="button"
+            className="btn-sm"
+            disabled={disabled || !Array.isArray(p.blocks) || !(p.blocks as CmsFreeformBlock[]).length}
+            onClick={() =>
+              setBlocks(
+                JSON.parse(JSON.stringify(p.blocks || [])) as CmsFreeformBlock[]
+              )
+            }
+          >
+            從電腦版複製
+          </button>
+        ) : null}
+      </div>
+      <ul className="cms-freeform-block-list">
+        {sorted.map((block, index) => (
+          <li key={block.id || index} className="cms-freeform-block-item">
+            <strong>{FREEFORM_KIND_LABEL[block.kind] || block.kind}</strong>
+            <span>
+              z{block.z} · {Math.round(block.x)}%,{Math.round(block.y)}% ·{" "}
+              {Math.round(block.w)}×{Math.round(block.h)}
+            </span>
+            <button
+              type="button"
+              className="btn-sm"
+              disabled={disabled}
+              title="上移圖層"
+              onClick={() => setBlocks(reorderZ(blocks, block.id, 1))}
+            >
+              ↑
+            </button>
+            <button
+              type="button"
+              className="btn-sm"
+              disabled={disabled}
+              title="下移圖層"
+              onClick={() => setBlocks(reorderZ(blocks, block.id, -1))}
+            >
+              ↓
+            </button>
+            {block.kind === "image" ? (
+              <button
+                type="button"
+                className="btn-sm"
+                disabled={disabled}
+                onClick={() => onPickMedia(`freeform-block:${block.id}:${key}`)}
+              >
+                選圖
+              </button>
+            ) : null}
+            <button
+              type="button"
+              className="btn-sm"
+              disabled={disabled}
+              onClick={() => setBlocks(blocks.filter((item) => item.id !== block.id))}
+            >
+              刪除
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
@@ -195,17 +358,34 @@ export default function CmsSectionPropsForm({
     );
   }
 
+  if (section.type === "freeform") {
+    return (
+      <FreeformPropsEditor
+        formRef={formRef}
+        props={p}
+        disabled={disabled}
+        onChange={onChange}
+        onPickMedia={onPickMedia}
+      />
+    );
+  }
+
+  const textKeys = (
+    {
+      hero: ["eyebrow", "title", "lead", "cta_label", "cta_secondary_label"],
+      rich_text: ["title", "body"],
+      image_text: ["title", "body", "cta_label"],
+      cta_band: ["title", "lead", "cta_label", "cta_secondary_label"],
+    } as Record<string, string[]>
+  )[section.type];
+
   return (
     <div ref={formRef} className="cms-section-props-form">
       <p className="cms-hint">可直接在預覽編輯，也可在此精確調整內容。</p>
-      {(
-        {
-          hero: ["eyebrow", "title", "lead", "cta_label", "cta_secondary_label"],
-          rich_text: ["title", "body"],
-          image_text: ["title", "body", "cta_label"],
-          cta_band: ["title", "lead", "cta_label", "cta_secondary_label"],
-        } as Record<string, string[]>
-      )[section.type]?.map((key) => (
+      {!textKeys ? (
+        <p className="cms-hint">此區塊類型（{section.type}）暫無文字欄位，請用上方顯示／刪除操作。</p>
+      ) : null}
+      {textKeys?.map((key) => (
         <Field
           key={key}
           label={
@@ -224,6 +404,12 @@ export default function CmsSectionPropsForm({
               data-cms-prop={key}
               rows={key === "body" ? 6 : 3}
               value={String(p[key] || "")}
+              placeholder={
+                {
+                  lead: "輸入說明文字",
+                  body: "輸入內文",
+                }[key] || ""
+              }
               disabled={disabled}
               onChange={(event) => set(key, event.target.value)}
             />
@@ -231,6 +417,14 @@ export default function CmsSectionPropsForm({
             <input
               data-cms-prop={key}
               value={String(p[key] || "")}
+              placeholder={
+                {
+                  eyebrow: "眉題",
+                  title: "輸入標題",
+                  cta_label: "主按鈕文字",
+                  cta_secondary_label: "次按鈕文字",
+                }[key] || ""
+              }
               disabled={disabled}
               onChange={(event) => set(key, event.target.value)}
             />

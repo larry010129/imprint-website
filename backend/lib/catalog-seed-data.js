@@ -148,8 +148,10 @@ function applyBraceletCaratRules(table) {
   }
 }
 
-// ponytail: WAX_WEIGHT_TABLE is authoritative; LEGACY_WEIGHT_TABLE only defines
-// which gold/carat combos exist and fills bracelet A 0.3+ until sheet provides wax.
+// ponytail: seed still Node (build-shop-catalog-static / render-build); ceiling =
+// dual-runtime catalog. Upgrade = port buildSeedRows to Python, drop this file.
+// WAX_WEIGHT_TABLE authoritative; LEGACY_WEIGHT_TABLE only defines which
+// gold/carat combos exist and fills bracelet A 0.3+ until sheet provides wax.
 const WAX_TO_METAL_CHIN = { '9k': 11.5, '14k': 14, '18k': 16, pt950: 24, s925: 11 };
 
 function waxChinForCell(category, style, gold, carat, legacyGolds) {

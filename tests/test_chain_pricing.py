@@ -21,20 +21,11 @@ def test_standalone_chain_labor_depends_on_metal():
     assert _labor_fee("pendant", "s925") == 5000
 
 
-def test_node_pricing_uses_same_exact_chain_wax():
-    script = (
-        "const p=require('./backend/lib/pricing');"
-        "console.log(JSON.stringify([p.chainWaxChin('1.5mm',46),p.chainWaxChin('3.0mm',80),"
-        "p.laborFee('chain','s925'),p.laborFee('chain','18k')]));"
-    )
-    result = subprocess.run(
-        ["node", "-e", script],
-        cwd=ROOT,
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    assert json.loads(result.stdout) == [0.033, 0.12, 500, 2000]
+def test_python_chain_wax_and_labor_exact():
+    assert _chain_wax_chin("1.5mm", 46) == 0.033
+    assert _chain_wax_chin("3.0mm", 80) == 0.12
+    assert _labor_fee("chain", "s925") == 500
+    assert _labor_fee("chain", "18k") == 2000
 
 
 def test_browser_pricing_uses_length_wax_and_chain_labor():

@@ -1,8 +1,10 @@
-"""Server-side authoritative order pricing — ported from backend/lib/pricing.js.
+"""Server-side authoritative order pricing (source of truth).
 
 Client-submitted prices (`clientPricing`) must never be trusted when writing to
 cart_items/orders; this module recomputes the price from the DB catalog + live
 gold rate. See shop_controller.add_to_cart, which is the sole write path.
+
+Thin client preview: public/js/shop-pricing-local.js must stay formula-aligned.
 """
 
 from __future__ import annotations
@@ -97,27 +99,15 @@ def _shape_surcharge_rate(diamond_shape: str | None) -> float:
     return NON_ROUND_SHAPE_SURCHARGE if (diamond_shape or "round") != "round" else 0.0
 
 
-def _multi_stone_tier(carat_key: str, carat_num: float, table: dict) -> str | None:
-    if table.get(carat_key) is not None:
-        return carat_key
-    return "0.3_plus" if carat_num > 0.3 else None
-
-
-def _resolve_multi_price(table: dict, tier: str, stone_count: int, multi_above_03: dict) -> float | None:
-    sc = str(stone_count)
-    if tier == "0.3_plus":
-        row = table.get("0.3") or {}
-        multiplier = multi_above_03.get(sc)
-        base_row = row.get(sc)
-        return round(base_row * multiplier) if (base_row is not None and multiplier) else None
-    return (table.get(tier) or {}).get(sc)
-
-
 def _effective_tables(overrides: dict[str, Any] | None) -> dict[str, Any]:
     """Overlay admin overrides onto the base diamond tables, canonicalizing carat
     keys so client ('0.10') and server ('0.1') formats align. With no overrides
     this yields the module constants unchanged (checkout math is untouched until
-    an admin sets a value)."""
+    an admin sets a value).
+
+    white_multi / fancy_multi stay available for admin tooling, but memorial
+    diamond totals use unit × qty × multi_above_03 — never absolute packages.
+    """
     ov = overrides or {}
     dia = ov.get("diamond") if isinstance(ov.get("diamond"), dict) else {}
     multi_above = {str(k): v for k, v in MULTI_STONE_ABOVE_03_MULTIPLIER.items()}
@@ -154,7 +144,7 @@ def compute_diamond_list_price(
         return None
 
     earring_pair = category == "earring"
-    multi_stone = category == "diamond" and _as_stone_count(stone_count) in VALID_STONE_COUNTS
+    multi_count = _as_stone_count(stone_count) if category == "diamond" else None
     if not _shape_carat_allowed(carat_num, diamond_shape):
         return None
 
@@ -163,21 +153,11 @@ def compute_diamond_list_price(
 
     base = None
     if diamond_kind == "white":
-        if multi_stone:
-            count = _as_stone_count(stone_count) or DEFAULT_STONE_COUNT_BY_CATEGORY.get(category, 2)
-            tier = _multi_stone_tier(ck, carat_num, eff["white_multi"])
-            base = _resolve_multi_price(eff["white_multi"], tier, count, eff["multi_above_03"]) if tier else None
-        else:
-            base = eff["white"].get(ck)
+        base = eff["white"].get(ck)
     elif diamond_kind == "fancy":
         if fancy_color not in VALID_FANCY_COLORS or carat_num < FANCY_MIN_CARAT:
             return None
-        if multi_stone:
-            count = _as_stone_count(stone_count) or DEFAULT_STONE_COUNT_BY_CATEGORY.get(category, 2)
-            tier = _multi_stone_tier(ck, carat_num, eff["fancy_multi"])
-            base = _resolve_multi_price(eff["fancy_multi"], tier, count, eff["multi_above_03"]) if tier else None
-        else:
-            base = eff["fancy"].get(ck)
+        base = eff["fancy"].get(ck)
     else:
         return None
 
@@ -188,8 +168,15 @@ def compute_diamond_list_price(
         surcharge = (pct / 100.0) if isinstance(pct, (int, float)) else NON_ROUND_SHAPE_SURCHARGE
     else:
         surcharge = 0.0
-    single_price = round(base * (1 + surcharge)) if surcharge else base
-    return single_price * 2 if earring_pair else single_price
+    unit_price = round(base * (1 + surcharge)) if surcharge else base
+    if earring_pair:
+        return unit_price * 2
+    if multi_count:
+        discount = eff["multi_above_03"].get(str(multi_count))
+        if not discount:
+            return None
+        return round(unit_price * multi_count * discount)
+    return unit_price
 
 
 def get_metal_prices(cur) -> dict[str, float]:
@@ -333,8 +320,7 @@ def _compute_chain_addon(
 
 
 def compute_order_pricing(cur, data: dict[str, Any], *, require_published: bool = True) -> dict[str, Any]:
-    """The single source of truth for cart/order pricing. Mirrors
-    backend/lib/pricing.js computeOrderPricing(); never trust data["clientPricing"]."""
+    """Single source of truth for cart/order pricing; never trust data["clientPricing"]."""
     category = data.get("category")
     carat = data.get("carat")
     gold = data.get("gold")

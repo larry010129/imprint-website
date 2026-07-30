@@ -11,6 +11,7 @@ from curl_cffi.requests import AsyncSession
 
 from app.kitco_silver import fetch_xag_per_gram_twd
 from app.parse_bot_gold import find_gold_bar_prices, is_bot_challenge
+from app.pricing import CHIN_TO_GRAMS, PURITY_MULTIPLIER as _PURITY_ALL
 
 # BOT only updates this quote a few times a day — re-scraping the live page on
 # every /api/bot-gold hit was pure wasted network latency (and risked getting
@@ -35,12 +36,12 @@ BOT_HEADERS = {
     "Accept": "text/html,application/xhtml+xml",
 }
 
-PURITY_MULTIPLIER = {"9k": 0.5, "14k": 0.75, "18k": 0.85, "pt950": 1.1, "s925": 0.925}
+# Shop alloys only (aliases 999/pt/silver925 stay in app.pricing for orders).
+PURITY_MULTIPLIER = {k: _PURITY_ALL[k] for k in ("9k", "14k", "18k", "pt950", "s925")}
 METAL_BASE = {"9k": "XAU", "14k": "XAU", "18k": "XAU", "pt950": "XPT", "s925": "XAG"}
 FALLBACK_XPT = 1050.0
 # Fine silver TWD/g fallback (~Kitco Ask × BOT USD cash sell / troy oz grams)
 FALLBACK_XAG = 61.0
-CHIN_TO_GRAMS = 3.75
 
 TAIPEI = ZoneInfo("Asia/Taipei")
 

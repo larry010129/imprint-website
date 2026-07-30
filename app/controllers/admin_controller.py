@@ -579,9 +579,10 @@ async def products_create(request: Request) -> JSONResponse:
             """
             insert into products (
                 category, name_zh, name_en, description_zh, description_en,
-                default_color, allows_engraving, is_published, first_published_at, created_by_id
+                default_color, allows_engraving, allows_pendant_only, allows_with_chain,
+                is_published, first_published_at, created_by_id
             )
-            values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             returning *
             """,
             (
@@ -592,6 +593,8 @@ async def products_create(request: Request) -> JSONResponse:
                 cleaned["descriptionEn"],
                 cleaned["defaultColor"],
                 cleaned["allowsEngraving"],
+                cleaned["allowsPendantOnly"],
+                cleaned["allowsWithChain"],
                 cleaned["isPublished"],
                 first_published,
                 user_id,
@@ -631,8 +634,9 @@ async def product_update(request: Request) -> JSONResponse:
             """
             update products set
                 category = %s, name_zh = %s, name_en = %s, description_zh = %s, description_en = %s,
-                default_color = %s, allows_engraving = %s, is_published = %s,
-                first_published_at = %s, updated_at = now()
+                default_color = %s, allows_engraving = %s,
+                allows_pendant_only = %s, allows_with_chain = %s,
+                is_published = %s, first_published_at = %s, updated_at = now()
             where id = %s
             returning *
             """,
@@ -644,6 +648,8 @@ async def product_update(request: Request) -> JSONResponse:
                 cleaned["descriptionEn"],
                 cleaned["defaultColor"],
                 cleaned["allowsEngraving"],
+                cleaned["allowsPendantOnly"],
+                cleaned["allowsWithChain"],
                 cleaned["isPublished"],
                 first_published,
                 product_id,
@@ -695,9 +701,10 @@ async def product_action(request: Request) -> JSONResponse:
                 """
                 insert into products (
                     category, name_zh, name_en, description_zh, description_en,
-                    default_color, allows_engraving, is_published, created_by_id
+                    default_color, allows_engraving, allows_pendant_only, allows_with_chain,
+                    is_published, created_by_id
                 )
-                values (%s, %s, %s, %s, %s, %s, %s, false, %s)
+                values (%s, %s, %s, %s, %s, %s, %s, %s, %s, false, %s)
                 returning *
                 """,
                 (
@@ -708,6 +715,8 @@ async def product_action(request: Request) -> JSONResponse:
                     product["description_en"],
                     product["default_color"],
                     product.get("allows_engraving", True),
+                    product.get("allows_pendant_only", True),
+                    product.get("allows_with_chain", True),
                     user_id,
                 ),
             )

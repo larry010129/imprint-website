@@ -447,13 +447,22 @@ function productAssetId(product) {
   return '';
 }
 
+/** Skip seed SVG placeholders — /shop/styles/*.svg 404; shop-product PNGs are SoT. */
+function isUsableCatalogImageUrl(url) {
+  if (!url) return false;
+  const path = String(url).split('?', 1)[0].toLowerCase();
+  if (path.endsWith('.svg')) return false;
+  if (/\/images\/shop\/styles\//i.test(path)) return false;
+  return true;
+}
+
 /** Pick catalog image URLs for exact slot keys (no legacy metal-only fallback). */
 function catalogImagesForKeys(product, keys) {
   if (!product?.images || !keys?.length) return [];
   const pick = (key) => {
     const val = product.images[key];
-    if (Array.isArray(val)) return val.filter(Boolean);
-    if (typeof val === 'string' && val) return [val];
+    if (Array.isArray(val)) return val.filter(isUsableCatalogImageUrl);
+    if (typeof val === 'string' && isUsableCatalogImageUrl(val)) return [val];
     return [];
   };
   for (const key of keys) {
@@ -703,7 +712,9 @@ function productImagesForColor(product, metalColor, diamondColor, opts) {
     }
     if (product?.images) {
       for (const list of Object.values(product.images)) {
-        const normalized = Array.isArray(list) ? list.filter(Boolean) : (list ? [list] : []);
+        const normalized = (Array.isArray(list) ? list : list ? [list] : []).filter(
+          isUsableCatalogImageUrl,
+        );
         if (normalized.length) return normalized;
       }
     }
@@ -1354,8 +1365,6 @@ const SUBMIT_FIELD_TARGETS = {
   fancyColor: () => document.getElementById('fancy-diamond-step'),
   diamondShape: () => document.getElementById('diamond-shape-step'),
   pendantChain: () => document.getElementById('pendant-chain-step'),
-  pendantChainMetal: () => document.querySelector('#pendant-chain-options .pendant-chain-metal'),
-  pendantChainColor: () => document.getElementById('pendant-chain-color-step'),
   pendantChainLength: () => document.querySelector('#pendant-chain-options .pendant-chain-length'),
 };
 
@@ -1382,8 +1391,6 @@ function getMissingSubmitFields() {
   }
   if (state.category === 'pendant' && state.includeChain) {
     if (!state.chainProductId) missing.push('pendantChain');
-    if (!state.chainGold) missing.push('pendantChainMetal');
-    if (!state.chainColor) missing.push('pendantChainColor');
     if (!state.chainLength) missing.push('pendantChainLength');
   }
   return missing;
@@ -1393,10 +1400,8 @@ function labelForSubmitField(key) {
   switch (key) {
     case 'category': return tr('step_category');
     case 'type': return tr('sum_style');
-    case 'gold':
-    case 'pendantChainMetal': return tr('step_metal');
-    case 'color':
-    case 'pendantChainColor': return tr('step_color');
+    case 'gold': return tr('step_metal');
+    case 'color': return tr('step_color');
     case 'carat': return tr('step_carat');
     case 'ringSize': return tr('step_ring_size');
     case 'length':
@@ -1734,15 +1739,70 @@ function estimatedProductPrice(product) {
   return estimates.length ? Math.min(...estimates) : null;
 }
 
+function catalogCaratOptionLabel(value, isChain) {
+  if (isChain) return String(value);
+  const n = parseFloat(value);
+  return Number.isNaN(n) ? String(value) : `${n.toFixed(1)} ct`;
+}
+
+function collectCategoryCarats(category) {
+  const set = new Set();
+  productsFor(category).forEach((product) => {
+    (product.carats || []).forEach((c) => {
+      if (c == null || c === '') return;
+      set.add(String(c));
+    });
+  });
+  return [...set].sort((a, b) => {
+    const na = parseFloat(a);
+    const nb = parseFloat(b);
+    if (!Number.isNaN(na) && !Number.isNaN(nb) && na !== nb) return na - nb;
+    return String(a).localeCompare(String(b), undefined, { numeric: true });
+  });
+}
+
+function productOffersCarat(product, carat) {
+  if (!carat) return true;
+  const target = String(carat);
+  return (product.carats || []).some((c) => String(c) === target);
+}
+
+function populateCatalogCaratFilter({ keepSelection = true } = {}) {
+  const sel = document.getElementById('catalog-carat-filter');
+  if (!sel) return;
+  const prev = keepSelection ? sel.value : '';
+  const isChain = state.category === 'chain';
+  const carats = state.category ? collectCategoryCarats(state.category) : [];
+  sel.innerHTML = '';
+  const all = document.createElement('option');
+  all.value = '';
+  all.textContent = tr(isChain ? 'catalog_all_thicknesses' : 'catalog_all_carats');
+  sel.appendChild(all);
+  carats.forEach((c) => {
+    const opt = document.createElement('option');
+    opt.value = c;
+    opt.textContent = catalogCaratOptionLabel(c, isChain);
+    sel.appendChild(opt);
+  });
+  sel.value = carats.includes(prev) ? prev : '';
+  sel.hidden = !carats.length;
+  sel.setAttribute(
+    'aria-label',
+    tr(isChain ? 'catalog_thickness_filter_label' : 'catalog_carat_filter_label'),
+  );
+}
+
 function filteredProductsForCurrentCategory() {
   const query = (document.getElementById('catalog-search-input')?.value || '').trim().toLowerCase();
   const metal = document.getElementById('catalog-metal-filter')?.value || '';
   const priceBand = document.getElementById('catalog-price-filter')?.value || '';
+  const carat = document.getElementById('catalog-carat-filter')?.value || '';
   return productsFor(state.category).filter(product => {
     const names = `${product.nameZh || ''} ${product.nameEn || ''}`.toLowerCase();
     if (query && !names.includes(query)) return false;
     const golds = product.golds || [];
     if (metal && golds.length && !golds.includes(metal)) return false;
+    if (carat && !productOffersCarat(product, carat)) return false;
     if (priceBand) {
       const price = estimatedProductPrice(product);
       if (price == null) return false;
@@ -1891,7 +1951,7 @@ function updateCaratButtons() {
   sel.innerHTML = '';
   const placeholder = document.createElement('option');
   placeholder.value = '';
-  placeholder.textContent = tr('carat_placeholder') || '— 請選擇克拉數 —';
+  placeholder.textContent = tr('carat_placeholder') || '選擇克拉';
   sel.appendChild(placeholder);
   validCarats.forEach((v) => {
     const n = parseFloat(v);
@@ -2857,81 +2917,96 @@ function defaultChainProductId() {
   return chains.length ? String(chains[0].id) : null;
 }
 
+/** Per-product 僅墜子 / 含鍊賣 flags from catalog (default both allowed). */
+function pendantSellFlags(product) {
+  return {
+    allowOnly: !product || product.allowsPendantOnly !== false,
+    allowChain: !product || product.allowsWithChain !== false,
+  };
+}
+
+/** Force includeChain when product only allows one sell mode. */
+function applyPendantSellMode(product) {
+  const { allowOnly, allowChain } = pendantSellFlags(product);
+  if (allowChain && !allowOnly) state.includeChain = true;
+  else if (allowOnly && !allowChain) state.includeChain = false;
+}
+
+/**
+ * Chain metal/color no longer user-picked — inherit from pendant body.
+ * Pricing still needs a chain SKU + gold; pick first published chain product.
+ */
+function syncAttachedChainFromPendant() {
+  if (!state.includeChain) {
+    state.chainProductId = null;
+    state.chainGold = null;
+    state.chainColor = null;
+    return;
+  }
+  const chains = productsFor('chain');
+  const chainIds = chains.map((p) => String(p.id));
+  if (!chainIds.includes(String(state.chainProductId))) {
+    state.chainProductId = defaultChainProductId();
+  }
+  const chainProduct = getProduct('chain', state.chainProductId);
+  const chainGolds = productGolds('chain', chainProduct);
+  if (state.gold && chainGolds.includes(state.gold)) {
+    state.chainGold = state.gold;
+  } else if (chainGolds.length) {
+    state.chainGold = chainGolds[0];
+  } else {
+    state.chainGold = state.gold || null;
+  }
+  state.chainColor = attachedChainColor(state.chainGold, state.color || previewColor());
+}
+
 function updateChainOptions() {
   const pendantStep = document.getElementById('pendant-chain-step');
   const pendantGuideStep = document.getElementById('pendant-chain-guide-step');
+  const toggleRow = document.getElementById('pendant-chain-toggle-row');
+  const onlyBtn = document.querySelector('.pendant-chain-toggle[data-include-chain="false"]');
+  const withBtn = document.querySelector('.pendant-chain-toggle[data-include-chain="true"]');
   const isPendant = state.category === 'pendant';
-  pendantStep?.classList.toggle('hidden', !isPendant);
-  pendantGuideStep?.classList.toggle('hidden', !isPendant || !state.includeChain);
-  updateLengthStep();
+  const product = isPendant ? getSelectedProduct() : null;
+  const { allowOnly, allowChain } = pendantSellFlags(product);
 
   if (!isPendant) {
     state.includeChain = false;
     state.chainProductId = null;
+    state.chainGold = null;
+    state.chainColor = null;
+    pendantStep?.classList.add('hidden');
+    pendantGuideStep?.classList.add('hidden');
+    updateLengthStep();
     return;
   }
 
-  document.querySelectorAll('.pendant-chain-toggle').forEach(btn =>
+  applyPendantSellMode(product);
+
+  // pendant-only: hide 搭配鏈條; otherwise show step
+  if (!allowChain && allowOnly) {
+    pendantStep?.classList.add('hidden');
+  } else {
+    pendantStep?.classList.remove('hidden');
+  }
+
+  // both → yes/no toggle; with-chain-only → hide toggle, length only
+  const showToggle = allowOnly && allowChain;
+  toggleRow?.classList.toggle('hidden', !showToggle);
+  onlyBtn?.classList.toggle('hidden', !allowOnly);
+  withBtn?.classList.toggle('hidden', !allowChain);
+
+  document.querySelectorAll('.pendant-chain-toggle').forEach((btn) =>
     btn.classList.toggle('active', String(state.includeChain) === btn.dataset.includeChain));
+
   const options = document.getElementById('pendant-chain-options');
   options?.classList.toggle('hidden', !state.includeChain);
+  pendantGuideStep?.classList.toggle('hidden', !state.includeChain);
+  updateLengthStep();
+
+  syncAttachedChainFromPendant();
   if (!state.includeChain) return;
 
-  const chains = productsFor('chain');
-  const chainIds = chains.map(p => String(p.id));
-  if (!chainIds.includes(String(state.chainProductId))) {
-    state.chainProductId = defaultChainProductId();
-    state.chainGold = null;
-    state.chainColor = null;
-  }
-
-  const chainProduct = getProduct('chain', state.chainProductId);
-  const chainGolds = productGolds('chain', chainProduct);
-  if (state.chainGold && chainGolds.length && !chainGolds.includes(state.chainGold)) {
-    state.chainGold = null;
-    state.chainColor = null;
-  }
-  if (!state.chainGold && chainGolds.length) {
-    state.chainGold = chainGolds[0];
-  }
-  // Attached chain is NOT a color-locked SKU — never use enforceMetalColor(chainProduct)
-  // (that always returns chain-A/B/C defaultColor and wipes the swatch).
-  state.chainColor = attachedChainColor(state.chainGold, state.chainColor || state.color);
-  renderMetalButtons('pendant-chain-metal-row', chainGolds, state.chainGold, gold => {
-    state.chainGold = gold;
-    state.chainColor = attachedChainColor(gold, state.chainColor || state.color);
-    updateChainOptions();
-    updateSummary();
-    updateLargeImage('chain');
-  });
-
-  const chainColorStep = document.getElementById('pendant-chain-color-step');
-  const chainColorRow = document.getElementById('pendant-chain-color-row');
-  // NOTE: intentionally not using needsColorSelection()/enforceMetalColor() here — those
-  // treat any "chain-" product as color-locked (correct for the standalone chain-only
-  // product page, where color is picked via SKU). Here the pendant's attached chain has
-  // no SKU switcher, only this swatch, so it must stay selectable like a normal metal.
-  const showChainColor = !!(state.chainGold && GOLD_COLOR_METALS.includes(state.chainGold));
-  chainColorStep?.classList.toggle('hidden', !showChainColor);
-  updateColorStepLabel('pendant-chain-color-label', state.chainGold);
-  if (!showChainColor) {
-    if (state.chainGold) {
-      state.chainColor = attachedChainColor(state.chainGold, state.chainColor || state.color);
-    }
-    if (chainColorRow) chainColorRow.innerHTML = '';
-  } else {
-    state.chainColor = attachedChainColor(state.chainGold, state.chainColor || state.color);
-    renderColorButtons('pendant-chain-color-row', state.chainGold, chainProduct, state.chainColor, color => {
-      const colors = availableColorsForGold(state.chainGold);
-      if (!colors.includes(color)) return;
-      // Chain color is independent of pendant color (mixed-metal combos allowed).
-      state.chainColor = color;
-      document.querySelectorAll('#pendant-chain-color-row .color-btn').forEach(b =>
-        b.classList.toggle('active', b.dataset.color === color));
-      updateSummary();
-      updateLargeImage('chain');
-    });
-  }
   if (!state.chainLength) {
     state.chainLength = CHAIN_LENGTH_OPTIONS_CM[0];
   }
@@ -3225,10 +3300,17 @@ function updateSummary() {
   document.getElementById("sum-cat").textContent =
     state.category ? tr('cat_' + state.category) : '-';
 
-  // Style
+  // Style — diamond standalone has no style pick (series SKU ≠ jewelry 款式)
   const selectedProduct = getSelectedProduct();
-  document.getElementById("sum-type").textContent =
-    selectedProduct ? productName(selectedProduct) : '-';
+  const typeRow = document.getElementById('sum-type-row');
+  const sumType = document.getElementById('sum-type');
+  if (isDiamondOnlyCategory()) {
+    typeRow?.classList.add('hidden');
+    if (sumType) sumType.textContent = '-';
+  } else {
+    typeRow?.classList.remove('hidden');
+    if (sumType) sumType.textContent = selectedProduct ? productName(selectedProduct) : '-';
+  }
 
   document.getElementById("sum-material").textContent =
     isDiamondOnlyCategory()
@@ -3386,6 +3468,7 @@ function selectCategory(cat) {
     metalFilter.hidden = cat === 'diamond';
     if (cat === 'diamond') metalFilter.value = '';
   }
+  populateCatalogCaratFilter({ keepSelection: false });
 
   renderTypeCards();
   const titleEl = document.getElementById("shop-category-title");
@@ -3545,21 +3628,17 @@ function ensureGirdleEngrave() {
 ensureGirdleEngrave();
 document.querySelectorAll('.pendant-chain-toggle').forEach(btn =>
   btn.addEventListener('click', () => {
-    state.includeChain = btn.dataset.includeChain === 'true';
+    const flags = pendantSellFlags(getSelectedProduct());
+    const wantChain = btn.dataset.includeChain === 'true';
+    if (wantChain && !flags.allowChain) return;
+    if (!wantChain && !flags.allowOnly) return;
+    state.includeChain = wantChain;
     if (state.includeChain && !state.chainLength) {
       state.chainLength = CHAIN_LENGTH_OPTIONS_CM[0];
-    }
-    if (state.includeChain && !state.chainColor) {
-      // First time 含鍊 only — seed from pendant; later picks stay independent.
-      state.chainColor = attachedChainColor(state.chainGold || state.gold, previewColor());
-    } else if (!state.includeChain) {
-      // 僅墜子: drop chain metal so preview can't leak combo paths.
-      state.chainColor = null;
     }
     productImageIndex = 0;
     updateChainOptions();
     updateSummary();
-    // Force pendant-only vs with-chain asset refresh (never keep prior combo src)
     updateLargeImage(state.includeChain ? 'chain' : 'pendant');
   }));
 
@@ -4166,7 +4245,7 @@ document.getElementById("favorite-btn")?.addEventListener("click", addCurrentFav
   });
 })();
 
-['catalog-search-input', 'catalog-metal-filter', 'catalog-price-filter'].forEach(id => {
+['catalog-search-input', 'catalog-metal-filter', 'catalog-price-filter', 'catalog-carat-filter'].forEach(id => {
   const element = document.getElementById(id);
   element?.addEventListener(element.tagName === 'INPUT' ? 'input' : 'change', renderTypeCards);
 });
@@ -4174,9 +4253,11 @@ function clearCatalogFilters() {
   const search = document.getElementById('catalog-search-input');
   const metal = document.getElementById('catalog-metal-filter');
   const price = document.getElementById('catalog-price-filter');
+  const carat = document.getElementById('catalog-carat-filter');
   if (search) search.value = '';
   if (metal) metal.value = '';
   if (price) price.value = '';
+  if (carat) carat.value = '';
   renderTypeCards();
 }
 document.getElementById('catalog-filter-clear')?.addEventListener('click', clearCatalogFilters);
@@ -4189,6 +4270,7 @@ document.addEventListener('langchange', () => {
   updateChainOptions();
   renderCatalogTiles();
   renderDiamondShapeButtons();
+  populateCatalogCaratFilter({ keepSelection: true });
   const titleEl = document.getElementById("shop-category-title");
   if (titleEl && state.category) titleEl.textContent = tr('cat_' + state.category);
   updateSummary();

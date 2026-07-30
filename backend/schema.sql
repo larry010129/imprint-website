@@ -109,6 +109,8 @@ create table if not exists products (
   description_en text,
   default_color text not null default 'white',
   allows_engraving boolean not null default true,
+  allows_pendant_only boolean not null default true,
+  allows_with_chain boolean not null default true,
   is_published boolean not null default false,
   first_published_at timestamptz,
   sort_order int not null default 0,

@@ -7,6 +7,7 @@ import {
   LayoutTemplate,
   Megaphone,
   MousePointerClick,
+  Move,
   Quote,
   Type,
 } from "lucide-react";
@@ -19,7 +20,49 @@ export type CmsSectionType =
   | "faq_embed"
   | "testimonials_embed"
   | "button_row"
-  | "spacer";
+  | "spacer"
+  | "freeform";
+
+export type CmsFreeformBlockKind = "heading" | "text" | "button" | "image";
+
+export type CmsFreeformBlock = {
+  id: string;
+  kind: CmsFreeformBlockKind;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  z: number;
+  text?: string;
+  href?: string;
+  image_url?: string;
+  image_alt?: string;
+};
+
+export function newFreeformBlockId(): string {
+  return `b-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+export function defaultFreeformBlock(
+  kind: CmsFreeformBlockKind,
+  index = 0
+): CmsFreeformBlock {
+  const base = {
+    id: newFreeformBlockId(),
+    kind,
+    x: 10 + (index % 3) * 6,
+    y: 12 + (index % 4) * 10,
+    w: kind === "button" ? 22 : kind === "image" ? 36 : 40,
+    h: kind === "heading" ? 14 : kind === "image" ? 28 : 12,
+    z: index + 1,
+  };
+  if (kind === "heading") return { ...base, text: "新標題" };
+  if (kind === "text") return { ...base, text: "在此編輯文字。" };
+  if (kind === "button") {
+    return { ...base, text: "了解更多", href: "/contact.html" };
+  }
+  return { ...base, image_url: "", image_alt: "" };
+}
 
 export type CmsSection = {
   id: string;
@@ -60,7 +103,7 @@ export type CmsSectionTemplate = {
   label: string;
   description: string;
   props: Record<string, unknown>;
-  previewKind: "hero" | "text" | "split" | "banner" | "list" | "buttons" | "space";
+  previewKind: "hero" | "text" | "split" | "banner" | "list" | "buttons" | "space" | "freeform";
 };
 
 export const SECTION_TEMPLATE_CATEGORIES: {
@@ -75,12 +118,153 @@ export const SECTION_TEMPLATE_CATEGORIES: {
 
 export const SECTION_TEMPLATES: CmsSectionTemplate[] = [
   {
+    id: "blank-freeform",
+    category: "blank",
+    type: "freeform",
+    label: "自由版面",
+    description: "像 PowerPoint／Squarespace 一樣自由拖曳元素",
+    props: {
+      height: 480,
+      blocks: [
+        {
+          id: "b-title",
+          kind: "heading",
+          x: 8,
+          y: 16,
+          w: 56,
+          h: 16,
+          z: 2,
+          text: "自由版面標題",
+        },
+        {
+          id: "b-body",
+          kind: "text",
+          x: 8,
+          y: 38,
+          w: 44,
+          h: 18,
+          z: 1,
+          text: "在預覽中拖曳把手移動，拖曳右下角縮放。",
+        },
+        {
+          id: "b-cta",
+          kind: "button",
+          x: 8,
+          y: 66,
+          w: 24,
+          h: 12,
+          z: 3,
+          text: "了解更多",
+          href: "/contact.html",
+        },
+      ],
+      blocks_mobile: [],
+    },
+    previewKind: "freeform",
+  },
+  {
+    id: "designed-freeform-hero",
+    category: "designed",
+    type: "freeform",
+    label: "自由 Hero",
+    description: "大標題＋說明＋按鈕的自由版面起點",
+    props: {
+      height: 560,
+      blocks: [
+        {
+          id: "fh-eyebrow",
+          kind: "text",
+          x: 8,
+          y: 18,
+          w: 40,
+          h: 8,
+          z: 1,
+          text: "IMPRINT DIAMOND",
+        },
+        {
+          id: "fh-title",
+          kind: "heading",
+          x: 8,
+          y: 28,
+          w: 70,
+          h: 18,
+          z: 3,
+          text: "把思念，留成永恆",
+        },
+        {
+          id: "fh-lead",
+          kind: "text",
+          x: 8,
+          y: 50,
+          w: 48,
+          h: 14,
+          z: 2,
+          text: "台灣在地 DNA 紀念鑽石，依您的步調客製。",
+        },
+        {
+          id: "fh-cta",
+          kind: "button",
+          x: 8,
+          y: 72,
+          w: 22,
+          h: 12,
+          z: 4,
+          text: "開始諮詢",
+          href: "/contact.html",
+        },
+      ],
+      blocks_mobile: [
+        {
+          id: "fh-title-m",
+          kind: "heading",
+          x: 6,
+          y: 22,
+          w: 88,
+          h: 20,
+          z: 2,
+          text: "把思念，留成永恆",
+        },
+        {
+          id: "fh-cta-m",
+          kind: "button",
+          x: 6,
+          y: 70,
+          w: 50,
+          h: 12,
+          z: 3,
+          text: "開始諮詢",
+          href: "/contact.html",
+        },
+      ],
+    },
+    previewKind: "freeform",
+  },
+  {
+    id: "designed-hero-full",
+    category: "designed",
+    type: "hero",
+    label: "全幅 Hero",
+    description: "大圖背景＋雙 CTA 的完整主視覺",
+    props: {
+      eyebrow: "銘印鑽石",
+      title: "全台唯一在地 DNA 紀念鑽石",
+      lead: "從樣本到鑲嵌，於台灣實驗室完成。",
+      image_url: "",
+      image_alt: "",
+      cta_label: "客製試算",
+      cta_href: "/shop/calculator/",
+      cta_secondary_label: "了解製程",
+      cta_secondary_href: "/what-is-dna-diamond.html",
+    },
+    previewKind: "hero",
+  },
+  {
     id: "blank-text",
     category: "blank",
     type: "rich_text",
     label: "空白文字",
     description: "從標題與內文開始",
-    props: { title: "", body: "", columns: 1 },
+    props: { title: "輸入標題", body: "在此編輯內文。", columns: 1 },
     previewKind: "text",
   },
   {
@@ -89,7 +273,15 @@ export const SECTION_TEMPLATES: CmsSectionTemplate[] = [
     type: "image_text",
     label: "空白圖文",
     description: "圖片與內容的自由起點",
-    props: { title: "", body: "", image_url: "", image_alt: "", layout: "stack" },
+    props: {
+      title: "圖文標題",
+      body: "在此編輯說明文字。",
+      image_url: "",
+      image_alt: "",
+      layout: "stack",
+      cta_label: "了解更多",
+      cta_href: "/contact.html",
+    },
     previewKind: "split",
   },
   {
@@ -202,24 +394,113 @@ export const SECTION_TEMPLATES: CmsSectionTemplate[] = [
   },
 ];
 
+/** Sensible starter props when palette/drag omits template props. */
+export function defaultPropsForType(type: CmsSectionType): Record<string, unknown> {
+  return copyProps(defaultTemplateForType(type).props);
+}
+
+function copyProps(props: Record<string, unknown>): Record<string, unknown> {
+  return JSON.parse(JSON.stringify(props)) as Record<string, unknown>;
+}
+
 export function defaultTemplateForType(type: CmsSectionType): CmsSectionTemplate {
-  return (
-    SECTION_TEMPLATES.find((template) => template.type === type) || {
-      id: `blank-${type}`,
-      category: "blank",
-      type,
-      label: sectionLabel(type),
-      description: sectionDescription(type),
-      props: {},
-      previewKind: "text",
-    }
-  );
+  const found = SECTION_TEMPLATES.find((template) => template.type === type);
+  if (found) return found;
+  const fallbackProps: Record<CmsSectionType, Record<string, unknown>> = {
+    hero: {
+      eyebrow: "EYEBROW",
+      title: "輸入主標題",
+      lead: "輸入一段簡短說明。",
+      image_url: "",
+      image_alt: "",
+      cta_label: "主要行動",
+      cta_href: "/contact.html",
+      cta_secondary_label: "次要行動",
+      cta_secondary_href: "/",
+    },
+    rich_text: { title: "輸入標題", body: "在此編輯內文。", columns: 1 },
+    image_text: {
+      title: "圖文標題",
+      body: "在此編輯說明文字。",
+      image_url: "",
+      image_alt: "",
+      layout: "stack",
+      cta_label: "了解更多",
+      cta_href: "/contact.html",
+    },
+    cta_band: {
+      title: "準備好開始了嗎？",
+      lead: "我們會依照您的步調，陪您了解下一步。",
+      image_url: "",
+      image_alt: "",
+      cta_label: "聯絡我們",
+      cta_href: "/contact.html",
+      cta_secondary_label: "了解更多",
+      cta_secondary_href: "/about.html",
+    },
+    faq_embed: { mode: "teaser", category_id: "", limit: 6 },
+    testimonials_embed: { limit: 6 },
+    button_row: {
+      buttons: [
+        { label: "第一個連結", href: "/" },
+        { label: "第二個連結", href: "/contact.html" },
+      ],
+    },
+    spacer: { size: "md" },
+    freeform: {
+      height: 480,
+      blocks: [
+        {
+          id: "b-title",
+          kind: "heading",
+          x: 8,
+          y: 16,
+          w: 56,
+          h: 16,
+          z: 2,
+          text: "自由版面標題",
+        },
+        {
+          id: "b-body",
+          kind: "text",
+          x: 8,
+          y: 38,
+          w: 44,
+          h: 18,
+          z: 1,
+          text: "在預覽中拖曳把手移動，拖曳右下角縮放。",
+        },
+        {
+          id: "b-cta",
+          kind: "button",
+          x: 8,
+          y: 66,
+          w: 24,
+          h: 12,
+          z: 3,
+          text: "了解更多",
+          href: "/contact.html",
+        },
+      ],
+      blocks_mobile: [],
+    },
+  };
+  return {
+    id: `blank-${type}`,
+    category: "blank",
+    type,
+    label: sectionLabel(type),
+    description: sectionDescription(type),
+    props: fallbackProps[type] || {},
+    previewKind: type === "freeform" ? "freeform" : "text",
+  };
 }
 
 export function sectionPrimaryProp(type: CmsSectionType): string {
   if (type === "button_row") return "buttons";
   if (type === "spacer") return "size";
   if (type === "faq_embed" || type === "testimonials_embed") return "limit";
+  if (type === "freeform") return "height";
   return "title";
 }
 
@@ -271,6 +552,12 @@ export const SECTION_PALETTE: CmsPaletteItem[] = [
     label: "間距",
     description: "調整區塊上下空白",
     icon: AlignVerticalSpaceAround,
+  },
+  {
+    type: "freeform",
+    label: "自由版面",
+    description: "區塊內自由拖曳／縮放元素",
+    icon: Move,
   },
 ];
 

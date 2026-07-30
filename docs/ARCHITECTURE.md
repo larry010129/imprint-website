@@ -61,7 +61,9 @@ The repo previously had root `*.html`, `partials/`, and Node bake scripts for Ne
 ## Local dev
 
 ```bash
-npm run dev          # uvicorn on :8080
+npm run dev              # FastAPI API on :8080
+npm run dev:web          # Next site on :3000
+# or: dev.bat            # launches both; browse http://127.0.0.1:3000/
 npm run build:frontend   # React → public/react/
 ```
 

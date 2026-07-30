@@ -31,8 +31,8 @@
   var METAL_SLOT_VALUES = METAL_SLOT_OPTIONS.map(function (o) { return o.value; });
   var DIAMOND_SLOT_VALUES = DIAMOND_SLOT_OPTIONS.map(function (o) { return o.value; });
 
-  // 項墜可搭配鍊條展示，且鍊條金屬色可與項墜本體不同色；第三段記錄鍊條的金屬色
-  // （白金/黃金/玫瑰金），留空表示沒有搭配鍊條的照片。其他品項不會出現第三段。
+  // Image slots are metal × diamond. Legacy 3-part keys (metal-diamond-chainMetal)
+  // still parse for folding into metal-diamond; calculator no longer picks chain color.
   function buildSlotKey(metal, diamond, chainMetal) {
     return String(metal) + '-' + String(diamond) + (chainMetal ? '-' + chainMetal : '');
   }
@@ -50,16 +50,11 @@
     return null;
   }
 
-  function allPresetSlotKeys(includeChainVariants) {
+  function allPresetSlotKeys() {
     var keys = [];
     METAL_SLOT_VALUES.forEach(function (metal) {
       DIAMOND_SLOT_VALUES.forEach(function (diamond) {
         keys.push(buildSlotKey(metal, diamond, null));
-        if (includeChainVariants) {
-          METAL_SLOT_VALUES.forEach(function (chainMetal) {
-            keys.push(buildSlotKey(metal, diamond, chainMetal));
-          });
-        }
       });
     });
     return keys;
@@ -67,13 +62,13 @@
 
   /** Calculator image axes per category (matches shop.js preview lookup). */
   function presetSlotKeysForCategory(category) {
-    if (category === 'pendant') return allPresetSlotKeys(true);
     if (category === 'chain') {
       return METAL_SLOT_VALUES.map(function (metal) {
         return buildSlotKey(metal, 'white', null);
       });
     }
-    return allPresetSlotKeys(false);
+    // Pendant matches other jewelry: metal × diamond only (no chain-metal axis).
+    return allPresetSlotKeys();
   }
 
   var root = document.getElementById('productsRoot');
@@ -660,7 +655,7 @@
           '<div class="ap-carousel-card-media">' +
             '<img class="ap-carousel-img" data-src="' + esc(src) + '" alt="" data-fallback="' + esc(src) +
               '" loading="lazy" decoding="async" fetchpriority="low" width="180" height="180">' +
-            '<button type="button" class="ap-remove-image" aria-label="移除">✕</button>' +
+            '<button type="button" class="ap-remove-image" aria-label="移除">X</button>' +
           '</div>' +
         '</div>' +
       '</div>'
@@ -709,17 +704,9 @@
     }).join('');
   }
 
-  function chainMetalOptionsHtml(selected) {
-    var opts = [{ value: '', label: '無鍊條' }].concat(METAL_SLOT_OPTIONS);
-    return opts.map(function (opt) {
-      var sel = opt.value === (selected || '') ? ' selected' : '';
-      return '<option value="' + opt.value + '"' + sel + '>' + esc(opt.label) + '</option>';
-    }).join('');
-  }
-
-  function slotPairSelectHtml(selectedKey, category) {
+  function slotPairSelectHtml(selectedKey) {
     var parsed = parseSlotKey(selectedKey) || { metal: 'white', diamond: 'white', chainMetal: null };
-    var html = (
+    return (
       '<label class="ap-image-slot-pair">' +
         '<span>金屬</span>' +
         '<select class="ap-image-slot-metal">' + slotSelectHtml(METAL_SLOT_OPTIONS, parsed.metal) + '</select>' +
@@ -729,15 +716,6 @@
         '<select class="ap-image-slot-diamond">' + slotSelectHtml(DIAMOND_SLOT_OPTIONS, parsed.diamond) + '</select>' +
       '</label>'
     );
-    if (category === 'pendant') {
-      html += (
-        '<label class="ap-image-slot-pair ap-image-slot-pair--chain">' +
-          '<span>鍊條金屬（可與項墜本體不同色）</span>' +
-          '<select class="ap-image-slot-chain">' + chainMetalOptionsHtml(parsed.chainMetal) + '</select>' +
-        '</label>'
-      );
-    }
-    return html;
   }
 
   function groupImagesForSlots(images) {
@@ -751,9 +729,8 @@
   }
 
   /**
-   * Seed every calculator image axis as an editable slot:
-   * metal × diamond (all categories), plus pendant metal × diamond × chainMetal.
-   * Existing product_images load into matching keys; unknown legacy keys kept too.
+   * Seed every calculator image axis as an editable slot: metal × diamond.
+   * Legacy pendant 3-part keys (metal-diamond-chainMetal) fold into metal-diamond.
    */
   function slotsForEditor(images, category) {
     var groups = groupImagesForSlots(images);
@@ -767,14 +744,25 @@
       slots.push({ color: key, urls: groups[key] ? groups[key].slice() : [] });
     }
 
+    function mergeInto(targetKey, urls) {
+      if (!groups[targetKey]) groups[targetKey] = [];
+      (urls || []).forEach(function (url) {
+        if (groups[targetKey].indexOf(url) < 0) groups[targetKey].push(url);
+      });
+    }
+
     // Legacy metal-only (white/yellow/rose) → metal-white so selects stay truthful.
     COLORS.forEach(function (metal) {
       if (!groups[metal] || !groups[metal].length) return;
-      var normalized = buildSlotKey(metal, 'white', null);
-      if (!groups[normalized]) groups[normalized] = [];
-      groups[metal].forEach(function (url) {
-        if (groups[normalized].indexOf(url) < 0) groups[normalized].push(url);
-      });
+      mergeInto(buildSlotKey(metal, 'white', null), groups[metal]);
+    });
+
+    // Fold legacy metal-diamond-chainMetal into metal-diamond (chain color no longer configured).
+    Object.keys(groups).forEach(function (key) {
+      var parsed = parseSlotKey(key);
+      if (!parsed || !parsed.chainMetal) return;
+      mergeInto(buildSlotKey(parsed.metal, parsed.diamond, null), groups[key]);
+      delete groups[key];
     });
 
     presets.forEach(pushSlot);
@@ -799,7 +787,7 @@
         '<div class="ap-image-slot-head">' +
           '<div class="ap-image-slot-label ap-image-slot-label--pair">' +
             '<span>圖片選項</span>' +
-            slotPairSelectHtml(color, category) +
+            slotPairSelectHtml(color) +
           '</div>' +
           '<button type="button" class="ap-remove-slot" aria-label="移除此選項">✕</button>' +
         '</div>' +
@@ -880,8 +868,7 @@
     var metalSel = slotEl.querySelector('.ap-image-slot-metal');
     var diamondSel = slotEl.querySelector('.ap-image-slot-diamond');
     if (metalSel && diamondSel) {
-      var chainSel = slotEl.querySelector('.ap-image-slot-chain');
-      return buildSlotKey(metalSel.value, diamondSel.value, chainSel ? chainSel.value : null);
+      return buildSlotKey(metalSel.value, diamondSel.value, null);
     }
     var legacy = slotEl.querySelector('.ap-image-slot-key');
     return legacy ? legacy.value : '';
@@ -976,7 +963,6 @@
   function bindSlotKeySelectors(slot, form) {
     var metalSel = slot.querySelector('.ap-image-slot-metal');
     var diamondSel = slot.querySelector('.ap-image-slot-diamond');
-    var chainSel = slot.querySelector('.ap-image-slot-chain');
 
     slot.dataset.lastKey = slotColorKey(slot);
 
@@ -988,7 +974,6 @@
         var prev = parseSlotKey(slot.dataset.lastKey) || { metal: 'white', diamond: 'white', chainMetal: null };
         if (metalSel) metalSel.value = prev.metal;
         if (diamondSel) diamondSel.value = prev.diamond;
-        if (chainSel) chainSel.value = prev.chainMetal || '';
         return;
       }
       slot.dataset.lastKey = key;
@@ -999,7 +984,6 @@
 
     metalSel?.addEventListener('change', onSlotKeyChange);
     diamondSel?.addEventListener('change', onSlotKeyChange);
-    chainSel?.addEventListener('change', onSlotKeyChange);
   }
 
   function refreshImageSlotCategory(slot, form, category) {
@@ -1009,7 +993,7 @@
     slot.dataset.category = category || '';
     var pairWrap = slot.querySelector('.ap-image-slot-label--pair');
     if (!pairWrap) return;
-    pairWrap.innerHTML = '<span>圖片選項</span>' + slotPairSelectHtml(baseColor, category);
+    pairWrap.innerHTML = '<span>圖片選項</span>' + slotPairSelectHtml(baseColor);
     bindSlotKeySelectors(slot, form);
     var key = slotColorKey(slot);
     slot.querySelectorAll('.ap-carousel-item[data-url]').forEach(function (item) {
@@ -1133,6 +1117,33 @@
     );
   }
 
+  function pendantSellModeTogglesHtml(product, category) {
+    var allowOnly = !product || product.allows_pendant_only !== false;
+    var allowChain = !product || product.allows_with_chain !== false;
+    var hiddenAttr = category === 'pendant' ? '' : ' hidden';
+    return (
+      '<div class="ap-pendant-sell-modes ap-field-wide" id="apPendantSellModes"' + hiddenAttr + '>' +
+        '<div class="ap-switch-wrap">' +
+          '<label class="ap-switch">' +
+            '<input type="checkbox" class="ap-switch-input" name="allowsPendantOnly"' +
+              (allowOnly ? ' checked' : '') + '>' +
+            '<span class="ap-switch-track" aria-hidden="true"><span class="ap-switch-thumb"></span></span>' +
+            '<span class="ap-switch-label">可僅墜子賣</span>' +
+          '</label>' +
+        '</div>' +
+        '<div class="ap-switch-wrap">' +
+          '<label class="ap-switch">' +
+            '<input type="checkbox" class="ap-switch-input" name="allowsWithChain"' +
+              (allowChain ? ' checked' : '') + '>' +
+            '<span class="ap-switch-track" aria-hidden="true"><span class="ap-switch-thumb"></span></span>' +
+            '<span class="ap-switch-label">可含鍊賣</span>' +
+          '</label>' +
+        '</div>' +
+        '<p class="ap-section-hint ap-pendant-sell-hint">項墜販售方式：兩者皆勾＝試算可選僅墜子／含鍊；只勾含鍊＝隱藏僅墜子；只勾僅墜子＝不顯示鏈條選項。</p>' +
+      '</div>'
+    );
+  }
+
   function editorFormHtml(product, defaultCategory) {
     var isEdit = !!product;
     var category = (product && product.category) || defaultCategory || 'ring';
@@ -1170,6 +1181,7 @@
               '<label class="ap-field-wide"><span>英文描述</span><textarea class="ap-textarea" name="descriptionEn" rows="3" placeholder="Product description…">' + esc(product && product.description_en) + '</textarea></label>' +
               saveForLaterToggleHtml(product) +
               allowsEngravingToggleHtml(product) +
+              pendantSellModeTogglesHtml(product, category) +
             '</div>' +
             '<h4 class="ap-section-title">款式選項</h4>' +
             '<div class="ap-variant-block">' +
@@ -1179,7 +1191,7 @@
             '<button type="button" class="btn-sm" id="apAddVariant">+ 新增款式</button>' +
             '<h4 class="ap-section-title">商品照片</h4>' +
             '<p class="ap-section-hint">試算頁會依「金屬 × 鑽石顏色」切換商品圖' +
-              (category === 'pendant' ? '；項墜另可標「鍊條金屬」給含鍊／異色鍊組合（例如：白金 + 粉鑽 + 玫瑰金鍊 → white-pink-rose）' : '') +
+              (category === 'pendant' ? '；含鍊預覽沿用項墜金屬色（無需另傳異色鍊圖）' : '') +
               '。下方已列出所有試算組合；有圖的會預先載入，無圖可直接上傳取代預設素材。</p>' +
             '<div class="ap-image-slots" id="apImageSlots">' + imageSlotsHtml(product && product.images, category) + '</div>' +
             '<button type="button" class="btn-sm" id="apAddImageSlot">+ 新增圖片選項</button>' +
@@ -1270,9 +1282,11 @@
       }
       if (hint) {
         hint.textContent = '試算頁會依「金屬 × 鑽石顏色」切換商品圖'
-          + (cat === 'pendant' ? '；項墜另可標「鍊條金屬」給含鍊／異色鍊組合（例如：白金 + 粉鑽 + 玫瑰金鍊 → white-pink-rose）' : '')
+          + (cat === 'pendant' ? '；含鍊預覽沿用項墜金屬色（無需另傳異色鍊圖）' : '')
           + '。下方已列出所有試算組合；有圖的會預先載入，無圖可直接上傳取代預設素材。';
       }
+      var sellModes = document.getElementById('apPendantSellModes');
+      if (sellModes) sellModes.hidden = cat !== 'pendant';
     });
 
     form.addEventListener('submit', function (e) {
@@ -1335,6 +1349,14 @@
       });
     });
     var allowsEngravingInput = form.querySelector('[name="allowsEngraving"]');
+    var allowsPendantOnlyInput = form.querySelector('[name="allowsPendantOnly"]');
+    var allowsWithChainInput = form.querySelector('[name="allowsWithChain"]');
+    var allowsPendantOnly = category === 'pendant'
+      ? !!(allowsPendantOnlyInput && allowsPendantOnlyInput.checked)
+      : true;
+    var allowsWithChain = category === 'pendant'
+      ? !!(allowsWithChainInput && allowsWithChainInput.checked)
+      : true;
     return {
       category: category,
       nameZh: String(fd.get('nameZh') || '').trim(),
@@ -1343,6 +1365,8 @@
       descriptionEn: String(fd.get('descriptionEn') || '').trim(),
       defaultColor: fd.get('defaultColor') || 'white',
       allowsEngraving: !!(allowsEngravingInput && allowsEngravingInput.checked),
+      allowsPendantOnly: allowsPendantOnly,
+      allowsWithChain: allowsWithChain,
       isPublished: !isSaveForLater(form),
       variants: variants,
       images: images,
@@ -1364,6 +1388,15 @@
           errEl.hidden = false;
         }
         form.querySelector('[name="nameZh"]')?.focus();
+        return;
+      }
+
+      if (payload.category === 'pendant' && !payload.allowsPendantOnly && !payload.allowsWithChain) {
+        if (errEl) {
+          errEl.textContent = '項墜請至少勾選「可僅墜子賣」或「可含鍊賣」';
+          errEl.hidden = false;
+        }
+        form.querySelector('[name="allowsPendantOnly"]')?.focus();
         return;
       }
 

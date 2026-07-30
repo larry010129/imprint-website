@@ -24,15 +24,40 @@ from app.controllers import (
 
 log = logging.getLogger(__name__)
 
+# blob: required for admin/CMS crop UI (URL.createObjectURL local previews).
+HTML_CONTENT_SECURITY_POLICY = (
+    "default-src 'self'; "
+    "script-src 'self' 'unsafe-inline' https://cdn.botpress.cloud "
+    "https://files.bpcontent.cloud https://*.botpress.cloud "
+    "https://accounts.google.com; "
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+    "font-src 'self' https://fonts.gstatic.com data:; "
+    "img-src 'self' data: blob: https:; "
+    "connect-src 'self' https://*.botpress.cloud wss://*.botpress.cloud "
+    "https://cdn.botpress.cloud https://files.bpcontent.cloud "
+    "https://accounts.google.com https://oauth2.googleapis.com "
+    "https://people.googleapis.com; "
+    # 'self' required for CMS page-builder preview iframe (/p/{slug}?preview=1)
+    "frame-src 'self' https://www.google.com https://accounts.google.com "
+    "https://www.youtube.com https://www.youtube-nocookie.com "
+    "https://*.botpress.cloud; "
+    "frame-ancestors 'self'; object-src 'none'; base-uri 'self'"
+)
+
 
 def _startup_banner() -> None:
-    base = settings.public_base_url
+    api = settings.public_base_url
+    site = settings.next_public_origin or (
+        "http://127.0.0.1:3000" if not settings.is_render else api
+    )
     label = "Diamond v3 on Render" if settings.is_render else "Diamond v3 local dev"
     print("")
     print(f"  {label}")
-    print(f"  Site: {base}/")
-    print(f"  Gold: {base}/gold-price.html")
-    print(f"  API:  {base}/api/bot-gold")
+    print(f"  Site (Next): {site}/")
+    print(f"  API (FastAPI): {api}/api/bot-gold")
+    if not settings.is_render:
+        print("  HTML pages are on Next :3000 — run: npm run dev:web")
+        print("  FastAPI :8080 is JSON + /static + /admin.html only")
     print("")
 
 
@@ -147,31 +172,25 @@ def create_app() -> FastAPI:
         if response.headers.get("content-type", "").startswith("text/html"):
             response.headers.setdefault(
                 "Content-Security-Policy",
-                "default-src 'self'; "
-                "script-src 'self' 'unsafe-inline' https://cdn.botpress.cloud "
-                "https://files.bpcontent.cloud https://*.botpress.cloud "
-                "https://accounts.google.com; "
-                "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-                "font-src 'self' https://fonts.gstatic.com data:; "
-                "img-src 'self' data: https:; "
-                "connect-src 'self' https://*.botpress.cloud wss://*.botpress.cloud "
-                "https://cdn.botpress.cloud https://files.bpcontent.cloud "
-                "https://accounts.google.com https://oauth2.googleapis.com "
-                "https://people.googleapis.com; "
-                # 'self' required for CMS page-builder preview iframe (/p/{slug}?preview=1)
-                "frame-src 'self' https://www.google.com https://accounts.google.com "
-                "https://www.youtube.com https://www.youtube-nocookie.com "
-                "https://*.botpress.cloud; "
-                "frame-ancestors 'self'; object-src 'none'; base-uri 'self'",
+                HTML_CONTENT_SECURITY_POLICY,
             )
         return response
 
+    # Legacy JSON mounts (keep until Next clients + any public JS switch to /api/v1).
     application.include_router(api_controller.router, prefix="/api")
     application.include_router(auth_controller.router, prefix="/api")
     application.include_router(notifications_controller.router, prefix="/api")
     application.include_router(shop_controller.router, prefix="/api")
     application.include_router(admin_controller.router, prefix="/api")
     application.include_router(cms_admin_controller.router, prefix="/api")
+
+    # Versioned JSON surface for Next.js (apps/web). Handlers re-exported; Jinja not used here.
+    from app.api.v1 import build_v1_router
+
+    application.include_router(build_v1_router(), prefix="/api/v1")
+
+    # HTML owned by Next.js (apps/web). FastAPI keeps static + admin + CMS proxy.
     web_controller.register_pages(application)
     web_controller.mount_static(application)
     return application
+

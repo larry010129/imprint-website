@@ -15,7 +15,12 @@ def _sort_golds(golds: set[str]) -> list[str]:
     return sorted(golds, key=lambda g: order.get(g, 99))
 
 
-from app.image_urls import is_uuid, resolve_product_image_url
+from app.image_urls import (
+    _is_raster_url,
+    is_uuid,
+    resolve_product_image_url,
+    shop_product_image_url,
+)
 
 
 def style_key_from_images(images: list[dict]) -> str | None:
@@ -95,19 +100,38 @@ def build_catalog_product(product: dict, variants: list[dict], images: list[dict
         if variant.get("side_stone_carat") is not None:
             side_stone_carats.setdefault(gold, {})[carat] = float(variant["side_stone_carat"])
 
+    style_key = legacy_style_key(product, images)
     images_by_color: dict[str, list[str]] = {}
     for image in images:
-        images_by_color.setdefault(image["color"], []).append(resolve_product_image_url(image["file_path"]))
+        url = resolve_product_image_url(image.get("file_path"))
+        # Seed SVG placeholders under /shop/styles/ 404 — prefer shop-product raster.
+        if url and not _is_raster_url(url) and style_key:
+            slot = str(image.get("color") or "")
+            parts = slot.split("-")
+            metal = parts[0] if parts else product.get("default_color") or "white"
+            diamond = parts[1] if len(parts) > 1 else "white"
+            chain = parts[2] if len(parts) > 2 else None
+            url = shop_product_image_url(
+                style_key,
+                metal,
+                default_color=product.get("default_color"),
+                diamond_color=diamond,
+                chain_color=chain,
+            )
+        if url and _is_raster_url(url):
+            images_by_color.setdefault(image["color"], []).append(url)
 
     return {
         "id": str(product["id"]),
-        "styleKey": legacy_style_key(product, images),
+        "styleKey": style_key,
         "nameZh": product["name_zh"],
         "nameEn": product["name_en"],
         "descriptionZh": product["description_zh"],
         "descriptionEn": product["description_en"],
         "defaultColor": product["default_color"],
         "allowsEngraving": bool(product.get("allows_engraving", True)),
+        "allowsPendantOnly": bool(product.get("allows_pendant_only", True)),
+        "allowsWithChain": bool(product.get("allows_with_chain", True)),
         "golds": golds,
         "carats": carats,
         "colors": sorted(images_by_color.keys()),

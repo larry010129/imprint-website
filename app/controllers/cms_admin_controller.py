@@ -54,7 +54,18 @@ def _image_signature_matches(data: bytes, ext: str) -> bool:
     return False
 
 
+_CMS_SCHEMA_READY = False
+
+
 def _ensure_all(cur) -> None:
+    """Run schema/seed once per process. Hot create/update must not re-seed.
+
+    Startup lifespan already seeds; repeating every copy-slot upsert + legacy
+    delete on each admin request was a major source of ~20s section-create latency.
+    """
+    global _CMS_SCHEMA_READY
+    if _CMS_SCHEMA_READY:
+        return
     from app.cms_copy_slots import ensure_page_copy_slots_schema, seed_page_copy_slots
     from app.cms_media import ensure_cms_media_schema
     from app.cms_pages import ensure_cms_pages_schema
@@ -65,6 +76,7 @@ def _ensure_all(cur) -> None:
     ensure_cms_media_schema(cur)
     seed_page_copy_slots(cur)
     remove_legacy_seeded_pages(cur)
+    _CMS_SCHEMA_READY = True
 
 
 # ── CMS pages ────────────────────────────────────────────────────────────────
@@ -185,29 +197,17 @@ async def cms_section_page_image_sync(request: Request) -> JSONResponse:
 
 @router.post("/cms-pages")
 async def cms_pages_create(request: Request) -> JSONResponse:
-    user_id = _require_admin(request)
-    body = await request.json()
-    if not isinstance(body, dict):
-        body = {}
-    from app.cms_pages import create_page, parse_page_payload
-
-    fields, err = parse_page_payload(body)
-    if err:
-        return JSONResponse(status_code=400, content={"error": err})
-    with get_connection() as conn, conn.cursor() as cur:
-        _ensure_all(cur)
-        try:
-            page = create_page(cur, fields)  # type: ignore[arg-type]
-        except Exception as exc:
-            if "unique" in str(exc).lower() or "duplicate" in str(exc).lower():
-                return JSONResponse(status_code=409, content={"error": "slug 已存在"})
-            raise
-    log_admin_action(_actor_email(user_id), "cms_page_created", {"id": page["id"], "slug": page["slug"]})
-    return JSONResponse(content={"page": page})
+    """Create campaign pages disabled — admin only edits finished site pages."""
+    _require_admin(request)
+    return JSONResponse(
+        status_code=410,
+        content={"error": "已停用新建頁面，僅可編輯現有官網頁面的文字與圖片"},
+    )
 
 
 @router.get("/cms-pages/{page_id}")
 async def cms_pages_get(request: Request, page_id: str) -> JSONResponse:
+    """Admin JSON for Next SSR — page + ordered sections + full normalized props."""
     _require_admin(request)
     if not _valid_uuid(page_id):
         return JSONResponse(status_code=400, content={"error": "id 無效"})
@@ -218,7 +218,9 @@ async def cms_pages_get(request: Request, page_id: str) -> JSONResponse:
         page = fetch_page_with_sections(cur, page_id=page_id)
     if not page:
         return JSONResponse(status_code=404, content={"error": "找不到頁面"})
-    return JSONResponse(content={"page": page})
+    sections = page.get("sections") or []
+    page["cms_path"] = f"/p/{page['slug']}"
+    return JSONResponse(content={"page": page, "sections": sections})
 
 
 @router.post("/cms-page-update")
@@ -305,15 +307,13 @@ async def cms_section_create(request: Request, page_id: str) -> JSONResponse:
 
 @router.get("/cms-sections/{section_id}/html")
 async def cms_section_html(request: Request, section_id: str) -> JSONResponse:
-    """Render one section partial for soft preview patching (admin edit mode)."""
+    """JSON section payload for preview sync (HTML Jinja removed — Next owns render)."""
     _require_admin(request)
     if not _valid_uuid(section_id):
         return JSONResponse(status_code=400, content={"error": "id 無效"})
-    from app.cms_pages import SECTION_TYPES, fetch_page_by_id, serialize_section
-    from app.controllers.web_controller import templates
+    from app.cms_pages import SECTION_TYPES, serialize_section
 
     with get_connection() as conn, conn.cursor() as cur:
-        _ensure_all(cur)
         cur.execute("select * from cms_page_sections where id = %s", (section_id,))
         row = cur.fetchone()
         if not row:
@@ -321,48 +321,8 @@ async def cms_section_html(request: Request, section_id: str) -> JSONResponse:
         section = serialize_section(row)
         if section.get("type") not in SECTION_TYPES:
             return JSONResponse(status_code=400, content={"error": "不支援的區塊類型"})
-        page = fetch_page_by_id(cur, str(section["page_id"]))
-        if not page:
-            return JSONResponse(status_code=404, content={"error": "找不到頁面"})
-        context = {
-            "section": section,
-            "props": section.get("props") or {},
-            "cms_page": page,
-            "cms_inline": True,
-            "site_cms_edit": True,
-            "cms_faq_items": [],
-            "cms_faq_all_items": [],
-            "cms_faq_by_category": {},
-            "cms_testimonials": [],
-        }
-        if section.get("type") in {"faq_embed", "testimonials_embed"}:
-            from app.content import fetch_faq_public, fetch_published_testimonials
-
-            faq = fetch_faq_public(cur)
-            testimonials = fetch_published_testimonials(cur)
-            faq_items = faq.get("teaser") or []
-            if not faq_items:
-                faq_items = [
-                    item
-                    for cat in (faq.get("categories") or [])
-                    for item in (cat.get("items") or [])
-                ]
-            context["cms_faq_items"] = faq_items
-            context["cms_faq_all_items"] = faq.get("items") or []
-            context["cms_faq_by_category"] = {
-                str(cat.get("id")): cat.get("items") or []
-                for cat in (faq.get("categories") or [])
-            }
-            context["cms_testimonials"] = testimonials
-    try:
-        html = templates.env.get_template(
-            f"partials/cms/section_{section['type']}.html"
-        ).render(context)
-    except Exception as exc:
-        return JSONResponse(
-            status_code=500, content={"error": f"區塊渲染失敗：{exc}"}
-        )
-    return JSONResponse(content={"html": html, "section": section})
+    # Soft HTML patch retired; editor falls back to hard iframe refresh.
+    return JSONResponse(content={"section": section, "html": None})
 
 
 @router.post("/cms-section-update")

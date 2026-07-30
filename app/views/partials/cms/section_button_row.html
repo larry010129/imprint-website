@@ -1,9 +1,0 @@
-<section class="cms-section cms-buttons" data-cms-reveal data-cms-section-id="{{ section.id }}" data-cms-section-type="button_row">
-  <div class="container">
-    <div class="cms-actions">
-      {% for btn in props.buttons or [] %}
-      <a class="cms-btn" href="{{ btn.href or '#' }}" data-cms-editable="button" data-cms-prop="buttons" data-cms-button-index="{{ loop.index0 }}">{{ btn.label }}</a>
-      {% endfor %}
-    </div>
-  </div>
-</section>

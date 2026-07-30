@@ -108,3 +108,112 @@
 .cms-drop-gap.is-active::before { background: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.2); }
 .cms-site-stack--empty .cms-drop-gap { height: 22px; margin: 4px 0; }
 .cms-site-stack--empty .cms-drop-gap.is-active::before { height: 3px; }
+
+/* Freeform canvas — Fluid Engine–style absolute blocks inside one section */
+.cms-freeform { padding: 0; color: var(--cms-ink); background: #f5f5f4; }
+.cms-freeform__canvas {
+  position: relative;
+  width: 100%;
+  min-height: var(--cms-freeform-h, 480px);
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.65), rgba(245,245,244,.95)),
+    repeating-linear-gradient(0deg, transparent, transparent 23px, rgba(28,25,23,.04) 24px),
+    repeating-linear-gradient(90deg, transparent, transparent 23px, rgba(28,25,23,.04) 24px);
+}
+.cms-freeform__block {
+  position: absolute;
+  box-sizing: border-box;
+  padding: .35rem .5rem;
+  min-width: 48px;
+}
+.cms-freeform__block h2,
+.cms-freeform__block p { margin: 0; word-break: break-word; }
+.cms-freeform__block h2 {
+  font-family: "Noto Serif TC", "Source Han Serif TC", serif;
+  font-weight: 600;
+  line-height: 1.25;
+  font-size: clamp(1.4rem, 3vw, 2.4rem);
+}
+.cms-freeform__block p { line-height: 1.65; color: var(--cms-muted); font-size: 1rem; }
+.cms-freeform__block--button { display: flex; align-items: flex-start; }
+.cms-freeform__block--image { padding: 0; overflow: hidden; }
+.cms-freeform__block--image img {
+  width: 100%;
+  height: 100%;
+  min-height: 80px;
+  object-fit: cover;
+  display: block;
+}
+.cms-freeform__image-ph { min-height: 100%; height: 100%; }
+.cms-freeform__empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  color: #78716c;
+  font-size: .9rem;
+  pointer-events: none;
+}
+[data-cms-inline] .cms-freeform__block {
+  outline: 1px dashed transparent;
+  outline-offset: 2px;
+}
+[data-cms-inline] .cms-freeform__block:hover,
+[data-cms-inline] .cms-freeform__block.is-freeform-selected {
+  outline-color: #2563eb;
+  background: rgba(255,255,255,.55);
+}
+.cms-freeform__drag,
+.cms-freeform__resize {
+  display: none;
+  position: absolute;
+  z-index: 5;
+  border: 0;
+  padding: 0;
+  cursor: grab;
+  background: #2563eb;
+  box-shadow: 0 1px 4px rgba(15,23,42,.25);
+}
+[data-cms-inline] .cms-freeform__drag,
+[data-cms-inline] .cms-freeform__resize { display: block; }
+.cms-freeform__drag {
+  top: -8px;
+  left: 50%;
+  width: 28px;
+  height: 10px;
+  margin-left: -14px;
+  border-radius: 999px;
+}
+.cms-freeform__drag:active,
+.cms-freeform.is-freeform-dragging .cms-freeform__drag { cursor: grabbing; }
+.cms-freeform__resize {
+  right: -6px;
+  bottom: -6px;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  cursor: nwse-resize;
+  background: #fff;
+  border: 2px solid #2563eb;
+}
+.cms-freeform.is-freeform-dragging { user-select: none; }
+.cms-freeform.is-freeform-dragging [data-cms-editable] { pointer-events: none; }
+@media (max-width: 800px) {
+  .cms-freeform__canvas { min-height: max(280px, calc(var(--cms-freeform-h, 480px) * 0.72)); }
+}
+
+/* Responsive freeform: desktop vs mobile block layers */
+.cms-freeform__layer { position: absolute; inset: 0; }
+.cms-freeform__layer--mobile { display: none; }
+.cms-freeform--has-mobile .cms-freeform__layer--desktop { display: block; }
+.cms-freeform--has-mobile .cms-freeform__layer--mobile { display: none; }
+@media (max-width: 800px) {
+  .cms-freeform--has-mobile .cms-freeform__layer--desktop { display: none; }
+  .cms-freeform--has-mobile .cms-freeform__layer--mobile { display: block; }
+}
+html[data-cms-device="mobile"] .cms-freeform--has-mobile .cms-freeform__layer--desktop { display: none; }
+html[data-cms-device="mobile"] .cms-freeform--has-mobile .cms-freeform__layer--mobile { display: block; }
+html[data-cms-device="desktop"] .cms-freeform--has-mobile .cms-freeform__layer--desktop { display: block; }
+html[data-cms-device="desktop"] .cms-freeform--has-mobile .cms-freeform__layer--mobile { display: none; }

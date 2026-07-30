@@ -642,6 +642,33 @@ export default function ExistingSitePageEditor({
           if (!confirm("刪除此區塊？")) return;
           void deleteSectionRef.current(section);
         }
+        if (data.type === "block-layout" && data.sectionId && Array.isArray(data.blocks)) {
+          if (busy) return;
+          const section = sections.find((item) => item.id === data.sectionId);
+          if (!section || section.type !== "freeform") return;
+          const device = data.device === "mobile" ? "mobile" : "desktop";
+          const key = device === "mobile" ? "blocks_mobile" : "blocks";
+          saveSectionProps(
+            section,
+            { ...section.props, [key]: data.blocks },
+            { skipPreview: true }
+          );
+        }
+        if (data.type === "block-edit" && data.sectionId && data.blockId && data.field) {
+          if (busy) return;
+          const section = sections.find((item) => item.id === data.sectionId);
+          if (!section || section.type !== "freeform") return;
+          const blocks = Array.isArray(section.props.blocks)
+            ? section.props.blocks.map((block) => ({
+                ...(block as Record<string, unknown>),
+              }))
+            : [];
+          const target = blocks.find((block) => block.id === data.blockId);
+          if (!target) return;
+          target[String(data.field)] = String(data.value || "");
+          if (data.href != null) target.href = String(data.href);
+          saveSectionProps(section, { ...section.props, blocks }, { skipPreview: true });
+        }
         if (data.type === "inline-edit" && data.sectionId && data.prop) {
           if (busy) return;
           const section = sections.find((item) => item.id === data.sectionId);
@@ -744,6 +771,10 @@ export default function ExistingSitePageEditor({
     preview.selectSection(selectedSectionId);
   }, [preview, selectedSectionId]);
 
+  useEffect(() => {
+    preview.post({ type: "set-device", device });
+  }, [device, preview]);
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
@@ -794,7 +825,7 @@ export default function ExistingSitePageEditor({
         active.data.current?.initialProps &&
         typeof active.data.current.initialProps === "object"
           ? (active.data.current.initialProps as Record<string, unknown>)
-          : {};
+          : undefined;
       if (!hostPage) {
         notify("固定頁主機尚未就緒，請稍後再試", "warning");
         return;
@@ -973,29 +1004,14 @@ export default function ExistingSitePageEditor({
           <SiteEditorTools
             selectedSlot={selectedSlot}
             selectedSection={selectedSection}
-            slots={slots}
-            sections={sections}
-            selectedSlotKey={selectedSlotKey}
-            selectedSectionId={selectedSectionId}
             faqCategories={faqCategories}
             disabled={busy || !hostPage}
             saving={saveStatus === "saving"}
             focusedProp={focusedProp}
             galleryOpen={galleryOpen}
             insertTarget={insertTarget}
-            onOpenGallery={() => setGalleryOpen(true)}
             onCloseGallery={closeGallery}
             onChooseTemplate={chooseTemplate}
-            onSelectSlot={(key) => {
-              setSelectedSlotKey(key);
-              setSelectedSectionId(null);
-              setFocusedProp(null);
-            }}
-            onSelectSection={(id) => {
-              setSelectedSectionId(id);
-              setSelectedSlotKey(null);
-              setFocusedProp(null);
-            }}
             onChangeSelectedSlot={(next) => {
               slotsRef.current = slotsRef.current.map((slot) =>
                 slot.slot_key === next.slot_key ? next : slot

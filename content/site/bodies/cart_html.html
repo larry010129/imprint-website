@@ -1,0 +1,41 @@
+<section aria-label="購物車" class="page-section member-app" id="mvc-cart">
+<div class="container">
+<div class="price-reference member-panel">
+<div class="price-reference-head">
+<p class="eyebrow">SHOP</p>
+<h1 class="price-reference-title">購物車</h1>
+<p class="price-reference-lead">勾選品項後送出訂單，未勾選的品項會保留在購物車。</p>
+</div>
+<div aria-busy="true" class="skel-panel" id="cart-loading">
+<ul class="skel-cart-list"><li class="skel-cart-item"><span class="skel-block skel-block--xs"></span><span class="skel-block skel-block--thumb"></span><div><span class="skel-line skel-line--long"></span><span class="skel-line skel-line--medium"></span></div><span class="skel-line skel-line--medium"></span></li><li class="skel-cart-item"><span class="skel-block skel-block--xs"></span><span class="skel-block skel-block--thumb"></span><div><span class="skel-line skel-line--long"></span><span class="skel-line skel-line--medium"></span></div><span class="skel-line skel-line--medium"></span></li></ul>
+</div>
+<div class="hidden" id="cart-list-wrap">
+<div class="member-cart-toolbar">
+<label><input checked="" id="cart-select-all" type="checkbox"/> 全選</label>
+</div>
+<ul class="member-cart-list" id="cart-list"></ul>
+<div class="member-cart-summary">
+<div class="member-cart-summary__row">
+<span id="cart-selected-label">已選 0 件</span>
+<strong id="cart-selected-total">NT$ 0</strong>
+</div>
+<button class="btn btn-dark" id="cart-checkout-btn" type="button">訂購已選品項</button>
+<a class="member-cart-continue" href="/shop/calculator/">繼續選購</a>
+</div>
+</div>
+<div class="member-state member-state--empty hidden" id="cart-empty">
+<p>購物車目前是空的。</p>
+<a class="btn btn-mint" href="/shop/calculator/">前往品項訂製</a>
+</div>
+</div>
+</div>
+</section>
+<dialog aria-labelledby="cart-detail-title" class="member-dialog" id="cart-detail-dialog">
+<div class="member-dialog__inner">
+<header class="member-dialog__header">
+<h2 id="cart-detail-title">品項明細</h2>
+<button aria-label="關閉" class="member-dialog__close" id="cart-detail-close" type="button">×</button>
+</header>
+<div id="cart-detail-body"><div aria-busy="true" class="skel-panel"><span class="skel-line skel-line--long"></span><span class="skel-line skel-line--medium"></span></div></div>
+</div>
+</dialog>

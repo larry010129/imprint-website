@@ -95,19 +95,24 @@
     });
   }
 
-  /* ---------- 進場顯示 ---------- */
-  if ('IntersectionObserver' in window) {
+  /* ---------- 進場顯示（首頁區塊 + 全站 .reveal；hero 輪播自管進場） ---------- */
+  var revealReduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var revealNodes = document.querySelectorAll('.reveal, .reveal-media');
+  function revealIn(el) { el.classList.add('is-in'); }
+  if (revealReduce || !('IntersectionObserver' in window)) {
+    revealNodes.forEach(revealIn);
+  } else {
     var io = new IntersectionObserver(function (entries) {
       entries.forEach(function (en) {
-        if (en.isIntersecting) {
-          en.target.classList.add('is-in');
-          io.unobserve(en.target);
-        }
+        if (!en.isIntersecting) return;
+        revealIn(en.target);
+        io.unobserve(en.target);
       });
-    }, { threshold: 0.12 });
-    document.querySelectorAll('.reveal').forEach(function (el) { io.observe(el); });
-  } else {
-    document.querySelectorAll('.reveal').forEach(function (el) { el.classList.add('is-in'); });
+    }, { threshold: 0.14, rootMargin: '0px 0px -6% 0px' });
+    revealNodes.forEach(function (el) {
+      if (el.closest('.hc-slide')) return;
+      io.observe(el);
+    });
   }
 
   /* ---------- FAQ 手風琴（略過 React 島） ---------- */

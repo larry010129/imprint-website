@@ -121,6 +121,7 @@ export default function CmsPageEditor({ pageId, api, onBack, onDeleted }: CmsPag
   const [faqCategories, setFaqCategories] = useState<{ id: string; title: string }[]>([]);
   const [mediaOpen, setMediaOpen] = useState(false);
   const [mediaProp, setMediaProp] = useState("image_url");
+  const [mediaBlockId, setMediaBlockId] = useState<string | null>(null);
   const [previewNonce, setPreviewNonce] = useState(0);
   const [dragging, setDragging] = useState(false);
   const [dragLabel, setDragLabel] = useState<string | null>(null);
@@ -352,6 +353,31 @@ export default function CmsPageEditor({ pageId, api, onBack, onDeleted }: CmsPag
         if (!confirm("刪除此區塊？")) return;
         void deleteSectionRef.current(section);
       }
+      if (data.type === "block-layout" && data.sectionId && Array.isArray(data.blocks)) {
+        if (busy) return;
+        const section = sections.find((s) => s.id === data.sectionId);
+        if (!section || section.type !== "freeform") return;
+        const device = data.device === "mobile" ? "mobile" : "desktop";
+        const key = device === "mobile" ? "blocks_mobile" : "blocks";
+        saveSectionProps(
+          section,
+          { ...section.props, [key]: data.blocks },
+          { skipPreview: true }
+        );
+      }
+      if (data.type === "block-edit" && data.sectionId && data.blockId && data.field) {
+        if (busy) return;
+        const section = sections.find((s) => s.id === data.sectionId);
+        if (!section || section.type !== "freeform") return;
+        const blocks = Array.isArray(section.props.blocks)
+          ? section.props.blocks.map((block) => ({ ...(block as Record<string, unknown>) }))
+          : [];
+        const target = blocks.find((block) => block.id === data.blockId);
+        if (!target) return;
+        target[String(data.field)] = String(data.value || "");
+        if (data.href != null) target.href = String(data.href);
+        saveSectionProps(section, { ...section.props, blocks }, { skipPreview: true });
+      }
       if (data.type === "inline-edit" && data.sectionId && data.prop) {
         if (busy) return;
         const section = sections.find((s) => s.id === data.sectionId);
@@ -377,6 +403,8 @@ export default function CmsPageEditor({ pageId, api, onBack, onDeleted }: CmsPag
       if (data.type === "edit-image" && data.sectionId) {
         setSelectedId(String(data.sectionId));
         if (data.prop) setMediaProp(String(data.prop));
+        setMediaBlockId(typeof data.blockId === "string" ? data.blockId : null);
+        setMediaOpen(true);
       }
       if (data.type === "drop-index") {
         const indexOk =
@@ -513,11 +541,12 @@ export default function CmsPageEditor({ pageId, api, onBack, onDeleted }: CmsPag
     }
     if (source === "palette") {
       const type = active.data.current?.type as CmsSectionType;
+      if (!type) return;
       const initialProps =
         active.data.current?.initialProps &&
         typeof active.data.current.initialProps === "object"
           ? (active.data.current.initialProps as Record<string, unknown>)
-          : {};
+          : undefined;
       const overIndex = sections.findIndex((section) => section.id === over.id);
       if (overIndex >= 0) {
         await addSection(type, overIndex, initialProps);
@@ -582,6 +611,10 @@ export default function CmsPageEditor({ pageId, api, onBack, onDeleted }: CmsPag
   useEffect(() => {
     preview.selectSection(selectedId);
   }, [preview, selectedId]);
+
+  useEffect(() => {
+    preview.post({ type: "set-device", device });
+  }, [device, preview]);
 
   if (!pageId) {
     return <p className="note">請選擇頁面。</p>;
@@ -688,25 +721,25 @@ export default function CmsPageEditor({ pageId, api, onBack, onDeleted }: CmsPag
 
         <CmsEditorTools
           page={page}
-          sections={sections}
           selected={selected}
-          selectedId={selectedId}
           media={media}
           faqCategories={faqCategories}
           disabled={busy}
           focusedProp={focusedProp}
           galleryOpen={galleryOpen}
           insertTarget={insertTarget}
-          onOpenGallery={() => setGalleryOpen(true)}
           onCloseGallery={closeGallery}
           onChooseTemplate={chooseTemplate}
-          onSelect={(id) => {
-            setSelectedId(id);
-            setFocusedProp(null);
-          }}
           onChangeProps={(props) => selected && saveSectionProps(selected, props)}
           onPickMedia={(prop) => {
-            setMediaProp(prop);
+            if (prop.startsWith("freeform-block:")) {
+              const parts = prop.split(":");
+              setMediaBlockId(parts[1] || null);
+              setMediaProp(parts[2] || "blocks");
+            } else {
+              setMediaProp(prop);
+              setMediaBlockId(null);
+            }
             setMediaOpen(true);
           }}
           onToggleVisibility={() => void toggleVisibility()}
@@ -742,18 +775,39 @@ export default function CmsPageEditor({ pageId, api, onBack, onDeleted }: CmsPag
           }}
           onSelect={(item) => {
             if (selected) {
-              const next = { ...selected.props, [mediaProp]: item.url };
-              if (mediaProp === "image_url" || sectionImagePropKey(selected.type, next)) {
-                void handleSectionImageUploaded(
-                  selected,
-                  item.url,
-                  String(next.image_alt || item.alt || "")
-                );
+              if (selected.type === "freeform" && mediaBlockId) {
+                const listKey =
+                  mediaProp === "blocks_mobile" ? "blocks_mobile" : "blocks";
+                const blocks = Array.isArray(selected.props[listKey])
+                  ? (selected.props[listKey] as Record<string, unknown>[]).map(
+                      (block) => ({ ...block })
+                    )
+                  : [];
+                const target = blocks.find((block) => block.id === mediaBlockId);
+                if (target) {
+                  target.image_url = item.url;
+                  target.image_alt = String(item.alt || target.image_alt || "");
+                  saveSectionProps(selected, {
+                    ...selected.props,
+                    [listKey]: blocks,
+                  });
+                  notify("已套用圖片", "success");
+                }
               } else {
-                saveSectionProps(selected, next);
-                notify("已套用圖片", "success");
+                const next = { ...selected.props, [mediaProp]: item.url };
+                if (mediaProp === "image_url" || sectionImagePropKey(selected.type, next)) {
+                  void handleSectionImageUploaded(
+                    selected,
+                    item.url,
+                    String(next.image_alt || item.alt || "")
+                  );
+                } else {
+                  saveSectionProps(selected, next);
+                  notify("已套用圖片", "success");
+                }
               }
             }
+            setMediaBlockId(null);
             setMediaOpen(false);
           }}
           onDelete={(item) => {

@@ -8,6 +8,7 @@ import type {
 } from "@/components/admin/cmsSectionMeta";
 import {
   buildOrderWithAnchor,
+  defaultPropsForType,
   sectionAnchor,
   sectionLabel,
 } from "@/components/admin/cmsSectionMeta";
@@ -33,7 +34,11 @@ export type AddSectionTarget =
 type Api = {
   createSection: (
     pageId: string,
-    body: { type: string; props?: Record<string, unknown> }
+    body: {
+      type: string;
+      props?: Record<string, unknown>;
+      isVisible?: boolean;
+    }
   ) => Promise<{ section?: CmsSection; error?: string }>;
   updateSection: (
     fields: Record<string, unknown>
@@ -176,20 +181,13 @@ export default function useCmsEditorCommands(options: Options) {
     const created = await api.createSection(page.id, {
       type: snapshot.type,
       props: copyCmsProps(snapshot.props),
+      isVisible: snapshot.is_visible,
     });
     if (created.error || !created.section) {
       throw new Error(String(created.error || "區塊重建失敗"));
     }
     const newId = created.section.id;
     try {
-      const updated = await api.updateSection({
-        id: newId,
-        props: copyCmsProps(snapshot.props),
-        isVisible: snapshot.is_visible,
-      });
-      if (updated.error || !updated.section) {
-        throw new Error(String(updated.error || "區塊內容還原失敗"));
-      }
       await flushPendingOnly(
         order.filter((item) => item !== reference).map((item) => item.currentId)
       );
@@ -204,7 +202,7 @@ export default function useCmsEditorCommands(options: Options) {
       setSelectedId(newId);
       const index = ids.indexOf(newId);
       const beforeId = index >= 0 && index < ids.length - 1 ? ids[index + 1] : null;
-      const anchor = sectionAnchor(updated.section);
+      const anchor = sectionAnchor(created.section);
       await softOrHard(async () => {
         const synced = await preview.syncSection(newId, beforeId, anchor);
         if (!synced) return false;
@@ -219,29 +217,26 @@ export default function useCmsEditorCommands(options: Options) {
   async function addSection(
     type: CmsSectionType,
     target: AddSectionTarget = sections.length,
-    initialProps: Record<string, unknown> = {},
+    initialProps?: Record<string, unknown>,
     historyLabel = "新增區塊",
   ): Promise<CmsSection | undefined> {
     if (!page) return;
     setBusy(true);
     try {
       const { anchor, localIndex } = resolveAddTarget(sections, target);
+      const seededProps = {
+        ...defaultPropsForType(type),
+        ...copyCmsProps(initialProps || {}),
+        anchor,
+      };
+      // One create call — props already include template defaults (no follow-up update).
       const res = await api.createSection(page.id, {
         type,
-        props: { ...copyCmsProps(initialProps), anchor },
+        props: seededProps,
       });
       if (res.error || !res.section) throw new Error(String(res.error || "新增失敗"));
 
-      const normalized = await api.updateSection({
-        id: res.section.id,
-        props: { ...copyCmsProps(initialProps), anchor },
-        isVisible: true,
-      });
-      if (normalized.error || !normalized.section) {
-        await api.sectionAction(res.section.id, "delete");
-        throw new Error(String(normalized.error || "範本內容套用失敗"));
-      }
-      const created = normalized.section;
+      const created = res.section;
       const next = buildOrderWithAnchor(sections, created, anchor, localIndex);
       const nextIds = next.map((item) => item.id);
       const appendOnly =
@@ -265,6 +260,7 @@ export default function useCmsEditorCommands(options: Options) {
       const snapshot = persisted.find((item) => item.id === res.section!.id) || created;
       const reference = getSectionRef(res.section.id);
       const order = persisted.map((item) => getSectionRef(item.id));
+      // Paint UI immediately — preview sync runs after busy clears.
       setSections(persisted);
       setSelectedId(res.section.id);
       record({
@@ -278,18 +274,18 @@ export default function useCmsEditorCommands(options: Options) {
           : `已新增「${sectionLabel(type)}」區塊`,
         "success",
       );
-      const persistedIndex = persisted.findIndex((item) => item.id === res.section!.id);
+      const sectionId = res.section.id;
+      const persistedIndex = persisted.findIndex((item) => item.id === sectionId);
       const beforeId =
         persistedIndex >= 0 && persistedIndex < persisted.length - 1
           ? persisted[persistedIndex + 1]?.id || null
           : null;
-      // Prefer next sibling in same anchor host for soft insert position.
       const sameAnchorBefore =
         persisted
           .slice(persistedIndex + 1)
           .find((item) => sectionAnchor(item) === anchor)?.id || null;
-      const sectionId = res.section.id;
-      await softOrHard(async () => {
+      setBusy(false);
+      void softOrHard(async () => {
         const synced = await preview.syncSection(
           sectionId,
           sameAnchorBefore || beforeId,
@@ -299,13 +295,13 @@ export default function useCmsEditorCommands(options: Options) {
           return preview.reorderSections(persisted.map((item) => item.id));
         }
         return synced;
-      }, preview.hardRefresh);
-      preview.selectSection(sectionId);
-      preview.focusSection(sectionId);
+      }, preview.hardRefresh).then(() => {
+        preview.selectSection(sectionId);
+        preview.focusSection(sectionId);
+      });
       return snapshot;
     } catch (error) {
       notify(String(error), "error");
-    } finally {
       setBusy(false);
     }
   }

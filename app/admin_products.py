@@ -90,6 +90,18 @@ def validate_product_fields(body: dict | None, *, valid_categories: set[str] | N
 
     cleaned["allowsEngraving"] = bool(body.get("allowsEngraving", True))
 
+    # Pendant sell modes (僅墜子 / 含鍊賣). Non-pendant rows keep both true.
+    if category == "pendant":
+        allows_pendant_only = bool(body.get("allowsPendantOnly", True))
+        allows_with_chain = bool(body.get("allowsWithChain", True))
+        if not allows_pendant_only and not allows_with_chain:
+            errors.append("pendant must allow 僅墜子 and/or 含鍊賣")
+        cleaned["allowsPendantOnly"] = allows_pendant_only
+        cleaned["allowsWithChain"] = allows_with_chain
+    else:
+        cleaned["allowsPendantOnly"] = True
+        cleaned["allowsWithChain"] = True
+
     valid_carats = VALID_CARATS_CHAIN if category == "chain" else VALID_CARATS
     variants: list[dict] = []
     seen_keys: set[str] = set()
@@ -189,6 +201,7 @@ def _format_product_errors(errors: list[str]) -> str:
         "invalid category": "品項無效",
         "nameZh is required": "請填寫中文名稱",
         "invalid defaultColor": "預設顏色無效",
+        "pendant must allow 僅墜子 and/or 含鍊賣": "項墜請至少勾選「可僅墜子賣」或「可含鍊賣」",
         "at least one variant is required": "請至少新增一個款式選項（金屬／克拉／蠟重）",
         "at least one product image is required": "請至少上傳一張商品照片",
         "default color must have at least one image": "預設顏色必須至少有一張商品照片",

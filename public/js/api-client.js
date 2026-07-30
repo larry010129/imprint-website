@@ -235,7 +235,6 @@
       getCmsSitePage: function (route) {
         return request('/api/admin/cms-site-page?route=' + encodeURIComponent(route || ''));
       },
-      createCmsPage: function (fields) { return request('/api/admin/cms-pages', { method: 'POST', body: fields }); },
       updateCmsPage: function (fields) { return request('/api/admin/cms-page-update', { method: 'POST', body: fields }); },
       cmsPageAction: function (id, action) {
         return request('/api/admin/cms-page-action', { method: 'POST', body: { id: id, action: action } });
