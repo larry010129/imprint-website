@@ -9,5 +9,6 @@
 
 name = "imprint-website"
 main = "src/entry.py"
-compatibility_date = "2026-07-31"
+# Must not be ahead of Cloudflare UTC "today" (TW midnight can still be prior UTC day).
+compatibility_date = "2026-07-30"
 compatibility_flags = ["python_workers"]
