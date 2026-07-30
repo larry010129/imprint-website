@@ -1,7 +1,8 @@
 {
-  "/p/[slug]/page": "app/p/[slug]/page.js",
-  "/shop/calculator/page": "app/shop/calculator/page.js",
   "/account.html/page": "app/account.html/page.js",
+  "/shop/calculator/page": "app/shop/calculator/page.js",
+  "/page": "app/page.js",
   "/about.html/page": "app/about.html/page.js",
-  "/page": "app/page.js"
+  "/p/[slug]/page": "app/p/[slug]/page.js",
+  "/what-is-dna-diamond.html/page": "app/what-is-dna-diamond.html/page.js"
 }

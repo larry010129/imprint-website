@@ -30,7 +30,7 @@ services:
     plan: free
     buildCommand: bash scripts/render-build.sh
     startCommand: bash scripts/render-start.sh
-    healthCheckPath: /api/bot-gold
+    healthCheckPath: /health
     envVars:
       - key: PYTHON_VERSION
         value: "3.12.8"

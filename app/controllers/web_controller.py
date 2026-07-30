@@ -9,7 +9,7 @@ from pathlib import Path
 from time import monotonic
 
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
@@ -253,6 +253,32 @@ def _fetch_public_cms_page_cached(slug: str, _time_bucket: int) -> dict | None:
 
 def register_pages(app: FastAPI) -> None:
     """Register non-Jinja web routes. HTML pages are served by Next.js (apps/web)."""
+
+    @app.api_route("/health", methods=["GET", "HEAD"], include_in_schema=False)
+    async def api_health() -> JSONResponse:
+        """Render / load-balancer health — must not 404 or the API service is SIGTERM'd."""
+        return JSONResponse({"ok": True, "service": "imprint-api"})
+
+    @app.api_route("/", methods=["GET", "HEAD"], include_in_schema=False)
+    async def api_root():
+        """API root is not the marketing site. Redirect to Next when configured."""
+        next_origin = settings.next_public_origin
+        api_base = settings.public_base_url.rstrip("/")
+        if next_origin and next_origin.rstrip("/") != api_base:
+            return RedirectResponse(url=f"{next_origin}/", status_code=307)
+        return JSONResponse(
+            {
+                "ok": True,
+                "service": "imprint-api",
+                "health": "/health",
+                "api": "/api/bot-gold",
+                "hint": (
+                    "This host is FastAPI only. Public pages are on imprint-web (Next.js). "
+                    "Deploy render.yaml Blueprint and open the imprint-web URL, "
+                    "or set NEXT_PUBLIC_ORIGIN to that host."
+                ),
+            }
+        )
 
     @app.get("/favicon.svg", include_in_schema=False)
     async def favicon() -> FileResponse:

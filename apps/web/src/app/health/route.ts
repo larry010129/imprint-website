@@ -4,3 +4,7 @@ import { NextResponse } from "next/server";
 export async function GET() {
   return NextResponse.json({ ok: true, service: "imprint-web" });
 }
+
+export async function HEAD() {
+  return new NextResponse(null, { status: 200 });
+}

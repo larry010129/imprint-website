@@ -40,6 +40,11 @@
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/about.html/page.js"
+    ],
+    "/what-is-dna-diamond.html/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/what-is-dna-diamond.html/page.js"
     ]
   }
 }
