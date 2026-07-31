@@ -732,6 +732,13 @@
   border-radius: 0;
 }
 
+/* Fancy min-carat warning — clear red (overrides muted inline tip) */
+.fancy-color-label-row .shop-fancy-min-note,
+.shop-fancy-min-note {
+  color: #c62828;
+  font-weight: 600;
+}
+
 @media (max-width: 360px) {
   .fancy-color-label-row {
     flex-wrap: wrap;

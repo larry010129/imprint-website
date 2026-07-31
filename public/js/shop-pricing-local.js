@@ -123,9 +123,11 @@
       base = DIAMOND_PRICE[caratKey] ?? null;
     } else if (diamondKind === 'fancy') {
       if (!VALID_FANCY_COLORS[fancyColor]) return null;
-      if (caratNum < FANCY_MIN_CARAT) return null;
+      // Fancy table starts at 0.3; product may still offer 0.1/0.2 — fall back to white.
       base = COLORED_SINGLE_DIAMOND_PRICE[caratKey]
         ?? (caratKey === '1.0' ? COLORED_SINGLE_DIAMOND_PRICE['1'] : null)
+        ?? DIAMOND_PRICE[caratKey]
+        ?? (caratKey === '1.0' ? DIAMOND_PRICE['1'] : null)
         ?? null;
     } else {
       return null;

@@ -23,6 +23,32 @@ from app.image_urls import (
     resolve_product_image_url,
     static_url_exists,
 )
+from app.pricing_overrides import canonical_carat
+
+
+def _variant_carat_key(raw: object) -> str:
+    """Normalize variant carat keys so 0.10 / 0.1 / Decimal meet as '0.1'.
+
+    Chain thicknesses (1.0mm) stay as stored strings.
+    """
+    text = str(raw or "").strip()
+    if not text:
+        return text
+    if text.lower().endswith("mm"):
+        return text
+    return canonical_carat(text) or text
+
+
+def _sort_carats(carats: set[str]) -> list[str]:
+    """Numeric order so 0.1 < 0.2 < 0.3 (not lexicographic string quirks)."""
+
+    def sort_key(carat: str) -> tuple[int, float | str]:
+        try:
+            return (0, float(carat))
+        except (TypeError, ValueError):
+            return (1, str(carat))
+
+    return sorted(carats, key=sort_key)
 
 
 def style_key_from_images(images: list[dict]) -> str | None:
@@ -81,7 +107,7 @@ def legacy_style_key(product: dict, images: list[dict] | None = None) -> str | N
 
 def build_catalog_product(product: dict, variants: list[dict], images: list[dict]) -> dict:
     golds = _sort_golds({v["gold"] for v in variants})
-    carats = sorted({v["carat"] for v in variants})
+    carats = _sort_carats({_variant_carat_key(v["carat"]) for v in variants})
 
     weights: dict[str, dict[str, float]] = {}
     manual_prices: dict[str, dict[str, float]] = {}
@@ -89,7 +115,7 @@ def build_catalog_product(product: dict, variants: list[dict], images: list[dict
     side_stone_carats: dict[str, dict[str, float]] = {}
     for variant in variants:
         gold = variant["gold"]
-        carat = variant["carat"]
+        carat = _variant_carat_key(variant["carat"])
         weights.setdefault(gold, {})[carat] = float(variant["weight_chin"])
         if variant.get("manual_price_twd") is not None:
             manual_prices.setdefault(gold, {})[carat] = float(variant["manual_price_twd"])

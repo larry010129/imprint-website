@@ -320,13 +320,15 @@ async def shop_step_configure(request: Request) -> HTMLResponse:
         )
     meta = catalog["categoryMeta"].get(category) or {}
     golds = list(product.get("golds") or [])
-    carats = [str(c) for c in (product.get("carats") or [])]
+    # Admin/catalog carats only (already sorted smallest-first in build_catalog_product).
+    carats = [str(c) for c in (product.get("carats") or []) if c is not None and str(c).strip()]
     lengths = []
     if category == "chain":
         lengths = CHAIN_LENGTHS_CM
     elif category == "bracelet":
         lengths = BRACELET_LENGTHS_CM
     defaults = {
+        # Default = first/smallest admin carat — never hard-coded 0.3.
         "carat": carats[0] if carats else "",
         "gold": golds[0] if golds else "",
         "lengthCm": 46 if category == "chain" else (18 if category == "bracelet" else ""),

@@ -168,9 +168,13 @@ def compute_diamond_list_price(
     if diamond_kind == "white":
         base = eff["white"].get(ck)
     elif diamond_kind == "fancy":
-        if fancy_color not in VALID_FANCY_COLORS or carat_num < FANCY_MIN_CARAT:
+        if fancy_color not in VALID_FANCY_COLORS:
             return None
+        # Fancy list starts at 0.3ct; admin product may still offer 0.1/0.2 —
+        # fall back to white table so shop quote does not blank out.
         base = eff["fancy"].get(ck)
+        if base is None:
+            base = eff["white"].get(ck)
     else:
         return None
 

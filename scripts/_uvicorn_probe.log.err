@@ -34,3 +34,148 @@ WARNING:  WatchFiles detected changes in 'tests\test_chain_length_weights.py'. R
 INFO:     Started server process [9156]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'tests\test_chain_length_weights.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [9156]
+INFO:     Started server process [549768]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'app\admin_products.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [549768]
+WARNING:  WatchFiles detected changes in 'app\controllers\htmx_shop_wizard.py', 'app\pricing.py'. Reloading...
+INFO:     Started server process [643936]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [643936]
+INFO:     Started server process [586788]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'app\pricing.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [586788]
+WARNING:  WatchFiles detected changes in 'tests\test_diamond_pricing.py', 'app\controllers\htmx_shop_wizard.py', 'app\admin_products.py', 'app\pricing.py'. Reloading...
+INFO:     Started server process [659720]
+INFO:     Waiting for application startup.
+WARNING:  WatchFiles detected changes in 'tests\test_diamond_pricing.py'. Reloading...
+INFO:     Application startup complete.
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [659720]
+INFO:     Started server process [643916]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'tests\test_diamond_pricing.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [643916]
+INFO:     Started server process [754100]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'scripts\_probe_carats.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [754100]
+WARNING:  WatchFiles detected changes in 'scripts\_probe_carats.py'. Reloading...
+C:\Users\yuzi0\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\uvicorn\_subprocess.py:84: RuntimeWarning: coroutine 'Server.serve' was never awaited
+  pass
+RuntimeWarning: Enable tracemalloc to get the object allocation traceback
+INFO:     Started server process [743012]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'app\catalog.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [743012]
+WARNING:  WatchFiles detected changes in 'app\controllers\htmx_shop_wizard.py', 'scripts\_probe_carats.py', 'tests\test_shop_variant_options.py', 'app\catalog.py'. Reloading...
+C:\Users\yuzi0\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\uvicorn\_subprocess.py:84: RuntimeWarning: coroutine 'Server.serve' was never awaited
+  pass
+RuntimeWarning: Enable tracemalloc to get the object allocation traceback
+INFO:     Started server process [848060]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'app\catalog.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [848060]
+WARNING:  WatchFiles detected changes in 'tests\test_diamond_pricing.py', 'app\controllers\htmx_shop_wizard.py', 'tests\test_shop_variant_options.py', 'app\admin_products.py', 'app\catalog.py'. Reloading...
+INFO:     Started server process [938008]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [938008]
+INFO:     Started server process [925908]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'tests\test_shop_variant_options.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [925908]
+INFO:     Started server process [938500]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'tests\test_diamond_pricing.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [938500]
+WARNING:  WatchFiles detected changes in 'tests\test_shop_variant_options.py'. Reloading...
+INFO:     Started server process [977312]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [977312]
+INFO:     Started server process [916944]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'tests\test_shop_variant_options.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [916944]
+INFO:     Started server process [929428]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'tests\test_shop_variant_options.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [929428]
+WARNING:  WatchFiles detected changes in 'tests\test_shop_variant_options.py'. Reloading...
+INFO:     Started server process [1062924]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [1062924]
+INFO:     Started server process [155524]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'tests\test_shop_variant_options.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [155524]
+INFO:     Started server process [1022796]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.

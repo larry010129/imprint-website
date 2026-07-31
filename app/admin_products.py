@@ -19,6 +19,7 @@ from app.image_urls import (
     resolve_product_image_url,
     static_url_exists,
 )
+from app.pricing_overrides import canonical_carat
 from app.storage import is_supabase_storage_url
 
 VALID_CATEGORIES = {"pendant", "ring", "earring", "bracelet", "chain"}
@@ -274,6 +275,9 @@ def validate_product_fields(body: dict | None, *, valid_categories: set[str] | N
     for variant in body.get("variants") or []:
         gold = str(variant.get("gold") or "").strip()
         carat = str(variant.get("carat") or "").strip()
+        # Align padded keys (0.10) with shop/catalog canonical form (0.1).
+        if category != "chain":
+            carat = canonical_carat(carat) or carat
         if gold not in VALID_GOLDS:
             errors.append(f"invalid variant metal: {gold or '(empty)'}")
             continue

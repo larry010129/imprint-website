@@ -2325,6 +2325,11 @@ body.dark-theme .ring-size-guide-table thead th {
   border-radius: 0 6px 6px 0;
 }
 
+.shop-fancy-min-note {
+  color: #c62828;
+  font-weight: 600;
+}
+
 .shop-fit .diamond-shape-hint {
   margin-top: 0.5rem;
   font-size: 0.6875rem;

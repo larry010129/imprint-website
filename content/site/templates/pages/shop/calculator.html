@@ -3,8 +3,8 @@
 {% block title %}{% if q_preview %}預覽模式｜不會送出真實訂單 — {% endif %}{{ title }}{% endblock %}
 {% block main_class %} class="main-content shop-calculator-page{% if q_preview %} is-shop-preview{% endif %}"{% endblock %}
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/shop.css?v=6.27">
-<link rel="stylesheet" href="/static/css/shop-wizard.css?v=22">
+<link rel="stylesheet" href="/static/css/shop.css?v=6.28">
+<link rel="stylesheet" href="/static/css/shop-wizard.css?v=23">
 {% include "partials/shop-tour-react-css.html" %}
 {% if q_preview %}
 <meta name="robots" content="noindex, nofollow">
@@ -191,7 +191,7 @@
             <div class="variant-group" id="fancy-diamond-step">
               <div class="variant-label-row fancy-color-label-row">
                 <h3 class="variant-label" data-i18n="step_diamond_color">選擇鑽石顏色</h3>
-                <p class="diamond-shape-hint diamond-shape-hint--inline" id="diamond-fancy-min-carat-notice" role="note"
+                <p class="diamond-shape-hint diamond-shape-hint--inline shop-fancy-min-note hidden" id="diamond-fancy-min-carat-notice" role="note"
                    data-i18n="diamond_fancy_min_carat">彩鑽只有 0.3 克拉（30 分）以上</p>
               </div>
               <div class="diamond-carousel-wrap">
@@ -234,7 +234,7 @@
                 </div>
               </div>
               <p class="diamond-shape-hint" id="diamond-shape-min-carat-notice" role="note"
-                 data-i18n="diamond_shape_min_carat">※ 溫馨提醒：除圓鑽外，其餘切工需 0.3 克拉（30 分）以上方可選擇與製作。</p>
+                 data-i18n="diamond_shape_min_carat">※ 溫馨提醒：除圓鑽外，其餘切工建議 0.3 克拉（30 分）以上；本款可選克拉以商品選項為準。</p>
             </div>
 
             <div class="variant-group hidden" id="stone-count-step">
@@ -815,9 +815,9 @@
 </script>
 <script src="/static/js/shop-assets.js?v=13"></script>
 <script src="/static/js/shop-catalog-data.js?v=6"></script>
-<script src="/static/js/shop-pricing-local.js?v=11"></script>
-<script src="/static/js/shop-i18n.js?v=12"></script>
+<script src="/static/js/shop-pricing-local.js?v=13"></script>
+<script src="/static/js/shop-i18n.js?v=14"></script>
 <script src="/static/js/girdle-engrave.js?v=24"></script>
 <script src="/static/js/shop-terms.js?v=4"></script>
-<script src="/static/js/shop.js?v=114"></script>
+<script src="/static/js/shop.js?v=122"></script>
 {% endblock %}

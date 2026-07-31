@@ -1983,7 +1983,7 @@ function caratsForProductGold(product, gold) {
 
 function enforceCaratForGold(product, gold) {
   if (!product || !gold || isDiamondOnlyCategory()) return;
-  const carats = caratsForProductGold(product, gold);
+  const carats = listProductCaratOptions(product, gold);
   if (!carats.length) {
     state.carat = null;
     return;
@@ -2149,31 +2149,145 @@ function updateColorStep(goldOverride) {
   renderColorButtons('color-btn-row', gold, product, state.color, selectColor);
 }
 
-function isCaratHiddenForShop(carat) {
-  const value = parseFloat(String(carat));
-  const minCarat = diamondOptions.fancyMinCarat || diamondOptions.nonRoundShapeMinCarat || 0.3;
-  if (Number.isNaN(value)) return false;
-  if (state.diamondKind === 'fancy' && value < minCarat) return true;
-  if (state.diamondShape && state.diamondShape !== 'round' && value < minCarat) return true;
+/**
+ * Admin/catalog carats for a product+gold (unfiltered).
+ * White dropdown + fancy-color gating use this full list.
+ */
+function listAdminProductCaratOptions(product, gold) {
+  if (!product) return [];
+  const fromGold = gold ? caratsForProductGold(product, gold) : null;
+  const raw = (fromGold && fromGold.length)
+    ? fromGold
+    : [...(product.carats || [])];
+  return raw.map(String).filter(Boolean);
+}
+
+/**
+ * Shop carat dropdown options.
+ * White: all admin carats. Fancy (黃/藍/粉): intersect admin list with ≥ fancyMinCarat (0.3).
+ */
+function listProductCaratOptions(product, gold) {
+  const options = listAdminProductCaratOptions(product, gold);
+  if (state.category === 'chain' || state.diamondKind !== 'fancy') return options;
+  const minCarat = fancyMinCaratValue();
+  return options.filter((c) => {
+    const n = parseFloat(c);
+    return !Number.isNaN(n) && n >= minCarat;
+  });
+}
+
+function productConfiguredCarats() {
+  return listAdminProductCaratOptions(getSelectedProduct(), state.gold);
+}
+
+/** @deprecated Prefer listProductCaratOptions fancy filter. Always false. */
+function isCaratHiddenForShop(_carat) {
   return false;
+}
+
+const FANCY_DIAMOND_COLOR_IDS = ['yellow', 'blue', 'pink'];
+
+function fancyMinCaratValue() {
+  const n = Number(diamondOptions.fancyMinCarat || 0.3);
+  return Number.isNaN(n) ? 0.3 : n;
+}
+
+/** True when admin carats include at least one ≥ fancy min (0.3). */
+function productOffersFancyMinCaratOrAbove() {
+  const minCarat = fancyMinCaratValue();
+  return productConfiguredCarats().some((c) => {
+    const n = parseFloat(c);
+    return !Number.isNaN(n) && n >= minCarat;
+  });
+}
+
+/** Fancy diamond colors present in admin image slot keys (metal-diamond[-chain]). */
+function designedFancyDiamondColors(product) {
+  const found = new Set();
+  const images = product?.images;
+  if (!images || typeof images !== 'object' || Array.isArray(images)) return [];
+  Object.keys(images).forEach((key) => {
+    const urls = images[key];
+    if (!urls || (Array.isArray(urls) && !urls.length)) return;
+    const parsed = window.ShopAssets?.parseImageSlotKey?.(key);
+    if (parsed && FANCY_DIAMOND_COLOR_IDS.includes(parsed.diamond)) {
+      found.add(parsed.diamond);
+      return;
+    }
+    const parts = String(key).toLowerCase().split('-');
+    if (parts.length >= 2 && FANCY_DIAMOND_COLOR_IDS.includes(parts[1])) {
+      found.add(parts[1]);
+    }
+  });
+  return FANCY_DIAMOND_COLOR_IDS.filter((c) => found.has(c));
+}
+
+/**
+ * Show 黃鑽/藍鑽/粉鑽 only when BOTH:
+ *   1) product has at least one admin carat ≥ fancyMinCarat (0.3), AND
+ *   2) that color has a product diamond image slot.
+ * Do not unlock all fancy colors from carat alone. White always separate.
+ */
+function isFancyDiamondColorOffered(colorId) {
+  if (!FANCY_DIAMOND_COLOR_IDS.includes(colorId)) return false;
+  if (!productOffersFancyMinCaratOrAbove()) return false;
+  return designedFancyDiamondColors(getSelectedProduct()).includes(colorId);
+}
+
+function offeredFancyDiamondColorIds() {
+  return FANCY_DIAMOND_COLOR_IDS.filter(isFancyDiamondColorOffered);
+}
+
+function syncFancyMinCaratNotice() {
+  const notice = document.getElementById('diamond-fancy-min-carat-notice');
+  if (!notice) return;
+  // Product-level gate only: show whenever fancy UI is offered.
+  // Do not hide on 白鑽 selection or when selected carat ≥ min.
+  const show = productOffersFancyMinCaratOrAbove()
+    && designedFancyDiamondColors(getSelectedProduct()).length > 0;
+  notice.classList.toggle('hidden', !show);
+}
+
+function ensureOfferedDiamondColorSelection() {
+  const active = selectedDiamondColorId();
+  if (active && active !== 'white' && !isFancyDiamondColorOffered(active)) {
+    state.diamondKind = 'white';
+    state.fancyColor = null;
+  }
 }
 
 function ensureChainCaratDefault() {
   if (state.category !== 'chain') return;
   const product = getSelectedProduct();
-  const carats = product?.carats || [];
+  const carats = listProductCaratOptions(product, state.gold);
   if (!carats.length) return;
-  if (!state.carat || !carats.includes(state.carat)) {
+  const current = state.carat != null ? String(state.carat) : '';
+  if (!current || !carats.includes(current)) {
+    state.carat = carats[0];
+  }
+}
+
+/** Default to smallest/first admin carat when unset or no longer offered. */
+function ensureProductCaratDefault(validCarats) {
+  const carats = Array.isArray(validCarats) ? validCarats.map(String) : [];
+  if (!carats.length) {
+    state.carat = null;
+    return;
+  }
+  const current = state.carat != null ? String(state.carat) : '';
+  if (!current || !carats.includes(current)) {
     state.carat = carats[0];
   }
 }
 
 function updateCaratButtons() {
   const product = getSelectedProduct();
-  const validCarats = product
-    ? (state.gold ? caratsForProductGold(product, state.gold) : (product.carats || []))
-    : [];
+  const validCarats = listProductCaratOptions(product, state.gold);
   if (state.gold && product) enforceCaratForGold(product, state.gold);
+  else if (product) ensureProductCaratDefault(validCarats);
+  // Re-read after enforce/default may have changed state.carat.
+  const options = listProductCaratOptions(product, state.gold);
+  ensureProductCaratDefault(options);
   const isChain = state.category === 'chain';
   document.getElementById('carat-step')?.classList.remove('hidden');
   const label = document.querySelector('#carat-step .variant-label');
@@ -2193,18 +2307,27 @@ function updateCaratButtons() {
     placeholder.textContent = (ph && ph !== 'carat_placeholder') ? ph : '選擇克拉';
   }
   sel.appendChild(placeholder);
-  validCarats.forEach((v) => {
+  // White: full admin list. Fancy: admin ∩ ≥ fancyMinCarat (see listProductCaratOptions).
+  options.forEach((v) => {
     const n = parseFloat(v);
-    const visible = isChain || !isCaratHiddenForShop(v);
-    if (!visible) return;
     const opt = document.createElement('option');
-    opt.value = v;
-    opt.textContent = isChain ? v : (Number.isNaN(n) ? v : `${n.toFixed(1)} ct`);
+    opt.value = String(v);
+    opt.textContent = isChain ? String(v) : (Number.isNaN(n) ? String(v) : `${n.toFixed(1)} ct`);
     sel.appendChild(opt);
   });
-  sel.value = state.carat && validCarats.includes(state.carat) ? state.carat : '';
+  const selected = state.carat != null ? String(state.carat) : '';
+  sel.value = selected && options.includes(selected) ? selected : '';
+  syncFancyMinCaratNotice();
   updateDiamondSteps();
 }
+
+// Expose for regression tests (Node / browser console).
+window.listAdminProductCaratOptions = listAdminProductCaratOptions;
+window.listProductCaratOptions = listProductCaratOptions;
+window.isCaratHiddenForShop = isCaratHiddenForShop;
+window.productOffersFancyMinCaratOrAbove = productOffersFancyMinCaratOrAbove;
+window.isFancyDiamondColorOffered = isFancyDiamondColorOffered;
+window.offeredFancyDiamondColorIds = offeredFancyDiamondColorIds;
 
 function resetDiamondOptions() {
   state.diamondKind = 'white';
@@ -2346,11 +2469,16 @@ function ensureStoneCountDefault() {
 }
 
 function diamondColorOptions() {
-  if (diamondOptions.diamondColors?.length) return diamondOptions.diamondColors;
-  return [
-    { id: 'white', kind: 'white', labelZh: '白鑽', labelEn: 'White', swatch: '#e8e8e8', image: 'diamonds/colors/white.png' },
-    ...(diamondOptions.fancyColors || []),
-  ];
+  const all = diamondOptions.diamondColors?.length
+    ? diamondOptions.diamondColors
+    : [
+      { id: 'white', kind: 'white', labelZh: '白鑽', labelEn: 'White', swatch: '#e8e8e8', image: 'diamonds/colors/white.png' },
+      ...(diamondOptions.fancyColors || []),
+    ];
+  return all.filter((color) => {
+    if (!color || color.id === 'white' || color.kind === 'white') return true;
+    return isFancyDiamondColorOffered(color.id);
+  });
 }
 
 function selectedDiamondColorId() {
@@ -2384,6 +2512,7 @@ function scheduleDiamondCarouselNavUpdate() {
 function renderDiamondColorCarousel() {
   const carousel = document.getElementById('fancy-color-carousel');
   if (!carousel) return;
+  ensureOfferedDiamondColorSelection();
   carousel.innerHTML = '';
   const activeId = selectedDiamondColorId();
   diamondColorOptions().forEach(color => {
@@ -2438,6 +2567,7 @@ function updateDiamondSteps() {
   }
   enforceRoundOnlyShape();
   minCaratNotice?.classList.toggle('hidden', isChain || !productAllowsFancyShapes());
+  syncFancyMinCaratNotice();
   renderDiamondColorCarousel();
   renderDiamondShapeButtons();
   renderStoneCountButtons();
@@ -2715,9 +2845,7 @@ function selectDiamondShape(shapeId) {
   } else {
     state.diamondShape = shapeId || 'round';
   }
-  if (state.carat && isCaratHiddenForShop(state.carat)) {
-    state.carat = null;
-  }
+  // Keep admin carats selectable; mins are notices only (see isCaratHiddenForShop).
   updateCaratButtons();
   renderDiamondShapeButtons();
   if (isDiamondOnlyCategory()) {
@@ -2827,11 +2955,6 @@ function selectDiamondColor(colorId) {
   } else {
     state.diamondKind = 'fancy';
     state.fancyColor = colorId;
-    if (state.carat && isCaratHiddenForShop(state.carat)) {
-      state.carat = null;
-      const caratSel = document.getElementById('carat-select');
-      if (caratSel) caratSel.value = '';
-    }
   }
   ensureStoneCountDefault();
   updateDiamondSteps();
@@ -3944,6 +4067,9 @@ function selectType(typeId) {
   document.querySelectorAll(".type-card").forEach(c =>
     c.classList.toggle("active", c.dataset.type === typeId));
 
+  // Default carat = smallest admin option before metal is chosen.
+  const initialCarats = listProductCaratOptions(product, null);
+  if (initialCarats.length) state.carat = initialCarats[0];
   updateCaratButtons();
   updateMetalButtons();
   document.querySelectorAll("#metal-btn-row .metal-btn, #color-btn-row .color-btn").forEach(b => b.classList.remove("active"));
@@ -4833,9 +4959,6 @@ function restoreShopConfig(cfg) {
   if (state.diamondShape !== 'round' && state.diamondShape !== 'other') {
     const restoredShape = nonRoundMatrixShapes().find((shape) => shape.id === state.diamondShape);
     if (!restoredShape) state.diamondShape = 'other';
-  }
-  if (state.carat && isCaratHiddenForShop(state.carat)) {
-    state.carat = null;
   }
 
   if (cfg.ringSize != null && cfg.ringSize !== '') {
