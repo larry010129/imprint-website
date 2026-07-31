@@ -1,11 +1,11 @@
 {% extends "layouts/base.html" %}
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/member-app.css?v=2">
+<link rel="stylesheet" href="/static/css/member-app.css?v=3">
 {% endblock %}
 {% block content %}
 <section class="account-section" id="view-account" aria-label="我的帳戶">
   <div class="container account-grid">
-    <div id="htmx-account" class="account-htmx-root price-reference member-panel"
+    <div id="htmx-account" class="account-htmx-root"
       hx-get="/htmx/account"
       hx-trigger="load"
       hx-swap="innerHTML">

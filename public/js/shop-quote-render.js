@@ -153,6 +153,7 @@
       var chainColorVal = materialLabel(config.chainGold, config.chainColor);
       if (pendantColorVal) rows.push({ label: '項墜顏色', value: pendantColorVal });
       if (chainColorVal) rows.push({ label: '鍊條顏色', value: chainColorVal });
+      if (config.chainThickness) rows.push({ label: '鍊條厚度', value: config.chainThickness });
       if (config.chainLength) rows.push({ label: '鍊條長度', value: config.chainLength + ' cm' });
     } else if (config.includeChain) {
       rows.push({ label: '搭配鍊條', value: materialLabel(config.chainGold, config.chainColor) || '是' });

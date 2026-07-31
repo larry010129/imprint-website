@@ -103,6 +103,9 @@
     }
     if (config.ringSize) rows.push({ label: '戒圍', value: String(config.ringSize) });
     if (config.lengthCm) rows.push({ label: '長度', value: config.lengthCm + ' cm' });
+    if (config.chainThickness && category !== 'chain') {
+      rows.push({ label: '鍊條厚度', value: config.chainThickness });
+    }
     if (config.chainLength && category !== 'chain') {
       rows.push({ label: '鍊長', value: config.chainLength + ' cm' });
     }

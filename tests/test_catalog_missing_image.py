@@ -81,3 +81,49 @@ def test_build_catalog_drops_auto_stock_shop_product_paths():
 
     assert entry["images"] == {}
     assert entry["styleKey"] is None
+
+
+def test_build_catalog_empty_images_stay_empty_no_style_key():
+    """New/empty products must not invent styleKey or shop-product slots."""
+    product = {
+        "id": "c54963cb-7c3d-469e-b26d-ae4372870445",
+        "category": "pendant",
+        "name_zh": "空白新品",
+        "name_en": None,
+        "description_zh": None,
+        "description_en": None,
+        "default_color": "white",
+        "sort_order": 0,
+        "is_published": False,
+        "allows_engraving": True,
+        "allows_pendant_only": True,
+        "allows_with_chain": True,
+    }
+
+    entry = build_catalog_product(product, [], [])
+
+    assert entry["images"] == {}
+    assert entry["styleKey"] is None
+    assert entry["colors"] == []
+
+
+def test_style_key_ignores_shop_product_only_rows():
+    """Stock letter paths must not mint styleKey (would re-invent shop images)."""
+    from app.catalog import style_key_from_images
+
+    assert (
+        style_key_from_images(
+            [
+                {
+                    "file_path": "/static/images/shop-product/silver/%E9%A0%85%E5%A2%9CA_silver.png",
+                }
+            ]
+        )
+        is None
+    )
+    assert (
+        style_key_from_images(
+            [{"file_path": "/static/images/products/white/pendant-A.png"}]
+        )
+        == "pendant-A"
+    )

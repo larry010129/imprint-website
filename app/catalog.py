@@ -26,9 +26,11 @@ from app.image_urls import (
 
 
 def style_key_from_images(images: list[dict]) -> str | None:
-    """Read pendant-A / ring-B from stored image paths (stable when sort_order has gaps)."""
+    """Read pendant-A / ring-B from real upload paths only (not shop-product stock)."""
     for image in images:
         path = (image.get("file_path") or "").replace("\\", "/")
+        if is_auto_stock_product_image(path) or is_dead_catalog_placeholder(path):
+            continue
         match = _STYLE_FROM_PATH.search(path)
         if match:
             return f"{match.group(1).lower()}-{match.group(2).upper()}"

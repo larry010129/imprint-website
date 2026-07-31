@@ -109,6 +109,7 @@ function saveShopResumeSnapshot() {
       chainProductId: state.chainProductId,
       chainGold: state.chainGold,
       chainColor: state.chainColor,
+      chainThickness: state.chainThickness,
       chainLength: state.chainLength,
       diamondKind: state.diamondKind,
       fancyColor: state.fancyColor,
@@ -514,6 +515,15 @@ function isUsableCatalogImageUrl(url) {
   return true;
 }
 
+/** True when product already has at least one admin/catalog raster (not empty new item). */
+function productHasCatalogImages(product) {
+  if (!product?.images || typeof product.images !== 'object') return false;
+  return Object.values(product.images).some((list) => {
+    const arr = Array.isArray(list) ? list : list ? [list] : [];
+    return arr.some(isUsableCatalogImageUrl);
+  });
+}
+
 /** Pick catalog image URLs for exact slot keys (no legacy metal-only fallback). */
 function catalogImagesForKeys(product, keys) {
   if (!product?.images || !keys?.length) return [];
@@ -791,6 +801,10 @@ function productImagesForColor(product, metalColor, diamondColor, opts) {
     if (fromWhite.length) return fromWhite;
   }
 
+  // Empty product → no invent. Bundled letter PNGs only fill missing slots on
+  // products that already have at least one real catalog upload.
+  if (!productHasCatalogImages(product)) return [];
+
   // Shop-product PNGs when no exact admin slot for this metal/diamond[/chain].
   if (assetId && window.ShopAssets?.productImageResolve) {
     const resolved = window.ShopAssets.productImageResolve(
@@ -844,6 +858,8 @@ function productImageUrl(product, metalColor, diamondColor, opts) {
   if (fromColor && !/\/images\/shop\/styles\/[a-z]+-[A-C]\.svg/i.test(fromColor)) {
     return fromColor;
   }
+  // No catalog uploads → stay blank (never invent letter thumbs for new/empty items).
+  if (!productHasCatalogImages(product)) return '';
   const assetId = productAssetId(product);
   if (assetId && window.ShopAssets) return window.ShopAssets.styleThumb(assetId);
   return '';
@@ -1069,6 +1085,7 @@ let state = {
   chainProductId: null,
   chainGold: null,
   chainColor: null,
+  chainThickness: null,
   chainLength: null,
   diamondKind: 'white',
   fancyColor: null,
@@ -1099,10 +1116,21 @@ function chainLengthOptionsCm(product, thickness) {
 function chainConfiguredThicknesses(product) {
   const lw = effectiveChainLengthWeights(product);
   if (!lw || !Object.keys(lw).length) return [];
-  return Object.keys(lw).filter((t) => {
-    const table = lw[t];
-    return table && typeof table === 'object' && Object.keys(table).some((k) => Number(table[k]) > 0);
-  });
+  return Object.keys(lw)
+    .filter((t) => {
+      const table = lw[t];
+      return table && typeof table === 'object' && Object.keys(table).some((k) => Number(table[k]) > 0);
+    })
+    .sort((a, b) => parseFloat(a) - parseFloat(b));
+}
+
+function syncChainThicknessState(options) {
+  if (state.chainThickness && options.includes(state.chainThickness)) return;
+  if (options.includes(DEFAULT_ATTACHED_CHAIN_THICKNESS)) {
+    state.chainThickness = DEFAULT_ATTACHED_CHAIN_THICKNESS;
+  } else {
+    state.chainThickness = options.length ? options[0] : null;
+  }
 }
 
 function syncChainLengthState(options, stateKey) {
@@ -1506,6 +1534,7 @@ const SUBMIT_FIELD_TARGETS = {
   fancyColor: () => document.getElementById('fancy-diamond-step'),
   diamondShape: () => document.getElementById('diamond-shape-step'),
   pendantChain: () => document.getElementById('pendant-chain-step'),
+  pendantChainThickness: () => document.querySelector('#pendant-chain-options .pendant-chain-thickness'),
   pendantChainLength: () => document.querySelector('#pendant-chain-options .pendant-chain-length'),
 };
 
@@ -1532,6 +1561,7 @@ function getMissingSubmitFields() {
   }
   if (state.category === 'pendant' && state.includeChain) {
     if (!state.chainProductId) missing.push('pendantChain');
+    if (!state.chainThickness) missing.push('pendantChainThickness');
     if (!state.chainLength) missing.push('pendantChainLength');
   }
   return missing;
@@ -1550,6 +1580,7 @@ function labelForSubmitField(key) {
     case 'fancyColor': return tr('step_diamond_color');
     case 'diamondShape': return tr('step_diamond_shape_other');
     case 'pendantChain':
+    case 'pendantChainThickness':
     case 'pendantChainLength': return tr('step_pendant_chain');
     default: return '';
   }
@@ -2018,10 +2049,14 @@ function renderTypeCards() {
 
     const img = document.createElement("img");
     const imgSrc = styleGridImageUrl(product);
-    img.src = imgSrc;
+    img.src = imgSrc || '';
     img.alt = productName(product);
     img.loading = "lazy";
-    window.ShopAssets?.attachImageFallback(img, window.ShopAssets.styleThumb(productAssetId(product) || styleId));
+    // Only letter-thumb fallback when product already has real catalog images.
+    const assetId = productAssetId(product);
+    if (imgSrc && assetId) {
+      window.ShopAssets?.attachImageFallback(img, window.ShopAssets.styleThumb(assetId));
+    }
 
     const name = document.createElement("span");
     name.className = "type-name";
@@ -2816,6 +2851,7 @@ function buildQuotePayload() {
     chainProductId: state.chainProductId,
     chainGold: state.chainGold,
     chainColor: state.chainColor,
+    chainThickness: state.chainThickness,
     chainLength: state.chainLength,
     diamondKind: state.diamondKind,
     fancyColor: state.fancyColor,
@@ -3203,6 +3239,25 @@ function renderLengthSelect(selectId, options, selected, placeholderKey) {
   syncShopDropdown(sel);
 }
 
+function renderThicknessSelect(selectId, options, selected, placeholderKey) {
+  const sel = document.getElementById(selectId);
+  if (!sel) return;
+  const current = selected && options.includes(selected) ? selected : null;
+  sel.innerHTML = '';
+  const ph = document.createElement('option');
+  ph.value = '';
+  ph.textContent = tr(placeholderKey);
+  sel.appendChild(ph);
+  options.forEach((thick) => {
+    const opt = document.createElement('option');
+    opt.value = thick;
+    opt.textContent = thick;
+    sel.appendChild(opt);
+  });
+  sel.value = current || '';
+  syncShopDropdown(sel);
+}
+
 function updateLengthStep() {
   const endBlock = document.getElementById('chain-length-end');
   const step = document.getElementById('chain-length-step');
@@ -3273,6 +3328,7 @@ function syncAttachedChainFromPendant() {
     state.chainProductId = null;
     state.chainGold = null;
     state.chainColor = null;
+    state.chainThickness = null;
     return;
   }
   const chains = productsFor('chain');
@@ -3339,7 +3395,15 @@ function updateChainOptions() {
   if (!state.includeChain) return;
 
   const chainProduct = getProduct('chain', state.chainProductId);
-  const pendantChainLengths = chainLengthOptionsCm(chainProduct, DEFAULT_ATTACHED_CHAIN_THICKNESS);
+  const thicknesses = chainConfiguredThicknesses(chainProduct);
+  syncChainThicknessState(thicknesses);
+  renderThicknessSelect(
+    'pendant-chain-thickness-select',
+    thicknesses,
+    state.chainThickness,
+    'chain_thickness_placeholder',
+  );
+  const pendantChainLengths = chainLengthOptionsCm(chainProduct, state.chainThickness);
   syncChainLengthState(pendantChainLengths, 'chainLength');
   renderLengthSelect('pendant-chain-length-select', pendantChainLengths, state.chainLength, 'chain_length_placeholder');
 }
@@ -3746,6 +3810,7 @@ function clearRingSizeSelection() {
   state.chainProductId = null;
   state.chainGold = null;
   state.chainColor = null;
+  state.chainThickness = null;
   state.chainLength = null;
   resetDiamondOptions();
   const sel = document.getElementById('ring-size-select');
@@ -3824,6 +3889,7 @@ function selectCategory(cat) {
   state.chainProductId = null;
   state.chainGold = null;
   state.chainColor = null;
+  state.chainThickness = null;
   state.chainLength = null;
 
   document.querySelectorAll(".cat-btn").forEach(b =>
@@ -3952,6 +4018,16 @@ document.getElementById('chain-length-select')?.addEventListener('change', (e) =
   updateSummary();
 });
 
+document.getElementById('pendant-chain-thickness-select')?.addEventListener('change', (e) => {
+  const v = e.target.value || null;
+  state.chainThickness = v;
+  const chainProduct = getProduct('chain', state.chainProductId);
+  const opts = chainLengthOptionsCm(chainProduct, state.chainThickness);
+  syncChainLengthState(opts, 'chainLength');
+  renderLengthSelect('pendant-chain-length-select', opts, state.chainLength, 'chain_length_placeholder');
+  updateSummary();
+});
+
 document.getElementById('pendant-chain-length-select')?.addEventListener('change', (e) => {
   const v = e.target.value;
   state.chainLength = v ? Number(v) : null;
@@ -4011,8 +4087,12 @@ document.getElementById('pendant-chain-toggle-row')?.addEventListener('click', (
   state.includeChain = wantChain;
   if (state.includeChain) {
     const chainProduct = getProduct('chain', state.chainProductId);
-    const opts = chainLengthOptionsCm(chainProduct, DEFAULT_ATTACHED_CHAIN_THICKNESS);
+    const thicknesses = chainConfiguredThicknesses(chainProduct);
+    syncChainThicknessState(thicknesses);
+    const opts = chainLengthOptionsCm(chainProduct, state.chainThickness);
     syncChainLengthState(opts, 'chainLength');
+  } else {
+    state.chainThickness = null;
   }
   productImageIndex = 0;
   updateChainOptions();
@@ -4072,6 +4152,7 @@ document.getElementById('back-to-catalog')?.addEventListener('click', () => {
   state.chainProductId = null;
   state.chainGold = null;
   state.chainColor = null;
+  state.chainThickness = null;
   state.chainLength = null;
   document.querySelectorAll('.cat-btn, #metal-btn-row .metal-btn, #color-btn-row .color-btn').forEach(b => b.classList.remove('active'));
   clearRingSizeSelection();
@@ -4151,6 +4232,7 @@ function buildSubmitPayload() {
     chainProductId: state.chainProductId,
     chainGold: state.chainGold,
     chainColor: state.chainColor,
+    chainThickness: state.chainThickness,
     chainLength: state.chainLength,
     diamondKind: state.diamondKind,
     fancyColor: state.fancyColor,
@@ -4671,6 +4753,7 @@ document.addEventListener('langchange', () => {
 
 function orderApiRowToEditConfig(o) {
   const type = o.product_id || o.product_type;
+  const saved = (o.config_json && typeof o.config_json === 'object') ? o.config_json : {};
   const cfg = {
     orderId: o.id,
     orderNumber: o.order_number,
@@ -4690,6 +4773,8 @@ function orderApiRowToEditConfig(o) {
     includeChain: !!o.include_chain,
     chainGold: o.chain_gold,
     chainColor: o.chain_color,
+    chainThickness: saved.chainThickness || null,
+    chainProductId: saved.chainProductId || null,
   };
   if (o.category === 'chain') cfg.lengthCm = o.chain_length_cm;
   else cfg.chainLength = o.chain_length_cm;
@@ -4731,6 +4816,7 @@ function restoreShopConfig(cfg) {
   state.chainProductId = cfg.chainProductId || null;
   state.chainGold = cfg.chainGold || null;
   state.chainColor = cfg.chainColor || null;
+  state.chainThickness = cfg.chainThickness || null;
   state.chainLength = cfg.chainLength != null ? cfg.chainLength : null;
   state.diamondKind = cfg.diamondKind || 'white';
   state.fancyColor = cfg.fancyColor || null;

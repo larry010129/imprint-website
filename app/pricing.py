@@ -395,10 +395,12 @@ def _metal_pre_tax(gold_prices: dict, gold: str, weight_chin: float) -> tuple[fl
 def _compute_chain_addon(
     cur, gold_prices: dict, *, chain_product_id: str, chain_gold: str,
     chain_length_cm: Any, require_published: bool,
+    chain_thickness: str | None = None,
 ) -> dict | None:
+    thickness = (chain_thickness or DEFAULT_ATTACHED_CHAIN_THICKNESS).strip()
     looked_up = _lookup_weight(
         cur, category="chain", product_id=chain_product_id, gold=chain_gold,
-        carat=DEFAULT_ATTACHED_CHAIN_THICKNESS,
+        carat=thickness or DEFAULT_ATTACHED_CHAIN_THICKNESS,
         length_cm=chain_length_cm, require_published=require_published,
     )
     if not looked_up:
@@ -424,6 +426,7 @@ def compute_order_pricing(cur, data: dict[str, Any], *, require_published: bool 
     chain_product_id = data.get("chainProductId")
     chain_gold = data.get("chainGold")
     chain_length = data.get("chainLength")
+    chain_thickness = data.get("chainThickness") or DEFAULT_ATTACHED_CHAIN_THICKNESS
     product_id = data.get("type")
 
     if not category or not carat or not product_id:
@@ -517,6 +520,7 @@ def compute_order_pricing(cur, data: dict[str, Any], *, require_published: bool 
         addon = _compute_chain_addon(
             cur, gold_prices, chain_product_id=chain_product_id, chain_gold=chain_gold,
             chain_length_cm=chain_length, require_published=require_published,
+            chain_thickness=chain_thickness,
         )
         if not addon:
             return {"ready": False, "error": "invalid chain option"}

@@ -816,7 +816,11 @@ async def product_action(request: Request) -> JSONResponse:
                 """
                 insert into product_images (product_id, color, file_path, sort_order)
                 select %s, color, file_path, sort_order
-                from product_images where product_id = %s
+                from product_images
+                where product_id = %s
+                  and file_path not ilike '%%/shop-product/%%'
+                  and file_path not ilike '%%\\shop-product\\%%'
+                  and file_path not ilike 'images/shop-product/%%'
                 """,
                 (copy_id, product_id),
             )

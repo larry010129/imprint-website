@@ -247,10 +247,10 @@
     return { amount: perChin * weightChin, perGram: perGramFor(gold) };
   }
 
-  function computeChainAddon(catalog, chainProductId, chainGold, chainLengthCm) {
+  function computeChainAddon(catalog, chainProductId, chainGold, chainLengthCm, chainThickness) {
     var chainProduct = findProduct(catalog, 'chain', chainProductId);
     if (!chainProduct) throw new Error('invalid chain');
-    var carat = DEFAULT_ATTACHED_CHAIN_THICKNESS;
+    var carat = chainThickness || DEFAULT_ATTACHED_CHAIN_THICKNESS;
     chainGold = normalizeGold(chainGold);
     var weightChin = lookupWeight(chainProduct, 'chain', chainGold, carat, chainLengthCm);
     var weightGrams = weightChin * CHIN_TO_GRAMS;
@@ -273,6 +273,7 @@
     var chainProductId = data.chainProductId;
     var chainGold = data.chainGold;
     var chainLength = data.chainLength;
+    var chainThickness = data.chainThickness || DEFAULT_ATTACHED_CHAIN_THICKNESS;
 
     if (!category || !carat || !productId) return { ready: false };
     if (category !== 'diamond' && !gold) return { ready: false };
@@ -352,7 +353,9 @@
 
     if (category === 'pendant' && includeChain && chainProductId && chainGold && chainLength) {
       try {
-        var addon = computeChainAddon(catalog, chainProductId, chainGold, chainLength);
+        var addon = computeChainAddon(
+          catalog, chainProductId, chainGold, chainLength, chainThickness
+        );
         chainDisplay = Math.round(addon.chainPreTax * (1 + TAX_RATE));
         total += chainDisplay;
       } catch (e) {

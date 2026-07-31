@@ -61,6 +61,22 @@ def test_normalize_keeps_supabase_storage_url():
     assert normalize_product_image_url(url, "white-white") == url
 
 
+def test_validate_draft_keeps_empty_images_without_inventing():
+    cleaned, err = validate_product_fields(
+        {
+            "category": "pendant",
+            "nameZh": "空白新品",
+            "defaultColor": "white",
+            "isPublished": False,
+            "variants": [],
+            "images": [],
+        }
+    )
+    assert err is None
+    assert cleaned is not None
+    assert cleaned["images"] == []
+
+
 def test_validate_product_fields_drops_dead_placeholders_and_rejects_blob():
     ok, err = validate_product_fields(
         {

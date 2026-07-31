@@ -125,18 +125,9 @@
     "layout": "site",
     "main_class": "",
     "extra_css": [
-      "/static/css/member-app.css?v=2",
-      "/static/react/account.css?v=8"
+      "/static/css/member-app.css?v=3"
     ],
-    "extra_scripts": [
-      {
-        "src": "/static/js/api-client.js?v=11"
-      },
-      {
-        "src": "/static/react/account.js?v=23",
-        "type": "module"
-      }
-    ],
+    "extra_scripts": [],
     "head_extras": []
   },
   {
@@ -639,15 +630,9 @@
     "layout": "site",
     "main_class": "",
     "extra_css": [
-      "/static/css/member-app.css?v=2",
-      "/static/react/profile.css?v=8"
+      "/static/css/member-app.css?v=3"
     ],
-    "extra_scripts": [
-      {
-        "src": "/static/react/profile.js?v=19",
-        "type": "module"
-      }
-    ],
+    "extra_scripts": [],
     "head_extras": []
   },
   {

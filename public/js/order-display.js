@@ -102,6 +102,7 @@
 
   function orderToShopConfig(o) {
     var type = o.product_id || o.product_type;
+    var saved = (o.config_json && typeof o.config_json === 'object') ? o.config_json : {};
     var cfg = {
       orderId: o.id,
       orderNumber: o.order_number,
@@ -121,6 +122,8 @@
       includeChain: !!o.include_chain,
       chainGold: o.chain_gold,
       chainColor: o.chain_color,
+      chainThickness: saved.chainThickness || null,
+      chainProductId: saved.chainProductId || null,
     };
     if (o.category === 'chain') {
       cfg.lengthCm = o.chain_length_cm;

@@ -976,3 +976,109 @@
   .order-detail-layout { grid-template-columns: 1fr; }
   .member-order-item { max-width: 120px; }
 }
+
+/* Account card-only (HTMX fallback — matches prior React MembershipCard chrome) */
+.account-card-only {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+}
+.account-member-card {
+  width: 100%;
+  border: 1px solid #E5E7EB;
+  border-radius: 20px;
+  background: #fff;
+  color: #111827;
+  padding: 28px;
+  box-shadow:
+    0 18px 50px -20px rgba(15, 23, 42, 0.28),
+    0 8px 20px -12px rgba(15, 23, 42, 0.12);
+}
+.account-member-card__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.account-member-card__logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: contain;
+}
+.account-member-card__eyebrow {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #9CA3AF;
+}
+.account-member-card__title {
+  margin: 2px 0 0;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.account-member-card__fields {
+  margin: 24px 0 0;
+  display: grid;
+  gap: 12px;
+}
+.account-member-card__fields dt {
+  margin: 0;
+  font-size: 12px;
+  color: #6B7280;
+}
+.account-member-card__fields dd {
+  margin: 2px 0 0;
+  font-size: 15px;
+  font-weight: 500;
+  color: #374151;
+}
+.account-member-card__email {
+  word-break: break-all;
+}
+.account-member-card__id {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: 0.06em;
+}
+.account-member-card__cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-top: 28px;
+  min-height: 48px;
+  border-radius: 10px;
+  text-decoration: none;
+}
+.account-member-card__logout {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  color: #6B7280;
+  text-align: center;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.account-member-card__logout:hover {
+  color: #111827;
+}
+.account-member-card__admin {
+  margin: 0;
+  font-size: 13px;
+  text-align: center;
+}
+.account-member-card__admin a {
+  color: #6B7280;
+}

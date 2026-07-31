@@ -67,7 +67,14 @@ def test_compute_order_pricing_pendant_with_chain(monkeypatch):
     monkeypatch.setattr("app.pricing.load_overrides", fake_load_overrides)
     monkeypatch.setattr(
         "app.pricing._product_length_weights",
-        lambda cur, pid: {"1.0mm": {"36": 0.014}} if pid == "chain-uuid" else None,
+        lambda cur, pid: {
+            "1.0mm": {"36": 0.014},
+            "2.5mm": {"36": 0.047},
+        } if pid == "chain-uuid" else None,
+    )
+    monkeypatch.setattr(
+        "app.pricing.resolve_product_id",
+        lambda cur, **kwargs: kwargs.get("type_ref"),
     )
 
     cur = MagicMock()
@@ -92,8 +99,69 @@ def test_compute_order_pricing_pendant_with_chain(monkeypatch):
     assert pricing["total"] > pricing["diamondPrice"]
 
 
+def test_compute_order_pricing_pendant_chain_thickness_changes_price(monkeypatch):
+    """Attached-chain thickness must feed wax lookup (not hard-coded 1.0mm)."""
+    pendant_variant = {
+        "weight_chin": 0.33,
+        "manual_price_twd": None,
+        "side_stone_price_twd": None,
+        "side_stone_carat": None,
+    }
+    chain_variant = {"weight_chin": 0.014, "manual_price_twd": None}
+    seen_chain_carats: list[str] = []
+
+    def fake_get_product_variant(cur, **kwargs):
+        if kwargs["category"] == "pendant":
+            return pendant_variant
+        if kwargs["category"] == "chain":
+            seen_chain_carats.append(kwargs["carat"])
+            return chain_variant
+        return None
+
+    monkeypatch.setattr("app.pricing.get_product_variant", fake_get_product_variant)
+    monkeypatch.setattr(
+        "app.pricing.get_metal_prices",
+        lambda cur: {"XAU": 4300.0, "XPT": 1050.0, "XAG": 61.0},
+    )
+    monkeypatch.setattr("app.pricing.load_overrides", lambda cur: {})
+    monkeypatch.setattr(
+        "app.pricing._product_length_weights",
+        lambda cur, pid: {
+            "1.0mm": {"36": 0.014},
+            "2.5mm": {"36": 0.047},
+        } if pid == "chain-uuid" else None,
+    )
+    monkeypatch.setattr(
+        "app.pricing.resolve_product_id",
+        lambda cur, **kwargs: kwargs.get("type_ref"),
+    )
+
+    base = {
+        "category": "pendant",
+        "type": "pendant-uuid",
+        "gold": "9k",
+        "carat": "0.1",
+        "includeChain": True,
+        "chainProductId": "chain-uuid",
+        "chainGold": "9k",
+        "chainLength": 36,
+        "diamondKind": "white",
+        "diamondShape": "round",
+    }
+    cur = MagicMock()
+    thin = compute_order_pricing(cur, {**base, "chainThickness": "1.0mm"})
+    thick = compute_order_pricing(cur, {**base, "chainThickness": "2.5mm"})
+    assert thin["ready"] is True
+    assert thick["ready"] is True
+    assert thin["chainPrice"] is not None
+    assert thick["chainPrice"] is not None
+    assert thick["chainPrice"] > thin["chainPrice"]
+    assert thick["total"] > thin["total"]
+    assert seen_chain_carats == ["1.0mm", "2.5mm"]
+
+
 def test_browser_pendant_admin_variant_with_chain_without_length_weights():
-    """Chain SKU without lengthWeights cannot quote attached chain length."""
+    """Chain SKU without lengthWeights uses Excel/抖圓鏈 type table."""
     script = """
 global.window = {};
 require('./public/js/shop-pricing-local.js');
@@ -134,3 +202,60 @@ console.log(JSON.stringify(pricing.computeOrderPricing(payload, catalog)));
     quote = json.loads(result.stdout)
     # Empty lengthWeights → Excel/抖圓鏈 type table (default douyuan).
     assert quote["ready"] is True
+
+
+def test_browser_pendant_chain_thickness_changes_price():
+    script = """
+global.window = {};
+require('./public/js/shop-pricing-local.js');
+const pricing = window.ShopPricingLocal;
+pricing.setLiveGoldRates({'9k': 1});
+const catalog = {
+  pendant: [{
+    id: 'p1',
+    weights: {'9k': {'0.1': 0.33}},
+    manualPrices: {},
+  }],
+  chain: [{
+    id: 'c1',
+    chainType: 'douyuan',
+    weights: {'9k': {'1.0mm': 0.014}},
+    lengthWeights: {},
+    manualPrices: {},
+  }],
+};
+function quote(thickness) {
+  return pricing.computeOrderPricing({
+    category: 'pendant',
+    type: 'p1',
+    gold: '9k',
+    carat: '0.1',
+    includeChain: true,
+    chainProductId: 'c1',
+    chainGold: '9k',
+    chainThickness: thickness,
+    chainLength: 36,
+    diamondKind: 'white',
+    diamondShape: 'round',
+  }, catalog);
+}
+const thin = quote('1.0mm');
+const thick = quote('2.5mm');
+console.log(JSON.stringify({
+  thinReady: thin.ready,
+  thickReady: thick.ready,
+  thinChain: thin.chainPrice,
+  thickChain: thick.chainPrice,
+}));
+"""
+    result = subprocess.run(
+        ["node", "-e", script],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    data = json.loads(result.stdout)
+    assert data["thinReady"] is True
+    assert data["thickReady"] is True
+    assert data["thickChain"] > data["thinChain"]
