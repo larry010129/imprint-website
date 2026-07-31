@@ -253,11 +253,10 @@ function effectiveChainLengthWeights(product) {
   if (admin && typeof admin === 'object' && Object.keys(admin).length > 0) {
     return admin;
   }
-  // Excel/type defaults only for chain SKUs (or pendant-attached chain lookups).
-  if (state.category === 'chain' || product?.chainType) {
-    return necklaceTypeLengthWeights(product?.chainType || 'douyuan');
-  }
-  return {};
+  // Excel/type defaults for chain SKUs and pendant 含鍊 attached-chain lookup.
+  // Do not gate on state.category — pendant flow looks up chain products while
+  // category stays 'pendant', and missing chainType must still show 1.0–3.0mm.
+  return necklaceTypeLengthWeights(product?.chainType || 'douyuan');
 }
 
 function mergeProductWeights(product, staticProduct, category) {
@@ -1104,7 +1103,7 @@ const BRACELET_REFERENCE_LENGTH_CM = 18;
 
 /** Lengths (cm) from admin override or Excel/type standard table. */
 function chainLengthOptionsCm(product, thickness) {
-  if (!product || !thickness) return [];
+  if (!thickness) return [];
   const table = effectiveChainLengthWeights(product)?.[thickness];
   if (!table || typeof table !== 'object') return [];
   return Object.keys(table)
@@ -1113,8 +1112,7 @@ function chainLengthOptionsCm(product, thickness) {
     .sort((a, b) => a - b);
 }
 
-function chainConfiguredThicknesses(product) {
-  const lw = effectiveChainLengthWeights(product);
+function thicknessesFromLengthWeights(lw) {
   if (!lw || !Object.keys(lw).length) return [];
   return Object.keys(lw)
     .filter((t) => {
@@ -1122,6 +1120,15 @@ function chainConfiguredThicknesses(product) {
       return table && typeof table === 'object' && Object.keys(table).some((k) => Number(table[k]) > 0);
     })
     .sort((a, b) => parseFloat(a) - parseFloat(b));
+}
+
+function chainConfiguredThicknesses(product) {
+  const fromProduct = thicknessesFromLengthWeights(effectiveChainLengthWeights(product));
+  if (fromProduct.length) return fromProduct;
+  // Admin table present but all-zero / unusable → Excel thicknesses.
+  return thicknessesFromLengthWeights(
+    necklaceTypeLengthWeights(product?.chainType || 'douyuan'),
+  );
 }
 
 function syncChainThicknessState(options) {

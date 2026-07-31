@@ -541,7 +541,8 @@ button:not(.btn-sm):not(.ap-tab-btn):not([data-slot="button-1"]):not([data-granu
   box-shadow:0 1px 2px rgba(43,35,32,.04);overflow:hidden;height:100%;
 }
 .ap-carousel-card-media{position:relative;aspect-ratio:1/1;background:#F7F3EE;}
-.ap-carousel-img{width:100%;height:100%;object-fit:cover;display:block;}
+/* contain: show full upload in admin; cover was cropping non-square photos */
+.ap-carousel-img{width:100%;height:100%;object-fit:contain;display:block;}
 .ap-carousel-card--upload{
   border:2px dashed #DDD5CC;background:#FBFAF8;box-shadow:none;position:relative;
   transition:border-color .2s,background .2s;

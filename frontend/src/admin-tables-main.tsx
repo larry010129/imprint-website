@@ -19,6 +19,9 @@ import BannerCropModal, {
 import BannerImageUploadCards, {
   type BannerImageUploadCardsProps,
 } from "@/components/admin/BannerImageUploadCards";
+import ProductImageCropModal, {
+  type ProductImageCropModalProps,
+} from "@/components/admin/ProductImageCropModal";
 import CmsPagesPanel, {
   type CmsPagesPanelProps,
 } from "@/components/admin/CmsPagesPanel";
@@ -72,6 +75,13 @@ function renderBannerCropModal(container: Element, props: BannerCropModalProps) 
   getRoot(container).render(<BannerCropModal {...props} />);
 }
 
+function renderProductImageCropModal(
+  container: Element,
+  props: ProductImageCropModalProps,
+) {
+  getRoot(container).render(<ProductImageCropModal {...props} />);
+}
+
 function renderBannerImageUploadCards(container: Element, props: BannerImageUploadCardsProps) {
   getRoot(container).render(<BannerImageUploadCards {...props} />);
 }
@@ -99,6 +109,7 @@ declare global {
       renderPageImageCreateModal: typeof renderPageImageCreateModal;
       renderImageUploadField: typeof renderImageUploadField;
       renderBannerCropModal: typeof renderBannerCropModal;
+      renderProductImageCropModal: typeof renderProductImageCropModal;
       renderBannerImageUploadCards: typeof renderBannerImageUploadCards;
       renderCmsPagesPanel: typeof renderCmsPagesPanel;
       unmount: typeof unmount;
@@ -115,6 +126,7 @@ window.AdminTables = {
   renderPageImageCreateModal,
   renderImageUploadField,
   renderBannerCropModal,
+  renderProductImageCropModal,
   renderBannerImageUploadCards,
   renderCmsPagesPanel,
   unmount,

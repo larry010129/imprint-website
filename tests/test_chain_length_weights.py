@@ -243,7 +243,7 @@ function effectiveChainLengthWeights(product) {
   return necklaceTypeLengthWeights((product && product.chainType) || 'douyuan');
 }
 function chainLengthOptionsCm(product, thickness) {
-  if (!product || !thickness) return [];
+  if (!thickness) return [];
   const table = effectiveChainLengthWeights(product)[thickness];
   if (!table || typeof table !== 'object') return [];
   return Object.keys(table)
@@ -265,6 +265,56 @@ console.log(JSON.stringify({adminOnly, fromExcel}));
     data = json.loads(result.stdout)
     assert data["adminOnly"] == [36, 46]
     assert data["fromExcel"] == [36, 41, 46, 51, 61, 76, 80]
+
+
+def test_pendant_attached_chain_thicknesses_excel_fallback():
+    """Pendant 含鍊: empty lengthWeights / no chainType / null product → Excel mm list."""
+    script = """
+global.window = {};
+require('./public/js/shop-pricing-local.js');
+function necklaceTypeLengthWeights(chainType) {
+  return window.ShopPricingLocal.lengthWeightsForChainType(chainType) || {};
+}
+function effectiveChainLengthWeights(product) {
+  const admin = product && product.lengthWeights;
+  if (admin && typeof admin === 'object' && Object.keys(admin).length > 0) return admin;
+  return necklaceTypeLengthWeights((product && product.chainType) || 'douyuan');
+}
+function thicknessesFromLengthWeights(lw) {
+  if (!lw || !Object.keys(lw).length) return [];
+  return Object.keys(lw)
+    .filter((t) => {
+      const table = lw[t];
+      return table && typeof table === 'object' && Object.keys(table).some((k) => Number(table[k]) > 0);
+    })
+    .sort((a, b) => parseFloat(a) - parseFloat(b));
+}
+function chainConfiguredThicknesses(product) {
+  const fromProduct = thicknessesFromLengthWeights(effectiveChainLengthWeights(product));
+  if (fromProduct.length) return fromProduct;
+  return thicknessesFromLengthWeights(
+    necklaceTypeLengthWeights((product && product.chainType) || 'douyuan')
+  );
+}
+const excel = ['1.0mm','1.5mm','2.0mm','2.5mm','3.0mm'];
+const emptyNoType = chainConfiguredThicknesses({lengthWeights: {}});
+const nullProduct = chainConfiguredThicknesses(null);
+const zeroAdmin = chainConfiguredThicknesses({lengthWeights: {'1.5mm': {'36': 0}}});
+const adminOnly = chainConfiguredThicknesses({lengthWeights: {'1.5mm': {'36': 0.099, '46': 0.033}}});
+console.log(JSON.stringify({emptyNoType, nullProduct, zeroAdmin, adminOnly, excel}));
+"""
+    result = subprocess.run(
+        ["node", "-e", script],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    data = json.loads(result.stdout)
+    assert data["emptyNoType"] == data["excel"]
+    assert data["nullProduct"] == data["excel"]
+    assert data["zeroAdmin"] == data["excel"]
+    assert data["adminOnly"] == ["1.5mm"]
 
 
 def test_browser_quote_uses_excel_for_unconfigured_length():

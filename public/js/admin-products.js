@@ -1108,7 +1108,7 @@
                       '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>' +
                     '</span>' +
                     '<span class="ap-upload-title">上傳圖片</span>' +
-                    '<span class="ap-upload-hint">或點擊瀏覽<br>PNG / JPG / WEBP，1MB 內</span>' +
+                    '<span class="ap-upload-hint">或點擊瀏覽<br>PNG / JPG / WEBP，1MB 內<br>可選裁切，預設保留原圖</span>' +
                     '<input type="file" class="ap-image-input" accept="' + IMAGE_ACCEPT + '" multiple hidden>' +
                   '</label>' +
                   '<div class="ap-upload-progress" hidden><div class="ap-upload-progress-bar"></div></div>' +
@@ -1187,6 +1187,58 @@
     return used;
   }
 
+  /**
+   * Open CMS-style crop modal (freeform by default). Resolves File or null if cancelled.
+   * Same ImageCropEditor stack as 內容與頁面圖片 / AdminTables.renderPageImageEditModal.
+   */
+  function openProductImageCrop(file) {
+    return new Promise(function (resolve) {
+      if (!window.AdminTables || !window.AdminTables.renderProductImageCropModal) {
+        resolve(file);
+        return;
+      }
+      var previewUrl = URL.createObjectURL(file);
+      var mount = document.createElement('div');
+      mount.id = 'apProductImageCropMount';
+      document.body.appendChild(mount);
+
+      function cleanup(result) {
+        try { URL.revokeObjectURL(previewUrl); } catch (e) { /* ignore */ }
+        if (window.AdminTables && window.AdminTables.unmount) {
+          try { window.AdminTables.unmount(mount); } catch (e2) { /* ignore */ }
+        }
+        if (mount.parentNode) mount.parentNode.removeChild(mount);
+        resolve(result);
+      }
+
+      window.AdminTables.renderProductImageCropModal(mount, {
+        previewUrl: previewUrl,
+        file: file,
+        fileLabel: file.name || '',
+        onComplete: function (result) {
+          cleanup(result && result.file ? result.file : file);
+        },
+        onCancel: function () {
+          cleanup(null);
+        },
+      });
+    });
+  }
+
+  /** Sequential crop dialogs, then upload prepared files. Cancel skips that file only. */
+  function prepareFilesWithCrop(files) {
+    var list = Array.from(files || []);
+    var prepared = [];
+    function next(i) {
+      if (i >= list.length) return Promise.resolve(prepared);
+      return openProductImageCrop(list[i]).then(function (out) {
+        if (out) prepared.push(out);
+        return next(i + 1);
+      });
+    }
+    return next(0);
+  }
+
   function uploadFilesToSlot(files, slot, form) {
     var track = slot.querySelector('.ap-carousel-track');
     var uploadItem = slot.querySelector('.ap-carousel-item--upload');
@@ -1196,76 +1248,81 @@
     if (!files.length || !track || !uploadItem) return;
 
     var color = slotColorKey(slot) || 'white';
-    var progressByIndex = files.map(function () { return 0; });
 
-    function updateProgress() {
-      if (!progressBar) return;
-      var avg = progressByIndex.reduce(function (a, b) { return a + b; }, 0) / progressByIndex.length;
-      progressBar.style.width = avg + '%';
-    }
+    prepareFilesWithCrop(files).then(function (readyFiles) {
+      if (!readyFiles.length) return;
 
-    function uploadOne(file, index) {
-      return new Promise(function (resolve) {
-        var xhr = new XMLHttpRequest();
-        xhr.open('POST', '/api/admin/product-upload');
-        xhr.withCredentials = true;
-        xhr.upload.addEventListener('progress', function (ev) {
-          if (ev.lengthComputable) {
-            progressByIndex[index] = (ev.loaded / ev.total) * 100;
-            updateProgress();
-          }
-        });
-        xhr.onload = function () {
-          var res = {};
-          try { res = JSON.parse(xhr.responseText); } catch (e) { res = { error: 'parse' }; }
-          if (!res.error && xhr.status >= 400) {
-            if (typeof res.detail === 'string') res.error = res.detail;
-            else res.error = (api && api.apiErrorMessage) ? api.apiErrorMessage(res) : ('HTTP ' + xhr.status);
-          }
-          progressByIndex[index] = 100;
-          updateProgress();
-          resolve(res);
-        };
-        xhr.onerror = function () { resolve({ error: 'network' }); };
-        var fd = new FormData();
-        fd.append('file', file);
-        // Existing product: persist URL into product_images immediately (SQL SoT).
-        if (state.editingId) {
-          fd.append('product_id', state.editingId);
-          fd.append('color', color);
-        }
-        xhr.send(fd);
-      });
-    }
+      var progressByIndex = readyFiles.map(function () { return 0; });
 
-    if (uploading) uploading.hidden = true;
-    if (progressWrap) progressWrap.hidden = false;
-    updateProgress();
-
-    Promise.all(files.map(uploadOne)).then(function (results) {
-      if (progressWrap) progressWrap.hidden = true;
-      if (progressBar) progressBar.style.width = '0%';
-      var hadError = false;
-      results.forEach(function (res) {
-        if (res.error || !res.url || isBrowserLocalImageUrl(res.url)) { hadError = true; return; }
-        var wrap = document.createElement('div');
-        wrap.innerHTML = imageSlideHtml(res.url, color);
-        var item = wrap.firstElementChild;
-        if (!item) { hadError = true; return; }
-        item.dataset.url = res.url;
-        item.dataset.color = color;
-        track.insertBefore(item, uploadItem);
-        item.querySelector('.ap-remove-image')?.addEventListener('click', function () {
-          item.remove();
-          var carousel = slot.querySelector('[data-carousel]');
-          if (carousel && carousel._refreshCarousel) carousel._refreshCarousel();
-        });
-      });
-      refreshAllCarousels(form);
-      if (hadError && uploading) {
-        uploading.hidden = false;
-        uploading.textContent = '上傳失敗';
+      function updateProgress() {
+        if (!progressBar) return;
+        var avg = progressByIndex.reduce(function (a, b) { return a + b; }, 0) / progressByIndex.length;
+        progressBar.style.width = avg + '%';
       }
+
+      function uploadOne(file, index) {
+        return new Promise(function (resolve) {
+          var xhr = new XMLHttpRequest();
+          xhr.open('POST', '/api/admin/product-upload');
+          xhr.withCredentials = true;
+          xhr.upload.addEventListener('progress', function (ev) {
+            if (ev.lengthComputable) {
+              progressByIndex[index] = (ev.loaded / ev.total) * 100;
+              updateProgress();
+            }
+          });
+          xhr.onload = function () {
+            var res = {};
+            try { res = JSON.parse(xhr.responseText); } catch (e) { res = { error: 'parse' }; }
+            if (!res.error && xhr.status >= 400) {
+              if (typeof res.detail === 'string') res.error = res.detail;
+              else res.error = (api && api.apiErrorMessage) ? api.apiErrorMessage(res) : ('HTTP ' + xhr.status);
+            }
+            progressByIndex[index] = 100;
+            updateProgress();
+            resolve(res);
+          };
+          xhr.onerror = function () { resolve({ error: 'network' }); };
+          var fd = new FormData();
+          fd.append('file', file);
+          // Existing product: persist URL into product_images immediately (SQL SoT).
+          if (state.editingId) {
+            fd.append('product_id', state.editingId);
+            fd.append('color', color);
+          }
+          xhr.send(fd);
+        });
+      }
+
+      if (uploading) uploading.hidden = true;
+      if (progressWrap) progressWrap.hidden = false;
+      updateProgress();
+
+      Promise.all(readyFiles.map(uploadOne)).then(function (results) {
+        if (progressWrap) progressWrap.hidden = true;
+        if (progressBar) progressBar.style.width = '0%';
+        var hadError = false;
+        results.forEach(function (res) {
+          if (res.error || !res.url || isBrowserLocalImageUrl(res.url)) { hadError = true; return; }
+          var wrap = document.createElement('div');
+          wrap.innerHTML = imageSlideHtml(res.url, color);
+          var item = wrap.firstElementChild;
+          if (!item) { hadError = true; return; }
+          item.dataset.url = res.url;
+          item.dataset.color = color;
+          track.insertBefore(item, uploadItem);
+          item.querySelector('.ap-remove-image')?.addEventListener('click', function () {
+            item.remove();
+            var carousel = slot.querySelector('[data-carousel]');
+            if (carousel && carousel._refreshCarousel) carousel._refreshCarousel();
+          });
+        });
+        refreshAllCarousels(form);
+        if (hadError && uploading) {
+          uploading.hidden = false;
+          uploading.textContent = '上傳失敗';
+        }
+      });
     });
   }
 
