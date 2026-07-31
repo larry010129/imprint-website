@@ -109,6 +109,7 @@ create table if not exists products (
   description_en text,
   default_color text not null default 'white',
   allows_engraving boolean not null default true,
+  allows_fancy_shapes boolean not null default true,
   allows_pendant_only boolean not null default true,
   allows_with_chain boolean not null default true,
   is_published boolean not null default false,

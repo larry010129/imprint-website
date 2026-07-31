@@ -15,14 +15,19 @@ from app.admin_dashboard import build_dashboard_csv, build_dashboard_payload, no
 from app.admin_products import (
     CATEGORY_LABELS,
     append_product_image,
+    ensure_product_chain_type_column,
+    ensure_product_length_weights_column,
     ensure_product_sell_mode_columns,
     first_published_at_value,
+    is_auto_stock_product_image,
     publish_readiness,
+    purge_auto_stock_product_images,
     save_product_children,
     serialize_product_row,
     valid_image_color,
     validate_product_fields,
 )
+from app.chain_catalog import chain_catalog_for_admin
 from app.auth import (
     generate_invite_code,
     get_user_id,
@@ -428,10 +433,6 @@ async def orders_bulk_update(request: Request) -> JSONResponse:
     return JSONResponse(content={"ok": True, "updated": updated})
 
 
-_PRODUCT_UPLOAD_DIR = settings.static_dir / "uploads" / "products"
-_CATEGORY_UPLOAD_DIR = settings.static_dir / "uploads" / "categories"
-_BANNER_UPLOAD_DIR = settings.static_dir / "uploads" / "banners"
-_TESTIMONIAL_UPLOAD_DIR = settings.static_dir / "uploads" / "testimonials"
 _ALLOWED_IMAGE_EXT = {".png", ".jpg", ".jpeg", ".webp"}
 _ALLOWED_IMAGE_MIME = {"image/png", "image/jpeg", "image/webp"}
 _MAX_IMAGE_BYTES = 1 * 1024 * 1024
@@ -466,6 +467,17 @@ def _image_upload_error(file: UploadFile, data: bytes, ext: str) -> str | None:
     return None
 
 
+def _storage_upload(kind: str, name: str, data: bytes, ext: str) -> tuple[str | None, str | None]:
+    from app.storage import StorageNotConfiguredError, StorageUploadError, upload_image
+
+    try:
+        return upload_image(kind, name, data, ext), None
+    except StorageNotConfiguredError as exc:
+        return None, str(exc)
+    except StorageUploadError as exc:
+        return None, str(exc)
+
+
 @router.post("/product-upload")
 async def product_upload(
     request: Request,
@@ -473,7 +485,7 @@ async def product_upload(
     product_id: str | None = Form(None),
     color: str | None = Form(None),
 ) -> JSONResponse:
-    """Write bytes to disk; when product_id+color given, also insert product_images row."""
+    """Upload to Supabase Storage; when product_id+color given, also insert product_images row."""
     _require_admin(request)
     if not file.filename:
         return JSONResponse(status_code=400, content={"error": "missing file"})
@@ -484,10 +496,10 @@ async def product_upload(
     if err:
         return JSONResponse(status_code=400, content={"error": err})
 
-    _PRODUCT_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     name = f"{uuid.uuid4().hex}{ext}"
-    (_PRODUCT_UPLOAD_DIR / name).write_bytes(data)
-    url = f"/static/uploads/products/{name}"
+    url, upload_err = _storage_upload("products", name, data, ext)
+    if upload_err:
+        return JSONResponse(status_code=503, content={"error": upload_err})
 
     pid = (product_id or "").strip()
     slot = (color or "").strip().lower()
@@ -550,10 +562,10 @@ async def product_category_upload(
     if err:
         return JSONResponse(status_code=400, content={"error": err})
 
-    _CATEGORY_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     name = f"{slug}{ext}"
-    (_CATEGORY_UPLOAD_DIR / name).write_bytes(data)
-    url = f"/static/uploads/categories/{name}"
+    url, upload_err = _storage_upload("categories", name, data, ext)
+    if upload_err:
+        return JSONResponse(status_code=503, content={"error": upload_err})
 
     with get_transaction() as conn, conn.cursor() as cur:
         category, error = update_category_thumb(cur, slug, url)
@@ -572,7 +584,12 @@ def _products_with_children(cur) -> list[dict]:
         pid = row["id"]
         product = serialize_product_row(row)
         product["variants"] = variants_by_product.get(pid, [])
-        product["images"] = images_by_product.get(pid, [])
+        # Never surface invented shop-product letter SKUs in admin editor.
+        product["images"] = [
+            image
+            for image in images_by_product.get(pid, [])
+            if not is_auto_stock_product_image(image.get("file_path"))
+        ]
         for variant in product["variants"]:
             if variant.get("id") is not None:
                 variant["id"] = str(variant["id"])
@@ -590,6 +607,11 @@ def _products_with_children(cur) -> list[dict]:
 @router.get("/products")
 async def products_list(request: Request) -> dict:
     _require_admin(request)
+    try:
+        with get_transaction() as conn, conn.cursor() as cur:
+            purge_auto_stock_product_images(cur)
+    except Exception:
+        pass
     with get_connection() as conn, conn.cursor() as cur:
         products = _products_with_children(cur)
         categories = fetch_categories(cur)
@@ -599,6 +621,7 @@ async def products_list(request: Request) -> dict:
         "categoryLabels": labels or CATEGORY_LABELS,
         "categories": categories,
         "categoryOrder": [row["slug"] for row in categories],
+        "chainCatalog": chain_catalog_for_admin(),
     }
 
 
@@ -615,14 +638,18 @@ async def products_create(request: Request) -> JSONResponse:
     first_published = first_published_at_value(None, cleaned["isPublished"])
     with get_transaction() as conn, conn.cursor() as cur:
         ensure_product_sell_mode_columns(cur)
+        ensure_product_length_weights_column(cur)
+        ensure_product_chain_type_column(cur)
         cur.execute(
             """
             insert into products (
                 category, name_zh, name_en, description_zh, description_en,
-                default_color, allows_engraving, allows_pendant_only, allows_with_chain,
+                default_color, allows_engraving, allows_fancy_shapes,
+                allows_pendant_only, allows_with_chain,
+                chain_type,
                 is_published, first_published_at, created_by_id
             )
-            values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             returning *
             """,
             (
@@ -633,8 +660,10 @@ async def products_create(request: Request) -> JSONResponse:
                 cleaned["descriptionEn"],
                 cleaned["defaultColor"],
                 cleaned["allowsEngraving"],
+                cleaned["allowsFancyShapes"],
                 cleaned["allowsPendantOnly"],
                 cleaned["allowsWithChain"],
+                cleaned.get("chainType"),
                 cleaned["isPublished"],
                 first_published,
                 user_id,
@@ -662,6 +691,8 @@ async def product_update(request: Request) -> JSONResponse:
 
     with get_transaction() as conn, conn.cursor() as cur:
         ensure_product_sell_mode_columns(cur)
+        ensure_product_length_weights_column(cur)
+        ensure_product_chain_type_column(cur)
         cur.execute(
             "select id, is_published, first_published_at from products where id = %s",
             (product_id,),
@@ -675,8 +706,9 @@ async def product_update(request: Request) -> JSONResponse:
             """
             update products set
                 category = %s, name_zh = %s, name_en = %s, description_zh = %s, description_en = %s,
-                default_color = %s, allows_engraving = %s,
+                default_color = %s, allows_engraving = %s, allows_fancy_shapes = %s,
                 allows_pendant_only = %s, allows_with_chain = %s,
+                chain_type = %s,
                 is_published = %s, first_published_at = %s, updated_at = now()
             where id = %s
             returning *
@@ -689,8 +721,10 @@ async def product_update(request: Request) -> JSONResponse:
                 cleaned["descriptionEn"],
                 cleaned["defaultColor"],
                 cleaned["allowsEngraving"],
+                cleaned["allowsFancyShapes"],
                 cleaned["allowsPendantOnly"],
                 cleaned["allowsWithChain"],
+                cleaned.get("chainType"),
                 cleaned["isPublished"],
                 first_published,
                 product_id,
@@ -713,6 +747,7 @@ async def product_action(request: Request) -> JSONResponse:
 
     with get_transaction() as conn, conn.cursor() as cur:
         ensure_product_sell_mode_columns(cur)
+        ensure_product_length_weights_column(cur)
         cur.execute("select * from products where id = %s", (product_id,))
         product = cur.fetchone()
         if not product:
@@ -743,23 +778,24 @@ async def product_action(request: Request) -> JSONResponse:
                 """
                 insert into products (
                     category, name_zh, name_en, description_zh, description_en,
-                    default_color, allows_engraving, allows_pendant_only, allows_with_chain,
+                    default_color, allows_engraving, allows_fancy_shapes,
+                    allows_pendant_only, allows_with_chain,
+                    length_weights, chain_type,
                     is_published, created_by_id
                 )
-                values (%s, %s, %s, %s, %s, %s, %s, %s, %s, false, %s)
+                select
+                    category, %s, name_en, description_zh, description_en,
+                    default_color, allows_engraving, allows_fancy_shapes,
+                    allows_pendant_only, allows_with_chain,
+                    length_weights, chain_type,
+                    false, %s
+                from products where id = %s
                 returning *
                 """,
                 (
-                    product["category"],
                     f"{product['name_zh']} (複製)",
-                    product["name_en"],
-                    product["description_zh"],
-                    product["description_en"],
-                    product["default_color"],
-                    product.get("allows_engraving", True),
-                    product.get("allows_pendant_only", True),
-                    product.get("allows_with_chain", True),
                     user_id,
+                    product_id,
                 ),
             )
             copy = cur.fetchone()
@@ -1617,10 +1653,11 @@ async def testimonial_upload(request: Request, file: UploadFile = File(...)) -> 
     err = _image_upload_error(file, data, ext)
     if err:
         return JSONResponse(status_code=400, content={"error": err})
-    _TESTIMONIAL_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     name = f"{uuid.uuid4().hex}{ext}"
-    (_TESTIMONIAL_UPLOAD_DIR / name).write_bytes(data)
-    return JSONResponse(content={"url": f"/static/uploads/testimonials/{name}"})
+    url, upload_err = _storage_upload("testimonials", name, data, ext)
+    if upload_err:
+        return JSONResponse(status_code=503, content={"error": upload_err})
+    return JSONResponse(content={"url": url})
 
 
 @router.post("/testimonial-update")
@@ -1953,10 +1990,11 @@ async def banner_upload(request: Request, file: UploadFile = File(...)) -> JSONR
     err = _image_upload_error(file, data, ext)
     if err:
         return JSONResponse(status_code=400, content={"error": err})
-    _BANNER_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     name = f"{uuid.uuid4().hex}{ext}"
-    (_BANNER_UPLOAD_DIR / name).write_bytes(data)
-    return JSONResponse(content={"url": f"/static/uploads/banners/{name}"})
+    url, upload_err = _storage_upload("banners", name, data, ext)
+    if upload_err:
+        return JSONResponse(status_code=503, content={"error": upload_err})
+    return JSONResponse(content={"url": url})
 
 
 @router.post("/banners")
@@ -2093,8 +2131,6 @@ async def admin_banner_action(request: Request) -> JSONResponse:
 
 # ── Content CMS: page image slots ────────────────────────────────────────────
 
-_PAGE_IMAGE_UPLOAD_DIR = settings.static_dir / "uploads" / "page-images"
-
 
 @router.get("/page-images")
 async def admin_page_images_list(request: Request) -> dict:
@@ -2166,13 +2202,14 @@ async def page_image_upload(request: Request, file: UploadFile = File(...)) -> J
     err = _image_upload_error(file, data, ext)
     if err:
         return JSONResponse(status_code=400, content={"error": err})
-    _PAGE_IMAGE_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     name = f"{uuid.uuid4().hex}{ext}"
-    (_PAGE_IMAGE_UPLOAD_DIR / name).write_bytes(data)
+    url, upload_err = _storage_upload("page-images", name, data, ext)
+    if upload_err:
+        return JSONResponse(status_code=503, content={"error": upload_err})
     from app.controllers.web_controller import clear_page_image_cache
 
     clear_page_image_cache()
-    return JSONResponse(content={"url": f"/static/uploads/page-images/{name}"})
+    return JSONResponse(content={"url": url})
 
 
 @router.post("/page-image-update")

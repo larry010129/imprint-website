@@ -28,6 +28,7 @@ from app.controllers.htmx_common import (
 from app.controllers.shop_controller import (
     _clamp_pendant_chain_sell_mode,
     _strip_disallowed_engraving,
+    _strip_disallowed_fancy_shape,
     _summary,
     _validate_config,
 )
@@ -387,6 +388,7 @@ async def shop_quote_partial(request: Request) -> HTMLResponse:
             if chain_err:
                 return html(request, "shop_quote.html", {"pricing": None, "error": chain_err}, 400)
             _strip_disallowed_engraving(cur, config)
+            _strip_disallowed_fancy_shape(cur, config)
         pricing = compute_order_pricing(cur, config, require_published=require_published)
     if not pricing.get("ready"):
         return html(
@@ -423,6 +425,7 @@ async def shop_cart_add(request: Request) -> Response:
             if chain_err:
                 return html(request, "shop_cart_msg.html", {"ok": False, "message": chain_err}, 400)
             _strip_disallowed_engraving(cur, config)
+            _strip_disallowed_fancy_shape(cur, config)
         require_published = config.get("category") != "diamond"
         pricing = compute_order_pricing(cur, config, require_published=require_published)
         if not pricing.get("ready"):

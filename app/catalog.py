@@ -15,11 +15,12 @@ def _sort_golds(golds: set[str]) -> list[str]:
     return sorted(golds, key=lambda g: order.get(g, 99))
 
 
+from app.admin_products import is_auto_stock_product_image, is_dead_catalog_placeholder
+from app.chain_catalog import DEFAULT_NECKLACE_TYPE, necklace_type_length_weights
 from app.image_urls import (
     _is_raster_url,
     is_uuid,
     resolve_product_image_url,
-    shop_product_image_url,
     static_url_exists,
 )
 
@@ -70,15 +71,9 @@ def resolve_product_id(
 
 
 def legacy_style_key(product: dict, images: list[dict] | None = None) -> str | None:
-    """Map to shop-product asset ids (pendant-A, ring-B, …)."""
+    """Map to shop-product asset ids only when stored image paths contain them."""
     if images:
-        from_images = style_key_from_images(images)
-        if from_images:
-            return from_images
-    category = (product.get("category") or "").strip().lower()
-    order = int(product.get("sort_order") or 0)
-    if category and 0 <= order <= 25:
-        return f"{category}-{chr(ord('A') + order)}"
+        return style_key_from_images(images)
     return None
 
 
@@ -104,32 +99,15 @@ def build_catalog_product(product: dict, variants: list[dict], images: list[dict
     style_key = legacy_style_key(product, images)
     images_by_color: dict[str, list[str]] = {}
     for image in images:
-        url = resolve_product_image_url(image.get("file_path"))
-        slot = str(image.get("color") or "")
-        parts = slot.split("-")
-        metal = parts[0] if parts else product.get("default_color") or "white"
-        diamond = parts[1] if len(parts) > 1 else "white"
-        chain = parts[2] if len(parts) > 2 else None
-        needs_raster = bool(url) and (
-            not _is_raster_url(url)
-            or (url.startswith("/static/") and not static_url_exists(url))
-        )
-        # Dead SVG / missing upload — prefer shop-product raster for the slot.
-        if needs_raster and style_key:
-            url = shop_product_image_url(
-                style_key,
-                metal,
-                default_color=product.get("default_color"),
-                diamond_color=diamond,
-                chain_color=chain,
-                pendant_only=(
-                    (product.get("category") or "").strip().lower() == "pendant"
-                    and not chain
-                ),
-            )
+        raw = image.get("file_path")
+        if is_auto_stock_product_image(raw):
+            continue
+        url = resolve_product_image_url(raw)
         if (
             url
             and _is_raster_url(url)
+            and not is_dead_catalog_placeholder(url)
+            and not is_auto_stock_product_image(url)
             and (not url.startswith("/static/") or static_url_exists(url))
         ):
             images_by_color.setdefault(image["color"], []).append(url)
@@ -143,6 +121,7 @@ def build_catalog_product(product: dict, variants: list[dict], images: list[dict
         "descriptionEn": product["description_en"],
         "defaultColor": product["default_color"],
         "allowsEngraving": bool(product.get("allows_engraving", True)),
+        "allowsFancyShapes": bool(product.get("allows_fancy_shapes", True)),
         "allowsPendantOnly": bool(product.get("allows_pendant_only", True)),
         "allowsWithChain": bool(product.get("allows_with_chain", True)),
         "golds": golds,
@@ -153,8 +132,22 @@ def build_catalog_product(product: dict, variants: list[dict], images: list[dict
         "manualPrices": manual_prices,
         "sideStonePrices": side_stone_prices,
         "sideStoneCarats": side_stone_carats,
+        "lengthWeights": _effective_chain_length_weights(product),
+        "chainType": product.get("chain_type") or (
+            DEFAULT_NECKLACE_TYPE if product.get("category") == "chain" else None
+        ),
         "draft": not product["is_published"],
     }
+
+
+def _effective_chain_length_weights(product: dict) -> dict:
+    """Admin overrides win; otherwise Excel/type table (抖圓鏈 etc.)."""
+    if product.get("category") != "chain":
+        return product.get("length_weights") or {}
+    lw = product.get("length_weights")
+    if isinstance(lw, dict) and lw:
+        return lw
+    return necklace_type_length_weights(product.get("chain_type") or DEFAULT_NECKLACE_TYPE)
 
 
 def fetch_catalog_rows(cur, *, category: str | None = None, include_drafts: bool = False) -> list[dict]:

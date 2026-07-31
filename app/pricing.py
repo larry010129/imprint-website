@@ -12,6 +12,7 @@ from __future__ import annotations
 from typing import Any
 
 from app.catalog import resolve_product_id
+from app.chain_catalog import DEFAULT_NECKLACE_TYPE, necklace_type_length_weights
 from app.pricing_overrides import (
     _merge_multi,
     _merge_table,
@@ -81,6 +82,18 @@ CHAIN_WAX_WEIGHT_CHIN = {
 TAX_RATE = 0.05
 CHIN_TO_GRAMS = 3.75
 BRACELET_REFERENCE_LENGTH_CM = 18
+
+
+def normalize_gold(gold: Any) -> str:
+    """Canonical metal key for DB lookups and pricing tables (9K → 9k, PT → pt950)."""
+    g = str(gold or "").strip().lower()
+    if g in ("pt", "pt950"):
+        return "pt950"
+    if g in ("silver925", "s925"):
+        return "s925"
+    if g in ("999",):
+        return "999"
+    return g
 
 
 def _as_stone_count(value: Any) -> int | None:
@@ -224,6 +237,73 @@ def _chain_wax_chin(carat: str, length_cm: Any) -> float:
     return wax
 
 
+def _chain_wax_from_length_weights(
+    length_weights: dict | None, carat: str, length_cm: Any
+) -> float | None:
+    if not length_weights or not isinstance(length_weights, dict):
+        return None
+    table = length_weights.get(carat)
+    if not isinstance(table, dict):
+        return None
+    try:
+        length_key = str(int(length_cm))
+    except (TypeError, ValueError):
+        return None
+    wax = table.get(length_key)
+    if wax is None:
+        return None
+    try:
+        value = float(wax)
+    except (TypeError, ValueError):
+        return None
+    return value if value > 0 else None
+
+
+def _product_chain_type(cur, product_id: str) -> str | None:
+    cur.execute("select chain_type from products where id = %s", (product_id,))
+    row = cur.fetchone()
+    if not row:
+        return None
+    ct = row.get("chain_type")
+    return str(ct).strip() if ct else None
+
+
+def _product_length_weights(cur, product_id: str) -> dict | None:
+    cur.execute("select length_weights from products where id = %s", (product_id,))
+    row = cur.fetchone()
+    if not row:
+        return None
+    lw = row.get("length_weights")
+    return lw if isinstance(lw, dict) and lw else None
+
+
+def _chain_wax_from_type_catalog(
+    chain_type: str | None, carat: str, length_cm: Any
+) -> float | None:
+    table = necklace_type_length_weights(chain_type)
+    return _chain_wax_from_length_weights(table, carat, length_cm)
+
+
+def _resolve_chain_wax(
+    cur,
+    *,
+    product_id: str,
+    carat: str,
+    length_cm: Any,
+) -> float:
+    resolved = resolve_product_id(cur, category="chain", type_ref=product_id, require_published=False)
+    pid = resolved or product_id
+    lw = _product_length_weights(cur, pid)
+    admin_wax = _chain_wax_from_length_weights(lw, carat, length_cm)
+    if admin_wax is not None:
+        return admin_wax
+    chain_type = _product_chain_type(cur, pid) or DEFAULT_NECKLACE_TYPE
+    type_wax = _chain_wax_from_type_catalog(chain_type, carat, length_cm)
+    if type_wax is not None:
+        return type_wax
+    raise ValueError("unsupported chain thickness or length")
+
+
 def _labor_fee(category: str, gold: str) -> int:
     if category != "chain":
         return LABOR_FEE_TWD
@@ -238,6 +318,7 @@ def get_product_variant(
     )
     if not resolved:
         return None
+    gold = normalize_gold(gold)
     for carat_key in _carat_lookup_keys(carat):
         if require_published:
             cur.execute(
@@ -287,7 +368,17 @@ def _lookup_weight(
     )
     if not variant:
         return None
-    wax = _chain_wax_chin(carat, length_cm) if category == "chain" else float(variant["weight_chin"])
+    resolved = resolve_product_id(
+        cur, category=category, type_ref=product_id, require_published=require_published,
+    )
+    if category == "chain":
+        pid = resolved or product_id
+        try:
+            wax = _resolve_chain_wax(cur, product_id=pid, carat=carat, length_cm=length_cm)
+        except ValueError:
+            return None
+    else:
+        wax = float(variant["weight_chin"])
     weight = wax_to_metal_chin(wax, gold)
     if category == "bracelet" and length_cm is not None:
         weight *= float(length_cm) / BRACELET_REFERENCE_LENGTH_CM
@@ -368,6 +459,9 @@ def compute_order_pricing(cur, data: dict[str, Any], *, require_published: bool 
 
     if not gold:
         return {"ready": False}
+    gold = normalize_gold(gold)
+    if chain_gold:
+        chain_gold = normalize_gold(chain_gold)
     ov_tax = overrides.get("taxRate")
     tax_rate = ov_tax if isinstance(ov_tax, (int, float)) else TAX_RATE
 

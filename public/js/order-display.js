@@ -226,7 +226,7 @@
               (o.diamond_shape ? specItem('形狀', o.diamond_shape) : '') +
               specItem('戒圍', o.ring_size != null ? o.ring_size : '—') +
               (o.engraving_band ? specItem('戒圈刻字', o.engraving_band) : '') +
-              (o.engraving_remark ? specItem('備註', o.engraving_remark) : '') +
+              (o.engraving_remark ? specItem('金屬刻字', o.engraving_remark) : '') +
               (o.engraving_girdle ? specItem('腰圍刻字', girdleDisplayHtml(o.engraving_girdle), { html: true }) : '') +
               specItem('取貨方式', fulfillment) +
               (shipping ? specItem('收件地址', shipping) : '') +

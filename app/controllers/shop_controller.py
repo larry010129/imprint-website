@@ -15,7 +15,7 @@ from app.coupons import apply_discount_split, record_redemptions, validate_coupo
 from app.database import get_connection, get_transaction
 from app.image_urls import config_image_url
 from app.orders import attach_order_display, attach_order_relations, pack_order_config
-from app.pricing import compute_order_pricing
+from app.pricing import compute_order_pricing, get_product_variant, normalize_gold
 
 router = APIRouter(tags=["shop"])
 
@@ -55,6 +55,29 @@ def _validate_config(body: dict[str, Any]) -> str | None:
     return None
 
 
+def _validate_product_variant(cur, body: dict[str, Any], *, require_published: bool = True) -> str | None:
+    """Reject gold/carat combos that are not in the product's 款式選項."""
+    category = str(body.get("category") or "")
+    if category == "diamond":
+        return None
+    gold = body.get("gold")
+    carat = body.get("carat")
+    if not gold or carat is None or carat == "":
+        return None
+    product_ref = str(body.get("type") or body.get("productId") or "")
+    variant = get_product_variant(
+        cur,
+        category=category,
+        product_id=product_ref,
+        gold=normalize_gold(str(gold)),
+        carat=str(carat),
+        require_published=require_published,
+    )
+    if not variant:
+        return "所選金屬或克拉不在此商品款式選項中"
+    return None
+
+
 def _strip_disallowed_engraving(cur, body: dict[str, Any]) -> None:
     """Clear engraving fields when the selected product does not allow 刻字."""
     if (
@@ -77,6 +100,24 @@ def _strip_disallowed_engraving(cur, body: dict[str, Any]) -> None:
         body["engravingBand"] = ""
         body["engravingRemark"] = ""
         body["engravingGirdle"] = ""
+
+
+def _strip_disallowed_fancy_shape(cur, body: dict[str, Any]) -> None:
+    shape = str(body.get("diamondShape") or "round").strip() or "round"
+    if shape == "round":
+        return
+    product_id = resolve_product_id(
+        cur,
+        category=str(body.get("category") or ""),
+        type_ref=str(body.get("type") or body.get("productId") or ""),
+        require_published=False,
+    )
+    if not product_id:
+        return
+    cur.execute("select allows_fancy_shapes from products where id = %s", (product_id,))
+    row = cur.fetchone()
+    if row and row.get("allows_fancy_shapes") is False:
+        body["diamondShape"] = "round"
 
 
 def _clamp_pendant_chain_sell_mode(cur, body: dict[str, Any]) -> str | None:
@@ -329,6 +370,7 @@ async def update_my_order(request: Request) -> dict:
         if chain_err:
             return _err(400, chain_err)
         _strip_disallowed_engraving(cur, config)
+        _strip_disallowed_fancy_shape(cur, config)
         pricing = compute_order_pricing(cur, config)
         if not pricing.get("ready"):
             return _err(400, "無法計算價格，請重新整理後再試")
@@ -385,10 +427,14 @@ async def add_to_cart(request: Request) -> dict:
     summary = _summary(body)
 
     with get_connection() as conn, conn.cursor() as cur:
+        variant_err = _validate_product_variant(cur, body)
+        if variant_err:
+            return _err(400, variant_err)
         chain_err = _clamp_pendant_chain_sell_mode(cur, body)
         if chain_err:
             return _err(400, chain_err)
         _strip_disallowed_engraving(cur, body)
+        _strip_disallowed_fancy_shape(cur, body)
         pricing = compute_order_pricing(cur, body)
         if not pricing.get("ready"):
             return _err(400, "無法計算價格，請重新整理後再試")
@@ -441,10 +487,14 @@ async def cart_item(request: Request) -> dict:
             error = _validate_config(body)
             if error:
                 return _err(400, error)
+            variant_err = _validate_product_variant(cur, body)
+            if variant_err:
+                return _err(400, variant_err)
             chain_err = _clamp_pendant_chain_sell_mode(cur, body)
             if chain_err:
                 return _err(400, chain_err)
             _strip_disallowed_engraving(cur, body)
+            _strip_disallowed_fancy_shape(cur, body)
             pricing = compute_order_pricing(cur, body)
             if not pricing.get("ready"):
                 return _err(400, "無法計算價格，請重新整理後再試")

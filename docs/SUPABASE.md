@@ -29,12 +29,36 @@ DATABASE_URL=postgresql://postgres.[PROJECT_REF]:[PASSWORD]@aws-0-[REGION].poole
 
 **Windows note:** Supabase Direct host (`db.*.supabase.co`) may resolve to IPv6 only. If `apply_schema.py` fails with `getaddrinfo failed` or `Network is unreachable`, switch to **Session pooler** (same dashboard page, mode = Session, port 5432). Username becomes `postgres.[PROJECT_REF]`, not plain `postgres`.
 
-Optional (future Supabase SDK features):
+Optional (Supabase Storage — required for admin image uploads):
 
 ```env
 SUPABASE_URL=https://[PROJECT_REF].supabase.co
 SUPABASE_SERVICE_ROLE_KEY=...
+# Optional fallback if SERVICE_ROLE unset (new sb_secret_* keys also work):
+# SUPABASE_SECRET_KEY=sb_secret_...
+SUPABASE_STORAGE_BUCKET=shop-media
 ```
+
+Admin uploads go to the public **`shop-media`** bucket; Postgres stores full `https://…/storage/v1/object/public/shop-media/…` URLs. Never expose the service role key to the browser.
+
+**Not used by this FastAPI app:** `npm install @supabase/server`, `SUPABASE_PUBLISHABLE_KEY`, and `SUPABASE_JWKS_URL`. Those are for Node/`@supabase/server` / Auth JWT verification. Uploads use Python `httpx` → Storage REST in `app/storage.py`.
+
+## 2b. Create Storage bucket (one-time)
+
+1. Supabase Dashboard → **Storage** → **New bucket**
+2. Name: `shop-media`
+3. Enable **Public bucket** (anonymous read)
+4. Writes use the service role from the server only (default when using `SUPABASE_SERVICE_ROLE_KEY`)
+
+Policies (if using custom RLS): allow `SELECT` for `anon`/`authenticated`; restrict `INSERT`/`UPDATE`/`DELETE` to service role.
+
+After bucket + env vars are set, run once:
+
+```bash
+python scripts/migrate_uploads_to_supabase_storage.py
+```
+
+Use `--dry-run` to preview without uploading or updating the database.
 
 ## 3. Apply schema (empty database)
 
@@ -85,6 +109,7 @@ Update Render env vars:
 
 - `DATABASE_URL` → Supabase **Direct** or **Session pooler** URL (port 5432)
 - `JWT_SECRET` → same as before (or rotate and force re-login)
+- `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_STORAGE_BUCKET` → for admin image uploads
 
 Redeploy the web service.
 

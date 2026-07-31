@@ -428,7 +428,7 @@ button:not(.btn-sm):not(.ap-tab-btn):not([data-slot="button-1"]):not([data-granu
   margin-top:4px;
 }
 .ap-pendant-sell-modes .ap-pendant-sell-hint{flex:1 1 100%;margin:0;}
-/* Flat dual sell-mode control — left 僅墜子賣 / right 可含鍊 (dark track, white thumb, no glow) */
+/* One switch — left 可不含鍊賣 / right 含鍊賣 */
 .ap-sell-mode-dual{
   display:inline-flex;align-items:center;gap:12px;
 }
@@ -483,6 +483,13 @@ button:not(.btn-sm):not(.ap-tab-btn):not([data-slot="button-1"]):not([data-granu
 .ap-remove-row{
   border:0;background:#F3F0EC;border-radius:4px;cursor:pointer;height:32px;width:36px;flex-shrink:0;
 }
+.ap-chain-length-weights{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin:0 0 12px;}
+.ap-chain-thickness-block{border:1px solid #EDE7E0;border-radius:10px;padding:10px 12px;background:#FBFAF8;}
+.ap-chain-thickness-title{margin:0 0 8px;font-size:12px;letter-spacing:.06em;color:var(--ink);}
+.ap-chain-length-head,.ap-chain-length-row{display:grid;grid-template-columns:72px 1fr;gap:8px;align-items:center;margin-bottom:6px;}
+.ap-chain-length-head{font-size:11px;color:var(--ink-faint);}
+.ap-chain-length-row input{width:100%;padding:6px 8px;border:1px solid #DDD5CC;border-radius:5px;font-size:13px;box-sizing:border-box;}
+.ap-chain-length-label{font-size:13px;color:var(--ink-soft);}
 .ap-required{color:#B5523D;font-weight:600;}
 .ap-section-hint{font-size:12px;color:var(--ink-faint);line-height:1.6;margin:-4px 0 12px;}
 .ap-image-slots{display:flex;flex-direction:column;gap:18px;margin-bottom:12px;}

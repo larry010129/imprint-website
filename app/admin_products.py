@@ -4,14 +4,20 @@ from __future__ import annotations
 
 import re
 from datetime import datetime, timezone
+from typing import Any
 from urllib.parse import unquote
 
-from app.image_urls import (
-    resolve_product_image_url,
-    shop_product_image_url,
-    static_url_exists,
-    style_key_from_path,
+from app.chain_catalog import (
+    DEFAULT_NECKLACE_TYPE,
+    VALID_NECKLACE_TYPES,
+    necklace_type_length_weights,
 )
+from app.image_urls import (
+    _is_raster_url,
+    resolve_product_image_url,
+    static_url_exists,
+)
+from app.storage import is_supabase_storage_url
 
 VALID_CATEGORIES = {"pendant", "ring", "earring", "bracelet", "chain"}
 VALID_CARATS = {
@@ -19,6 +25,7 @@ VALID_CARATS = {
     "1.5", "2.0", "3.0",
 }
 VALID_CARATS_CHAIN = {"1.0mm", "1.5mm", "2.0mm", "2.5mm", "3.0mm"}
+VALID_CHAIN_LENGTHS_CM = {36, 41, 46, 51, 61, 76, 80}
 VALID_GOLDS = {"9k", "14k", "18k", "pt950", "s925"}
 VALID_COLORS = {"white", "yellow", "rose"}
 IMAGE_COLOR_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,31}$")
@@ -27,6 +34,11 @@ PRODUCT_DESC_MAX = 2000
 _BROWSER_LOCAL_URL_RE = re.compile(r"^(?:blob:|data:)", re.I)
 _DEAD_CATALOG_PLACEHOLDER_RE = re.compile(
     r"(?:\.svg(?:$|\?))|/images/shop/styles/",
+    re.I,
+)
+# Letter-SKU stock renders under shop-product/ — never treat as admin-uploaded photos.
+_AUTO_STOCK_PRODUCT_IMAGE_RE = re.compile(
+    r"(?:^|/|\\)(?:static/)?images/shop-product(?:/|\\|$)",
     re.I,
 )
 
@@ -42,6 +54,7 @@ CATEGORY_LABELS = {
 _PRODUCT_SELL_MODE_COLUMNS = (
     ("allows_pendant_only", "boolean not null default true"),
     ("allows_with_chain", "boolean not null default true"),
+    ("allows_fancy_shapes", "boolean not null default true"),
 )
 
 
@@ -49,6 +62,63 @@ def ensure_product_sell_mode_columns(cur) -> None:
     """Add pendant sell-mode columns if missing (see migration 20260730140000)."""
     for name, col_type in _PRODUCT_SELL_MODE_COLUMNS:
         cur.execute(f"alter table products add column if not exists {name} {col_type}")
+
+
+def ensure_product_length_weights_column(cur) -> None:
+    """Add chain length wax table column if missing (migration 20260731120000)."""
+    cur.execute("alter table products add column if not exists length_weights jsonb")
+
+
+def ensure_product_chain_type_column(cur) -> None:
+    """Add necklace pricing type column if missing (migration 20260731130000)."""
+    cur.execute("alter table products add column if not exists chain_type text")
+
+
+def _parse_length_weights(raw: Any, *, errors: list[str]) -> dict[str, dict[str, float]] | None:
+    if raw in (None, "", {}):
+        return None
+    if not isinstance(raw, dict):
+        errors.append("invalid chain length weights")
+        return None
+    cleaned: dict[str, dict[str, float]] = {}
+    for thickness, lengths in raw.items():
+        thick = str(thickness or "").strip()
+        if thick not in VALID_CARATS_CHAIN:
+            errors.append(f"invalid chain thickness in length weights: {thick or '(empty)'}")
+            continue
+        if not isinstance(lengths, dict):
+            errors.append(f"invalid length map for {thick}")
+            continue
+        row: dict[str, float] = {}
+        for length_key, wax_val in lengths.items():
+            try:
+                length_cm = int(length_key)
+                wax = float(wax_val)
+            except (TypeError, ValueError):
+                errors.append(f"invalid length/wax for {thick}")
+                continue
+            if length_cm not in VALID_CHAIN_LENGTHS_CM:
+                errors.append(f"unsupported chain length cm: {length_cm}")
+                continue
+            if wax <= 0:
+                errors.append(f"invalid wax weight for {thick} {length_cm}cm")
+                continue
+            row[str(length_cm)] = wax
+        if row:
+            cleaned[thick] = row
+    return cleaned or None
+
+
+def _sync_chain_variant_reference_weights(
+    variants: list[dict], length_weights: dict[str, dict[str, float]] | None
+) -> None:
+    """Keep variant weight_chin aligned with 46cm wax when length table is present."""
+    if not length_weights:
+        return
+    for variant in variants:
+        ref = length_weights.get(variant["carat"], {}).get("46")
+        if ref is not None:
+            variant["weightChin"] = ref
 
 
 def valid_image_color(color: str) -> bool:
@@ -63,47 +133,55 @@ def is_browser_local_image_url(url: str | None) -> bool:
 
 
 def is_dead_catalog_placeholder(url: str | None) -> bool:
-    """Seed SVG /styles paths 404 — shop-product rasters are the real assets."""
+    """Seed SVG /styles paths 404 — not real uploads."""
     if not url:
         return False
     path = unquote(str(url).strip().split("?", 1)[0])
     return bool(_DEAD_CATALOG_PLACEHOLDER_RE.search(path))
 
 
+def is_auto_stock_product_image(url: str | None) -> bool:
+    """Bundled letter-SKU PNGs under shop-product/ — never admin product photos."""
+    if not url:
+        return False
+    path = unquote(str(url).strip().split("?", 1)[0]).replace("\\", "/")
+    return bool(_AUTO_STOCK_PRODUCT_IMAGE_RE.search(path))
+
+
 def normalize_product_image_url(url: str | None, color: str | None = None) -> str | None:
     """Return a persistable server URL, or None if the value must be dropped."""
+    del color  # slot color is metadata only; never infer shop-product letter PNGs.
     raw = str(url or "").strip()
     if not raw or is_browser_local_image_url(raw):
         return None
     resolved = resolve_product_image_url(raw) or raw
-    missing_static = resolved.startswith("/static/") and not static_url_exists(resolved)
     if (
-        not is_dead_catalog_placeholder(resolved)
-        and not is_dead_catalog_placeholder(raw)
-        and not missing_static
+        is_dead_catalog_placeholder(resolved)
+        or is_dead_catalog_placeholder(raw)
+        or is_auto_stock_product_image(resolved)
+        or is_auto_stock_product_image(raw)
     ):
-        return resolved
-    style_key = style_key_from_path(raw) or style_key_from_path(resolved)
-    if not style_key:
-        # Missing upload with no style hint (e.g. /static/uploads/.../test.png) — drop.
         return None
-    parts = str(color or "").strip().lower().split("-")
-    metal = parts[0] if parts and parts[0] in VALID_COLORS else "white"
-    diamond = parts[1] if len(parts) > 1 else "white"
-    chain = parts[2] if len(parts) > 2 and parts[2] in VALID_COLORS else None
-    raster = shop_product_image_url(
-        style_key,
-        metal,
-        diamond_color=diamond,
-        chain_color=chain,
+    if not _is_raster_url(resolved):
+        return None
+    if resolved.startswith(("http://", "https://")):
+        return resolved if is_supabase_storage_url(resolved) else None
+    if resolved.startswith("/static/") and not static_url_exists(resolved):
+        return None
+    return resolved
+
+
+def purge_auto_stock_product_images(cur) -> int:
+    """Delete invented shop-product letter rows from product_images. Returns rows removed."""
+    cur.execute(
+        """
+        delete from product_images
+        where file_path ilike '%/shop-product/%'
+           or file_path ilike '%\\shop-product\\%'
+           or file_path ilike 'images/shop-product/%'
+        """
     )
-    if (
-        raster
-        and not is_dead_catalog_placeholder(raster)
-        and (not raster.startswith("/static/") or static_url_exists(raster))
-    ):
-        return raster
-    return None
+    return int(cur.rowcount or 0)
 
 
 def image_covers_default_color(image_color: str, default_color: str) -> bool:
@@ -163,13 +241,14 @@ def validate_product_fields(body: dict | None, *, valid_categories: set[str] | N
         cleaned["defaultColor"] = default_color
 
     cleaned["allowsEngraving"] = bool(body.get("allowsEngraving", True))
+    cleaned["allowsFancyShapes"] = bool(body.get("allowsFancyShapes", True))
 
-    # Pendant sell modes (僅墜子 / 含鍊賣). Non-pendant rows keep both true.
+    # Pendant sell modes (可不含鍊賣 / 含鍊賣). Non-pendant rows keep both true.
     if category == "pendant":
         allows_pendant_only = bool(body.get("allowsPendantOnly", True))
         allows_with_chain = bool(body.get("allowsWithChain", True))
         if not allows_pendant_only and not allows_with_chain:
-            errors.append("pendant must select 僅墜子賣 or 可含鍊")
+            errors.append("pendant must select 可不含鍊賣 or 含鍊賣")
         cleaned["allowsPendantOnly"] = allows_pendant_only
         cleaned["allowsWithChain"] = allows_with_chain
     else:
@@ -246,6 +325,31 @@ def validate_product_fields(body: dict | None, *, valid_categories: set[str] | N
         errors.append("at least one variant is required")
     cleaned["variants"] = variants
 
+    chain_type = None
+    length_weights = None
+    if category == "chain":
+        raw_type = str(body.get("chainType") or body.get("chain_type") or "").strip()
+        if raw_type:
+            if raw_type not in VALID_NECKLACE_TYPES:
+                errors.append(f"invalid chain type: {raw_type}")
+            else:
+                chain_type = raw_type
+        elif is_published:
+            chain_type = DEFAULT_NECKLACE_TYPE
+        cleaned["chainType"] = chain_type
+
+        length_weights = _parse_length_weights(body.get("lengthWeights"), errors=errors)
+        # Empty admin grid → Excel/type standard table (抖圓鏈 etc.). No per-SKU edit needed.
+        if not length_weights and chain_type:
+            length_weights = necklace_type_length_weights(chain_type)
+        _sync_chain_variant_reference_weights(variants, length_weights)
+        if is_published and variants:
+            if not chain_type:
+                errors.append("chain type is required")
+    else:
+        cleaned["chainType"] = None
+    cleaned["lengthWeights"] = length_weights
+
     images: list[dict] = []
     for img in body.get("images") or []:
         if not img or not img.get("url"):
@@ -279,8 +383,8 @@ def _format_product_errors(errors: list[str]) -> str:
         "invalid category": "品項無效",
         "nameZh is required": "請填寫中文名稱",
         "invalid defaultColor": "預設顏色無效",
-        "pendant must select 僅墜子賣 or 可含鍊": "項墜請選擇「僅墜子賣」或「可含鍊」",
-        "pendant must allow 僅墜子 and/or 含鍊賣": "項墜請選擇「僅墜子賣」或「可含鍊」",
+        "pendant must select 可不含鍊賣 or 含鍊賣": "項墜請選擇「可不含鍊賣」或「含鍊賣」",
+        "pendant must allow 可不含鍊賣 and/or 含鍊賣": "項墜請選擇「可不含鍊賣」或「含鍊賣」",
         "at least one variant is required": "請至少新增一個款式選項（金屬／克拉／蠟重）",
         "at least one product image is required": "請至少上傳一張商品照片",
         "default color must have at least one image": "預設顏色必須至少有一張商品照片",
@@ -319,6 +423,33 @@ def _format_product_errors(errors: list[str]) -> str:
             continue
         if err.startswith("duplicate variant"):
             parts.append("款式選項重複：" + err.split(": ", 1)[-1])
+            continue
+        if err.startswith("invalid chain type"):
+            parts.append("項鍊類型無效")
+            continue
+        if err == "chain type is required":
+            parts.append("請選擇項鍊類型")
+            continue
+        if err.startswith("invalid chain thickness in length weights"):
+            parts.append("長度蠟重：厚度無效")
+            continue
+        if err.startswith("invalid length map for"):
+            parts.append("長度蠟重：長度資料格式無效")
+            continue
+        if err.startswith("invalid length/wax for"):
+            parts.append("長度蠟重：長度或蠟重無效")
+            continue
+        if err.startswith("unsupported chain length cm"):
+            parts.append("長度蠟重：不支援的長度（cm）")
+            continue
+        if err.startswith("invalid wax weight for"):
+            parts.append("長度蠟重：蠟重無效")
+            continue
+        if err.startswith("chain length weights required for thickness"):
+            parts.append("請填寫鏈條各厚度的長度蠟重：" + err.split(": ", 1)[-1])
+            continue
+        if err.startswith("invalid chain length weights"):
+            parts.append("長度蠟重資料無效")
             continue
         if err.startswith("invalid image option"):
             parts.append("圖片選項代碼無效")
@@ -362,6 +493,12 @@ def serialize_product_row(row: dict) -> dict:
         out["id"] = str(out["id"])
     if out.get("created_by_id") is not None:
         out["created_by_id"] = str(out["created_by_id"])
+    lw = out.pop("length_weights", None)
+    if lw is not None:
+        out["lengthWeights"] = lw
+    ct = out.pop("chain_type", None)
+    if ct is not None:
+        out["chainType"] = ct
     for key, value in out.items():
         if isinstance(value, datetime):
             out[key] = value.isoformat()
@@ -389,6 +526,11 @@ def save_product_children(cur, product_id: str, cleaned: dict) -> None:
                 variant.get("sideStoneCarat"),
             ),
         )
+
+    cur.execute(
+        "update products set length_weights = %s, chain_type = %s where id = %s",
+        (cleaned.get("lengthWeights"), cleaned.get("chainType"), product_id),
+    )
 
     cur.execute("delete from product_images where product_id = %s", (product_id,))
     for sort_order, image in enumerate(cleaned["images"]):

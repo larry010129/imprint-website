@@ -2,6 +2,7 @@
 
 from app.admin_products import (
     ensure_product_sell_mode_columns,
+    is_auto_stock_product_image,
     is_browser_local_image_url,
     is_dead_catalog_placeholder,
     normalize_product_image_url,
@@ -23,14 +24,26 @@ def test_detects_dead_svg_placeholders():
     )
 
 
-def test_normalize_rewrites_svg_placeholder_to_shop_product():
-    url = normalize_product_image_url(
+def test_detects_auto_stock_shop_product_images():
+    assert is_auto_stock_product_image(
+        "/static/images/shop-product/silver/%E9%A0%85%E5%A2%9CB_silver.png"
+    )
+    assert is_auto_stock_product_image("images/shop-product/gold/項墜A_gold.png")
+    assert not is_auto_stock_product_image("/static/uploads/products/abc.png")
+
+
+def test_normalize_drops_svg_placeholder():
+    assert normalize_product_image_url(
         "images/shop/styles/pendant-B.svg",
         "white-white",
-    )
-    assert url
-    assert url.startswith("/static/images/shop-product/")
-    assert not is_dead_catalog_placeholder(url)
+    ) is None
+
+
+def test_normalize_drops_auto_stock_shop_product():
+    assert normalize_product_image_url(
+        "/static/images/shop-product/silver/%E9%A0%85%E5%A2%9CB_silver.png",
+        "white-white",
+    ) is None
 
 
 def test_normalize_drops_blob_urls():
@@ -41,7 +54,14 @@ def test_normalize_drops_missing_upload_without_style_hint():
     assert normalize_product_image_url("/static/uploads/products/test.png", "white-white") is None
 
 
-def test_validate_product_fields_rewrites_images_and_rejects_blob():
+def test_normalize_keeps_supabase_storage_url():
+    url = (
+        "https://abc123.supabase.co/storage/v1/object/public/shop-media/products/x.webp"
+    )
+    assert normalize_product_image_url(url, "white-white") == url
+
+
+def test_validate_product_fields_drops_dead_placeholders_and_rejects_blob():
     ok, err = validate_product_fields(
         {
             "category": "pendant",
@@ -57,9 +77,7 @@ def test_validate_product_fields_rewrites_images_and_rejects_blob():
     )
     assert err is None
     assert ok is not None
-    assert len(ok["images"]) == 1
-    assert ok["images"][0]["color"] == "white-white"
-    assert ok["images"][0]["url"].startswith("/static/images/shop-product/")
+    assert ok["images"] == []
 
 
 def test_validate_published_rejects_only_blob_images():
@@ -82,7 +100,7 @@ def test_validate_published_rejects_only_blob_images():
     assert "商品照片" in err
 
 
-def test_validate_pendant_sell_modes_xor():
+def test_validate_pendant_sell_modes():
     cleaned, err = validate_product_fields(
         {
             "category": "pendant",
@@ -98,6 +116,54 @@ def test_validate_pendant_sell_modes_xor():
     assert err is None
     assert cleaned["allowsPendantOnly"] is True
     assert cleaned["allowsWithChain"] is False
+    assert cleaned["allowsFancyShapes"] is True
+
+    # Left mode (可不含鍊賣): customer may choose with/without chain.
+    choose, choose_err = validate_product_fields(
+        {
+            "category": "pendant",
+            "nameZh": "測試墜",
+            "defaultColor": "white",
+            "isPublished": False,
+            "allowsPendantOnly": True,
+            "allowsWithChain": True,
+            "variants": [],
+            "images": [],
+        }
+    )
+    assert choose_err is None
+    assert choose["allowsPendantOnly"] is True
+    assert choose["allowsWithChain"] is True
+
+    # Right mode (含鍊賣): with-chain only.
+    chain_only, chain_err = validate_product_fields(
+        {
+            "category": "pendant",
+            "nameZh": "測試墜",
+            "defaultColor": "white",
+            "isPublished": False,
+            "allowsPendantOnly": False,
+            "allowsWithChain": True,
+            "variants": [],
+            "images": [],
+        }
+    )
+    assert chain_err is None
+    assert chain_only["allowsPendantOnly"] is False
+    assert chain_only["allowsWithChain"] is True
+
+    cleaned_off, _ = validate_product_fields(
+        {
+            "category": "ring",
+            "nameZh": "測試戒",
+            "defaultColor": "white",
+            "isPublished": False,
+            "allowsFancyShapes": False,
+            "variants": [],
+            "images": [],
+        }
+    )
+    assert cleaned_off["allowsFancyShapes"] is False
 
     bad, bad_err = validate_product_fields(
         {
@@ -112,7 +178,7 @@ def test_validate_pendant_sell_modes_xor():
         }
     )
     assert bad is None
-    assert bad_err and "僅墜子賣" in bad_err
+    assert bad_err and "可不含鍊賣" in bad_err
 
 
 def test_ensure_product_sell_mode_columns_idempotent():
@@ -135,9 +201,9 @@ def test_ensure_product_sell_mode_columns_idempotent():
             """
             select column_name from information_schema.columns
             where table_schema = 'public' and table_name = 'products'
-              and column_name in ('allows_pendant_only', 'allows_with_chain')
+              and column_name in ('allows_pendant_only', 'allows_with_chain', 'allows_fancy_shapes')
             order by column_name
             """
         )
         cols = [row["column_name"] for row in cur.fetchall()]
-    assert cols == ["allows_pendant_only", "allows_with_chain"]
+    assert cols == ["allows_fancy_shapes", "allows_pendant_only", "allows_with_chain"]

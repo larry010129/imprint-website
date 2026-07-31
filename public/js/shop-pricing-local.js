@@ -38,6 +38,35 @@
   var LABOR_FEE_TWD = 5000;
   var CHAIN_LABOR_FEE_TWD = { s925: 500, other: 2000 };
   var DEFAULT_ATTACHED_CHAIN_THICKNESS = '1.0mm';
+  var CHAIN_WAX_WEIGHT_CHIN = {
+    '1.0mm': {36: 0.014, 41: 0.016, 46: 0.018, 51: 0.020, 61: 0.024, 76: 0.030, 80: 0.032},
+    '1.5mm': {36: 0.026, 41: 0.030, 46: 0.033, 51: 0.037, 61: 0.043, 76: 0.054, 80: 0.057},
+    '2.0mm': {36: 0.040, 41: 0.046, 46: 0.051, 51: 0.056, 61: 0.066, 76: 0.083, 80: 0.087},
+    '2.5mm': {36: 0.047, 41: 0.053, 46: 0.059, 51: 0.065, 61: 0.076, 76: 0.095, 80: 0.100},
+    '3.0mm': {36: 0.052, 41: 0.060, 46: 0.066, 51: 0.074, 61: 0.086, 76: 0.110, 80: 0.120},
+  };
+  var NECKLACE_TYPE_WAX = {
+    douyuan: CHAIN_WAX_WEIGHT_CHIN,
+  };
+
+  function lengthWeightsForChainType(chainType) {
+    var table = NECKLACE_TYPE_WAX[chainType || 'douyuan'] || NECKLACE_TYPE_WAX.douyuan;
+    if (!table) return {};
+    var out = {};
+    Object.keys(table).forEach(function (thick) {
+      out[thick] = Object.assign({}, table[thick]);
+    });
+    return out;
+  }
+
+  function chainWaxFromTypeCatalog(chainType, carat, lengthCm) {
+    var table = NECKLACE_TYPE_WAX[chainType || 'douyuan'] || NECKLACE_TYPE_WAX.douyuan;
+    if (!table) return null;
+    var byLength = table[carat];
+    if (!byLength) return null;
+    var wax = byLength[parseInt(lengthCm, 10)];
+    return wax == null ? null : Number(wax);
+  }
   var TAX_RATE = 0.05;
   var CHIN_TO_GRAMS = 3.75;
   var BRACELET_REFERENCE_LENGTH_CM = 18;
@@ -141,6 +170,36 @@
     return productIndexFor(list)[String(productId)] || null;
   }
 
+  function normalizeGold(gold) {
+    var g = String(gold || '').trim().toLowerCase();
+    if (g === 'pt' || g === 'pt950') return 'pt950';
+    if (g === 'silver925' || g === 's925') return 's925';
+    return g;
+  }
+
+  function caratLookupKeys(carat) {
+    var keys = [];
+    function add(key) {
+      if (key != null && key !== '' && keys.indexOf(String(key)) < 0) keys.push(String(key));
+    }
+    add(carat);
+    var n = parseFloat(carat);
+    if (!Number.isNaN(n)) {
+      add(n.toFixed(1));
+      if (n === Math.floor(n)) add(String(Math.floor(n)) + '.0');
+      if (n === Math.floor(n)) add(String(Math.floor(n)));
+    }
+    return keys;
+  }
+
+  function chainWaxChin(thickness, lengthCm) {
+    var length = parseInt(lengthCm, 10);
+    var table = CHAIN_WAX_WEIGHT_CHIN[thickness];
+    var wax = table && table[length];
+    if (wax == null) throw new Error('unsupported chain thickness or length');
+    return wax;
+  }
+
   function waxToMetalChin(waxChin, gold) {
     var factor = WAX_TO_METAL_CHIN[gold];
     if (factor == null) throw new Error('unknown gold: ' + gold);
@@ -148,10 +207,25 @@
   }
 
   function lookupWeight(product, category, gold, carat, lengthCm) {
-    var wax = product.weights && product.weights[gold] && product.weights[gold][carat];
+    gold = normalizeGold(gold);
+    var wax = null;
     if (category === 'chain') {
       wax = product.lengthWeights && product.lengthWeights[carat]
         && product.lengthWeights[carat][String(lengthCm)];
+      if (wax == null) {
+        wax = chainWaxFromTypeCatalog(product.chainType || 'douyuan', carat, lengthCm);
+      }
+    } else {
+      var byGold = product.weights && product.weights[gold];
+      if (byGold) {
+        var caratKeys = caratLookupKeys(carat);
+        for (var i = 0; i < caratKeys.length; i++) {
+          if (byGold[caratKeys[i]] != null) {
+            wax = byGold[caratKeys[i]];
+            break;
+          }
+        }
+      }
     }
     if (wax == null) throw new Error('no weight');
     var weight = waxToMetalChin(Number(wax), gold);
@@ -177,6 +251,7 @@
     var chainProduct = findProduct(catalog, 'chain', chainProductId);
     if (!chainProduct) throw new Error('invalid chain');
     var carat = DEFAULT_ATTACHED_CHAIN_THICKNESS;
+    chainGold = normalizeGold(chainGold);
     var weightChin = lookupWeight(chainProduct, 'chain', chainGold, carat, chainLengthCm);
     var weightGrams = weightChin * CHIN_TO_GRAMS;
     // 搭配鏈條 = live metal only; standalone chain labor is added in computeOrderPricing
@@ -201,6 +276,8 @@
 
     if (!category || !carat || !productId) return { ready: false };
     if (category !== 'diamond' && !gold) return { ready: false };
+    gold = normalizeGold(gold);
+    if (chainGold) chainGold = normalizeGold(chainGold);
     if ((category === 'chain' || category === 'bracelet') && lengthCm == null) return { ready: false };
 
     var product = findProduct(catalog, category, productId);
@@ -376,5 +453,6 @@
     waxToMetalChin: waxToMetalChin,
     LABOR_FEE_TWD: LABOR_FEE_TWD,
     CHAIN_LABOR_FEE_TWD: CHAIN_LABOR_FEE_TWD,
+    lengthWeightsForChainType: lengthWeightsForChainType,
   };
 })(window);

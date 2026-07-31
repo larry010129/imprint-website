@@ -42,5 +42,21 @@ class Settings:
             base = f"https://{base}"
         return base
 
+    @property
+    def supabase_url(self) -> str:
+        return os.environ.get("SUPABASE_URL", "").strip().rstrip("/")
+
+    @property
+    def supabase_service_role_key(self) -> str:
+        """Server key for Storage/admin APIs: SERVICE_ROLE, else SUPABASE_SECRET_KEY."""
+        return (
+            os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+            or os.environ.get("SUPABASE_SECRET_KEY", "").strip()
+        )
+
+    @property
+    def supabase_storage_bucket(self) -> str:
+        return os.environ.get("SUPABASE_STORAGE_BUCKET", "shop-media").strip() or "shop-media"
+
 
 settings = Settings()

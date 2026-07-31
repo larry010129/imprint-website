@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import unquote
 
+from app.storage import is_supabase_storage_url
+
 _STYLE_ID = re.compile(r"^([a-z]+)-([A-C])$", re.I)
 _STYLE_FROM_PATH = re.compile(r"(?:^|/)([a-z]+)-([A-C])\.(?:svg|png|jpe?g|webp)", re.I)
 _UUID = re.compile(
@@ -125,12 +127,14 @@ _SHOP_ASSET_EXISTS_CACHE: dict[str, bool] = {}
 
 
 def static_url_exists(url: str | None) -> bool:
-    """True when URL is a local /static/ path and the file is on disk."""
+    """True when URL is a local /static/ path on disk or a Supabase Storage public URL."""
     if not url:
         return False
     path = str(url).strip().split("?", 1)[0]
-    if path.startswith(("http://", "https://")):
+    if is_supabase_storage_url(path):
         return True
+    if path.startswith(("http://", "https://")):
+        return False
     if not path.startswith("/static/"):
         return False
     cached = _SHOP_ASSET_EXISTS_CACHE.get(path)

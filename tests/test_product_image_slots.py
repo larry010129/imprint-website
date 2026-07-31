@@ -58,25 +58,21 @@ class _CatalogCursor:
         self.rows = []
         self.updates = []
         self.inserts = []
+        self.deletes = []
+        self.rowcount = 0
 
     def execute(self, query, params=None):
         normalized = " ".join(query.split()).lower()
-        if normalized.startswith("select id, category, name_zh"):
-            self.rows = [
-                {
-                    "id": "product-1",
-                    "category": "pendant",
-                    "name_zh": "Pendant A",
-                    "sort_order": 1,
-                }
-            ]
+        if normalized.startswith("delete from product_images"):
+            self.deletes.append(params)
+            self.rowcount = 0
         elif normalized.startswith("select id, product_id, color"):
             self.rows = [
                 {
                     "id": f"image-{index}",
                     "product_id": "product-1",
                     "color": color,
-                    "file_path": f"/static/images/products/{color}/pendant-A.png",
+                    "file_path": f"/static/uploads/products/{color}.png",
                     "sort_order": index,
                 }
                 for index, color in enumerate(("white", "yellow", "rose"))
@@ -92,33 +88,27 @@ class _CatalogCursor:
         return self.rows
 
 
-def test_backfill_preserves_originals_and_populates_empty_slots():
+def test_backfill_normalizes_legacy_keys_without_inventing_stock():
     cursor = _CatalogCursor()
 
     normalized, inserted = backfill_catalog_image_slots(cursor, [])
 
     assert normalized == 3
-    assert inserted == 45
+    assert inserted == 0
+    assert cursor.inserts == []
     assert {color for color, _ in cursor.updates} == {
         "white-white",
         "yellow-white",
         "rose-white",
     }
-    assert all(Path(unquote(path.removeprefix("/static/"))).suffix == ".png" for _, _, path, _ in cursor.inserts)
 
 
 class _MissingImageCursor(_CatalogCursor):
     def execute(self, query, params=None):
         normalized = " ".join(query.split()).lower()
-        if normalized.startswith("select id, category, name_zh"):
-            self.rows = [
-                {
-                    "id": "product-1",
-                    "category": "pendant",
-                    "name_zh": "四爪項墜",
-                    "sort_order": 0,
-                }
-            ]
+        if normalized.startswith("delete from product_images"):
+            self.deletes.append(params)
+            self.rowcount = 0
         elif normalized.startswith("select id, product_id, color"):
             self.rows = [
                 {
@@ -137,21 +127,21 @@ class _MissingImageCursor(_CatalogCursor):
             raise AssertionError(f"Unexpected query: {normalized}")
 
 
-def test_backfill_replaces_missing_on_disk_upload():
+def test_backfill_does_not_replace_missing_upload_with_stock():
     cursor = _MissingImageCursor()
-    seed_rows = [
-        {
-            "category": "pendant",
-            "style": "A",
-            "nameZh": "四爪項墜",
-        }
-    ]
 
-    normalized, inserted = backfill_catalog_image_slots(cursor, seed_rows)
+    normalized, inserted = backfill_catalog_image_slots(cursor, [])
 
-    assert normalized >= 1
-    assert any(
+    assert inserted == 0
+    assert cursor.inserts == []
+    assert not any(
         str(params[0]).startswith("/static/images/shop-product/")
         for params in cursor.updates
+        if params
     )
-    assert inserted >= 40
+    # Missing upload stays; only SVG / shop-product stock are removed.
+    assert all(
+        params != ("image-dead",)
+        for params in cursor.deletes
+        if params
+    )

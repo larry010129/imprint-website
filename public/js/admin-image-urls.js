@@ -54,38 +54,21 @@
     return m[1].toLowerCase() + '-' + m[2].toUpperCase();
   }
 
-  /** Prefer uploaded/photo assets; map SVG catalog paths to shop-product renders. */
-  function productPhoto(path, color) {
+  /** Admin product photos — only real uploaded rasters; never invent letter SKU PNGs. */
+  function productPhoto(path) {
     var url = resolve(path);
     if (!url) return '';
-    if (/\.(png|jpe?g|webp)$/i.test(url)) return url;
-    var styleKey = styleKeyFromPath(path) || styleKeyFromPath(url);
-    if (styleKey && global.ShopAssets) {
-      var slot = global.ShopAssets.parseImageSlotKey
-        ? global.ShopAssets.parseImageSlotKey(color)
-        : null;
-      var metal = slot ? slot.metal : color;
-      var diamond = slot ? slot.diamond : 'white';
-      var opts = slot && slot.chainMetal ? { chainColor: slot.chainMetal } : {};
-      var resolved = global.ShopAssets.productImageResolve
-        ? global.ShopAssets.productImageResolve(styleKey, metal, metal, diamond, opts)
-        : null;
-      var real = resolved && resolved.src
-        ? resolved.src
-        : global.ShopAssets.productImage(styleKey, metal, metal, diamond, opts);
-      if (real) return real;
+    if (/\.svg($|\?)/i.test(url) || /\/images\/shop\/styles\//i.test(url)) return '';
+    if (/(?:^|\/)(?:static\/)?images\/shop-product(?:\/|$)/i.test(url.replace(/\\/g, '/'))) {
+      return '';
     }
-    return url;
+    if (/\.(png|jpe?g|webp)$/i.test(url)) return url;
+    return '';
   }
 
-  /** Use the small style asset in tables; keep uploaded/custom images exact. */
+  /** Table thumbs — same rules as productPhoto (no shop-product letter fallbacks). */
   function productThumbnail(path, color) {
-    var styleKey = styleKeyFromPath(path);
-    if (styleKey && global.ShopAssets) {
-      var thumb = global.ShopAssets.styleThumb(styleKey);
-      if (thumb) return thumb;
-    }
-    return productPhoto(path, color);
+    return productPhoto(path);
   }
 
   function styleKeyFromCategoryStyle(category, styleType) {

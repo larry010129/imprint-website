@@ -7,8 +7,7 @@ import logging
 from pathlib import Path
 
 from app.database import get_connection
-from app.admin_products import is_dead_catalog_placeholder
-from app.image_urls import catalog_image_slot_urls, resolve_product_image_url, static_url_exists, style_key_from_path
+from app.admin_products import is_auto_stock_product_image, is_dead_catalog_placeholder, purge_auto_stock_product_images
 
 log = logging.getLogger(__name__)
 
@@ -16,111 +15,40 @@ _SEED_PATH = Path(__file__).resolve().parent / "data" / "catalog-seed-rows.json"
 _LEGACY_METALS = frozenset({"white", "yellow", "rose"})
 
 
-def _seed_style_lookup(rows: list[dict]) -> dict[tuple[str, str], str]:
-    return {
-        (str(row.get("category") or ""), str(row.get("nameZh") or "")): (
-            f"{row['category']}-{row['style']}"
-        )
-        for row in rows
-        if row.get("category") and row.get("style") and row.get("nameZh")
-    }
-
-
-def _product_style_key(
-    product: dict,
-    images: list[dict],
-    seed_styles: dict[tuple[str, str], str],
-) -> str | None:
-    for image in images:
-        style_key = style_key_from_path(image.get("file_path"))
-        if style_key:
-            return style_key
-    by_name = seed_styles.get(
-        (str(product.get("category") or ""), str(product.get("name_zh") or ""))
-    )
-    if by_name:
-        return by_name
-    category = (product.get("category") or "").strip().lower()
-    order = int(product.get("sort_order") or 0)
-    if category and 0 <= order <= 25:
-        return f"{category}-{chr(ord('A') + order)}"
-    return None
-
-
 def backfill_catalog_image_slots(cur, seed_rows: list[dict]) -> tuple[int, int]:
-    """Normalize legacy image keys and add the canonical CMS image matrix."""
-    cur.execute(
-        "select id, category, name_zh, sort_order from products order by category, sort_order"
-    )
-    products = cur.fetchall()
-    if not products:
-        return (0, 0)
+    """Normalize legacy color keys only. Never invent shop-product letter SKU photos."""
+    del seed_rows  # unused — style matrix backfill removed by design
+    purged = purge_auto_stock_product_images(cur)
 
     cur.execute(
         """
-        select id, product_id, color, file_path, sort_order
+        select id, product_id, color, file_path
         from product_images
         order by product_id, sort_order, id
         """
     )
-    by_product: dict[str, list[dict]] = {}
-    for image in cur.fetchall():
-        by_product.setdefault(str(image["product_id"]), []).append(image)
+    images = cur.fetchall()
+    if not images and not purged:
+        return (0, 0)
 
-    seed_styles = _seed_style_lookup(seed_rows)
     normalized = 0
-    inserted = 0
-    for product in products:
-        product_id = str(product["id"])
-        images = by_product.get(product_id, [])
-        style_key = _product_style_key(product, images, seed_styles)
-        desired = catalog_image_slot_urls(style_key)
-        if not desired:
+    for image in images:
+        color = str(image.get("color") or "")
+        path = image.get("file_path")
+        if is_auto_stock_product_image(path):
             continue
-
-        existing_keys: set[str] = set()
-        next_sort = 0
-        for image in images:
-            color = str(image.get("color") or "")
-            next_sort = max(next_sort, int(image.get("sort_order") or 0) + 1)
-            if color in _LEGACY_METALS:
-                color = f"{color}-white"
-                cur.execute(
-                    "update product_images set color = %s where id = %s",
-                    (color, image["id"]),
-                )
-                normalized += 1
-            # Replace seed SVG /styles placeholders and missing-on-disk uploads.
-            path = image.get("file_path")
-            resolved = resolve_product_image_url(path) if path else ""
-            path_dead = is_dead_catalog_placeholder(path) or (
-                bool(resolved)
-                and resolved.startswith("/static/")
-                and not static_url_exists(resolved)
-            )
-            if color in desired and path_dead:
-                cur.execute(
-                    "update product_images set file_path = %s where id = %s",
-                    (desired[color], image["id"]),
-                )
-                normalized += 1
-            existing_keys.add(color)
-
-        for color, file_path in desired.items():
-            if color in existing_keys:
-                continue
+        if color in _LEGACY_METALS:
             cur.execute(
-                """
-                insert into product_images (product_id, color, file_path, sort_order)
-                values (%s, %s, %s, %s)
-                """,
-                (product["id"], color, file_path, next_sort),
+                "update product_images set color = %s where id = %s",
+                (f"{color}-white", image["id"]),
             )
-            next_sort += 1
-            existing_keys.add(color)
-            inserted += 1
+            normalized += 1
+        # Drop SVG placeholders only — never replace with shop-product stock.
+        if is_dead_catalog_placeholder(path):
+            cur.execute("delete from product_images where id = %s", (image["id"],))
+            normalized += 1
 
-    return normalized, inserted
+    return normalized, 0
 
 
 def seed_catalog_if_empty() -> int:
@@ -171,11 +99,11 @@ def seed_catalog_if_empty() -> int:
 
                     for image in entry.get("images") or []:
                         file_path = image["filePath"]
+                        # Never seed letter-SKU / SVG placeholders as product photos.
                         if str(file_path).lower().endswith(".svg"):
-                            file_path = (
-                                f"/static/images/products/{image['color']}/"
-                                f"{entry['category']}-{entry['style']}.png"
-                            )
+                            continue
+                        if is_auto_stock_product_image(file_path):
+                            continue
                         cur.execute(
                             """
                             insert into product_images (product_id, color, file_path, sort_order)

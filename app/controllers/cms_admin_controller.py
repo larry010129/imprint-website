@@ -18,7 +18,6 @@ router = APIRouter(prefix="/admin", tags=["admin-cms"])
 _ALLOWED_IMAGE_EXT = {".png", ".jpg", ".jpeg", ".webp"}
 _ALLOWED_IMAGE_MIME = {"image/png", "image/jpeg", "image/webp"}
 _MAX_IMAGE_BYTES = 1 * 1024 * 1024
-_MEDIA_UPLOAD_DIR = settings.static_dir / "uploads" / "cms-media"
 
 
 def _require_admin(request: Request) -> str:
@@ -71,6 +70,17 @@ def _image_upload_error(file: UploadFile, data: bytes, ext: str) -> str | None:
     if not _image_signature_matches(data, ext):
         return "圖片內容與副檔名不符"
     return None
+
+
+def _storage_upload(kind: str, name: str, data: bytes, ext: str) -> tuple[str | None, str | None]:
+    from app.storage import StorageNotConfiguredError, StorageUploadError, upload_image
+
+    try:
+        return upload_image(kind, name, data, ext), None
+    except StorageNotConfiguredError as exc:
+        return None, str(exc)
+    except StorageUploadError as exc:
+        return None, str(exc)
 
 
 _CMS_SCHEMA_READY = False
@@ -534,10 +544,10 @@ async def cms_media_upload(request: Request, file: UploadFile = File(...)) -> JS
     err = _image_upload_error(file, data, ext)
     if err:
         return JSONResponse(status_code=400, content={"error": err})
-    _MEDIA_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     name = f"{uuid.uuid4().hex}{ext}"
-    (_MEDIA_UPLOAD_DIR / name).write_bytes(data)
-    url = f"/static/uploads/cms-media/{name}"
+    url, upload_err = _storage_upload("cms-media", name, data, ext)
+    if upload_err:
+        return JSONResponse(status_code=503, content={"error": upload_err})
     from app.cms_media import create_media
 
     with get_connection() as conn, conn.cursor() as cur:
@@ -562,8 +572,12 @@ async def cms_media_action(request: Request) -> JSONResponse:
         url = delete_media(cur, media_id)
     if not url:
         return JSONResponse(status_code=404, content={"error": "找不到媒體"})
+    from app.storage import delete_by_url
+
+    delete_by_url(url)
     if url.startswith("/static/uploads/cms-media/"):
-        (_MEDIA_UPLOAD_DIR / Path(url).name).unlink(missing_ok=True)
+        legacy = settings.static_dir / "uploads" / "cms-media" / Path(url).name
+        legacy.unlink(missing_ok=True)
     log_admin_action(_actor_email(user_id), "cms_media_deleted", {"id": media_id})
     return JSONResponse(content={"ok": True})
 

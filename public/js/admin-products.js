@@ -12,6 +12,7 @@
     '1.5', '2.0', '3.0',
   ];
   var CHAIN_CARATS = ['1.0mm', '1.5mm', '2.0mm', '2.5mm', '3.0mm'];
+  var CHAIN_LENGTHS_CM = [36, 41, 46, 51, 61, 76, 80];
   var COLORS = ['white', 'yellow', 'rose'];
   var GOLD_LABELS = { '9k': '9K', '14k': '14K', '18k': '18K', 'pt950': 'PT950', 's925': 'S925' };
   // 蠟重(錢) × factor → 成品金重(錢)；試算頁下單時以後端 app/pricing.py 的同一份係數為準，這裡僅供上架時預覽估算。
@@ -109,6 +110,7 @@
     categoryLabels: {},
     categories: [],
     categoryOrder: [],
+    chainCatalog: null,
     activeTab: 'cat-pendant',
     editingId: null,
     view: 'list',
@@ -136,17 +138,29 @@
     return /^(?:blob:|data:)/i.test(String(url || '').trim());
   }
 
-  /** Seed SVG /styles paths 404; shop-product rasters are SoT. */
+  /** Seed SVG /styles paths 404 — not real uploads. */
   function isDeadCatalogPlaceholder(url) {
     var path = String(url || '').split('?', 1)[0].toLowerCase();
     return /\.svg$/i.test(path) || /\/images\/shop\/styles\//i.test(path);
   }
 
-  /** Persistable URL for editor data-url + SQL (raster server path only). */
+  /** Bundled letter-SKU stock under shop-product/ — never treat as uploaded photos. */
+  function isAutoStockProductImage(url) {
+    var path = String(url || '').split('?', 1)[0].replace(/\\/g, '/').toLowerCase();
+    return /(?:^|\/)(?:static\/)?images\/shop-product(?:\/|$)/.test(path);
+  }
+
+  /** Persistable URL for editor data-url + SQL (real uploads only). */
   function persistableImageUrl(path, color) {
     if (!path || isBrowserLocalImageUrl(path)) return '';
+    if (isAutoStockProductImage(path)) return '';
     var resolved = imageUrl(path, color) || path;
-    if (!resolved || isBrowserLocalImageUrl(resolved) || isDeadCatalogPlaceholder(resolved)) {
+    if (
+      !resolved
+      || isBrowserLocalImageUrl(resolved)
+      || isDeadCatalogPlaceholder(resolved)
+      || isAutoStockProductImage(resolved)
+    ) {
       return '';
     }
     return resolved;
@@ -164,13 +178,13 @@
     var def = product.default_color || 'white';
     var match = images.find(function (img) { return imageCoversDefaultColor(img.color, def); }) || images[0];
     if (match) {
-      return window.AdminImageUrls && window.AdminImageUrls.productThumbnail
+      var thumb = window.AdminImageUrls && window.AdminImageUrls.productThumbnail
         ? window.AdminImageUrls.productThumbnail(match.file_path, def)
         : imageUrl(match.file_path, def);
+      // Never invent shop-product letter thumbs for products without uploads.
+      return persistableImageUrl(thumb || match.file_path, def) || '';
     }
-    return window.AdminImageUrls
-      ? window.AdminImageUrls.categoryFallback(product.category)
-      : '';
+    return '';
   }
 
   function productStatus(product) {
@@ -282,8 +296,39 @@
     );
   }
 
-  function caratsFor(category) {
-    return category === 'chain' ? CHAIN_CARATS : CARATS;
+  function chainCatalogTypes() {
+    var cat = state.chainCatalog;
+    return (cat && cat.types) || {};
+  }
+
+  function defaultChainType() {
+    return (state.chainCatalog && state.chainCatalog.defaultType) || 'douyuan';
+  }
+
+  function resolveChainType(raw) {
+    var types = chainCatalogTypes();
+    if (raw && types[raw]) return raw;
+    return defaultChainType();
+  }
+
+  function chainTypeWaxTable(chainType) {
+    var entry = chainCatalogTypes()[resolveChainType(chainType)];
+    return (entry && entry.lengthWeights) || {};
+  }
+
+  function chainTypeThicknesses(chainType) {
+    var entry = chainCatalogTypes()[resolveChainType(chainType)];
+    if (entry && entry.thicknesses && entry.thicknesses.length) return entry.thicknesses;
+    return CHAIN_CARATS;
+  }
+
+  function getFormChainType(form) {
+    var sel = form && form.querySelector('[name="chainType"]');
+    return resolveChainType(sel ? sel.value : null);
+  }
+
+  function caratsFor(category, chainType) {
+    return category === 'chain' ? chainTypeThicknesses(chainType) : CARATS;
   }
 
   function productsInCategory(cat) {
@@ -670,8 +715,151 @@
     out.textContent = metalWeightLabel(weightInput ? weightInput.value : '', goldSelect ? goldSelect.value : GOLDS[0]);
   }
 
-  function variantRowHtml(variant, category) {
-    var carats = caratsFor(category);
+  function chainLengthWaxValue(lengthWeights, thickness, lengthCm) {
+    var table = lengthWeights && lengthWeights[thickness];
+    if (!table) return '';
+    var val = table[String(lengthCm)];
+    return val == null ? '' : val;
+  }
+
+  function chainTypeSelectorHtml(product, category) {
+    if (category !== 'chain') return '';
+    var types = chainCatalogTypes();
+    var selected = resolveChainType(product && (product.chainType || product.chain_type));
+    var opts = Object.keys(types).map(function (slug) {
+      var label = types[slug].labelZh || slug;
+      var sel = slug === selected ? ' selected' : '';
+      return '<option value="' + esc(slug) + '"' + sel + '>' + esc(label) + '</option>';
+    }).join('');
+    if (!opts) {
+      opts = '<option value="douyuan" selected>抖圓鏈</option>';
+    }
+    return (
+      '<label class="ap-field-wide ap-chain-type-field">' +
+        '<span>項鍊類型</span>' +
+        '<select name="chainType" id="apChainType">' + opts + '</select>' +
+        '<span class="ap-section-hint">依 Excel 鍊條價格表選擇項鍊款式。選類型後，商店「選擇鏈條長度」與報價自動用該表，不必每件商品手填。</span>' +
+      '</label>'
+    );
+  }
+
+  function chainLengthWeightsGridInnerHtml(lengthWeights, chainType) {
+    var thicknesses = chainTypeThicknesses(chainType);
+    var effective = lengthWeights && Object.keys(lengthWeights).length
+      ? lengthWeights
+      : chainTypeWaxTable(chainType);
+    return thicknesses.map(function (thick) {
+      var rows = CHAIN_LENGTHS_CM.map(function (len) {
+        var val = chainLengthWaxValue(effective, thick, len);
+        return (
+          '<div class="ap-chain-length-row" data-thickness="' + esc(thick) + '" data-length="' + len + '">' +
+            '<span class="ap-chain-length-label">' + len + ' cm</span>' +
+            '<input type="number" name="chainLengthWax" step="0.0001" min="0.0001" ' +
+              'data-thickness="' + esc(thick) + '" data-length="' + len + '" ' +
+              'placeholder="蠟重（錢）" value="' + esc(val) + '">' +
+          '</div>'
+        );
+      }).join('');
+      return (
+        '<div class="ap-chain-thickness-block" data-thickness="' + esc(thick) + '">' +
+          '<h5 class="ap-chain-thickness-title">厚度 ' + esc(thick) + '</h5>' +
+          '<div class="ap-chain-length-head"><span>長度</span><span>蠟重（錢）</span></div>' +
+          '<div class="ap-chain-length-grid">' + rows + '</div>' +
+        '</div>'
+      );
+    }).join('');
+  }
+
+  function chainLengthWeightsBlockHtml(lengthWeights, category, chainType) {
+    if (category !== 'chain') return '';
+    return (
+      '<h4 class="ap-section-title">長度蠟重（選填）</h4>' +
+      '<p class="ap-section-hint">預設使用 Excel／項鍊類型標準表（抖圓鏈等），商店長度選項會自動出現。僅在要覆蓋標準值時才改下面欄位；留空＝用標準表。</p>' +
+      '<div class="ap-chain-length-weights" id="apChainLengthWeights">' +
+        chainLengthWeightsGridInnerHtml(lengthWeights, chainType) +
+      '</div>' +
+      '<button type="button" class="btn-sm" id="apFillChainLengthDefaults">重填標準蠟重表</button>'
+    );
+  }
+
+  function collectChainLengthWeights(form) {
+    var out = {};
+    form.querySelectorAll('#apChainLengthWeights input[name="chainLengthWax"]').forEach(function (input) {
+      var thick = input.dataset.thickness;
+      var len = input.dataset.length;
+      var raw = String(input.value || '').trim();
+      if (!thick || !len || !raw) return;
+      var wax = parseFloat(raw);
+      if (!Number.isFinite(wax) || wax <= 0) return;
+      if (!out[thick]) out[thick] = {};
+      out[thick][String(len)] = wax;
+    });
+    return Object.keys(out).length ? out : null;
+  }
+
+  function fillChainLengthDefaults(form) {
+    var host = form.querySelector('#apChainLengthWeights');
+    if (!host) return;
+    var chainType = getFormChainType(form);
+    var table = chainTypeWaxTable(chainType);
+    var thicknesses = chainTypeThicknesses(chainType);
+    thicknesses.forEach(function (thick) {
+      CHAIN_LENGTHS_CM.forEach(function (len) {
+        var input = host.querySelector(
+          'input[name="chainLengthWax"][data-thickness="' + thick + '"][data-length="' + len + '"]'
+        );
+        if (!input || String(input.value || '').trim()) return;
+        var wax = table[thick] && table[thick][String(len)];
+        if (wax != null) input.value = wax;
+      });
+    });
+    syncChainVariantWeightsFromLengthTable(form);
+  }
+
+  function rebindChainLengthGrid(form) {
+    var host = form.querySelector('#apChainLengthWeights');
+    if (!host || host.dataset.bound) return;
+    host.dataset.bound = '1';
+    host.addEventListener('input', function (e) {
+      if (e.target.name !== 'chainLengthWax') return;
+      syncChainVariantWeightsFromLengthTable(form);
+    });
+  }
+
+  function refreshChainLengthGrid(form, category, chainType) {
+    var section = form.querySelector('#apChainLengthSection');
+    if (!section || category !== 'chain') return;
+    var preserved = collectChainLengthWeights(form) || {};
+    var weightsHost = section.querySelector('#apChainLengthWeights');
+    if (weightsHost) {
+      delete weightsHost.dataset.bound;
+      weightsHost.innerHTML = chainLengthWeightsGridInnerHtml(preserved, chainType);
+    }
+    rebindChainLengthGrid(form);
+  }
+
+  function syncChainVariantWeightsFromLengthTable(form) {
+    form.querySelectorAll('#apVariantGrid .ap-variant-row').forEach(function (row) {
+      var carat = row.querySelector('[name="carat"]')?.value;
+      var weightInput = row.querySelector('[name="weight"]');
+      if (!carat || !weightInput) return;
+      var ref = form.querySelector(
+        '#apChainLengthWeights input[name="chainLengthWax"][data-thickness="' + carat + '"][data-length="46"]'
+      );
+      if (!ref || !String(ref.value || '').trim()) return;
+      weightInput.value = ref.value;
+      updateVariantRowMetalWeight(row);
+    });
+  }
+
+  function toggleChainLengthSection(form, category) {
+    var section = form.querySelector('#apChainLengthSection');
+    if (!section) return;
+    section.hidden = category !== 'chain';
+  }
+
+  function variantRowHtml(variant, category, chainType) {
+    var carats = caratsFor(category, chainType);
     var goldOpts = GOLDS.map(function (g) {
       var sel = variant && variant.gold === g ? ' selected' : '';
       return '<option value="' + g + '"' + sel + '>' + (GOLD_LABELS[g] || g) + '</option>';
@@ -704,15 +892,13 @@
   }
 
   function imageSlideHtml(url, color) {
-    var persistUrl = persistableImageUrl(url, color) || String(url || '');
-    var src = persistableImageUrl(url, color) || imageUrl(url, color);
-    if (!src || isBrowserLocalImageUrl(src)) return '';
-    // Eager src — deferred data-src left empty <img> showing broken icon in carousel.
+    var persistUrl = persistableImageUrl(url, color);
+    if (!persistUrl) return '';
     return (
       '<div class="ap-carousel-item" data-url="' + esc(persistUrl) + '" data-color="' + esc(color || '') + '">' +
         '<div class="ap-carousel-card">' +
           '<div class="ap-carousel-card-media">' +
-            '<img class="ap-carousel-img" src="' + esc(src) + '" alt="" data-fallback="' + esc(src) +
+            '<img class="ap-carousel-img" src="' + esc(persistUrl) + '" alt="" data-fallback="' + esc(persistUrl) +
               '" loading="eager" decoding="async" width="180" height="180">' +
             '<button type="button" class="ap-remove-image" aria-label="移除">X</button>' +
           '</div>' +
@@ -791,19 +977,21 @@
   }
 
   /**
-   * Seed every calculator image axis as an editable slot: metal × diamond.
+   * Only slots that already have real uploads (+ one empty default for new items).
+   * Never pre-create the full metal×diamond matrix or invent stock photos.
    * Legacy pendant 3-part keys (metal-diamond-chainMetal) fold into metal-diamond.
    */
   function slotsForEditor(images, category) {
     var groups = groupImagesForSlots(images);
-    var presets = presetSlotKeysForCategory(category);
     var seen = {};
     var slots = [];
 
     function pushSlot(key) {
       if (!key || seen[key]) return;
+      var urls = groups[key] ? groups[key].slice() : [];
+      if (!urls.length && key !== 'white-white') return;
       seen[key] = true;
-      slots.push({ color: key, urls: groups[key] ? groups[key].slice() : [] });
+      slots.push({ color: key, urls: urls });
     }
 
     function mergeInto(targetKey, urls) {
@@ -827,9 +1015,9 @@
       delete groups[key];
     });
 
-    presets.forEach(pushSlot);
     Object.keys(groups).forEach(function (key) {
       if (COLORS.indexOf(key) >= 0) return; // folded into metal-white above
+      if (!(groups[key] && groups[key].length)) return;
       pushSlot(key);
     });
 
@@ -1193,46 +1381,41 @@
     );
   }
 
-  /** Exclusive sell mode: 'only' (left) or 'chain' (right). Both-true → chain. */
-  function resolvePendantSellMode(product) {
-    var allowOnly = !product || product.allows_pendant_only !== false;
-    var allowChain = !product || product.allows_with_chain !== false;
-    if (allowChain) return 'chain';
-    if (allowOnly) return 'only';
-    return 'chain';
-  }
-
-  function syncPendantSellModeUi(root) {
-    var dual = (root || document).querySelector('.ap-sell-mode-dual');
-    var input = dual && dual.querySelector('[name="pendantSellModeChain"]');
-    if (!dual || !input) return;
-    var chainOn = !!input.checked;
-    dual.classList.toggle('is-chain', chainOn);
-    dual.setAttribute('data-mode', chainOn ? 'chain' : 'only');
-    var left = dual.querySelector('[data-side="only"]');
-    var right = dual.querySelector('[data-side="chain"]');
-    if (left) left.setAttribute('aria-pressed', String(!chainOn));
-    if (right) right.setAttribute('aria-pressed', String(chainOn));
+  function allowsFancyShapesToggleHtml(product) {
+    var on = !product || product.allows_fancy_shapes !== false;
+    var checked = on ? ' checked' : '';
+    return (
+      '<div class="ap-switch-wrap">' +
+        '<label class="ap-switch">' +
+          '<input type="checkbox" class="ap-switch-input" name="allowsFancyShapes"' + checked + '>' +
+          '<span class="ap-switch-track" aria-hidden="true"><span class="ap-switch-thumb"></span></span>' +
+          '<span class="ap-switch-label">可選其它形狀</span>' +
+        '</label>' +
+      '</div>'
+    );
   }
 
   function pendantSellModeTogglesHtml(product, category) {
-    var mode = resolvePendantSellMode(product);
-    var chainOn = mode === 'chain';
+    // Left 可不含鍊賣 = customer may choose with/without chain.
+    // Right 含鍊賣 = with-chain only (no choice).
+    var chainOnly = !!(product && product.allows_with_chain !== false
+      && product.allows_pendant_only === false);
+    if (!product) chainOnly = false;
     var hiddenAttr = category === 'pendant' ? '' : ' hidden';
     return (
       '<div class="ap-pendant-sell-modes ap-field-wide" id="apPendantSellModes"' + hiddenAttr + '>' +
-        '<div class="ap-sell-mode-dual' + (chainOn ? ' is-chain' : '') + '" role="group" aria-label="項墜販售方式" data-mode="' + mode + '">' +
-          '<button type="button" class="ap-sell-mode-side" data-side="only" aria-pressed="' + (!chainOn) + '">僅墜子賣</button>' +
+        '<div class="ap-sell-mode-dual' + (chainOnly ? ' is-chain' : '') + '" id="apSellModeDual">' +
+          '<button type="button" class="ap-sell-mode-side" data-side="only">可不含鍊賣</button>' +
           '<label class="ap-switch ap-cine-switch">' +
-            '<input type="checkbox" class="ap-switch-input" name="pendantSellModeChain"' +
-              (chainOn ? ' checked' : '') + ' aria-label="項墜販售方式：左僅墜子賣，右可含鍊">' +
-            '<span class="ap-cine-track" aria-hidden="true">' +
-              '<span class="ap-cine-thumb"></span>' +
-            '</span>' +
+            '<input type="checkbox" class="ap-switch-input" name="sellWithChain"' +
+              (chainOnly ? ' checked' : '') + ' aria-label="項墜販售方式">' +
+            '<span class="ap-cine-track" aria-hidden="true"><span class="ap-cine-thumb"></span></span>' +
           '</label>' +
-          '<button type="button" class="ap-sell-mode-side" data-side="chain" aria-pressed="' + chainOn + '">可含鍊</button>' +
+          '<button type="button" class="ap-sell-mode-side" data-side="chain">含鍊賣</button>' +
         '</div>' +
-        '<p class="ap-section-hint ap-pendant-sell-hint">項墜販售方式（二選一）：「僅墜子賣」＝試算不顯示鏈條；「可含鍊」＝必須搭配鏈條。</p>' +
+        '<p class="ap-section-hint ap-pendant-sell-hint">' +
+          '左＝可不含鍊賣：客人可選要不要鍊；右＝含鍊賣：只能含鍊、客人不能選不含鍊。' +
+        '</p>' +
       '</div>'
     );
   }
@@ -1240,9 +1423,10 @@
   function editorFormHtml(product, defaultCategory) {
     var isEdit = !!product;
     var category = (product && product.category) || defaultCategory || 'ring';
+    var chainType = resolveChainType(product && (product.chainType || product.chain_type));
     var variants = (product && product.variants && product.variants.length)
-      ? product.variants.map(function (v) { return variantRowHtml(v, category); }).join('')
-      : variantRowHtml(null, category);
+      ? product.variants.map(function (v) { return variantRowHtml(v, category, chainType); }).join('')
+      : variantRowHtml(null, category, chainType);
 
     var catOpts = categoryOrderList().map(function (c) {
       var sel = category === c ? ' selected' : '';
@@ -1274,6 +1458,7 @@
               '<label class="ap-field-wide"><span>英文描述</span><textarea class="ap-textarea" name="descriptionEn" rows="3" placeholder="Product description…">' + esc(product && product.description_en) + '</textarea></label>' +
               saveForLaterToggleHtml(product) +
               allowsEngravingToggleHtml(product) +
+              allowsFancyShapesToggleHtml(product) +
               pendantSellModeTogglesHtml(product, category) +
             '</div>' +
             '<h4 class="ap-section-title">款式選項</h4>' +
@@ -1282,10 +1467,14 @@
               '<div id="apVariantGrid">' + variants + '</div>' +
             '</div>' +
             '<button type="button" class="btn-sm" id="apAddVariant">+ 新增款式</button>' +
+            '<div id="apChainLengthSection"' + (category === 'chain' ? '' : ' hidden') + '>' +
+              chainTypeSelectorHtml(product, category) +
+              chainLengthWeightsBlockHtml(product && product.lengthWeights, category, chainType) +
+            '</div>' +
             '<h4 class="ap-section-title">商品照片</h4>' +
             '<p class="ap-section-hint">試算頁會依「金屬 × 鑽石顏色」切換商品圖' +
               (category === 'pendant' ? '；含鍊預覽沿用項墜金屬色（無需另傳異色鍊圖）' : '') +
-              '。下方已列出所有試算組合；有圖的會預先載入，無圖可直接上傳取代預設素材。</p>' +
+              '。請只上傳此商品的照片；用「+ 新增圖片選項」加其他金屬×鑽石組合。不會自動填入其他圖。</p>' +
             '<div class="ap-image-slots" id="apImageSlots">' + imageSlotsHtml(product && product.images, category) + '</div>' +
             '<button type="button" class="btn-sm" id="apAddImageSlot">+ 新增圖片選項</button>' +
             '<div class="ap-form-actions ap-editor-actions">' +
@@ -1298,6 +1487,25 @@
     );
   }
 
+  function bindPendantSellModeSwitch(form) {
+    var dual = document.getElementById('apSellModeDual');
+    var input = form && form.querySelector('[name="sellWithChain"]');
+    if (!dual || !input) return;
+
+    function sync() {
+      dual.classList.toggle('is-chain', !!input.checked);
+    }
+
+    input.addEventListener('change', sync);
+    dual.querySelectorAll('.ap-sell-mode-side').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        input.checked = btn.getAttribute('data-side') === 'chain';
+        sync();
+      });
+    });
+    sync();
+  }
+
   function bindEditorEvents(product) {
     var form = document.getElementById('apProductForm');
     var grid = document.getElementById('apVariantGrid');
@@ -1305,10 +1513,28 @@
 
     document.getElementById('apEditorBack')?.addEventListener('click', closeEditor);
     document.getElementById('apEditorCancel')?.addEventListener('click', closeEditor);
+    bindPendantSellModeSwitch(form);
 
     document.getElementById('apAddVariant')?.addEventListener('click', function () {
-      grid.insertAdjacentHTML('beforeend', variantRowHtml(null, catSel.value));
+      grid.insertAdjacentHTML('beforeend', variantRowHtml(null, catSel.value, getFormChainType(form)));
       bindRemoveRows();
+    });
+
+    document.getElementById('apFillChainLengthDefaults')?.addEventListener('click', function () {
+      fillChainLengthDefaults(form);
+    });
+
+    rebindChainLengthGrid(form);
+
+    document.getElementById('apChainType')?.addEventListener('change', function () {
+      refreshChainLengthGrid(form, catSel.value, getFormChainType(form));
+    });
+
+    catSel?.addEventListener('change', function () {
+      toggleChainLengthSection(form, catSel.value);
+      if (catSel.value === 'chain') {
+        refreshChainLengthGrid(form, 'chain', getFormChainType(form));
+      }
     });
 
     function bindRemoveRows() {
@@ -1377,27 +1603,11 @@
       if (hint) {
         hint.textContent = '試算頁會依「金屬 × 鑽石顏色」切換商品圖'
           + (cat === 'pendant' ? '；含鍊預覽沿用項墜金屬色（無需另傳異色鍊圖）' : '')
-          + '。下方已列出所有試算組合；有圖的會預先載入，無圖可直接上傳取代預設素材。';
+          + '。請只上傳此商品的照片；用「+ 新增圖片選項」加其他金屬×鑽石組合。不會自動填入其他圖。';
       }
       var sellModes = document.getElementById('apPendantSellModes');
       if (sellModes) sellModes.hidden = cat !== 'pendant';
     });
-
-    var sellModeHost = document.getElementById('apPendantSellModes');
-    if (sellModeHost) {
-      sellModeHost.addEventListener('change', function (e) {
-        if (e.target && e.target.name === 'pendantSellModeChain') syncPendantSellModeUi(sellModeHost);
-      });
-      sellModeHost.addEventListener('click', function (e) {
-        var sideBtn = e.target.closest('.ap-sell-mode-side');
-        if (!sideBtn || !sellModeHost.contains(sideBtn)) return;
-        var input = sellModeHost.querySelector('[name="pendantSellModeChain"]');
-        if (!input) return;
-        input.checked = sideBtn.getAttribute('data-side') === 'chain';
-        syncPendantSellModeUi(sellModeHost);
-      });
-      syncPendantSellModeUi(sellModeHost);
-    }
 
     form.addEventListener('submit', function (e) {
       e.preventDefault();
@@ -1459,11 +1669,12 @@
       });
     });
     var allowsEngravingInput = form.querySelector('[name="allowsEngraving"]');
-    // Exclusive dual control: unchecked = 僅墜子賣, checked = 可含鍊.
-    var sellModeChainInput = form.querySelector('[name="pendantSellModeChain"]');
-    var withChain = !!(sellModeChainInput && sellModeChainInput.checked);
-    var allowsPendantOnly = category === 'pendant' ? !withChain : true;
-    var allowsWithChain = category === 'pendant' ? withChain : true;
+    var allowsFancyShapesInput = form.querySelector('[name="allowsFancyShapes"]');
+    var sellWithChainInput = form.querySelector('[name="sellWithChain"]');
+    var chainOnly = !!(sellWithChainInput && sellWithChainInput.checked);
+    // Left: both modes → shop shows choose switch. Right: chain-only.
+    var allowsPendantOnly = category === 'pendant' ? !chainOnly : true;
+    var allowsWithChain = true;
     return {
       category: category,
       nameZh: String(fd.get('nameZh') || '').trim(),
@@ -1472,10 +1683,13 @@
       descriptionEn: String(fd.get('descriptionEn') || '').trim(),
       defaultColor: fd.get('defaultColor') || 'white',
       allowsEngraving: !!(allowsEngravingInput && allowsEngravingInput.checked),
+      allowsFancyShapes: !!(allowsFancyShapesInput && allowsFancyShapesInput.checked),
       allowsPendantOnly: allowsPendantOnly,
       allowsWithChain: allowsWithChain,
       isPublished: !isSaveForLater(form),
       variants: variants,
+      lengthWeights: category === 'chain' ? collectChainLengthWeights(form) : null,
+      chainType: category === 'chain' ? getFormChainType(form) : null,
       images: images,
     };
   }
@@ -1495,15 +1709,6 @@
           errEl.hidden = false;
         }
         form.querySelector('[name="nameZh"]')?.focus();
-        return;
-      }
-
-      if (payload.category === 'pendant' && !payload.allowsPendantOnly && !payload.allowsWithChain) {
-        if (errEl) {
-          errEl.textContent = '項墜請選擇「僅墜子賣」或「可含鍊」';
-          errEl.hidden = false;
-        }
-        form.querySelector('[name="pendantSellModeChain"]')?.focus();
         return;
       }
 
@@ -1620,6 +1825,7 @@
       state.categoryLabels = res.categoryLabels || {};
       state.categories = res.categories || [];
       state.categoryOrder = res.categoryOrder || categoryOrderList();
+      state.chainCatalog = res.chainCatalog || state.chainCatalog;
       if (state.categoryOrder.indexOf(state.activeTab.replace('cat-', '')) < 0 && state.categoryOrder.length) {
         state.activeTab = 'cat-' + state.categoryOrder[0];
       }

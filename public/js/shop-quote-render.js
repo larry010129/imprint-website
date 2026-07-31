@@ -145,7 +145,7 @@
     if (config.ringSize) rows.push({ label: '戒圍', value: String(config.ringSize) });
     if (config.lengthCm) rows.push({ label: '長度', value: config.lengthCm + ' cm' });
     if (config.engravingBand) rows.push({ label: '戒圈刻字', value: config.engravingBand });
-    if (config.engravingRemark) rows.push({ label: '備註', value: config.engravingRemark });
+    if (config.engravingRemark) rows.push({ label: '金屬刻字', value: config.engravingRemark });
     if (config.engravingGirdle) rows.push({ label: '腰圍刻字', value: config.engravingGirdle });
     if (config.category === 'pendant' && config.includeChain) {
       var pendantColorVal = colorLabel(config.color || config.defaultColor)

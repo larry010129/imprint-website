@@ -68,9 +68,14 @@ def _startup_seed_mode() -> str:
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    from app.admin_products import ensure_product_sell_mode_columns
+    from app.admin_products import (
+        ensure_product_chain_type_column,
+        ensure_product_length_weights_column,
+        ensure_product_sell_mode_columns,
+        purge_auto_stock_product_images,
+    )
     from app.auth import ensure_google_id_column
-    from app.database import get_connection
+    from app.database import get_connection, get_transaction
     from app.cms_copy_slots import ensure_page_copy_slots_schema, seed_page_copy_slots
     from app.cms_media import ensure_cms_media_schema
     from app.cms_pages import ensure_cms_pages_schema
@@ -92,8 +97,17 @@ async def lifespan(_app: FastAPI):
     try:
         with get_connection() as conn, conn.cursor() as cur:
             ensure_product_sell_mode_columns(cur)
+            ensure_product_length_weights_column(cur)
+            ensure_product_chain_type_column(cur)
     except Exception:
         log.exception("ensure_product_sell_mode_columns failed")
+    try:
+        with get_transaction() as conn, conn.cursor() as cur:
+            removed = purge_auto_stock_product_images(cur)
+            if removed:
+                log.info("purged %s auto shop-product image row(s) from product_images", removed)
+    except Exception:
+        log.exception("purge_auto_stock_product_images failed")
     try:
         with get_connection() as conn, conn.cursor() as cur:
             ensure_membership_schema(cur)
