@@ -7,6 +7,8 @@ from datetime import datetime, timezone
 from typing import Any
 from urllib.parse import unquote
 
+from psycopg.types.json import Jsonb
+
 from app.chain_catalog import (
     DEFAULT_NECKLACE_TYPE,
     VALID_NECKLACE_TYPES,
@@ -72,6 +74,17 @@ def ensure_product_length_weights_column(cur) -> None:
 def ensure_product_chain_type_column(cur) -> None:
     """Add necklace pricing type column if missing (migration 20260731130000)."""
     cur.execute("alter table products add column if not exists chain_type text")
+
+
+def as_jsonb(value: Any) -> Jsonb | None:
+    """Wrap dict/list for jsonb params. Bare dict → ProgrammingError in psycopg3."""
+    if value is None:
+        return None
+    if isinstance(value, Jsonb):
+        return value
+    if isinstance(value, (dict, list)):
+        return Jsonb(value)
+    return None
 
 
 def _parse_length_weights(raw: Any, *, errors: list[str]) -> dict[str, dict[str, float]] | None:
@@ -267,14 +280,19 @@ def validate_product_fields(body: dict | None, *, valid_categories: set[str] | N
         if carat not in valid_carats:
             errors.append(f"invalid variant carat: {carat or '(empty)'}")
             continue
-        try:
-            weight_chin = float(variant.get("weightChin"))
-        except (TypeError, ValueError):
-            errors.append(f"invalid weight for {gold}/{carat}")
-            continue
-        if weight_chin <= 0:
-            errors.append(f"invalid weight for {gold}/{carat}")
-            continue
+        # Chain wax lives in length_weights grid; variant weightChin is synced from 46cm.
+        raw_weight = variant.get("weightChin")
+        if category == "chain" and raw_weight in (None, ""):
+            weight_chin = 0.0
+        else:
+            try:
+                weight_chin = float(raw_weight)
+            except (TypeError, ValueError):
+                errors.append(f"invalid weight for {gold}/{carat}")
+                continue
+            if weight_chin <= 0:
+                errors.append(f"invalid weight for {gold}/{carat}")
+                continue
         manual_price = None
         if variant.get("manualPriceTwd") not in (None, ""):
             try:
@@ -346,6 +364,11 @@ def validate_product_fields(body: dict | None, *, valid_categories: set[str] | N
         if is_published and variants:
             if not chain_type:
                 errors.append("chain type is required")
+            for variant in variants:
+                if float(variant.get("weightChin") or 0) <= 0:
+                    errors.append(
+                        f"chain thickness missing 46cm wax in 長度蠟重: {variant['carat']}"
+                    )
     else:
         cleaned["chainType"] = None
     cleaned["lengthWeights"] = length_weights
@@ -448,6 +471,9 @@ def _format_product_errors(errors: list[str]) -> str:
         if err.startswith("chain length weights required for thickness"):
             parts.append("請填寫鏈條各厚度的長度蠟重：" + err.split(": ", 1)[-1])
             continue
+        if err.startswith("chain thickness missing 46cm wax in 長度蠟重"):
+            parts.append("長度蠟重：請填寫該厚度的 46cm 蠟重（或重填標準表）：" + err.split(": ", 1)[-1])
+            continue
         if err.startswith("invalid chain length weights"):
             parts.append("長度蠟重資料無效")
             continue
@@ -529,7 +555,11 @@ def save_product_children(cur, product_id: str, cleaned: dict) -> None:
 
     cur.execute(
         "update products set length_weights = %s, chain_type = %s where id = %s",
-        (cleaned.get("lengthWeights"), cleaned.get("chainType"), product_id),
+        (
+            as_jsonb(cleaned.get("lengthWeights")),
+            cleaned.get("chainType"),
+            product_id,
+        ),
     )
 
     cur.execute("delete from product_images where product_id = %s", (product_id,))

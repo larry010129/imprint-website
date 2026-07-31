@@ -1,0 +1,36 @@
+INFO:     Will watch for changes in these directories: ['C:\\Users\\yuzi0\\Documents\\Diamond web\\imprint-website']
+INFO:     Uvicorn running on http://127.0.0.1:8080 (Press CTRL+C to quit)
+INFO:     Started reloader process [231468] using WatchFiles
+INFO:     Started server process [253688]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'app\admin_products.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [253688]
+WARNING:  WatchFiles detected changes in 'app\admin_products.py', 'app\controllers\admin_controller.py', 'tests\test_chain_length_weights.py'. Reloading...
+INFO:     Started server process [46380]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'app\chain_catalog.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [46380]
+WARNING:  WatchFiles detected changes in 'app\admin_products.py'. Reloading...
+C:\Users\yuzi0\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\uvicorn\_subprocess.py:84: RuntimeWarning: coroutine 'Server.serve' was never awaited
+  pass
+RuntimeWarning: Enable tracemalloc to get the object allocation traceback
+INFO:     Started server process [24052]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'tests\test_chain_length_weights.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [24052]
+WARNING:  WatchFiles detected changes in 'tests\test_chain_length_weights.py'. Reloading...
+INFO:     Started server process [9156]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.

@@ -15,6 +15,7 @@ from app.admin_dashboard import build_dashboard_csv, build_dashboard_payload, no
 from app.admin_products import (
     CATEGORY_LABELS,
     append_product_image,
+    as_jsonb,
     ensure_product_chain_type_column,
     ensure_product_length_weights_column,
     ensure_product_sell_mode_columns,
@@ -646,10 +647,10 @@ async def products_create(request: Request) -> JSONResponse:
                 category, name_zh, name_en, description_zh, description_en,
                 default_color, allows_engraving, allows_fancy_shapes,
                 allows_pendant_only, allows_with_chain,
-                chain_type,
+                length_weights, chain_type,
                 is_published, first_published_at, created_by_id
             )
-            values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             returning *
             """,
             (
@@ -663,6 +664,7 @@ async def products_create(request: Request) -> JSONResponse:
                 cleaned["allowsFancyShapes"],
                 cleaned["allowsPendantOnly"],
                 cleaned["allowsWithChain"],
+                as_jsonb(cleaned.get("lengthWeights")),
                 cleaned.get("chainType"),
                 cleaned["isPublished"],
                 first_published,
@@ -708,7 +710,7 @@ async def product_update(request: Request) -> JSONResponse:
                 category = %s, name_zh = %s, name_en = %s, description_zh = %s, description_en = %s,
                 default_color = %s, allows_engraving = %s, allows_fancy_shapes = %s,
                 allows_pendant_only = %s, allows_with_chain = %s,
-                chain_type = %s,
+                length_weights = %s, chain_type = %s,
                 is_published = %s, first_published_at = %s, updated_at = now()
             where id = %s
             returning *
@@ -724,6 +726,7 @@ async def product_update(request: Request) -> JSONResponse:
                 cleaned["allowsFancyShapes"],
                 cleaned["allowsPendantOnly"],
                 cleaned["allowsWithChain"],
+                as_jsonb(cleaned.get("lengthWeights")),
                 cleaned.get("chainType"),
                 cleaned["isPublished"],
                 first_published,

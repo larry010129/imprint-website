@@ -322,6 +322,16 @@
     return CHAIN_CARATS;
   }
 
+  function chainLengthsCm() {
+    var fromCat = state.chainCatalog && state.chainCatalog.lengthsCm;
+    if (fromCat && fromCat.length) {
+      return fromCat.map(function (n) { return parseInt(n, 10); }).filter(function (n) {
+        return Number.isFinite(n);
+      });
+    }
+    return CHAIN_LENGTHS_CM.slice();
+  }
+
   function getFormChainType(form) {
     var sel = form && form.querySelector('[name="chainType"]');
     return resolveChainType(sel ? sel.value : null);
@@ -745,11 +755,12 @@
 
   function chainLengthWeightsGridInnerHtml(lengthWeights, chainType) {
     var thicknesses = chainTypeThicknesses(chainType);
+    var lengths = chainLengthsCm();
     var effective = lengthWeights && Object.keys(lengthWeights).length
       ? lengthWeights
       : chainTypeWaxTable(chainType);
     return thicknesses.map(function (thick) {
-      var rows = CHAIN_LENGTHS_CM.map(function (len) {
+      var rows = lengths.map(function (len) {
         var val = chainLengthWaxValue(effective, thick, len);
         return (
           '<div class="ap-chain-length-row" data-thickness="' + esc(thick) + '" data-length="' + len + '">' +
@@ -774,7 +785,7 @@
     if (category !== 'chain') return '';
     return (
       '<h4 class="ap-section-title">長度蠟重（選填）</h4>' +
-      '<p class="ap-section-hint">預設使用 Excel／項鍊類型標準表（抖圓鏈等），商店長度選項會自動出現。僅在要覆蓋標準值時才改下面欄位；留空＝用標準表。</p>' +
+      '<p class="ap-section-hint">在此填寫各厚度×長度的蠟重（錢）。選項來自 Excel 鍊條價格表（抖圓鏈等）。預設帶入標準值；留空格子＝用標準表。款式選項只選金屬／厚度，不再填 46cm 蠟重。</p>' +
       '<div class="ap-chain-length-weights" id="apChainLengthWeights">' +
         chainLengthWeightsGridInnerHtml(lengthWeights, chainType) +
       '</div>' +
@@ -803,8 +814,9 @@
     var chainType = getFormChainType(form);
     var table = chainTypeWaxTable(chainType);
     var thicknesses = chainTypeThicknesses(chainType);
+    var lengths = chainLengthsCm();
     thicknesses.forEach(function (thick) {
-      CHAIN_LENGTHS_CM.forEach(function (len) {
+      lengths.forEach(function (len) {
         var input = host.querySelector(
           'input[name="chainLengthWax"][data-thickness="' + thick + '"][data-length="' + len + '"]'
         );
@@ -813,17 +825,12 @@
         if (wax != null) input.value = wax;
       });
     });
-    syncChainVariantWeightsFromLengthTable(form);
   }
 
   function rebindChainLengthGrid(form) {
     var host = form.querySelector('#apChainLengthWeights');
     if (!host || host.dataset.bound) return;
     host.dataset.bound = '1';
-    host.addEventListener('input', function (e) {
-      if (e.target.name !== 'chainLengthWax') return;
-      syncChainVariantWeightsFromLengthTable(form);
-    });
   }
 
   function refreshChainLengthGrid(form, category, chainType) {
@@ -838,24 +845,67 @@
     rebindChainLengthGrid(form);
   }
 
-  function syncChainVariantWeightsFromLengthTable(form) {
-    form.querySelectorAll('#apVariantGrid .ap-variant-row').forEach(function (row) {
-      var carat = row.querySelector('[name="carat"]')?.value;
-      var weightInput = row.querySelector('[name="weight"]');
-      if (!carat || !weightInput) return;
-      var ref = form.querySelector(
-        '#apChainLengthWeights input[name="chainLengthWax"][data-thickness="' + carat + '"][data-length="46"]'
-      );
-      if (!ref || !String(ref.value || '').trim()) return;
-      weightInput.value = ref.value;
-      updateVariantRowMetalWeight(row);
-    });
-  }
-
   function toggleChainLengthSection(form, category) {
     var section = form.querySelector('#apChainLengthSection');
     if (!section) return;
     section.hidden = category !== 'chain';
+  }
+
+  function variantHeadHtml(category) {
+    if (category === 'chain') {
+      return (
+        '<div class="ap-variant-head">' +
+          '<span>金屬</span><span>厚度</span><span>手動定價</span><span></span>' +
+        '</div>'
+      );
+    }
+    return (
+      '<div class="ap-variant-head">' +
+        '<span>金屬</span><span>克拉</span><span>蠟重（錢）</span><span>預估金重</span>' +
+        '<span>配鑽 cts</span><span>配鑽價錢</span><span>手動定價</span><span></span>' +
+      '</div>'
+    );
+  }
+
+  function variantComboKey(gold, carat) {
+    return String(gold || '') + '|' + String(carat || '');
+  }
+
+  function existingVariantComboKeys(grid) {
+    var keys = {};
+    if (!grid) return keys;
+    grid.querySelectorAll('.ap-variant-row').forEach(function (row) {
+      var gold = row.querySelector('[name="gold"]')?.value;
+      var carat = row.querySelector('[name="carat"]')?.value;
+      if (!gold || !carat) return;
+      keys[variantComboKey(gold, carat)] = true;
+    });
+    return keys;
+  }
+
+  /** All admin metals × chain thicknesses; skip combos already in the grid. */
+  function generateAllChainVariantRows(grid, form) {
+    if (!grid) return 0;
+    var chainType = getFormChainType(form);
+    var thicknesses = chainTypeThicknesses(chainType);
+    var existing = existingVariantComboKeys(grid);
+    var html = [];
+    GOLDS.forEach(function (gold) {
+      thicknesses.forEach(function (thick) {
+        var key = variantComboKey(gold, thick);
+        if (existing[key]) return;
+        existing[key] = true;
+        html.push(variantRowHtml({ gold: gold, carat: thick }, 'chain', chainType));
+      });
+    });
+    if (!html.length) return 0;
+    grid.insertAdjacentHTML('beforeend', html.join(''));
+    return html.length;
+  }
+
+  function syncChainVariantActions(category) {
+    var genBtn = document.getElementById('apGenerateAllChainVariants');
+    if (genBtn) genBtn.hidden = category !== 'chain';
   }
 
   function variantRowHtml(variant, category, chainType) {
@@ -868,25 +918,28 @@
       var sel = variant && String(variant.carat) === c ? ' selected' : '';
       return '<option value="' + c + '"' + sel + '>' + c + '</option>';
     }).join('');
-    var weight = variant ? variant.weight_chin : '';
     var price = variant && variant.manual_price_twd != null ? variant.manual_price_twd : '';
+    if (category === 'chain') {
+      return (
+        '<div class="ap-variant-row">' +
+          '<select name="gold">' + goldOpts + '</select>' +
+          '<select name="carat">' + caratOpts + '</select>' +
+          '<input type="number" name="price" step="1" min="0" placeholder="手動定價" value="' + esc(price) + '">' +
+          '<button type="button" class="ap-remove-row" aria-label="移除">✕</button>' +
+        '</div>'
+      );
+    }
+    var weight = variant ? variant.weight_chin : '';
     var sideStone = variant && variant.side_stone_price_twd != null ? variant.side_stone_price_twd : '';
     var sideStoneCts = variant && variant.side_stone_carat != null ? variant.side_stone_carat : '';
     var gold = (variant && variant.gold) || GOLDS[0];
-    var weightPlaceholder = category === 'chain' ? '46cm 蠟重（錢）' : '蠟重（錢）';
-    var sideStoneCtsCell = category === 'chain'
-      ? '<span class="ap-metal-weight-out" aria-hidden="true">—</span>'
-      : '<input type="number" name="sideStoneCarat" step="0.01" min="0" placeholder="配鑽 cts" value="' + esc(sideStoneCts) + '">';
-    var sideStoneCell = category === 'chain'
-      ? '<span class="ap-metal-weight-out" aria-hidden="true">—</span>'
-      : '<input type="number" name="sideStonePrice" step="1" min="0" placeholder="配鑽價錢" value="' + esc(sideStone) + '">';
     return '<div class="ap-variant-row">' +
       '<select name="gold">' + goldOpts + '</select>' +
       '<select name="carat">' + caratOpts + '</select>' +
-      '<input type="number" name="weight" step="0.0001" min="0.0001" placeholder="' + weightPlaceholder + '" value="' + esc(weight) + '">' +
+      '<input type="number" name="weight" step="0.0001" min="0.0001" placeholder="蠟重（錢）" value="' + esc(weight) + '">' +
       '<output class="ap-metal-weight-out" name="metalWeight">' + metalWeightLabel(weight, gold) + '</output>' +
-      sideStoneCtsCell +
-      sideStoneCell +
+      '<input type="number" name="sideStoneCarat" step="0.01" min="0" placeholder="配鑽 cts" value="' + esc(sideStoneCts) + '">' +
+      '<input type="number" name="sideStonePrice" step="1" min="0" placeholder="配鑽價錢" value="' + esc(sideStone) + '">' +
       '<input type="number" name="price" step="1" min="0" placeholder="手動定價" value="' + esc(price) + '">' +
       '<button type="button" class="ap-remove-row" aria-label="移除">✕</button></div>';
   }
@@ -1462,11 +1515,16 @@
               pendantSellModeTogglesHtml(product, category) +
             '</div>' +
             '<h4 class="ap-section-title">款式選項</h4>' +
-            '<div class="ap-variant-block">' +
-              '<div class="ap-variant-head"><span>金屬</span><span>' + (category === 'chain' ? '厚度' : '克拉') + '</span><span>' + (category === 'chain' ? '46cm 蠟重（錢）' : '蠟重（錢）') + '</span><span>預估金重</span><span>配鑽 cts</span><span>配鑽價錢</span><span>手動定價</span><span></span></div>' +
+            '<div class="ap-variant-block' + (category === 'chain' ? ' ap-variant-block--chain' : '') + '">' +
+              variantHeadHtml(category) +
               '<div id="apVariantGrid">' + variants + '</div>' +
             '</div>' +
-            '<button type="button" class="btn-sm" id="apAddVariant">+ 新增款式</button>' +
+            '<div class="ap-variant-actions">' +
+              '<button type="button" class="btn-sm" id="apAddVariant">+ 新增款式</button>' +
+              '<button type="button" class="btn-sm" id="apGenerateAllChainVariants"' +
+                (category === 'chain' ? '' : ' hidden') +
+                '>一鍵產生全部款式</button>' +
+            '</div>' +
             '<div id="apChainLengthSection"' + (category === 'chain' ? '' : ' hidden') + '>' +
               chainTypeSelectorHtml(product, category) +
               chainLengthWeightsBlockHtml(product && product.lengthWeights, category, chainType) +
@@ -1520,6 +1578,13 @@
       bindRemoveRows();
     });
 
+    document.getElementById('apGenerateAllChainVariants')?.addEventListener('click', function () {
+      if (catSel.value !== 'chain') return;
+      var added = generateAllChainVariantRows(grid, form);
+      bindRemoveRows();
+      if (!added) alert('全部金屬 × 厚度組合已存在，無需再產生');
+    });
+
     document.getElementById('apFillChainLengthDefaults')?.addEventListener('click', function () {
       fillChainLengthDefaults(form);
     });
@@ -1532,6 +1597,7 @@
 
     catSel?.addEventListener('change', function () {
       toggleChainLengthSection(form, catSel.value);
+      syncChainVariantActions(catSel.value);
       if (catSel.value === 'chain') {
         refreshChainLengthGrid(form, 'chain', getFormChainType(form));
       }
@@ -1575,15 +1641,29 @@
     });
 
     catSel?.addEventListener('change', function () {
-      grid.querySelectorAll('.ap-variant-row select[name="carat"]').forEach(function (sel) {
-        var prev = sel.value;
-        var opts = caratsFor(catSel.value);
-        sel.innerHTML = opts.map(function (c) {
-          return '<option value="' + c + '">' + c + '</option>';
-        }).join('');
-        if (opts.indexOf(prev) >= 0) sel.value = prev;
-      });
       var cat = catSel.value;
+      var block = form.querySelector('.ap-variant-block');
+      if (block) {
+        block.classList.toggle('ap-variant-block--chain', cat === 'chain');
+        var head = block.querySelector('.ap-variant-head');
+        if (head) head.outerHTML = variantHeadHtml(cat);
+      }
+      var preserved = [];
+      grid.querySelectorAll('.ap-variant-row').forEach(function (row) {
+        preserved.push({
+          gold: row.querySelector('[name="gold"]')?.value,
+          carat: row.querySelector('[name="carat"]')?.value,
+          weight_chin: row.querySelector('[name="weight"]')?.value,
+          manual_price_twd: row.querySelector('[name="price"]')?.value,
+          side_stone_price_twd: row.querySelector('[name="sideStonePrice"]')?.value,
+          side_stone_carat: row.querySelector('[name="sideStoneCarat"]')?.value,
+        });
+      });
+      var chainType = getFormChainType(form);
+      grid.innerHTML = (preserved.length ? preserved : [null]).map(function (v) {
+        return variantRowHtml(v, cat, chainType);
+      }).join('');
+      bindRemoveRows();
       var host = document.getElementById('apImageSlots');
       var hint = form.querySelector('.ap-section-hint');
       if (host) {
@@ -1649,14 +1729,21 @@
       var price = row.querySelector('[name="price"]')?.value;
       var sideStone = row.querySelector('[name="sideStonePrice"]')?.value;
       var sideStoneCts = row.querySelector('[name="sideStoneCarat"]')?.value;
-      if (!gold || !carat || !weight) return;
+      if (!gold || !carat) return;
+      // Chain: wax in 長度蠟重; no 配鑽 / no per-variant 46cm wax field.
+      if (category !== 'chain' && !weight) return;
+      var isChain = category === 'chain';
       variants.push({
         gold: gold,
         carat: carat,
-        weightChin: parseFloat(weight),
+        weightChin: isChain ? null : parseFloat(weight),
         manualPriceTwd: price === '' || price == null ? null : parseFloat(price),
-        sideStonePriceTwd: sideStone === '' || sideStone == null ? null : parseFloat(sideStone),
-        sideStoneCarat: sideStoneCts === '' || sideStoneCts == null ? null : parseFloat(sideStoneCts),
+        sideStonePriceTwd: isChain || sideStone === '' || sideStone == null
+          ? null
+          : parseFloat(sideStone),
+        sideStoneCarat: isChain || sideStoneCts === '' || sideStoneCts == null
+          ? null
+          : parseFloat(sideStoneCts),
       });
     });
     var images = [];

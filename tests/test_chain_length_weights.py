@@ -5,7 +5,9 @@ import subprocess
 from pathlib import Path
 from unittest.mock import MagicMock
 
-from app.admin_products import validate_product_fields
+from psycopg.types.json import Jsonb
+
+from app.admin_products import as_jsonb, save_product_children, validate_product_fields
 from app.pricing import _chain_wax_from_length_weights, _lookup_weight
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -38,6 +40,65 @@ def test_validate_chain_length_weights_round_trip():
     assert cleaned["lengthWeights"]["1.5mm"]["46"] == 0.033
     assert cleaned["lengthWeights"]["1.5mm"]["36"] == 0.099
     assert cleaned["variants"][0]["weightChin"] == 0.033
+
+
+def test_validate_chain_omits_variant_wax_syncs_from_length_table():
+    """款式選項 no longer sends 46cm wax — backend syncs weightChin from 長度蠟重."""
+    body = _chain_publish_body(isPublished=False, images=[])
+    body["variants"] = [{"gold": "18k", "carat": "1.5mm"}]
+    cleaned, err = validate_product_fields(body)
+    assert err is None
+    assert cleaned["variants"][0]["weightChin"] == 0.033
+    assert cleaned["variants"][0]["sideStonePriceTwd"] is None
+    assert cleaned["variants"][0]["sideStoneCarat"] is None
+    assert cleaned["lengthWeights"]["1.5mm"]["36"] == 0.099
+
+
+def test_chain_catalog_admin_exposes_excel_length_options():
+    from app.chain_catalog import chain_catalog_for_admin
+
+    cat = chain_catalog_for_admin()
+    assert cat["lengthsCm"] == [36, 41, 46, 51, 61, 76, 80]
+    douyuan = cat["types"]["douyuan"]
+    assert douyuan["thicknesses"] == ["1.0mm", "1.5mm", "2.0mm", "2.5mm", "3.0mm"]
+    assert douyuan["lengthWeights"]["1.0mm"]["36"] == 0.014
+    assert douyuan["lengthWeights"]["3.0mm"]["80"] == 0.12
+
+
+def test_as_jsonb_wraps_dict_and_list():
+    wrapped = as_jsonb({"1.5mm": {"46": 0.033}})
+    assert isinstance(wrapped, Jsonb)
+    assert wrapped.obj["1.5mm"]["46"] == 0.033
+    assert as_jsonb(None) is None
+    assert isinstance(as_jsonb([1, 2]), Jsonb)
+    assert as_jsonb("nope") is None
+
+
+def test_save_product_children_adapts_length_weights_as_jsonb():
+    """psycopg cannot adapt bare dict for jsonb — must wrap Jsonb (HTTP 500 otherwise)."""
+    cleaned, err = validate_product_fields(
+        _chain_publish_body(isPublished=False, images=[], chainType="douyuan")
+    )
+    assert err is None
+    cur = MagicMock()
+    save_product_children(cur, "product-uuid", cleaned)
+    update_calls = [
+        call
+        for call in cur.execute.call_args_list
+        if call.args and "length_weights" in str(call.args[0])
+    ]
+    assert update_calls, "expected length_weights update"
+    params = update_calls[0].args[1]
+    assert isinstance(params[0], Jsonb)
+    assert params[0].obj["1.5mm"]["46"] == 0.033
+    assert params[1] == "douyuan"
+    assert params[2] == "product-uuid"
+    # No bare dict/list in any SQL param (variants/images are scalars only).
+    for call in cur.execute.call_args_list:
+        if len(call.args) < 2:
+            continue
+        for param in call.args[1]:
+            assert not isinstance(param, (dict, list)), param
 
 
 def test_validate_chain_publish_uses_excel_type_table_when_length_weights_empty():

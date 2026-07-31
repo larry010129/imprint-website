@@ -471,6 +471,12 @@ button:not(.btn-sm):not(.ap-tab-btn):not([data-slot="button-1"]):not([data-granu
   grid-template-columns:minmax(70px,0.8fr) minmax(70px,0.8fr) minmax(96px,1fr) minmax(96px,1fr) minmax(88px,0.9fr) minmax(100px,1fr) minmax(110px,1.1fr) 36px;
   gap:10px;align-items:center;margin-bottom:8px;min-width:min(100%,860px);
 }
+.ap-variant-block--chain .ap-variant-head,
+.ap-variant-block--chain .ap-variant-row{
+  grid-template-columns:minmax(70px,0.8fr) minmax(70px,0.8fr) minmax(110px,1.1fr) 36px;
+  min-width:min(100%,420px);
+}
+.ap-variant-actions{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px;}
 .ap-variant-head{font-size:11px;color:var(--ink-faint);}
 .ap-variant-row input,.ap-variant-row select{
   width:100%;min-width:0;padding:7px 8px;border:1px solid #DDD5CC;border-radius:5px;font-size:13px;box-sizing:border-box;

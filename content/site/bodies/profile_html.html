@@ -1,14 +1,8 @@
 
-<section aria-label="帳戶設定" class="page-section member-app profile-page-shell">
-<div class="container">
-<div class="price-reference member-panel">
-<div class="price-reference-head">
-<p class="eyebrow">ACCOUNT</p>
-<h1 class="price-reference-title">帳戶設定</h1>
-</div>
-<div hx-get="/htmx/profile" hx-swap="innerHTML" hx-trigger="load" id="htmx-profile">
+<section aria-label="帳戶設定" class="account-section" id="view-profile">
+<div class="container account-grid">
+<div class="account-htmx-root" hx-get="/htmx/profile" hx-swap="innerHTML" hx-trigger="load" id="htmx-profile">
 <div aria-busy="true" class="skel-panel"><span class="skel-line skel-line--medium"></span></div>
-</div>
 </div>
 </div>
 </section>

@@ -630,7 +630,7 @@
     "layout": "site",
     "main_class": "",
     "extra_css": [
-      "/static/css/member-app.css?v=3"
+      "/static/css/member-app.css?v=4"
     ],
     "extra_scripts": [],
     "head_extras": []

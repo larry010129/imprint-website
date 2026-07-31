@@ -4,34 +4,52 @@
   <a href="/login.html?next=/profile.html" class="btn btn-mint">會員登入</a>
 </div>
 {% else %}
-{% if saved %}<p class="form-msg is-ok" role="status">已儲存。</p>{% endif %}
-{% if error %}<p class="form-msg is-error" role="alert">{{ error }}</p>{% endif %}
-<form class="login-form"
-  hx-post="/htmx/profile"
-  hx-target="#htmx-profile"
-  hx-swap="innerHTML">
-  <div class="form-field">
-    <label for="fullName">姓名</label>
-    <input id="fullName" name="fullName" value="{{ profile.full_name or '' }}" autocomplete="name">
-  </div>
-  <div class="form-field">
-    <label for="phone">電話</label>
-    <input id="phone" name="phone" type="tel" value="{{ profile.phone or '' }}" autocomplete="tel">
-  </div>
-  <div class="form-field">
-    <label for="shippingPostal">郵遞區號</label>
-    <input id="shippingPostal" name="shippingPostal" value="{{ profile.shipping_postal or '' }}">
-  </div>
-  <div class="form-field">
-    <label for="shippingCity">縣市</label>
-    <input id="shippingCity" name="shippingCity" value="{{ profile.shipping_city or '' }}">
-  </div>
-  <div class="form-field">
-    <label for="shippingAddress">地址</label>
-    <input id="shippingAddress" name="shippingAddress" value="{{ profile.shipping_address or '' }}">
-  </div>
-  <p class="text-faint">Email：{{ user.email }}（無法在此變更）</p>
-  <button type="submit" class="btn btn-dark">儲存</button>
-</form>
-{# ponytail: Google People import + password change deferred; upgrade = wire GSI enrich + /api/auth endpoints into this partial #}
+<div class="account-card-only">
+  <aside class="cfg-summary account-profile-card" aria-label="帳戶設定">
+    <h3>帳戶設定</h3>
+    {% if saved %}<p class="account-profile-msg is-ok" role="status">已儲存。</p>{% endif %}
+    {% if error %}<p class="account-profile-msg is-err" role="alert">{{ error }}</p>{% endif %}
+    <form class="account-profile-form"
+      hx-post="/htmx/profile"
+      hx-target="#htmx-profile"
+      hx-swap="innerHTML"
+      novalidate>
+      <label class="account-field" for="fullName">
+        <span>姓名</span>
+        <input id="fullName" name="fullName" type="text" value="{{ profile.full_name or '' }}" autocomplete="name" required placeholder="請輸入姓名">
+      </label>
+      <label class="account-field" for="phone">
+        <span>聯絡電話</span>
+        <input id="phone" name="phone" type="tel" value="{{ profile.phone or '' }}" autocomplete="tel" required placeholder="請輸入電話">
+      </label>
+      <div class="account-field account-field--readonly">
+        <span>Email</span>
+        <span class="v">{{ user.email or '—' }}</span>
+      </div>
+
+      <p class="account-address-heading">寄送地址</p>
+      <p class="account-address-hint">結帳選宅配時會自動帶入；可留空。</p>
+      <label class="account-field" for="shippingPostal">
+        <span>郵遞區號</span>
+        <input id="shippingPostal" name="shippingPostal" type="text" value="{{ profile.shipping_postal or '' }}" autocomplete="postal-code" inputmode="numeric" placeholder="例：106">
+      </label>
+      <label class="account-field" for="shippingCity">
+        <span>縣市</span>
+        <input id="shippingCity" name="shippingCity" type="text" value="{{ profile.shipping_city or '' }}" autocomplete="address-level1" placeholder="例：台北市大安區">
+      </label>
+      <label class="account-field" for="shippingAddress">
+        <span>詳細地址</span>
+        <input id="shippingAddress" name="shippingAddress" type="text" value="{{ profile.shipping_address or '' }}" autocomplete="street-address" placeholder="路名、巷弄、樓層">
+      </label>
+
+      <button type="submit" class="btn btn-dark account-save-btn">儲存帳戶資料</button>
+    </form>
+    <p class="account-profile-card__footer">
+      <a href="/account.html">返回我的帳戶</a>
+      <span aria-hidden="true">·</span>
+      <a href="/reset-password.html">重設密碼</a>
+    </p>
+  </aside>
+</div>
+{# ponytail: Google People import + city/district selects deferred; upgrade = wire GSI enrich + taiwan-admin-divisions #}
 {% endif %}

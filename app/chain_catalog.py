@@ -36,6 +36,8 @@ NECKLACE_TYPES: dict[str, dict[str, Any]] = {
 
 DEFAULT_NECKLACE_TYPE = "douyuan"
 VALID_NECKLACE_TYPES = frozenset(NECKLACE_TYPES)
+# Length options from 鍊條價格.xlsx (cm). Same across douyuan thicknesses.
+CHAIN_LENGTHS_CM = (36, 41, 46, 51, 61, 76, 80)
 
 
 def necklace_type_thicknesses(chain_type: str | None) -> list[str]:
@@ -64,7 +66,7 @@ def necklace_type_length_weights(chain_type: str | None) -> dict[str, dict[str, 
 
 
 def chain_catalog_for_admin() -> dict[str, Any]:
-    """JSON-safe catalog for admin UI (type selector + 填入標準蠟重表)."""
+    """JSON-safe catalog for admin UI (type selector + 長度蠟重 grid)."""
     types: dict[str, Any] = {}
     for slug, entry in NECKLACE_TYPES.items():
         types[slug] = {
@@ -74,5 +76,6 @@ def chain_catalog_for_admin() -> dict[str, Any]:
         }
     return {
         "defaultType": DEFAULT_NECKLACE_TYPE,
+        "lengthsCm": list(CHAIN_LENGTHS_CM),
         "types": types,
     }
