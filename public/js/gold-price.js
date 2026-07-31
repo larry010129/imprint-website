@@ -3,10 +3,13 @@
   'use strict';
 
   var API_URL = '/api/bot-gold';
-  var BOT_PUBLIC_RECENT = 'https://rate.bot.com.tw/gold/quote/recent';
+  var ALLBEAUTY_PUBLIC = 'https://www.allbeauty.com.tw/m/';
+  var BOT_PUBLIC_RECENT = ALLBEAUTY_PUBLIC; // legacy name; source is Allbeauty
   var CACHE_KEY = 'imprintGoldQuoteCache';
   var CHIN_TO_GRAMS = 3.75;
   var GOLD_UNITS = ['g', 'chin', 'tael'];
+  /** Soft client re-fetch; server GHA + /api/gold-refresh own durable hourly scrape. */
+  var POLL_MS = 60 * 60 * 1000;
 
   var PURITY_LABELS = {
     '9k': '9K 金',
@@ -17,7 +20,8 @@
   };
 
   var SOURCE_PILL = {
-    bot: { cls: 'source-pill--bot', label: '台銀牌價' },
+    allbeauty: { cls: 'source-pill--bot', label: '黃金最新牌價' },
+    bot: { cls: 'source-pill--bot', label: '黃金最新牌價' },
     cached: { cls: 'source-pill--cached', label: '沿用上次牌價' },
     fallback: { cls: 'source-pill--fallback', label: '備援牌價' },
   };
@@ -114,7 +118,7 @@
       })
       .then(function (data) {
         if (data.error || !data.quote || !data.quote.available) {
-          throw new Error(data.error || '無法取得台銀牌價');
+          throw new Error(data.error || '無法取得金價');
         }
         writeCache(data);
         return Object.assign({}, data, { refreshed: true });
@@ -162,7 +166,7 @@
   function refreshMessage(data) {
     if (data.refreshed) return { text: '牌價已更新', ok: true };
     if (data.fromCache || data.fromBootstrap) {
-      return { text: liveReady ? '台銀暫時無回應，顯示備援牌價' : '顯示備援牌價（需 FastAPI 伺服器才能即時抓取）', ok: false };
+      return { text: liveReady ? '金價來源暫時無回應，顯示備援牌價' : '顯示備援牌價（需 FastAPI 伺服器才能即時抓取）', ok: false };
     }
     if (data.fromFallback) return { text: '顯示預設備援牌價', ok: false };
     return { text: '牌價已更新', ok: true };
@@ -216,9 +220,6 @@
       sellEl.dataset.perGram = String(q.sell);
       sellEl.textContent = formatTwd(q.sell * unitFactor());
     }
-
-    var link = document.getElementById('gold-source-link');
-    if (link && q.source_url) link.href = q.source_url;
 
     var updatedEl = document.getElementById('gold-updated-line');
     if (updatedEl) {
@@ -329,6 +330,15 @@
       updateLiveHint(ok);
       fetchGoldQuote().then(applyQuote);
     });
+
+    setInterval(function () {
+      refreshGoldQuote()
+        .then(function (data) {
+          applyQuote(data);
+          return probeLiveEndpoint().then(updateLiveHint);
+        })
+        .catch(function () {});
+    }, POLL_MS);
   }
 
   if (document.readyState === 'loading') {

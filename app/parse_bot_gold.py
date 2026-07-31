@@ -1,22 +1,36 @@
-"""Parse Bank of Taiwan (BOT) 黃金條塊 sell price from HTML."""
+"""Parse Allbeauty (詮美) mobile gold board HTML → retail gold per-gram.
+
+Source: https://www.allbeauty.com.tw/m/  (`#goldprice` table).
+
+Price field choice
+------------------
+Shop pricing uses **黃金條塊 / 售價** (bar gold sell).
+
+Board quotes are 元/錢 (台錢); convert with CHIN_TO_GRAMS (3.75) → TWD/g
+for the rest of the stack.
+"""
 
 from __future__ import annotations
 
 import re
-from typing import Iterable
+from typing import Any
 
 from bs4 import BeautifulSoup, Tag
 
-GOLD_BAR_ANCHOR = "黃金條塊"
-BAR_DERIVED_GRAM_MIN = 3500
-BAR_DERIVED_GRAM_MAX = 5500
+from app.pricing import CHIN_TO_GRAMS
 
-WEIGHT_HEADER_PATTERNS: list[tuple[re.Pattern[str], int]] = [
-    (re.compile(r"1\s*公斤"), 1000),
-    (re.compile(r"500\s*公克"), 500),
-    (re.compile(r"250\s*公克"), 250),
-    (re.compile(r"100\s*公克"), 100),
-]
+BAR_GOLD_LABEL = "黃金條塊"
+PLATINUM_LABEL = "白金 Pt950"
+GOLDPRICE_TABLE_ID = "goldprice"
+
+# Plausible TWD/錢 bands for Taiwan retail boards (guards parse mistakes).
+BAR_GOLD_PER_CHIN_MIN = 8000.0
+BAR_GOLD_PER_CHIN_MAX = 40000.0
+PT950_PER_CHIN_MIN = 2000.0
+PT950_PER_CHIN_MAX = 20000.0
+
+_STAMP_RE = re.compile(r"(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2})(?::(\d{2}))?")
+_AMOUNT_RE = re.compile(r"[\d,]+(?:\.\d+)?")
 
 
 def text_of(el: Tag | None) -> str:
@@ -36,216 +50,140 @@ def parse_twd_amount(text: str | None) -> float | None:
     return value if value == value else None
 
 
-def cell_amount(cell: Tag | None) -> float | None:
-    if cell is None:
+def normalize_stamp(raw: str | None) -> str | None:
+    if not raw:
         return None
-    return parse_twd_amount(text_of(cell))
-
-
-def grams_from_header_text(text: str | None) -> int | None:
-    normalized = re.sub(r"\s+", "", text or "")
-    for pattern, grams in WEIGHT_HEADER_PATTERNS:
-        if pattern.search(text or "") or pattern.search(normalized):
-            return grams
-    return None
-
-
-def is_bar_derived_gram_price(amount: float | None) -> bool:
-    return amount is not None and BAR_DERIVED_GRAM_MIN <= amount <= BAR_DERIVED_GRAM_MAX
-
-
-def parse_bot_datetime(stamp: str | None) -> list[int] | None:
-    if not stamp:
-        return None
-    match = re.search(r"(\d{4})/(\d{2})/(\d{2})\s+(\d{2}):(\d{2})", stamp)
+    match = _STAMP_RE.search(raw)
     if not match:
         return None
-    return [int(match.group(i)) for i in range(1, 6)]
+    y, mo, d, h, mi = (match.group(i) for i in range(1, 6))
+    sec = match.group(6) or "00"
+    return f"{y}-{mo}-{d} {h}:{mi}:{sec}"
 
 
-def extract_page_stamp(soup: BeautifulSoup) -> str | None:
-    body = soup.find("body")
-    text = text_of(body)
-    for pattern in (
-        r"掛牌時間[：:]\s*(\d{4}/\d{2}/\d{2}\s+\d{2}:\d{2})",
-        r"牌價時間[：:]\s*(\d{4}/\d{2}/\d{2}\s+\d{2}:\d{2})",
-    ):
-        match = re.search(pattern, text)
-        if match:
-            return match.group(1).strip()
+def _label_matches(cell_text: str, label: str) -> bool:
+    compact = re.sub(r"\s+", "", cell_text)
+    want = re.sub(r"\s+", "", label)
+    return compact == want or compact.startswith(want)
 
-    time_span = soup.select_one("span.time")
-    if time_span:
-        match = re.search(r"(\d{4}/\d{2}/\d{2}\s+\d{2}:\d{2})", text_of(time_span))
-        if match:
-            return match.group(1)
 
-    time_cell = soup.select_one('td[data-table="牌價時間"]')
-    if time_cell:
-        match = re.search(r"(\d{4}/\d{2}/\d{2}\s+\d{2}:\d{2})", text_of(time_cell))
-        if match:
-            return match.group(1)
+def _row_cells(row: Tag) -> list[Tag]:
+    return row.find_all(["td", "th"], recursive=False) or row.find_all(["td", "th"])
+
+
+def _sell_from_named_row(row: Tag, label: str) -> float | None:
+    cells = _row_cells(row)
+    if len(cells) < 2:
+        return None
+    if not _label_matches(text_of(cells[0]), label):
+        return None
+    return parse_twd_amount(text_of(cells[1]))
+
+
+def _find_goldprice_table(soup: BeautifulSoup) -> Tag | None:
+    table = soup.find("table", id=GOLDPRICE_TABLE_ID)
+    if table is not None:
+        return table
+    for candidate in soup.find_all("table"):
+        blob = text_of(candidate)
+        if BAR_GOLD_LABEL in blob and ("售價" in blob or "回收價" in blob):
+            return candidate
     return None
 
 
-def extract_stamp_from_row(row: Tag) -> str | None:
-    time_cell = row.select_one('td[data-table*="牌價時間"]')
-    if time_cell:
-        match = re.search(r"(\d{4}/\d{2}/\d{2}\s+\d{2}:\d{2})", text_of(time_cell))
-        if match:
-            return match.group(1)
-    match = re.search(r"(\d{4}/\d{2}/\d{2}\s+\d{2}:\d{2})", text_of(row))
-    return match.group(1) if match else None
-
-
-def weight_columns_from_table(table: Tag) -> dict[int, int]:
+def _extract_stamp(table: Tag, soup: BeautifulSoup) -> str | None:
     for row in table.find_all("tr"):
-        cols: dict[int, int] = {}
-        for idx, cell in enumerate(row.find_all(["td", "th"])):
-            grams = grams_from_header_text(text_of(cell))
-            if grams is not None:
-                cols[idx] = grams
-        if cols:
-            return cols
-    return {}
+        stamp = normalize_stamp(text_of(row))
+        if stamp:
+            return stamp
+    return normalize_stamp(text_of(soup.find("body")))
 
 
-PREFERRED_GRAM_ORDER = (100, 250, 500, 1000)
+def _per_chin_in_band(amount: float | None, lo: float, hi: float) -> float | None:
+    if amount is None or not (lo <= amount <= hi):
+        return None
+    return amount
 
 
-def per_gram_from_bar_sell_row(row: Tag, weight_cols: dict[int, int]) -> float | None:
-    cells = row.find_all(["td", "th"])
-    candidates: dict[int, float] = {}
-    for idx, grams in weight_cols.items():
-        if idx >= len(cells):
-            continue
-        amount = cell_amount(cells[idx])
-        if amount is None or amount < 10000:
-            continue
-        per_gram = amount / grams
-        if is_bar_derived_gram_price(per_gram):
-            candidates[grams] = per_gram
-    for grams in PREFERRED_GRAM_ORDER:
-        if grams in candidates:
-            return candidates[grams]
-    return None
-
-
-def is_gold_bar_table(soup: BeautifulSoup, table: Tag) -> bool:
-    for td in table.find_all("td"):
-        if text_of(td) == GOLD_BAR_ANCHOR:
-            return True
-    summary = table.get("summary") or table.get("title") or ""
-    if GOLD_BAR_ANCHOR in summary and "存摺" not in summary:
-        return True
-    return any(label in summary for label in ("黃金條塊歷史牌價", "黃金條塊牌價", "黃金條塊表格"))
-
-
-def find_gold_bar_anchor(soup: BeautifulSoup) -> Tag | None:
-    for td in soup.find_all("td"):
-        if text_of(td) == GOLD_BAR_ANCHOR:
-            return td
-    return None
-
-
-def quotes_from_live_gold_bar_block(soup: BeautifulSoup, page_stamp: str | None) -> list[tuple[float, str | None]]:
-    anchor = find_gold_bar_anchor(soup)
-    if anchor is None:
-        return []
-    table = anchor.find_parent("table")
+def find_allbeauty_retail_prices(html: str) -> dict[str, Any] | None:
+    """Parse `#goldprice` rows. Returns perGram (TWD/g) for 黃金條塊 售價."""
+    if not html or not html.strip():
+        return None
+    soup = BeautifulSoup(html, "html.parser")
+    table = _find_goldprice_table(soup)
     if table is None:
-        return []
+        return None
 
-    weight_cols = weight_columns_from_table(table)
-    if not weight_cols:
-        return []
-
-    anchor_row = anchor.find_parent("tr")
-    quotes: list[tuple[float, str | None]] = []
-    started = anchor_row is None
-
+    bar_chin: float | None = None
+    pt_chin: float | None = None
     for row in table.find_all("tr"):
-        if row is anchor_row:
-            started = True
-        elif not started:
-            continue
+        if bar_chin is None:
+            bar_chin = _per_chin_in_band(
+                _sell_from_named_row(row, BAR_GOLD_LABEL),
+                BAR_GOLD_PER_CHIN_MIN,
+                BAR_GOLD_PER_CHIN_MAX,
+            )
+        if pt_chin is None:
+            pt_chin = _per_chin_in_band(
+                _sell_from_named_row(row, PLATINUM_LABEL),
+                PT950_PER_CHIN_MIN,
+                PT950_PER_CHIN_MAX,
+            )
 
-        row_text = text_of(row)
-        if "轉換" in row_text:
-            continue
-        if "本行賣出" not in row_text and not row.select_one('td[data-table="本行賣出"]'):
-            continue
-
-        per_gram = per_gram_from_bar_sell_row(row, weight_cols)
-        if per_gram is not None:
-            quotes.append((per_gram, page_stamp or extract_page_stamp(soup)))
+    # Broken markup sometimes nests cells without clean <tr>; scan flat tds.
+    if bar_chin is None:
+        cells = table.find_all(["td", "th"])
+        for idx, cell in enumerate(cells):
+            if not _label_matches(text_of(cell), BAR_GOLD_LABEL):
+                continue
+            if idx + 1 >= len(cells):
+                break
+            bar_chin = _per_chin_in_band(
+                parse_twd_amount(text_of(cells[idx + 1])),
+                BAR_GOLD_PER_CHIN_MIN,
+                BAR_GOLD_PER_CHIN_MAX,
+            )
             break
-    return quotes
 
+    if bar_chin is None:
+        return None
 
-def quotes_from_history_tables(soup: BeautifulSoup) -> list[tuple[float, str | None]]:
-    quotes: list[tuple[float, str | None]] = []
-    for table in soup.find_all("table"):
-        summary = table.get("summary") or table.get("title") or ""
-        if not is_gold_bar_table(soup, table):
-            continue
-        if "黃金存摺" in summary and "黃金條塊" not in summary:
-            continue
-
-        weight_cols = weight_columns_from_table(table)
-        if not weight_cols:
-            continue
-
-        for row in table.find_all("tr"):
-            row_text = text_of(row)
-            if "轉換" in row_text:
-                continue
-            stamp = extract_stamp_from_row(row)
-            per_gram = per_gram_from_bar_sell_row(row, weight_cols)
-            if per_gram is None:
-                continue
-            if "本行賣出" in row_text or stamp:
-                quotes.append((per_gram, stamp))
-    return quotes
-
-
-def compare_key(a: list[int], b: list[int]) -> int:
-    for left, right in zip(a, b):
-        if left != right:
-            return left - right
-    return 0
-
-
-def pick_latest_quote(quotes: Iterable[tuple[float, str | None]]) -> tuple[float, str | None] | None:
-    best: tuple[float, str | None] | None = None
-    best_key: list[int] | None = None
-    for sell, stamp in quotes:
-        key = parse_bot_datetime(stamp) or [0, 0, 0, 0, 0]
-        if best is None or compare_key(key, best_key or [0, 0, 0, 0, 0]) >= 0:
-            best = (sell, stamp)
-            best_key = key
-    return best
+    per_gram = bar_chin / CHIN_TO_GRAMS
+    result: dict[str, Any] = {
+        "perGram": per_gram,
+        "perChin": bar_chin,
+        "stamp": _extract_stamp(table, soup),
+        "label": BAR_GOLD_LABEL,
+        "field": "售價",
+    }
+    if pt_chin is not None:
+        result["xptPerGram"] = pt_chin / CHIN_TO_GRAMS
+        result["xptPerChin"] = pt_chin
+    return result
 
 
 def find_gold_bar_prices(html: str) -> dict[str, float | str | None] | None:
-    soup = BeautifulSoup(html, "html.parser")
-    page_stamp = extract_page_stamp(soup)
-    quotes = [
-        *quotes_from_live_gold_bar_block(soup, page_stamp),
-        *quotes_from_history_tables(soup),
-    ]
-    if not quotes:
+    """Backward-compatible entry used by `app.bot_gold` (Allbeauty 條塊 售價)."""
+    parsed = find_allbeauty_retail_prices(html)
+    if not parsed:
         return None
-
-    picked = pick_latest_quote(quotes)
-    if picked is None:
-        return None
-    sell, stamp_raw = picked
-    return {"perGram": sell, "stamp": stamp_raw or page_stamp}
+    out: dict[str, float | str | None] = {
+        "perGram": float(parsed["perGram"]),
+        "stamp": parsed.get("stamp"),
+    }
+    if parsed.get("xptPerGram") is not None:
+        out["xptPerGram"] = float(parsed["xptPerGram"])
+    return out
 
 
 def is_bot_challenge(html: str | None) -> bool:
-    if not html or len(html) < 10000:
+    """True when response looks empty / blocked (not a usable price board)."""
+    if not html or len(html.strip()) < 200:
         return True
     lowered = html.lower()
-    return "challenge validation" in lowered or "<title>challenge" in lowered
+    if "challenge validation" in lowered or "<title>challenge" in lowered:
+        return True
+    if "captcha" in lowered and "allbeauty" not in lowered:
+        return True
+    # Need either table id or bar-gold label; otherwise treat as unusable.
+    return GOLDPRICE_TABLE_ID not in html and BAR_GOLD_LABEL not in html

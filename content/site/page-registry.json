@@ -330,8 +330,8 @@
   {
     "route": "/gold-price.html",
     "template": "pages/gold-price.html",
-    "title": "台銀金價｜黃金條塊牌價－銘印鑽石",
-    "description": "即時台銀黃金條塊本行賣出牌價，9K/14K/18K 成色金價換算，供戒台訂製試算參考。",
+    "title": "黃金牌價｜黃金最新牌價－銘印鑽石",
+    "description": "即時黃金最新牌價，9K/14K/18K 成色金價換算，供戒台訂製試算參考。",
     "canonical_path": "gold-price.html",
     "og_title": null,
     "og_description": null,
@@ -352,7 +352,7 @@
         "src": "/static/js/gold-quote-data.js"
       },
       {
-        "src": "/static/js/gold-price.js?v=15"
+        "src": "/static/js/gold-price.js?v=17"
       }
     ],
     "head_extras": []

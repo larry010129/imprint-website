@@ -9,7 +9,7 @@ FastAPI + Jinja2 SSR + HTMX. One public origin on **Render** (`imprint-api` in `
 | Site + API | `app/`, `main.py`, `content/site/templates/` | Browse `http://127.0.0.1:8080/` — HTML, `/api/...`, `/htmx/...`, `/static` |
 | Admin | `admin.html` | Product/orders UI + `admin-tables` React island |
 | Database | Postgres (Supabase or local) | `backend/schema.sql`, `docs/SUPABASE.md` |
-| Gold quote | `scripts/fetch_gold_quote.py` | GitHub Actions cron (`.github/workflows/update-gold-quote.yml`) |
+| Gold quote | `scripts/fetch_gold_quote.py` + `POST /api/gold-refresh` | GitHub Actions hourly (`.github/workflows/update-gold-quote.yml`; secret `IMPRINT_SITE_URL`) |
 | React | `frontend/` → `public/react/admin-tables.*` | Admin only — `npm run build:frontend` |
 
 See **`docs/ARCHITECTURE.md`** for directory layout.

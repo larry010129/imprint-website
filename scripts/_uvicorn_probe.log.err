@@ -179,3 +179,56 @@ INFO:     Finished server process [155524]
 INFO:     Started server process [1022796]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'scripts\_probe_allbeauty_enc.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [1022796]
+WARNING:  WatchFiles detected changes in 'app\controllers\api_controller.py', 'app\parse_bot_gold.py', 'config\routes.py', 'scripts\_probe_allbeauty_enc.py', 'scripts\fetch_gold_quote.py', 'tests\test_parse_allbeauty_gold.py', 'app\bot_gold.py'. Reloading...
+INFO:     Started server process [269968]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [269968]
+INFO:     Started server process [273124]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'app\parse_bot_gold.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [273124]
+INFO:     Started server process [179992]
+INFO:     Waiting for application startup.
+WARNING:  WatchFiles detected changes in 'tests\test_parse_allbeauty_gold.py'. Reloading...
+INFO:     Application startup complete.
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [179992]
+WARNING:  WatchFiles detected changes in 'app\bot_gold.py'. Reloading...
+Exception ignored while calling deallocator <function BaseEventLoop.__del__ at 0x0000017A1F023CC0>:
+Traceback (most recent call last):
+  File "C:\Users\yuzi0\AppData\Local\Python\pythoncore-3.14-64\Lib\asyncio\base_events.py", line 760, in __del__
+    self.close()
+  File "C:\Users\yuzi0\AppData\Local\Python\pythoncore-3.14-64\Lib\asyncio\selector_events.py", line 104, in close
+    self._close_self_pipe()
+  File "C:\Users\yuzi0\AppData\Local\Python\pythoncore-3.14-64\Lib\asyncio\selector_events.py", line 111, in _close_self_pipe
+    self._remove_reader(self._ssock.fileno())
+AttributeError: '_WindowsSelectorEventLoop' object has no attribute '_ssock'
+C:\Users\yuzi0\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\uvicorn\_subprocess.py:84: RuntimeWarning: coroutine 'Server.serve' was never awaited
+  pass
+RuntimeWarning: Enable tracemalloc to get the object allocation traceback
+INFO:     Started server process [96824]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'config\routes.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [96824]
+INFO:     Started server process [336884]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.

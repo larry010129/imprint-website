@@ -424,7 +424,7 @@ def gold_price() -> dict:
 
 @router.post("/gold-refresh")
 async def gold_refresh() -> dict:
-    """Re-scrape the BOT gold quote and persist it. fetch_bot_gold_quote caches
+    """Re-scrape Allbeauty gold board and persist it. fetch_bot_gold_quote caches
     successful fetches for a few minutes, so this can't hammer the upstream."""
     try:
         payload = await fetch_bot_gold_quote()
@@ -438,19 +438,21 @@ async def gold_refresh() -> dict:
     xpt = float(metals.get("XPT") or FALLBACK_XPT)
     if xau <= 0:
         raise HTTPException(status_code=502, detail="金價資料無效")
+    source = str(quote.get("source") or "allbeauty")
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute(
             """
             insert into gold_price_cache (id, xau_per_gram, xpt_per_gram, xag_per_gram, bot_posted_at, source, fetched_at)
-            values (1, %s, %s, %s, %s, 'bot', now())
+            values (1, %s, %s, %s, %s, %s, now())
             on conflict (id) do update set
               xau_per_gram = excluded.xau_per_gram,
               xpt_per_gram = excluded.xpt_per_gram,
               xag_per_gram = excluded.xag_per_gram,
               bot_posted_at = excluded.bot_posted_at,
+              source = excluded.source,
               fetched_at = now()
             """,
-            (xau, xpt, xag, quote.get("bot_posted_at")),
+            (xau, xpt, xag, quote.get("bot_posted_at"), source),
         )
     return {
         "ok": True,

@@ -2,8 +2,8 @@ name: Update gold quote
 
 on:
   schedule:
-    # 08:00–22:00 Taipei, hourly (UTC 0–14)
-    - cron: '0 0-14 * * *'
+    # Every hour UTC (GitHub may delay schedules by a few minutes)
+    - cron: '0 * * * *'
   workflow_dispatch:
 
 permissions:
@@ -22,13 +22,30 @@ jobs:
       - name: Install Python deps
         run: pip install -r requirements.txt
 
-      - name: Fetch latest BOT gold quote
+      - name: Fetch latest Allbeauty gold quote
         run: python scripts/fetch_gold_quote.py
 
       - name: Commit updated quote files
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/gold-quote.json js/gold-quote-data.js
-          git diff --staged --quiet || git commit -m "chore: update BOT gold quote fallback"
+          git add data/gold-quote.json public/js/gold-quote-data.js
+          git diff --staged --quiet || git commit -m "chore: update Allbeauty gold quote fallback"
           git push
+
+      # Proactively refresh Render Postgres gold_price_cache (no redeploy).
+      # Repo secret IMPRINT_SITE_URL = https://<your-service>.onrender.com
+      - name: Refresh Render gold_price_cache
+        env:
+          SITE_URL: ${{ secrets.IMPRINT_SITE_URL }}
+        run: |
+          if [ -z "$SITE_URL" ]; then
+            echo "IMPRINT_SITE_URL secret not set; skip live /api/gold-refresh"
+            exit 0
+          fi
+          url="${SITE_URL%/}/api/gold-refresh"
+          echo "POST $url"
+          curl -fsS -X POST "$url" \
+            -H "Accept: application/json" \
+            -H "Content-Type: application/json" \
+            --retry 3 --retry-delay 5 --max-time 90
