@@ -1,6 +1,6 @@
 {% extends "layouts/base-auth.html" %}
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/auth.css?v=9">
+<link rel="stylesheet" href="/static/css/auth.css?v=10">
 {% endblock %}
 {% block content %}
 {% from "partials/auth_macros.html" import auth_shell, auth_password_field %}
@@ -14,7 +14,8 @@
     hx-post="/htmx/auth/register"
     hx-target="#auth-form-msg"
     hx-swap="innerHTML"
-    hx-disabled-elt="button[type=submit]">
+    hx-disabled-elt="button[type=submit]"
+    {% if recaptcha_site_key %}data-recaptcha-sitekey="{{ recaptcha_site_key }}" data-recaptcha-action="register"{% endif %}>
     <div class="form-field">
       <input type="text" id="rName" name="fullName" placeholder=" " autocomplete="name" required>
       <label for="rName">姓名</label>
@@ -44,8 +45,9 @@
       <label for="rReferralCode">好友邀請碼（選填）</label>
     </div>
     {% if recaptcha_site_key %}
-    <div class="form-field recaptcha-field" data-auth-recaptcha>
-      <div class="g-recaptcha" id="registerRecaptcha" data-sitekey="{{ recaptcha_site_key }}"></div>
+    <div class="form-field recaptcha-field" data-auth-recaptcha aria-live="polite">
+      <input type="hidden" name="g-recaptcha-response" id="rRecaptchaResponse" value="">
+      <p class="recaptcha-v3-hint">本表單受 Google reCAPTCHA 保護</p>
     </div>
     {% else %}
     <p class="form-msg is-err" role="alert">註冊驗證尚未設定，請稍後再試或聯絡客服。</p>
@@ -89,22 +91,8 @@
 {% endblock %}
 {% block extra_scripts %}
 {% if recaptcha_site_key %}
-<script>
-window.__imprintRecaptchaOnload = function () {
-  var nodes = document.querySelectorAll('.g-recaptcha[data-sitekey]:not([data-recaptcha-rendered])');
-  for (var i = 0; i < nodes.length; i++) {
-    var el = nodes[i];
-    var key = (el.getAttribute('data-sitekey') || '').trim();
-    if (!key || typeof grecaptcha === 'undefined' || typeof grecaptcha.render !== 'function') continue;
-    try {
-      grecaptcha.render(el, { sitekey: key });
-      el.setAttribute('data-recaptcha-rendered', '1');
-    } catch (err) { /* already rendered or API not ready */ }
-  }
-};
-</script>
-<script src="https://www.google.com/recaptcha/api.js?onload=__imprintRecaptchaOnload&render=explicit" async defer></script>
+<script src="https://www.google.com/recaptcha/api.js?render={{ recaptcha_site_key }}" async defer></script>
 {% endif %}
-<script src="/static/js/auth-shell.js?v=7"></script>
+<script src="/static/js/auth-shell.js?v=8"></script>
 <script src="/static/js/register-terms.js?v=1"></script>
 {% endblock %}

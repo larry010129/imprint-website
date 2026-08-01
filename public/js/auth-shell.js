@@ -174,45 +174,38 @@
   }
 
   function getRecaptchaResponse(form) {
-    if (typeof global.grecaptcha !== 'undefined' && typeof global.grecaptcha.getResponse === 'function') {
-      try {
-        var fromApi = global.grecaptcha.getResponse();
-        if (fromApi) return String(fromApi);
-      } catch (err) {
-        /* widget not ready */
-      }
-    }
     var ta = form ? form.querySelector('[name="g-recaptcha-response"]') : null;
     return ta ? String(ta.value || '').trim() : '';
   }
 
-  function resetRecaptcha() {
-    if (typeof global.grecaptcha !== 'undefined' && typeof global.grecaptcha.reset === 'function') {
-      try {
-        global.grecaptcha.reset();
-      } catch (err) {
-        /* ignore */
-      }
-    }
+  function setRecaptchaResponse(form, token) {
+    var ta = form ? form.querySelector('[name="g-recaptcha-response"]') : null;
+    if (ta) ta.value = token || '';
   }
 
-  function renderRecaptchaWidgets(root) {
-    var scope = root || document;
-    if (typeof global.grecaptcha === 'undefined' || typeof global.grecaptcha.render !== 'function') {
-      return;
+  function resetRecaptcha(form) {
+    setRecaptchaResponse(form || document.getElementById('registerForm'), '');
+  }
+
+  function executeRecaptchaV3(form) {
+    var siteKey = form ? String(form.getAttribute('data-recaptcha-sitekey') || '').trim() : '';
+    var action = form ? String(form.getAttribute('data-recaptcha-action') || 'register').trim() : 'register';
+    if (!siteKey) {
+      return Promise.reject(new Error('missing site key'));
     }
-    var nodes = scope.querySelectorAll('.g-recaptcha[data-sitekey]:not([data-recaptcha-rendered])');
-    for (var i = 0; i < nodes.length; i++) {
-      var el = nodes[i];
-      var key = String(el.getAttribute('data-sitekey') || '').trim();
-      if (!key) continue;
-      try {
-        global.grecaptcha.render(el, { sitekey: key });
-        el.setAttribute('data-recaptcha-rendered', '1');
-      } catch (err) {
-        /* already rendered or API still booting */
-      }
+    if (typeof global.grecaptcha === 'undefined' || typeof global.grecaptcha.execute !== 'function') {
+      return Promise.reject(new Error('grecaptcha not loaded'));
     }
+    return new Promise(function (resolve, reject) {
+      global.grecaptcha.ready(function () {
+        global.grecaptcha
+          .execute(siteKey, { action: action || 'register' })
+          .then(function (token) {
+            resolve(token);
+          })
+          .catch(reject);
+      });
+    });
   }
 
   function ensureErrorMessage(wrap) {
@@ -296,7 +289,7 @@
     ) {
       var recaptchaWrap = form.querySelector('[data-auth-recaptcha]');
       setFieldInvalid(recaptchaWrap, errorText);
-      resetRecaptcha();
+      resetRecaptcha(form);
       return;
     }
     if (
@@ -383,11 +376,7 @@
 
     var recaptchaWrap = form.querySelector('[data-auth-recaptcha]');
     if (recaptchaWrap) {
-      if (!getRecaptchaResponse(form)) {
-        fail(recaptchaWrap, '請完成驗證');
-      } else {
-        clearFieldInvalid(recaptchaWrap);
-      }
+      clearFieldInvalid(recaptchaWrap);
     }
 
     var termsInput = form.querySelector('[name="acceptTerms"]');
@@ -553,6 +542,31 @@
       if (result.firstBad && result.firstBad.focus) result.firstBad.focus();
     });
 
+    form.addEventListener('htmx:confirm', function (ev) {
+      if (!form.getAttribute('data-recaptcha-sitekey')) return;
+      var result = validateRegisterForm(form, emailCheck.get(), inviteCheck.get());
+      if (!result.ok) {
+        ev.preventDefault();
+        if (result.firstBad && result.firstBad.focus) result.firstBad.focus();
+        return;
+      }
+      ev.preventDefault();
+      var issueRequest = ev.detail && ev.detail.issueRequest;
+      executeRecaptchaV3(form)
+        .then(function (token) {
+          if (!token) {
+            setFieldInvalid(form.querySelector('[data-auth-recaptcha]'), '請完成驗證');
+            return;
+          }
+          setRecaptchaResponse(form, token);
+          clearFieldInvalid(form.querySelector('[data-auth-recaptcha]'));
+          if (typeof issueRequest === 'function') issueRequest(true);
+        })
+        .catch(function () {
+          setFieldInvalid(form.querySelector('[data-auth-recaptcha]'), '請完成驗證');
+        });
+    });
+
     form.addEventListener('htmx:afterSwap', function () {
       var errorText = extractAuthErrorMessage();
       if (errorText) mapRegisterServerError(errorText, form);
@@ -569,7 +583,7 @@
   global.imprintAuthShell.clearFieldInvalid = clearFieldInvalid;
   global.imprintAuthShell.validateRegisterForm = validateRegisterForm;
   global.imprintAuthShell.mapRegisterServerError = mapRegisterServerError;
-  global.imprintAuthShell.renderRecaptchaWidgets = renderRecaptchaWidgets;
+  global.imprintAuthShell.executeRecaptchaV3 = executeRecaptchaV3;
 
   function init() {
     var container = document.querySelector('[data-auth-container]');
@@ -589,7 +603,6 @@
     initPhoneNumeric(container);
     initPartnerToggle(container);
     initRegisterEmailValidation(container);
-    renderRecaptchaWidgets(container);
   }
 
   if (document.readyState === 'loading') {

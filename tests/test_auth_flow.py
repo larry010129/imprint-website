@@ -84,7 +84,7 @@ def test_verify_recaptcha_true_on_siteverify_success(mock_client_cls, monkeypatc
     monkeypatch.setenv("RECAPTCHA_SECRET_KEY", "secret")
     mock_resp = MagicMock()
     mock_resp.raise_for_status = MagicMock()
-    mock_resp.json.return_value = {"success": True}
+    mock_resp.json.return_value = {"success": True, "score": 0.9, "action": "register"}
     mock_client = MagicMock()
     mock_client.__enter__.return_value = mock_client
     mock_client.__exit__.return_value = None
@@ -114,6 +114,41 @@ def test_verify_recaptcha_false_on_siteverify_failure(mock_client_cls, monkeypat
     mock_client_cls.return_value = mock_client
 
     assert verify_recaptcha("bad-token") is False
+
+
+@patch("app.captcha.httpx.Client")
+def test_verify_recaptcha_false_on_low_score(mock_client_cls, monkeypatch):
+    from app.captcha import verify_recaptcha
+
+    monkeypatch.setenv("RECAPTCHA_SECRET_KEY", "secret")
+    monkeypatch.setenv("RECAPTCHA_MIN_SCORE", "0.5")
+    mock_resp = MagicMock()
+    mock_resp.raise_for_status = MagicMock()
+    mock_resp.json.return_value = {"success": True, "score": 0.1, "action": "register"}
+    mock_client = MagicMock()
+    mock_client.__enter__.return_value = mock_client
+    mock_client.__exit__.return_value = None
+    mock_client.post.return_value = mock_resp
+    mock_client_cls.return_value = mock_client
+
+    assert verify_recaptcha("low-score-token") is False
+
+
+@patch("app.captcha.httpx.Client")
+def test_verify_recaptcha_false_on_wrong_action(mock_client_cls, monkeypatch):
+    from app.captcha import verify_recaptcha
+
+    monkeypatch.setenv("RECAPTCHA_SECRET_KEY", "secret")
+    mock_resp = MagicMock()
+    mock_resp.raise_for_status = MagicMock()
+    mock_resp.json.return_value = {"success": True, "score": 0.9, "action": "login"}
+    mock_client = MagicMock()
+    mock_client.__enter__.return_value = mock_client
+    mock_client.__exit__.return_value = None
+    mock_client.post.return_value = mock_resp
+    mock_client_cls.return_value = mock_client
+
+    assert verify_recaptcha("wrong-action-token") is False
 
 
 def test_captcha_endpoint_removed(client):

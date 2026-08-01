@@ -189,15 +189,16 @@ def test_register_page_includes_validation_assets(client, monkeypatch):
     monkeypatch.setenv("RECAPTCHA_SITE_KEY", "test-recaptcha-site-key")
     resp = client.get("/register.html")
     assert resp.status_code == 200
-    assert "auth-shell.js?v=7" in resp.text
-    assert "auth.css?v=9" in resp.text
+    assert "auth-shell.js?v=8" in resp.text
+    assert "auth.css?v=10" in resp.text
     assert 'id="registerForm"' in resp.text
     assert 'hx-post="/htmx/auth/register"' in resp.text
-    assert "g-recaptcha" in resp.text
-    assert 'data-sitekey="test-recaptcha-site-key"' in resp.text
-    assert "www.google.com/recaptcha/api.js" in resp.text
-    assert "onload=__imprintRecaptchaOnload" in resp.text
-    assert "render=explicit" in resp.text
+    assert 'name="g-recaptcha-response"' in resp.text
+    assert 'data-recaptcha-sitekey="test-recaptcha-site-key"' in resp.text
+    assert "www.google.com/recaptcha/api.js?render=test-recaptcha-site-key" in resp.text
+    assert 'class="g-recaptcha"' not in resp.text
+    assert "onload=__imprintRecaptchaOnload" not in resp.text
+    assert "render=explicit" not in resp.text
     assert 'name="captcha"' not in resp.text
     assert "/api/auth/captcha" not in resp.text
     csp = resp.headers.get("content-security-policy", "")
@@ -210,7 +211,8 @@ def test_register_page_shows_config_message_without_site_key(client, monkeypatch
     resp = client.get("/register.html")
     assert resp.status_code == 200
     assert "註冊驗證尚未設定" in resp.text
-    assert "g-recaptcha" not in resp.text
+    assert "data-recaptcha-sitekey" not in resp.text
+    assert 'name="g-recaptcha-response"' not in resp.text
     assert 'id="registerSubmitBtn"' in resp.text
     assert "disabled" in resp.text
 

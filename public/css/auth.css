@@ -911,24 +911,18 @@
 
 .login-container .recaptcha-field {
   margin: 4px 0 8px;
-  min-height: 78px;
   overflow: visible;
 }
 
-.login-container .recaptcha-field .g-recaptcha {
-  transform-origin: left top;
-  min-height: 78px;
+.login-container .recaptcha-v3-hint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #6b6b6b;
 }
 
-.login-container .recaptcha-field .g-recaptcha iframe {
-  display: block;
-  max-width: 100%;
-}
-
-.login-container .recaptcha-field.invalid .g-recaptcha {
-  outline: 2px solid #c45c5c;
-  outline-offset: 4px;
-  border-radius: 4px;
+.login-container .recaptcha-field.invalid .recaptcha-v3-hint {
+  color: #c45c5c;
 }
 
 @media (max-width: 420px) {

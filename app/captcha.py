@@ -1,4 +1,4 @@
-"""Google reCAPTCHA v2 siteverify helpers for registration."""
+"""Google reCAPTCHA v3 siteverify helpers for registration."""
 
 from __future__ import annotations
 
@@ -16,6 +16,8 @@ log = logging.getLogger(__name__)
 SITEVERIFY_URL = "https://www.google.com/recaptcha/api/siteverify"
 RECAPTCHA_ERROR = "請完成驗證"
 RECAPTCHA_CONFIG_ERROR = "註冊驗證尚未設定，請稍後再試或聯絡客服。"
+RECAPTCHA_ACTION = "register"
+DEFAULT_MIN_SCORE = 0.5
 
 
 def recaptcha_site_key() -> str:
@@ -26,8 +28,23 @@ def recaptcha_secret_key() -> str:
     return os.environ.get("RECAPTCHA_SECRET_KEY", "").strip()
 
 
-def verify_recaptcha(token: str | None, remote_ip: str | None = None) -> bool:
-    """POST token to Google siteverify. Fail closed if secret or token missing."""
+def recaptcha_min_score() -> float:
+    raw = (os.environ.get("RECAPTCHA_MIN_SCORE") or "").strip()
+    if not raw:
+        return DEFAULT_MIN_SCORE
+    try:
+        return max(0.0, min(1.0, float(raw)))
+    except ValueError:
+        return DEFAULT_MIN_SCORE
+
+
+def verify_recaptcha(
+    token: str | None,
+    remote_ip: str | None = None,
+    *,
+    expected_action: str = RECAPTCHA_ACTION,
+) -> bool:
+    """POST token to Google siteverify. Fail closed if secret/token missing or score low."""
     secret = recaptcha_secret_key()
     if not secret:
         log.error("RECAPTCHA_SECRET_KEY is not set — rejecting verification")
@@ -46,7 +63,17 @@ def verify_recaptcha(token: str | None, remote_ip: str | None = None) -> bool:
     except (httpx.HTTPError, ValueError, TypeError):
         log.exception("reCAPTCHA siteverify request failed")
         return False
-    return bool(payload.get("success"))
+    if not payload.get("success"):
+        return False
+    action = str(payload.get("action") or "").strip()
+    if expected_action and action and action != expected_action:
+        log.warning("reCAPTCHA action mismatch: got %r expected %r", action, expected_action)
+        return False
+    try:
+        score = float(payload.get("score") if payload.get("score") is not None else 0.0)
+    except (TypeError, ValueError):
+        return False
+    return score >= recaptcha_min_score()
 
 
 def recaptcha_error_or_none(request: "Request", token: str | None) -> str | None:
