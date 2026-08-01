@@ -32,6 +32,11 @@ window.ImprintMemberId = window.ImprintMemberId || (function () {
   var _allAccounts = [];
   var _query = '';
   var _searchTimer = null;
+  var _membershipEnabled = true;
+
+  function membershipProgramOn() {
+    return _membershipEnabled !== false;
+  }
 
   function esc(s) {
     return window.AdminPanel && window.AdminPanel.escapeHtml
@@ -136,12 +141,14 @@ window.ImprintMemberId = window.ImprintMemberId || (function () {
           '</div>' +
         '</div>' +
         '<div class="adx-col-role">' + roleSelect(account) +
-          '<div class="adx-muted" style="margin-top:6px;font-size:11px;line-height:1.5">' +
-            '<label><input type="checkbox" data-action="set-imprint-invited" data-id="' + esc(account.id) + '"' +
-              (account.imprint_invited ? ' checked' : '') + '> 銘鑽邀請</label><br>' +
-            '<label><input type="checkbox" data-action="set-partner-imprint-invited" data-id="' + esc(account.id) + '"' +
-              (account.partner_imprint_invited ? ' checked' : '') + '> 合作銘鑽邀請</label>' +
-          '</div>' +
+          (membershipProgramOn()
+            ? ('<div class="adx-muted" style="margin-top:6px;font-size:11px;line-height:1.5">' +
+                '<label><input type="checkbox" data-action="set-imprint-invited" data-id="' + esc(account.id) + '"' +
+                  (account.imprint_invited ? ' checked' : '') + '> 銘鑽邀請</label><br>' +
+                '<label><input type="checkbox" data-action="set-partner-imprint-invited" data-id="' + esc(account.id) + '"' +
+                  (account.partner_imprint_invited ? ' checked' : '') + '> 合作銘鑽邀請</label>' +
+              '</div>')
+            : '') +
         '</div>' +
         '<div class="adx-col-status"><span class="adx-chip ' + (active ? 'adx-chip--success' : 'adx-chip--default') + '">' + (active ? '啟用' : '停用') + '</span></div>' +
         '<div class="adx-col-joined adx-muted">' + esc(formatMonth(account.created_at)) + '</div>' +
@@ -152,6 +159,7 @@ window.ImprintMemberId = window.ImprintMemberId || (function () {
           '<div class="adx-actions">' +
             '<button type="button" class="btn-sm' + (active ? ' adx-action--danger' : '') + '" data-action="toggle-active" data-id="' + esc(account.id) + '" data-active="' + (active ? '1' : '0') + '">' + (active ? '停用' : '啟用') + '</button>' +
             '<button type="button" class="btn-sm" data-action="reset-password" data-id="' + esc(account.id) + '">重設</button>' +
+            '<button type="button" class="btn-sm adx-action--danger" data-action="delete-account" data-id="' + esc(account.id) + '" data-email="' + esc(account.email || '') + '" data-orders="' + esc(String(account.order_count || 0)) + '" data-name="' + esc(name) + '">刪除帳號</button>' +
           '</div>' +
         '</div>' +
       '</div>'
@@ -312,6 +320,37 @@ window.ImprintMemberId = window.ImprintMemberId || (function () {
         });
       });
     });
+
+    root.querySelectorAll('[data-action="delete-account"]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        var id = btn.dataset.id;
+        var email = btn.dataset.email || '';
+        var orders = btn.dataset.orders || '0';
+        var label = btn.dataset.name || email || id;
+        if (!confirm('確定刪除帳號「' + label + '」？其 ' + orders + ' 筆訂單將一併刪除，且無法復原。')) return;
+        var typed = prompt('請輸入該帳戶 Email 以確認刪除：\n' + email);
+        if (typed == null) return;
+        if (String(typed).trim().toLowerCase() !== String(email).trim().toLowerCase()) {
+          alert('Email 不符，已取消刪除。');
+          return;
+        }
+        btn.disabled = true;
+        api.admin.accountAction(id, 'delete', { confirmEmail: typed.trim() }).then(function (res) {
+          btn.disabled = false;
+          if (res.error) {
+            var msg = res.error.message || res.error;
+            if (window.showToast) window.showToast('刪除失敗：' + msg, 'error');
+            else alert('刪除失敗：' + msg);
+            return;
+          }
+          _allAccounts = _allAccounts.filter(function (a) { return String(a.id) !== String(id); });
+          updateListOnly();
+          if (window.showToast) window.showToast('已刪除帳號', 'success');
+          else alert('已刪除帳號');
+        });
+      });
+    });
   }
 
   function load(silent, force) {
@@ -320,7 +359,15 @@ window.ImprintMemberId = window.ImprintMemberId || (function () {
     if (!silent) {
       root.innerHTML = window.SkeletonUI ? window.SkeletonUI.accountsShell() : '<p class="adx-loading-inline">載入帳戶中…</p>';
     }
-    api.admin.getAccounts().then(function (res) {
+    var accountsP = api.admin.getAccounts();
+    var membershipP = api.getMembershipConfig
+      ? api.getMembershipConfig()
+      : Promise.resolve({ config: { enabled: true } });
+    Promise.all([accountsP, membershipP]).then(function (results) {
+      var res = results[0] || {};
+      var membershipRes = results[1] || {};
+      var cfg = membershipRes.config || {};
+      _membershipEnabled = !membershipRes.error && cfg.enabled !== false;
       if (res.error) {
         clearPanelBusy();
         root.innerHTML = '<p class="note warn">載入失敗：' + esc(res.error) + '</p>';

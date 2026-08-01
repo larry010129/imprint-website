@@ -14,6 +14,29 @@
   var _cache = null;
   var _cachePromise = null;
   var _resultsById = {};
+  var _membershipEnabled = true;
+  var _membershipPromise = null;
+
+  function membershipProgramOn() {
+    return _membershipEnabled !== false;
+  }
+
+  function ensureMembershipFlag() {
+    if (_membershipPromise) return _membershipPromise;
+    if (!api.getMembershipConfig) {
+      _membershipEnabled = true;
+      return Promise.resolve(true);
+    }
+    _membershipPromise = api.getMembershipConfig().then(function (res) {
+      var cfg = (res && res.config) || {};
+      _membershipEnabled = !(res && res.error) && cfg.enabled !== false;
+      return _membershipEnabled;
+    }).catch(function () {
+      _membershipEnabled = true;
+      return true;
+    });
+    return _membershipPromise;
+  }
 
   function esc(s) {
     return window.AdminPanel && window.AdminPanel.escapeHtml
@@ -199,7 +222,8 @@
       '</div>'
     );
 
-    api.admin.getAccount(accountId).then(function (res) {
+    Promise.all([api.admin.getAccount(accountId), ensureMembershipFlag()]).then(function (results) {
+      var res = results[0] || {};
       if (res.error) {
         window.AdminPanel.openModal(
           '<div class="qr-modal lead-detail-modal" role="dialog" aria-modal="true">' +
@@ -241,10 +265,10 @@
       detailRow('狀態', active ? '啟用' : '停用') +
       detailRow('卡面編號', shortId(account.id)) +
       detailRow('帳號 ID', account.id || '—') +
-      detailRow('推薦碼', account.referral_code || '—') +
-      detailRow('推薦人', account.referred_by_label || account.referred_by || '—') +
-      detailRow('銘鑽邀請', account.imprint_invited ? '是' : '否') +
-      detailRow('合作銘鑽邀請', account.partner_imprint_invited ? '是' : '否') +
+      detailRow('推薦碼', membershipProgramOn() ? (account.referral_code || '—') : null) +
+      detailRow('推薦人', membershipProgramOn() ? (account.referred_by_label || account.referred_by || '—') : null) +
+      detailRow('銘鑽邀請', membershipProgramOn() ? (account.imprint_invited ? '是' : '否') : null) +
+      detailRow('合作銘鑽邀請', membershipProgramOn() ? (account.partner_imprint_invited ? '是' : '否') : null) +
       detailRow('訂單數', String(account.order_count != null ? account.order_count : (orders || []).length)) +
       detailRow('註冊時間', formatDateTime(account.created_at)) +
       detailRow('最近登入', formatDateTime(account.last_login_at)) +

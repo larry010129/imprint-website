@@ -219,7 +219,7 @@
 .adx-col-joined { flex: 0 0 96px; }
 .adx-col-store { flex: 0 0 120px; min-width: 0; }
 .adx-col-orders { flex: 0 0 64px; text-align: center; }
-.adx-col-actions { flex: 0 0 168px; min-width: 168px; }
+.adx-col-actions { flex: 0 0 220px; min-width: 220px; }
 
 .adx-account-actions {
   display: flex;
@@ -231,6 +231,7 @@
 .adx-actions {
   display: flex;
   justify-content: center;
+  flex-wrap: wrap;
   gap: 6px;
 }
 

@@ -172,6 +172,7 @@
     {% endif %}
     <a class="btn btn-line account-member-card__cta" href="/account-security.html">帳戶安全</a>
     <button type="button" class="account-member-card__logout" hx-post="/htmx/logout" hx-swap="none">登出</button>
+    <button type="button" class="account-member-card__delete" data-account-delete-open>刪除帳號</button>
     {% if totp_enabled %}
     <p class="account-member-card__admin">已啟用 Authenticator（可用於重設密碼）</p>
     {% endif %}
@@ -179,6 +180,47 @@
     <p class="account-member-card__admin"><a href="/admin.html">管理後台</a></p>
     {% endif %}
   </div>
+
+  <dialog
+    id="account-delete-dialog"
+    class="member-dialog account-delete-dialog"
+    aria-labelledby="account-delete-title"
+    aria-describedby="account-delete-desc"
+  >
+    <div class="member-dialog__inner">
+      <header class="member-dialog__header">
+        <h2 id="account-delete-title">刪除帳號</h2>
+        <button type="button" class="member-dialog__close" data-account-delete-cancel aria-label="關閉">&times;</button>
+      </header>
+      <form
+        class="account-delete-dialog__body"
+        hx-post="/htmx/account/delete"
+        hx-target="#account-delete-error"
+        hx-swap="innerHTML"
+      >
+        <p id="account-delete-desc" class="account-delete-dialog__warn">
+          刪除後將永久移除帳戶、個人資料與登入狀態，<strong>無法復原</strong>。訂單紀錄可能保留為匿名資料。
+        </p>
+        <label class="account-delete-dialog__label" for="account-delete-email">
+          請輸入您的 Email 以確認
+        </label>
+        <input
+          id="account-delete-email"
+          class="account-delete-dialog__input"
+          type="email"
+          name="confirmEmail"
+          autocomplete="email"
+          required
+          placeholder="{{ user.email or '' }}"
+        >
+        <div id="account-delete-error" aria-live="polite"></div>
+        <div class="account-delete-dialog__actions">
+          <button type="button" class="btn btn-line" data-account-delete-cancel>取消</button>
+          <button type="submit" class="btn account-delete-dialog__confirm">確認刪除</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
 
   {% if program_on %}
   {% include "partials/htmx/membership_ladder.html" %}

@@ -1,4 +1,4 @@
-{% macro auth_shell() %}
+{% macro auth_shell(corner='') %}
 <div class="login-container light" id="authContainer" data-auth-container>
   <canvas class="particles-canvas" aria-hidden="true" data-auth-particles></canvas>
 
@@ -17,6 +17,7 @@
       {{ caller() }}
     </div>
   </div>
+  {% if corner %}{{ corner }}{% endif %}
 </div>
 {% endmacro %}
 

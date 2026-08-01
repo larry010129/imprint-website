@@ -11,6 +11,7 @@ from fastapi import APIRouter, File, Form, HTTPException, Query, Request, Upload
 from fastapi.responses import JSONResponse, Response
 from psycopg.types.json import Jsonb
 
+from app.account_delete import delete_blocked_reason, hard_delete_user
 from app.admin_dashboard import build_dashboard_csv, build_dashboard_payload, normalize_range
 from app.admin_products import (
     CATEGORY_LABELS,
@@ -1194,7 +1195,16 @@ async def account_action(request: Request) -> JSONResponse:
                 (f"login:{email}:%",),
             )
         elif action == "delete":
-            cur.execute("delete from users where id = %s", (account_id,))
+            confirm_email = str(body.get("confirmEmail") or "").strip().lower()
+            if not confirm_email:
+                return JSONResponse(status_code=400, content={"error": "請輸入 Email 以確認刪除"})
+            target_email = str(user.get("email") or "").strip().lower()
+            if confirm_email != target_email:
+                return JSONResponse(status_code=400, content={"error": "Email 不符，請輸入該帳戶的 Email"})
+            blocked = delete_blocked_reason(cur, str(account_id))
+            if blocked:
+                return JSONResponse(status_code=403, content={"error": blocked})
+            hard_delete_user(cur, account_id)
         elif action == "reset-password":
             new_password = body.get("newPassword") or ""
             if len(str(new_password)) < 6:

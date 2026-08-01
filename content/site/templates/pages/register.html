@@ -1,10 +1,15 @@
 {% extends "layouts/base-auth.html" %}
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/auth.css?v=10">
+<link rel="stylesheet" href="/static/css/auth.css?v=11">
 {% endblock %}
 {% block content %}
 {% from "partials/auth_macros.html" import auth_shell, auth_password_field %}
-{% call auth_shell() %}
+{% set recaptcha_corner %}
+{% if recaptcha_site_key %}
+<p class="recaptcha-disclosure">本表單受 reCAPTCHA 保護，適用 Google「<a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">隱私權政策</a>」與「<a href="https://policies.google.com/terms" target="_blank" rel="noopener noreferrer">服務條款</a>」。</p>
+{% endif %}
+{% endset %}
+{% call auth_shell(corner=recaptcha_corner) %}
   <div class="login-header">
     <h1>加入會員</h1>
     <p>註冊會員即可查詢您的訂製進度、保留聯絡資料，讓顧問更快為您服務。</p>
@@ -47,7 +52,6 @@
     {% if recaptcha_site_key %}
     <div class="form-field recaptcha-field" data-auth-recaptcha aria-live="polite">
       <input type="hidden" name="g-recaptcha-response" id="rRecaptchaResponse" value="">
-      <p class="recaptcha-v3-hint">本表單受 Google reCAPTCHA 保護</p>
     </div>
     {% else %}
     <p class="form-msg is-err" role="alert">註冊驗證尚未設定，請稍後再試或聯絡客服。</p>

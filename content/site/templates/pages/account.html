@@ -1,6 +1,6 @@
 {% extends "layouts/base.html" %}
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/member-app.css?v=6">
+<link rel="stylesheet" href="/static/css/member-app.css?v=7">
 {% endblock %}
 {% block extra_scripts %}
 <script>
@@ -62,11 +62,43 @@
     }
   }
 
+  function bindAccountDelete(root) {
+    if (!root) return;
+    var dialog = root.querySelector('#account-delete-dialog');
+    var openBtn = root.querySelector('[data-account-delete-open]');
+    if (!dialog || !openBtn || typeof dialog.showModal !== 'function') return;
+    if (dialog.dataset.bound) return;
+    dialog.dataset.bound = '1';
+
+    function closeDialog() {
+      if (dialog.open) dialog.close();
+      var err = dialog.querySelector('#account-delete-error');
+      if (err) err.innerHTML = '';
+      var input = dialog.querySelector('#account-delete-email');
+      if (input) input.value = '';
+    }
+
+    openBtn.addEventListener('click', function () {
+      if (!dialog.open) dialog.showModal();
+    });
+    dialog.querySelectorAll('[data-account-delete-cancel]').forEach(function (btn) {
+      btn.addEventListener('click', closeDialog);
+    });
+    dialog.addEventListener('cancel', function (e) {
+      e.preventDefault();
+      closeDialog();
+    });
+    dialog.addEventListener('click', function (e) {
+      if (e.target === dialog) closeDialog();
+    });
+  }
+
   document.body.addEventListener('htmx:afterSwap', function (e) {
     var target = e.detail && e.detail.target;
     if (target && target.id === 'htmx-account') {
       bindCopyButtons(target);
       bindOnboardPrompt(target);
+      bindAccountDelete(target);
     }
   });
 })();

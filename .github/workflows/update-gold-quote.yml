@@ -13,9 +13,9 @@ jobs:
   update:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
 
@@ -34,18 +34,66 @@ jobs:
           git push
 
       # Proactively refresh Render Postgres gold_price_cache (no redeploy).
-      # Repo secret IMPRINT_SITE_URL = https://<your-service>.onrender.com
+      # Repo secret IMPRINT_SITE_URL = https://<this-fastapi-service>.onrender.com
+      # Must be the FastAPI service from render.yaml — NOT the Laravel www host,
+      # and NOT a different Render app (e.g. chat RAG) that lacks /api/gold-refresh.
       - name: Refresh Render gold_price_cache
         env:
           SITE_URL: ${{ secrets.IMPRINT_SITE_URL }}
         run: |
-          if [ -z "$SITE_URL" ]; then
+          set -euo pipefail
+          if [ -z "${SITE_URL:-}" ]; then
             echo "IMPRINT_SITE_URL secret not set; skip live /api/gold-refresh"
             exit 0
           fi
-          url="${SITE_URL%/}/api/gold-refresh"
-          echo "POST $url"
-          curl -fsS -X POST "$url" \
+          base="${SITE_URL%/}"
+          health_url="${base}/health"
+          refresh_url="${base}/api/gold-refresh"
+
+          # This app's /health is {"ok":true,"service":"imprint-api"} — not
+          # {"status":"healthy"} (other Render apps use that and lack /api/gold-refresh).
+          echo "Wake/check $health_url"
+          health_ok=0
+          for i in 1 2 3 4 5 6 7 8; do
+            code="$(curl -sS -o /tmp/health.body -w '%{http_code}' --max-time 45 "$health_url" || true)"
+            body="$(cat /tmp/health.body 2>/dev/null || true)"
+            echo "health attempt $i -> HTTP $code"
+            if [ "$code" = "200" ] && echo "$body" | grep -q '"service"[[:space:]]*:[[:space:]]*"imprint-api"'; then
+              health_ok=1
+              break
+            fi
+            sleep 10
+          done
+          if [ "$health_ok" != "1" ]; then
+            echo "::error::IMPRINT_SITE_URL /health is not this FastAPI (need service=imprint-api)."
+            echo "Got HTTP ${code:-?} body: ${body:-<empty>}"
+            echo "Set secret to this repo's Render URL from the dashboard (Blueprint service imprint-api)."
+            echo "Do not use https://www.imprint-diamond.com (Laravel) or unrelated onrender apps."
+            exit 1
+          fi
+
+          if [ ! -f data/gold-quote.json ]; then
+            echo "::error::data/gold-quote.json missing after fetch step"
+            exit 1
+          fi
+
+          echo "POST $refresh_url (push scraped quote JSON)"
+          code="$(curl -sS -o /tmp/refresh.body -w '%{http_code}' \
+            -X POST "$refresh_url" \
             -H "Accept: application/json" \
             -H "Content-Type: application/json" \
-            --retry 3 --retry-delay 5 --max-time 90
+            --data-binary @data/gold-quote.json \
+            --retry 3 --retry-delay 5 --max-time 90 || true)"
+          body="$(cat /tmp/refresh.body 2>/dev/null || true)"
+          echo "refresh -> HTTP $code"
+          echo "$body"
+          case "$code" in
+            200|201) echo "$body" | grep -q '"ok"[[:space:]]*:[[:space:]]*true' || {
+              echo "::error::gold-refresh returned $code without ok:true"
+              exit 1
+            } ;;
+            *)
+              echo "::error::gold-refresh failed with HTTP $code (curl exit 22 was -f on non-2xx)."
+              exit 1
+              ;;
+          esac

@@ -55,10 +55,11 @@ Policies (if using custom RLS): allow `SELECT` for `anon`/`authenticated`; restr
 After bucket + env vars are set, run once:
 
 ```bash
-python scripts/migrate_uploads_to_supabase_storage.py
+python scripts/migrate_uploads_to_supabase_storage.py --dry-run   # preview
+python scripts/migrate_uploads_to_supabase_storage.py             # upload + rewrite DB
 ```
 
-Use `--dry-run` to preview without uploading or updating the database.
+Migrates `/static/uploads/…` **and** DB-referenced `/static/images/…` into the `shop-media` bucket (`site-images/…` for bundled images), then rewrites Postgres URLs. Also uploads leftover files under `public/uploads/` (`--skip-orphans` to skip). If uploads fail with `EntityTooLarge`, raise the bucket file size limit (Dashboard → Storage → shop-media, or `update storage.buckets set file_size_limit = 10485760 where name = 'shop-media'`).
 
 ## 3. Apply schema (empty database)
 

@@ -432,23 +432,26 @@ def gold_price() -> dict:
     }
 
 
-@router.post("/gold-refresh")
-async def gold_refresh() -> dict:
-    """Re-scrape Allbeauty gold board and persist it. fetch_bot_gold_quote caches
-    successful fetches for a few minutes, so this can't hammer the upstream."""
-    try:
-        payload = await fetch_bot_gold_quote()
-    except Exception as err:  # noqa: BLE001
-        log.exception("gold-refresh fetch failed")
-        raise HTTPException(status_code=502, detail="金價暫時無法取得，請稍後再試") from err
+def _quote_fields_from_payload(payload: dict) -> tuple[float, float, float, str | None, str]:
+    """Extract cache columns from fetch_bot_gold_quote / gold-quote.json shape."""
     quote = payload.get("quote") or {}
     metals = payload.get("metals") or {}
     xau = float(quote.get("sell") or metals.get("XAU") or 0)
     xag = float(metals.get("XAG") or FALLBACK_XAG)
     xpt = float(metals.get("XPT") or FALLBACK_XPT)
-    if xau <= 0:
-        raise HTTPException(status_code=502, detail="金價資料無效")
     source = str(quote.get("source") or "allbeauty")
+    stamp = quote.get("bot_posted_at")
+    return xau, xag, xpt, stamp if stamp is None or isinstance(stamp, str) else str(stamp), source
+
+
+def _persist_gold_price_cache(
+    *,
+    xau: float,
+    xag: float,
+    xpt: float,
+    bot_posted_at: str | None,
+    source: str,
+) -> None:
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute(
             """
@@ -462,13 +465,57 @@ async def gold_refresh() -> dict:
               source = excluded.source,
               fetched_at = now()
             """,
-            (xau, xpt, xag, quote.get("bot_posted_at"), source),
+            (xau, xpt, xag, bot_posted_at, source),
         )
+
+
+@router.post("/gold-refresh")
+async def gold_refresh(request: Request) -> dict:
+    """Persist gold_price_cache.
+
+    Prefer an optional JSON body (same shape as ``data/gold-quote.json``) so
+    GitHub Actions can push a quote it already scraped. Empty body keeps the
+    legacy live re-scrape path.
+    """
+    body: dict = {}
+    try:
+        raw = await request.json()
+        if isinstance(raw, dict):
+            body = raw
+    except Exception:  # noqa: BLE001 — empty / non-JSON body = live scrape
+        body = {}
+
+    if body.get("quote") or body.get("metals"):
+        xau, xag, xpt, stamp, source = _quote_fields_from_payload(body)
+        if xau <= 0:
+            raise HTTPException(status_code=400, detail="金價資料無效")
+        _persist_gold_price_cache(
+            xau=xau, xag=xag, xpt=xpt, bot_posted_at=stamp, source=source
+        )
+        return {
+            "ok": True,
+            "xau_per_gram": xau,
+            "xag_per_gram": xag,
+            "bot_posted_at": stamp,
+            "source": source,
+        }
+
+    try:
+        payload = await fetch_bot_gold_quote()
+    except Exception as err:  # noqa: BLE001
+        log.exception("gold-refresh fetch failed")
+        raise HTTPException(status_code=502, detail="金價暫時無法取得，請稍後再試") from err
+    xau, xag, xpt, stamp, source = _quote_fields_from_payload(payload)
+    if xau <= 0:
+        raise HTTPException(status_code=502, detail="金價資料無效")
+    _persist_gold_price_cache(
+        xau=xau, xag=xag, xpt=xpt, bot_posted_at=stamp, source=source
+    )
     return {
         "ok": True,
         "xau_per_gram": xau,
         "xag_per_gram": xag,
-        "bot_posted_at": quote.get("bot_posted_at"),
+        "bot_posted_at": stamp,
     }
 
 

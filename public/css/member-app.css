@@ -1281,6 +1281,87 @@
 .account-member-card__logout:hover {
   color: #111827;
 }
+.account-member-card__delete {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  color: #B5523D;
+  text-align: center;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.account-member-card__delete:hover {
+  color: #8F3F2E;
+}
+.account-delete-dialog {
+  width: min(440px, calc(100vw - 32px));
+}
+.account-delete-dialog__body {
+  padding: 18px 22px 22px;
+}
+.account-delete-dialog__warn {
+  margin: 0 0 16px;
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--ink-soft, #6b6058);
+}
+.account-delete-dialog__warn strong {
+  color: #8F3F2E;
+  font-weight: 600;
+}
+.account-delete-dialog__label {
+  display: block;
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink, #1f1a17);
+}
+.account-delete-dialog__input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid #D6D0C8;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 14px;
+  background: #fff;
+}
+.account-delete-dialog__input:focus {
+  outline: 2px solid rgba(181, 82, 61, 0.35);
+  outline-offset: 1px;
+  border-color: #B5523D;
+}
+.account-delete-dialog__error {
+  margin: 0 0 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #B5523D;
+}
+.account-delete-dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+.account-delete-dialog__confirm {
+  background: #B5523D;
+  color: #fff;
+  border-color: #B5523D;
+}
+.account-delete-dialog__confirm:hover {
+  background: #8F3F2E;
+  border-color: #8F3F2E;
+  color: #fff;
+}
 .account-member-card__admin {
   margin: 0;
   font-size: 13px;

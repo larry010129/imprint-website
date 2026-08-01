@@ -5,7 +5,14 @@ from __future__ import annotations
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, Response
 
-from app.auth import enforce_rate_limit, get_user_id, is_admin
+from app.account_delete import delete_blocked_reason, hard_delete_user
+from app.auth import (
+    clear_pre2fa_cookie,
+    clear_session_cookie,
+    enforce_rate_limit,
+    get_user_id,
+    is_admin,
+)
 from app.controllers.htmx_common import form_bool, html, hx_redirect
 from app.database import get_connection
 from app.membership_config import load_config
@@ -33,6 +40,13 @@ def _format_member_since(value) -> str | None:
         return value.strftime("%Y/%m/%d")
     text = str(value).strip()
     return text[:10].replace("-", "/") if text else None
+
+
+def _delete_error(message: str, status: int = 400) -> HTMLResponse:
+    return HTMLResponse(
+        f'<p class="account-delete-dialog__error" role="alert">{message}</p>',
+        status_code=status,
+    )
 
 
 @router.post("/contact", response_class=HTMLResponse)
@@ -310,6 +324,38 @@ async def profile_save(request: Request) -> Response:
             "onboarding": False,
         },
     )
+
+
+@router.post("/account/delete")
+async def account_delete(request: Request) -> Response:
+    """Hard-delete the authenticated user, clear session, redirect home."""
+    user_id = get_user_id(request)
+    if not user_id:
+        return _delete_error("請先登入。", 401)
+    if not enforce_rate_limit(request, action="account-delete", limit=5, window_seconds=600):
+        return _delete_error("操作過於頻繁，請稍後再試。", 429)
+
+    form = await request.form()
+    confirm_email = str(form.get("confirmEmail") or "").strip().lower()
+    if not confirm_email:
+        return _delete_error("請輸入 Email 以確認刪除。")
+
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute("select id, email from users where id = %s", (user_id,))
+        user = cur.fetchone()
+        if not user:
+            return _delete_error("找不到帳戶。", 404)
+        if confirm_email != str(user.get("email") or "").strip().lower():
+            return _delete_error("Email 不符，請輸入目前帳戶的 Email。")
+        blocked = delete_blocked_reason(cur, user_id)
+        if blocked:
+            return _delete_error(blocked, 403)
+        hard_delete_user(cur, user_id)
+
+    resp = hx_redirect("/")
+    clear_session_cookie(resp, request)
+    clear_pre2fa_cookie(resp, request)
+    return resp
 
 
 @router.get("/account-security", response_class=HTMLResponse)

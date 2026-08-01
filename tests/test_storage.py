@@ -10,7 +10,16 @@ from fastapi import UploadFile
 
 from app.admin_products import normalize_product_image_url
 from app.catalog import build_catalog_product
-from app.controllers.admin_controller import _storage_upload, product_upload
+from app.controllers.admin_controller import (
+    _storage_upload,
+    banner_upload,
+    page_image_upload,
+    product_upload,
+)
+from app.controllers.admin_controller import (
+    testimonial_upload as admin_testimonial_upload,
+)
+from app.controllers.cms_admin_controller import cms_media_upload
 from app.storage import (
     StorageNotConfiguredError,
     StorageUploadError,
@@ -23,6 +32,18 @@ from app.storage import (
 SUPABASE_URL = "https://abc123.supabase.co"
 PUBLIC_PRODUCT = (
     f"{SUPABASE_URL}/storage/v1/object/public/shop-media/products/abc.webp"
+)
+PUBLIC_PAGE_IMAGE = (
+    f"{SUPABASE_URL}/storage/v1/object/public/shop-media/page-images/hero.webp"
+)
+PUBLIC_BANNER = (
+    f"{SUPABASE_URL}/storage/v1/object/public/shop-media/banners/banner.webp"
+)
+PUBLIC_TESTIMONIAL = (
+    f"{SUPABASE_URL}/storage/v1/object/public/shop-media/testimonials/face.webp"
+)
+PUBLIC_CMS_MEDIA = (
+    f"{SUPABASE_URL}/storage/v1/object/public/shop-media/cms-media/block.webp"
 )
 
 
@@ -47,6 +68,18 @@ def test_local_upload_to_object_key():
     assert local_upload_to_object_key("/static/uploads/cms-media/b.png") == (
         "cms-media",
         "b.png",
+    )
+    assert local_upload_to_object_key("/static/uploads/page-images/c.jpg") == (
+        "page-images",
+        "c.jpg",
+    )
+    assert local_upload_to_object_key("/static/uploads/banners/d.webp") == (
+        "banners",
+        "d.webp",
+    )
+    assert local_upload_to_object_key("/static/uploads/testimonials/e.png") == (
+        "testimonials",
+        "e.png",
     )
 
 
@@ -186,6 +219,11 @@ def test_delete_by_url_calls_storage_api():
     assert mock_client.delete.called
 
 
+def _png_upload(name: str = "photo.png") -> UploadFile:
+    png = b"\x89PNG\r\n\x1a\n" + b"\x00" * 32
+    return UploadFile(filename=name, file=BytesIO(png))
+
+
 def test_product_upload_returns_storage_url(monkeypatch):
     import asyncio
 
@@ -198,12 +236,137 @@ def test_product_upload_returns_storage_url(monkeypatch):
         lambda *_a, **_k: (PUBLIC_PRODUCT, None),
     )
 
-    png = b"\x89PNG\r\n\x1a\n" + b"\x00" * 32
-    upload = UploadFile(filename="photo.png", file=BytesIO(png))
-    request = MagicMock()
-
     resp = asyncio.run(
-        product_upload(request, file=upload, product_id=None, color=None)
+        product_upload(MagicMock(), file=_png_upload(), product_id=None, color=None)
     )
+    assert PUBLIC_PRODUCT in resp.body.decode()
+
+
+def test_page_image_upload_returns_storage_url(monkeypatch):
+    import asyncio
+
+    monkeypatch.setattr(
+        "app.controllers.admin_controller._require_admin",
+        lambda _req: "admin-user",
+    )
+    kinds: list[str] = []
+
+    def fake_upload(kind: str, name: str, data: bytes, ext: str):
+        kinds.append(kind)
+        return PUBLIC_PAGE_IMAGE, None
+
+    monkeypatch.setattr(
+        "app.controllers.admin_controller._storage_upload",
+        fake_upload,
+    )
+    monkeypatch.setattr(
+        "app.controllers.web_controller.clear_page_image_cache",
+        lambda: None,
+    )
+
+    resp = asyncio.run(page_image_upload(MagicMock(), file=_png_upload()))
+    assert resp.status_code == 200
+    assert PUBLIC_PAGE_IMAGE in resp.body.decode()
+    assert kinds == ["page-images"]
+
+
+def test_page_image_upload_fails_when_storage_missing(monkeypatch):
+    import asyncio
+
+    monkeypatch.setattr(
+        "app.controllers.admin_controller._require_admin",
+        lambda _req: "admin-user",
+    )
+    monkeypatch.setattr(
+        "app.controllers.admin_controller._storage_upload",
+        lambda *_a, **_k: (None, "Supabase Storage 未設定：請設定 SUPABASE_URL"),
+    )
+
+    resp = asyncio.run(page_image_upload(MagicMock(), file=_png_upload()))
+    assert resp.status_code == 503
+    assert "Supabase Storage" in resp.body.decode()
+    assert "/static/uploads/" not in resp.body.decode()
+
+
+def test_banner_and_testimonial_upload_use_storage(monkeypatch):
+    import asyncio
+
+    monkeypatch.setattr(
+        "app.controllers.admin_controller._require_admin",
+        lambda _req: "admin-user",
+    )
+    mapping = {
+        "banners": PUBLIC_BANNER,
+        "testimonials": PUBLIC_TESTIMONIAL,
+    }
+
+    def fake_upload(kind: str, name: str, data: bytes, ext: str):
+        return mapping[kind], None
+
+    monkeypatch.setattr(
+        "app.controllers.admin_controller._storage_upload",
+        fake_upload,
+    )
+
+    banner_resp = asyncio.run(banner_upload(MagicMock(), file=_png_upload()))
+    testimonial_resp = asyncio.run(
+        admin_testimonial_upload(MagicMock(), file=_png_upload())
+    )
+    assert PUBLIC_BANNER in banner_resp.body.decode()
+    assert PUBLIC_TESTIMONIAL in testimonial_resp.body.decode()
+
+
+def test_cms_media_upload_returns_storage_url(monkeypatch):
+    import asyncio
+
+    monkeypatch.setattr(
+        "app.controllers.cms_admin_controller._require_admin",
+        lambda _req: "admin-user",
+    )
+    kinds: list[str] = []
+
+    def fake_upload(kind: str, name: str, data: bytes, ext: str):
+        kinds.append(kind)
+        return PUBLIC_CMS_MEDIA, None
+
+    monkeypatch.setattr(
+        "app.controllers.cms_admin_controller._storage_upload",
+        fake_upload,
+    )
+    monkeypatch.setattr(
+        "app.controllers.cms_admin_controller._actor_email",
+        lambda _uid: "admin@example.com",
+    )
+    monkeypatch.setattr(
+        "app.controllers.cms_admin_controller.log_admin_action",
+        lambda *_a, **_k: None,
+    )
+
+    class _Conn:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def cursor(self):
+            return self
+
+    monkeypatch.setattr(
+        "app.controllers.cms_admin_controller.get_connection",
+        lambda: _Conn(),
+    )
+    monkeypatch.setattr(
+        "app.controllers.cms_admin_controller._ensure_all",
+        lambda _cur: None,
+    )
+    monkeypatch.setattr(
+        "app.cms_media.create_media",
+        lambda _cur, url, filename: {"id": "m1", "url": url, "filename": filename},
+    )
+
+    resp = asyncio.run(cms_media_upload(MagicMock(), file=_png_upload()))
+    assert resp.status_code == 200
     body = resp.body.decode()
-    assert PUBLIC_PRODUCT in body
+    assert PUBLIC_CMS_MEDIA in body
+    assert kinds == ["cms-media"]

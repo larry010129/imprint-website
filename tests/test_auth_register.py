@@ -190,7 +190,7 @@ def test_register_page_includes_validation_assets(client, monkeypatch):
     resp = client.get("/register.html")
     assert resp.status_code == 200
     assert "auth-shell.js?v=8" in resp.text
-    assert "auth.css?v=10" in resp.text
+    assert "auth.css?v=11" in resp.text
     assert 'id="registerForm"' in resp.text
     assert 'hx-post="/htmx/auth/register"' in resp.text
     assert 'name="g-recaptcha-response"' in resp.text
@@ -201,6 +201,11 @@ def test_register_page_includes_validation_assets(client, monkeypatch):
     assert "render=explicit" not in resp.text
     assert 'name="captcha"' not in resp.text
     assert "/api/auth/captcha" not in resp.text
+    assert "recaptcha-v3-hint" not in resp.text
+    assert 'class="recaptcha-disclosure"' in resp.text
+    assert "https://policies.google.com/privacy" in resp.text
+    assert "https://policies.google.com/terms" in resp.text
+    assert "本表單受 reCAPTCHA 保護" in resp.text
     csp = resp.headers.get("content-security-policy", "")
     assert "https://www.google.com" in csp
     assert "https://www.gstatic.com" in csp
