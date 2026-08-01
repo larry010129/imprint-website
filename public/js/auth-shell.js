@@ -196,6 +196,25 @@
     }
   }
 
+  function renderRecaptchaWidgets(root) {
+    var scope = root || document;
+    if (typeof global.grecaptcha === 'undefined' || typeof global.grecaptcha.render !== 'function') {
+      return;
+    }
+    var nodes = scope.querySelectorAll('.g-recaptcha[data-sitekey]:not([data-recaptcha-rendered])');
+    for (var i = 0; i < nodes.length; i++) {
+      var el = nodes[i];
+      var key = String(el.getAttribute('data-sitekey') || '').trim();
+      if (!key) continue;
+      try {
+        global.grecaptcha.render(el, { sitekey: key });
+        el.setAttribute('data-recaptcha-rendered', '1');
+      } catch (err) {
+        /* already rendered or API still booting */
+      }
+    }
+  }
+
   function ensureErrorMessage(wrap) {
     var msgEl = wrap.querySelector('.error-message');
     if (msgEl) return msgEl;
@@ -550,6 +569,7 @@
   global.imprintAuthShell.clearFieldInvalid = clearFieldInvalid;
   global.imprintAuthShell.validateRegisterForm = validateRegisterForm;
   global.imprintAuthShell.mapRegisterServerError = mapRegisterServerError;
+  global.imprintAuthShell.renderRecaptchaWidgets = renderRecaptchaWidgets;
 
   function init() {
     var container = document.querySelector('[data-auth-container]');
@@ -569,6 +589,7 @@
     initPhoneNumeric(container);
     initPartnerToggle(container);
     initRegisterEmailValidation(container);
+    renderRecaptchaWidgets(container);
   }
 
   if (document.readyState === 'loading') {

@@ -155,7 +155,8 @@
   z-index: 2;
   width: 100%;
   max-width: 420px;
-  overflow: hidden;
+  /* visible so reCAPTCHA checkbox / challenge iframe is not clipped */
+  overflow: visible;
   background: var(--login-card);
   border: 1px solid var(--login-mint-border);
   border-radius: 16px;
@@ -910,10 +911,18 @@
 
 .login-container .recaptcha-field {
   margin: 4px 0 8px;
+  min-height: 78px;
+  overflow: visible;
 }
 
 .login-container .recaptcha-field .g-recaptcha {
   transform-origin: left top;
+  min-height: 78px;
+}
+
+.login-container .recaptcha-field .g-recaptcha iframe {
+  display: block;
+  max-width: 100%;
 }
 
 .login-container .recaptcha-field.invalid .g-recaptcha {
