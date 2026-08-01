@@ -934,6 +934,77 @@ function finishShopBoot() {
   document.getElementById('shop-price-panel')?.classList.remove('is-loading-prices');
 }
 
+function productHasFullDetail(product) {
+  return !!(product && product.weights != null && typeof product.weights === 'object');
+}
+
+function findProductCategory(productId) {
+  if (productId == null) return null;
+  const id = String(productId);
+  for (const cat of Object.keys(catalog)) {
+    if ((catalog[cat] || []).some((p) => String(p.id) === id)) return cat;
+  }
+  return null;
+}
+
+function mergeProductIntoCatalog(category, product) {
+  if (!category || !product?.id) return;
+  const list = catalog[category] || (catalog[category] = []);
+  const idx = list.findIndex((p) => String(p.id) === String(product.id));
+  if (idx >= 0) list[idx] = product;
+  else list.push(product);
+}
+
+async function ensureProductDetail(productId, category) {
+  if (!productId || !shopUsesApi() || !shopApiConfigured()) return null;
+  if (String(productId).startsWith('diamond-')) return getProduct(category || 'diamond', productId);
+  const cat = category || state.category || findProductCategory(productId);
+  const existing = cat ? getProduct(cat, productId) : null;
+  if (existing && productHasFullDetail(existing)) return existing;
+
+  const params = new URLSearchParams();
+  if (window.shopConfig?.preview) params.set('preview', '1');
+  const qs = params.toString() ? `?${params.toString()}` : '';
+  try {
+    const { res, data } = await shopApiFetch(
+      `/api/catalog/product/${encodeURIComponent(productId)}${qs}`,
+    );
+    if (!res.ok) throw new Error(`API ${res.status}`);
+    const full = data?.product;
+    if (!full?.id) return existing;
+    const targetCat = cat || findProductCategory(full.id) || state.category;
+    if (targetCat) mergeProductIntoCatalog(targetCat, full);
+    return full;
+  } catch (err) {
+    console.error('failed to load product detail', err);
+    return existing;
+  }
+}
+
+async function ensureCategoryCatalog(category) {
+  if (!category || category === 'diamond' || !shopUsesApi() || !shopApiConfigured()) return;
+  if ((catalog[category] || []).length) return;
+  const params = new URLSearchParams({ category });
+  if (window.shopConfig?.preview) params.set('preview', '1');
+  try {
+    const { res, data } = await shopApiFetch(`/api/catalog?${params.toString()}`);
+    if (!res.ok) throw new Error(`API ${res.status}`);
+    const incoming = data.categories?.[category] || [];
+    if (incoming.length) catalog[category] = incoming;
+    if (data.categoryMeta) {
+      window._catalogCategoryMeta = {
+        ...(window._catalogCategoryMeta || {}),
+        ...data.categoryMeta,
+      };
+    }
+    if (data.categoryOrder?.length && !window._catalogCategoryOrder?.length) {
+      window._catalogCategoryOrder = data.categoryOrder;
+    }
+  } catch (err) {
+    console.error('failed to load category catalog', err);
+  }
+}
+
 async function loadCatalog() {
   const grid = document.querySelector('.catalog-grid');
   renderCatalogSkeleton();
@@ -950,6 +1021,7 @@ async function loadCatalog() {
       return;
     }
     if (!shopApiConfigured()) throw new Error('API_NOT_CONFIGURED');
+    // Lite list by default — full weights/images load per style via ensureProductDetail.
     const catalogPath = window.shopConfig?.preview ? '/api/catalog?preview=1' : '/api/catalog';
     const { res, data } = await shopApiFetch(catalogPath);
     if (!res.ok) throw new Error(`API ${res.status}`);
@@ -1297,7 +1369,7 @@ function updateDiamondWizardChrome() {
   }
 }
 
-function enterDiamondLooseProduct() {
+async function enterDiamondLooseProduct() {
   const typeId = diamondLooseProductId();
   if (!typeId) {
     setShopView('styles');
@@ -1305,7 +1377,7 @@ function enterDiamondLooseProduct() {
     updateSummary();
     return;
   }
-  selectType(typeId);
+  await selectType(typeId);
 }
 
 const WIZARD_GUIDE = {
@@ -1789,7 +1861,10 @@ function lookupManualPrice(category, type, gold, carat) {
 
 /** Step 2 style grid — always white-diamond preview; fancy color only on step 3 gallery. */
 function styleGridImageUrl(product) {
-  return productImageUrl(product, product?.defaultColor || 'white', 'white');
+  const fromImages = productImageUrl(product, product?.defaultColor || 'white', 'white');
+  if (fromImages) return fromImages;
+  if (product?.thumbUrl && isUsableCatalogImageUrl(product.thumbUrl)) return product.thumbUrl;
+  return '';
 }
 
 function imageUrl(category, type, metalColor, diamondColor) {
@@ -1996,7 +2071,10 @@ function collectCategoryCarats(category) {
 function collectCategoryMetals(category) {
   const set = new Set();
   productsFor(category).forEach((product) => {
-    productGolds(category, product).forEach((g) => set.add(g));
+    const golds = productHasAdminVariants(product)
+      ? productGolds(category, product)
+      : (product.golds || []);
+    golds.forEach((g) => set.add(g));
   });
   return sortGolds([...set]);
 }
@@ -3607,7 +3685,7 @@ function syncAttachedChainFromPendant() {
   state.chainColor = attachedChainColor(state.chainGold, state.color || previewColor());
 }
 
-function updateChainOptions() {
+async function updateChainOptions() {
   const pendantStep = document.getElementById('pendant-chain-step');
   const pendantGuideStep = document.getElementById('pendant-chain-guide-step');
   const toggleRow = document.getElementById('pendant-chain-toggle-row');
@@ -3653,6 +3731,9 @@ function updateChainOptions() {
   syncAttachedChainFromPendant();
   if (!state.includeChain) return;
 
+  if (state.chainProductId) {
+    await ensureProductDetail(state.chainProductId, 'chain');
+  }
   const chainProduct = getProduct('chain', state.chainProductId);
   const thicknesses = chainConfiguredThicknesses(chainProduct);
   syncChainThicknessState(thicknesses);
@@ -4133,7 +4214,7 @@ function renderRingSizeGuide() {
 
 // ── Selection handlers ────────────────────────────────────────────────────
 
-function selectCategory(cat) {
+async function selectCategory(cat) {
   state.category = cat;
   state.type = null;
   state.gold = null;
@@ -4153,6 +4234,10 @@ function selectCategory(cat) {
 
   document.querySelectorAll(".cat-btn").forEach(b =>
     b.classList.toggle("active", b.dataset.cat === cat));
+
+  if (cat !== 'diamond') {
+    await ensureCategoryCatalog(cat);
+  }
 
   if (window.CatalogMultiFilter) {
     window.CatalogMultiFilter.setHidden('catalog-metal-filter', cat === 'diamond');
@@ -4178,7 +4263,7 @@ function selectCategory(cat) {
   updateDiamondWizardChrome();
 
   if (cat === 'diamond') {
-    enterDiamondLooseProduct();
+    await enterDiamondLooseProduct();
     return;
   }
 
@@ -4186,11 +4271,10 @@ function selectCategory(cat) {
   updateSummary();
 }
 
-function selectType(typeId) {
+async function selectType(typeId) {
   state.type = typeId;
   state.carat = null;
   state.gold = null;
-  const product = getSelectedProduct();
   state.color = null;
   state.ringSize = null;
   state.engravingBand = '';
@@ -4200,6 +4284,9 @@ function selectType(typeId) {
 
   document.querySelectorAll(".type-card").forEach(c =>
     c.classList.toggle("active", c.dataset.type === typeId));
+
+  await ensureProductDetail(typeId, state.category);
+  const product = getSelectedProduct();
 
   // Default carat = smallest admin option before metal is chosen.
   const initialCarats = listProductCaratOptions(product, null);
@@ -4214,7 +4301,7 @@ function selectType(typeId) {
   updateRingSizeStep();
   updateEngravingSteps();
   updateDiamondSteps();
-  updateChainOptions();
+  await updateChainOptions();
   setShopView('product', { skipScroll: true });
   updateSummary();
 }
@@ -4344,7 +4431,7 @@ function ensureGirdleEngrave() {
   return girdleEngraveCtrl;
 }
 ensureGirdleEngrave();
-document.getElementById('pendant-chain-toggle-row')?.addEventListener('click', (ev) => {
+document.getElementById('pendant-chain-toggle-row')?.addEventListener('click', async (ev) => {
   const btn = ev.target.closest('.pendant-chain-seg__btn');
   if (!btn) return;
   const flags = pendantSellFlags(getSelectedProduct());
@@ -4353,6 +4440,8 @@ document.getElementById('pendant-chain-toggle-row')?.addEventListener('click', (
   if (!wantChain && !flags.allowOnly) return;
   state.includeChain = wantChain;
   if (state.includeChain) {
+    syncAttachedChainFromPendant();
+    if (state.chainProductId) await ensureProductDetail(state.chainProductId, 'chain');
     const chainProduct = getProduct('chain', state.chainProductId);
     const thicknesses = chainConfiguredThicknesses(chainProduct);
     syncChainThicknessState(thicknesses);
@@ -4362,7 +4451,7 @@ document.getElementById('pendant-chain-toggle-row')?.addEventListener('click', (
     state.chainThickness = null;
   }
   productImageIndex = 0;
-  updateChainOptions();
+  await updateChainOptions();
   updateSummary();
   updateLargeImage(state.includeChain ? 'chain' : 'pendant');
 });
@@ -5066,7 +5155,7 @@ function orderApiRowToEditConfig(o) {
   return cfg;
 }
 
-function restoreShopConfig(cfg) {
+async function restoreShopConfig(cfg) {
   if (!cfg?.category || !cfg?.type) return;
 
   const typeId = String(cfg.type);
@@ -5078,6 +5167,10 @@ function restoreShopConfig(cfg) {
 
   const titleEl = document.getElementById('shop-category-title');
   if (titleEl) titleEl.textContent = tr('cat_' + cfg.category);
+
+  await ensureCategoryCatalog(cfg.category);
+  await ensureProductDetail(typeId, cfg.category);
+  if (cfg.chainProductId) await ensureProductDetail(cfg.chainProductId, 'chain');
 
   renderTypeCards();
   document.querySelectorAll('.type-card').forEach((card) =>
@@ -5120,7 +5213,7 @@ function restoreShopConfig(cfg) {
   updateDiamondSteps();
   updateCaratButtons();
   updateEngravingSteps();
-  updateChainOptions();
+  await updateChainOptions();
   updateLengthStep();
   syncVariantChipActiveStates();
   productImageIndex = 0;
@@ -5225,10 +5318,10 @@ async function bootShopCore() {
   updateDiamondWizardChrome();
 }
 
-function applyInitialShopState() {
+async function applyInitialShopState() {
   const prefillData = window.cartEditData || window.editData || window.prefillData || takeShopResumeSnapshot();
   if (prefillData) {
-    restoreShopConfig(prefillData);
+    await restoreShopConfig(prefillData);
   } else {
     setShopView('catalog');
     updateWizardGuide();
@@ -5269,7 +5362,7 @@ async function init() {
   }
 
   await bootPromise;
-  applyInitialShopState();
+  await applyInitialShopState();
   finishShopBoot();
 }
 

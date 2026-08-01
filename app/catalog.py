@@ -105,6 +105,54 @@ def legacy_style_key(product: dict, images: list[dict] | None = None) -> str | N
     return None
 
 
+def _usable_images_by_color(images: list[dict]) -> dict[str, list[str]]:
+    images_by_color: dict[str, list[str]] = {}
+    for image in images:
+        raw = image.get("file_path")
+        if is_auto_stock_product_image(raw):
+            continue
+        url = resolve_product_image_url(raw)
+        if (
+            url
+            and _is_raster_url(url)
+            and not is_dead_catalog_placeholder(url)
+            and not is_auto_stock_product_image(url)
+            and (not url.startswith("/static/") or static_url_exists(url))
+        ):
+            images_by_color.setdefault(image["color"], []).append(url)
+    return images_by_color
+
+
+def _first_thumb_url(images_by_color: dict[str, list[str]]) -> str | None:
+    for urls in images_by_color.values():
+        if urls:
+            return urls[0]
+    return None
+
+
+def build_catalog_product_lite(product: dict, variants: list[dict], images: list[dict]) -> dict:
+    """Style-grid payload — option lists + thumb, no weights/images maps."""
+    golds = _sort_golds({v["gold"] for v in variants})
+    carats = _sort_carats({_variant_carat_key(v["carat"]) for v in variants})
+    images_by_color = _usable_images_by_color(images)
+    return {
+        "id": str(product["id"]),
+        "styleKey": legacy_style_key(product, images),
+        "nameZh": product["name_zh"],
+        "nameEn": product["name_en"],
+        "defaultColor": product["default_color"],
+        "allowsEngraving": bool(product.get("allows_engraving", True)),
+        "allowsFancyShapes": bool(product.get("allows_fancy_shapes", True)),
+        "allowsPendantOnly": bool(product.get("allows_pendant_only", True)),
+        "allowsWithChain": bool(product.get("allows_with_chain", True)),
+        "golds": golds,
+        "carats": carats,
+        "colors": sorted(images_by_color.keys()),
+        "thumbUrl": _first_thumb_url(images_by_color),
+        "draft": not product["is_published"],
+    }
+
+
 def build_catalog_product(product: dict, variants: list[dict], images: list[dict]) -> dict:
     golds = _sort_golds({v["gold"] for v in variants})
     carats = _sort_carats({_variant_carat_key(v["carat"]) for v in variants})
@@ -125,20 +173,7 @@ def build_catalog_product(product: dict, variants: list[dict], images: list[dict
             side_stone_carats.setdefault(gold, {})[carat] = float(variant["side_stone_carat"])
 
     style_key = legacy_style_key(product, images)
-    images_by_color: dict[str, list[str]] = {}
-    for image in images:
-        raw = image.get("file_path")
-        if is_auto_stock_product_image(raw):
-            continue
-        url = resolve_product_image_url(raw)
-        if (
-            url
-            and _is_raster_url(url)
-            and not is_dead_catalog_placeholder(url)
-            and not is_auto_stock_product_image(url)
-            and (not url.startswith("/static/") or static_url_exists(url))
-        ):
-            images_by_color.setdefault(image["color"], []).append(url)
+    images_by_color = _usable_images_by_color(images)
 
     return {
         "id": str(product["id"]),
@@ -197,6 +232,10 @@ def fetch_catalog_rows(cur, *, category: str | None = None, include_drafts: bool
     return cur.fetchall()
 
 
+def normalize_catalog_detail(detail: str | None) -> str:
+    return "full" if str(detail or "").strip().lower() == "full" else "lite"
+
+
 def build_catalog_response(
     products: list[dict],
     variants_by_product: dict,
@@ -204,14 +243,20 @@ def build_catalog_response(
     *,
     category_order: list[str] | None = None,
     category_meta: dict[str, dict] | None = None,
+    detail: str = "lite",
 ) -> dict:
     if not products and not category_meta:
         return {"categories": {}, "categoryOrder": [], "categoryMeta": {}}
 
+    builder = (
+        build_catalog_product
+        if normalize_catalog_detail(detail) == "full"
+        else build_catalog_product_lite
+    )
     categories: dict[str, list[dict]] = {}
     for product in products:
         product_id = product["id"]
-        entry = build_catalog_product(
+        entry = builder(
             product,
             variants_by_product.get(product_id, []),
             images_by_product.get(product_id, []),
@@ -227,6 +272,24 @@ def build_catalog_response(
         "categoryOrder": category_order_out,
         "categoryMeta": category_meta or {},
     }
+
+
+def fetch_product_row(
+    cur,
+    product_id: str,
+    *,
+    include_drafts: bool = False,
+) -> dict | None:
+    """Load one product by id; unpublished only when include_drafts."""
+    if not product_id:
+        return None
+    cur.execute("select * from products where id = %s", (product_id,))
+    row = cur.fetchone()
+    if not row:
+        return None
+    if not row["is_published"] and not include_drafts:
+        return None
+    return row
 
 
 def load_product_children(cur, product_ids: list) -> tuple[dict, dict]:

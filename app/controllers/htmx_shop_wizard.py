@@ -16,7 +16,13 @@ from fastapi.responses import HTMLResponse, Response
 from psycopg.types.json import Jsonb
 
 from app.auth import get_user_id, is_admin
-from app.catalog import build_catalog_response, fetch_catalog_rows, load_product_children
+from app.catalog import (
+    build_catalog_product,
+    build_catalog_response,
+    fetch_catalog_rows,
+    fetch_product_row,
+    load_product_children,
+)
 from app.controllers.htmx_common import (
     cart_count,
     form_bool,
@@ -102,6 +108,9 @@ DIAMOND_STYLES: list[dict[str, Any]] = [
 
 
 def _product_thumb(product: dict[str, Any]) -> str:
+    thumb = product.get("thumbUrl")
+    if thumb:
+        return str(thumb)
     images = product.get("images") or {}
     for urls in images.values():
         if isinstance(urls, list) and urls:
@@ -129,7 +138,7 @@ def _type_grid_layout(count: int) -> dict[str, Any]:
     return {"type_grid_size": size, "type_grid_cols": cols, "type_grid_count": count}
 
 
-def _load_catalog(*, include_drafts: bool = False) -> dict[str, Any]:
+def _load_catalog(*, include_drafts: bool = False, detail: str = "lite") -> dict[str, Any]:
     with get_connection() as conn, conn.cursor() as cur:
         products = fetch_catalog_rows(cur, include_drafts=include_drafts)
         variants, images = load_product_children(cur, [row["id"] for row in products])
@@ -149,6 +158,7 @@ def _load_catalog(*, include_drafts: bool = False) -> dict[str, Any]:
         images,
         category_order=cat_order,
         category_meta=cat_meta,
+        detail=detail,
     )
     categories = dict(catalog.get("categories") or {})
     categories["diamond"] = DIAMOND_STYLES
@@ -174,6 +184,35 @@ def _find_product(catalog: dict[str, Any], category: str, type_ref: str) -> dict
         if str(product.get("id")) == type_ref or str(product.get("styleKey")) == type_ref:
             return product
     return None
+
+
+def _load_full_product(product_id: str, *, include_drafts: bool = False) -> dict[str, Any] | None:
+    with get_connection() as conn, conn.cursor() as cur:
+        product = fetch_product_row(cur, product_id, include_drafts=include_drafts)
+        if not product:
+            return None
+        variants, images = load_product_children(cur, [product["id"]])
+        return build_catalog_product(
+            product,
+            variants.get(product["id"], []),
+            images.get(product["id"], []),
+        )
+
+
+def _resolve_configure_product(
+    catalog: dict[str, Any],
+    category: str,
+    type_ref: str,
+    *,
+    include_drafts: bool,
+) -> dict[str, Any] | None:
+    product = _find_product(catalog, category, type_ref)
+    if not product:
+        return None
+    if category == "diamond" or product.get("weights") is not None:
+        return product
+    full = _load_full_product(str(product["id"]), include_drafts=include_drafts)
+    return full or product
 
 
 def _config_from_form(form: Any) -> dict[str, Any]:
@@ -219,10 +258,15 @@ def _preview_ctx(request: Request) -> dict[str, Any]:
     return {"preview": preview, "preview_qs": "preview=1" if preview else ""}
 
 
-def _catalog_for_request(request: Request) -> dict[str, Any]:
+def _catalog_for_request(request: Request, *, detail: str = "lite") -> dict[str, Any]:
     preview = is_shop_preview(request)
     include_drafts = bool(preview and is_admin(get_user_id(request)))
-    return _load_catalog(include_drafts=include_drafts)
+    return _load_catalog(include_drafts=include_drafts, detail=detail)
+
+
+def _include_drafts_for_request(request: Request) -> bool:
+    preview = is_shop_preview(request)
+    return bool(preview and is_admin(get_user_id(request)))
 
 
 def _step_ctx(
@@ -297,8 +341,11 @@ async def shop_step_configure(request: Request) -> HTMLResponse:
         return await shop_step_catalog(request)
     if not type_ref:
         return await shop_step_styles(request)
-    catalog = _catalog_for_request(request)
-    product = _find_product(catalog, category, type_ref)
+    catalog = _catalog_for_request(request, detail="lite")
+    include_drafts = _include_drafts_for_request(request)
+    product = _resolve_configure_product(
+        catalog, category, type_ref, include_drafts=include_drafts
+    )
     if not product:
         products = [
             {**p, "thumb": _product_thumb(p)}

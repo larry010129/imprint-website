@@ -106,8 +106,16 @@
 
     // ---- shop (dynamic catalog calculator) ----
     getCatalog: function (opts) {
-      var q = opts && opts.preview ? '?preview=1' : '';
+      var parts = [];
+      if (opts && opts.preview) parts.push('preview=1');
+      if (opts && opts.category) parts.push('category=' + encodeURIComponent(opts.category));
+      if (opts && opts.detail) parts.push('detail=' + encodeURIComponent(opts.detail));
+      var q = parts.length ? '?' + parts.join('&') : '';
       return request('/api/catalog' + q);
+    },
+    getCatalogProduct: function (productId, opts) {
+      var q = opts && opts.preview ? '?preview=1' : '';
+      return request('/api/catalog/product/' + encodeURIComponent(productId) + q);
     },
     getShopPrices: function () { return request('/api/prices'); },
     getShopQuote: function (config, opts) {

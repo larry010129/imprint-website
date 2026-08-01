@@ -5,11 +5,19 @@ from __future__ import annotations
 import logging
 
 from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
 from app.auth import enforce_rate_limit, get_user_id, is_admin
 from app.bot_gold import FALLBACK_XAG, FALLBACK_XPT, build_payload_from_cache, fetch_bot_gold_quote
-from app.catalog import build_catalog_response, fetch_catalog_rows, load_product_children
+from app.catalog import (
+    build_catalog_product,
+    build_catalog_response,
+    fetch_catalog_rows,
+    fetch_product_row,
+    load_product_children,
+    normalize_catalog_detail,
+)
 from app.product_categories import fetch_categories
 from app.orders import attach_order_display, attach_order_relations, hydrate_order
 from app.database import get_connection, get_transaction
@@ -189,12 +197,15 @@ def catalog(
     request: Request,
     category: str | None = Query(None),
     preview: int = Query(0),
-) -> dict:
+    detail: str = Query("lite"),
+) -> JSONResponse:
     include_drafts = False
     if preview:
         user_id = get_user_id(request)
         if user_id and is_admin(user_id):
             include_drafts = True
+
+    detail_mode = normalize_catalog_detail(detail)
 
     with get_connection() as conn, conn.cursor() as cur:
         products = fetch_catalog_rows(cur, category=category, include_drafts=include_drafts)
@@ -210,13 +221,46 @@ def catalog(
             }
             for row in category_rows
         }
-    return build_catalog_response(
+    payload = build_catalog_response(
         products,
         variants_by_product,
         images_by_product,
         category_order=cat_order,
         category_meta=cat_meta,
+        detail=detail_mode,
     )
+    headers = {}
+    if detail_mode == "lite" and not include_drafts:
+        headers["Cache-Control"] = "public, max-age=60"
+    return JSONResponse(content=jsonable_encoder(payload), headers=headers)
+
+
+@router.get("/catalog/product/{product_id}")
+def catalog_product(
+    request: Request,
+    product_id: str,
+    preview: int = Query(0),
+) -> dict:
+    """Full product payload for configure/quote (weights, images, prices)."""
+    include_drafts = False
+    if preview:
+        user_id = get_user_id(request)
+        if user_id and is_admin(user_id):
+            include_drafts = True
+
+    with get_connection() as conn, conn.cursor() as cur:
+        product = fetch_product_row(cur, product_id, include_drafts=include_drafts)
+        if not product:
+            raise HTTPException(status_code=404, detail="product not found")
+        variants_by_product, images_by_product = load_product_children(cur, [product["id"]])
+
+    return {
+        "product": build_catalog_product(
+            product,
+            variants_by_product.get(product["id"], []),
+            images_by_product.get(product["id"], []),
+        )
+    }
 
 
 @router.get("/testimonials")
