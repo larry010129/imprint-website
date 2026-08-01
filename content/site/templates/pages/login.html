@@ -15,7 +15,7 @@
     <p>登入後可查詢訂製進度、管理購物車與帳戶資料。</p>
   </div>
   <div id="auth-form-msg"></div>
-  <form class="login-form"
+  <form class="login-form" id="login-form"
     hx-post="/htmx/auth/login"
     hx-target="#auth-form-msg"
     hx-swap="innerHTML"
@@ -26,6 +26,7 @@
       <label for="lEmail">電子郵件</label>
     </div>
     {{ auth_password_field('lPassword', label='密碼', autocomplete='current-password') }}
+    <p class="forgot-password"><a href="/forgot-password.html">忘記密碼？</a></p>
     <label class="partner-check">
       <input type="checkbox" name="remember" value="1" checked>
       <span class="checkmark"></span>
@@ -33,36 +34,17 @@
     </label>
     <button type="submit" class="login-button">登入</button>
   </form>
-  <p class="signup-prompt">
-    <a href="#" id="forgot-toggle">忘記密碼？</a>
-    · 還不是會員？<a href="/register.html">立即註冊</a>
-  </p>
-  <form id="forgot-form" class="login-form" hidden
-    hx-post="/htmx/auth/request-reset"
-    hx-target="#auth-form-msg"
-    hx-swap="innerHTML">
-    <div class="form-field">
-      <input type="email" id="fEmail" name="email" placeholder=" " autocomplete="username" required>
-      <label for="fEmail">註冊用 Email</label>
-    </div>
-    <button type="submit" class="login-button">寄送重設連結</button>
-  </form>
   {% if google_client_id %}
-  <div id="google-signin-slot" class="google-signin-slot"
-    data-google-client-id="{{ google_client_id }}"></div>
+  <p class="auth-divider">或使用</p>
+  <div id="googleSignInMsg" class="form-msg" aria-live="polite"></div>
+  <div id="googleSignInBtn" class="google-signin-btn"></div>
   {% endif %}
+  <p class="signup-prompt">還不是會員？<a href="/register.html">立即註冊</a></p>
 {% endcall %}
 {% endblock %}
 {% block extra_scripts %}
-<script src="/static/js/auth-shell.js"></script>
+<script src="/static/js/auth-shell.js?v=2"></script>
 {% if google_client_id %}
-<script src="/static/js/google-signin.js?v=1" defer></script>
+<script src="/static/js/google-signin.js?v=2" defer data-client-id="{{ google_client_id }}"></script>
 {% endif %}
-<script>
-document.getElementById('forgot-toggle')?.addEventListener('click', function (e) {
-  e.preventDefault();
-  var f = document.getElementById('forgot-form');
-  if (f) f.hidden = !f.hidden;
-});
-</script>
 {% endblock %}

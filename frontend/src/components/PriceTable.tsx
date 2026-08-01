@@ -276,7 +276,7 @@ export default function PriceTable() {
         <div className="mb-12">
           <h3 className="mb-2 text-lg font-semibold">飾品戒台費用參考</h3>
           <p className="mb-4 text-sm text-muted-foreground">
-            鑽石價格不含飾品戒台；以下為未稅估算，依台銀黃金條塊牌價浮動調整金屬成本
+            鑽石價格不含飾品戒台；以下為未稅估算，依黃金最新牌價浮動調整金屬成本
             {necklace9k != null ? (
               <>
                 （9K 經典款項鍊 {fmtPrice(necklace9k)} 起）

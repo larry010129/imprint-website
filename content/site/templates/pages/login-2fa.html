@@ -1,0 +1,36 @@
+{% extends "layouts/base-auth.html" %}
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/auth.css?v=5">
+{% endblock %}
+{% block content %}
+{% from "partials/auth_macros.html" import auth_shell, auth_password_field %}
+{% call auth_shell() %}
+  <div class="login-header">
+    <h1>雙因素驗證</h1>
+    <p>請在 Authenticator 應用程式中查看 6 位數驗證碼，或使用備用碼。</p>
+  </div>
+  <div id="auth-form-msg"></div>
+  <form class="login-form" id="login-2fa-form"
+    hx-post="/htmx/auth/verify-2fa"
+    hx-target="#auth-form-msg"
+    hx-swap="innerHTML"
+    hx-disabled-elt="button[type=submit]">
+    <input type="hidden" name="next" value="{{ request.query_params.get('next', '/account.html') }}">
+    <input type="hidden" name="remember" value="{{ request.query_params.get('remember', '1') }}">
+    <div class="form-field">
+      <input type="text" id="l2faCode" name="code" placeholder=" " inputmode="numeric"
+        autocomplete="one-time-code" pattern="[0-9\s-]*" maxlength="12" required autofocus>
+      <label for="l2faCode">6 位數驗證碼</label>
+    </div>
+    <button type="submit" class="login-button">驗證並登入</button>
+  </form>
+  <p class="signup-prompt">
+    <a href="#" id="toggle-backup-mode">使用備用碼</a>
+    · <a href="/login.html">返回登入</a>
+  </p>
+{% endcall %}
+{% endblock %}
+{% block extra_scripts %}
+<script src="/static/js/auth-shell.js"></script>
+<script src="/static/js/login-2fa.js"></script>
+{% endblock %}

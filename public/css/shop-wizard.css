@@ -370,6 +370,31 @@
   flex: 0 1 168px;
   align-self: flex-start;
   min-width: 128px;
+}
+
+.catalog-ms-filter {
+  position: relative;
+  flex: 0 1 168px;
+  align-self: flex-start;
+  min-width: 128px;
+}
+
+.catalog-ms-filter.catalog-carat-filter {
+  flex: 0 1 168px;
+  min-width: 128px;
+}
+
+.catalog-filters .catalog-ms-filter {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.catalog-ms-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
   min-height: 40px;
   padding: 8px 11px;
   border: 1px solid var(--color-border, #d8d0c8);
@@ -377,6 +402,82 @@
   background: var(--color-surface, #fff);
   color: var(--color-text, inherit);
   font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.catalog-ms-trigger::after {
+  content: '';
+  width: 0.42em;
+  height: 0.42em;
+  margin-top: -0.15em;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg);
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.catalog-ms-trigger:hover,
+.catalog-ms-filter--active .catalog-ms-trigger {
+  border-color: var(--mint-deep, #6b9080);
+}
+
+.catalog-ms-trigger:focus-visible {
+  outline: 2px solid var(--mint-deep, #6b9080);
+  outline-offset: 2px;
+}
+
+.catalog-ms-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+}
+
+.catalog-ms-panel {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  min-width: 100%;
+  max-height: min(280px, 52vh);
+  overflow: auto;
+  padding: 6px;
+  border: 1px solid var(--mint-line, #d8d0c8);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(43, 35, 32, 0.12);
+}
+
+.catalog-ms-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1.3;
+}
+
+.catalog-ms-option:hover {
+  background: var(--mint-soft, #eef5f1);
+}
+
+.catalog-ms-option input {
+  flex-shrink: 0;
+  margin: 0;
+  accent-color: var(--mint-deep, #6b9080);
+}
+
+.catalog-ms-option-text {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .catalog-filters-wrap:not([open]) .catalog-filters {
@@ -393,7 +494,8 @@
   }
 
   .catalog-filters-wrap,
-  .catalog-carat-filter {
+  .catalog-carat-filter,
+  .catalog-ms-filter.catalog-carat-filter {
     flex: 1 1 100%;
     width: 100%;
   }

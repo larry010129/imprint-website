@@ -59,7 +59,7 @@ Every marketing / member page (except admin) extends `content/site/templates/lay
 | 珠寶試算 | `/shop/calculator/` | Main commerce entry |
 | ↳ 戒台試算 | `/shop/calculator/` | Same wizard |
 | ↳ DNA 鑽石價格 | `/price.html` | React price table |
-| ↳ 台銀金價 | `/gold-price.html` | Live BOT gold quote |
+| ↳ 黃金牌價 | `/gold-price.html` | Live gold quote from `gold_price_cache` |
 | DNA 鑽石 | `/diamonds.html` | Product/education hub |
 | 時尚珠寶 | `/jewelry/` | Category hub |
 | ↳ 戒指 / 項鍊 / 耳環 / 手鍊 | `/jewelry/{category}/` | Category landing pages |
@@ -95,7 +95,7 @@ Member-only links (cart, account, notifications) appear in nav when session exis
 | URL | Template | Rendering | Purpose |
 |-----|----------|-----------|---------|
 | `/price.html` | `pages/price.html` | Jinja + **React price table** | DNA diamond price reference |
-| `/gold-price.html` | `pages/gold-price.html` | Jinja + `gold-price.js` | Taiwan Bank gold/platinum/silver rates via `/api/bot-gold` |
+| `/gold-price.html` | `pages/gold-price.html` | Jinja + `gold-price.js` | Gold/platinum/silver rates via `/api/bot-gold` (`gold_price_cache`) |
 
 ### 4.3 Jewelry catalog (SEO landing pages)
 
@@ -176,7 +176,7 @@ Implemented in `public/js/shop.js`. Three views map to stepper UI:
 | 2 | `styles` | 選擇款式 | Pick style/type within category |
 | 3 | `product` | 配置下單 | Configure metal, carat, diamond, engraving, qty; live price |
 
-**Pricing source:** tries `/api/prices` + `/api/quote`; falls back to bundled `shop-pricing-local.js` if API unavailable (see ponytail comment in `shop.js`).
+**Pricing source:** prefers `GET /api/prices` + `POST /api/quote` when API is available; falls back to bundled `shop-pricing-local.js` offline/demo only.
 
 **Catalog source:** `/api/catalog` (DB products + variants + images).
 
@@ -287,7 +287,7 @@ All JSON routes mount under `/api` except auth which is `/api/auth/*`.
 |--------|------|----------|
 | POST | `/api/contact` | Contact form → `contact_messages` |
 | POST | `/api/quote-request` | Lead quote form → `quote_requests` |
-| GET | `/api/bot-gold` | Cached Taiwan Bank gold quote |
+| GET | `/api/bot-gold` | Public gold quote (`gold_price_cache`; refresh via `POST /api/gold-refresh`) |
 | POST | `/api/track-order` | Guest order lookup |
 | GET | `/api/orders` | Member order list |
 | GET | `/api/catalog` | Shop product catalog |
@@ -322,18 +322,15 @@ All JSON routes mount under `/api` except auth which is `/api/auth/*`.
 | Invites | `GET/POST /api/invites`, `POST /api/invite-action` |
 | Accounts | `GET /api/accounts`, `POST /api/account-action` |
 
-### 8.6 Client-expected but not yet in FastAPI (gaps)
+### 8.6 Client-expected API parity (remaining gaps)
 
-These are referenced in `public/js/api-client.js` / `shop.js` but **no matching Python routes** were found:
+Most shop pricing routes are live in FastAPI (`GET /api/prices`, `POST /api/quote`, favorites). Remaining gaps:
 
-| Path | Used by | Fallback today |
-|------|---------|----------------|
-| `/api/prices` | Shop wizard weight constants | `shop-pricing-local.js` |
-| `/api/quote` | Server-side quote validation | Client-side pricing math |
-| `/api/favorites` (+ DELETE by id) | Favorites page, shop heart button | Likely broken until implemented |
-| `/api/pricing` | Admin price overrides panel | Admin UI may error |
+| Path | Used by | Notes |
+|------|---------|-------|
+| `/api/pricing` | Admin price overrides panel | Implemented as `/api/admin/pricing-overrides` — verify admin UI wiring |
 
-**Planning note:** Port from legacy `backend/lib/pricing.js` is partially done in `app/pricing.py`; wire remaining routes when consolidating pricing authority.
+Gold display, shop calculator, and order pricing share **`gold_price_cache`** (hourly GHA `POST /api/gold-refresh`; set repo secret `IMPRINT_SITE_URL`).
 
 ---
 

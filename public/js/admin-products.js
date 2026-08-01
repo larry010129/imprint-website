@@ -389,6 +389,7 @@
 
     setRoot(
       '<p class="note">管理商品款式、金屬選項與照片。上架後會顯示於客製試算頁；拖曳列可調整排序。</p>' +
+      '<p class="note ap-memorial-note">紀念鑽石系列（滿月／寵物／結髮／全家福／生命鑽石）為試算頁固定款式，不在此商品 CRUD 管理；價格依克拉試算。</p>' +
       '<div class="ap-toolbar"><button type="button" class="btn-sm btn-primary" id="btnNewProduct">+ 新增商品</button></div>' +
       '<div class="ap-category-tabs" role="tablist">' + tabs + '</div>' +
       categoryPanelHtml() +

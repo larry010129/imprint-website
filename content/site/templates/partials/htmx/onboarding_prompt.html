@@ -1,0 +1,25 @@
+{% if show_onboarding_prompt %}
+<dialog
+  id="onboard-prompt-dialog"
+  class="member-dialog onboard-prompt-dialog"
+  aria-labelledby="onboard-prompt-title"
+  aria-describedby="onboard-prompt-desc"
+>
+  <div class="member-dialog__inner">
+    <header class="member-dialog__header">
+      <h2 id="onboard-prompt-title">請完善個人資料</h2>
+    </header>
+    <div class="onboard-prompt-dialog__body">
+      <p id="onboard-prompt-desc" class="onboard-prompt-dialog__copy">
+        為順利出貨與聯絡，請補充姓名、電話與收件地址。現在填寫或稍後再說都可以。
+      </p>
+      <div class="onboard-prompt-dialog__actions">
+        <button type="button" class="btn btn-line onboard-prompt-later" data-onboard-later>
+          稍後再說
+        </button>
+        <a class="btn btn-mint" href="/profile.html?onboarding=1">現在填寫</a>
+      </div>
+    </div>
+  </div>
+</dialog>
+{% endif %}

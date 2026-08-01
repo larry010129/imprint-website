@@ -32,13 +32,11 @@ REGISTRY_OUT = OUT / "page-registry.json"
 BASE_CSS = {
     "/static/css/base.css",
     "/static/css/nav.css",
-    "/static/css/home.css",
+    "/static/css/footer.css",
     "/static/css/pages.css",
     "/static/css/skeleton.css",
     "/static/css/responsive.css",
     "/static/css/social-fab.css",
-    "/static/react/src.css",
-    "/static/react/footer.css",
     "/favicon.svg",
 }
 BASE_JS_PREFIXES = (
@@ -96,6 +94,7 @@ def build_env() -> Environment:
         autoescape=select_autoescape(["html", "xml"]),
     )
     env.globals["google_client_id"] = settings.google_client_id
+    env.globals["recaptcha_site_key"] = settings.recaptcha_site_key
     return env
 
 

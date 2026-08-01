@@ -1,6 +1,76 @@
 {% extends "layouts/base.html" %}
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/member-app.css?v=3">
+<link rel="stylesheet" href="/static/css/member-app.css?v=6">
+{% endblock %}
+{% block extra_scripts %}
+<script>
+(function () {
+  var LATER_COOKIE = 'imprint_onboard_later';
+  var LATER_MAX_AGE = 60 * 60 * 24;
+
+  function bindCopyButtons(root) {
+    if (!root) return;
+    root.querySelectorAll('[data-copy]').forEach(function (btn) {
+      if (btn.dataset.copyBound) return;
+      btn.dataset.copyBound = '1';
+      btn.addEventListener('click', function () {
+        var text = btn.getAttribute('data-copy');
+        if (!text || !navigator.clipboard) return;
+        navigator.clipboard.writeText(text).then(function () {
+          btn.classList.add('is-copied');
+          btn.setAttribute('aria-label', '已複製');
+          window.setTimeout(function () {
+            btn.classList.remove('is-copied');
+            btn.setAttribute('aria-label', btn.dataset.copyLabel || '複製');
+          }, 1500);
+        });
+      });
+    });
+  }
+
+  function setOnboardLaterCookie() {
+    document.cookie = LATER_COOKIE + '=1; path=/; max-age=' + LATER_MAX_AGE + '; SameSite=Lax';
+  }
+
+  function dismissOnboardPrompt(dialog) {
+    setOnboardLaterCookie();
+    if (dialog && dialog.open && typeof dialog.close === 'function') dialog.close();
+  }
+
+  function bindOnboardPrompt(root) {
+    if (!root) return;
+    var dialog = root.querySelector('#onboard-prompt-dialog');
+    if (!dialog || typeof dialog.showModal !== 'function') return;
+    if (!dialog.dataset.bound) {
+      dialog.dataset.bound = '1';
+      var laterBtn = dialog.querySelector('[data-onboard-later]');
+      if (laterBtn) {
+        laterBtn.addEventListener('click', function () {
+          dismissOnboardPrompt(dialog);
+        });
+      }
+      dialog.addEventListener('cancel', function (e) {
+        e.preventDefault();
+        dismissOnboardPrompt(dialog);
+      });
+      dialog.addEventListener('click', function (e) {
+        if (e.target === dialog) dismissOnboardPrompt(dialog);
+      });
+    }
+    if (root.querySelector('[data-onboard-prompt]') && !dialog.open) {
+      dialog.showModal();
+    }
+  }
+
+  document.body.addEventListener('htmx:afterSwap', function (e) {
+    var target = e.detail && e.detail.target;
+    if (target && target.id === 'htmx-account') {
+      bindCopyButtons(target);
+      bindOnboardPrompt(target);
+    }
+  });
+})();
+</script>
 {% endblock %}
 {% block content %}
 <section class="account-section" id="view-account" aria-label="我的帳戶">

@@ -7,7 +7,9 @@ from __future__ import annotations
 
 import hmac
 import os
+import re
 import secrets
+import socket
 from datetime import datetime, timedelta, timezone
 
 import bcrypt
@@ -18,12 +20,90 @@ from config.settings import settings
 from app.database import get_connection
 
 COOKIE_NAME = "imprint_session"
+PRE2FA_COOKIE_NAME = "imprint_pre2fa"
+PWRESET_COOKIE_NAME = "imprint_pwreset"
 SESSION_DAYS = 30
+PRE2FA_MINUTES = 5
+PWRESET_MINUTES = 10
 
 LOGIN_MAX_ATTEMPTS = 5
 LOGIN_LOCKOUT_SECONDS = 300
 REGISTER_MAX_ATTEMPTS = 10
 REGISTER_LOCKOUT_SECONDS = 600
+TOTP_VERIFY_MAX_ATTEMPTS = 5
+TOTP_VERIFY_LOCKOUT_SECONDS = 900
+
+_DOMAIN_LABEL_RE = re.compile(r"^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$")
+_DNS_LOOKUP_SECONDS = 3.0
+
+EMAIL_FORMAT_ERROR = "請輸入有效的 Email 格式"
+EMAIL_DOMAIN_ERROR = "此 Email 網域不存在或無法接收郵件，請確認網址是否正確"
+
+
+def is_valid_email(email: str) -> bool:
+    """Format check: local@domain.tld with sane labels — not deliverability."""
+    if not email or len(email) > 254:
+        return False
+    if any(c.isspace() for c in email):
+        return False
+    if email.count("@") != 1:
+        return False
+
+    local, domain = email.rsplit("@", 1)
+    if not local or not domain or len(local) > 64:
+        return False
+    if local.startswith(".") or local.endswith(".") or ".." in local:
+        return False
+    if domain.startswith(".") or domain.endswith(".") or ".." in domain:
+        return False
+    if "." not in domain:
+        return False
+
+    tld = domain.rsplit(".", 1)[-1]
+    if len(tld) < 2:
+        return False
+    if tld.isalpha():
+        pass
+    elif tld.startswith("xn--") and len(tld) > 4:
+        pass
+    else:
+        return False
+
+    for label in domain.split("."):
+        if not label or len(label) > 63:
+            return False
+        if label.startswith("-") or label.endswith("-"):
+            return False
+        if _DOMAIN_LABEL_RE.match(label):
+            continue
+        if label.startswith("xn--"):
+            continue
+        return False
+    return True
+
+
+def email_domain_resolves(domain: str) -> bool:
+    """Light deliverability: domain must resolve (A/AAAA). No MX/SMTP required."""
+    if not domain:
+        return False
+    prev_timeout = socket.getdefaulttimeout()
+    try:
+        socket.setdefaulttimeout(_DNS_LOOKUP_SECONDS)
+        socket.getaddrinfo(domain, None, type=socket.SOCK_STREAM)
+        return True
+    except (OSError, socket.gaierror, socket.timeout):
+        return False
+    finally:
+        socket.setdefaulttimeout(prev_timeout)
+
+
+def validate_register_email(email: str, *, check_domain: bool = True) -> str | None:
+    """Returns a user-facing error message, or None if the email is acceptable."""
+    if not is_valid_email(email):
+        return EMAIL_FORMAT_ERROR
+    if check_domain and not email_domain_resolves(email.rsplit("@", 1)[1]):
+        return EMAIL_DOMAIN_ERROR
+    return None
 
 
 def _jwt_secret() -> str:
@@ -84,10 +164,123 @@ def verify_session_token(token: str) -> tuple[str, int] | None:
         payload = jwt.decode(token, _jwt_secret(), algorithms=["HS256"])
     except jwt.PyJWTError:
         return None
+    if payload.get("purpose") in ("pre2fa", "pwreset"):
+        return None
     sub = payload.get("sub")
     if not sub:
         return None
     return sub, int(payload.get("ver", 0))
+
+
+def sign_pre2fa(user_id: str) -> str:
+    payload = {
+        "sub": user_id,
+        "purpose": "pre2fa",
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=PRE2FA_MINUTES),
+    }
+    return jwt.encode(payload, _jwt_secret(), algorithm="HS256")
+
+
+def verify_pre2fa(token: str) -> str | None:
+    try:
+        payload = jwt.decode(token, _jwt_secret(), algorithms=["HS256"])
+    except jwt.PyJWTError:
+        return None
+    if payload.get("purpose") != "pre2fa":
+        return None
+    sub = payload.get("sub")
+    return str(sub) if sub else None
+
+
+def set_pre2fa_cookie(response: Response, token: str, request: Request) -> None:
+    response.set_cookie(
+        key=PRE2FA_COOKIE_NAME,
+        value=token,
+        path="/",
+        httponly=True,
+        secure=_is_secure_request(request),
+        samesite="lax",
+        max_age=PRE2FA_MINUTES * 60,
+    )
+
+
+def clear_pre2fa_cookie(response: Response, request: Request | None = None) -> None:
+    secure = _is_secure_request(request) if request is not None else False
+    response.delete_cookie(
+        key=PRE2FA_COOKIE_NAME, path="/", httponly=True, secure=secure, samesite="lax"
+    )
+
+
+def get_pre2fa_user_id(request: Request) -> str | None:
+    token = request.cookies.get(PRE2FA_COOKIE_NAME)
+    if not token:
+        return None
+    user_id = verify_pre2fa(token)
+    if not user_id:
+        return None
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute("select is_active from users where id = %s", (user_id,))
+        row = cur.fetchone()
+    if not row or not row["is_active"]:
+        return None
+    return user_id
+
+
+def sign_pwreset(user_id: str) -> str:
+    payload = {
+        "sub": user_id,
+        "purpose": "pwreset",
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=PWRESET_MINUTES),
+    }
+    return jwt.encode(payload, _jwt_secret(), algorithm="HS256")
+
+
+def verify_pwreset(token: str) -> str | None:
+    try:
+        payload = jwt.decode(token, _jwt_secret(), algorithms=["HS256"])
+    except jwt.PyJWTError:
+        return None
+    if payload.get("purpose") != "pwreset":
+        return None
+    sub = payload.get("sub")
+    return str(sub) if sub else None
+
+
+def set_pwreset_cookie(response: Response, token: str, request: Request) -> None:
+    response.set_cookie(
+        key=PWRESET_COOKIE_NAME,
+        value=token,
+        path="/",
+        httponly=True,
+        secure=_is_secure_request(request),
+        samesite="lax",
+        max_age=PWRESET_MINUTES * 60,
+    )
+
+
+def clear_pwreset_cookie(response: Response, request: Request | None = None) -> None:
+    secure = _is_secure_request(request) if request is not None else False
+    response.delete_cookie(
+        key=PWRESET_COOKIE_NAME, path="/", httponly=True, secure=secure, samesite="lax"
+    )
+
+
+def get_pwreset_user_id(request: Request) -> str | None:
+    token = request.cookies.get(PWRESET_COOKIE_NAME)
+    if not token:
+        return None
+    user_id = verify_pwreset(token)
+    if not user_id:
+        return None
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute(
+            "select is_active, totp_enabled from users where id = %s",
+            (user_id,),
+        )
+        row = cur.fetchone()
+    if not row or not row["is_active"] or not row.get("totp_enabled"):
+        return None
+    return user_id
 
 
 def bump_token_version(user_id: str) -> None:
@@ -257,6 +450,11 @@ def check_register_lockout(request: Request) -> tuple[str, bool]:
     return key, _is_locked_out(key)
 
 
+def check_totp_verify_lockout(request: Request, user_id: str) -> tuple[str, bool]:
+    key = f"2fa:{user_id}:{client_ip(request)}"
+    return key, _is_locked_out(key)
+
+
 # ── invite codes (register.html doesn't collect one yet — this is a no-op
 # unless REQUIRE_INVITE_CODE / REGISTRATION_INVITE_CODE are set) ───────────
 
@@ -264,6 +462,25 @@ def _invite_required() -> bool:
     if os.environ.get("REQUIRE_INVITE_CODE", "").strip().lower() in ("1", "true", "yes"):
         return True
     return bool(os.environ.get("REGISTRATION_INVITE_CODE", "").strip())
+
+
+def _lookup_active_invite(code: str) -> tuple[dict | None, str | None]:
+    """Fetch invite row; return (invite, error). error set when unusable."""
+    invalid = "邀請碼無效或已過期。 (Invalid or expired invite code.)"
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute("select * from invite_codes where code = %s", (code,))
+        invite = cur.fetchone()
+    if not invite or not invite["is_active"]:
+        return None, invalid
+    expires_at = invite.get("expires_at")
+    if expires_at is not None:
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        if expires_at < datetime.now(timezone.utc):
+            return None, invalid
+    if invite["max_uses"] is not None and invite["use_count"] >= invite["max_uses"]:
+        return None, "邀請碼已達使用上限。 (Invite code has reached its use limit.)"
+    return invite, None
 
 
 def validate_invite_code(code: str | None) -> str | None:
@@ -279,17 +496,22 @@ def validate_invite_code(code: str | None) -> str | None:
     if env_code and hmac.compare_digest(code, env_code):
         return None
 
-    with get_connection() as conn, conn.cursor() as cur:
-        cur.execute("select * from invite_codes where code = %s", (code,))
-        invite = cur.fetchone()
+    _invite, err = _lookup_active_invite(code)
+    return err
 
-    invalid = "邀請碼無效或已過期。 (Invalid or expired invite code.)"
-    if not invite or not invite["is_active"]:
-        return invalid
-    if invite["expires_at"] and invite["expires_at"] < datetime.now(timezone.utc):
-        return invalid
-    if invite["max_uses"] is not None and invite["use_count"] >= invite["max_uses"]:
-        return "邀請碼已達使用上限。 (Invite code has reached its use limit.)"
+
+def validate_partner_invite_code(code: str | None) -> str | None:
+    """Partner checkbox path — always requires an active DB invite that grants partner/admin."""
+    code = (code or "").strip()
+    if not code:
+        return "請輸入合作廠商邀請碼。"
+
+    invite, err = _lookup_active_invite(code)
+    if err:
+        return err
+    assert invite is not None
+    if not (invite.get("grants_partner") or invite.get("grants_admin")):
+        return "邀請碼無效或已過期。 (Invalid or expired invite code.)"
     return None
 
 

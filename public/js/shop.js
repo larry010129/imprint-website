@@ -82,9 +82,14 @@ function shopApiConfigured() {
   return Boolean(base);
 }
 
-/** ponytail: FastAPI has /api/catalog but not /api/prices|quote yet — use bundled calculator math when present. */
+/** Offline/demo only — prefer GET /api/prices + POST /api/quote when API is up. */
 function shopUsesLocalPricing() {
-  return Boolean(window.ShopPricingLocal?.computeOrderPricing);
+  return Boolean(window.ShopPricingLocal?.computeOrderPricing) && !shopUsesApi();
+}
+
+/** Bundled shop-catalog-data.js is offline/demo only; prod must not resurrect SKUs when API fails. */
+function shopAllowsStaticCatalog() {
+  return !shopUsesApi();
 }
 
 const SHOP_RESUME_KEY = 'imprint_shop_resume_v1';
@@ -292,6 +297,7 @@ function mergeProductWeights(product, staticProduct, category) {
 }
 
 function enrichCatalogFromStatic() {
+  if (!shopAllowsStaticCatalog()) return;
   const staticCats = window.shopCatalogData?.categories;
   if (!staticCats || !catalog) return;
   for (const [category, products] of Object.entries(catalog)) {
@@ -304,6 +310,20 @@ function enrichCatalogFromStatic() {
       product.golds = productGolds(category, product);
     }
   }
+  injectDiamondCatalog();
+}
+
+/** True when /api/catalog returned at least one jewelry category (not memorial diamond-only). */
+function catalogHasJewelryFromApi() {
+  return Object.entries(catalog || {}).some(
+    ([cat, products]) => cat !== 'diamond' && Array.isArray(products) && products.length > 0,
+  );
+}
+
+/** Memorial diamond series are intentionally static (not in product CRUD); inject after API jewelry loads. */
+function injectMemorialDiamondCatalogIfNeeded() {
+  if (shopAllowsStaticCatalog()) return;
+  if (!catalogHasJewelryFromApi()) return;
   injectDiamondCatalog();
 }
 
@@ -879,6 +899,7 @@ function categoryLabel(cat) {
 }
 
 function applyStaticCatalogFallback() {
+  if (!shopAllowsStaticCatalog()) return false;
   if (!window.shopCatalogData?.categories) return false;
   const cats = Object.keys(window.shopCatalogData.categories).filter(
     (cat) => (window.shopCatalogData.categories[cat] || []).length > 0,
@@ -935,11 +956,10 @@ async function loadCatalog() {
     catalog = data.categories || {};
     window._catalogCategoryOrder = data.categoryOrder || null;
     window._catalogCategoryMeta = data.categoryMeta || null;
-    enrichCatalogFromStatic();
-    if (!catalogCategories().length && applyStaticCatalogFallback()) {
-      if (errEl) errEl.remove();
-      requestAnimationFrame(() => renderCatalogTiles());
-      return;
+    if (shopAllowsStaticCatalog()) {
+      enrichCatalogFromStatic();
+    } else {
+      injectMemorialDiamondCatalogIfNeeded();
     }
     catalogLoaded = true;
     if (errEl) errEl.remove();
@@ -948,7 +968,7 @@ async function loadCatalog() {
     }
     requestAnimationFrame(() => renderCatalogTiles());
   } catch (err) {
-    if (shopUsesApi() && applyStaticCatalogFallback()) {
+    if (applyStaticCatalogFallback()) {
       if (errEl) errEl.remove();
       requestAnimationFrame(() => renderCatalogTiles());
       return;
@@ -1034,6 +1054,7 @@ function renderCatalogTiles() {
   });
   grid.classList.remove('is-loading');
   grid.setAttribute('aria-busy', 'false');
+  if (state.category) populateCatalogFilters({ keepSelection: true, category: state.category });
 }
 
 // Weight/pricing constants loaded from /api/prices (server is source of truth)
@@ -1842,9 +1863,9 @@ async function loadMetalPrices() {
   }
 }
 
-/** Swaps the static per-gram estimate for the live BOT scrape once it's back;
- * re-renders the summary so an already-selected config picks up the real rate. */
+/** Overlay cached gold rates when running offline/demo pricing only. */
 async function loadLiveGoldRates() {
+  if (shopUsesApi()) return;
   try {
     const { res, data } = await shopApiFetch('/api/bot-gold');
     if (!res.ok || !data?.alloyRates) return;
@@ -1934,15 +1955,14 @@ function catalogCaratOptionLabel(value, isChain) {
   return Number.isNaN(n) ? String(value) : `${n.toFixed(1)} ct`;
 }
 
-function collectCategoryCarats(category) {
-  const set = new Set();
-  productsFor(category).forEach((product) => {
-    (product.carats || []).forEach((c) => {
-      if (c == null || c === '') return;
-      set.add(String(c));
-    });
-  });
-  return [...set].sort((a, b) => {
+const CATALOG_PRICE_BAND_DEFS = [
+  { value: 'under30000', label: 'NT$ 30,000 以下' },
+  { value: '30000to80000', label: 'NT$ 30,000–80,000' },
+  { value: 'over80000', label: 'NT$ 80,000 以上' },
+];
+
+function sortCaratValues(values) {
+  return [...values].sort((a, b) => {
     const na = parseFloat(a);
     const nb = parseFloat(b);
     if (!Number.isNaN(na) && !Number.isNaN(nb) && na !== nb) return na - nb;
@@ -1950,10 +1970,83 @@ function collectCategoryCarats(category) {
   });
 }
 
+/** Distinct carats/thicknesses a listing offers (variants + weight rows). */
+function catalogCaratsForProduct(product) {
+  const set = new Set();
+  (product?.carats || []).forEach((c) => {
+    if (c == null || c === '') return;
+    set.add(String(c));
+  });
+  Object.values(product?.weights || {}).forEach((byCarat) => {
+    Object.keys(byCarat || {}).forEach((c) => {
+      if (c) set.add(String(c));
+    });
+  });
+  return sortCaratValues([...set]);
+}
+
+function collectCategoryCarats(category) {
+  const set = new Set();
+  productsFor(category).forEach((product) => {
+    catalogCaratsForProduct(product).forEach((c) => set.add(c));
+  });
+  return sortCaratValues([...set]);
+}
+
+function collectCategoryMetals(category) {
+  const set = new Set();
+  productsFor(category).forEach((product) => {
+    productGolds(category, product).forEach((g) => set.add(g));
+  });
+  return sortGolds([...set]);
+}
+
+function collectCategoryPriceBands(category) {
+  return CATALOG_PRICE_BAND_DEFS.filter((band) =>
+    productsFor(category).some((product) => {
+      const price = estimatedProductPrice(product);
+      return price != null && productMatchesPriceBand(price, band.value);
+    }),
+  );
+}
+
 function productOffersCarat(product, carat) {
   if (!carat) return true;
   const target = String(carat);
-  return (product.carats || []).some((c) => String(c) === target);
+  return catalogCaratsForProduct(product).some((c) => c === target);
+}
+
+function catalogMetalOptionLabel(gold) {
+  const label = tr(`metal_${gold}`);
+  return label && label !== `metal_${gold}` ? label : gold.toUpperCase();
+}
+
+function setCatalogFilterOptions(id, options, config) {
+  if (window.CatalogMultiFilter?.setOptions) {
+    window.CatalogMultiFilter.setOptions(id, options, config);
+    return;
+  }
+  const sel = document.getElementById(id);
+  if (!sel || sel.tagName !== 'SELECT') return;
+  const prev = config.keepSelection ? sel.value : '';
+  sel.innerHTML = '';
+  const all = document.createElement('option');
+  all.value = '';
+  if (config.defaultLabelKey) all.dataset.i18n = config.defaultLabelKey;
+  all.textContent = tr(config.defaultLabelKey, config.defaultLabelFallback || '');
+  sel.appendChild(all);
+  (options || []).forEach((o) => {
+    const opt = document.createElement('option');
+    opt.value = o.value;
+    opt.textContent = o.label;
+    if (o.i18n) opt.dataset.i18n = o.i18n;
+    sel.appendChild(opt);
+  });
+  sel.value = options.some((o) => o.value === prev) ? prev : '';
+  if (typeof config.hidden === 'boolean') sel.hidden = config.hidden;
+  if (config.ariaLabelKey) {
+    sel.setAttribute('aria-label', tr(config.ariaLabelKey, config.ariaLabelFallback || ''));
+  }
 }
 
 function caratsForProductGold(product, gold) {
@@ -1994,48 +2087,84 @@ function enforceCaratForGold(product, gold) {
   }
 }
 
-function populateCatalogCaratFilter({ keepSelection = true } = {}) {
-  const sel = document.getElementById('catalog-carat-filter');
-  if (!sel) return;
-  const prev = keepSelection ? sel.value : '';
-  const isChain = state.category === 'chain';
-  const carats = state.category ? collectCategoryCarats(state.category) : [];
-  sel.innerHTML = '';
-  const all = document.createElement('option');
-  all.value = '';
-  all.textContent = tr(isChain ? 'catalog_all_thicknesses' : 'catalog_all_carats');
-  sel.appendChild(all);
-  carats.forEach((c) => {
-    const opt = document.createElement('option');
-    opt.value = c;
-    opt.textContent = catalogCaratOptionLabel(c, isChain);
-    sel.appendChild(opt);
+function catalogFilterValues(id) {
+  return window.CatalogMultiFilter?.getValues(id) || [];
+}
+
+function productMatchesPriceBand(price, band) {
+  if (band === 'under30000') return price < 30000;
+  if (band === '30000to80000') return price >= 30000 && price <= 80000;
+  if (band === 'over80000') return price > 80000;
+  return false;
+}
+
+function populateCatalogMetalFilter({ keepSelection = true, category = state.category } = {}) {
+  const metals = category ? collectCategoryMetals(category) : [];
+  const options = metals.map((g) => ({
+    value: g,
+    label: catalogMetalOptionLabel(g),
+    i18n: `metal_${g}`,
+  }));
+  setCatalogFilterOptions('catalog-metal-filter', options, {
+    keepSelection,
+    defaultLabelKey: 'catalog_all_metals',
+    ariaLabelKey: 'catalog_metal_filter_label',
+    hidden: category === 'diamond' || !metals.length,
   });
-  sel.value = carats.includes(prev) ? prev : '';
-  sel.hidden = !carats.length;
-  sel.setAttribute(
-    'aria-label',
-    tr(isChain ? 'catalog_thickness_filter_label' : 'catalog_carat_filter_label'),
-  );
+}
+
+function populateCatalogPriceFilter({ keepSelection = true, category = state.category } = {}) {
+  const bands = category ? collectCategoryPriceBands(category) : [];
+  const options = bands.map((b) => ({
+    value: b.value,
+    label: b.label,
+  }));
+  setCatalogFilterOptions('catalog-price-filter', options, {
+    keepSelection,
+    defaultLabelKey: 'catalog_all_prices',
+    ariaLabelKey: 'catalog_price_filter_label',
+    hidden: !bands.length,
+  });
+}
+
+function populateCatalogCaratFilter({ keepSelection = true, category = state.category } = {}) {
+  const isChain = category === 'chain';
+  const carats = category ? collectCategoryCarats(category) : [];
+  const options = carats.map((c) => ({
+    value: c,
+    label: catalogCaratOptionLabel(c, isChain),
+  }));
+
+  setCatalogFilterOptions('catalog-carat-filter', options, {
+    keepSelection,
+    defaultLabelKey: isChain ? 'catalog_all_thicknesses' : 'catalog_all_carats',
+    ariaLabelKey: isChain ? 'catalog_thickness_filter_label' : 'catalog_carat_filter_label',
+    hidden: !carats.length,
+  });
+}
+
+function populateCatalogFilters({ keepSelection = true, category = state.category } = {}) {
+  if (!category) return;
+  populateCatalogMetalFilter({ keepSelection, category });
+  populateCatalogPriceFilter({ keepSelection, category });
+  populateCatalogCaratFilter({ keepSelection, category });
 }
 
 function filteredProductsForCurrentCategory() {
   const query = (document.getElementById('catalog-search-input')?.value || '').trim().toLowerCase();
-  const metal = document.getElementById('catalog-metal-filter')?.value || '';
-  const priceBand = document.getElementById('catalog-price-filter')?.value || '';
-  const carat = document.getElementById('catalog-carat-filter')?.value || '';
+  const metals = catalogFilterValues('catalog-metal-filter');
+  const priceBands = catalogFilterValues('catalog-price-filter');
+  const carats = catalogFilterValues('catalog-carat-filter');
   return productsFor(state.category).filter(product => {
     const names = `${product.nameZh || ''} ${product.nameEn || ''}`.toLowerCase();
     if (query && !names.includes(query)) return false;
     const golds = product.golds || [];
-    if (metal && golds.length && !golds.includes(metal)) return false;
-    if (carat && !productOffersCarat(product, carat)) return false;
-    if (priceBand) {
+    if (metals.length && golds.length && !metals.some((m) => golds.includes(m))) return false;
+    if (carats.length && !carats.some((c) => productOffersCarat(product, c))) return false;
+    if (priceBands.length) {
       const price = estimatedProductPrice(product);
       if (price == null) return false;
-      if (priceBand === 'under30000' && price >= 30000) return false;
-      if (priceBand === '30000to80000' && (price < 30000 || price > 80000)) return false;
-      if (priceBand === 'over80000' && price <= 80000) return false;
+      if (!priceBands.some((band) => productMatchesPriceBand(price, band))) return false;
     }
     return true;
   });
@@ -4025,12 +4154,17 @@ function selectCategory(cat) {
   document.querySelectorAll(".cat-btn").forEach(b =>
     b.classList.toggle("active", b.dataset.cat === cat));
 
-  const metalFilter = document.getElementById('catalog-metal-filter');
-  if (metalFilter) {
-    metalFilter.hidden = cat === 'diamond';
-    if (cat === 'diamond') metalFilter.value = '';
+  if (window.CatalogMultiFilter) {
+    window.CatalogMultiFilter.setHidden('catalog-metal-filter', cat === 'diamond');
+    if (cat === 'diamond') window.CatalogMultiFilter.clearValues('catalog-metal-filter');
+  } else {
+    const metalFilter = document.getElementById('catalog-metal-filter');
+    if (metalFilter) {
+      metalFilter.hidden = cat === 'diamond';
+      if (cat === 'diamond') metalFilter.value = '';
+    }
   }
-  populateCatalogCaratFilter({ keepSelection: false });
+  populateCatalogFilters({ keepSelection: false, category: cat });
 
   renderTypeCards();
   const titleEl = document.getElementById("shop-category-title");
@@ -4847,21 +4981,37 @@ document.getElementById("favorite-btn")?.addEventListener("click", addCurrentFav
   });
 })();
 
-['catalog-search-input', 'catalog-metal-filter', 'catalog-price-filter', 'catalog-carat-filter'].forEach(id => {
-  const element = document.getElementById(id);
-  element?.addEventListener(element.tagName === 'INPUT' ? 'input' : 'change', renderTypeCards);
-});
+function initCatalogFilterControls() {
+  const ms = window.CatalogMultiFilter;
+  if (ms) {
+    ['catalog-metal-filter', 'catalog-price-filter', 'catalog-carat-filter'].forEach((id) => {
+      const sel = document.getElementById(id);
+      if (sel?.tagName === 'SELECT') ms.upgradeSelect(sel, { onChange: renderTypeCards });
+    });
+  } else {
+    ['catalog-metal-filter', 'catalog-price-filter', 'catalog-carat-filter'].forEach((id) => {
+      const element = document.getElementById(id);
+      element?.addEventListener('change', renderTypeCards);
+    });
+  }
+  document.getElementById('catalog-search-input')?.addEventListener('input', renderTypeCards);
+}
+
 function clearCatalogFilters() {
   const search = document.getElementById('catalog-search-input');
-  const metal = document.getElementById('catalog-metal-filter');
-  const price = document.getElementById('catalog-price-filter');
-  const carat = document.getElementById('catalog-carat-filter');
   if (search) search.value = '';
-  if (metal) metal.value = '';
-  if (price) price.value = '';
-  if (carat) carat.value = '';
+  if (window.CatalogMultiFilter) {
+    window.CatalogMultiFilter.clearAll();
+  } else {
+    ['catalog-metal-filter', 'catalog-price-filter', 'catalog-carat-filter'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+  }
   renderTypeCards();
 }
+
+initCatalogFilterControls();
 document.getElementById('catalog-filter-clear')?.addEventListener('click', clearCatalogFilters);
 document.getElementById('catalog-filter-empty-clear')?.addEventListener('click', clearCatalogFilters);
 
@@ -4872,7 +5022,8 @@ document.addEventListener('langchange', () => {
   updateChainOptions();
   renderCatalogTiles();
   renderDiamondShapeButtons();
-  populateCatalogCaratFilter({ keepSelection: true });
+  window.CatalogMultiFilter?.refreshAll();
+  populateCatalogFilters({ keepSelection: true });
   const titleEl = document.getElementById("shop-category-title");
   if (titleEl && state.category) titleEl.textContent = tr('cat_' + state.category);
   updateSummary();

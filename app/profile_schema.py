@@ -18,7 +18,27 @@ _MEMBERSHIP_COLUMNS = (
     ("referred_at", "timestamptz"),
     ("imprint_invited", "boolean not null default false"),
     ("partner_imprint_invited", "boolean not null default false"),
+    ("onboarding_completed_at", "timestamptz"),
 )
+
+
+def _backfill_onboarding_completed(cur) -> None:
+    """Stamp legacy members who already filled required fields (remote-safe)."""
+    cur.execute(
+        """
+        update profiles
+        set onboarding_completed_at = coalesce(
+          (select u.created_at from users u where u.id = profiles.id),
+          now()
+        )
+        where onboarding_completed_at is null
+          and nullif(btrim(coalesce(full_name, '')), '') is not null
+          and nullif(btrim(coalesce(phone, '')), '') is not null
+          and nullif(btrim(coalesce(shipping_postal, '')), '') is not null
+          and nullif(btrim(coalesce(shipping_city, '')), '') is not null
+          and nullif(btrim(coalesce(shipping_address, '')), '') is not null
+        """
+    )
 
 
 def ensure_profile_address_columns() -> None:
@@ -27,6 +47,7 @@ def ensure_profile_address_columns() -> None:
             cur.execute(f"alter table profiles add column if not exists {name} {col_type}")
         for name, col_type in _MEMBERSHIP_COLUMNS:
             cur.execute(f"alter table profiles add column if not exists {name} {col_type}")
+        _backfill_onboarding_completed(cur)
 
 
 def fetch_profile(cur, user_id: str) -> dict | None:
@@ -37,7 +58,8 @@ def fetch_profile(cur, user_id: str) -> dict | None:
                    shipping_postal, shipping_city, shipping_address,
                    referral_code, referred_by, referred_at,
                    coalesce(imprint_invited, false) as imprint_invited,
-                   coalesce(partner_imprint_invited, false) as partner_imprint_invited
+                   coalesce(partner_imprint_invited, false) as partner_imprint_invited,
+                   onboarding_completed_at
             from profiles where id = %s
             """,
             (user_id,),
@@ -61,4 +83,5 @@ def fetch_profile(cur, user_id: str) -> dict | None:
             "referred_at": None,
             "imprint_invited": False,
             "partner_imprint_invited": False,
+            "onboarding_completed_at": None,
         }

@@ -17,23 +17,47 @@ from app.auth import (
     LOGIN_MAX_ATTEMPTS,
     REGISTER_LOCKOUT_SECONDS,
     REGISTER_MAX_ATTEMPTS,
+    TOTP_VERIFY_LOCKOUT_SECONDS,
     bump_token_version,
     check_login_lockout,
     check_register_lockout,
+    check_totp_verify_lockout,
+    clear_pre2fa_cookie,
     clear_session_cookie,
     consume_invite_code,
     enforce_rate_limit,
     get_user_id,
     hash_password,
     is_admin,
+    is_valid_email,
     log_admin_action,
     record_failure,
     record_success,
     set_session_cookie,
     sign_session,
     validate_invite_code,
+    validate_partner_invite_code,
+    validate_register_email,
     verify_google_id_token,
     verify_password,
+)
+from app.captcha import recaptcha_error_or_none
+from app.onboarding import (
+    ONBOARDING_URL,
+    is_onboarding_complete,
+    mark_onboarding_complete_if_ready,
+)
+from app.auth_post_login import (
+    apply_post_login_cookies,
+    decide_post_login,
+    post_login_json,
+    safe_next_url,
+)
+from app.auth_totp_service import (
+    confirm_totp_setup,
+    disable_totp,
+    reset_password_with_totp,
+    start_totp_setup,
 )
 from app.database import get_connection
 from app.google_people import (
@@ -72,9 +96,10 @@ def _serialize_profile(profile: dict | None) -> dict | None:
     out = dict(profile)
     if out.get("referred_by") is not None:
         out["referred_by"] = str(out["referred_by"])
-    referred_at = out.get("referred_at")
-    if isinstance(referred_at, datetime):
-        out["referred_at"] = referred_at.isoformat()
+    for ts_key in ("referred_at", "onboarding_completed_at"):
+        ts_val = out.get(ts_key)
+        if isinstance(ts_val, datetime):
+            out[ts_key] = ts_val.isoformat()
     out["imprint_invited"] = bool(out.get("imprint_invited"))
     out["partner_imprint_invited"] = bool(out.get("partner_imprint_invited"))
     out["is_partner"] = bool(out.get("is_partner"))
@@ -89,16 +114,20 @@ def _session_payload(
     invite_count_2y: int = 0,
     referral_code: str | None = None,
 ) -> dict:
-    phone = (profile or {}).get("phone") if profile else None
     serialized = _serialize_profile(profile)
     if serialized is not None and referral_code:
         serialized["referral_code"] = referral_code
+    admin = is_admin(user_id)
+    onboarding_done = is_onboarding_complete(profile)
     return {
         "user": {"id": str(user["id"]), "email": user["email"]},
         "profile": serialized,
-        "isAdmin": is_admin(user_id),
+        "isAdmin": admin,
+        "totpEnabled": bool(user.get("totp_enabled")),
         "hasGoogleLinked": bool(user.get("google_id")),
-        "profileComplete": bool(str(phone or "").strip()),
+        "profileComplete": onboarding_done,
+        "onboardingComplete": onboarding_done,
+        "onboardingUrl": None if admin or onboarding_done else ONBOARDING_URL,
         "imprintInvited": bool((profile or {}).get("imprint_invited")),
         "partnerImprintInvited": bool((profile or {}).get("partner_imprint_invited")),
         "inviteCount2y": int(invite_count_2y or 0),
@@ -129,11 +158,28 @@ async def signup(request: Request, response: Response) -> JSONResponse:
     invite_code = body.get("inviteCode")
     referral_code = (body.get("referralCode") or body.get("friendCode") or "").strip() or None
     accept_terms = body.get("acceptTerms")
+    is_partner = body.get("isPartner")
+    recaptcha_token = (
+        body.get("g-recaptcha-response")
+        or body.get("recaptchaToken")
+        or body.get("captcha")
+        or ""
+    )
+    if isinstance(recaptcha_token, str):
+        recaptcha_token = recaptcha_token.strip()
+    else:
+        recaptcha_token = ""
     if isinstance(accept_terms, str):
         accept_terms = accept_terms.strip().lower() in ("1", "true", "yes", "on")
+    if isinstance(is_partner, str):
+        is_partner = is_partner.strip().lower() in ("1", "true", "yes", "on")
+    is_partner = bool(is_partner)
 
     if not email or not password or not full_name or not phone:
         return _err(400, "請完整填寫所有欄位")
+    email_error = validate_register_email(email)
+    if email_error:
+        return _err(400, email_error)
     if not accept_terms:
         return _err(400, "請先閱讀並同意服務條款與隱私權政策")
     if len(password) < 8:
@@ -145,7 +191,16 @@ async def signup(request: Request, response: Response) -> JSONResponse:
     if locked:
         return _err(429, f"註冊失敗次數過多，請 {math.ceil(REGISTER_LOCKOUT_SECONDS / 60)} 分鐘後再試")
 
-    invite_error = validate_invite_code(invite_code)
+    captcha_error = recaptcha_error_or_none(request, recaptcha_token)
+    if captcha_error:
+        record_failure(lockout_key, REGISTER_MAX_ATTEMPTS, REGISTER_LOCKOUT_SECONDS)
+        return _err(400, captcha_error)
+
+    code_for_validate = str(invite_code or "").strip() or None
+    if is_partner:
+        invite_error = validate_partner_invite_code(code_for_validate)
+    else:
+        invite_error = validate_invite_code(code_for_validate)
     if invite_error:
         record_failure(lockout_key, REGISTER_MAX_ATTEMPTS, REGISTER_LOCKOUT_SECONDS)
         return _err(400, invite_error)
@@ -180,7 +235,11 @@ async def signup(request: Request, response: Response) -> JSONResponse:
             record_failure(lockout_key, REGISTER_MAX_ATTEMPTS, REGISTER_LOCKOUT_SECONDS)
             return _err(409, "此 Email 已被註冊")
 
-    grants = consume_invite_code(invite_code, user["id"])
+    grants = (
+        consume_invite_code(code_for_validate, user["id"])
+        if is_partner
+        else {"grants_admin": False, "grants_partner": False}
+    )
     if grants["grants_admin"]:
         with get_connection() as conn, conn.cursor() as cur:
             cur.execute(
@@ -199,7 +258,14 @@ async def signup(request: Request, response: Response) -> JSONResponse:
     record_failure(lockout_key, REGISTER_MAX_ATTEMPTS, REGISTER_LOCKOUT_SECONDS)
 
     token = sign_session(str(user["id"]))
-    result = JSONResponse(content={"ok": True, "user": {"id": str(user["id"]), "email": user["email"]}})
+    decision = decide_post_login(next_url="/account.html", user_id=str(user["id"]))
+    result = JSONResponse(
+        content={
+            "ok": True,
+            "user": {"id": str(user["id"]), "email": user["email"]},
+            "next": decision.next_url,
+        }
+    )
     set_session_cookie(result, token, request)
     return result
 
@@ -219,7 +285,10 @@ async def login(request: Request) -> JSONResponse:
 
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute(
-            "select id, email, password_hash, token_version, is_active from users where email = %s",
+            """
+            select id, email, password_hash, token_version, is_active, totp_enabled
+            from users where email = %s
+            """,
             (normalized_email,),
         )
         user = cur.fetchone()
@@ -239,9 +308,10 @@ async def login(request: Request) -> JSONResponse:
     if isinstance(remember, str):
         remember = remember.strip().lower() not in ("0", "false", "no")
 
-    token = sign_session(str(user["id"]), user["token_version"])
-    result = JSONResponse(content={"ok": True, "user": {"id": str(user["id"]), "email": user["email"]}})
-    set_session_cookie(result, token, request, remember=remember)
+    next_url = safe_next_url(body.get("next"))
+    decision = decide_post_login(next_url=next_url, user_id=str(user["id"]))
+    result = JSONResponse(content=post_login_json(decision, user))
+    apply_post_login_cookies(result, request, user, decision, remember=remember)
     return result
 
 
@@ -268,7 +338,10 @@ async def google_login(request: Request) -> JSONResponse:
 
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute(
-            "select id, email, token_version, is_active from users where google_id = %s",
+            """
+            select id, email, token_version, is_active, totp_enabled
+            from users where google_id = %s
+            """,
             (google_sub,),
         )
         user = cur.fetchone()
@@ -277,7 +350,10 @@ async def google_login(request: Request) -> JSONResponse:
             # Same email already has a password account — link this Google
             # identity to it instead of creating a duplicate user.
             cur.execute(
-                "select id, email, token_version, is_active from users where email = %s",
+                """
+                select id, email, token_version, is_active, totp_enabled
+                from users where email = %s
+                """,
                 (email,),
             )
             existing = cur.fetchone()
@@ -293,7 +369,7 @@ async def google_login(request: Request) -> JSONResponse:
                     """
                     insert into users (email, password_hash, email_verified, google_id)
                     values (%s, %s, true, %s)
-                    returning id, email, token_version, is_active
+                    returning id, email, token_version, is_active, totp_enabled
                     """,
                     (email, placeholder_hash, google_sub),
                 )
@@ -311,9 +387,10 @@ async def google_login(request: Request) -> JSONResponse:
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute("update users set last_login_at = now() where id = %s", (user["id"],))
 
-    token = sign_session(str(user["id"]), user["token_version"])
-    result = JSONResponse(content={"ok": True, "user": {"id": str(user["id"]), "email": user["email"]}})
-    set_session_cookie(result, token, request)
+    next_url = safe_next_url(body.get("next"))
+    decision = decide_post_login(next_url=next_url, user_id=str(user["id"]))
+    result = JSONResponse(content=post_login_json(decision, user))
+    apply_post_login_cookies(result, request, user, decision, remember=True)
     return result
 
 
@@ -324,6 +401,7 @@ async def logout(request: Request) -> JSONResponse:
         bump_token_version(user_id)
     result = JSONResponse(content={"ok": True})
     clear_session_cookie(result, request)
+    clear_pre2fa_cookie(result, request)
     return result
 
 
@@ -409,6 +487,39 @@ async def reset_password(request: Request) -> JSONResponse:
     return JSONResponse(content={"ok": True})
 
 
+@router.post("/reset-password-totp")
+async def reset_password_totp(request: Request) -> JSONResponse:
+    if not enforce_rate_limit(request, action="pwreset-totp", limit=10, window_seconds=900):
+        return _err(429, "請求過於頻繁，請稍後再試")
+
+    body = await request.json()
+    email = (body.get("email") or "").strip()
+    code = str(body.get("code") or "").strip()
+    new_password = body.get("newPassword") or body.get("password") or ""
+    if not email or not code or not new_password:
+        return _err(400, "請輸入 Email、驗證碼與新密碼")
+    if len(new_password) < 8:
+        return _err(400, "密碼至少需要 8 碼")
+
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute("select id from users where email = %s and is_active = true", (email.lower(),))
+        row = cur.fetchone()
+    lockout_key = None
+    if row:
+        lockout_key, locked = check_totp_verify_lockout(request, str(row["id"]))
+        if locked:
+            return _err(
+                429,
+                f"驗證失敗次數過多，請 {math.ceil(TOTP_VERIFY_LOCKOUT_SECONDS / 60)} 分鐘後再試",
+            )
+
+    err = reset_password_with_totp(email, code, new_password, lockout_key=lockout_key)
+    if err:
+        status = 400 if "請先於帳戶安全" in err else 401
+        return _err(status, err)
+    return JSONResponse(content={"ok": True})
+
+
 @router.get("/session")
 async def session(request: Request) -> JSONResponse:
     user_id = get_user_id(request)
@@ -416,7 +527,10 @@ async def session(request: Request) -> JSONResponse:
         return JSONResponse(content={"user": None})
 
     with get_connection() as conn, conn.cursor() as cur:
-        cur.execute("select id, email, google_id from users where id = %s", (user_id,))
+        cur.execute(
+            "select id, email, google_id, totp_enabled from users where id = %s",
+            (user_id,),
+        )
         user = cur.fetchone()
         if not user:
             return JSONResponse(content={"user": None})
@@ -543,10 +657,67 @@ async def update_profile(request: Request) -> JSONResponse:
               shipping_city = excluded.shipping_city,
               shipping_address = excluded.shipping_address
             returning full_name, phone, store_name, is_partner,
-                      shipping_postal, shipping_city, shipping_address
+                      shipping_postal, shipping_city, shipping_address,
+                      onboarding_completed_at
             """,
             (user_id, full_name, phone, shipping_postal or None, shipping_city or None, shipping_address or None),
         )
         profile = cur.fetchone()
+        mark_onboarding_complete_if_ready(cur, user_id, profile)
+        profile = fetch_profile(cur, user_id)
 
     return JSONResponse(content={"ok": True, "profile": profile})
+
+
+@router.post("/totp/setup/start")
+async def totp_setup_start(request: Request) -> JSONResponse:
+    user_id = get_user_id(request)
+    if not user_id:
+        return _err(401, "請先登入")
+
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute("select email, totp_enabled from users where id = %s", (user_id,))
+        row = cur.fetchone()
+    if not row:
+        return _err(401, "請先登入")
+    if row.get("totp_enabled"):
+        return _err(409, "雙因素驗證已啟用")
+
+    payload = start_totp_setup(user_id, row["email"])
+    return JSONResponse(content={"ok": True, **payload})
+
+
+@router.post("/totp/setup/confirm")
+async def totp_setup_confirm(request: Request) -> JSONResponse:
+    user_id = get_user_id(request)
+    if not user_id:
+        return _err(401, "請先登入")
+
+    body = await request.json()
+    code = str(body.get("code") or "").strip()
+    if not code:
+        return _err(400, "請輸入 Authenticator 驗證碼")
+
+    backup_codes, err = confirm_totp_setup(user_id, code)
+    if err:
+        return _err(400, err)
+
+    return JSONResponse(content={"ok": True, "backupCodes": backup_codes})
+
+
+@router.post("/totp/disable")
+async def totp_disable(request: Request) -> JSONResponse:
+    user_id = get_user_id(request)
+    if not user_id:
+        return _err(401, "請先登入")
+
+    body = await request.json()
+    password = str(body.get("password") or "")
+    code = str(body.get("code") or "").strip()
+    if not password or not code:
+        return _err(400, "請輸入密碼與驗證碼")
+
+    err = disable_totp(user_id, password, code)
+    if err:
+        return _err(400, err)
+    return JSONResponse(content={"ok": True})

@@ -5,45 +5,183 @@
 </div>
 {% else %}
 {% set display_name = (profile.full_name if profile and profile.full_name else user.email) %}
-{% set phone = (profile.phone if profile and profile.phone else '') %}
-{% set member_id = (user.id|string)|replace('-', '')|upper %}
-{% set short_id = member_id[:10] if member_id|length >= 10 else member_id %}
-<div class="account-card-only">
-  <article class="account-member-card" aria-label="會員卡片">
-    <header class="account-member-card__head">
-      <img src="/favicon.svg" alt="" aria-hidden="true" class="account-member-card__logo">
-      <div class="account-member-card__brand">
-        <p class="account-member-card__eyebrow">IMPRINT</p>
-        <h2 class="account-member-card__title">我的帳戶</h2>
+{% set program_on = membership and membership.enabled %}
+<div class="account-page-stack"{% if show_onboarding_prompt %} data-onboard-prompt="1"{% endif %}>
+  {% include "partials/htmx/onboarding_prompt.html" %}
+  <div class="account-card-only">
+    {% if program_on %}
+    {% set accent = membership.accent %}
+    <article
+      class="membership-metal-card membership-metal-card--{{ membership.tier_id }}{% if membership.is_dark %} membership-metal-card--dark{% endif %}"
+      aria-label="會員卡片"
+      style="--mc-from: {{ accent.from }}; --mc-to: {{ accent.to }}; --mc-chip: {{ accent.chip }}; --mc-text: {{ accent.text }}; --mc-muted: {{ accent.muted }}; --mc-line: {{ accent.line }};"
+    >
+      <div class="membership-metal-card__sheen" aria-hidden="true"></div>
+      <div class="membership-metal-card__glow" aria-hidden="true"></div>
+      <div class="membership-metal-card__inner">
+        <header class="membership-metal-card__head">
+          <div class="membership-metal-card__brand">
+            <img src="/favicon.svg" alt="" aria-hidden="true" class="membership-metal-card__logo">
+            <div>
+              <p class="membership-metal-card__eyebrow">IMPRINT</p>
+              <h2 class="membership-metal-card__title">{{ membership.tier_name }}</h2>
+            </div>
+          </div>
+          <div class="membership-metal-card__badges">
+            {% if membership.partner_chip %}
+            <span class="membership-metal-card__badge">合作</span>
+            {% endif %}
+            <span class="membership-metal-card__badge">{{ membership.role_label or '目前等級' }}</span>
+          </div>
+        </header>
+
+        <div class="membership-metal-card__mid">
+          <p class="membership-metal-card__id">{{ member_id_display or '———— ————' }}</p>
+          <div class="membership-metal-card__bars">
+            <div class="membership-metal-card__bar" title="{{ membership.progress.detail }}">
+              <div class="membership-metal-card__bar-head">
+                <span>{{ membership.progress.label }}</span>
+                <span>{{ membership.progress.ratio_label }}</span>
+              </div>
+              <div class="membership-metal-card__bar-track" role="progressbar"
+                aria-valuenow="{{ membership.progress.percent }}" aria-valuemin="0" aria-valuemax="100"
+                aria-label="{{ membership.progress.label }}，{{ membership.progress.detail }}">
+                <div class="membership-metal-card__bar-fill" style="width: {{ membership.progress.percent }}%;"></div>
+              </div>
+            </div>
+            <div class="membership-metal-card__bar" title="{{ membership.keep_progress.detail }}">
+              <div class="membership-metal-card__bar-head">
+                <span>{{ membership.keep_progress.label }}</span>
+                <span>{{ membership.keep_progress.ratio_label }}</span>
+              </div>
+              <div class="membership-metal-card__bar-track" role="progressbar"
+                aria-valuenow="{{ membership.keep_progress.percent }}" aria-valuemin="0" aria-valuemax="100"
+                aria-label="{{ membership.keep_progress.label }}，{{ membership.keep_progress.detail }}">
+                <div class="membership-metal-card__bar-fill" style="width: {{ membership.keep_progress.percent }}%;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer class="membership-metal-card__foot">
+          <div>
+            <p class="membership-metal-card__holder-label">CARDHOLDER</p>
+            <p class="membership-metal-card__holder-name">{{ display_name or '—' }}</p>
+          </div>
+          <div class="membership-metal-card__qr" aria-hidden="true">QR</div>
+        </footer>
       </div>
-    </header>
-    <dl class="account-member-card__fields">
-      <div>
-        <dt>姓名</dt>
-        <dd>{{ display_name or '—' }}</dd>
+    </article>
+    {% else %}
+    {% set name_initial = (display_name or user.email or '?')[:1] | upper %}
+    {% set email_short = (user.email or '').split('@')[0] if user.email else '—' %}
+    {% set city_line = ([profile.shipping_postal, profile.shipping_city] | reject('equalto', none) | reject('equalto', '') | join(' ')) if profile else '' %}
+    {% set address_line = (profile.shipping_address or '') if profile else '' %}
+    {% set phone_line = (profile.phone or '').strip() if profile and profile.phone else '' %}
+    {% set footer_line = address_line or phone_line %}
+    {% set role_label = membership.role_label if membership else ('管理員' if is_admin else '會員') %}
+    <article class="member-id-card" aria-label="會員卡片">
+      <header class="member-id-card__head">
+        <div class="member-id-card__identity">
+          <div class="member-id-card__avatar" aria-hidden="true">{{ name_initial }}</div>
+          <div class="member-id-card__meta">
+            {% if member_since %}
+            <p class="member-id-card__meta-label">加入日期</p>
+            <p class="member-id-card__meta-value">{{ member_since }}</p>
+            <p class="member-id-card__meta-hint">{{ email_short }}</p>
+            {% else %}
+            <p class="member-id-card__meta-label">會員帳戶</p>
+            <p class="member-id-card__meta-value">{{ email_short }}</p>
+            {% endif %}
+          </div>
+        </div>
+        <div class="member-id-card__mark" aria-hidden="true">
+          <img src="/favicon.svg" alt="" class="member-id-card__mark-logo">
+          <span class="member-id-card__mark-id">{{ member_id_display or '————' }}</span>
+        </div>
+      </header>
+
+      <div class="member-id-card__grid">
+        <div class="member-id-card__field">
+          <span class="member-id-card__label">姓名</span>
+          <span class="member-id-card__value">{{ display_name or '—' }}</span>
+        </div>
+        <div class="member-id-card__field">
+          <span class="member-id-card__label">聯絡電話</span>
+          <span class="member-id-card__value">{{ phone_line or '尚未填寫' }}</span>
+        </div>
+        <div class="member-id-card__field">
+          <span class="member-id-card__label">寄送縣市</span>
+          <span class="member-id-card__value">{{ city_line or '尚未填寫' }}</span>
+        </div>
+        <div class="member-id-card__field member-id-card__field--copy">
+          <span class="member-id-card__label">Email</span>
+          <span class="member-id-card__value">
+            {{ user.email or '—' }}
+            {% if user.email %}
+            <button type="button" class="member-id-card__copy" data-copy="{{ user.email }}"
+              data-copy-label="複製 Email" aria-label="複製 Email" title="複製">
+              <svg class="member-id-card__copy-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path fill="currentColor" d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 18H8V7h11v16z"/>
+              </svg>
+              <svg class="member-id-card__copy-icon member-id-card__copy-icon--done" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path fill="currentColor" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+              </svg>
+            </button>
+            {% endif %}
+          </span>
+        </div>
+        <div class="member-id-card__field member-id-card__field--copy">
+          <span class="member-id-card__label">會員編號</span>
+          <span class="member-id-card__value member-id-card__value--mono">
+            {{ member_id_display or '—' }}
+            {% if member_id_display %}
+            <button type="button" class="member-id-card__copy" data-copy="{{ member_id_copy }}"
+              data-copy-label="複製會員編號" aria-label="複製會員編號" title="複製">
+              <svg class="member-id-card__copy-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path fill="currentColor" d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 18H8V7h11v16z"/>
+              </svg>
+              <svg class="member-id-card__copy-icon member-id-card__copy-icon--done" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path fill="currentColor" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+              </svg>
+            </button>
+            {% endif %}
+          </span>
+        </div>
+        <div class="member-id-card__field">
+          <span class="member-id-card__label">帳戶類型</span>
+          <span class="member-id-card__value">{{ role_label }}</span>
+        </div>
       </div>
-      <div>
-        <dt>Email</dt>
-        <dd class="account-member-card__email">{{ user.email or '—' }}</dd>
-      </div>
-      {% if phone %}
-      <div>
-        <dt>聯絡電話</dt>
-        <dd>{{ phone }}</dd>
+
+      {% if footer_line %}
+      <div class="member-id-card__band">
+        <span class="member-id-card__band-label">{% if address_line %}寄送地址{% else %}聯絡電話{% endif %}</span>
+        <span class="member-id-card__band-value">{{ footer_line }}</span>
       </div>
       {% endif %}
-      {% if short_id %}
-      <div>
-        <dt>會員編號</dt>
-        <dd class="account-member-card__id">{{ short_id }}</dd>
-      </div>
-      {% endif %}
-    </dl>
+
+      <footer class="member-id-card__foot">
+        <a class="btn btn-dark member-id-card__cta" href="/profile.html">編輯資料</a>
+      </footer>
+    </article>
+    {% endif %}
+
+    {% if program_on %}
     <a class="btn btn-dark account-member-card__cta" href="/profile.html">更新帳戶資料</a>
+    {% endif %}
+    <a class="btn btn-line account-member-card__cta" href="/account-security.html">帳戶安全</a>
     <button type="button" class="account-member-card__logout" hx-post="/htmx/logout" hx-swap="none">登出</button>
-  </article>
-  {% if is_admin %}
-  <p class="account-member-card__admin"><a href="/admin.html">管理後台</a></p>
+    {% if totp_enabled %}
+    <p class="account-member-card__admin">已啟用 Authenticator（可用於重設密碼）</p>
+    {% endif %}
+    {% if is_admin %}
+    <p class="account-member-card__admin"><a href="/admin.html">管理後台</a></p>
+    {% endif %}
+  </div>
+
+  {% if program_on %}
+  {% include "partials/htmx/membership_ladder.html" %}
   {% endif %}
 </div>
 {% endif %}

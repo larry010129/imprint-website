@@ -120,16 +120,6 @@
           });
         });
       });
-
-      if (e.forgotBtn) {
-        e.forgotBtn.addEventListener('click', function () {
-          var email = global.prompt('請輸入您註冊時使用的 Email，我們會寄送重設密碼連結：');
-          if (!email || !M.api()) return;
-          Model.requestReset(email.trim()).then(function () {
-            View.setMsg('已寄送重設密碼信件至 ' + email.trim() + '，請至信箱查收。', 'ok');
-          });
-        });
-      }
     },
   });
 })(window);

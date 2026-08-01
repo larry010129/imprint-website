@@ -18,7 +18,7 @@ export const PAGE_LINK_OPTIONS: PageLinkOption[] = [
   { value: "/", label: "首頁" },
   { value: "/shop/calculator/", label: "客製試算" },
   { value: "/price.html", label: "DNA 鑽石價格" },
-  { value: "/gold-price.html", label: "台銀金價" },
+  { value: "/gold-price.html", label: "黃金牌價" },
   { value: "/series.html", label: "系列總覽" },
   { value: "/series/first-love/", label: "滿月鑽石" },
   { value: "/series/pet/", label: "寵物鑽石" },

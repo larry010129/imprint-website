@@ -1,4 +1,24 @@
 /* 銘印鑽石｜帳戶管理 */
+window.ImprintMemberId = window.ImprintMemberId || (function () {
+  'use strict';
+  function deriveMemberDisplayNumber(id) {
+    var compact = String(id || '').replace(/[\s-]/g, '').trim().toLowerCase();
+    if (!compact || !/^[0-9a-f]+$/.test(compact)) return '';
+    try {
+      var n = BigInt('0x' + compact) % BigInt('1000000000000');
+      return n.toString().padStart(12, '0');
+    } catch (e) {
+      return '';
+    }
+  }
+  function formatMemberDisplayGroups(id) {
+    var number = deriveMemberDisplayNumber(id);
+    if (!number) return '—';
+    return number.replace(/(.{4})/g, '$1 ').trim();
+  }
+  return { deriveMemberDisplayNumber: deriveMemberDisplayNumber, formatMemberDisplayGroups: formatMemberDisplayGroups };
+})();
+
 (function () {
   'use strict';
 
@@ -28,9 +48,9 @@
   }
 
   function shortId(id) {
-    var s = String(id || '').replace(/-/g, '').toUpperCase();
-    if (s.length < 10) return s || '';
-    return s.slice(0, 4) + ' ' + s.slice(4, 8) + ' ' + s.slice(8, 10);
+    return window.ImprintMemberId
+      ? window.ImprintMemberId.formatMemberDisplayGroups(id)
+      : String(id || '').slice(0, 12);
   }
 
   function initials(account) {
@@ -61,6 +81,7 @@
       account.id,
       idCompact,
       shortId(account.id),
+      window.ImprintMemberId ? window.ImprintMemberId.deriveMemberDisplayNumber(account.id) : '',
       accountRole(account) === 'admin' ? '管理員' : (accountRole(account) === 'partner' ? '合作廠商' : '會員'),
     ];
     for (var i = 0; i < fields.length; i++) {

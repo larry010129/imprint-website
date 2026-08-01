@@ -1,10 +1,9 @@
-/* Gold price page — live quote via GET /api/bot-gold (FastAPI / gunicorn on Render). */
+/* Gold price page — live quote via GET /api/bot-gold (reads gold_price_cache). */
 (function (global) {
   'use strict';
 
   var API_URL = '/api/bot-gold';
-  var ALLBEAUTY_PUBLIC = 'https://www.allbeauty.com.tw/m/';
-  var BOT_PUBLIC_RECENT = ALLBEAUTY_PUBLIC; // legacy name; source is Allbeauty
+  var REFRESH_URL = '/api/gold-refresh';
   var CACHE_KEY = 'imprintGoldQuoteCache';
   var CHIN_TO_GRAMS = 3.75;
   var GOLD_UNITS = ['g', 'chin', 'tael'];
@@ -22,13 +21,14 @@
   var SOURCE_PILL = {
     allbeauty: { cls: 'source-pill--bot', label: '黃金最新牌價' },
     bot: { cls: 'source-pill--bot', label: '黃金最新牌價' },
-    cached: { cls: 'source-pill--cached', label: '沿用上次牌價' },
+    cached: { cls: 'source-pill--cached', label: '黃金最新牌價' },
     fallback: { cls: 'source-pill--fallback', label: '備援牌價' },
   };
 
   var FALLBACK_XAU = 4300;
+  var FALLBACK_XAG = 61;
   /** Last-resort only — used when live API + cache + bootstrap all missing that metal. */
-  var FALLBACK_ALLOY_STUB = { pt950: 1155, s925: 56 };
+  var FALLBACK_ALLOY_STUB = { pt950: 1155, s925: 56.4 };
   var liveReady = false;
 
   function formatTwd(value) {
@@ -103,13 +103,13 @@
         bot_posted_at: null,
         fetched_at_display: null,
         is_stale: true,
-        source_url: BOT_PUBLIC_RECENT,
+        source_url: null,
       },
       alloyRates: alloyRates,
     };
   }
 
-  /** Live BOT quote from FastAPI server (Render / dev.bat). */
+  /** Cached gold quote from FastAPI (gold_price_cache). */
   function fetchLiveQuote() {
     return fetch(API_URL, { cache: 'no-store' })
       .then(function (res) {
@@ -133,11 +133,21 @@
   }
 
   function refreshGoldQuote() {
-    return fetchLiveQuote().catch(function () {
-      var cached = readCache() || readBootstrap();
-      if (cached) return Object.assign({}, cached, { refreshed: false });
-      return fallbackPayload();
-    });
+    return fetch(REFRESH_URL, {
+      method: 'POST',
+      cache: 'no-store',
+      headers: { Accept: 'application/json' },
+    })
+      .then(function (res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      })
+      .then(function () { return fetchLiveQuote(); })
+      .catch(function () {
+        var cached = readCache() || readBootstrap();
+        if (cached) return Object.assign({}, cached, { refreshed: false });
+        return fallbackPayload();
+      });
   }
 
   function probeLiveEndpoint() {
@@ -302,7 +312,7 @@
       refreshBtn.addEventListener('click', function () {
         refreshBtn.disabled = true;
         refreshBtn.classList.add('is-loading');
-        showMsg('抓取中…', true);
+        showMsg('正在取得最新牌價…', true);
         refreshGoldQuote()
           .then(function (data) {
             applyQuote(data);

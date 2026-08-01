@@ -1,0 +1,129 @@
+{% if guest %}
+
+<div class="member-state member-state--empty">
+
+  <p>請先登入。</p>
+
+  <a href="/login.html?next=/account-security.html" class="btn btn-mint">會員登入</a>
+
+</div>
+
+{% else %}
+
+<div class="totp-security-panel">
+
+  <header class="totp-security-head">
+
+    <h1>帳戶安全</h1>
+
+    <p>雙因素驗證（Authenticator）為<strong>選用</strong>，日常登入與管理後台<strong>不需要</strong>。若您希望使用「忘記密碼」自行重設密碼，請先在此啟用。</p>
+
+  </header>
+
+
+
+  {% if totp_enabled %}
+
+  <div class="totp-status totp-status--on">
+
+    <p><strong>狀態：</strong>已啟用 Authenticator（可用於重設密碼）</p>
+
+    <details class="totp-disable">
+
+      <summary>關閉 Authenticator</summary>
+
+      <form id="totp-disable-form" class="totp-form">
+
+        <div class="form-field">
+
+          <input type="password" name="password" id="totpDisablePassword" placeholder=" " required autocomplete="current-password">
+
+          <label for="totpDisablePassword">目前密碼</label>
+
+        </div>
+
+        <div class="form-field">
+
+          <input type="text" name="code" id="totpDisableCode" placeholder=" " required inputmode="numeric" autocomplete="one-time-code">
+
+          <label for="totpDisableCode">驗證碼或備用碼</label>
+
+        </div>
+
+        <button type="submit" class="btn btn-dark">關閉 Authenticator</button>
+
+        <p id="totp-disable-msg" class="form-msg" aria-live="polite"></p>
+
+      </form>
+
+    </details>
+
+  </div>
+
+  {% else %}
+
+  <p class="totp-banner totp-banner--warn">尚未啟用 Authenticator 時，無法使用「忘記密碼」自行重設；請聯絡管理員或完成下方設定。</p>
+
+  <div class="totp-setup" id="totp-setup-root" data-email="{{ user.email }}">
+
+    <ol class="totp-steps">
+
+      <li>在手機上安裝 Authenticator 應用程式</li>
+
+      <li>掃描 QR 碼或手動輸入金鑰</li>
+
+      <li>輸入應用程式顯示的 6 位數驗證碼以完成設定</li>
+
+    </ol>
+
+    <button type="button" class="btn btn-mint" id="totp-start-btn">開始設定</button>
+
+    <div id="totp-setup-panel" class="totp-setup-panel" hidden>
+
+      <img id="totp-qr" alt="TOTP QR code" class="totp-qr" width="200" height="200">
+
+      <p class="totp-secret-label">手動輸入金鑰：</p>
+
+      <code id="totp-secret" class="totp-secret"></code>
+
+      <form id="totp-confirm-form" class="totp-form">
+
+        <div class="form-field">
+
+          <input type="text" name="code" id="totpConfirmCode" placeholder=" " required inputmode="numeric" autocomplete="one-time-code">
+
+          <label for="totpConfirmCode">6 位數驗證碼</label>
+
+        </div>
+
+        <button type="submit" class="btn btn-dark">確認並啟用</button>
+
+      </form>
+
+      <p id="totp-setup-msg" class="form-msg" aria-live="polite"></p>
+
+    </div>
+
+    <div id="totp-backup-panel" class="totp-backup-panel" hidden>
+
+      <h2>備用碼（僅顯示一次）</h2>
+
+      <p>請將以下備用碼保存在安全處。忘記密碼時可用備用碼重設，每組僅能使用一次。</p>
+
+      <ul id="totp-backup-list" class="totp-backup-list"></ul>
+
+      <button type="button" class="btn btn-mint" id="totp-backup-done">我已保存備用碼</button>
+
+    </div>
+
+  </div>
+
+  {% endif %}
+
+
+
+  <p class="totp-back-link"><a href="/account.html">← 返回我的帳戶</a></p>
+
+</div>
+
+{% endif %}

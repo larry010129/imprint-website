@@ -3,14 +3,36 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 
 from app.auth import enforce_rate_limit, get_user_id, is_admin
-from app.controllers.htmx_common import html
+from app.controllers.htmx_common import form_bool, html, hx_redirect
 from app.database import get_connection
+from app.membership_config import load_config
+from app.membership_referral import count_invites_since, rolling_two_year_start
+from app.membership_tiers import (
+    build_account_membership,
+    derive_member_display_number,
+    format_member_id_groups,
+)
+from app.onboarding import (
+    mark_onboarding_complete_if_ready,
+    needs_member_onboarding,
+    profile_fields_complete,
+    should_show_onboarding_prompt,
+)
 from app.profile_schema import fetch_profile
 
 router = APIRouter(tags=["htmx-member"])
+
+
+def _format_member_since(value) -> str | None:
+    if value is None:
+        return None
+    if hasattr(value, "strftime"):
+        return value.strftime("%Y/%m/%d")
+    text = str(value).strip()
+    return text[:10].replace("-", "/") if text else None
 
 
 @router.post("/contact", response_class=HTMLResponse)
@@ -123,18 +145,59 @@ async def notifications_partial(request: Request) -> HTMLResponse:
 
 
 @router.get("/account", response_class=HTMLResponse)
-async def account_partial(request: Request) -> HTMLResponse:
+async def account_partial(request: Request) -> Response:
     user_id = get_user_id(request)
     if not user_id:
         return html(request, "account_panel.html", {"guest": True, "user": None, "profile": None})
+    show_onboarding_prompt = should_show_onboarding_prompt(request, user_id)
+    admin = is_admin(user_id)
     with get_connection() as conn, conn.cursor() as cur:
-        cur.execute("select id, email, google_id from users where id = %s", (user_id,))
+        cur.execute(
+            "select id, email, google_id, totp_enabled, created_at from users where id = %s",
+            (user_id,),
+        )
         user = cur.fetchone()
         profile = fetch_profile(cur, user_id) if user else None
+        orders: list = []
+        invite_count = 0
+        membership = None
+        if user:
+            cur.execute(
+                """
+                select status, total_price, created_at
+                from orders where user_id = %s
+                """,
+                (user_id,),
+            )
+            orders = cur.fetchall() or []
+            try:
+                invite_count = count_invites_since(cur, user_id, rolling_two_year_start())
+            except Exception:
+                invite_count = 0
+            config = load_config(cur)
+            membership = build_account_membership(
+                profile=profile,
+                orders=orders,
+                invite_count=invite_count,
+                is_admin=admin,
+                config=config,
+            )
     return html(
         request,
         "account_panel.html",
-        {"guest": False, "user": user, "profile": profile, "is_admin": is_admin(user_id)},
+        {
+            "guest": False,
+            "user": user,
+            "profile": profile,
+            "is_admin": admin,
+            "totp_enabled": bool(user.get("totp_enabled")) if user else False,
+            "membership": membership,
+            "member_id_display": format_member_id_groups(str(user["id"])) if user else "",
+            "member_id_copy": derive_member_display_number(str(user["id"])) if user else "",
+            "member_since": _format_member_since(user.get("created_at")) if user else None,
+            "login_type": "Google" if user and user.get("google_id") else "電子郵件",
+            "show_onboarding_prompt": show_onboarding_prompt,
+        },
     )
 
 
@@ -142,7 +205,11 @@ async def account_partial(request: Request) -> HTMLResponse:
 async def profile_partial(request: Request) -> HTMLResponse:
     user_id = get_user_id(request)
     if not user_id:
-        return html(request, "profile_form.html", {"guest": True})
+        return html(request, "profile_form.html", {"guest": True, "onboarding": False})
+    onboarding = (
+        needs_member_onboarding(user_id)
+        or str(request.query_params.get("onboarding") or "").strip() == "1"
+    )
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute("select id, email from users where id = %s", (user_id,))
         user = cur.fetchone()
@@ -150,21 +217,61 @@ async def profile_partial(request: Request) -> HTMLResponse:
     return html(
         request,
         "profile_form.html",
-        {"guest": False, "user": user, "profile": profile or {}, "saved": False, "error": None},
+        {
+            "guest": False,
+            "user": user,
+            "profile": profile or {},
+            "saved": False,
+            "error": None,
+            "onboarding": onboarding,
+        },
     )
 
 
 @router.post("/profile", response_class=HTMLResponse)
-async def profile_save(request: Request) -> HTMLResponse:
+async def profile_save(request: Request) -> Response:
     user_id = get_user_id(request)
     if not user_id:
-        return html(request, "profile_form.html", {"guest": True}, 401)
+        return html(request, "profile_form.html", {"guest": True, "onboarding": False}, 401)
     form = await request.form()
+    onboarding = (
+        needs_member_onboarding(user_id)
+        or form_bool(form.get("onboarding"))
+        or str(request.query_params.get("onboarding") or "").strip() == "1"
+    )
     full_name = str(form.get("fullName") or "").strip()
     phone = str(form.get("phone") or "").strip()
     shipping_postal = str(form.get("shippingPostal") or "").strip() or None
     shipping_city = str(form.get("shippingCity") or "").strip() or None
     shipping_address = str(form.get("shippingAddress") or "").strip() or None
+
+    draft = {
+        "full_name": full_name,
+        "phone": phone,
+        "shipping_postal": shipping_postal,
+        "shipping_city": shipping_city,
+        "shipping_address": shipping_address,
+    }
+    if onboarding and not profile_fields_complete(draft):
+        with get_connection() as conn, conn.cursor() as cur:
+            cur.execute("select id, email from users where id = %s", (user_id,))
+            user = cur.fetchone()
+            profile = fetch_profile(cur, user_id) or {}
+        merged = {**profile, **draft}
+        return html(
+            request,
+            "profile_form.html",
+            {
+                "guest": False,
+                "user": user,
+                "profile": merged,
+                "saved": False,
+                "error": "請完整填寫姓名、電話與寄送地址。",
+                "onboarding": True,
+            },
+            400,
+        )
+
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute("insert into profiles (id) values (%s) on conflict (id) do nothing", (user_id,))
         cur.execute(
@@ -183,13 +290,49 @@ async def profile_save(request: Request) -> HTMLResponse:
                 user_id,
             ),
         )
+        mark_onboarding_complete_if_ready(cur, user_id, draft)
         cur.execute("select id, email from users where id = %s", (user_id,))
         user = cur.fetchone()
         profile = fetch_profile(cur, user_id)
+
+    if onboarding and profile_fields_complete(profile):
+        return hx_redirect("/account.html")
+
     return html(
         request,
         "profile_form.html",
-        {"guest": False, "user": user, "profile": profile or {}, "saved": True, "error": None},
+        {
+            "guest": False,
+            "user": user,
+            "profile": profile or {},
+            "saved": True,
+            "error": None,
+            "onboarding": False,
+        },
+    )
+
+
+@router.get("/account-security", response_class=HTMLResponse)
+async def account_security_partial(request: Request) -> HTMLResponse:
+    user_id = get_user_id(request)
+    if not user_id:
+        return html(request, "totp_security_panel.html", {"guest": True})
+    admin = is_admin(user_id)
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute(
+            "select id, email, totp_enabled from users where id = %s",
+            (user_id,),
+        )
+        user = cur.fetchone()
+    return html(
+        request,
+        "totp_security_panel.html",
+        {
+            "guest": False,
+            "user": user,
+            "totp_enabled": bool(user.get("totp_enabled")) if user else False,
+            "is_admin": admin,
+        },
     )
 
 

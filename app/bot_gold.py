@@ -68,6 +68,40 @@ def format_fetched_at(when: datetime) -> str:
     return when.astimezone(TAIPEI).strftime("%Y/%m/%d %H:%M:%S")
 
 
+def build_payload_from_cache(row: dict) -> dict:
+    """Build public GoldQuote JSON from ``gold_price_cache`` (orders + display source)."""
+    now = datetime.now(timezone.utc)
+    xau = float(row["xau_per_gram"])
+    xpt = float(row["xpt_per_gram"])
+    xag = float(row["xag_per_gram"])
+    raw = {"XAU": xau, "XPT": xpt, "XAG": xag}
+    alloy_rates = build_alloy_rates(raw)
+    fetched = row.get("fetched_at")
+    if fetched is not None and hasattr(fetched, "astimezone"):
+        fetched_dt = fetched if fetched.tzinfo else fetched.replace(tzinfo=timezone.utc)
+    else:
+        fetched_dt = now
+    age_hours = (now - fetched_dt.astimezone(timezone.utc)).total_seconds() / 3600.0
+    fetched_display = format_fetched_at(fetched_dt)
+    return {
+        "refreshed": False,
+        "quote": {
+            "available": True,
+            "sell": xau,
+            "sellPerChin": xau * CHIN_TO_GRAMS,
+            "source": "cached",
+            "bot_posted_at": row.get("bot_posted_at"),
+            "fetched_at": fetched_dt.isoformat(),
+            "fetched_at_display": fetched_display,
+            "is_stale": age_hours > 24,
+            "source_url": "",
+        },
+        "alloyRates": alloy_rates,
+        "alloyRatesPerChin": build_alloy_rates_per_chin(alloy_rates),
+        "metals": raw,
+    }
+
+
 def build_payload(
     parsed: dict[str, float | str | None],
     source_url: str,

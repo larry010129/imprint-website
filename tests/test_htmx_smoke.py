@@ -91,7 +91,39 @@ def test_login_page_has_htmx_form(client):
     resp = client.get("/login.html")
     assert resp.status_code == 200
     assert 'hx-post="/htmx/auth/login"' in resp.text
+    assert 'id="forgot-form"' not in resp.text
+    assert 'href="/forgot-password.html"' in resp.text
     assert "accounts.google.com/gsi/client" in resp.text or "google_client_id" not in resp.text
+
+
+def test_forgot_password_page_explains_totp_requirement(client):
+    resp = client.get("/forgot-password.html")
+    assert resp.status_code == 200
+    assert 'hx-post="/htmx/auth/forgot-password-verify"' in resp.text
+    assert 'hx-post="/htmx/auth/forgot-password"' in resp.text
+    assert 'data-fp-wizard' in resp.text
+    assert 'data-otp-group' in resp.text
+    assert 'data-otp-target="fpCodeHidden"' in resp.text
+    assert 'id="fpCodeHidden"' in resp.text
+    assert "forgot-password.js?v=3" in resp.text
+    assert "otp-input.js?v=3" in resp.text
+    assert "已啟用 Authenticator" in resp.text
+    assert 'href="/account-security.html"' in resp.text
+    assert 'href="/login.html?next=/account-security.html"' in resp.text
+
+
+def test_account_security_page_has_htmx_and_totp_script(client):
+    resp = client.get("/account-security.html")
+    assert resp.status_code == 200
+    assert 'hx-get="/htmx/account-security"' in resp.text
+    assert "totp-security.js" in resp.text
+
+
+def test_htmx_account_security_guest_shows_login(client):
+    resp = client.get("/htmx/account-security", headers={"HX-Request": "true"})
+    assert resp.status_code == 200
+    assert "請先登入" in resp.text
+    assert 'id="totp-start-btn"' not in resp.text
 
 
 def test_calculator_page_shop_js_wizard(client):

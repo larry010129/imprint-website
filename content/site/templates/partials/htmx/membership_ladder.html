@@ -1,0 +1,87 @@
+{% if membership %}
+<section class="membership-ladder" aria-label="各等級權益比較">
+  <div class="membership-ladder__intro">
+    <span class="membership-ladder__badge">
+      {% if membership.track == 'partner' %}合作廠商制度{% else %}會員制度{% endif %}
+    </span>
+    <h2 class="membership-ladder__title">各等級權益比較</h2>
+    <p class="membership-ladder__lead">
+      {% if membership.track == 'partner' %}
+      依本月 or 本年合格訂單筆數升級（擇優）；合作銘鑽僅限邀請。月 or 年曆重計。
+      {% else %}
+      訂單筆數 or 消費金額 or 好友邀請可升級／維持；銘鑽卡僅限品牌邀請。
+      {% endif %}
+    </p>
+    {% if membership.upgrade_hint %}
+    <p class="membership-ladder__hint">{{ membership.upgrade_hint }}</p>
+    {% endif %}
+  </div>
+
+  <div class="membership-ladder__scroll">
+    <table class="membership-ladder__table">
+      <thead>
+        <tr>
+          <th scope="col" class="membership-ladder__sticky">權益項目</th>
+          {% for plan in membership.plans %}
+          <th scope="col" class="membership-ladder__tier{% if plan.id == membership.tier_id %} is-current{% endif %}">
+            <div class="membership-ladder__tier-head">
+              {% if plan.id == membership.tier_id %}
+              <span class="membership-ladder__current-pill">目前等級</span>
+              {% else %}
+              <span class="membership-ladder__current-spacer" aria-hidden="true"></span>
+              {% endif %}
+              <span class="membership-ladder__chip" style="background: {{ plan.accent.chip }};"></span>
+              <span class="membership-ladder__tier-name">{{ plan.name }}</span>
+              {% if membership.track == 'partner' %}
+              <span class="membership-ladder__tier-sub">合作</span>
+              {% endif %}
+            </div>
+          </th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="membership-ladder__section">
+          <td colspan="{{ membership.plans|length + 1 }}">等級條件</td>
+        </tr>
+        <tr>
+          <th scope="row" class="membership-ladder__sticky">達成門檻</th>
+          {% for plan in membership.plans %}
+          <td class="{% if plan.id == membership.tier_id %}is-current{% endif %}">{{ plan.price }}</td>
+          {% endfor %}
+        </tr>
+        <tr>
+          <th scope="row" class="membership-ladder__sticky">
+            {% if membership.track == 'partner' %}計算週期{% else %}續卡{% endif %}
+          </th>
+          {% for plan in membership.plans %}
+          <td class="{% if plan.id == membership.tier_id %}is-current{% endif %}">{{ plan.cadence }}</td>
+          {% endfor %}
+        </tr>
+        {% for group in membership.feature_groups %}
+        <tr class="membership-ladder__section">
+          <td colspan="{{ membership.plans|length + 1 }}">{{ group.section }}</td>
+        </tr>
+        {% for feature in group.features %}
+        <tr>
+          <th scope="row" class="membership-ladder__sticky">{{ feature.label }}</th>
+          {% for value in feature.values %}
+          {% set plan = membership.plans[loop.index0] %}
+          <td class="{% if plan.id == membership.tier_id %}is-current{% endif %}">
+            {% if value is sameas true %}
+            <span class="membership-ladder__yes" aria-label="包含">✓</span>
+            {% elif value is sameas false %}
+            <span class="membership-ladder__no" aria-label="不包含">✕</span>
+            {% else %}
+            <span class="membership-ladder__text">{{ value }}</span>
+            {% endif %}
+          </td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}

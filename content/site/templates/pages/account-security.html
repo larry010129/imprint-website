@@ -1,0 +1,40 @@
+{% extends "layouts/base.html" %}
+
+{% block extra_css %}
+
+<link rel="stylesheet" href="/static/css/member-app.css?v=4">
+
+<link rel="stylesheet" href="/static/css/auth.css?v=5">
+
+{% endblock %}
+
+{% block content %}
+
+<section class="account-section" id="view-account-security" aria-label="帳戶安全">
+
+  <div class="container account-grid">
+
+    <div id="htmx-account-security" class="account-htmx-root"
+
+      hx-get="/htmx/account-security"
+
+      hx-trigger="load"
+
+      hx-swap="innerHTML">
+
+      <div class="skel-panel" aria-busy="true"><span class="skel-line skel-line--long"></span></div>
+
+    </div>
+
+  </div>
+
+</section>
+
+{% endblock %}
+
+{% block extra_scripts %}
+
+<script src="/static/js/totp-security.js?v=2"></script>
+
+{% endblock %}
+

@@ -1,6 +1,6 @@
 {% extends "layouts/base-auth.html" %}
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/auth.css?v=5">
+<link rel="stylesheet" href="/static/css/auth.css?v=8">
 {% endblock %}
 {% block content %}
 {% from "partials/auth_macros.html" import auth_shell, auth_password_field %}
@@ -24,7 +24,8 @@
       <label for="rPhone">電話</label>
     </div>
     <div class="form-field">
-      <input type="email" id="rEmail" name="email" placeholder=" " autocomplete="username" required>
+      <input type="email" id="rEmail" name="email" placeholder=" " autocomplete="username"
+        pattern="[^\s@]+@[^\s@]+\.[A-Za-z]{2,}" title="請輸入有效的 Email 格式" required>
       <label for="rEmail">電子郵件</label>
     </div>
     {{ auth_password_field('rPassword', label='密碼（至少 8 碼）', autocomplete='new-password', minlength=8) }}
@@ -42,6 +43,13 @@
       <input type="text" id="rReferralCode" name="referralCode" placeholder=" " autocomplete="off">
       <label for="rReferralCode">好友邀請碼（選填）</label>
     </div>
+    {% if recaptcha_site_key %}
+    <div class="form-field recaptcha-field" data-auth-recaptcha>
+      <div class="g-recaptcha" data-sitekey="{{ recaptcha_site_key }}"></div>
+    </div>
+    {% else %}
+    <p class="form-msg is-err" role="alert">註冊驗證尚未設定，請稍後再試或聯絡客服。</p>
+    {% endif %}
 
     <label class="partner-check terms-check" id="registerTermsTrigger">
       <input type="checkbox" id="rAcceptTerms" name="acceptTerms" value="1" required>
@@ -55,7 +63,7 @@
     </label>
     <p class="terms-check-hint">需開啟條款並捲動至底部後才能勾選同意</p>
 
-    <button type="submit" class="login-button" id="registerSubmitBtn">建立會員帳號</button>
+    <button type="submit" class="login-button" id="registerSubmitBtn"{% if not recaptcha_site_key %} disabled{% endif %}>建立會員帳號</button>
   </form>
   <p class="signup-prompt">已經是會員了？<a href="/login.html">直接登入</a></p>
 {% endcall %}
@@ -80,6 +88,9 @@
 </dialog>
 {% endblock %}
 {% block extra_scripts %}
-<script src="/static/js/auth-shell.js"></script>
+{% if recaptcha_site_key %}
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
+{% endif %}
+<script src="/static/js/auth-shell.js?v=6"></script>
 <script src="/static/js/register-terms.js?v=1"></script>
 {% endblock %}

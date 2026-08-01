@@ -22,7 +22,7 @@
     { value: '/', label: '首頁' },
     { value: '/shop/calculator/', label: '客製試算' },
     { value: '/price.html', label: 'DNA 鑽石價格' },
-    { value: '/gold-price.html', label: '台銀金價' },
+    { value: '/gold-price.html', label: '黃金牌價' },
     { value: '/series.html', label: '系列總覽' },
     { value: '/what-is-dna-diamond.html', label: 'DNA 鑽石的誕生' },
     { value: '/faq.html', label: '常見問題' },

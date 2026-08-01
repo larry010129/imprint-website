@@ -27,7 +27,8 @@
 html{ scroll-behavior:smooth; }
 html.site-layout-ready .topbar,
 html.site-layout-ready .nav,
-html.site-layout-ready .footer{ opacity:1; transition:opacity .15s ease; }
+html.site-layout-ready .footer,
+html.site-layout-ready .site-footer{ opacity:1; transition:opacity .15s ease; }
 body{
   font-family:var(--sans);
   color:var(--ink);

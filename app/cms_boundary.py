@@ -34,6 +34,7 @@ RESERVED_CMS_SLUGS = frozenset(
         "track-order",
         "success",
         "reset-password",
+        "forgot-password",
     }
 )
 

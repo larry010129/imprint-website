@@ -72,6 +72,12 @@
     },
     requestPasswordReset: function (email) { return request('/api/auth/request-password-reset', { method: 'POST', body: { email: email } }); },
     resetPassword: function (token, newPassword) { return request('/api/auth/reset-password', { method: 'POST', body: { token: token, newPassword: newPassword } }); },
+    resetPasswordWithTotp: function (email, code, newPassword) {
+      return request('/api/auth/reset-password-totp', {
+        method: 'POST',
+        body: { email: email, code: code, newPassword: newPassword },
+      });
+    },
 
     // ---- customer ----
     getMyOrders: function () { return request('/api/orders'); },

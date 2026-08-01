@@ -3,8 +3,8 @@
   "private": true,
   "description": "FastAPI + Jinja SSR + HTMX on :8080. Pricing SoT: app/pricing.py. React: admin-tables only.",
   "scripts": {
-    "dev": "python -m uvicorn main:app --reload --host 127.0.0.1 --port 8080",
-    "dev:api": "python -m uvicorn main:app --reload --host 127.0.0.1 --port 8080",
+    "dev": "python -m uvicorn main:app --reload --host 127.0.0.1 --port 8080 --reload-dir app --reload-dir config --reload-dir content --reload-delay 0.25",
+    "dev:api": "python -m uvicorn main:app --reload --host 127.0.0.1 --port 8080 --reload-dir app --reload-dir config --reload-dir content --reload-delay 0.25",
     "build:frontend": "npm run build --prefix frontend",
     "export:site": "python scripts/export_site_content.py",
     "fetch:gold": "python scripts/fetch_gold_quote.py"

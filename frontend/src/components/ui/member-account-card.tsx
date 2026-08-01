@@ -1,6 +1,7 @@
 import * as React from "react"
 import { Check, Clock, Copy, UserRound } from "lucide-react"
 
+import { deriveMemberDisplayNumber, formatMemberDisplayGroups } from "@/lib/membership-tiers"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
@@ -80,6 +81,8 @@ export function MemberAccountCard({
 }: MemberAccountCardProps) {
   const cityLine = [member.shippingPostal, member.shippingCity].filter(Boolean).join(" ")
   const addressLine = member.shippingAddress || ""
+  const memberNumber = deriveMemberDisplayNumber(member.memberId)
+  const memberNumberDisplay = formatMemberDisplayGroups(member.memberId)
 
   return (
     <div
@@ -128,8 +131,8 @@ export function MemberAccountCard({
         <InfoField label="聯絡電話" value={member.phone || "尚未填寫"} />
         <InfoField label="寄送縣市" value={cityLine || "尚未填寫"} />
         <InfoField label="Email" value={member.email || "—"} />
-        <InfoField label="會員編號" value={member.memberId}>
-          <CopyButton text={member.memberId} label="複製會員編號" />
+        <InfoField label="會員編號" value={memberNumberDisplay}>
+          <CopyButton text={memberNumber} label="複製會員編號" />
         </InfoField>
         <InfoField label="登入方式" value={member.loginType} />
         <InfoField label="寄送地址" value={addressLine || "尚未填寫"} className="col-span-1" />

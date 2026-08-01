@@ -47,10 +47,14 @@ HTML_CONTENT_SECURITY_POLICY = (
 
 
 def _startup_banner() -> None:
+    from app.database import database_target_label, require_database_url
+
     api = settings.public_base_url
     label = "Diamond v3 on Render" if settings.is_render else "Diamond v3 local dev"
+    dsn = require_database_url()
     print("")
     print(f"  {label}")
+    print(f"  DB: {database_target_label(dsn)}")
     print(f"  Site (Jinja SSR): {api}/")
     print(f"  API: {api}/api/bot-gold")
     if not settings.is_render:
@@ -75,6 +79,7 @@ async def lifespan(_app: FastAPI):
         purge_auto_stock_product_images,
     )
     from app.auth import ensure_google_id_column
+    from app.totp import ensure_totp_columns
     from app.database import get_connection, get_transaction
     from app.cms_copy_slots import ensure_page_copy_slots_schema, seed_page_copy_slots
     from app.cms_media import ensure_cms_media_schema
@@ -93,6 +98,14 @@ async def lifespan(_app: FastAPI):
     _startup_banner()
     ensure_profile_address_columns()
     ensure_google_id_column()
+    ensure_totp_columns()
+    try:
+        from app.controllers.admin_controller import _ensure_invite_schema
+
+        with get_connection() as conn, conn.cursor() as cur:
+            _ensure_invite_schema(cur)
+    except Exception:
+        log.exception("ensure_invite_schema failed")
     # Sell-mode columns must not ride the silent try below — missing cols = product-update 500.
     try:
         with get_connection() as conn, conn.cursor() as cur:

@@ -5,7 +5,11 @@
   'use strict';
 
   var thisScript = document.currentScript;
-  var clientId = thisScript && thisScript.dataset.clientId;
+  var slot = document.getElementById('google-signin-slot');
+  var clientId =
+    (thisScript && thisScript.dataset.clientId) ||
+    (slot && slot.dataset.googleClientId) ||
+    '';
   if (!clientId) return;
 
   function setMsg(text, isError) {
@@ -40,7 +44,9 @@
         }
         var params = new URLSearchParams(window.location.search);
         var next = params.get('next');
-        window.location.href = next ? decodeURIComponent(next) : '/account.html';
+        // Server `next` wins (soft onboarding prompt shows on /account when incomplete).
+        window.location.href = result.data.next
+          || (next ? decodeURIComponent(next) : '/account.html');
       })
       .catch(function () {
         setMsg('連線異常，請稍後再試。', true);
@@ -48,7 +54,7 @@
   }
 
   function renderButton() {
-    var target = document.getElementById('googleSignInBtn');
+    var target = document.getElementById('googleSignInBtn') || slot;
     if (!target) return;
     google.accounts.id.initialize({ client_id: clientId, callback: handleCredentialResponse });
     google.accounts.id.renderButton(target, {

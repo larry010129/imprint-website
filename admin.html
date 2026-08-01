@@ -359,8 +359,8 @@
 
       <div class="card">
         <div class="card-head">
-          <h2>飾品戒台費用<span class="src-tag estimate">依台銀金價自動換算</span></h2>
-          <span class="hint">金工費 NT$5,000 固定；金屬部分依即時台銀牌價等比浮動（未稅）。9K 經典項鍊基準 NT$10,000。</span>
+          <h2>飾品戒台費用<span class="src-tag estimate">依即時金價自動換算</span></h2>
+          <span class="hint">金工費 NT$5,000 固定；金屬部分依即時牌價等比浮動（未稅）。9K 經典項鍊基準 NT$10,000。</span>
         </div>
         <p class="note" id="mountingGoldNote" style="margin:0 18px 12px;font-size:12px;color:var(--ink-faint);"></p>
         <div class="admin-scroll">
@@ -547,7 +547,7 @@
       inp.value = (v != null) ? v : 0;
       inp.readOnly = true;
       inp.classList.add('is-auto-price');
-      inp.title = '依台銀即時金價自動換算，無需手動輸入';
+      inp.title = '依即時金價自動換算，無需手動輸入';
     });
     inpShapePct.value = p.shapeSurchargePct;
     inpEngraveFee.value = p.engraveFee;
@@ -556,9 +556,9 @@
       var q = window.ImprintPricing.getGoldQuoteMeta();
       if (q && q.available) {
         var stale = q.is_stale ? '（資料可能已過期）' : '';
-        goldNote.textContent = '金價來源：台銀牌價 · 更新：' + (q.fetched_at_display || q.fetched_at || '—') + stale;
+        goldNote.textContent = '金價更新：' + (q.fetched_at_display || q.fetched_at || '—') + stale;
       } else {
-        goldNote.textContent = '金價暫未取得，目前顯示基準估算值；待台銀資料更新後會自動換算。';
+        goldNote.textContent = '金價暫未取得，目前顯示基準估算值；待牌價更新後會自動換算。';
       }
     }
   }

@@ -37,17 +37,7 @@
     </label>
 <button class="login-button" type="submit">登入</button>
 </form>
-<p class="signup-prompt">
-<a href="#" id="forgot-toggle">忘記密碼？</a>
-    · 還不是會員？<a href="/register.html">立即註冊</a>
-</p>
-<form class="login-form" hidden="" hx-post="/htmx/auth/request-reset" hx-swap="innerHTML" hx-target="#auth-form-msg" id="forgot-form">
-<div class="form-field">
-<input autocomplete="username" id="fEmail" name="email" placeholder=" " required="" type="email"/>
-<label for="fEmail">註冊用 Email</label>
-</div>
-<button class="login-button" type="submit">寄送重設連結</button>
-</form>
+<p class="signup-prompt">還不是會員？<a href="/register.html">立即註冊</a></p>
 </div>
 </div>
 </div>

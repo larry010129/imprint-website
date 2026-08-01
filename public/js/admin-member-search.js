@@ -40,9 +40,9 @@
   }
 
   function shortId(id) {
-    var s = String(id || '').replace(/-/g, '').toUpperCase();
-    if (s.length < 10) return s || '—';
-    return s.slice(0, 4) + ' ' + s.slice(4, 8) + ' ' + s.slice(8, 10);
+    return window.ImprintMemberId
+      ? window.ImprintMemberId.formatMemberDisplayGroups(id)
+      : String(id || '').slice(0, 12);
   }
 
   function roleLabel(account) {
@@ -92,6 +92,7 @@
       account.id,
       idCompact,
       shortId(account.id),
+      window.ImprintMemberId ? window.ImprintMemberId.deriveMemberDisplayNumber(account.id) : '',
     ];
     for (var i = 0; i < fields.length; i++) {
       var v = String(fields[i] || '').toLowerCase();

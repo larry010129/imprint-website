@@ -18,7 +18,7 @@ export const NAV_ITEMS: NavItem[] = [
     children: [
       { label: "戒台試算", href: "/shop/calculator/" },
       { label: "DNA 鑽石價格", href: "/price.html" },
-      { label: "台銀金價", href: "/gold-price.html" },
+      { label: "黃金牌價", href: "/gold-price.html" },
     ],
   },
   {

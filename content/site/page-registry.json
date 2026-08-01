@@ -352,7 +352,7 @@
         "src": "/static/js/gold-quote-data.js"
       },
       {
-        "src": "/static/js/gold-price.js?v=17"
+        "src": "/static/js/gold-price.js?v=18"
       }
     ],
     "head_extras": []

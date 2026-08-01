@@ -63,11 +63,6 @@ async function patchProfile(body: Record<string, string>) {
   return { ok: res.ok, status: res.status, data }
 }
 
-function shortMemberId(id: string): string {
-  const compact = id.replace(/-/g, "").toUpperCase()
-  return compact.slice(0, 10) || id.slice(0, 8)
-}
-
 function wantsCompleteBanner(session: Session): boolean {
   const params = new URLSearchParams(window.location.search)
   return params.get("complete") === "1" || session.profileComplete === false
@@ -337,7 +332,7 @@ export default function AccountPage() {
                 <MembershipCard
                   tierId={membership.tierId}
                   memberName={name}
-                  memberId={shortMemberId(session.user.id)}
+                  memberId={session.user.id}
                   roleLabel={roleOverride || membership.label}
                   spend={membership.spend}
                   orderCount={membership.orderCount}

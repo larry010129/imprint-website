@@ -1,12 +1,12 @@
 {% extends "layouts/base.html" %}
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/member-app.css?v=4">
+<link rel="stylesheet" href="/static/css/member-app.css?v=5">
 {% endblock %}
 {% block content %}
 <section class="account-section" id="view-profile" aria-label="帳戶設定">
   <div class="container account-grid">
     <div id="htmx-profile" class="account-htmx-root"
-      hx-get="/htmx/profile"
+      hx-get="/htmx/profile{% if request.query_params.get('onboarding') == '1' %}?onboarding=1{% endif %}"
       hx-trigger="load"
       hx-swap="innerHTML">
       <div class="skel-panel" aria-busy="true"><span class="skel-line skel-line--medium"></span></div>

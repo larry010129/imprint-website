@@ -32,6 +32,14 @@ class Settings:
         return os.environ.get("GOOGLE_CLIENT_ID", "").strip()
 
     @property
+    def recaptcha_site_key(self) -> str:
+        return os.environ.get("RECAPTCHA_SITE_KEY", "").strip()
+
+    @property
+    def recaptcha_secret_key(self) -> str:
+        return os.environ.get("RECAPTCHA_SECRET_KEY", "").strip()
+
+    @property
     def public_base_url(self) -> str:
         external = os.environ.get("RENDER_EXTERNAL_URL")
         if external:

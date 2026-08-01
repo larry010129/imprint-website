@@ -914,3 +914,21 @@ export function applyFetchedMembershipConfig(config: MembershipConfig): void {
   setMembershipConfig(config);
   refreshMembershipPlansExport();
 }
+
+/** Stable 12-digit numeric display id from internal user id (UUID). */
+export function deriveMemberDisplayNumber(memberId: string): string {
+  const compact = memberId.replace(/[\s-]/g, "").trim().toLowerCase();
+  if (!compact || !/^[0-9a-f]+$/.test(compact)) return "";
+  try {
+    const value = BigInt(`0x${compact}`) % 1_000_000_000_000n;
+    return value.toString().padStart(12, "0");
+  } catch {
+    return "";
+  }
+}
+
+export function formatMemberDisplayGroups(memberId: string): string {
+  const number = deriveMemberDisplayNumber(memberId);
+  if (!number) return "———— ————";
+  return number.replace(/(.{4})/g, "$1 ").trim();
+}

@@ -20,6 +20,7 @@ from app.youtube_channel import fetch_latest_channel_video, resolve_channel_id
 
 templates = Jinja2Templates(directory=str(settings.templates_dir))
 templates.env.globals["google_client_id"] = settings.google_client_id
+templates.env.globals["recaptcha_site_key"] = settings.recaptcha_site_key
 
 # Fragments live under content/site/fragments (not templates/).
 _FRAGMENTS_DIR = settings.site_content_dir / "fragments"
@@ -257,18 +258,40 @@ def _fetch_public_cms_page_cached(slug: str, _time_bucket: int) -> dict | None:
     return bundle
 
 
+def _load_gold_quote_bootstrap() -> dict | None:
+    """Last-known gold quote from DB for SSR on /gold-price.html."""
+    try:
+        from app.bot_gold import build_payload_from_cache
+        from app.database import get_connection
+
+        with get_connection() as conn, conn.cursor() as cur:
+            cur.execute("select * from gold_price_cache where id = 1")
+            row = cur.fetchone()
+        if row and float(row.get("xau_per_gram") or 0) > 0:
+            payload = build_payload_from_cache(row)
+            return {
+                "quote": payload["quote"],
+                "alloyRates": payload["alloyRates"],
+                "metals": payload.get("metals"),
+            }
+    except Exception:
+        return None
+    return None
+
+
 def _context(request: Request, meta: PageMeta) -> dict:
     page_images = _load_page_images(meta.route)
     page_image = _load_page_image(meta.route, page_images)
     page_copy_slots = _load_page_copy_slots(meta.route)
     lcp_image = None
-    if page_image and meta.route not in {"/", "/about.html"}:
+    if page_image and meta.route not in {"/"}:
         lcp_image = page_image.get("display_webp") or page_image.get("display_url")
     context = {
         "request": request,
         "title": meta.title,
         "description": meta.description,
         "canonical_path": meta.canonical_path,
+        "robots": meta.robots,
         "og_title": meta.og_title,
         "og_description": meta.og_description,
         "og_image": meta.og_image,
@@ -296,6 +319,12 @@ def _context(request: Request, meta: PageMeta) -> dict:
         context["featured_video"] = load_featured_video()
     if meta.route == "/about.html":
         context["youtube_latest_video"] = load_youtube_latest_video()
+    if meta.route == "/gold-price.html":
+        context["gold_quote_bootstrap"] = _load_gold_quote_bootstrap()
+    # Live env read so register page picks up keys without process restart in tests.
+    from app.captcha import recaptcha_site_key as _recaptcha_site_key
+
+    context["recaptcha_site_key"] = _recaptcha_site_key()
     return context
 
 
@@ -359,6 +388,10 @@ def register_pages(app: FastAPI) -> None:
     @app.get("/robots.txt", include_in_schema=False)
     async def robots() -> FileResponse:
         return FileResponse(settings.site_root / "robots.txt")
+
+    @app.get("/llms.txt", include_in_schema=False)
+    async def llms_txt() -> FileResponse:
+        return FileResponse(settings.site_root / "llms.txt", media_type="text/plain; charset=utf-8")
 
     @app.get("/sitemap.xml", include_in_schema=False)
     async def sitemap() -> FileResponse:

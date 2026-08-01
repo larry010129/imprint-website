@@ -26,7 +26,7 @@
 <label for="rPhone">電話</label>
 </div>
 <div class="form-field">
-<input autocomplete="username" id="rEmail" name="email" placeholder=" " required="" type="email"/>
+<input autocomplete="username" id="rEmail" name="email" pattern="[^\s@]+@[^\s@]+\.[A-Za-z]{2,}" placeholder=" " required="" title="請輸入有效的 Email 格式" type="email"/>
 <label for="rEmail">電子郵件</label>
 </div>
 <div class="form-field">
@@ -57,6 +57,9 @@
 <div class="form-field">
 <input autocomplete="off" id="rReferralCode" name="referralCode" placeholder=" " type="text"/>
 <label for="rReferralCode">好友邀請碼（選填）</label>
+</div>
+<div class="form-field recaptcha-field" data-auth-recaptcha="">
+<div class="g-recaptcha" data-sitekey=""></div>
 </div>
 <label class="partner-check terms-check" id="registerTermsTrigger">
 <input id="rAcceptTerms" name="acceptTerms" required="" type="checkbox" value="1"/>

@@ -8,7 +8,7 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 
 from app.auth import enforce_rate_limit, get_user_id, is_admin
-from app.bot_gold import FALLBACK_XAG, FALLBACK_XPT, fetch_bot_gold_quote
+from app.bot_gold import FALLBACK_XAG, FALLBACK_XPT, build_payload_from_cache, fetch_bot_gold_quote
 from app.catalog import build_catalog_response, fetch_catalog_rows, load_product_children
 from app.product_categories import fetch_categories
 from app.orders import attach_order_display, attach_order_relations, hydrate_order
@@ -112,10 +112,20 @@ async def submit_quote_request(request: Request) -> dict:
 
 @router.get("/bot-gold", response_model=GoldQuote)
 async def bot_gold() -> JSONResponse:
+    """Public gold quote — reads ``gold_price_cache`` (same source as orders + /api/prices)."""
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute("select * from gold_price_cache where id = 1")
+        row = cur.fetchone()
+    if row and float(row.get("xau_per_gram") or 0) > 0:
+        payload = build_payload_from_cache(row)
+        return JSONResponse(
+            content=GoldQuote.model_validate(payload).model_dump(),
+            headers={"Cache-Control": "no-store"},
+        )
     try:
         payload = await fetch_bot_gold_quote()
     except Exception as err:  # noqa: BLE001
-        log.exception("bot-gold quote fetch failed")
+        log.exception("bot-gold cache empty and live fetch failed")
         raise HTTPException(status_code=502, detail="金價暫時無法取得，請稍後再試") from err
     return JSONResponse(
         content=GoldQuote.model_validate(payload).model_dump(),

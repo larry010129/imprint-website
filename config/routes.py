@@ -24,6 +24,7 @@ class PageMeta:
     extra_body_class: str | None = None
     content_fragment: str | None = None
     extra_head_blocks: list[str] = field(default_factory=list)
+    robots: str | None = None
 
 
 HOME = PageMeta(
@@ -79,7 +80,7 @@ PAGE_ACCOUNT = PageMeta(
     template='pages/account.html',
     title='會員專區｜銘印鑽石 IMPRINT DIAMOND',
     description='',
-    canonical_path='',
+    canonical_path='account.html',
     og_title=None,
     og_description=None,
     og_image=None,
@@ -88,6 +89,7 @@ PAGE_ACCOUNT = PageMeta(
     extra_body_class=None,
     content_fragment=None,
     extra_head_blocks=[],
+    robots='noindex, nofollow',
 )
 
 PAGE_CART = PageMeta(
@@ -95,7 +97,7 @@ PAGE_CART = PageMeta(
     template='pages/cart.html',
     title='購物車｜銘印鑽石 IMPRINT DIAMOND',
     description='',
-    canonical_path='',
+    canonical_path='cart.html',
     og_title=None,
     og_description=None,
     og_image=None,
@@ -104,6 +106,7 @@ PAGE_CART = PageMeta(
     extra_body_class=None,
     content_fragment=None,
     extra_head_blocks=[],
+    robots='noindex, nofollow',
 )
 
 PAGE_CHECKOUT = PageMeta(
@@ -111,7 +114,7 @@ PAGE_CHECKOUT = PageMeta(
     template='pages/checkout.html',
     title='確認訂單｜銘印鑽石 IMPRINT DIAMOND',
     description='',
-    canonical_path='',
+    canonical_path='checkout.html',
     og_title=None,
     og_description=None,
     og_image=None,
@@ -120,6 +123,7 @@ PAGE_CHECKOUT = PageMeta(
     extra_body_class=None,
     content_fragment=None,
     extra_head_blocks=[],
+    robots='noindex, nofollow',
 )
 
 PAGE_CONTACT = PageMeta(
@@ -159,7 +163,7 @@ PAGE_FAVORITES = PageMeta(
     template='pages/favorites.html',
     title='收藏款式｜銘印鑽石 IMPRINT DIAMOND',
     description='',
-    canonical_path='',
+    canonical_path='favorites.html',
     og_title=None,
     og_description=None,
     og_image=None,
@@ -168,6 +172,7 @@ PAGE_FAVORITES = PageMeta(
     extra_body_class=None,
     content_fragment=None,
     extra_head_blocks=[],
+    robots='noindex, nofollow',
 )
 
 PAGE_GOLD_PRICE = PageMeta(
@@ -191,7 +196,7 @@ PAGE_HISTORY = PageMeta(
     template='pages/history.html',
     title='訂購紀錄｜銘印鑽石 IMPRINT DIAMOND',
     description='',
-    canonical_path='',
+    canonical_path='history.html',
     og_title=None,
     og_description=None,
     og_image=None,
@@ -200,6 +205,7 @@ PAGE_HISTORY = PageMeta(
     extra_body_class=None,
     content_fragment=None,
     extra_head_blocks=[],
+    robots='noindex, nofollow',
 )
 
 PAGE_LOGIN = PageMeta(
@@ -207,7 +213,7 @@ PAGE_LOGIN = PageMeta(
     template='pages/login.html',
     title='會員登入｜銘印鑽石 IMPRINT DIAMOND',
     description='',
-    canonical_path='',
+    canonical_path='login.html',
     og_title=None,
     og_description=None,
     og_image=None,
@@ -216,6 +222,41 @@ PAGE_LOGIN = PageMeta(
     extra_body_class='page-login',
     content_fragment=None,
     extra_head_blocks=[],
+    robots='noindex, nofollow',
+)
+
+PAGE_LOGIN_2FA = PageMeta(
+    route='/login-2fa.html',
+    template='pages/login-2fa.html',
+    title='雙因素驗證｜銘印鑽石 IMPRINT DIAMOND',
+    description='',
+    canonical_path='login-2fa.html',
+    og_title=None,
+    og_description=None,
+    og_image=None,
+    breadcrumbs=[],
+    mvc_page='login-2fa',
+    extra_body_class='page-login-2fa',
+    content_fragment=None,
+    extra_head_blocks=[],
+    robots='noindex, nofollow',
+)
+
+PAGE_ACCOUNT_SECURITY = PageMeta(
+    route='/account-security.html',
+    template='pages/account-security.html',
+    title='帳戶安全｜銘印鑽石 IMPRINT DIAMOND',
+    description='',
+    canonical_path='account-security.html',
+    og_title=None,
+    og_description=None,
+    og_image=None,
+    breadcrumbs=[],
+    mvc_page='account-security',
+    extra_body_class=None,
+    content_fragment=None,
+    extra_head_blocks=[],
+    robots='noindex, nofollow',
 )
 
 PAGE_NOTIFICATIONS = PageMeta(
@@ -223,7 +264,7 @@ PAGE_NOTIFICATIONS = PageMeta(
     template='pages/notifications.html',
     title='通知｜銘印鑽石 IMPRINT DIAMOND',
     description='',
-    canonical_path='',
+    canonical_path='notifications.html',
     og_title=None,
     og_description=None,
     og_image=None,
@@ -232,6 +273,7 @@ PAGE_NOTIFICATIONS = PageMeta(
     extra_body_class=None,
     content_fragment=None,
     extra_head_blocks=[],
+    robots='noindex, nofollow',
 )
 
 PAGE_PRICE = PageMeta(
@@ -264,6 +306,7 @@ PAGE_PRIVACY = PageMeta(
     extra_body_class=None,
     content_fragment=None,
     extra_head_blocks=[],
+    robots='noindex, nofollow',
 )
 
 PAGE_TERMS = PageMeta(
@@ -280,6 +323,7 @@ PAGE_TERMS = PageMeta(
     extra_body_class=None,
     content_fragment=None,
     extra_head_blocks=[],
+    robots='noindex, nofollow',
 )
 
 PAGE_RETURN_POLICY = PageMeta(
@@ -296,6 +340,7 @@ PAGE_RETURN_POLICY = PageMeta(
     extra_body_class=None,
     content_fragment=None,
     extra_head_blocks=[],
+    robots='noindex, nofollow',
 )
 
 PAGE_PROFILE = PageMeta(
@@ -303,7 +348,7 @@ PAGE_PROFILE = PageMeta(
     template='pages/profile.html',
     title='帳戶設定｜銘印鑽石 IMPRINT DIAMOND',
     description='',
-    canonical_path='',
+    canonical_path='profile.html',
     og_title=None,
     og_description=None,
     og_image=None,
@@ -312,6 +357,7 @@ PAGE_PROFILE = PageMeta(
     extra_body_class=None,
     content_fragment=None,
     extra_head_blocks=[],
+    robots='noindex, nofollow',
 )
 
 PAGE_REGISTER = PageMeta(
@@ -319,7 +365,7 @@ PAGE_REGISTER = PageMeta(
     template='pages/register.html',
     title='加入會員｜銘印鑽石 IMPRINT DIAMOND',
     description='',
-    canonical_path='',
+    canonical_path='register.html',
     og_title=None,
     og_description=None,
     og_image=None,
@@ -328,6 +374,7 @@ PAGE_REGISTER = PageMeta(
     extra_body_class=None,
     content_fragment=None,
     extra_head_blocks=[],
+    robots='noindex, nofollow',
 )
 
 PAGE_RESET_PASSWORD = PageMeta(
@@ -335,7 +382,7 @@ PAGE_RESET_PASSWORD = PageMeta(
     template='pages/reset-password.html',
     title='重設密碼｜銘印鑽石 IMPRINT DIAMOND',
     description='',
-    canonical_path='',
+    canonical_path='reset-password.html',
     og_title=None,
     og_description=None,
     og_image=None,
@@ -344,6 +391,24 @@ PAGE_RESET_PASSWORD = PageMeta(
     extra_body_class=None,
     content_fragment=None,
     extra_head_blocks=[],
+    robots='noindex, nofollow',
+)
+
+PAGE_FORGOT_PASSWORD = PageMeta(
+    route='/forgot-password.html',
+    template='pages/forgot-password.html',
+    title='忘記密碼｜銘印鑽石 IMPRINT DIAMOND',
+    description='',
+    canonical_path='forgot-password.html',
+    og_title=None,
+    og_description=None,
+    og_image=None,
+    breadcrumbs=[],
+    mvc_page='forgot-password',
+    extra_body_class='page-forgot-password',
+    content_fragment=None,
+    extra_head_blocks=[],
+    robots='noindex, nofollow',
 )
 
 PAGE_STORIES = PageMeta(
@@ -367,7 +432,7 @@ PAGE_SUCCESS = PageMeta(
     template='pages/success.html',
     title='訂單送出｜銘印鑽石 IMPRINT DIAMOND',
     description='',
-    canonical_path='',
+    canonical_path='success.html',
     og_title=None,
     og_description=None,
     og_image=None,
@@ -376,6 +441,7 @@ PAGE_SUCCESS = PageMeta(
     extra_body_class=None,
     content_fragment=None,
     extra_head_blocks=[],
+    robots='noindex, nofollow',
 )
 
 PAGE_TRACK_ORDER = PageMeta(
@@ -383,7 +449,7 @@ PAGE_TRACK_ORDER = PageMeta(
     template='pages/track-order.html',
     title='查詢訂製進度｜銘印鑽石 IMPRINT DIAMOND',
     description='',
-    canonical_path='',
+    canonical_path='track-order.html',
     og_title=None,
     og_description=None,
     og_image=None,
@@ -456,6 +522,7 @@ SHOP_CALCULATOR = PageMeta(
     extra_body_class=None,
     content_fragment=None,
     extra_head_blocks=[],
+    robots='noindex, follow',
 )
 
 JEWELRY_CATEGORY_BRACELETS = PageMeta(
@@ -864,7 +931,8 @@ STANDALONE_QUOTE_SHEET = PageMeta(
     template='pages/shop/quote-sheet.html',
     title='珠寶報價單｜銘印鑽石',
     description='',
-    canonical_path='',
+    canonical_path='shop/quote-sheet.html',
+    robots='noindex, nofollow',
 )
 
 STANDALONE_QUOTE_SHEET_SHORT = PageMeta(
@@ -872,7 +940,8 @@ STANDALONE_QUOTE_SHEET_SHORT = PageMeta(
     template='pages/shop/quote-sheet.html',
     title='珠寶報價單｜銘印鑽石',
     description='',
-    canonical_path='',
+    canonical_path='quote-sheet',
+    robots='noindex, nofollow',
 )
 
 STANDALONE_SHARE_SUMMARY = PageMeta(
@@ -880,7 +949,8 @@ STANDALONE_SHARE_SUMMARY = PageMeta(
     template='pages/share/summary.html',
     title='分享試算｜銘印鑽石',
     description='',
-    canonical_path='',
+    canonical_path='share/summary.html',
+    robots='noindex, nofollow',
 )
 
 
@@ -897,6 +967,8 @@ ALL_PAGES: list[PageMeta] = [
     PAGE_GOLD_PRICE,
     PAGE_HISTORY,
     PAGE_LOGIN,
+    PAGE_LOGIN_2FA,
+    PAGE_ACCOUNT_SECURITY,
     PAGE_NOTIFICATIONS,
     PAGE_PRICE,
     PAGE_PRIVACY,
@@ -905,6 +977,7 @@ ALL_PAGES: list[PageMeta] = [
     PAGE_PROFILE,
     PAGE_REGISTER,
     PAGE_RESET_PASSWORD,
+    PAGE_FORGOT_PASSWORD,
     PAGE_STORIES,
     PAGE_SUCCESS,
     PAGE_TRACK_ORDER,

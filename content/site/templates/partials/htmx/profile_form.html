@@ -4,16 +4,22 @@
   <a href="/login.html?next=/profile.html" class="btn btn-mint">會員登入</a>
 </div>
 {% else %}
-<div class="account-card-only">
+<div class="account-card-only{% if onboarding %} is-onboarding{% endif %}">
   <aside class="cfg-summary account-profile-card" aria-label="帳戶設定">
+    {% if onboarding %}
+    <h3>請完善個人資料</h3>
+    <p class="account-address-hint">首次登入需填寫聯絡與寄送資料後，才能使用會員帳戶。</p>
+    {% else %}
     <h3>帳戶設定</h3>
+    {% endif %}
     {% if saved %}<p class="account-profile-msg is-ok" role="status">已儲存。</p>{% endif %}
     {% if error %}<p class="account-profile-msg is-err" role="alert">{{ error }}</p>{% endif %}
     <form class="account-profile-form"
-      hx-post="/htmx/profile"
+      hx-post="/htmx/profile{% if onboarding %}?onboarding=1{% endif %}"
       hx-target="#htmx-profile"
       hx-swap="innerHTML"
       novalidate>
+      {% if onboarding %}<input type="hidden" name="onboarding" value="1">{% endif %}
       <label class="account-field" for="fullName">
         <span>姓名</span>
         <input id="fullName" name="fullName" type="text" value="{{ profile.full_name or '' }}" autocomplete="name" required placeholder="請輸入姓名">
@@ -28,27 +34,33 @@
       </div>
 
       <p class="account-address-heading">寄送地址</p>
+      {% if onboarding %}
+      <p class="account-address-hint">請填寫完整寄送地址（必填）。</p>
+      {% else %}
       <p class="account-address-hint">結帳選宅配時會自動帶入；可留空。</p>
+      {% endif %}
       <label class="account-field" for="shippingPostal">
         <span>郵遞區號</span>
-        <input id="shippingPostal" name="shippingPostal" type="text" value="{{ profile.shipping_postal or '' }}" autocomplete="postal-code" inputmode="numeric" placeholder="例：106">
+        <input id="shippingPostal" name="shippingPostal" type="text" value="{{ profile.shipping_postal or '' }}" autocomplete="postal-code" inputmode="numeric" placeholder="例：106"{% if onboarding %} required{% endif %}>
       </label>
       <label class="account-field" for="shippingCity">
         <span>縣市</span>
-        <input id="shippingCity" name="shippingCity" type="text" value="{{ profile.shipping_city or '' }}" autocomplete="address-level1" placeholder="例：台北市大安區">
+        <input id="shippingCity" name="shippingCity" type="text" value="{{ profile.shipping_city or '' }}" autocomplete="address-level1" placeholder="例：台北市大安區"{% if onboarding %} required{% endif %}>
       </label>
       <label class="account-field" for="shippingAddress">
         <span>詳細地址</span>
-        <input id="shippingAddress" name="shippingAddress" type="text" value="{{ profile.shipping_address or '' }}" autocomplete="street-address" placeholder="路名、巷弄、樓層">
+        <input id="shippingAddress" name="shippingAddress" type="text" value="{{ profile.shipping_address or '' }}" autocomplete="street-address" placeholder="路名、巷弄、樓層"{% if onboarding %} required{% endif %}>
       </label>
 
-      <button type="submit" class="btn btn-dark account-save-btn">儲存帳戶資料</button>
+      <button type="submit" class="btn btn-dark account-save-btn">{% if onboarding %}完成並繼續{% else %}儲存帳戶資料{% endif %}</button>
     </form>
+    {% if not onboarding %}
     <p class="account-profile-card__footer">
       <a href="/account.html">返回我的帳戶</a>
       <span aria-hidden="true">·</span>
       <a href="/reset-password.html">重設密碼</a>
     </p>
+    {% endif %}
   </aside>
 </div>
 {# ponytail: Google People import + city/district selects deferred; upgrade = wire GSI enrich + taiwan-admin-divisions #}

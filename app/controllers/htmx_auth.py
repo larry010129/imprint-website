@@ -9,27 +9,39 @@ import secrets
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 
 from app.auth import (
     LOGIN_LOCKOUT_SECONDS,
     LOGIN_MAX_ATTEMPTS,
     REGISTER_LOCKOUT_SECONDS,
     REGISTER_MAX_ATTEMPTS,
+    TOTP_VERIFY_LOCKOUT_SECONDS,
     bump_token_version,
     check_login_lockout,
     check_register_lockout,
+    check_totp_verify_lockout,
+    clear_pwreset_cookie,
     consume_invite_code,
     enforce_rate_limit,
+    get_pwreset_user_id,
     hash_password,
+    is_valid_email,
     log_admin_action,
     record_failure,
     record_success,
+    set_pwreset_cookie,
     set_session_cookie,
+    sign_pwreset,
     sign_session,
     validate_invite_code,
+    validate_partner_invite_code,
+    validate_register_email,
     verify_password,
 )
+from app.auth_post_login import apply_post_login_cookies, decide_post_login
+from app.auth_totp_service import complete_password_reset, verify_totp_for_pwreset
+from app.captcha import recaptcha_error_or_none
 from app.controllers.htmx_common import form_bool, html, hx_redirect
 from app.database import get_connection
 from app.membership_referral import apply_friend_referral, ensure_referral_code
@@ -62,7 +74,10 @@ async def auth_login(request: Request) -> Response:
 
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute(
-            "select id, email, password_hash, token_version, is_active from users where email = %s",
+            """
+            select id, email, password_hash, token_version, is_active, totp_enabled
+            from users where email = %s
+            """,
             (normalized,),
         )
         user = cur.fetchone()
@@ -77,10 +92,40 @@ async def auth_login(request: Request) -> Response:
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute("update users set last_login_at = now() where id = %s", (user["id"],))
 
-    token = sign_session(str(user["id"]), user["token_version"])
-    resp = hx_redirect(next_url)
-    set_session_cookie(resp, token, request, remember=remember)
+    decision = decide_post_login(next_url=next_url, user_id=str(user["id"]))
+    resp = hx_redirect(decision.next_url)
+    apply_post_login_cookies(resp, request, user, decision, remember=remember)
     return resp
+
+
+@router.post("/auth/check-email")
+async def auth_check_email(request: Request) -> JSONResponse:
+    form = await request.form()
+    email = str(form.get("email") or "").strip()
+    if not email:
+        return JSONResponse(status_code=400, content={"ok": False, "error": "請輸入 Email"})
+    email_error = validate_register_email(email)
+    if email_error:
+        return JSONResponse(status_code=400, content={"ok": False, "error": email_error})
+    normalized = email.lower()
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute("select id from users where email = %s", (normalized,))
+        if cur.fetchone():
+            return JSONResponse(
+                status_code=400,
+                content={"ok": False, "error": "此 Email 已被註冊"},
+            )
+    return JSONResponse(content={"ok": True})
+
+
+@router.post("/auth/check-invite")
+async def auth_check_invite(request: Request) -> JSONResponse:
+    form = await request.form()
+    invite_code = str(form.get("inviteCode") or "").strip()
+    invite_error = validate_partner_invite_code(invite_code)
+    if invite_error:
+        return JSONResponse(status_code=400, content={"ok": False, "error": invite_error})
+    return JSONResponse(content={"ok": True})
 
 
 @router.post("/auth/register", response_class=HTMLResponse)
@@ -95,9 +140,13 @@ async def auth_register(request: Request) -> Response:
     referral_code = str(form.get("referralCode") or "").strip() or None
     accept_terms = form_bool(form.get("acceptTerms"))
     is_partner = form_bool(form.get("isPartner"))
+    recaptcha_token = str(form.get("g-recaptcha-response") or "").strip()
 
     if not email or not password or not full_name or not phone:
         return html(request, "auth_error.html", {"error": "請完整填寫所有欄位"}, 400)
+    email_error = validate_register_email(email)
+    if email_error:
+        return html(request, "auth_error.html", {"error": email_error}, 400)
     if password != password_confirm:
         return html(request, "auth_error.html", {"error": "兩次密碼不一致"}, 400)
     if not accept_terms:
@@ -114,19 +163,30 @@ async def auth_register(request: Request) -> Response:
             request, "auth_error.html", {"error": f"註冊失敗次數過多，請 {mins} 分鐘後再試"}, 429
         )
 
-    code_for_validate = invite_code if is_partner else None
+    captcha_error = recaptcha_error_or_none(request, recaptcha_token)
+    if captcha_error:
+        record_failure(lockout_key, REGISTER_MAX_ATTEMPTS, REGISTER_LOCKOUT_SECONDS)
+        return html(request, "auth_error.html", {"error": captcha_error}, 400)
+
+    def _register_err(message: str, status: int = 400) -> HTMLResponse:
+        record_failure(lockout_key, REGISTER_MAX_ATTEMPTS, REGISTER_LOCKOUT_SECONDS)
+        return html(request, "auth_error.html", {"error": message}, status)
+
+    code_for_validate = str(invite_code or "").strip() or None
     if is_partner:
+        invite_error = validate_partner_invite_code(code_for_validate)
+        if invite_error:
+            return _register_err(invite_error)
+    else:
         invite_error = validate_invite_code(code_for_validate)
         if invite_error:
-            record_failure(lockout_key, REGISTER_MAX_ATTEMPTS, REGISTER_LOCKOUT_SECONDS)
-            return html(request, "auth_error.html", {"error": invite_error}, 400)
+            return _register_err(invite_error)
 
     normalized = email.lower()
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute("select id from users where email = %s", (normalized,))
         if cur.fetchone():
-            record_failure(lockout_key, REGISTER_MAX_ATTEMPTS, REGISTER_LOCKOUT_SECONDS)
-            return html(request, "auth_error.html", {"error": "此 Email 已被註冊"}, 409)
+            return _register_err("此 Email 已被註冊", 409)
         cur.execute(
             """
             insert into users (email, password_hash, email_verified)
@@ -161,8 +221,77 @@ async def auth_register(request: Request) -> Response:
 
     record_failure(lockout_key, REGISTER_MAX_ATTEMPTS, REGISTER_LOCKOUT_SECONDS)
     token = sign_session(str(user["id"]))
-    resp = hx_redirect("/account.html")
+    decision = decide_post_login(next_url="/account.html", user_id=str(user["id"]))
+    resp = hx_redirect(decision.next_url)
     set_session_cookie(resp, token, request)
+    return resp
+
+
+@router.post("/auth/forgot-password-verify", response_class=HTMLResponse)
+async def auth_forgot_password_verify(request: Request) -> Response:
+    if not enforce_rate_limit(request, action="pwreset-totp", limit=10, window_seconds=900):
+        return html(request, "auth_error.html", {"error": "請求過於頻繁，請稍後再試"}, 429)
+
+    form = await request.form()
+    email = str(form.get("email") or "").strip()
+    code = str(form.get("code") or "").strip()
+    if not email or not code:
+        return html(request, "auth_error.html", {"error": "請輸入 Email 與驗證碼"}, 400)
+    if not is_valid_email(email):
+        return html(request, "auth_error.html", {"error": "請輸入有效的 Email 格式"}, 400)
+
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute("select id from users where email = %s and is_active = true", (email.lower(),))
+        row = cur.fetchone()
+    lockout_key = None
+    if row:
+        lockout_key, locked = check_totp_verify_lockout(request, str(row["id"]))
+        if locked:
+            mins = math.ceil(TOTP_VERIFY_LOCKOUT_SECONDS / 60)
+            return html(
+                request,
+                "auth_error.html",
+                {"error": f"驗證失敗次數過多，請 {mins} 分鐘後再試"},
+                429,
+            )
+
+    user_id, err = verify_totp_for_pwreset(email, code, lockout_key=lockout_key)
+    if err:
+        status = 400 if "請先於帳戶安全" in err else 401
+        return html(request, "auth_error.html", {"error": err}, status)
+
+    resp = html(request, "auth_success.html", {"message": "驗證成功，請設定新密碼。"})
+    set_pwreset_cookie(resp, sign_pwreset(user_id), request)
+    return resp
+
+
+@router.post("/auth/forgot-password", response_class=HTMLResponse)
+async def auth_forgot_password(request: Request) -> Response:
+    if not enforce_rate_limit(request, action="pwreset-totp", limit=10, window_seconds=900):
+        return html(request, "auth_error.html", {"error": "請求過於頻繁，請稍後再試"}, 429)
+
+    user_id = get_pwreset_user_id(request)
+    if not user_id:
+        return html(
+            request,
+            "auth_error.html",
+            {"error": "驗證已過期，請重新輸入 Email 與 Authenticator 驗證碼。"},
+            401,
+        )
+
+    form = await request.form()
+    new_password = str(form.get("password") or "")
+    password_confirm = str(form.get("passwordConfirm") or "")
+    if not new_password or not password_confirm:
+        return html(request, "auth_error.html", {"error": "請輸入新密碼並再次確認"}, 400)
+    if new_password != password_confirm:
+        return html(request, "auth_error.html", {"error": "兩次密碼不一致"}, 400)
+    if len(new_password) < 8:
+        return html(request, "auth_error.html", {"error": "密碼至少需要 8 碼"}, 400)
+
+    complete_password_reset(user_id, new_password)
+    resp = hx_redirect("/login.html")
+    clear_pwreset_cookie(resp, request)
     return resp
 
 

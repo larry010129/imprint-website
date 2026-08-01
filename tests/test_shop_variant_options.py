@@ -108,6 +108,117 @@ def test_catalog_canonicalizes_decimal_and_padded_carat_keys():
     assert set(entry["weights"]["14k"]) == {"0.1", "0.3"}
 
 
+def test_shop_catalog_filters_use_or_within_dimension():
+    src = (ROOT / "public" / "js" / "shop.js").read_text(encoding="utf-8")
+    assert "function productMatchesPriceBand" in src
+    assert "metals.some((m) => golds.includes(m))" in src
+    assert "carats.some((c) => productOffersCarat(product, c))" in src
+    assert "priceBands.some((band) => productMatchesPriceBand(price, band))" in src
+    assert "function catalogCaratsForProduct" in src
+    assert "function collectCategoryCarats" in src
+    assert "function collectCategoryMetals" in src
+    assert "function populateCatalogFilters" in src
+    ms = (ROOT / "public" / "js" / "catalog-multi-filter.js").read_text(encoding="utf-8")
+    assert "aria-multiselectable" in ms
+    assert "upgradeSelect" in ms
+
+
+def test_shop_js_catalog_filter_options_from_product_variants():
+    """Carat/metal filter options must union distinct variant values in category."""
+    import json
+    import subprocess
+
+    browser_script = r"""
+const METAL_DISPLAY_ORDER = ['9k', '14k', '18k', 'pt950', 's925'];
+function sortGolds(golds) {
+  const order = Object.fromEntries(METAL_DISPLAY_ORDER.map((g, i) => [g, i]));
+  return [...golds].sort((a, b) => (order[a] ?? 99) - (order[b] ?? 99));
+}
+function sortCaratValues(values) {
+  return [...values].sort((a, b) => {
+    const na = parseFloat(a);
+    const nb = parseFloat(b);
+    if (!Number.isNaN(na) && !Number.isNaN(nb) && na !== nb) return na - nb;
+    return String(a).localeCompare(String(b), undefined, { numeric: true });
+  });
+}
+function catalogCaratsForProduct(product) {
+  const set = new Set();
+  (product?.carats || []).forEach((c) => {
+    if (c == null || c === '') return;
+    set.add(String(c));
+  });
+  Object.values(product?.weights || {}).forEach((byCarat) => {
+    Object.keys(byCarat || {}).forEach((c) => {
+      if (c) set.add(String(c));
+    });
+  });
+  return sortCaratValues([...set]);
+}
+function collectCategoryCarats(products) {
+  const set = new Set();
+  products.forEach((product) => {
+    catalogCaratsForProduct(product).forEach((c) => set.add(c));
+  });
+  return sortCaratValues([...set]);
+}
+function productGolds(product) {
+  const golds = new Set(Object.keys(product.weights || {}));
+  (product.golds || []).forEach((g) => {
+    if (product.weights?.[g] && Object.keys(product.weights[g]).length) golds.add(g);
+  });
+  return sortGolds([...golds]);
+}
+function collectCategoryMetals(products) {
+  const set = new Set();
+  products.forEach((product) => productGolds(product).forEach((g) => set.add(g)));
+  return sortGolds([...set]);
+}
+
+const ringProducts = [
+  { carats: ['0.3'], weights: { '14k': { '0.3': 1 } } },
+  { carats: ['0.5', '0.6'], weights: { '18k': { '0.5': 1, '0.6': 1 } } },
+];
+const chainProducts = [
+  { carats: ['1.5mm'], weights: { '18k': { '1.5mm': 0.03 } } },
+  { carats: ['2.0mm', '2.5mm'], weights: { '14k': { '2.0mm': 0.04, '2.5mm': 0.05 } } },
+];
+
+console.log(JSON.stringify({
+  ringCarats: collectCategoryCarats(ringProducts),
+  ringMetals: collectCategoryMetals(ringProducts),
+  chainThicknesses: collectCategoryCarats(chainProducts),
+  offers06: catalogCaratsForProduct(ringProducts[1]).includes('0.6'),
+  weightOnly: catalogCaratsForProduct({ carats: [], weights: { '14k': { '0.1': 1, '0.7': 1 } } }),
+}));
+"""
+    out = json.loads(
+        subprocess.run(
+            ["node", "-e", browser_script],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout
+    )
+    assert out["ringCarats"] == ["0.3", "0.5", "0.6"]
+    assert out["ringMetals"] == ["14k", "18k"]
+    assert out["chainThicknesses"] == ["1.5mm", "2.0mm", "2.5mm"]
+    assert out["offers06"] is True
+    assert out["weightOnly"] == ["0.1", "0.7"]
+
+
+def test_build_catalog_product_includes_extended_carats_for_filters():
+    """API catalog must surface 0.5/0.6 so client filters can list them."""
+    variants = [
+        {"gold": "14k", "carat": "0.3", "weight_chin": 0.018},
+        {"gold": "14k", "carat": "0.5", "weight_chin": 0.022},
+        {"gold": "18k", "carat": "0.6", "weight_chin": 0.024},
+    ]
+    entry = build_catalog_product(_generic_product(category="ring"), variants, [])
+    assert entry["carats"] == ["0.3", "0.5", "0.6"]
+
+
 def test_shop_js_fancy_carat_dropdown_intersects_admin_min():
     """Fancy carat <select> = admin ∩ ≥ fancyMin; white keeps full admin list."""
     src = (ROOT / "public" / "js" / "shop.js").read_text(encoding="utf-8")
@@ -129,7 +240,10 @@ def test_shop_js_fancy_carat_dropdown_intersects_admin_min():
     # Per-color AND gate: carat≥0.3 alone must not unlock all fancy colors.
     assert "if (!productOffersFancyMinCaratOrAbove()) return false;" in src
     assert "if (productOffersFancyMinCaratOrAbove()) return true;" not in src
-    assert "shop.js?v=122" in (
+    assert "shop.js?v=123" in (
+        ROOT / "content" / "site" / "templates" / "pages" / "shop" / "calculator.html"
+    ).read_text(encoding="utf-8")
+    assert "catalog-multi-filter.js" in (
         ROOT / "content" / "site" / "templates" / "pages" / "shop" / "calculator.html"
     ).read_text(encoding="utf-8")
     assert "shop-fancy-min-note" in (

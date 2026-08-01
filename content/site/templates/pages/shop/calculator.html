@@ -76,24 +76,16 @@
                   <span class="sr-only" data-i18n="catalog_search_label">搜尋款式</span>
                   <input type="search" id="catalog-search-input" placeholder="搜尋款式" data-i18n-placeholder="catalog_search_placeholder">
                 </label>
-                <select id="catalog-metal-filter" aria-label="金屬篩選">
+                <select id="catalog-metal-filter" aria-label="金屬篩選" data-i18n-aria="catalog_metal_filter_label">
                   <option value="" data-i18n="catalog_all_metals">所有金屬</option>
-                  <option value="9k">9K</option>
-                  <option value="14k">14K</option>
-                  <option value="18k">18K</option>
-                  <option value="pt950">Pt950</option>
-                  <option value="s925">S925</option>
                 </select>
-                <select id="catalog-price-filter" aria-label="價格篩選">
+                <select id="catalog-price-filter" aria-label="價格篩選" data-i18n-aria="catalog_price_filter_label">
                   <option value="" data-i18n="catalog_all_prices">所有價格</option>
-                  <option value="under30000">NT$ 30,000 以下</option>
-                  <option value="30000to80000">NT$ 30,000–80,000</option>
-                  <option value="over80000">NT$ 80,000 以上</option>
                 </select>
                 <button type="button" id="catalog-filter-clear" data-i18n="catalog_clear_filters">清除</button>
               </div>
             </details>
-            <select id="catalog-carat-filter" class="catalog-carat-filter" aria-label="克拉篩選">
+            <select id="catalog-carat-filter" class="catalog-carat-filter" aria-label="克拉篩選" data-i18n-aria="catalog_carat_filter_label">
               <option value="" data-i18n="catalog_all_carats">所有克拉</option>
             </select>
           </div>
@@ -604,7 +596,7 @@
       </section>
       <section class="shop-terms-section">
         <p><strong>二、試算價格</strong></p>
-        <p>頁面顯示之總價、鑽石價格、金工價格及台銀金價換算結果均為<strong>預估參考</strong>，非最終報價。鑽石牌價、金價及匯率可能浮動，實際金額可能與試算結果有 ±10% 或更大差異，正式金額以顧問書面或系統訂單確認為準。</p>
+        <p>頁面顯示之總價、鑽石價格、金工價格及黃金牌價換算結果均為<strong>預估參考</strong>，非最終報價。鑽石牌價、金價及匯率可能浮動，實際金額可能與試算結果有 ±10% 或更大差異，正式金額以顧問書面或系統訂單確認為準。</p>
       </section>
       <section class="shop-terms-section">
         <p><strong>三、鑽石顏色與預覽</strong></p>
@@ -799,8 +791,8 @@
 </script>
 {% endif %}
 {% include "partials/shop-tour-react-js.html" %}
-<script src="/static/js/api-client.js"></script>
-<script>
+<script src="/static/js/api-client.js" defer></script>
+<script defer>
   window.shopConfig = Object.assign({
     mode: 'order',
     useApi: true,
@@ -813,11 +805,12 @@
     preview: {% if q_preview %}true{% else %}false{% endif %},
   }, window.shopConfig || {});
 </script>
-<script src="/static/js/shop-assets.js?v=13"></script>
-<script src="/static/js/shop-catalog-data.js?v=6"></script>
-<script src="/static/js/shop-pricing-local.js?v=13"></script>
-<script src="/static/js/shop-i18n.js?v=14"></script>
-<script src="/static/js/girdle-engrave.js?v=24"></script>
-<script src="/static/js/shop-terms.js?v=4"></script>
-<script src="/static/js/shop.js?v=122"></script>
+<script src="/static/js/shop-assets.js?v=13" defer></script>
+<script src="/static/js/shop-catalog-data.js?v=6" defer></script>
+<script src="/static/js/shop-pricing-local.js?v=13" defer></script>
+<script src="/static/js/shop-i18n.js?v=14" defer></script>
+<script src="/static/js/girdle-engrave.js?v=24" defer></script>
+<script src="/static/js/shop-terms.js?v=4" defer></script>
+<script src="/static/js/catalog-multi-filter.js?v=1" defer></script>
+<script src="/static/js/shop.js?v=123" defer></script>
 {% endblock %}

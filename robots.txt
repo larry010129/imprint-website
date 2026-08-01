@@ -6,5 +6,8 @@
 User-agent: *
 Allow: /
 Disallow: /admin.html
+Disallow: /quote-sheet
+Disallow: /shop/quote-sheet.html
+Disallow: /s/
 
 Sitemap: https://www.imprint-diamond.com/sitemap.xml

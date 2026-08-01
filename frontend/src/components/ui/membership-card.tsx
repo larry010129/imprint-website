@@ -2,6 +2,8 @@ import * as React from "react";
 import { Check, Copy } from "lucide-react";
 
 import {
+  deriveMemberDisplayNumber,
+  formatMemberDisplayGroups,
   membershipKeepProgress,
   membershipPlanById,
   membershipProgressTowardNext,
@@ -34,10 +36,6 @@ export type MembershipCardProps = {
   className?: string;
 };
 
-function formatMemberIdGroups(id: string): string {
-  const compact = id.replace(/\s+/g, "").toUpperCase();
-  return compact.replace(/(.{4})/g, "$1 ").trim();
-}
 
 function CopyButton({
   text,
@@ -139,7 +137,8 @@ export const MembershipCard = React.memo(function MembershipCard({
     tierId === "imprint" ||
     tierId === "partner_star" ||
     tierId === "partner_imprint";
-  const idDisplay = formatMemberIdGroups(memberId);
+  const idDisplay = formatMemberDisplayGroups(memberId);
+  const idCopy = deriveMemberDisplayNumber(memberId);
   const progressCtx = {
     tierId,
     orderCount,
@@ -237,7 +236,7 @@ export const MembershipCard = React.memo(function MembershipCard({
               >
                 {idDisplay || "———— ————"}
               </p>
-              <CopyButton text={memberId} className="mt-0.5" />
+              <CopyButton text={idCopy} className="mt-0.5" />
             </div>
 
             {!hideProgress ? (

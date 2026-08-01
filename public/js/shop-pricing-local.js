@@ -73,10 +73,10 @@
   var FANCY_MIN_CARAT = 0.3;
   var NON_ROUND_SHAPE_SURCHARGE = 0.10;
 
-  var FALLBACK_METAL_RAW = { XAU: 4300, XPT: 1050, XAG: 30 };
+  var FALLBACK_METAL_RAW = { XAU: 4300, XPT: 1050, XAG: 61 };
 
-  // Per-purity TWD/gram rates from the live BOT scrape (/api/bot-gold's
-  // alloyRates), set once fetched. Falls back to FALLBACK_METAL_RAW until then.
+  // Per-purity TWD/gram rates from gold_price_cache (/api/bot-gold, same as orders).
+  // Set once fetched; falls back to FALLBACK_METAL_RAW until then.
   var liveAlloyRates = null;
 
   function setLiveGoldRates(rates) {

@@ -21,7 +21,7 @@
    因為 V3 的商品線是全新設計，沒有對應的克重資料，mounting 目前仍是估算表。
 
    即時金價：GitHub Actions 每小時跑 scripts/fetch_gold_quote.py，並 POST
-   /api/gold-refresh 寫入 gold_price_cache；線上頁面 GET /api/bot-gold 取 alloyRates。
+   /api/gold-refresh 寫入 gold_price_cache；線上頁面 GET /api/bot-gold 讀同一快取。
    飾品戒台費用 = 基準表（DEFAULTS.mounting）依即時金價換算：金工費 NT$5,000 固定，
    金屬部分隨牌價等比浮動（與 frontend mounting-pricing.ts / 價格頁一致）。
 */
@@ -63,7 +63,7 @@
        顯示/加總時另外加稅(見 configurator.js 的 render())。 */
     taxRate: 0.05,
 
-    /* 基準戒台費（未稅）：供依台銀金價換算。公式 = NT$5,000 金工費 + 金屬部分 × (即時成色金價 / 基準金價)。
+    /* 基準戒台費（未稅）：供依即時金價換算。公式 = NT$5,000 金工費 + 金屬部分 × (即時成色金價 / 基準金價)。
        9K 經典項鍊 NT$10,000 為官方公開基準；其餘依倍率估算。 */
     mounting: {
       loose:    { '18k': 0,     '14k': 0,     '9k': 0,     'pt950': 0,     'silver': 0    },
@@ -84,7 +84,7 @@
   var PURITY_MULTIPLIER = { '9k': 0.5, '14k': 0.75, '18k': 0.85, pt950: 1.1, s925: 0.925 };
   var METAL_SYMBOL = { '9k': 'XAU', '14k': 'XAU', '18k': 'XAU', pt950: 'XPT', s925: 'XAG' };
   var MOUNTING_METAL_RATE_KEY = { '18k': '18k', '14k': '14k', '9k': '9k', pt950: 'pt950', silver: 's925' };
-  var FALLBACK_METAL_RAW = { XAU: 4300, XPT: 1050, XAG: 30 };
+  var FALLBACK_METAL_RAW = { XAU: 4300, XPT: 1050, XAG: 61 };
 
   var liveAlloyRates = null;
   var goldQuoteMeta = null;
@@ -196,7 +196,7 @@
 
   var GOLD_POLL_MS = 60 * 60 * 1000;
 
-  /* 頁面一載入就去後端 API 拿最新價格與台銀金價；ready 讓呼叫端知道「這是不是已經是最新資料」。
+  /* 頁面一載入就去後端 API 拿最新價格與金價；ready 讓呼叫端知道「這是不是已經是最新資料」。
      連線失敗時也會 resolve，讓頁面至少能用預設值/舊快取運作。 */
   var ready = new Promise(function (resolve) {
     function finishPricingLoad() {

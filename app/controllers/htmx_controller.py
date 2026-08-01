@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, Response
 
-from app.auth import bump_token_version, clear_session_cookie, get_user_id
+from app.auth import bump_token_version, clear_pre2fa_cookie, clear_session_cookie, get_user_id
 from app.controllers import htmx_auth, htmx_member, htmx_shop, htmx_shop_wizard
 from app.controllers.htmx_common import cart_count, html, hx_redirect, nav_user
 
@@ -50,4 +50,5 @@ async def logout(request: Request) -> Response:
         bump_token_version(user_id)
     resp = hx_redirect("/")
     clear_session_cookie(resp, request)
+    clear_pre2fa_cookie(resp, request)
     return resp

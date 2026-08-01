@@ -180,9 +180,12 @@ body.shop-mobile-bar {
 .catalog-tile img {
   width: 100%;
   aspect-ratio: 1;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
   display: block;
   background: var(--color-bg);
+  padding: 0.35rem;
+  box-sizing: border-box;
 }
 
 .catalog-tile span {
@@ -397,7 +400,8 @@ body.shop-mobile-bar {
 .product-preview > #large-image {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
   display: block;
   cursor: zoom-in;
 }
@@ -539,8 +543,12 @@ body.shop-mobile-bar {
 .product-thumb-btn img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
   display: block;
+  background: var(--color-surface);
+  padding: 0.2rem;
+  box-sizing: border-box;
 }
 
 .product-thumb-btn.active,
@@ -2687,8 +2695,11 @@ body.app-shell:not(.dark-theme) .shop-fit {
   width: 100%;
   aspect-ratio: 1;
   max-height: none;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
   display: block;
+  padding: 0.35rem;
+  box-sizing: border-box;
 }
 
 .shop-fit .catalog-tile span {
@@ -4190,7 +4201,8 @@ body.app-shell .mobile-buy-actions .shop-cta--secondary:hover:not(:disabled) {
 
 .catalog-filters input,
 .catalog-filters select,
-.catalog-filters button {
+.catalog-filters button,
+.catalog-filters .catalog-ms-trigger {
   min-height: 40px;
   padding: 8px 11px;
   border: 1px solid var(--color-border);
@@ -4198,6 +4210,16 @@ body.app-shell .mobile-buy-actions .shop-cta--secondary:hover:not(:disabled) {
   background: var(--color-surface);
   color: var(--color-text);
   font: inherit;
+}
+
+.catalog-filters .catalog-ms-filter {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.catalog-filters .catalog-ms-trigger {
+  width: 100%;
 }
 
 .catalog-filter-empty {
