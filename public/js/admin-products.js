@@ -1623,7 +1623,7 @@
               '<label><span>品項</span><select name="category" id="apCategory">' + catOpts + '</select></label>' +
               '<label><span>預設顏色</span><select name="defaultColor">' + colorOpts + '</select></label>' +
               '<label><span>中文名稱 <span class="ap-required" aria-hidden="true">*</span></span><input name="nameZh" maxlength="150" autocomplete="off" value="' + esc(product && product.name_zh) + '"></label>' +
-              '<label><span>英文名稱</span><input name="nameEn" maxlength="150" value="' + esc(product && product.name_en) + '"></label>' +
+              '<label><span>英文名稱（資料用） <span class="ap-required" aria-hidden="true">*</span></span><input name="nameEn" maxlength="150" required autocomplete="off" value="' + esc(product && product.name_en) + '"></label>' +
               '<label class="ap-field-wide"><span>中文描述</span><textarea class="ap-textarea" name="descriptionZh" rows="3" placeholder="商品中文說明…">' + esc(product && product.description_zh) + '</textarea></label>' +
               '<label class="ap-field-wide"><span>英文描述</span><textarea class="ap-textarea" name="descriptionEn" rows="3" placeholder="Product description…">' + esc(product && product.description_en) + '</textarea></label>' +
               saveForLaterToggleHtml(product) +
@@ -1908,7 +1908,17 @@
     var errEl = document.getElementById('apFormError');
     var isDraft = isSaveForLater(form);
 
-    // 儲存草稿不要求任何欄位；只有正式上架才需要完整資料。
+    // 英文名稱（資料用）always required — Storage folder slug source of truth.
+    if (!payload.nameEn) {
+      if (errEl) {
+        errEl.textContent = '請填寫英文名稱（資料用，必填）';
+        errEl.hidden = false;
+      }
+      form.querySelector('[name="nameEn"]')?.focus();
+      return;
+    }
+
+    // 儲存草稿不要求中文／照片；只有正式上架才需要完整資料。
     if (!isDraft) {
       if (!payload.nameZh) {
         if (errEl) {

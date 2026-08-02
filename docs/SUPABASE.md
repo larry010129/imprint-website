@@ -41,6 +41,26 @@ SUPABASE_STORAGE_BUCKET=shop-media
 
 Admin uploads go to the public **`shop-media`** bucket; Postgres stores full `https://…/storage/v1/object/public/shop-media/…` URLs. Never expose the service role key to the browser.
 
+**Product image object keys** (under `shop-media/`):
+
+```
+products/{product_name_slug}/{metal_color}/{uuid}.ext
+```
+
+- Folder segment: from admin **英文名稱（資料用）** (`name_en`) when it sanitizes to an ASCII slug. Never pinyin, never auto zh→en. Sanitize: lowercase; spaces → `-`; strip non `[a-z0-9._-]`; collapse repeated `-`/`_`; trim; max ~80. Empty / CJK-only `name_en` → first 8 hex chars of the product id (last resort). If two products share the same folder, append `-{first8_of_uuid}`. `name_en` is required in admin create/update.
+- **Why ASCII (not raw Chinese):** Supabase Storage `isValidKey` rejects non-ASCII object keys (`InvalidKey`). Percent-encoding UTF-8 in the Storage REST URL (RFC 3986) does **not** help — the server decodes the path and still validates the Unicode key. Example: admin `name_en` `Four Claw Solitaire Necklace` → `four-claw-solitaire-necklace`.
+- `metal_color` is `white` | `yellow` | `rose` (from the admin slot; compound slots like `white-pink` use folder `white`).
+- New products without an id yet upload to `products/_pending/{metal}/{uuid}.ext` (or `products/_pending/{uuid}.ext` if the slot is unknown); on product save, pending objects are promoted into the name-slug folder. Renaming a product moves its Storage objects into the new slug folder and rewrites that product’s `product_images.file_path` (shared URLs are copied so other products keep the old path).
+- Leave `page-images/`, `site-images/`, and local `/static/images/shop-product/` alone.
+
+One-time reorganize of legacy flat `products/{uuid}.ext` or id-folder `products/{product_id}/…` keys into name-slug folders:
+
+```bash
+python scripts/reorganize_supabase_product_images.py --dry-run
+# Live remote requires intentional opt-in:
+SUPABASE_ALLOW_LIVE_MIGRATE=1 python scripts/reorganize_supabase_product_images.py
+```
+
 **Not used by this FastAPI app:** `npm install @supabase/server`, `SUPABASE_PUBLISHABLE_KEY`, and `SUPABASE_JWKS_URL`. Those are for Node/`@supabase/server` / Auth JWT verification. Uploads use Python `httpx` → Storage REST in `app/storage.py`.
 
 ## 2b. Create Storage bucket (one-time)

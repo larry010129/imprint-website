@@ -30,6 +30,21 @@ UPLOAD_KIND_PREFIXES: dict[str, str] = {
     "/static/uploads/cms-media/": "cms-media",
 }
 
+# Admin image slots: white | yellow | rose (compound slots like white-pink → white).
+PRODUCT_METAL_FOLDERS = frozenset({"white", "yellow", "rose"})
+_PENDING_PREFIX = "products/_pending/"
+_PENDING_FOLDER = "_pending"
+PRODUCT_FOLDER_MAX_LEN = 80
+_UNSAFE_SEGMENT = re.compile(r"[^a-zA-Z0-9._-]")
+_UNSAFE_FOLDER_CHAR = re.compile(r"[^\w.\-]", re.UNICODE)
+_MULTI_DASH = re.compile(r"[-_]{2,}")
+_HEX_ONLY = re.compile(r"[^a-fA-F0-9]")
+_STORAGE_ASCII_SAFE = re.compile(r"^[A-Za-z0-9._-]+$")
+_UUID_FOLDER = re.compile(
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+    re.I,
+)
+
 
 class StorageNotConfiguredError(Exception):
     """Required Supabase Storage env vars are missing."""
@@ -118,7 +133,12 @@ def is_supabase_storage_url(url: str | None) -> bool:
         base, _, bucket = _require_config()
         return path.startswith(f"{base}/storage/v1/object/public/{bucket}/")
     except StorageNotConfiguredError:
-        return bool(re.match(r"^https://[^/]+\.supabase\.co/storage/v1/object/public/", path))
+        return bool(
+            re.match(
+                r"^https://[^/]+\.supabase\.co/storage/v1/object/public/",
+                path,
+            )
+        )
 
 
 def object_path_from_public_url(url: str) -> str | None:
@@ -213,3 +233,369 @@ def delete_by_url(url: str | None) -> bool:
         return resp.status_code in (200, 204, 404)
     except httpx.HTTPError:
         return False
+
+
+def metal_color_from_slot(slot: str | None) -> str | None:
+    """Metal folder from admin slot: white-pink → white; yellow → yellow."""
+    if not slot:
+        return None
+    first = str(slot).strip().lower().split("-", 1)[0]
+    return first if first in PRODUCT_METAL_FOLDERS else None
+
+
+def _safe_path_segment(value: str, *, label: str) -> str:
+    raw = (value or "").strip().strip("/")
+    if not raw or "/" in raw or "\\" in raw or raw in {".", ".."}:
+        raise StorageUploadError(f"invalid {label} for Storage path")
+    if _UNSAFE_SEGMENT.search(raw):
+        raise StorageUploadError(f"invalid {label} for Storage path")
+    return raw
+
+
+def _safe_folder_segment(value: str, *, label: str = "folder") -> str:
+    raw = (value or "").strip().strip("/")
+    if (
+        not raw
+        or "/" in raw
+        or "\\" in raw
+        or raw in {".", ".."}
+        or raw == _PENDING_FOLDER
+    ):
+        raise StorageUploadError(f"invalid {label} for Storage path")
+    if _UNSAFE_FOLDER_CHAR.search(raw):
+        raise StorageUploadError(f"invalid {label} for Storage path")
+    return raw
+
+
+def short_product_id_segment(product_id: str) -> str:
+    """First 8 hex chars of a UUID (dashes stripped); stable empty-name fallback."""
+    cleaned = _HEX_ONLY.sub("", str(product_id or ""))
+    if len(cleaned) >= 8:
+        return cleaned[:8].lower()
+    fallback = sanitize_product_name_slug(str(product_id or ""), max_len=36)
+    return fallback or "product"
+
+
+def sanitize_product_name_slug(
+    name: str,
+    *,
+    max_len: int = PRODUCT_FOLDER_MAX_LEN,
+) -> str:
+    """ASCII folder slug from English name: lowercase, spaces→`-`, strip unsafe, max ~80."""
+    raw = (name or "").strip().lower()
+    if not raw:
+        return ""
+    s = raw.replace(" ", "-").replace("/", "-").replace("\\", "-")
+    s = re.sub(r"[^a-z0-9._-]+", "-", s)
+    s = _MULTI_DASH.sub("-", s)
+    # "_pending" / "pending" reserved — never a product folder slug.
+    if s.strip("-_") == "pending":
+        return ""
+    s = s.strip("-_")
+    if len(s) > max_len:
+        s = s[:max_len].rstrip("-_")
+    if not s or s in {".", ".."} or s == _PENDING_FOLDER or s == "pending":
+        return ""
+    if not _STORAGE_ASCII_SAFE.fullmatch(s):
+        return ""
+    return s
+
+
+def storage_safe_folder_segment(slug: str) -> str:
+    """Ensure folder segment is ASCII-safe for Supabase Storage keys.
+
+    Folder names come from 英文名稱 (`name_en`) via `sanitize_product_name_slug`.
+    Non-ASCII / empty input → empty string (caller uses short product id).
+    """
+    raw = (slug or "").strip()
+    if not raw:
+        return ""
+    if _STORAGE_ASCII_SAFE.fullmatch(raw):
+        return raw[:PRODUCT_FOLDER_MAX_LEN].lower()
+    return sanitize_product_name_slug(raw)
+
+
+def english_label_for_folder(
+    name_en: str | None,
+    name_zh: str | None = None,
+) -> str:
+    """Return name_en when it yields an ASCII slug; else \"\".
+
+    ``name_zh`` ignored — admin 英文名稱 (`name_en`) is source of truth.
+    """
+    _ = name_zh
+    en = (name_en or "").strip()
+    if sanitize_product_name_slug(en):
+        return en
+    return ""
+
+
+def product_folder_with_id_suffix(
+    base_slug: str,
+    product_id: str,
+    *,
+    max_len: int = PRODUCT_FOLDER_MAX_LEN,
+) -> str:
+    """Append `-{first8}` when slugs collide."""
+    suffix = short_product_id_segment(product_id)
+    room = max_len - len(suffix) - 1
+    if room < 1:
+        return suffix
+    head = (base_slug or "")[:room].rstrip("-_")
+    return f"{head}-{suffix}" if head else suffix
+
+
+def product_folder_segment(
+    name_en: str | None,
+    product_id: str,
+    *,
+    name_zh: str | None = None,
+    collide: bool = False,
+) -> str:
+    """Storage folder from name_en slug; else short id.
+
+    Collision → append `-{first8}` of id. Never uses pinyin or zh→en translate.
+    ``name_zh`` ignored (API compat).
+    """
+    label = english_label_for_folder(name_en, name_zh)
+    folder = sanitize_product_name_slug(label)
+    if not folder:
+        return short_product_id_segment(product_id)
+    if collide:
+        return product_folder_with_id_suffix(folder, product_id)
+    return folder
+
+
+def is_uuid_product_folder(segment: str | None) -> bool:
+    """True when folder looks like a legacy product-id UUID."""
+    return bool(segment and _UUID_FOLDER.match(str(segment).strip()))
+
+
+def product_object_key(
+    folder_segment: str,
+    metal_color: str | None,
+    filename: str,
+) -> str:
+    """Build `products/{folder}/{metal}/{file}` (metal optional)."""
+    folder = _safe_folder_segment(folder_segment, label="product_folder")
+    file_part = _safe_path_segment(filename, label="filename")
+    metal = (metal_color or "").strip().lower()
+    if metal:
+        if metal not in PRODUCT_METAL_FOLDERS:
+            raise StorageUploadError(f"invalid metal_color for Storage path: {metal}")
+        return f"products/{folder}/{metal}/{file_part}"
+    return f"products/{folder}/{file_part}"
+
+
+def pending_product_object_key(metal_color: str | None, filename: str) -> str:
+    """Build `products/_pending/{metal}/{file}` or `products/_pending/{file}`."""
+    file_part = _safe_path_segment(filename, label="filename")
+    metal = (metal_color or "").strip().lower()
+    if metal:
+        if metal not in PRODUCT_METAL_FOLDERS:
+            raise StorageUploadError(f"invalid metal_color for Storage path: {metal}")
+        return f"products/_pending/{metal}/{file_part}"
+    return f"products/_pending/{file_part}"
+
+
+def is_pending_product_object_key(object_path: str | None) -> bool:
+    path = (object_path or "").strip().lstrip("/")
+    return path.startswith(_PENDING_PREFIX) or path == "products/_pending"
+
+
+def is_flat_product_object_key(object_path: str | None) -> bool:
+    """True for legacy `products/{file}` (one segment, not `_pending`)."""
+    parts = [p for p in (object_path or "").strip().strip("/").split("/") if p]
+    return (
+        len(parts) == 2
+        and parts[0] == "products"
+        and parts[1] != _PENDING_FOLDER
+    )
+
+
+def is_nested_product_object_key(object_path: str | None) -> bool:
+    """True for `products/{folder}/{metal}/{file}` (or `products/{folder}/{file}`)."""
+    parts = [p for p in (object_path or "").strip().strip("/").split("/") if p]
+    if len(parts) < 3 or parts[0] != "products" or parts[1] == _PENDING_FOLDER:
+        return False
+    if len(parts) == 3:
+        return True
+    return len(parts) == 4 and parts[2] in PRODUCT_METAL_FOLDERS
+
+
+def product_folder_from_object_key(object_path: str | None) -> str | None:
+    """Return folder segment for nested product keys; None for flat/pending."""
+    parts = [p for p in (object_path or "").strip().strip("/").split("/") if p]
+    if len(parts) < 3 or parts[0] != "products" or parts[1] == _PENDING_FOLDER:
+        return None
+    return parts[1]
+
+
+def product_upload_relative_path(
+    filename: str,
+    *,
+    folder: str | None = None,
+    product_id: str | None = None,
+    color_slot: str | None = None,
+) -> str:
+    """Relative key under kind `products` for upload_image / upload_bytes.
+
+    Prefer `folder` (name slug). `product_id` kept as legacy alias for folder.
+    """
+    name = _safe_path_segment(filename, label="filename")
+    folder_seg = (folder or product_id or "").strip()
+    metal = metal_color_from_slot(color_slot)
+    if folder_seg and metal:
+        return f"{_safe_folder_segment(folder_seg)}/{metal}/{name}"
+    if folder_seg:
+        return f"{_safe_folder_segment(folder_seg)}/{name}"
+    if metal:
+        return f"{_PENDING_FOLDER}/{metal}/{name}"
+    return f"{_PENDING_FOLDER}/{name}"
+
+
+def move_object(source_path: str, dest_path: str) -> str:
+    """Move object within the bucket; return public URL of destination."""
+    src = (source_path or "").strip().lstrip("/")
+    dst = (dest_path or "").strip().lstrip("/")
+    if not src or not dst:
+        raise StorageUploadError("Storage move failed: empty object path")
+    if ".." in src.split("/") or ".." in dst.split("/"):
+        raise StorageUploadError("Storage move failed: invalid object path")
+    if src == dst:
+        return public_url_for_object(dst)
+
+    base, key, bucket = _require_config()
+    move_url = f"{base}/storage/v1/object/move"
+    payload = {
+        "bucketId": bucket,
+        "sourceKey": src,
+        "destinationKey": dst,
+    }
+    headers = _storage_headers(key, content_type="application/json")
+    with httpx.Client(timeout=60.0) as client:
+        resp = client.post(move_url, json=payload, headers=headers)
+        if resp.status_code not in (200, 201):
+            try:
+                copy_object(src, dst)
+            except StorageUploadError as copy_exc:
+                detail = (resp.text or str(copy_exc) or "")[:200]
+                raise StorageUploadError(
+                    f"Storage move failed ({resp.status_code}): {detail}"
+                ) from copy_exc
+            del_url = _object_api_url(base, bucket, src)
+            client.delete(del_url, headers=_storage_headers(key))
+    return public_url_for_object(dst)
+
+
+def copy_object(source_path: str, dest_path: str) -> str:
+    """Copy object within the bucket; return public URL of destination."""
+    src = (source_path or "").strip().lstrip("/")
+    dst = (dest_path or "").strip().lstrip("/")
+    if not src or not dst:
+        raise StorageUploadError("Storage copy failed: empty object path")
+    if ".." in src.split("/") or ".." in dst.split("/"):
+        raise StorageUploadError("Storage copy failed: invalid object path")
+    if src == dst:
+        return public_url_for_object(dst)
+
+    base, key, bucket = _require_config()
+    copy_url = f"{base}/storage/v1/object/copy"
+    payload = {
+        "bucketId": bucket,
+        "sourceKey": src,
+        "destinationKey": dst,
+    }
+    headers = _storage_headers(key, content_type="application/json")
+    with httpx.Client(timeout=60.0) as client:
+        resp = client.post(copy_url, json=payload, headers=headers)
+        if resp.status_code not in (200, 201):
+            detail = (resp.text or "")[:200]
+            raise StorageUploadError(
+                f"Storage copy failed ({resp.status_code}): {detail}"
+            )
+    return public_url_for_object(dst)
+
+
+def relocate_product_object_url(
+    url: str,
+    old_folder: str,
+    new_folder: str,
+    *,
+    shared: bool = False,
+) -> str:
+    """Move/copy object from old product folder to new; return new public URL.
+
+    When `shared` is True, copy (leave source for other product refs). Best-effort:
+    on Storage errors return the original URL.
+    """
+    if not url or old_folder == new_folder:
+        return url
+    if not is_supabase_storage_url(url):
+        return url
+    obj = object_path_from_public_url(url)
+    if not obj:
+        return url
+    current = product_folder_from_object_key(obj)
+    if current != old_folder:
+        return url
+    parts = [p for p in obj.split("/") if p]
+    if len(parts) == 4 and parts[2] in PRODUCT_METAL_FOLDERS:
+        dest = product_object_key(new_folder, parts[2], parts[3])
+    elif len(parts) == 3:
+        dest = product_object_key(new_folder, None, parts[2])
+    else:
+        return url
+    if dest == obj:
+        return url
+    try:
+        if shared:
+            return copy_object(obj, dest)
+        return move_object(obj, dest)
+    except (StorageNotConfiguredError, StorageUploadError, httpx.HTTPError):
+        return url
+
+
+def promote_pending_product_url(
+    url: str,
+    folder_segment: str,
+    metal: str | None = None,
+) -> str:
+    """Move `products/_pending/…` object into `products/{folder}/{metal}/…`.
+
+    Non-pending or non-Storage URLs are returned unchanged. On Storage errors
+    the original URL is kept (best-effort, same spirit as delete_by_url).
+    """
+    if not url or not is_supabase_storage_url(url):
+        return url
+    obj = object_path_from_public_url(url)
+    if not obj or not is_pending_product_object_key(obj):
+        return url
+
+    parts = [p for p in obj.split("/") if p]
+    if len(parts) < 3:
+        return url
+    pending_metal: str | None = None
+    if len(parts) == 4 and parts[2] in PRODUCT_METAL_FOLDERS:
+        pending_metal = parts[2]
+        filename = parts[3]
+    elif len(parts) == 3:
+        filename = parts[2]
+    else:
+        filename = parts[-1]
+        if len(parts) >= 4 and parts[2] in PRODUCT_METAL_FOLDERS:
+            pending_metal = parts[2]
+
+    dest_metal = (metal or "").strip().lower() or pending_metal
+    if dest_metal and dest_metal not in PRODUCT_METAL_FOLDERS:
+        dest_metal = pending_metal
+    try:
+        dest = product_object_key(folder_segment, dest_metal, filename)
+    except StorageUploadError:
+        return url
+    if dest == obj:
+        return url
+    try:
+        return move_object(obj, dest)
+    except (StorageNotConfiguredError, StorageUploadError, httpx.HTTPError):
+        return url

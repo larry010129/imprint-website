@@ -20,9 +20,19 @@ from app.image_urls import (
     static_url_exists,
 )
 from app.pricing_overrides import canonical_carat
-from app.storage import is_supabase_storage_url
+from app.storage import (
+    delete_by_url,
+    is_supabase_storage_url,
+    metal_color_from_slot,
+    object_path_from_public_url,
+    product_folder_from_object_key,
+    product_folder_segment,
+    promote_pending_product_url,
+    relocate_product_object_url,
+)
 
 VALID_CATEGORIES = {"pendant", "ring", "earring", "bracelet", "chain"}
+
 VALID_CARATS = {
     "0.1", "0.2", "0.3", "0.5", "0.6", "0.7", "0.8", "0.9", "1.0",
     "1.5", "2.0", "3.0",
@@ -236,10 +246,15 @@ def validate_product_fields(body: dict | None, *, valid_categories: set[str] | N
     else:
         cleaned["nameZh"] = name_zh
 
-    name_en = str(body.get("nameEn") or "").strip()
-    if len(name_en) > PRODUCT_NAME_MAX:
+    name_en = str(body.get("nameEn") or body.get("name_en") or "").strip()
+    if not name_en:
+        errors.append("nameEn is required")
+        cleaned["nameEn"] = None
+    elif len(name_en) > PRODUCT_NAME_MAX:
         errors.append(f"nameEn must be at most {PRODUCT_NAME_MAX} characters")
-    cleaned["nameEn"] = name_en[:PRODUCT_NAME_MAX] or None
+        cleaned["nameEn"] = name_en[:PRODUCT_NAME_MAX]
+    else:
+        cleaned["nameEn"] = name_en
 
     desc_zh = str(body.get("descriptionZh") or "").strip()
     desc_en = str(body.get("descriptionEn") or "").strip()
@@ -409,6 +424,7 @@ def _format_product_errors(errors: list[str]) -> str:
     zh = {
         "invalid category": "品項無效",
         "nameZh is required": "請填寫中文名稱",
+        "nameEn is required": "請填寫英文名稱（資料用）",
         "invalid defaultColor": "預設顏色無效",
         "pendant must select 可不含鍊賣 or 含鍊賣": "項墜請選擇「可不含鍊賣」或「含鍊賣」",
         "pendant must allow 可不含鍊賣 and/or 含鍊賣": "項墜請選擇「可不含鍊賣」或「含鍊賣」",
@@ -535,6 +551,110 @@ def serialize_product_row(row: dict) -> dict:
     return out
 
 
+def _is_products_storage_url(url: str | None) -> bool:
+    """True when URL is a Supabase Storage object under products/."""
+    if not url or not is_supabase_storage_url(url):
+        return False
+    obj = object_path_from_public_url(url)
+    return bool(obj and obj.startswith("products/"))
+
+
+
+
+def resolve_product_folder(
+    cur,
+    product_id: str,
+    name_en: str | None,
+    name_zh: str | None = None,
+) -> str:
+    """Storage folder: name_en slug, else short id (name_zh unused)."""
+    pid = str(product_id).strip()
+    mine = product_folder_segment(name_en, pid, name_zh=name_zh, collide=False)
+    cur.execute("select id, name_en, name_zh from products where id <> %s", (pid,))
+    collide = False
+    for row in cur.fetchall() or []:
+        other = product_folder_segment(
+            row.get("name_en"),
+            str(row["id"]),
+            name_zh=row.get("name_zh"),
+            collide=False,
+        )
+        if other == mine:
+            collide = True
+            break
+    return product_folder_segment(
+        name_en, pid, name_zh=name_zh, collide=collide
+    )
+
+
+def _url_shared_with_other_products(cur, url: str, product_id: str) -> bool:
+    cur.execute(
+        """
+        select 1 from product_images
+        where file_path = %s and product_id <> %s
+        limit 1
+        """,
+        (url, product_id),
+    )
+    return cur.fetchone() is not None
+
+
+def align_product_images_to_folder(
+    cur,
+    product_id: str,
+    folder: str,
+    images: list[dict],
+) -> None:
+    """Move/copy nested product objects into `folder` (rename / legacy id paths)."""
+    if not folder:
+        return
+    for image in images:
+        url = str(image.get("url") or "").strip()
+        if not url:
+            continue
+        obj = object_path_from_public_url(url)
+        current = product_folder_from_object_key(obj) if obj else None
+        if not current or current == folder:
+            continue
+        shared = _url_shared_with_other_products(cur, url, product_id)
+        new_url = relocate_product_object_url(
+            url, current, folder, shared=shared
+        )
+        if new_url != url:
+            image["url"] = new_url
+
+
+def delete_product_image_urls_if_unreferenced(cur, urls) -> int:
+    """Delete Storage objects when no product_images row still references them.
+
+    Only Supabase URLs under products/. Dedupes. Best-effort: Storage failures
+    do not raise. Returns how many delete_by_url calls reported success.
+    """
+    candidates: list[str] = []
+    seen: set[str] = set()
+    for raw in urls or []:
+        url = str(raw or "").strip()
+        if not url or url in seen or not _is_products_storage_url(url):
+            continue
+        seen.add(url)
+        candidates.append(url)
+
+    deleted = 0
+    for url in candidates:
+        cur.execute(
+            "select 1 from product_images where file_path = %s limit 1",
+            (url,),
+        )
+        if cur.fetchone():
+            continue
+        try:
+            if delete_by_url(url):
+                deleted += 1
+        except Exception:
+            continue
+    return deleted
+
+
 def save_product_children(cur, product_id: str, cleaned: dict) -> None:
     cur.execute("delete from product_variants where product_id = %s", (product_id,))
     for variant in cleaned["variants"]:
@@ -566,15 +686,42 @@ def save_product_children(cur, product_id: str, cleaned: dict) -> None:
         ),
     )
 
+    folder = resolve_product_folder(
+        cur,
+        product_id,
+        cleaned.get("nameEn"),
+        cleaned.get("nameZh"),
+    )
+    align_product_images_to_folder(
+        cur, product_id, folder, cleaned.get("images") or []
+    )
+
+    cur.execute(
+        "select file_path from product_images where product_id = %s",
+        (product_id,),
+    )
+    previous_urls = {
+        str(row["file_path"]).strip()
+        for row in cur.fetchall()
+        if row.get("file_path")
+    }
+
     cur.execute("delete from product_images where product_id = %s", (product_id,))
     for sort_order, image in enumerate(cleaned["images"]):
+        url = image["url"]
+        metal = metal_color_from_slot(image.get("color"))
+        url = promote_pending_product_url(url, folder, metal)
+        image["url"] = url
         cur.execute(
             """
             insert into product_images (product_id, color, file_path, sort_order)
             values (%s, %s, %s, %s)
             """,
-            (product_id, image["color"], image["url"], sort_order),
+            (product_id, image["color"], url, sort_order),
         )
+
+    new_urls = {str(img["url"]).strip() for img in cleaned["images"] if img.get("url")}
+    delete_product_image_urls_if_unreferenced(cur, previous_urls - new_urls)
 
 
 def publish_readiness(cur, product: dict) -> tuple[bool, str | None]:

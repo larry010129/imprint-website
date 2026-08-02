@@ -11,6 +11,7 @@ def _chain_publish_body(**overrides):
     body = {
         "category": "chain",
         "nameZh": "測試鍊條",
+        "nameEn": "Test Chain",
         "defaultColor": "white",
         "isPublished": True,
         "variants": [{"gold": "18k", "carat": "1.5mm", "weightChin": 0.033}],
@@ -34,6 +35,7 @@ def test_validate_chain_type_round_trip():
     body = {
         "category": "chain",
         "nameZh": "測試鍊",
+        "nameEn": "Test Chain",
         "defaultColor": "white",
         "isPublished": False,
         "chainType": "douyuan",
@@ -50,6 +52,7 @@ def test_validate_chain_publish_defaults_chain_type():
     body = {
         "category": "chain",
         "nameZh": "測試鍊",
+        "nameEn": "Test Chain",
         "defaultColor": "white",
         "isPublished": False,
         "variants": [{"gold": "18k", "carat": "1.5mm", "weightChin": 0.033}],

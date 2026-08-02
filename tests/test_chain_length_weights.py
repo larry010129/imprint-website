@@ -21,6 +21,7 @@ def _chain_publish_body(**overrides):
     body = {
         "category": "chain",
         "nameZh": "測試鍊條",
+        "nameEn": "Test Chain",
         "defaultColor": "white",
         "isPublished": True,
         "variants": [
@@ -81,6 +82,8 @@ def test_save_product_children_adapts_length_weights_as_jsonb():
     )
     assert err is None
     cur = MagicMock()
+    cur.fetchall.return_value = []
+    cur.fetchone.return_value = None
     save_product_children(cur, "product-uuid", cleaned)
     update_calls = [
         call

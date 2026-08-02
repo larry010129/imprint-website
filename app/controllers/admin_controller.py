@@ -17,6 +17,7 @@ from app.admin_products import (
     CATEGORY_LABELS,
     append_product_image,
     as_jsonb,
+    delete_product_image_urls_if_unreferenced,
     ensure_product_chain_type_column,
     ensure_product_length_weights_column,
     ensure_product_sell_mode_columns,
@@ -24,6 +25,7 @@ from app.admin_products import (
     is_auto_stock_product_image,
     publish_readiness,
     purge_auto_stock_product_images,
+    resolve_product_folder,
     save_product_children,
     serialize_product_row,
     valid_image_color,
@@ -499,17 +501,36 @@ async def product_upload(
     if err:
         return JSONResponse(status_code=400, content={"error": err})
 
+    pid = (product_id or "").strip()
+    slot = (color or "").strip().lower()
+    if slot and not valid_image_color(slot):
+        return JSONResponse(status_code=400, content={"error": "圖片選項代碼無效"})
+
+    from app.storage import product_folder_segment, product_upload_relative_path
+
     name = f"{uuid.uuid4().hex}{ext}"
-    url, upload_err = _storage_upload("products", name, data, ext)
+    folder = None
+    if pid:
+        with get_connection() as conn, conn.cursor() as cur:
+            cur.execute(
+                "select name_en, name_zh from products where id = %s", (pid,)
+            )
+            prow = cur.fetchone()
+            if prow:
+                folder = resolve_product_folder(
+                    cur, pid, prow.get("name_en"), prow.get("name_zh")
+                )
+            else:
+                folder = product_folder_segment(None, pid)
+    rel = product_upload_relative_path(
+        name, folder=folder, color_slot=slot or None
+    )
+    url, upload_err = _storage_upload("products", rel, data, ext)
     if upload_err:
         return JSONResponse(status_code=503, content={"error": upload_err})
 
-    pid = (product_id or "").strip()
-    slot = (color or "").strip().lower()
     image_row = None
     if pid and slot:
-        if not valid_image_color(slot):
-            return JSONResponse(status_code=400, content={"error": "圖片選項代碼無效", "url": url})
         with get_transaction() as conn, conn.cursor() as cur:
             image_row = append_product_image(cur, pid, slot, url)
         if image_row and image_row.get("id") is not None:
@@ -777,7 +798,17 @@ async def product_action(request: Request) -> JSONResponse:
                 (product_id,),
             )
         elif action == "delete":
+            cur.execute(
+                "select file_path from product_images where product_id = %s",
+                (product_id,),
+            )
+            image_urls = [
+                str(row["file_path"]).strip()
+                for row in cur.fetchall()
+                if row.get("file_path")
+            ]
             cur.execute("delete from products where id = %s", (product_id,))
+            delete_product_image_urls_if_unreferenced(cur, image_urls)
         elif action == "duplicate":
             cur.execute(
                 """

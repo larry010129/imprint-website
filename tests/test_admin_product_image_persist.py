@@ -66,6 +66,7 @@ def test_validate_draft_keeps_empty_images_without_inventing():
         {
             "category": "pendant",
             "nameZh": "空白新品",
+            "nameEn": "Blank Draft",
             "defaultColor": "white",
             "isPublished": False,
             "variants": [],
@@ -77,11 +78,49 @@ def test_validate_draft_keeps_empty_images_without_inventing():
     assert cleaned["images"] == []
 
 
+def test_validate_product_fields_rejects_empty_name_en():
+    cleaned, err = validate_product_fields(
+        {
+            "category": "pendant",
+            "nameZh": "測試墜",
+            "nameEn": "",
+            "defaultColor": "white",
+            "isPublished": False,
+            "variants": [],
+            "images": [],
+        }
+    )
+    assert cleaned is None
+    assert err and "英文名稱（資料用）" in err
+
+    missing, missing_err = validate_product_fields(
+        {
+            "category": "ring",
+            "nameZh": "測試戒",
+            "defaultColor": "white",
+            "isPublished": True,
+            "variants": [{"gold": "14k", "carat": "0.5", "weightChin": 0.1}],
+            "images": [
+                {
+                    "color": "white-white",
+                    "url": (
+                        "https://abc123.supabase.co/storage/v1/object/public/"
+                        "shop-media/products/x.webp"
+                    ),
+                },
+            ],
+        }
+    )
+    assert missing is None
+    assert missing_err and "英文名稱（資料用）" in missing_err
+
+
 def test_validate_product_fields_drops_dead_placeholders_and_rejects_blob():
     ok, err = validate_product_fields(
         {
             "category": "pendant",
             "nameZh": "測試",
+            "nameEn": "Test Pendant",
             "defaultColor": "white",
             "isPublished": False,
             "variants": [],
@@ -101,6 +140,7 @@ def test_validate_published_rejects_only_blob_images():
         {
             "category": "ring",
             "nameZh": "測試戒",
+            "nameEn": "Test Ring",
             "defaultColor": "white",
             "isPublished": True,
             "variants": [
@@ -121,6 +161,7 @@ def test_validate_pendant_sell_modes():
         {
             "category": "pendant",
             "nameZh": "測試墜",
+            "nameEn": "Test Pendant",
             "defaultColor": "white",
             "isPublished": False,
             "allowsPendantOnly": True,
@@ -139,6 +180,7 @@ def test_validate_pendant_sell_modes():
         {
             "category": "pendant",
             "nameZh": "測試墜",
+            "nameEn": "Test Pendant",
             "defaultColor": "white",
             "isPublished": False,
             "allowsPendantOnly": True,
@@ -156,6 +198,7 @@ def test_validate_pendant_sell_modes():
         {
             "category": "pendant",
             "nameZh": "測試墜",
+            "nameEn": "Test Pendant",
             "defaultColor": "white",
             "isPublished": False,
             "allowsPendantOnly": False,
@@ -172,6 +215,7 @@ def test_validate_pendant_sell_modes():
         {
             "category": "ring",
             "nameZh": "測試戒",
+            "nameEn": "Test Ring",
             "defaultColor": "white",
             "isPublished": False,
             "allowsFancyShapes": False,
@@ -185,6 +229,7 @@ def test_validate_pendant_sell_modes():
         {
             "category": "pendant",
             "nameZh": "測試墜",
+            "nameEn": "Test Pendant",
             "defaultColor": "white",
             "isPublished": False,
             "allowsPendantOnly": False,
