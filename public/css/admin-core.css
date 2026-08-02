@@ -587,6 +587,14 @@ button.ap-remove-image{
 button.ap-remove-image:hover{
   background:#2B2320;border-color:#2B2320;color:#fff;
 }
+.ap-stock-label{
+  position:absolute;left:6px;bottom:6px;z-index:2;
+  padding:2px 6px;border-radius:4px;
+  background:rgba(43,35,32,.72);color:#fff;
+  font-size:10px;font-weight:600;letter-spacing:.04em;line-height:1.3;
+  pointer-events:none;
+}
+.ap-carousel-item--stock .ap-carousel-card{outline:1px dashed rgba(43,35,32,.22);}
 .ap-image-upload-btn input{display:none;}
 .ap-uploading{font-size:12px;color:var(--ink-faint);}
 /* 邀請碼 */

@@ -25,6 +25,10 @@ def test_build_catalog_includes_supabase_storage_url():
     images = [{"color": "white-white", "file_path": SUPABASE_PRODUCT}]
     entry = build_catalog_product(product, [], images)
     assert SUPABASE_PRODUCT in entry["images"].get("white-white", [])
+    assert entry["category"] == "pendant"
+    assert entry["sortOrder"] == 0
+    # sortOrder for client letter-SKU stock; styleKey still not invented.
+    assert entry["styleKey"] is None
 
 
 def test_build_catalog_drops_missing_upload_without_style_fallback():

@@ -983,7 +983,7 @@
         "inline": "\n  window.shopConfig = Object.assign({\n    mode: 'order',\n    useApi: true,\n    loginUrl: '/login.html',\n    cartUrl: '/cart.html',\n    checkoutUrl: '/checkout.html',\n    successUrl: '/success.html',\n    quoteSheetUrl: '/quote-sheet',\n    shareBaseUrl: '/s/TOKEN',\n  }, window.shopConfig || {});\n"
       },
       {
-        "src": "/static/js/shop-assets.js?v=13"
+        "src": "/static/js/shop-assets.js?v=15"
       },
       {
         "src": "/static/js/shop-catalog-data.js?v=6"
@@ -1001,7 +1001,7 @@
         "src": "/static/js/shop-terms.js?v=4"
       },
       {
-        "src": "/static/js/shop.js?v=122"
+        "src": "/static/js/shop.js?v=127"
       }
     ],
     "head_extras": []

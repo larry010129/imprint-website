@@ -240,9 +240,20 @@ def test_shop_js_fancy_carat_dropdown_intersects_admin_min():
     # Per-color AND gate: carat≥0.3 alone must not unlock all fancy colors.
     assert "if (!productOffersFancyMinCaratOrAbove()) return false;" in src
     assert "if (productOffersFancyMinCaratOrAbove()) return true;" not in src
-    assert "shop.js?v=123" in (
+    # Letter SKUs: bundled shop-product fancy PNGs count (admin 內建, not DB).
+    assert "stockFancyDiamondColors" in src
+    assert "stockFancyDiamondColors" in (
+        ROOT / "public" / "js" / "shop-assets.js"
+    ).read_text(encoding="utf-8")
+    assert "shop.js?v=127" in (
         ROOT / "content" / "site" / "templates" / "pages" / "shop" / "calculator.html"
     ).read_text(encoding="utf-8")
+    assert "shop-assets.js?v=15" in (
+        ROOT / "content" / "site" / "templates" / "pages" / "shop" / "calculator.html"
+    ).read_text(encoding="utf-8")
+    # Fancy preview must not reuse metal-only / white-stone catalog slots.
+    assert "that froze preview on" in src
+    assert "Catalog miss (common: white slot only)" in src
     assert "catalog-multi-filter.js" in (
         ROOT / "content" / "site" / "templates" / "pages" / "shop" / "calculator.html"
     ).read_text(encoding="utf-8")
@@ -254,6 +265,9 @@ def test_shop_js_fancy_carat_dropdown_intersects_admin_min():
     assert "designedFancyDiamondColors(getSelectedProduct()).length > 0" in src
     assert "selectedCaratBelowFancyMin" not in src
     assert "function syncFancyMinCaratNotice" in src
+    # API /api/prices omits diamondOptions — must seed UI tables + fallback defs.
+    assert "function ensureDiamondOptionTables" in src
+    assert "FALLBACK_DIAMOND_COLOR_DEFS" in src
 
 
 def test_shop_js_fancy_min_notice_when_product_offers_fancy():
@@ -292,13 +306,26 @@ console.log(JSON.stringify({
 
 
 def test_shop_js_fancy_color_requires_carat_and_image():
-    """Fancy swatch X shown iff carat≥0.3 AND product has image for X."""
+    """Fancy swatch X shown iff carat≥0.3 AND (catalog slot OR letter stock) for X."""
     import json
     import subprocess
 
     browser_script = r"""
+const fs = require('fs');
+const path = require('path');
+const vm = require('vm');
+const assetsSrc = fs.readFileSync(path.join('public', 'js', 'shop-assets.js'), 'utf8');
+const pricingSrc = fs.readFileSync(path.join('public', 'js', 'shop-pricing-local.js'), 'utf8');
+const sandbox = { window: { shopConfig: { imageRoot: '/static/images/shop-product/', useApi: true } }, console };
+sandbox.window = sandbox.window;
+sandbox.global = sandbox.window;
+vm.runInNewContext(assetsSrc, sandbox);
+vm.runInNewContext(pricingSrc, sandbox);
+const ShopAssets = sandbox.window.ShopAssets;
+
 const FANCY_DIAMOND_COLOR_IDS = ['yellow', 'blue', 'pink'];
-const diamondOptions = { fancyMinCarat: 0.3 };
+let diamondOptions = { diamondColors: [], fancyColors: [], fancyMinCarat: 0.3 };
+const state = { category: 'ring' };
 let selectedProduct = null;
 function getSelectedProduct() { return selectedProduct; }
 function fancyMinCaratValue() {
@@ -315,18 +342,43 @@ function productOffersFancyMinCaratOrAbove() {
     return !Number.isNaN(n) && n >= minCarat;
   });
 }
-function designedFancyDiamondColors(product) {
-  const found = new Set();
-  const images = product?.images;
-  if (!images || typeof images !== 'object' || Array.isArray(images)) return [];
-  Object.keys(images).forEach((key) => {
-    const urls = images[key];
-    if (!urls || (Array.isArray(urls) && !urls.length)) return;
+function productAssetId(product) {
+  if (!product) return '';
+  if (product.styleKey && /^[a-z]+-[A-C]$/i.test(String(product.styleKey))) {
+    return String(product.styleKey);
+  }
+  const id = String(product.id || '');
+  if (/^[a-z]+-[A-C]$/i.test(id)) return id;
+  const cat = String(product.category || state.category || '').toLowerCase();
+  if (!['pendant', 'ring', 'earring', 'bracelet', 'chain'].includes(cat)) return '';
+  const order = Number(product.sortOrder ?? product.sort_order);
+  if (!Number.isFinite(order) || order < 0 || order > 2) return '';
+  return cat + '-' + String.fromCharCode(65 + order);
+}
+function addFancyColorsFromSlotKeys(keys, found) {
+  if (!keys) return;
+  const list = Array.isArray(keys) ? keys : Object.keys(keys);
+  list.forEach((key) => {
     const parts = String(key).toLowerCase().split('-');
     if (parts.length >= 2 && FANCY_DIAMOND_COLOR_IDS.includes(parts[1])) {
       found.add(parts[1]);
     }
   });
+}
+function designedFancyDiamondColors(product) {
+  const found = new Set();
+  const images = product?.images;
+  if (images && typeof images === 'object' && !Array.isArray(images)) {
+    Object.keys(images).forEach((key) => {
+      const urls = images[key];
+      if (!urls || (Array.isArray(urls) && !urls.length)) return;
+      addFancyColorsFromSlotKeys([key], found);
+    });
+  }
+  addFancyColorsFromSlotKeys(product?.colors, found);
+  const styleKey = productAssetId(product);
+  const stock = ShopAssets.stockFancyDiamondColors(styleKey) || [];
+  stock.forEach((c) => { if (FANCY_DIAMOND_COLOR_IDS.includes(c)) found.add(c); });
   return FANCY_DIAMOND_COLOR_IDS.filter((c) => found.has(c));
 }
 function isFancyDiamondColorOffered(colorId) {
@@ -336,6 +388,46 @@ function isFancyDiamondColorOffered(colorId) {
 }
 function offered() {
   return FANCY_DIAMOND_COLOR_IDS.filter(isFancyDiamondColorOffered);
+}
+
+const FALLBACK_DIAMOND_COLOR_DEFS = [
+  { id: 'white', kind: 'white' },
+  { id: 'yellow', kind: 'fancy' },
+  { id: 'blue', kind: 'fancy' },
+  { id: 'pink', kind: 'fancy' },
+];
+function ensureDiamondOptionTables() {
+  const localOpts = sandbox.window.ShopPricingLocal?.pricesPayload?.()?.diamondOptions;
+  if (!localOpts) return false;
+  const needColors = !diamondOptions.diamondColors?.length;
+  const needFancy = !diamondOptions.fancyColors?.length;
+  if (!needColors && !needFancy) return false;
+  diamondOptions = {
+    ...diamondOptions,
+    diamondColors: needColors ? (localOpts.diamondColors || []) : diamondOptions.diamondColors,
+    fancyColors: needFancy ? (localOpts.fancyColors || []) : diamondOptions.fancyColors,
+  };
+  return true;
+}
+function diamondColorOptions() {
+  ensureDiamondOptionTables();
+  let all = diamondOptions.diamondColors?.length
+    ? diamondOptions.diamondColors
+    : [{ id: 'white', kind: 'white' }, ...(diamondOptions.fancyColors || [])];
+  const byId = new Map();
+  all.forEach((c) => { if (c?.id) byId.set(c.id, c); });
+  FALLBACK_DIAMOND_COLOR_DEFS.forEach((def) => {
+    if (!byId.has(def.id)) byId.set(def.id, def);
+  });
+  all = FALLBACK_DIAMOND_COLOR_DEFS.map((def) => byId.get(def.id)).filter(Boolean);
+  return all.filter((color) => {
+    if (!color || color.id === 'white' || color.kind === 'white') return true;
+    return isFancyDiamondColorOffered(color.id);
+  }).map((c) => c.id);
+}
+function noticeShows() {
+  return productOffersFancyMinCaratOrAbove()
+    && designedFancyDiamondColors(getSelectedProduct()).length > 0;
 }
 
 selectedProduct = {
@@ -362,7 +454,62 @@ selectedProduct = {
 };
 const yellowBlue = offered();
 
-console.log(JSON.stringify({ yellowOnly, caratNoImage, imageNoCarat, yellowBlue }));
+// Letter SKU with only white uploads — stock fancy PNGs unlock 黃/藍/粉.
+selectedProduct = {
+  id: 'uuid-ring',
+  category: 'ring',
+  sortOrder: 0,
+  carats: ['0.1', '0.3'],
+  images: { 'white-white': ['/upload-white.png'] },
+};
+const stockLetterFancy = offered();
+
+selectedProduct = {
+  id: 'earring-A',
+  carats: ['0.3'],
+  images: { white: ['/e.png'] },
+};
+const earringStock = offered();
+
+selectedProduct = {
+  id: 'bracelet-A',
+  carats: ['0.3'],
+  images: { 'white-white': ['/b.png'] },
+};
+const braceletNoStockFancy = offered();
+
+// Lite UUID + 0.3 + stock: carousel must list fancy (not white-only) even when
+// diamondOptions left empty by /api/prices (useApi path).
+diamondOptions = { diamondColors: [], fancyColors: [], fancyMinCarat: 0.3 };
+selectedProduct = {
+  id: 'uuid-earring',
+  category: 'earring',
+  sortOrder: 0,
+  carats: ['0.3'],
+  colors: ['white-white'],
+  // lite omits images
+};
+const apiModeCarousel = diamondColorOptions();
+const apiModeNotice = noticeShows();
+const apiModeOffered = offered();
+
+// Notice must not claim fancy when nothing offered.
+selectedProduct = {
+  id: 'bracelet-A',
+  category: 'bracelet',
+  sortOrder: 0,
+  carats: ['0.3'],
+  colors: ['white-white'],
+};
+const braceletNotice = noticeShows();
+
+console.log(JSON.stringify({
+  yellowOnly, caratNoImage, imageNoCarat, yellowBlue,
+  stockLetterFancy, earringStock, braceletNoStockFancy,
+  stockRing: ShopAssets.stockFancyDiamondColors('ring-A'),
+  stockBracelet: ShopAssets.stockFancyDiamondColors('bracelet-A'),
+  apiModeCarousel, apiModeNotice, apiModeOffered, braceletNotice,
+}));
 """
     out = json.loads(
         subprocess.run(
@@ -377,6 +524,112 @@ console.log(JSON.stringify({ yellowOnly, caratNoImage, imageNoCarat, yellowBlue 
     assert out["caratNoImage"] == []
     assert out["imageNoCarat"] == []
     assert out["yellowBlue"] == ["yellow", "blue"]
+    assert out["stockRing"] == ["yellow", "blue", "pink"]
+    assert out["stockBracelet"] == []
+    assert out["stockLetterFancy"] == ["yellow", "blue", "pink"]
+    assert out["earringStock"] == ["yellow", "blue", "pink"]
+    assert out["braceletNoStockFancy"] == []
+    # Regression: stock fancy + 0.3 → carousel lists 黃/藍/粉 (API empty tables).
+    assert out["apiModeOffered"] == ["yellow", "blue", "pink"]
+    assert out["apiModeCarousel"] == ["white", "yellow", "blue", "pink"]
+    assert out["apiModeNotice"] is True
+    assert out["braceletNotice"] is False
+
+
+def test_shop_preview_url_follows_fancy_diamond_color():
+    """White-only catalog slot must not pin preview; pink → *_pink.png stock."""
+    import json
+    import subprocess
+
+    browser_script = r"""
+const fs = require('fs');
+const path = require('path');
+const vm = require('vm');
+const assetsSrc = fs.readFileSync(path.join('public', 'js', 'shop-assets.js'), 'utf8');
+const sandbox = { window: { shopConfig: { imageRoot: '/static/images/shop-product/' } }, console };
+sandbox.global = sandbox.window;
+vm.runInNewContext(assetsSrc, sandbox);
+const ShopAssets = sandbox.window.ShopAssets;
+
+function catalogImagesForKeys(product, keys) {
+  if (!product?.images || !keys?.length) return [];
+  for (const key of keys) {
+    const val = product.images[key];
+    const list = Array.isArray(val) ? val : val ? [val] : [];
+    if (list.length) return list;
+  }
+  return [];
+}
+
+/** Mirrors shop.js catalogPreviewSrc fancy exact-key behavior. */
+function catalogPreviewSrc(product, metal, diamond, chainMetal) {
+  if (!product?.images) return '';
+  const d = diamond || 'white';
+  let keys;
+  if (d !== 'white') {
+    keys = [];
+    if (chainMetal) keys.push(ShopAssets.buildImageSlotKey(metal, d, chainMetal));
+    keys.push(ShopAssets.buildImageSlotKey(metal, d));
+  } else {
+    keys = ShopAssets.imageSlotKeysForLookup(metal, d, chainMetal || null);
+  }
+  const urls = catalogImagesForKeys(product, keys);
+  return urls[0] || '';
+}
+
+const product = {
+  id: 'uuid-ring',
+  category: 'ring',
+  sortOrder: 0,
+  defaultColor: 'white',
+  images: { white: ['/static/uploads/products/ring-white.png'], 'white-white': ['/static/uploads/products/ring-white.png'] },
+};
+const whiteCatalog = catalogPreviewSrc(product, 'white', 'white', null);
+const pinkCatalog = catalogPreviewSrc(product, 'white', 'pink', null);
+const pinkStock = ShopAssets.productImage('ring-A', 'white', 'white', 'pink');
+const yellowGold = ShopAssets.productImage('ring-A', 'white', 'white', 'yellow');
+const earringPinkGold = ShopAssets.productImage('earring-A', 'yellow', 'yellow', 'pink');
+const earringYellowResolve = ShopAssets.productImageResolve('earring-A', 'yellow', 'yellow', 'pink');
+const earringRoseResolve = ShopAssets.productImageResolve('earring-A', 'rose', 'rose', 'pink');
+console.log(JSON.stringify({
+  whiteCatalog,
+  pinkCatalog,
+  pinkStock,
+  yellowGold,
+  earringPinkGold,
+  earringYellowResolve,
+  earringRoseResolve,
+  lookupWouldHaveReturnedWhite: ShopAssets.imageSlotKeysForLookup('white', 'pink', null),
+}));
+"""
+    out = json.loads(
+        subprocess.run(
+            ["node", "-e", browser_script],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout
+    )
+    assert out["whiteCatalog"] == "/static/uploads/products/ring-white.png"
+    # Exact fancy slot missing → empty (do NOT return white upload).
+    assert out["pinkCatalog"] == ""
+    # Legacy lookup still lists metal-only — proves the trap we avoid.
+    assert "white" in out["lookupWouldHaveReturnedWhite"]
+    assert "white-pink" in out["lookupWouldHaveReturnedWhite"]
+    assert out["pinkStock"].endswith("戒指A_silver_pink.png") or "%E6%88%92%E6%8C%87A_silver_pink.png" in out["pinkStock"]
+    assert "_yellow.png" in out["yellowGold"] or out["yellowGold"].endswith("yellow.png")
+    assert "耳飾A_gold_pink.png" in out["earringPinkGold"] or "%E8%80%B3%E9%A3%BEA_gold_pink.png" in out["earringPinkGold"]
+    # Yellow metal earring: gold fancy primary, gold white fallback — never silver fancy.
+    yellow_chain = [out["earringYellowResolve"]["src"], *out["earringYellowResolve"]["fallbacks"]]
+    assert any("gold" in u and "pink" in u for u in yellow_chain)
+    assert any("gold" in u and "pink" not in u for u in yellow_chain) or any(
+        u.endswith("耳飾A_gold.png") or "%E8%80%B3%E9%A3%BEA_gold.png" in u for u in yellow_chain
+    )
+    assert not any("silver" in u for u in yellow_chain)
+    # Rose metal earring keeps rose_gold fancy.
+    assert "rose" in out["earringRoseResolve"]["src"]
+    assert "pink" in out["earringRoseResolve"]["src"]
 
 
 def test_validate_product_variant_rejects_unconfigured_combo(monkeypatch):

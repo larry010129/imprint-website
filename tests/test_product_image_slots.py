@@ -36,10 +36,33 @@ def test_every_catalog_slot_resolves_to_an_existing_image(style_key, expected):
         assert (settings.static_dir / relative_path).is_file()
 
 
+def test_earring_yellow_fancy_uses_gold_fancy_renders():
+    """Gold earring fancy must be gold-folder assets, not silver-metal copies."""
+    silver_root = settings.static_dir / "images" / "shop-product" / "silver"
+    gold_root = settings.static_dir / "images" / "shop-product" / "gold"
+    for diamond in ("yellow", "blue", "pink"):
+        image_url = unquote(
+            shop_product_image_url("earring-A", "yellow", diamond_color=diamond)
+        )
+        assert "/gold/" in image_url
+        assert image_url.endswith(f"耳飾A_gold_{diamond}.png")
+        gold_path = gold_root / f"耳飾A_gold_{diamond}.png"
+        silver_path = silver_root / f"耳飾A_silver_{diamond}.png"
+        assert gold_path.is_file()
+        assert gold_path.read_bytes() != silver_path.read_bytes()
+
+
+def test_earring_rose_fancy_stays_in_rose_gold_folder():
+    for diamond in ("yellow", "blue", "pink"):
+        image_url = unquote(
+            shop_product_image_url("earring-A", "rose", diamond_color=diamond)
+        )
+        assert "/rose_gold/" in image_url
+        assert image_url.endswith(f"耳飾A_rose_{diamond}.png")
+
+
 def test_missing_fancy_renders_use_same_product_originals():
-    assert shop_product_image_url(
-        "earring-A", "yellow", diamond_color="pink"
-    ) == shop_product_image_url("earring-A", "yellow", diamond_color="white")
+    # Bracelet still has no fancy-stone library files → same-metal white fallback.
     assert shop_product_image_url(
         "bracelet-A", "rose", diamond_color="blue"
     ) == shop_product_image_url("bracelet-A", "rose", diamond_color="white")

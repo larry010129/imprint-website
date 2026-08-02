@@ -130,6 +130,15 @@ def _first_thumb_url(images_by_color: dict[str, list[str]]) -> str | None:
     return None
 
 
+def _product_sort_order(product: dict) -> int | None:
+    raw = product.get("sort_order")
+    try:
+        order = int(raw)
+    except (TypeError, ValueError):
+        return None
+    return order
+
+
 def build_catalog_product_lite(product: dict, variants: list[dict], images: list[dict]) -> dict:
     """Style-grid payload — option lists + thumb, no weights/images maps."""
     golds = _sort_golds({v["gold"] for v in variants})
@@ -138,6 +147,8 @@ def build_catalog_product_lite(product: dict, variants: list[dict], images: list
     return {
         "id": str(product["id"]),
         "styleKey": legacy_style_key(product, images),
+        "category": product.get("category"),
+        "sortOrder": _product_sort_order(product),
         "nameZh": product["name_zh"],
         "nameEn": product["name_en"],
         "defaultColor": product["default_color"],
@@ -178,6 +189,8 @@ def build_catalog_product(product: dict, variants: list[dict], images: list[dict
     return {
         "id": str(product["id"]),
         "styleKey": style_key,
+        "category": product.get("category"),
+        "sortOrder": _product_sort_order(product),
         "nameZh": product["name_zh"],
         "nameEn": product["name_en"],
         "descriptionZh": product["description_zh"],

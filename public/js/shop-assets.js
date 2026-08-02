@@ -129,13 +129,10 @@
     var d = diamondColor && DIAMOND_COLORS.indexOf(diamondColor) >= 0 ? diamondColor : 'white';
     var basename;
 
-    // These edited fancy-stone renders do not exist in the asset library.
+    // Bracelet fancy-stone renders do not exist in the asset library.
     // Resolve them to the same-metal white-stone original so CMS/storefront
     // thumbnails never receive a known 404 URL.
-    if (d !== 'white' && (
-      category === 'bracelet'
-      || (category === 'earring' && style === 'A' && c === 'yellow')
-    )) {
+    if (d !== 'white' && category === 'bracelet') {
       d = 'white';
     }
 
@@ -217,7 +214,7 @@
       || categoryThumb(parsed.category);
   }
 
-  /** Ordered PNG candidates: metal+fancy → silver+fancy → metal+white → thumb */
+  /** Ordered PNG candidates: metal+fancy → (optional silver+fancy) → metal+white → thumb */
   function productImageResolve(productId, color, defaultColor, diamondColor, opts) {
     opts = opts || {};
     var parsed = parseProductId(productId);
@@ -240,8 +237,10 @@
       return { src: chain[0] || '', fallbacks: chain.slice(1) };
     }
     if (d !== 'white') {
-      if (resolved !== 'white') {
-        // ponytail: rose/yellow metal fancy PNG missing (e.g. 耳飾) — show silver fancy until assets exist
+      // Missing metal+fancy: silver fancy only when metal is already white-adjacent.
+      // Never for yellow gold (silver metal look). Never for earrings — rose has its
+      // own fancy set; yellow must fall through to gold white-stone, not silver.
+      if (resolved !== 'white' && resolved !== 'yellow' && parsed.category !== 'earring') {
         push(stylePngPath(parsed.category, parsed.style, 'white', d, opts));
       }
       push(stylePngPath(parsed.category, parsed.style, resolved, 'white', opts));
@@ -283,6 +282,28 @@
     };
   }
 
+  /**
+   * True when letter SKU has a real fancy-stone PNG path (not bracelet/chain remap).
+   * Matches admin stockUrlForSlot: bracelet/chain never offer 黃/藍/粉 from stock.
+   */
+  function hasStockFancyDiamond(productId, diamondColor) {
+    var parsed = parseProductId(productId);
+    if (!parsed) return false;
+    var d = diamondColor && DIAMOND_COLORS.indexOf(diamondColor) >= 0 ? diamondColor : '';
+    if (!d || d === 'white') return false;
+    if (parsed.category === 'bracelet' || parsed.category === 'chain') return false;
+    var opts = parsed.category === 'pendant' ? { pendantOnly: true } : {};
+    var path = stylePngPath(parsed.category, parsed.style, 'white', d, opts);
+    return !!(path && path.indexOf('_' + d) >= 0);
+  }
+
+  /** Fancy diamond ids (yellow/blue/pink) with bundled shop-product renders. */
+  function stockFancyDiamondColors(productId) {
+    return DIAMOND_COLORS.filter(function (d) {
+      return d !== 'white' && hasStockFancyDiamond(productId, d);
+    });
+  }
+
   global.ShopAssets = {
     imageRoot: IMAGE_ROOT,
     categoryThumb: categoryThumb,
@@ -296,6 +317,8 @@
     buildImageSlotKey: buildImageSlotKey,
     parseImageSlotKey: parseImageSlotKey,
     imageSlotKeysForLookup: imageSlotKeysForLookup,
+    hasStockFancyDiamond: hasStockFancyDiamond,
+    stockFancyDiamondColors: stockFancyDiamondColors,
     DIAMOND_COLORS: DIAMOND_COLORS,
   };
 })(window);

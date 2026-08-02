@@ -946,6 +946,20 @@
   }
 
   function imageSlideHtml(url, color) {
+    // Bundled shop-product PNGs are preview-only — show in gallery, never persist.
+    if (isAutoStockProductImage(url)) {
+      return (
+        '<div class="ap-carousel-item ap-carousel-item--stock" data-url="" data-stock="1" data-color="' + esc(color || '') + '">' +
+          '<div class="ap-carousel-card">' +
+            '<div class="ap-carousel-card-media">' +
+              '<img class="ap-carousel-img" src="' + esc(url) + '" alt="內建預覽" loading="eager" decoding="async" width="180" height="180">' +
+              '<span class="ap-stock-label">內建</span>' +
+              '<button type="button" class="ap-remove-image" aria-label="隱藏">X</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>'
+      );
+    }
     var persistUrl = persistableImageUrl(url, color);
     if (!persistUrl) return '';
     return (
@@ -1030,12 +1044,44 @@
     return groups;
   }
 
+  /** Letter SKU (ring-A) from category + sort_order — matches resolve_product_id. */
+  function styleKeyForProduct(product, category) {
+    var cat = String(category || (product && product.category) || '').toLowerCase();
+    if (!cat || CATEGORY_ORDER.indexOf(cat) < 0) return '';
+    var order = product && (product.sort_order != null ? product.sort_order : product.sortOrder);
+    order = Number(order);
+    if (!Number.isFinite(order) || order < 0 || order > 2) return '';
+    return cat + '-' + String.fromCharCode(65 + order);
+  }
+
   /**
-   * Only slots that already have real uploads (+ one empty default for new items).
-   * Never pre-create the full metal×diamond matrix or invent stock photos.
+   * Shop-product PNG for a metal×diamond slot. Bracelet has no fancy renders —
+   * skip those so admin does not show white-stone dupes under 黃/藍/粉.
+   */
+  function stockUrlForSlot(styleKey, slotKey, category) {
+    if (!styleKey || !window.ShopAssets || !window.ShopAssets.productImage) return '';
+    var parsed = parseSlotKey(slotKey);
+    if (!parsed) return '';
+    if ((category === 'bracelet' || category === 'chain') && parsed.diamond !== 'white') {
+      return '';
+    }
+    var opts = category === 'pendant' ? { pendantOnly: true } : {};
+    return window.ShopAssets.productImage(
+      styleKey,
+      parsed.metal,
+      null,
+      parsed.diamond,
+      opts
+    ) || '';
+  }
+
+  /**
+   * Real uploads first. For letter SKUs (sort_order A–C), also show bundled
+   * shop-product metal×diamond previews (incl. ring/earring fancy 黃/藍/粉).
+   * Stock URLs are display-only and never persisted on save.
    * Legacy pendant 3-part keys (metal-diamond-chainMetal) fold into metal-diamond.
    */
-  function slotsForEditor(images, category) {
+  function slotsForEditor(images, category, product) {
     var groups = groupImagesForSlots(images);
     var seen = {};
     var slots = [];
@@ -1043,7 +1089,7 @@
     function pushSlot(key) {
       if (!key || seen[key]) return;
       var urls = groups[key] ? groups[key].slice() : [];
-      if (!urls.length && key !== 'white-white') return;
+      if (!urls.length) return;
       seen[key] = true;
       slots.push({ color: key, urls: urls });
     }
@@ -1069,6 +1115,19 @@
       delete groups[key];
     });
 
+    // Fill missing calculator slots from shop-product letter assets (preview only).
+    var styleKey = styleKeyForProduct(product, category);
+    var presets = presetSlotKeysForCategory(category);
+    if (styleKey) {
+      presets.forEach(function (key) {
+        if (groups[key] && groups[key].length) return;
+        var stock = stockUrlForSlot(styleKey, key, category);
+        if (stock) groups[key] = [stock];
+      });
+    }
+
+    // Preset order first (metal×diamond matrix), then any leftover custom keys.
+    presets.forEach(pushSlot);
     Object.keys(groups).forEach(function (key) {
       if (COLORS.indexOf(key) >= 0) return; // folded into metal-white above
       if (!(groups[key] && groups[key].length)) return;
@@ -1126,8 +1185,8 @@
     );
   }
 
-  function imageSlotsHtml(images, category) {
-    var slots = slotsForEditor(images, category);
+  function imageSlotsHtml(images, category, product) {
+    var slots = slotsForEditor(images, category, product);
     return slots.map(function (slot) { return imageSlotHtml(slot, category); }).join('');
   }
 
@@ -1590,8 +1649,8 @@
             '<h4 class="ap-section-title">商品照片</h4>' +
             '<p class="ap-section-hint">試算頁會依「金屬 × 鑽石顏色」切換商品圖' +
               (category === 'pendant' ? '；含鍊預覽沿用項墜金屬色（無需另傳異色鍊圖）' : '') +
-              '。請只上傳此商品的照片；用「+ 新增圖片選項」加其他金屬×鑽石組合。不會自動填入其他圖。</p>' +
-            '<div class="ap-image-slots" id="apImageSlots">' + imageSlotsHtml(product && product.images, category) + '</div>' +
+              '。有對應款式時會顯示內建預覽（含彩鑽），上傳圖會覆蓋該格；內建圖不會寫入資料庫。</p>' +
+            '<div class="ap-image-slots" id="apImageSlots">' + imageSlotsHtml(product && product.images, category, product) + '</div>' +
             '<button type="button" class="btn-sm" id="apAddImageSlot">+ 新增圖片選項</button>' +
             '<div class="ap-form-actions ap-editor-actions">' +
               '<button type="button" class="btn-sm" id="apEditorCancel">取消</button>' +
@@ -1690,8 +1749,10 @@
         alert('所有組合都已建立，無法再新增圖片選項');
         return;
       }
+      var styleKey = styleKeyForProduct(product, cat);
+      var stock = styleKey ? stockUrlForSlot(styleKey, pick, cat) : '';
       var wrap = document.createElement('div');
-      wrap.innerHTML = imageSlotHtml({ color: pick, urls: [] }, cat);
+      wrap.innerHTML = imageSlotHtml({ color: pick, urls: stock ? [stock] : [] }, cat);
       var slot = wrap.firstElementChild;
       host.appendChild(slot);
       bindImageSlot(slot, form);
@@ -1735,13 +1796,14 @@
           });
         });
         _slotCounter = 0;
-        host.innerHTML = imageSlotsHtml(currentImages, cat);
+        var editorProduct = Object.assign({}, product || {}, { category: cat });
+        host.innerHTML = imageSlotsHtml(currentImages, cat, editorProduct);
         bindImageSlots(form);
       }
       if (hint) {
         hint.textContent = '試算頁會依「金屬 × 鑽石顏色」切換商品圖'
           + (cat === 'pendant' ? '；含鍊預覽沿用項墜金屬色（無需另傳異色鍊圖）' : '')
-          + '。請只上傳此商品的照片；用「+ 新增圖片選項」加其他金屬×鑽石組合。不會自動填入其他圖。';
+          + '。有對應款式時會顯示內建預覽（含彩鑽），上傳圖會覆蓋該格；內建圖不會寫入資料庫。';
       }
       var sellModes = document.getElementById('apPendantSellModes');
       if (sellModes) sellModes.hidden = cat !== 'pendant';

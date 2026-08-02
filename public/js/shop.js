@@ -522,7 +522,12 @@ function productAssetId(product) {
   }
   const id = String(product.id || '');
   if (/^[a-z]+-[A-C]$/i.test(id)) return id;
-  return '';
+  // UUID letter SKUs: admin A–C = category + sortOrder (stock 內建, not styleKey).
+  const cat = String(product.category || state.category || '').toLowerCase();
+  if (!['pendant', 'ring', 'earring', 'bracelet', 'chain'].includes(cat)) return '';
+  const order = Number(product.sortOrder ?? product.sort_order);
+  if (!Number.isFinite(order) || order < 0 || order > 2) return '';
+  return `${cat}-${String.fromCharCode(65 + order)}`;
 }
 
 /** Skip seed SVG placeholders — /shop/styles/*.svg 404; shop-product PNGs are SoT. */
@@ -563,13 +568,32 @@ function catalogImagesForKeys(product, keys) {
 function catalogPreviewSrc(product, metal, diamond, chainMetal) {
   if (!product?.images) return '';
   const d = diamond || 'white';
-  const keys = window.ShopAssets?.imageSlotKeysForLookup
-    ? window.ShopAssets.imageSlotKeysForLookup(metal, d, chainMetal || null)
-    : [
-      chainMetal ? `${metal}-${d}-${chainMetal}` : null,
-      `${metal}-${d}`,
-      metal,
-    ].filter(Boolean);
+  // Fancy: exact metal-diamond[-chain] only. Never legacy metal-only / white-stone —
+  // that froze preview on 白鑽 PNG when user picked 黃/藍/粉.
+  let keys;
+  if (d !== 'white') {
+    keys = [];
+    if (chainMetal) {
+      keys.push(
+        window.ShopAssets?.buildImageSlotKey
+          ? window.ShopAssets.buildImageSlotKey(metal, d, chainMetal)
+          : `${metal}-${d}-${chainMetal}`,
+      );
+    }
+    keys.push(
+      window.ShopAssets?.buildImageSlotKey
+        ? window.ShopAssets.buildImageSlotKey(metal, d)
+        : `${metal}-${d}`,
+    );
+  } else {
+    keys = window.ShopAssets?.imageSlotKeysForLookup
+      ? window.ShopAssets.imageSlotKeysForLookup(metal, d, chainMetal || null)
+      : [
+        chainMetal ? `${metal}-${d}-${chainMetal}` : null,
+        `${metal}-${d}`,
+        metal,
+      ].filter(Boolean);
+  }
   const urls = catalogImagesForKeys(product, keys);
   return urls.find((u) => !isPendantLayerAssetUrl(u)) || '';
 }
@@ -735,6 +759,12 @@ function pendantPreviewLayers(product) {
     if (fromCatalog) {
       return { composite: false, src: fromCatalog, pendantOnly: false, fromCatalog: true };
     }
+    const combo = pendantWithChainImageUrl(product, metal, chainMetal, diamond);
+    if (combo) {
+      return { composite: false, src: combo, pendantOnly: false, fromCatalog: false };
+    }
+    const composite = pendantCompositeFallback(product);
+    if (composite) return composite;
     return previewSrcWhenCatalogMissing(product, metal, diamond, chainMetal, { pendantOnly: false });
   }
 
@@ -745,6 +775,16 @@ function pendantPreviewLayers(product) {
       src: catalogSrc,
       pendantOnly: opts.pendantOnly,
       fromCatalog: true,
+    };
+  }
+  // Catalog miss (common: white slot only) → letter shop-product fancy PNG.
+  const stockSrc = productImagesForColor(product, metal, diamond, opts)[0] || '';
+  if (stockSrc) {
+    return {
+      composite: false,
+      src: stockSrc,
+      pendantOnly: opts.pendantOnly,
+      fromCatalog: false,
     };
   }
   return previewSrcWhenCatalogMissing(product, metal, diamond, opts.chainColor || null, opts);
@@ -820,9 +860,9 @@ function productImagesForColor(product, metalColor, diamondColor, opts) {
     if (fromWhite.length) return fromWhite;
   }
 
-  // Empty product → no invent. Bundled letter PNGs only fill missing slots on
-  // products that already have at least one real catalog upload.
-  if (!productHasCatalogImages(product)) return [];
+  // Empty product with no letter-SKU mapping → no invent. Letter A–C stock may
+  // fill metal×diamond when admin only uploaded white (or omitted images).
+  if (!productHasCatalogImages(product) && !assetId) return [];
 
   // Shop-product PNGs when no exact admin slot for this metal/diamond[/chain].
   if (assetId && window.ShopAssets?.productImageResolve) {
@@ -877,9 +917,9 @@ function productImageUrl(product, metalColor, diamondColor, opts) {
   if (fromColor && !/\/images\/shop\/styles\/[a-z]+-[A-C]\.svg/i.test(fromColor)) {
     return fromColor;
   }
-  // No catalog uploads → stay blank (never invent letter thumbs for new/empty items).
-  if (!productHasCatalogImages(product)) return '';
+  // No catalog uploads and no letter stock mapping → stay blank.
   const assetId = productAssetId(product);
+  if (!productHasCatalogImages(product) && !assetId) return '';
   if (assetId && window.ShopAssets) return window.ShopAssets.styleThumb(assetId);
   return '';
 }
@@ -1853,9 +1893,39 @@ function imageUrl(category, type, metalColor, diamondColor) {
 
 // ── Metal price fetch ─────────────────────────────────────────────────────
 
+/**
+ * /api/prices only returns money numbers — never diamondColors/fancyColors tables.
+ * Always seed UI option metadata from ShopPricingLocal so API mode still shows 黃/藍/粉.
+ */
+function ensureDiamondOptionTables() {
+  const localOpts = window.ShopPricingLocal?.pricesPayload?.()?.diamondOptions;
+  if (!localOpts || typeof localOpts !== 'object') return false;
+  const needColors = !diamondOptions.diamondColors?.length;
+  const needFancy = !diamondOptions.fancyColors?.length;
+  const needShapes = !diamondOptions.shapes?.length;
+  if (!needColors && !needFancy && !needShapes) return false;
+  diamondOptions = {
+    ...diamondOptions,
+    ...localOpts,
+    // Keep any API-provided money-adjacent fields already on diamondOptions.
+    diamondColors: needColors
+      ? (localOpts.diamondColors || diamondOptions.diamondColors)
+      : diamondOptions.diamondColors,
+    fancyColors: needFancy
+      ? (localOpts.fancyColors || diamondOptions.fancyColors)
+      : diamondOptions.fancyColors,
+    shapes: needShapes
+      ? (localOpts.shapes || diamondOptions.shapes)
+      : diamondOptions.shapes,
+  };
+  return true;
+}
+
 async function loadMetalPrices() {
   const pricePanel = document.getElementById("shop-price-panel");
   pricePanel?.classList.add("is-loading-prices");
+  // Seed color/shape tables before first product render (API path skips local money).
+  ensureDiamondOptionTables();
   try {
     const localPayload = window.ShopPricingLocal?.pricesPayload?.();
     if (localPayload && (shopUsesLocalPricing() || !shopUsesApi())) {
@@ -1898,9 +1968,12 @@ async function loadMetalPrices() {
     if (data.diamondOptions) {
       diamondOptions = { ...diamondOptions, ...data.diamondOptions };
     }
+    // API omits diamond option tables — keep ShopPricingLocal UI metadata.
+    ensureDiamondOptionTables();
     pricesLoaded = true;
     populateRingSizeSelect();
     renderRingSizeGuide();
+    if (state.type) updateDiamondSteps();
     updateSummary();
     const initialData = window.cartEditData || window.editData || window.prefillData;
     if (initialData?.ringSize) {
@@ -1908,6 +1981,7 @@ async function loadMetalPrices() {
     }
   } catch (err) {
     pricesLoaded = false;
+    ensureDiamondOptionTables();
     updateSummary();
   } finally {
     pricePanel?.classList.remove("is-loading-prices");
@@ -2384,14 +2458,11 @@ function productOffersFancyMinCaratOrAbove() {
   });
 }
 
-/** Fancy diamond colors present in admin image slot keys (metal-diamond[-chain]). */
-function designedFancyDiamondColors(product) {
-  const found = new Set();
-  const images = product?.images;
-  if (!images || typeof images !== 'object' || Array.isArray(images)) return [];
-  Object.keys(images).forEach((key) => {
-    const urls = images[key];
-    if (!urls || (Array.isArray(urls) && !urls.length)) return;
+/** Collect yellow/blue/pink from slot keys (images map or lite `colors` list). */
+function addFancyColorsFromSlotKeys(keys, found) {
+  if (!keys) return;
+  const list = Array.isArray(keys) ? keys : Object.keys(keys);
+  list.forEach((key) => {
     const parsed = window.ShopAssets?.parseImageSlotKey?.(key);
     if (parsed && FANCY_DIAMOND_COLOR_IDS.includes(parsed.diamond)) {
       found.add(parsed.diamond);
@@ -2402,14 +2473,36 @@ function designedFancyDiamondColors(product) {
       found.add(parts[1]);
     }
   });
+}
+
+/** Fancy diamond colors from catalog uploads and/or bundled letter-SKU stock PNGs. */
+function designedFancyDiamondColors(product) {
+  const found = new Set();
+  const images = product?.images;
+  if (images && typeof images === 'object' && !Array.isArray(images)) {
+    Object.keys(images).forEach((key) => {
+      const urls = images[key];
+      if (!urls || (Array.isArray(urls) && !urls.length)) return;
+      addFancyColorsFromSlotKeys([key], found);
+    });
+  }
+  // Lite catalog omits `images` but keeps slot keys in `colors`.
+  addFancyColorsFromSlotKeys(product?.colors, found);
+  // Admin 內建 previews are not persisted — letter SKUs still have stock fancy PNGs.
+  const styleKey = productAssetId(product);
+  const stock = window.ShopAssets?.stockFancyDiamondColors?.(styleKey) || [];
+  stock.forEach((c) => {
+    if (FANCY_DIAMOND_COLOR_IDS.includes(c)) found.add(c);
+  });
   return FANCY_DIAMOND_COLOR_IDS.filter((c) => found.has(c));
 }
 
 /**
  * Show 黃鑽/藍鑽/粉鑽 only when BOTH:
  *   1) product has at least one admin carat ≥ fancyMinCarat (0.3), AND
- *   2) that color has a product diamond image slot.
+ *   2) that color has a catalog image slot OR letter-SKU stock PNG.
  * Do not unlock all fancy colors from carat alone. White always separate.
+ * Bracelet/chain: stock remaps fancy→white — no stock fancy offered.
  */
 function isFancyDiamondColorOffered(colorId) {
   if (!FANCY_DIAMOND_COLOR_IDS.includes(colorId)) return false;
@@ -2651,13 +2744,29 @@ function ensureStoneCountDefault() {
   state.stoneCount = defaultStoneCountForCategory();
 }
 
+/** Built-in swatch defs when /api/prices + empty diamondOptions leave fancyColors=[]. */
+const FALLBACK_DIAMOND_COLOR_DEFS = [
+  { id: 'white', kind: 'white', labelZh: '白鑽', labelEn: 'White', swatch: '#e8e8e8', image: 'diamonds/colors/white.png' },
+  { id: 'yellow', kind: 'fancy', labelZh: '黃鑽', labelEn: 'Yellow', swatch: '#e6c200', image: 'diamonds/colors/yellow.png' },
+  { id: 'blue', kind: 'fancy', labelZh: '藍鑽', labelEn: 'Blue', swatch: '#7ec8e3', image: 'diamonds/colors/blue.png' },
+  { id: 'pink', kind: 'fancy', labelZh: '粉鑽', labelEn: 'Pink', swatch: '#f4a6c8', image: 'diamonds/colors/pink.png' },
+];
+
 function diamondColorOptions() {
-  const all = diamondOptions.diamondColors?.length
+  ensureDiamondOptionTables();
+  let all = diamondOptions.diamondColors?.length
     ? diamondOptions.diamondColors
     : [
-      { id: 'white', kind: 'white', labelZh: '白鑽', labelEn: 'White', swatch: '#e8e8e8', image: 'diamonds/colors/white.png' },
+      FALLBACK_DIAMOND_COLOR_DEFS[0],
       ...(diamondOptions.fancyColors || []),
     ];
+  // API mode historically left fancyColors empty — merge fallbacks for offered ids.
+  const byId = new Map();
+  all.forEach((c) => { if (c?.id) byId.set(c.id, c); });
+  FALLBACK_DIAMOND_COLOR_DEFS.forEach((def) => {
+    if (!byId.has(def.id)) byId.set(def.id, def);
+  });
+  all = FALLBACK_DIAMOND_COLOR_DEFS.map((def) => byId.get(def.id)).filter(Boolean);
   return all.filter((color) => {
     if (!color || color.id === 'white' || color.kind === 'white') return true;
     return isFancyDiamondColorOffered(color.id);
@@ -3276,7 +3385,8 @@ window.animateCountUp = animateShopTotal;
 
 async function refreshQuotePrices() {
   const pricePanel = document.getElementById('shop-price-panel');
-  pricePanel?.classList.add('is-loading-prices');
+  // Keep last known breakdown/total visible while recalculating.
+  // Skeleton (is-loading-prices) is only for initial boot via HTML + loadMetalPrices.
   let quote;
   try {
     quote = await fetchQuote();
@@ -3731,15 +3841,20 @@ function currentProductImages() {
     return [diamondMatrixImageUrl(resolvedDiamondShape(), selectedDiamondColorId())];
   }
   const imageOpts = pendantPreviewImageOpts();
+  const forColor = productImagesForColor(
+    product,
+    previewColor(),
+    selectedDiamondColorId(),
+    imageOpts,
+  );
+  if (forColor.length) return forColor;
   const catalog = catalogPreviewSrc(
     product,
     previewColor(),
     selectedDiamondColorId(),
     imageOpts.chainColor || null,
   );
-  if (catalog) return [catalog];
-  const current = readDisplayedPreviewSrc();
-  return current ? [current] : [];
+  return catalog ? [catalog] : [];
 }
 
 function renderProductThumbnails(images) {
@@ -3803,6 +3918,13 @@ function productPreviewFallbackSrc(product) {
     opts.chainColor || null,
   );
   if (catalog) return catalog;
+  const stock = productImagesForColor(
+    product,
+    previewColor(),
+    selectedDiamondColorId(),
+    opts,
+  )[0];
+  if (stock) return stock;
   return readDisplayedPreviewSrc() || '';
 }
 
