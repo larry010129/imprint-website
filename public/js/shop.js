@@ -1667,25 +1667,6 @@ function getMissingSubmitFields() {
   return missing;
 }
 
-function labelForSubmitField(key) {
-  switch (key) {
-    case 'category': return tr('step_category');
-    case 'type': return tr('sum_style');
-    case 'gold': return tr('step_metal');
-    case 'color': return tr('step_color');
-    case 'carat': return tr('step_carat');
-    case 'ringSize': return tr('step_ring_size');
-    case 'length':
-      return state.category === 'bracelet' ? tr('step_bracelet_length') : tr('step_chain_length');
-    case 'fancyColor': return tr('step_diamond_color');
-    case 'diamondShape': return tr('step_diamond_shape_other');
-    case 'pendantChain':
-    case 'pendantChainThickness':
-    case 'pendantChainLength': return tr('step_pendant_chain');
-    default: return '';
-  }
-}
-
 function isReadyToSubmit() {
   if (getMissingSubmitFields().length) return false;
   if (state.category === 'chain' && state.gold === '9k') {
@@ -1693,10 +1674,6 @@ function isReadyToSubmit() {
     if (chainProduct && chainProduct.defaultColor !== 'white') return false;
   }
   return true;
-}
-
-function missingSubmitLabels() {
-  return getMissingSubmitFields().map(labelForSubmitField).filter(Boolean);
 }
 
 function clearAllSubmitFieldHighlights() {
@@ -1770,11 +1747,10 @@ function updatePriceHint(total) {
     return;
   }
   hint.hidden = false;
-  const missing = missingSubmitLabels();
-  if (missing.length) {
-    hint.textContent = `${tr('shop_complete_missing')}：${missing.join('、')}`;
-  } else if (total == null && quoteRefreshPending && lastQuoteTotal != null) {
+  if (total == null && quoteRefreshPending && lastQuoteTotal != null) {
     hint.hidden = true;
+  } else if (!optionsReady) {
+    hint.textContent = tr('shop_complete_options');
   } else if (total == null) {
     hint.textContent = tr('shop_price_unavailable');
   } else {
