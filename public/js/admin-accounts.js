@@ -306,10 +306,10 @@ window.ImprintMemberId = window.ImprintMemberId || (function () {
       btn.addEventListener('click', function (e) {
         e.preventDefault();
         var id = btn.dataset.id;
-        var pwd = prompt('請輸入新密碼（至少 6 碼）：');
+        var pwd = prompt('請輸入新密碼（至少 8 碼）：');
         if (!pwd) return;
-        if (pwd.length < 6) {
-          alert('密碼至少需要 6 碼');
+        if (pwd.length < 8) {
+          alert('密碼至少需要 8 碼');
           return;
         }
         btn.disabled = true;
@@ -335,8 +335,18 @@ window.ImprintMemberId = window.ImprintMemberId || (function () {
           alert('Email 不符，已取消刪除。');
           return;
         }
+        var adminPwd = prompt('請輸入您的管理員密碼以確認刪除：');
+        if (adminPwd == null || !String(adminPwd).trim()) {
+          alert('已取消刪除（需管理員密碼）。');
+          return;
+        }
+        var adminTotp = prompt('若已啟用 Authenticator（用於重設密碼／敏感操作），請輸入驗證碼；否則留空後確定：') || '';
         btn.disabled = true;
-        api.admin.accountAction(id, 'delete', { confirmEmail: typed.trim() }).then(function (res) {
+        api.admin.accountAction(id, 'delete', {
+          confirmEmail: typed.trim(),
+          password: String(adminPwd),
+          totpCode: String(adminTotp).trim() || undefined,
+        }).then(function (res) {
           btn.disabled = false;
           if (res.error) {
             var msg = res.error.message || res.error;

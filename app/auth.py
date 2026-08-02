@@ -404,55 +404,135 @@ def record_success(key: str) -> None:
         cur.execute("delete from login_lockouts where lockout_key = %s", (key,))
 
 
-def enforce_rate_limit(request: Request, *, action: str, limit: int, window_seconds: int) -> bool:
-    """Per-IP throttle for unauthenticated POST endpoints (contact/quote forms),
+def _as_lockout_keys(keys: str | list[str] | None) -> list[str]:
+    if not keys:
+        return []
+    if isinstance(keys, str):
+        return [keys]
+    return [k for k in keys if k]
+
+
+def record_failures(keys: str | list[str] | None, max_attempts: int, lockout_seconds: int) -> None:
+    for key in _as_lockout_keys(keys):
+        record_failure(key, max_attempts, lockout_seconds)
+
+
+def record_successes(keys: str | list[str] | None) -> None:
+    for key in _as_lockout_keys(keys):
+        record_success(key)
+
+
+def _dual_lockout_keys(account_key: str, ip_key: str) -> tuple[list[str], bool]:
+    """Lock if either account-scoped or IP-scoped key is locked."""
+    keys = [account_key, ip_key]
+    return keys, any(_is_locked_out(k) for k in keys)
+
+
+def enforce_rate_limit(
+    request: Request,
+    *,
+    action: str,
+    limit: int,
+    window_seconds: int,
+    subject: str | None = None,
+) -> bool:
+    """Per-IP (and optional subject) throttle for unauthenticated POST endpoints,
     reusing the login_lockouts table so it works across gunicorn workers. Returns
     True if the request is within the allowance, False if it should be rejected.
 
     Fixed window that resets after `window_seconds` of inactivity: while a client
     keeps hitting the endpoint the counter grows and, once it passes `limit`,
     stays blocked; after it goes quiet for a full window the counter starts over.
-    Keys are namespaced by `action`, separate from login:/register: keys."""
-    key = f"{action}:{client_ip(request)}"
+    Keys are namespaced by `action`, separate from login:/register: keys.
+    When `subject` is set, both IP and subject keys are incremented; either over
+    limit rejects."""
+    keys = [f"{action}:{client_ip(request)}"]
+    if subject:
+        keys.append(f"{action}:acct:{subject.strip().lower()}")
     now = datetime.now(timezone.utc)
+    allowed = True
     with get_connection() as conn, conn.cursor() as cur:
-        cur.execute(
-            "select fail_count, updated_at from login_lockouts where lockout_key = %s",
-            (key,),
-        )
-        row = cur.fetchone()
-        within_window = bool(
-            row and row["updated_at"] and (now - row["updated_at"]).total_seconds() < window_seconds
-        )
-        count = (row["fail_count"] + 1) if within_window else 1
-        locked_until = now + timedelta(seconds=window_seconds) if count > limit else None
-        cur.execute(
-            """
-            insert into login_lockouts (lockout_key, fail_count, locked_until, updated_at)
-            values (%s, %s, %s, now())
-            on conflict (lockout_key) do update set
-              fail_count = excluded.fail_count,
-              locked_until = excluded.locked_until,
-              updated_at = now()
-            """,
-            (key, count, locked_until),
-        )
-        return count <= limit
+        for key in keys:
+            cur.execute(
+                "select fail_count, updated_at from login_lockouts where lockout_key = %s",
+                (key,),
+            )
+            row = cur.fetchone()
+            within_window = bool(
+                row
+                and row["updated_at"]
+                and (now - row["updated_at"]).total_seconds() < window_seconds
+            )
+            count = (row["fail_count"] + 1) if within_window else 1
+            locked_until = now + timedelta(seconds=window_seconds) if count > limit else None
+            cur.execute(
+                """
+                insert into login_lockouts (lockout_key, fail_count, locked_until, updated_at)
+                values (%s, %s, %s, now())
+                on conflict (lockout_key) do update set
+                  fail_count = excluded.fail_count,
+                  locked_until = excluded.locked_until,
+                  updated_at = now()
+                """,
+                (key, count, locked_until),
+            )
+            if count > limit:
+                allowed = False
+    return allowed
 
 
-def check_login_lockout(request: Request, email: str) -> tuple[str, bool]:
-    key = f"login:{email.lower()}:{client_ip(request)}"
-    return key, _is_locked_out(key)
+def check_login_lockout(request: Request, email: str) -> tuple[list[str], bool]:
+    normalized = email.lower()
+    return _dual_lockout_keys(
+        f"login:{normalized}",
+        f"login:{normalized}:{client_ip(request)}",
+    )
 
 
-def check_register_lockout(request: Request) -> tuple[str, bool]:
-    key = f"register:{client_ip(request)}"
-    return key, _is_locked_out(key)
+def check_register_lockout(request: Request, email: str | None = None) -> tuple[list[str], bool]:
+    ip_key = f"register:{client_ip(request)}"
+    if email:
+        return _dual_lockout_keys(f"register:{(email or '').strip().lower()}", ip_key)
+    return [ip_key], _is_locked_out(ip_key)
 
 
-def check_totp_verify_lockout(request: Request, user_id: str) -> tuple[str, bool]:
-    key = f"2fa:{user_id}:{client_ip(request)}"
-    return key, _is_locked_out(key)
+def check_totp_verify_lockout(request: Request, user_id: str) -> tuple[list[str], bool]:
+    return _dual_lockout_keys(
+        f"2fa:{user_id}",
+        f"2fa:{user_id}:{client_ip(request)}",
+    )
+
+
+def same_site_origin(request: Request) -> bool:
+    """True when Origin/Referer matches Host, or both headers are absent.
+
+    Cross-site browser POSTs always send Origin; rejecting mismatches is the
+    CSRF defense. Missing both is allowed for same-site HTMX / TestClient."""
+    host = (request.headers.get("host") or "").strip().lower()
+    if not host:
+        return True
+
+    origin = (request.headers.get("origin") or "").strip()
+    if origin:
+        return _url_host_matches(origin, host)
+
+    referer = (request.headers.get("referer") or "").strip()
+    if referer:
+        return _url_host_matches(referer, host)
+    return True
+
+
+def _url_host_matches(url: str, host: str) -> bool:
+    from urllib.parse import urlparse
+
+    try:
+        parsed = urlparse(url)
+    except ValueError:
+        return False
+    netloc = (parsed.netloc or "").strip().lower()
+    if not netloc:
+        return False
+    return netloc == host
 
 
 # ── invite codes (register.html doesn't collect one yet — this is a no-op
@@ -516,7 +596,11 @@ def validate_partner_invite_code(code: str | None) -> str | None:
 
 
 def consume_invite_code(code: str | None, user_id: str) -> dict[str, bool]:
-    """Marks a DB-backed invite code as used. Returns role flags granted by the code."""
+    """Atomically consume a DB invite. Returns role flags, or empty if unavailable.
+
+    Uses UPDATE…WHERE use_count < max_uses RETURNING so parallel signups cannot
+    all grant admin/partner from one single-use code.
+    """
     empty = {"grants_admin": False, "grants_partner": False}
     code = (code or "").strip()
     env_code = os.environ.get("REGISTRATION_INVITE_CODE", "").strip()
@@ -526,22 +610,29 @@ def consume_invite_code(code: str | None, user_id: str) -> dict[str, bool]:
         return empty
 
     with get_connection() as conn, conn.cursor() as cur:
-        cur.execute("select * from invite_codes where code = %s", (code,))
+        cur.execute(
+            """
+            update invite_codes
+            set
+              use_count = use_count + 1,
+              used_by_id = %s,
+              used_at = now(),
+              is_active = case
+                when max_uses is null then is_active
+                when use_count + 1 < max_uses then true
+                else false
+              end
+            where code = %s
+              and is_active = true
+              and (expires_at is null or expires_at > now())
+              and (max_uses is null or use_count < max_uses)
+            returning grants_admin, grants_partner
+            """,
+            (user_id, code),
+        )
         invite = cur.fetchone()
         if not invite:
             return empty
-
-        new_use_count = (invite["use_count"] or 0) + 1
-        still_active = (
-            new_use_count < invite["max_uses"] if invite["max_uses"] is not None else invite["is_active"]
-        )
-        cur.execute(
-            """
-            update invite_codes set use_count = %s, used_by_id = %s, used_at = now(), is_active = %s
-            where id = %s
-            """,
-            (new_use_count, user_id, still_active, invite["id"]),
-        )
         grants_admin = bool(invite["grants_admin"])
         grants_partner = bool(invite.get("grants_partner")) or (not grants_admin)
         return {"grants_admin": grants_admin, "grants_partner": grants_partner}

@@ -13,6 +13,7 @@ from app.auth import (
     get_user_id,
     is_admin,
 )
+from app.auth_totp_service import verify_step_up_password
 from app.controllers.htmx_common import form_bool, html, hx_redirect
 from app.database import get_connection
 from app.membership_config import load_config
@@ -83,6 +84,10 @@ async def contact_submit(request: Request) -> HTMLResponse:
 
 @router.post("/track-order", response_class=HTMLResponse)
 async def track_order_partial(request: Request) -> HTMLResponse:
+    if not enforce_rate_limit(request, action="track-order", limit=10, window_seconds=600):
+        return html(
+            request, "track_result.html", {"error": "請求過於頻繁，請稍後再試", "rows": []}, 429
+        )
     form = await request.form()
     order_number = str(form.get("orderNumber") or "").strip()
     phone = str(form.get("phone") or "").strip()
@@ -337,8 +342,16 @@ async def account_delete(request: Request) -> Response:
 
     form = await request.form()
     confirm_email = str(form.get("confirmEmail") or "").strip().lower()
+    password = str(form.get("password") or "")
+    totp_code = str(form.get("totpCode") or form.get("code") or "").strip()
     if not confirm_email:
         return _delete_error("請輸入 Email 以確認刪除。")
+    if not password:
+        return _delete_error("請輸入目前密碼以確認刪除。")
+
+    step_err = verify_step_up_password(user_id, password, totp_code or None)
+    if step_err:
+        return _delete_error(step_err, 401)
 
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute("select id, email from users where id = %s", (user_id,))

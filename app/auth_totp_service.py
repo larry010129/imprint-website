@@ -10,8 +10,8 @@ from app.auth import (
     TOTP_VERIFY_MAX_ATTEMPTS,
     bump_token_version,
     hash_password,
-    record_failure,
-    record_success,
+    record_failures,
+    record_successes,
     verify_password,
 )
 from app.database import get_connection
@@ -59,7 +59,12 @@ def fetch_totp_user(user_id: str) -> dict | None:
         return cur.fetchone()
 
 
-def verify_second_factor(user_id: str, code: str, *, lockout_key: str | None = None) -> tuple[bool, str]:
+def verify_second_factor(
+    user_id: str,
+    code: str,
+    *,
+    lockout_key: str | list[str] | None = None,
+) -> tuple[bool, str]:
     user = fetch_totp_user(user_id)
     if not user or not user.get("totp_enabled") or not user.get("totp_secret"):
         return False, "雙因素驗證未啟用"
@@ -68,14 +73,12 @@ def verify_second_factor(user_id: str, code: str, *, lockout_key: str | None = N
     backup_hashes = _json_backup_codes(user.get("totp_backup_codes"))
 
     if verify_totp(secret, code):
-        if lockout_key:
-            record_success(lockout_key)
+        record_successes(lockout_key)
         return True, ""
 
     backup_idx = verify_backup_code(code, backup_hashes)
     if backup_idx is None:
-        if lockout_key:
-            record_failure(lockout_key, TOTP_VERIFY_MAX_ATTEMPTS, TOTP_VERIFY_LOCKOUT_SECONDS)
+        record_failures(lockout_key, TOTP_VERIFY_MAX_ATTEMPTS, TOTP_VERIFY_LOCKOUT_SECONDS)
         return False, "驗證碼不正確"
 
     remaining = burn_backup_code(backup_hashes, backup_idx)
@@ -84,8 +87,7 @@ def verify_second_factor(user_id: str, code: str, *, lockout_key: str | None = N
             "update users set totp_backup_codes = %s where id = %s",
             (_store_backup_codes(remaining), user_id),
         )
-    if lockout_key:
-        record_success(lockout_key)
+    record_successes(lockout_key)
     return True, ""
 
 
@@ -129,15 +131,20 @@ def confirm_totp_setup(user_id: str, code: str) -> tuple[list[str] | None, str |
 
 
 NO_TOTP_ENROLLED_MSG = "請先於帳戶安全設定驗證器，或聯絡管理員重設密碼"
+PWRESET_GENERIC_ERR = "Email 或驗證碼不正確"
 
 
 def verify_totp_for_pwreset(
     email: str,
     code: str,
     *,
-    lockout_key: str | None = None,
+    lockout_key: str | list[str] | None = None,
 ) -> tuple[str | None, str | None]:
-    """Verify TOTP/backup for password reset. Returns (user_id, error)."""
+    """Verify TOTP/backup for password reset. Returns (user_id, error).
+
+    Always returns the same generic error for unknown email / no TOTP / bad code
+    so the reset path cannot enumerate enrolled accounts.
+    """
     normalized = email.strip().lower()
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute(
@@ -150,14 +157,14 @@ def verify_totp_for_pwreset(
         user = cur.fetchone()
 
     if not user or not user.get("is_active"):
-        return None, "Email 或驗證碼不正確"
+        return None, PWRESET_GENERIC_ERR
     if not user.get("totp_enabled") or not user.get("totp_secret"):
-        return None, NO_TOTP_ENROLLED_MSG
+        return None, PWRESET_GENERIC_ERR
 
     user_id = str(user["id"])
-    ok, err = verify_second_factor(user_id, code, lockout_key=lockout_key)
+    ok, _err = verify_second_factor(user_id, code, lockout_key=lockout_key)
     if not ok:
-        return None, err or "驗證碼不正確"
+        return None, PWRESET_GENERIC_ERR
     return user_id, None
 
 
@@ -175,13 +182,37 @@ def reset_password_with_totp(
     code: str,
     new_password: str,
     *,
-    lockout_key: str | None = None,
+    lockout_key: str | list[str] | None = None,
 ) -> str | None:
     """Verify TOTP/backup and set a new password. Returns error message or None."""
     user_id, err = verify_totp_for_pwreset(email, code, lockout_key=lockout_key)
     if err:
         return err
     complete_password_reset(user_id, new_password)
+    return None
+
+
+def verify_step_up_password(
+    user_id: str,
+    password: str,
+    totp_code: str | None = None,
+) -> str | None:
+    """Require current password (+ TOTP when enrolled) for destructive actions."""
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute(
+            "select password_hash, totp_enabled from users where id = %s",
+            (user_id,),
+        )
+        user = cur.fetchone()
+    if not user or not verify_password(password, user["password_hash"]):
+        return "密碼不正確"
+    if user.get("totp_enabled"):
+        code = (totp_code or "").strip()
+        if not code:
+            return "請輸入 Authenticator 驗證碼"
+        ok, err = verify_second_factor(user_id, code)
+        if not ok:
+            return err or "驗證碼不正確"
     return None
 
 

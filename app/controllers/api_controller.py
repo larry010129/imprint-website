@@ -143,6 +143,9 @@ async def bot_gold() -> JSONResponse:
 
 @router.post("/track-order")
 async def track_order(request: Request) -> dict:
+    if not enforce_rate_limit(request, action="track-order", limit=10, window_seconds=600):
+        return _err(429, "請求過於頻繁，請稍後再試")
+
     body = await request.json()
     if not isinstance(body, dict):
         return _err(400, "invalid body")

@@ -168,6 +168,25 @@ def create_app() -> FastAPI:
     )
     application.add_middleware(GZipMiddleware, minimum_size=1024, compresslevel=5)
 
+    _CSRF_SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS", "TRACE"})
+    _CSRF_PREFIXES = ("/api/auth/", "/htmx/", "/api/admin/")
+
+    @application.middleware("http")
+    async def csrf_same_site_origin(request, call_next):
+        """Reject cross-site Origin/Referer on cookie-auth mutating routes."""
+        if request.method not in _CSRF_SAFE_METHODS:
+            path = request.url.path
+            if any(path.startswith(prefix) for prefix in _CSRF_PREFIXES):
+                from app.auth import same_site_origin
+                from fastapi.responses import JSONResponse
+
+                if not same_site_origin(request):
+                    return JSONResponse(
+                        status_code=403,
+                        content={"error": "請求來源不被允許"},
+                    )
+        return await call_next(request)
+
     @application.middleware("http")
     async def dev_static_fresh(request, call_next):
         """Local dev: skip conditional-cache 304s so static assets always revalidate as 200."""

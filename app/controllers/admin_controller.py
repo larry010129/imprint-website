@@ -38,6 +38,7 @@ from app.auth import (
     log_admin_action,
     verify_password,
 )
+from app.auth_totp_service import verify_step_up_password
 from app.catalog import load_product_children
 from app.product_categories import category_labels, create_category, delete_category, fetch_categories, update_category_thumb, valid_category_slugs
 from config.settings import settings
@@ -1191,13 +1192,23 @@ async def account_action(request: Request) -> JSONResponse:
         elif action == "clear-lockout":
             email = (user["email"] or "").lower()
             cur.execute(
-                "delete from login_lockouts where lockout_key like %s",
-                (f"login:{email}:%",),
+                """
+                delete from login_lockouts
+                where lockout_key = %s or lockout_key like %s
+                """,
+                (f"login:{email}", f"login:{email}:%"),
             )
         elif action == "delete":
             confirm_email = str(body.get("confirmEmail") or "").strip().lower()
+            admin_password = str(body.get("password") or body.get("adminPassword") or "")
+            admin_totp = str(body.get("totpCode") or body.get("code") or "").strip()
             if not confirm_email:
                 return JSONResponse(status_code=400, content={"error": "請輸入 Email 以確認刪除"})
+            if not admin_password:
+                return JSONResponse(status_code=400, content={"error": "請輸入您的管理員密碼以確認刪除"})
+            step_err = verify_step_up_password(str(admin_id), admin_password, admin_totp or None)
+            if step_err:
+                return JSONResponse(status_code=401, content={"error": step_err})
             target_email = str(user.get("email") or "").strip().lower()
             if confirm_email != target_email:
                 return JSONResponse(status_code=400, content={"error": "Email 不符，請輸入該帳戶的 Email"})
@@ -1207,8 +1218,8 @@ async def account_action(request: Request) -> JSONResponse:
             hard_delete_user(cur, account_id)
         elif action == "reset-password":
             new_password = body.get("newPassword") or ""
-            if len(str(new_password)) < 6:
-                return JSONResponse(status_code=400, content={"error": "密碼至少需要 6 碼"})
+            if len(str(new_password)) < 8:
+                return JSONResponse(status_code=400, content={"error": "密碼至少需要 8 碼"})
             cur.execute(
                 "update users set password_hash = %s, token_version = token_version + 1 where id = %s",
                 (hash_password(str(new_password)), account_id),

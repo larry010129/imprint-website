@@ -9,11 +9,14 @@
   <a href="/shop/calculator/" class="btn btn-mint">前往品項訂製</a>
 </div>
 {% else %}
+{% set available_items = items|selectattr('available')|list %}
+{% set unavailable_items = items|rejectattr('available')|list %}
+{% if available_items %}
 <div class="member-cart-toolbar">
   <label><input type="checkbox" id="cart-select-all" checked data-cart-select-all> 全選</label>
 </div>
 <ul class="member-cart-list" id="cart-list">
-  {% for item in items %}
+  {% for item in available_items %}
   <li class="member-cart-item" data-cart-id="{{ item.id }}">
     <label class="member-cart-item__check">
       <input type="checkbox" name="itemIds" value="{{ item.id }}" checked data-cart-check data-price="{{ item.total_price or 0 }}">
@@ -36,13 +39,42 @@
   </li>
   {% endfor %}
 </ul>
+{% endif %}
+{% if unavailable_items %}
+<section class="member-cart-unavailable" aria-labelledby="cart-unavailable-heading">
+  <h2 class="member-cart-unavailable__title" id="cart-unavailable-heading">無法購買</h2>
+  <p class="member-cart-unavailable__hint">以下品項無法結帳，不會計入金額；請移除。</p>
+  <ul class="member-cart-list member-cart-list--unavailable">
+    {% for item in unavailable_items %}
+    <li class="member-cart-item member-cart-item--unavailable" data-cart-id="{{ item.id }}">
+      {% if item.image_url %}
+      <img class="member-cart-item__thumb" src="{{ item.image_url }}" alt="" loading="lazy" width="72" height="72">
+      {% else %}
+      <span class="member-cart-item__thumb member-cart-item__thumb--empty" aria-hidden="true"></span>
+      {% endif %}
+      <div class="member-cart-item__body">
+        <p class="member-cart-item__summary">{{ item.summary_zh or '訂製品項' }}</p>
+        <p class="member-cart-item__unavailable-reason">{{ item.unavailableReason or '商品已下架或規格已變更' }}</p>
+      </div>
+      <div class="member-cart-item__actions">
+        <button type="button" class="btn btn-line"
+          hx-post="/htmx/cart/delete"
+          hx-vals='{"id":"{{ item.id }}"}'
+          hx-target="#htmx-cart"
+          hx-confirm="移除此品項？">移除</button>
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
 <div class="member-cart-summary">
   <div class="member-cart-summary__row">
-    <span id="cart-selected-label">已選 {{ items|length }} 件</span>
-    {% set ns = namespace(total=0) %}{% for item in items %}{% set ns.total = ns.total + (item.total_price or 0) %}{% endfor %}
+    <span id="cart-selected-label">已選 {{ available_items|length }} 件</span>
+    {% set ns = namespace(total=0) %}{% for item in available_items %}{% set ns.total = ns.total + (item.total_price or 0) %}{% endfor %}
     <strong id="cart-selected-total">{{ format_twd(ns.total) }}</strong>
   </div>
-  <button type="button" class="btn btn-dark" id="cart-checkout-btn" data-cart-checkout>訂購已選品項</button>
+  <button type="button" class="btn btn-dark" id="cart-checkout-btn" data-cart-checkout{% if not available_items %} disabled{% endif %}>訂購已選品項</button>
   <a href="/shop/calculator/" class="member-cart-continue">繼續選購</a>
 </div>
 <script>
@@ -58,6 +90,8 @@
     if(tot) tot.textContent='NT$'+Math.round(total).toLocaleString('zh-Hant-TW');
     var all=root.querySelector('[data-cart-select-all]');
     if(all) all.checked=selected.length===boxes.length && boxes.length>0;
+    var btn=root.querySelector('[data-cart-checkout]');
+    if(btn) btn.disabled=selected.length===0;
   }
   root.addEventListener('change',function(e){
     if(e.target.matches('[data-cart-select-all]')){
@@ -67,6 +101,7 @@
   });
   var btn=root.querySelector('[data-cart-checkout]');
   if(btn) btn.addEventListener('click',function(){
+    if(btn.disabled) return;
     var ids=[].slice.call(root.querySelectorAll('[data-cart-check]:checked')).map(function(b){return b.value;});
     if(!ids.length){alert('請至少選擇一件品項');return;}
     location.href='/checkout.html?items='+encodeURIComponent(ids.join(','));

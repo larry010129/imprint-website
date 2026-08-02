@@ -213,6 +213,33 @@
           required
           placeholder="{{ user.email or '' }}"
         >
+        <label class="account-delete-dialog__label" for="account-delete-password">
+          請輸入目前密碼
+        </label>
+        <input
+          id="account-delete-password"
+          class="account-delete-dialog__input"
+          type="password"
+          name="password"
+          autocomplete="current-password"
+          required
+        >
+        {% if totp_enabled %}
+        <label class="account-delete-dialog__label" for="account-delete-totp">
+          Authenticator 驗證碼（用於重設密碼／敏感操作）
+        </label>
+        <input
+          id="account-delete-totp"
+          class="account-delete-dialog__input"
+          type="text"
+          name="totpCode"
+          inputmode="numeric"
+          autocomplete="one-time-code"
+          maxlength="12"
+          required
+          placeholder="6 位數或備用碼"
+        >
+        {% endif %}
         <div id="account-delete-error" aria-live="polite"></div>
         <div class="account-delete-dialog__actions">
           <button type="button" class="btn btn-line" data-account-delete-cancel>取消</button>

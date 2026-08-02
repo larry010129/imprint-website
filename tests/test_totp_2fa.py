@@ -60,7 +60,7 @@ from app.auth import (
 
 )
 
-from app.auth_totp_service import NO_TOTP_ENROLLED_MSG
+from app.auth_totp_service import PWRESET_GENERIC_ERR
 
 from app.totp import (
 
@@ -403,11 +403,27 @@ class TestTotpIntegration:
 
 
 
+            verify = client.post(
+
+                "/api/auth/forgot-password-verify",
+
+                json={"email": email, "code": code},
+
+            )
+
+            assert verify.status_code == 200
+
+            assert PWRESET_COOKIE_NAME in verify.cookies
+
+
+
             resp = client.post(
 
                 "/api/auth/reset-password-totp",
 
-                json={"email": email, "code": code, "newPassword": new_password},
+                json={"newPassword": new_password},
+
+                cookies=verify.cookies,
 
             )
 
@@ -511,7 +527,7 @@ class TestTotpIntegration:
 
 
 
-    def test_reset_password_wrong_code_fails(self, client):
+    def test_reset_password_without_pwreset_cookie_fails(self, client):
 
         user_id, email, _password = self._create_user(totp_enabled=True)
 
@@ -521,13 +537,37 @@ class TestTotpIntegration:
 
                 "/api/auth/reset-password-totp",
 
-                json={"email": email, "code": "000000", "newPassword": "newpass456"},
+                json={"newPassword": "newpass456"},
 
             )
 
             assert resp.status_code == 401
 
             assert resp.json().get("error")
+
+        finally:
+
+            self._cleanup(user_id)
+
+
+
+    def test_reset_password_wrong_code_fails(self, client):
+
+        user_id, email, _password = self._create_user(totp_enabled=True)
+
+        try:
+
+            resp = client.post(
+
+                "/api/auth/forgot-password-verify",
+
+                json={"email": email, "code": "000000"},
+
+            )
+
+            assert resp.status_code == 401
+
+            assert resp.json().get("error") == PWRESET_GENERIC_ERR
 
         finally:
 
@@ -543,15 +583,15 @@ class TestTotpIntegration:
 
             resp = client.post(
 
-                "/api/auth/reset-password-totp",
+                "/api/auth/forgot-password-verify",
 
-                json={"email": email, "code": "123456", "newPassword": "newpass456"},
+                json={"email": email, "code": "123456"},
 
             )
 
-            assert resp.status_code == 400
+            assert resp.status_code == 401
 
-            assert resp.json().get("error") == NO_TOTP_ENROLLED_MSG
+            assert resp.json().get("error") == PWRESET_GENERIC_ERR
 
         finally:
 
@@ -605,15 +645,15 @@ class TestTotpIntegration:
 
             resp = client.post(
 
-                "/api/auth/reset-password-totp",
+                "/api/auth/forgot-password-verify",
 
-                json={"email": email, "code": code, "newPassword": "newpass456"},
+                json={"email": email, "code": code},
 
             )
 
-            assert resp.status_code == 400
+            assert resp.status_code == 401
 
-            assert resp.json().get("error") == NO_TOTP_ENROLLED_MSG
+            assert resp.json().get("error") == PWRESET_GENERIC_ERR
 
         finally:
 

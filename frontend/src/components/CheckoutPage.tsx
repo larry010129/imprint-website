@@ -21,7 +21,13 @@ type CartItem = {
   style_type?: string | null;
   category?: string | null;
   image_url?: string | null;
+  available?: boolean;
+  unavailableReason?: string | null;
 };
+
+function isItemAvailable(item: CartItem): boolean {
+  return item.available !== false;
+}
 
 type Breakdown = PriceBreakdown;
 
@@ -232,7 +238,14 @@ export default function CheckoutPage() {
     };
   }, [itemIds]);
 
-  const subtotal = items.reduce((sum, { item, breakdown }) => sum + (breakdown.total ?? item.total_price ?? 0), 0);
+  const availableDetails = items.filter(({ item }) => isItemAvailable(item));
+  const unavailableDetails = items.filter(({ item }) => !isItemAvailable(item));
+  const hasUnavailable = unavailableDetails.length > 0;
+  const checkoutItemIds = availableDetails.map(({ item }) => item.id);
+  const subtotal = availableDetails.reduce(
+    (sum, { item, breakdown }) => sum + (breakdown.total ?? item.total_price ?? 0),
+    0
+  );
   const discountAmount = appliedCoupon?.discountAmount ?? 0;
   const total = appliedCoupon ? appliedCoupon.total : subtotal;
 
@@ -252,7 +265,7 @@ export default function CheckoutPage() {
       error?: string;
     }>("/api/coupon/validate", {
       method: "POST",
-      body: JSON.stringify({ code, itemIds }),
+      body: JSON.stringify({ code, itemIds: checkoutItemIds }),
     });
     setCouponApplying(false);
     if (status === 401) {
@@ -295,6 +308,7 @@ export default function CheckoutPage() {
       "invalid item selection": "訂購項目無效，請返回購物車重新選擇",
       "not signed in": "請先登入後再送出訂單",
       "Internal Server Error": "伺服器發生錯誤，請稍後再試或聯絡客服",
+      "請先移除無法購買品項": "請先移除無法購買品項，再返回購物車重新結帳",
     };
     if (known[raw]) return known[raw];
     if (raw.startsWith("缺少欄位")) {
@@ -319,6 +333,10 @@ export default function CheckoutPage() {
     e.preventDefault();
     setError(null);
 
+    if (hasUnavailable || !checkoutItemIds.length) {
+      showCheckoutError("請先移除無法購買品項，再返回購物車重新結帳");
+      return;
+    }
     if (!name.trim() || !phone.trim()) {
       showCheckoutError("請填寫姓名與聯絡電話");
       return;
@@ -341,7 +359,7 @@ export default function CheckoutPage() {
         {
           method: "POST",
           body: JSON.stringify({
-            itemIds,
+            itemIds: checkoutItemIds,
             customerName: name.trim(),
             customerPhone: phone.trim(),
             customerEmail: emailTrimmed || undefined,
@@ -387,11 +405,13 @@ export default function CheckoutPage() {
     );
   }
 
+  const submitDisabled = submitting || hasUnavailable || !checkoutItemIds.length;
+
   const summaryBlock = (
     <aside className="checkout-summary">
       <h2 className="checkout-summary-title">訂單摘要</h2>
       <ul className="checkout-summary-list">
-        {items.map(({ item, breakdown }) => (
+        {availableDetails.map(({ item, breakdown }) => (
           <li key={item.id} className="checkout-summary-item checkout-summary-item--stacked">
             <div className="checkout-summary-item-copy">
               <span className="checkout-summary-item-title">{item.summary_zh || "訂製品項"}</span>
@@ -403,6 +423,11 @@ export default function CheckoutPage() {
           </li>
         ))}
       </ul>
+      {hasUnavailable && (
+        <p className="checkout-unavailable-note" role="status">
+          有無法購買品項，不會計入金額。請返回購物車移除後再結帳。
+        </p>
+      )}
       <div className="checkout-coupon">
         <Label htmlFor="checkout-coupon">優惠碼</Label>
         <div className="checkout-coupon-row">
@@ -463,7 +488,7 @@ export default function CheckoutPage() {
         此步驟尚未付款。送出後由專人確認規格與報價，確認後才會進行付款。
       </p>
       <div className="checkout-actions checkout-actions--desktop">
-        <Button type="submit" className="w-full" disabled={submitting}>
+        <Button type="submit" className="w-full" disabled={submitDisabled}>
           {submitting ? "送出中…" : "確認送出訂單"}
         </Button>
         <Button type="button" variant="ghost" className="w-full" onClick={() => window.history.back()}>
@@ -481,9 +506,32 @@ export default function CheckoutPage() {
         <div className="checkout-main">
           <section className="checkout-block">
             <h2 className="checkout-block-title">訂製明細</h2>
-            {items.map(({ item, breakdown }) => (
+            {availableDetails.map(({ item, breakdown }) => (
               <CheckoutItemDetail key={item.id} item={item} breakdown={breakdown} />
             ))}
+            {hasUnavailable && (
+              <div className="checkout-unavailable">
+                <h3 className="checkout-unavailable-title">無法購買</h3>
+                <p className="checkout-unavailable-hint">
+                  以下品項無法結帳，不會計入金額；請返回購物車移除。
+                </p>
+                <ul className="checkout-unavailable-list">
+                  {unavailableDetails.map(({ item }) => (
+                    <li key={item.id} className="checkout-unavailable-item">
+                      <span className="checkout-unavailable-item-title">
+                        {item.summary_zh || "訂製品項"}
+                      </span>
+                      <span className="checkout-unavailable-item-reason">
+                        {item.unavailableReason || "商品已下架或規格已變更"}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <a className="checkout-unavailable-link" href="/cart.html">
+                  返回購物車
+                </a>
+              </div>
+            )}
           </section>
 
           <section className="checkout-block">
@@ -604,7 +652,7 @@ export default function CheckoutPage() {
           <div className="text-xs text-muted-foreground">總計</div>
           <div className="text-base font-semibold">{formatTwd(total)}</div>
         </div>
-        <Button type="submit" disabled={submitting}>
+        <Button type="submit" disabled={submitDisabled}>
           {submitting ? "送出中…" : "確認送出"}
         </Button>
       </div>

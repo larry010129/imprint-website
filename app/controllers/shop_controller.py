@@ -78,6 +78,45 @@ def _validate_product_variant(cur, body: dict[str, Any], *, require_published: b
     return None
 
 
+CART_UNAVAILABLE_REASON = "商品已下架或規格已變更"
+CART_UNAVAILABLE_CHECKOUT_MSG = "請先移除無法購買品項"
+
+
+def _cart_item_config(item: dict[str, Any]) -> dict[str, Any]:
+    """Normalize cart row config; fill category/type from row columns when missing."""
+    raw = item.get("config_json") or {}
+    config = dict(raw) if isinstance(raw, dict) else {}
+    if not config.get("category") and item.get("category"):
+        config["category"] = item["category"]
+    if not config.get("type") and item.get("style_type"):
+        config["type"] = item["style_type"]
+    return config
+
+
+def _mark_cart_available(item: dict[str, Any], available: bool, reason: str = "") -> dict[str, Any]:
+    item["available"] = available
+    item["unavailableReason"] = reason
+    return item
+
+
+def annotate_cart_item(cur, item: dict[str, Any]) -> dict[str, Any]:
+    """Mark cart line available/unavailable without rewriting stored price."""
+    config = _cart_item_config(item)
+    category = str(config.get("category") or "")
+    cfg_err = _validate_config(config)
+    if cfg_err:
+        return _mark_cart_available(item, False, cfg_err)
+    # Diamond memorial: required fields only — no product-row / publish gate.
+    if category == "diamond":
+        return _mark_cart_available(item, True)
+    if _validate_product_variant(cur, config, require_published=True):
+        return _mark_cart_available(item, False, CART_UNAVAILABLE_REASON)
+    pricing = compute_order_pricing(cur, config, require_published=True)
+    if not pricing.get("ready"):
+        return _mark_cart_available(item, False, CART_UNAVAILABLE_REASON)
+    return _mark_cart_available(item, True)
+
+
 def _strip_disallowed_engraving(cur, body: dict[str, Any]) -> None:
     """Clear engraving fields when the selected product does not allow 刻字."""
     if (
@@ -405,6 +444,7 @@ def fetch_cart_items(user_id: str, item_ids: list[str] | None = None) -> list[di
                 style_type=item.get("style_type"),
                 category=item.get("category"),
             )
+            annotate_cart_item(cur, item)
     return items
 
 
@@ -546,6 +586,7 @@ async def cart_item(request: Request) -> dict:
             style_type=item.get("style_type"),
             category=item.get("category"),
         )
+        annotate_cart_item(cur, item)
         return {"item": item, "breakdown": breakdown}
 
 
@@ -654,6 +695,11 @@ async def _cart_checkout_impl(request: Request, body: dict[str, Any] | None = No
             return _err(400, "cart is empty")
         if item_ids and len(items) != len(set(item_ids)):
             return _err(400, "invalid item selection")
+
+        for item in items:
+            annotate_cart_item(cur, item)
+            if not item.get("available"):
+                return _err(400, CART_UNAVAILABLE_CHECKOUT_MSG)
 
         profile = _profile(cur, user_id)
         customer, customer_err = _validate_customer(body, profile)

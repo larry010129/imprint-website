@@ -23,17 +23,21 @@ from app.auth import (
     check_register_lockout,
     check_totp_verify_lockout,
     clear_pre2fa_cookie,
+    clear_pwreset_cookie,
     clear_session_cookie,
     consume_invite_code,
     enforce_rate_limit,
+    get_pwreset_user_id,
     get_user_id,
     hash_password,
     is_admin,
     is_valid_email,
     log_admin_action,
-    record_failure,
-    record_success,
+    record_failures,
+    record_successes,
+    set_pwreset_cookie,
     set_session_cookie,
+    sign_pwreset,
     sign_session,
     validate_invite_code,
     validate_partner_invite_code,
@@ -54,10 +58,12 @@ from app.auth_post_login import (
     safe_next_url,
 )
 from app.auth_totp_service import (
+    PWRESET_GENERIC_ERR,
+    complete_password_reset,
     confirm_totp_setup,
     disable_totp,
-    reset_password_with_totp,
     start_totp_setup,
+    verify_totp_for_pwreset,
 )
 from app.database import get_connection
 from app.google_people import (
@@ -187,13 +193,13 @@ async def signup(request: Request, response: Response) -> JSONResponse:
 
     normalized_email = email.lower()
 
-    lockout_key, locked = check_register_lockout(request)
+    lockout_keys, locked = check_register_lockout(request, normalized_email)
     if locked:
         return _err(429, f"註冊失敗次數過多，請 {math.ceil(REGISTER_LOCKOUT_SECONDS / 60)} 分鐘後再試")
 
     captcha_error = recaptcha_error_or_none(request, recaptcha_token)
     if captcha_error:
-        record_failure(lockout_key, REGISTER_MAX_ATTEMPTS, REGISTER_LOCKOUT_SECONDS)
+        record_failures(lockout_keys, REGISTER_MAX_ATTEMPTS, REGISTER_LOCKOUT_SECONDS)
         return _err(400, captcha_error)
 
     code_for_validate = str(invite_code or "").strip() or None
@@ -202,13 +208,13 @@ async def signup(request: Request, response: Response) -> JSONResponse:
     else:
         invite_error = validate_invite_code(code_for_validate)
     if invite_error:
-        record_failure(lockout_key, REGISTER_MAX_ATTEMPTS, REGISTER_LOCKOUT_SECONDS)
+        record_failures(lockout_keys, REGISTER_MAX_ATTEMPTS, REGISTER_LOCKOUT_SECONDS)
         return _err(400, invite_error)
 
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute("select id from users where email = %s", (normalized_email,))
         if cur.fetchone():
-            record_failure(lockout_key, REGISTER_MAX_ATTEMPTS, REGISTER_LOCKOUT_SECONDS)
+            record_failures(lockout_keys, REGISTER_MAX_ATTEMPTS, REGISTER_LOCKOUT_SECONDS)
             return _err(409, "此 Email 已被註冊")
 
         password_hash = hash_password(password)
@@ -232,7 +238,7 @@ async def signup(request: Request, response: Response) -> JSONResponse:
         except psycopg.errors.UniqueViolation:
             # Two concurrent signups for the same email raced past the SELECT
             # check above; the DB's unique constraint is the real guard.
-            record_failure(lockout_key, REGISTER_MAX_ATTEMPTS, REGISTER_LOCKOUT_SECONDS)
+            record_failures(lockout_keys, REGISTER_MAX_ATTEMPTS, REGISTER_LOCKOUT_SECONDS)
             return _err(409, "此 Email 已被註冊")
 
     grants = (
@@ -255,7 +261,7 @@ async def signup(request: Request, response: Response) -> JSONResponse:
     # register throttle (not cleared via record_success) — otherwise an
     # attacker using unique emails could mass-create accounts forever, since
     # every attempt would reset the counter back to zero right after it.
-    record_failure(lockout_key, REGISTER_MAX_ATTEMPTS, REGISTER_LOCKOUT_SECONDS)
+    record_failures(lockout_keys, REGISTER_MAX_ATTEMPTS, REGISTER_LOCKOUT_SECONDS)
 
     token = sign_session(str(user["id"]))
     decision = decide_post_login(next_url="/account.html", user_id=str(user["id"]))
@@ -279,7 +285,7 @@ async def login(request: Request) -> JSONResponse:
         return _err(400, "請輸入 Email 與密碼")
 
     normalized_email = email.lower()
-    lockout_key, locked = check_login_lockout(request, normalized_email)
+    lockout_keys, locked = check_login_lockout(request, normalized_email)
     if locked:
         return _err(429, f"登入失敗次數過多，請 {math.ceil(LOGIN_LOCKOUT_SECONDS / 60)} 分鐘後再試")
 
@@ -294,13 +300,13 @@ async def login(request: Request) -> JSONResponse:
         user = cur.fetchone()
 
     if not user or not verify_password(password, user["password_hash"]):
-        record_failure(lockout_key, LOGIN_MAX_ATTEMPTS, LOGIN_LOCKOUT_SECONDS)
+        record_failures(lockout_keys, LOGIN_MAX_ATTEMPTS, LOGIN_LOCKOUT_SECONDS)
         return _err(401, "Email 或密碼不正確")
 
     if not user["is_active"]:
         return _err(403, "此帳號已被停用，請聯絡客服。 (This account has been deactivated.)")
 
-    record_success(lockout_key)
+    record_successes(lockout_keys)
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute("update users set last_login_at = now() where id = %s", (user["id"],))
 
@@ -487,37 +493,65 @@ async def reset_password(request: Request) -> JSONResponse:
     return JSONResponse(content={"ok": True})
 
 
-@router.post("/reset-password-totp")
-async def reset_password_totp(request: Request) -> JSONResponse:
-    if not enforce_rate_limit(request, action="pwreset-totp", limit=10, window_seconds=900):
-        return _err(429, "請求過於頻繁，請稍後再試")
-
+@router.post("/forgot-password-verify")
+async def forgot_password_verify(request: Request) -> JSONResponse:
+    """Step 1 of TOTP password reset: verify Authenticator, set pwreset cookie."""
     body = await request.json()
     email = (body.get("email") or "").strip()
     code = str(body.get("code") or "").strip()
-    new_password = body.get("newPassword") or body.get("password") or ""
-    if not email or not code or not new_password:
-        return _err(400, "請輸入 Email、驗證碼與新密碼")
-    if len(new_password) < 8:
-        return _err(400, "密碼至少需要 8 碼")
+    if not email or not code:
+        return _err(400, "請輸入 Email 與驗證碼")
+    if not is_valid_email(email):
+        return _err(400, "請輸入有效的 Email 格式")
+
+    normalized = email.lower()
+    if not enforce_rate_limit(
+        request, action="pwreset-totp", limit=5, window_seconds=900, subject=normalized
+    ):
+        return _err(429, "請求過於頻繁，請稍後再試")
 
     with get_connection() as conn, conn.cursor() as cur:
-        cur.execute("select id from users where email = %s and is_active = true", (email.lower(),))
+        cur.execute("select id from users where email = %s and is_active = true", (normalized,))
         row = cur.fetchone()
-    lockout_key = None
+    lockout_keys = None
     if row:
-        lockout_key, locked = check_totp_verify_lockout(request, str(row["id"]))
+        lockout_keys, locked = check_totp_verify_lockout(request, str(row["id"]))
         if locked:
             return _err(
                 429,
                 f"驗證失敗次數過多，請 {math.ceil(TOTP_VERIFY_LOCKOUT_SECONDS / 60)} 分鐘後再試",
             )
 
-    err = reset_password_with_totp(email, code, new_password, lockout_key=lockout_key)
+    user_id, err = verify_totp_for_pwreset(email, code, lockout_key=lockout_keys)
     if err:
-        status = 400 if "請先於帳戶安全" in err else 401
-        return _err(status, err)
-    return JSONResponse(content={"ok": True})
+        return _err(401, PWRESET_GENERIC_ERR)
+
+    result = JSONResponse(content={"ok": True})
+    set_pwreset_cookie(result, sign_pwreset(user_id), request)
+    return result
+
+
+@router.post("/reset-password-totp")
+async def reset_password_totp(request: Request) -> JSONResponse:
+    """Step 2: set new password. Requires imprint_pwreset cookie from verify."""
+    if not enforce_rate_limit(request, action="pwreset-totp", limit=5, window_seconds=900):
+        return _err(429, "請求過於頻繁，請稍後再試")
+
+    user_id = get_pwreset_user_id(request)
+    if not user_id:
+        return _err(401, "驗證已過期，請重新輸入 Email 與 Authenticator 驗證碼。")
+
+    body = await request.json()
+    new_password = body.get("newPassword") or body.get("password") or ""
+    if not new_password:
+        return _err(400, "請輸入新密碼")
+    if len(new_password) < 8:
+        return _err(400, "密碼至少需要 8 碼")
+
+    complete_password_reset(user_id, new_password)
+    result = JSONResponse(content={"ok": True})
+    clear_pwreset_cookie(result, request)
+    return result
 
 
 @router.get("/session")

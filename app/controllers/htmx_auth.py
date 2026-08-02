@@ -28,8 +28,8 @@ from app.auth import (
     hash_password,
     is_valid_email,
     log_admin_action,
-    record_failure,
-    record_success,
+    record_failures,
+    record_successes,
     set_pwreset_cookie,
     set_session_cookie,
     sign_pwreset,
@@ -40,7 +40,11 @@ from app.auth import (
     verify_password,
 )
 from app.auth_post_login import apply_post_login_cookies, decide_post_login
-from app.auth_totp_service import complete_password_reset, verify_totp_for_pwreset
+from app.auth_totp_service import (
+    PWRESET_GENERIC_ERR,
+    complete_password_reset,
+    verify_totp_for_pwreset,
+)
 from app.captcha import recaptcha_error_or_none
 from app.controllers.htmx_common import form_bool, html, hx_redirect
 from app.database import get_connection
@@ -65,7 +69,7 @@ async def auth_login(request: Request) -> Response:
         return html(request, "auth_error.html", {"error": "請輸入 Email 與密碼"}, 400)
 
     normalized = email.lower()
-    lockout_key, locked = check_login_lockout(request, normalized)
+    lockout_keys, locked = check_login_lockout(request, normalized)
     if locked:
         mins = math.ceil(LOGIN_LOCKOUT_SECONDS / 60)
         return html(
@@ -83,12 +87,12 @@ async def auth_login(request: Request) -> Response:
         user = cur.fetchone()
 
     if not user or not verify_password(password, user["password_hash"]):
-        record_failure(lockout_key, LOGIN_MAX_ATTEMPTS, LOGIN_LOCKOUT_SECONDS)
+        record_failures(lockout_keys, LOGIN_MAX_ATTEMPTS, LOGIN_LOCKOUT_SECONDS)
         return html(request, "auth_error.html", {"error": "Email 或密碼不正確"}, 401)
     if not user["is_active"]:
         return html(request, "auth_error.html", {"error": "此帳號已被停用，請聯絡客服。"}, 403)
 
-    record_success(lockout_key)
+    record_successes(lockout_keys)
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute("update users set last_login_at = now() where id = %s", (user["id"],))
 
@@ -100,6 +104,10 @@ async def auth_login(request: Request) -> Response:
 
 @router.post("/auth/check-email")
 async def auth_check_email(request: Request) -> JSONResponse:
+    if not enforce_rate_limit(request, action="check-email", limit=10, window_seconds=600):
+        return JSONResponse(
+            status_code=429, content={"ok": False, "error": "請求過於頻繁，請稍後再試"}
+        )
     form = await request.form()
     email = str(form.get("email") or "").strip()
     if not email:
@@ -120,6 +128,10 @@ async def auth_check_email(request: Request) -> JSONResponse:
 
 @router.post("/auth/check-invite")
 async def auth_check_invite(request: Request) -> JSONResponse:
+    if not enforce_rate_limit(request, action="check-invite", limit=10, window_seconds=600):
+        return JSONResponse(
+            status_code=429, content={"ok": False, "error": "請求過於頻繁，請稍後再試"}
+        )
     form = await request.form()
     invite_code = str(form.get("inviteCode") or "").strip()
     invite_error = validate_partner_invite_code(invite_code)
@@ -156,7 +168,7 @@ async def auth_register(request: Request) -> Response:
     if len(password) < 8:
         return html(request, "auth_error.html", {"error": "密碼至少需要 8 碼"}, 400)
 
-    lockout_key, locked = check_register_lockout(request)
+    lockout_keys, locked = check_register_lockout(request, email)
     if locked:
         mins = math.ceil(REGISTER_LOCKOUT_SECONDS / 60)
         return html(
@@ -165,11 +177,11 @@ async def auth_register(request: Request) -> Response:
 
     captcha_error = recaptcha_error_or_none(request, recaptcha_token)
     if captcha_error:
-        record_failure(lockout_key, REGISTER_MAX_ATTEMPTS, REGISTER_LOCKOUT_SECONDS)
+        record_failures(lockout_keys, REGISTER_MAX_ATTEMPTS, REGISTER_LOCKOUT_SECONDS)
         return html(request, "auth_error.html", {"error": captcha_error}, 400)
 
     def _register_err(message: str, status: int = 400) -> HTMLResponse:
-        record_failure(lockout_key, REGISTER_MAX_ATTEMPTS, REGISTER_LOCKOUT_SECONDS)
+        record_failures(lockout_keys, REGISTER_MAX_ATTEMPTS, REGISTER_LOCKOUT_SECONDS)
         return html(request, "auth_error.html", {"error": message}, status)
 
     code_for_validate = str(invite_code or "").strip() or None
@@ -219,7 +231,7 @@ async def auth_register(request: Request) -> Response:
         with get_connection() as conn, conn.cursor() as cur:
             cur.execute("update profiles set is_partner = true where id = %s", (user["id"],))
 
-    record_failure(lockout_key, REGISTER_MAX_ATTEMPTS, REGISTER_LOCKOUT_SECONDS)
+    record_failures(lockout_keys, REGISTER_MAX_ATTEMPTS, REGISTER_LOCKOUT_SECONDS)
     token = sign_session(str(user["id"]))
     decision = decide_post_login(next_url="/account.html", user_id=str(user["id"]))
     resp = hx_redirect(decision.next_url)
@@ -229,9 +241,6 @@ async def auth_register(request: Request) -> Response:
 
 @router.post("/auth/forgot-password-verify", response_class=HTMLResponse)
 async def auth_forgot_password_verify(request: Request) -> Response:
-    if not enforce_rate_limit(request, action="pwreset-totp", limit=10, window_seconds=900):
-        return html(request, "auth_error.html", {"error": "請求過於頻繁，請稍後再試"}, 429)
-
     form = await request.form()
     email = str(form.get("email") or "").strip()
     code = str(form.get("code") or "").strip()
@@ -240,12 +249,18 @@ async def auth_forgot_password_verify(request: Request) -> Response:
     if not is_valid_email(email):
         return html(request, "auth_error.html", {"error": "請輸入有效的 Email 格式"}, 400)
 
+    normalized = email.lower()
+    if not enforce_rate_limit(
+        request, action="pwreset-totp", limit=5, window_seconds=900, subject=normalized
+    ):
+        return html(request, "auth_error.html", {"error": "請求過於頻繁，請稍後再試"}, 429)
+
     with get_connection() as conn, conn.cursor() as cur:
-        cur.execute("select id from users where email = %s and is_active = true", (email.lower(),))
+        cur.execute("select id from users where email = %s and is_active = true", (normalized,))
         row = cur.fetchone()
-    lockout_key = None
+    lockout_keys = None
     if row:
-        lockout_key, locked = check_totp_verify_lockout(request, str(row["id"]))
+        lockout_keys, locked = check_totp_verify_lockout(request, str(row["id"]))
         if locked:
             mins = math.ceil(TOTP_VERIFY_LOCKOUT_SECONDS / 60)
             return html(
@@ -255,10 +270,9 @@ async def auth_forgot_password_verify(request: Request) -> Response:
                 429,
             )
 
-    user_id, err = verify_totp_for_pwreset(email, code, lockout_key=lockout_key)
+    user_id, err = verify_totp_for_pwreset(email, code, lockout_key=lockout_keys)
     if err:
-        status = 400 if "請先於帳戶安全" in err else 401
-        return html(request, "auth_error.html", {"error": err}, status)
+        return html(request, "auth_error.html", {"error": PWRESET_GENERIC_ERR}, 401)
 
     resp = html(request, "auth_success.html", {"message": "驗證成功，請設定新密碼。"})
     set_pwreset_cookie(resp, sign_pwreset(user_id), request)
@@ -267,7 +281,7 @@ async def auth_forgot_password_verify(request: Request) -> Response:
 
 @router.post("/auth/forgot-password", response_class=HTMLResponse)
 async def auth_forgot_password(request: Request) -> Response:
-    if not enforce_rate_limit(request, action="pwreset-totp", limit=10, window_seconds=900):
+    if not enforce_rate_limit(request, action="pwreset-totp", limit=5, window_seconds=900):
         return html(request, "auth_error.html", {"error": "請求過於頻繁，請稍後再試"}, 429)
 
     user_id = get_pwreset_user_id(request)

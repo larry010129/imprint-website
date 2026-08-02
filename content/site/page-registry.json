@@ -148,7 +148,7 @@
     "layout": "site",
     "main_class": "",
     "extra_css": [
-      "/static/css/member-app.css?v=2"
+      "/static/css/member-app.css?v=3"
     ],
     "extra_scripts": [
       {
@@ -187,9 +187,9 @@
     "layout": "site",
     "main_class": "",
     "extra_css": [
-      "/static/css/member-app.css?v=2",
+      "/static/css/member-app.css?v=3",
       "/static/react/checkout.css?v=7",
-      "/static/css/checkout-page.css?v=12"
+      "/static/css/checkout-page.css?v=13"
     ],
     "extra_scripts": [
       {

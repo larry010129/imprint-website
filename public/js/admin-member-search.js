@@ -312,10 +312,10 @@
             if (_lastQ) search(_lastQ);
           });
         } else if (action === 'reset-password') {
-          var pwd = prompt('請輸入新密碼（至少 6 碼）：');
+          var pwd = prompt('請輸入新密碼（至少 8 碼）：');
           if (!pwd) return;
-          if (pwd.length < 6) {
-            alert('密碼至少需要 6 碼');
+          if (pwd.length < 8) {
+            alert('密碼至少需要 8 碼');
             return;
           }
           btn.disabled = true;

@@ -74,8 +74,10 @@
       if (dialog.open) dialog.close();
       var err = dialog.querySelector('#account-delete-error');
       if (err) err.innerHTML = '';
-      var input = dialog.querySelector('#account-delete-email');
-      if (input) input.value = '';
+      ['#account-delete-email', '#account-delete-password', '#account-delete-totp'].forEach(function (sel) {
+        var input = dialog.querySelector(sel);
+        if (input) input.value = '';
+      });
     }
 
     openBtn.addEventListener('click', function () {

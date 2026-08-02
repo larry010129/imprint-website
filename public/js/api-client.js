@@ -72,10 +72,23 @@
     },
     requestPasswordReset: function (email) { return request('/api/auth/request-password-reset', { method: 'POST', body: { email: email } }); },
     resetPassword: function (token, newPassword) { return request('/api/auth/reset-password', { method: 'POST', body: { token: token, newPassword: newPassword } }); },
-    resetPasswordWithTotp: function (email, code, newPassword) {
-      return request('/api/auth/reset-password-totp', {
+    verifyPasswordResetTotp: function (email, code) {
+      return request('/api/auth/forgot-password-verify', {
         method: 'POST',
-        body: { email: email, code: code, newPassword: newPassword },
+        body: { email: email, code: code },
+      });
+    },
+    resetPasswordWithTotp: function (email, code, newPassword) {
+      // Two-step: Authenticator verify sets imprint_pwreset cookie, then set password.
+      return request('/api/auth/forgot-password-verify', {
+        method: 'POST',
+        body: { email: email, code: code },
+      }).then(function (res) {
+        if (res && res.error) return res;
+        return request('/api/auth/reset-password-totp', {
+          method: 'POST',
+          body: { newPassword: newPassword },
+        });
       });
     },
 

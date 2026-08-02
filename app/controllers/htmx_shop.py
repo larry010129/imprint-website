@@ -62,6 +62,8 @@ async def checkout_partial(request: Request) -> Response:
     items = fetch_cart_items(user_id, item_ids)
     if not items:
         return hx_redirect("/cart.html")
+    if any(i.get("available") is False for i in items):
+        return hx_redirect("/cart.html")
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute(
             """
