@@ -115,17 +115,60 @@
     });
   }
 
-  /* ---------- FAQ 手風琴（略過 React 島） ---------- */
+  /* ---------- FAQ 分類 tabs（SSR） ---------- */
+  document.querySelectorAll('.faq-shell').forEach(function (shell) {
+    var tabs = Array.prototype.slice.call(shell.querySelectorAll('[data-faq-tab]'));
+    var panels = Array.prototype.slice.call(shell.querySelectorAll('[data-faq-panel]'));
+    if (!tabs.length || !panels.length) return;
+
+    function activate(id, focusTab) {
+      tabs.forEach(function (tab) {
+        var on = tab.getAttribute('data-faq-tab') === id;
+        tab.classList.toggle('is-active', on);
+        tab.setAttribute('aria-selected', on ? 'true' : 'false');
+        tab.setAttribute('tabindex', on ? '0' : '-1');
+        if (on && focusTab) tab.focus();
+      });
+      panels.forEach(function (panel) {
+        var on = panel.getAttribute('data-faq-panel') === id;
+        panel.classList.toggle('is-active', on);
+        if (on) panel.removeAttribute('hidden');
+        else panel.setAttribute('hidden', '');
+      });
+    }
+
+    tabs.forEach(function (tab, index) {
+      tab.addEventListener('click', function () {
+        activate(tab.getAttribute('data-faq-tab') || '', false);
+      });
+      tab.addEventListener('keydown', function (ev) {
+        var next = -1;
+        if (ev.key === 'ArrowRight' || ev.key === 'ArrowDown') next = (index + 1) % tabs.length;
+        else if (ev.key === 'ArrowLeft' || ev.key === 'ArrowUp') next = (index - 1 + tabs.length) % tabs.length;
+        else if (ev.key === 'Home') next = 0;
+        else if (ev.key === 'End') next = tabs.length - 1;
+        if (next < 0) return;
+        ev.preventDefault();
+        activate(tabs[next].getAttribute('data-faq-tab') || '', true);
+      });
+    });
+  });
+
+  /* ---------- FAQ 手風琴（舊 .faq-a 結構；略過 details / React 島） ---------- */
   if (!document.querySelector('[data-faq-root]')) {
   document.querySelectorAll('.faq-item').forEach(function (item) {
+    if (item.querySelector('details')) return;
     var q = item.querySelector('.faq-q');
     var a = item.querySelector('.faq-a');
+    if (!q || !a) return;
     q.addEventListener('click', function () {
       var open = item.classList.contains('is-open');
       document.querySelectorAll('.faq-item.is-open').forEach(function (other) {
         other.classList.remove('is-open');
-        other.querySelector('.faq-a').style.maxHeight = null;
-        other.querySelector('.faq-q').setAttribute('aria-expanded', 'false');
+        var otherA = other.querySelector('.faq-a');
+        var otherQ = other.querySelector('.faq-q');
+        if (otherA) otherA.style.maxHeight = null;
+        if (otherQ) otherQ.setAttribute('aria-expanded', 'false');
       });
       if (!open) {
         item.classList.add('is-open');

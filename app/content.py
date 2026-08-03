@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import json
 import re
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
@@ -257,17 +259,31 @@ def fetch_all_testimonials(cur) -> list[dict]:
     return [serialize_testimonial(r) for r in cur.fetchall()]
 
 
-def fetch_faq_public(cur) -> dict[str, Any]:
-    cur.execute("select * from faq_categories order by sort_order asc, id asc")
-    categories = [serialize_faq_category(r) for r in cur.fetchall()]
-    cur.execute(
-        """
-        select * from faq_items
-        where is_published = true
-        order by sort_order asc, id asc
-        """
+def format_faq_answer_html(answer: str) -> str:
+    """Escape FAQ answer text and revive known public links."""
+    from html import escape
+
+    text = escape(answer or "")
+    text = text.replace(
+        "/price.html",
+        '<a href="/price.html">價格試算・價格總覽</a>',
     )
-    items = [serialize_faq_item(r) for r in cur.fetchall()]
+    text = text.replace(
+        "/shop/calculator/",
+        '<a href="/shop/calculator/">客製試算頁</a>',
+    )
+    text = text.replace(
+        "GIA",
+        '<a href="https://www.gia.edu/" target="_blank" rel="noopener">GIA</a>',
+    )
+    text = text.replace(
+        "IGI",
+        '<a href="https://www.igi.org/" target="_blank" rel="noopener">IGI</a>',
+    )
+    return text
+
+
+def _faq_public_payload(categories: list[dict], items: list[dict]) -> dict[str, Any]:
     by_cat: dict[str, list] = {c["id"]: [] for c in categories}
     for item in items:
         by_cat.setdefault(item["category_id"], []).append(item)
@@ -281,17 +297,57 @@ def fetch_faq_public(cur) -> dict[str, Any]:
                 "id": cat["id"],
                 "title": cat["title"],
                 "items": [
-                    {"id": i["id"], "question": i["question"], "answer": i["answer"]}
+                    {
+                        "id": i["id"],
+                        "question": i["question"],
+                        "answer": i["answer"],
+                        "answer_html": format_faq_answer_html(i.get("answer") or ""),
+                    }
                     for i in cat_items
                 ],
             }
         )
     teaser = [
-        {"id": i["id"], "question": i["question"], "answer": i["answer"]}
+        {
+            "id": i["id"],
+            "question": i["question"],
+            "answer": i["answer"],
+            "answer_html": format_faq_answer_html(i.get("answer") or ""),
+        }
         for i in items
         if i.get("show_in_teaser")
     ]
     return {"categories": nested, "teaser": teaser, "items": items}
+
+
+def fetch_faq_public(cur) -> dict[str, Any]:
+    cur.execute("select * from faq_categories order by sort_order asc, id asc")
+    categories = [serialize_faq_category(r) for r in cur.fetchall()]
+    cur.execute(
+        """
+        select * from faq_items
+        where is_published = true
+        order by sort_order asc, id asc
+        """
+    )
+    items = [serialize_faq_item(r) for r in cur.fetchall()]
+    return _faq_public_payload(categories, items)
+
+
+def faq_public_from_seed() -> dict[str, Any]:
+    """Offline fallback when DB has no FAQ rows."""
+    seed_path = Path(__file__).resolve().parent / "data" / "content-seed.json"
+    try:
+        data = json.loads(seed_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {"categories": [], "teaser": [], "items": []}
+    categories = list(data.get("faq_categories") or [])
+    items = []
+    for row in data.get("faq_items") or []:
+        item = dict(row)
+        item.setdefault("is_published", True)
+        items.append(item)
+    return _faq_public_payload(categories, items)
 
 
 def fetch_faq_admin(cur) -> dict[str, Any]:

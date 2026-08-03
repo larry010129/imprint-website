@@ -52,10 +52,15 @@ async def cart_delete(request: Request) -> HTMLResponse:
 
 @router.get("/checkout", response_class=HTMLResponse)
 async def checkout_partial(request: Request) -> Response:
+    raw_ids = (
+        request.query_params.get("items") or request.query_params.get("item") or ""
+    ).strip()
     user_id = get_user_id(request)
     if not user_id:
-        return hx_redirect("/login.html?next=/checkout.html")
-    raw_ids = request.query_params.get("items") or request.query_params.get("item") or ""
+        next_path = "/checkout.html"
+        if raw_ids:
+            next_path = f"/checkout.html?items={raw_ids}"
+        return hx_redirect("/login.html?next=" + quote(next_path, safe=""))
     item_ids = [s.strip() for s in raw_ids.split(",") if s.strip()]
     if not item_ids:
         return hx_redirect("/cart.html")

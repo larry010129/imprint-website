@@ -10,6 +10,7 @@ import pytest
 from dotenv import load_dotenv
 
 from app.catalog import (
+    _first_thumb_url,
     build_catalog_product,
     build_catalog_product_lite,
     build_catalog_response,
@@ -88,6 +89,50 @@ def test_build_catalog_product_lite_omits_heavy_maps():
     assert "lengthWeights" not in entry
     assert entry["allowsEngraving"] is True
     assert entry["draft"] is False
+
+
+def test_first_thumb_url_prefers_default_metal_white_diamond():
+    fancy = "https://cdn.example/fancy-pink.webp"
+    white = "https://cdn.example/white-white.webp"
+    # Insertion order puts fancy first — step-2 must still pick white diamond.
+    images = {
+        "yellow-pink": [fancy],
+        "white-white": [white],
+    }
+    assert _first_thumb_url(images, default_color="white") == white
+    # Missing yellow-white → still prefer any white-diamond slot over fancy.
+    assert _first_thumb_url(images, default_color="yellow") == white
+
+
+def test_lite_thumb_prefers_default_metal_over_fancy_slot_order():
+    fancy = "https://cdn.example/rose-yellow.webp"
+    white = "https://cdn.example/rose-white.webp"
+    images = [
+        {"color": "rose-yellow", "file_path": fancy},
+        {"color": "rose-white", "file_path": white},
+    ]
+    product = {**_product_row(), "default_color": "rose"}
+    entry = build_catalog_product_lite(product, _variants(), images)
+    assert entry["thumbUrl"] == white
+
+
+def test_lite_thumb_uses_realistic_supabase_storage_url():
+    """Step-2 thumb must keep admin Storage URL (not letter invent / SVG seed)."""
+    url = (
+        "https://erobemoojyptyxvnyvuf.supabase.co/storage/v1/object/public/"
+        "shop-media/products/gabriel-cross-pendant/white/c8d5658258e245d4aa3145b52aeb70ce.png"
+    )
+    images = [
+        {"color": "yellow-pink", "file_path": "https://cdn.example/wrong-fancy.webp"},
+        {"color": "white-white", "file_path": url},
+    ]
+    entry = build_catalog_product_lite(
+        {**_product_row(category="pendant"), "sort_order": 0},
+        _variants(),
+        images,
+    )
+    assert entry["thumbUrl"] == url
+    assert entry["styleKey"] is None
 
 
 def test_build_catalog_product_full_keeps_previous_shape():

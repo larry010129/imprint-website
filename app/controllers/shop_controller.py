@@ -118,16 +118,20 @@ def annotate_cart_item(cur, item: dict[str, Any]) -> dict[str, Any]:
 
 
 def _strip_disallowed_engraving(cur, body: dict[str, Any]) -> None:
-    """Clear engraving fields when the selected product does not allow 刻字."""
-    if (
-        not body.get("engravingBand")
-        and not body.get("engravingGirdle")
-        and not body.get("engravingRemark")
-    ):
+    """Clear band/metal engraving when product disallows 可刻字.
+
+    腰圍刻字 (girdle) is always available for DNA diamond products and is never
+    gated by allows_engraving. Clear girdle only for chain (no diamond).
+    """
+    category = str(body.get("category") or "").strip()
+    if category == "chain":
+        body["engravingGirdle"] = ""
+
+    if not body.get("engravingBand") and not body.get("engravingRemark"):
         return
     product_id = resolve_product_id(
         cur,
-        category=str(body.get("category") or ""),
+        category=category,
         type_ref=str(body.get("type") or body.get("productId") or ""),
         require_published=False,
     )
@@ -138,7 +142,6 @@ def _strip_disallowed_engraving(cur, body: dict[str, Any]) -> None:
     if row and row.get("allows_engraving") is False:
         body["engravingBand"] = ""
         body["engravingRemark"] = ""
-        body["engravingGirdle"] = ""
 
 
 def _strip_disallowed_fancy_shape(cur, body: dict[str, Any]) -> None:

@@ -41,6 +41,10 @@ def test_inventory_excludes_empty_calculator_and_jewelry_slots():
     assert counts["/what-is-dna-diamond.html"] == 14
     assert "/shop/calculator/" not in counts
     assert not any(key.startswith("/jewelry") for key in counts)
+    assert "intro" in by_slot
+    assert by_slot["intro"]["default_image_url"] == (
+        "/static/images/dna-process/what-is-dna-diamond-hero.png"
+    )
     assert "lab-photo" in by_slot
     assert by_slot["lab-photo"]["slot_label"] == "在地實驗室（主文區）"
     assert by_slot["lab-photo"]["default_image_url"] == ""
@@ -121,6 +125,50 @@ def test_create_page_image_from_registry_inserts_missing_slot():
     assert dup_error == "此區塊已存在"
 
 
+def test_dna_template_marks_cms_slots():
+    from pathlib import Path
+
+    html = (
+        Path(__file__).resolve().parents[1]
+        / "content/site/templates/pages/what-is-dna-diamond.html"
+    ).read_text(encoding="utf-8")
+    for slot in (
+        "intro",
+        "process-sample",
+        "process-growth",
+        "process-cutting",
+        "process-certificate",
+        "process-jewelry",
+        "process-memorial-box",
+        "sample-quantity",
+        "lab-photo",
+        "assurance-certificate",
+        "usp-lab-photo",
+        "usp-certificate",
+        "usp-memorial-box",
+        "usp-jewelry-making",
+    ):
+        assert f'data-cms-slot="{slot}"' in html or f"dna_img('{slot}'" in html
+    assert "/static/images/dna-process/what-is-dna-diamond-hero.png" in html
+    assert "/static/images/dna-process/collect-bottle.png" in html
+
+
+def test_dna_slot_rewrite_updates_marked_process_image():
+    html = (
+        '<img data-cms-slot="process-sample" '
+        'src="/static/images/dna-process/collect-bottle.png">'
+    )
+    row = {
+        "slot_key": "process-sample",
+        "image_url": "/static/uploads/cms/dna-sample.png",
+        "default_image_url": "/static/images/dna-process/collect-bottle.png",
+        "is_published": True,
+    }
+    out = apply_page_image_slots(html, "/what-is-dna-diamond.html", [row])
+    assert "/static/uploads/cms/dna-sample.png" in out
+    assert "collect-bottle.png" not in out
+
+
 def test_page_image_loader_reuses_per_route_cache(monkeypatch):
     calls = []
 
@@ -138,6 +186,8 @@ def test_page_image_loader_reuses_per_route_cache(monkeypatch):
             {"page_key": "/series/pet/", "slot_key": "hero"},
             {"page_key": "/series/pet/", "slot_key": "intro"},
             {"page_key": "/series/love/", "slot_key": "hero"},
+            {"page_key": "/what-is-dna-diamond.html", "slot_key": "intro"},
+            {"page_key": "/what-is-dna-diamond.html", "slot_key": "process-sample"},
     ]
 
     def fetch_page_images(_cur, route):
@@ -151,5 +201,6 @@ def test_page_image_loader_reuses_per_route_cache(monkeypatch):
     assert len(web_controller._load_page_images("/series/pet/")) == 2
     assert web_controller._load_page_image("/series/pet/")["slot_key"] == "hero"
     assert web_controller._load_page_image("/series/love/")["slot_key"] == "hero"
-    assert calls == ["/series/pet/", "/series/love/"]
+    assert web_controller._load_page_image("/what-is-dna-diamond.html")["slot_key"] == "intro"
+    assert calls == ["/series/pet/", "/series/love/", "/what-is-dna-diamond.html"]
     web_controller.clear_page_image_cache()
