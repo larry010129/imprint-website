@@ -15,8 +15,25 @@
 <span class="checkout-stepper-label">完成</span>
 </div>
 </nav>
-<div hx-get="/htmx/checkout" hx-swap="innerHTML" hx-trigger="load" hx-vals='js:{items: new URLSearchParams(location.search).get("items") || new URLSearchParams(location.search).get("item") || ""}' id="htmx-checkout">
+{# CSP blocks unsafe-eval — set hx-get via inline script (unsafe-inline OK), not hx-vals js: #}
+<div hx-swap="innerHTML" hx-trigger="load" id="htmx-checkout"
+  hx-on::response-error="this.innerHTML='<p class=&quot;form-msg is-error&quot; role=&quot;alert&quot;>無法載入訂單，請重新整理或<a href=&quot;/cart.html&quot;>返回購物車</a>。</p>'"
+  hx-on::send-error="this.innerHTML='<p class=&quot;form-msg is-error&quot; role=&quot;alert&quot;>無法載入訂單，請重新整理或<a href=&quot;/cart.html&quot;>返回購物車</a>。</p>'">
 <div aria-busy="true" class="checkout-skel"><p>載入訂單…</p></div>
 </div>
+<script>
+(function () {
+  var el = document.getElementById('htmx-checkout');
+  if (!el) return;
+  var q = new URLSearchParams(location.search);
+  var items = q.get('items') || q.get('item') || '';
+  el.setAttribute('hx-get', '/htmx/checkout?items=' + encodeURIComponent(items));
+  window.setTimeout(function () {
+    if (el.querySelector('.checkout-skel')) {
+      el.innerHTML = '<p class="form-msg is-error" role="alert">無法載入訂單，請重新整理或<a href="/cart.html">返回購物車</a>。</p>';
+    }
+  }, 12000);
+})();
+</script>
 </div>
 </section>

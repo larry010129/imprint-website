@@ -11,7 +11,7 @@
   hx-swap="innerHTML"
   hx-disabled-elt="button[type=submit]">
   <input type="hidden" name="itemIds" value="{{ ids_csv }}">
-  <input type="hidden" name="couponCode" id="checkout-coupon-code" value="{{ coupon.code if coupon else '' }}">
+  {# couponCode lives on #couponInput only — avoid duplicate name= (form.get takes first) #}
 
   <div class="checkout-main">
     <section class="checkout-block">
@@ -77,17 +77,17 @@
     <div class="form-field" style="display:flex;gap:.5rem;align-items:flex-end">
       <div style="flex:1">
         <label for="couponInput">優惠碼</label>
-        <input id="couponInput" name="couponInput" value="{{ coupon.code if coupon else '' }}"
+        {# name=couponCode matches server form key; no hx-vals js: (CSP blocks eval) #}
+        <input id="couponInput" name="couponCode" value="{{ coupon.code if coupon else '' }}"
           hx-post="/htmx/checkout/coupon"
           hx-target="#checkout-coupon-slot"
           hx-include="[name='itemIds']"
-          hx-vals='js:{couponCode: document.getElementById("couponInput").value, itemIds: "{{ ids_csv }}"}'
           hx-trigger="keyup changed delay:500ms">
       </div>
       <button type="button" class="btn btn-line"
         hx-post="/htmx/checkout/coupon"
         hx-target="#checkout-coupon-slot"
-        hx-vals='js:{couponCode: document.getElementById("couponInput").value, itemIds: "{{ ids_csv }}"}'>套用</button>
+        hx-include="#couponInput,[name='itemIds']">套用</button>
     </div>
     <button type="submit" class="btn btn-dark" style="width:100%;margin-top:1rem">送出訂製申請</button>
   </aside>

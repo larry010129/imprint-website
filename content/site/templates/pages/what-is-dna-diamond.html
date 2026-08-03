@@ -1,55 +1,172 @@
 {% extends "layouts/base.html" %}
 {% block content %}
-{# SSR DNA knowledge page — React island removed in P3; polish/motion deferred #}
-{# ponytail: DnaDiamondPage motion/TOC polish deferred; upgrade = light CSS/HTMX when design parity needed #}
-<div data-dna-diamond-root data-page-images="{{ page_images | tojson | forceescape }}">
+{# SSR DNA knowledge page — React island removed in P3 #}
+{# Motion: reuse site .reveal / .reveal-media + main.js IntersectionObserver; scoped under .dna-page #}
+{# Hero LCP media: no reveal-media (avoid opacity:0 on LCP). Body figures use reveal-media via dna_img. #}
+{% set _rows = page_images or [] %}
+{% macro dna_img(slot, default_url, alt, eager=false) -%}
+  {%- set row = _rows|selectattr('slot_key', 'equalto', slot)|list|first -%}
+  {%- set url = (row.display_url if row else '') or (row.image_url if row else '') or default_url -%}
+  {%- set webp = (row.display_webp if row else '') or (row.image_webp if row else '') -%}
+  {%- set img_alt = (row.image_alt if row and row.image_alt else alt) -%}
+  {%- if url -%}
+  <figure class="dna-figure reveal-media">
+    <picture>
+      {% if webp %}<source srcset="{{ webp }}" type="image/webp">{% endif %}
+      <img data-cms-slot="{{ slot }}" src="{{ url }}" alt="{{ img_alt }}" {% if eager %}loading="eager" fetchpriority="high"{% else %}loading="lazy"{% endif %} decoding="async" onerror="imgFallback(this)">
+    </picture>
+  </figure>
+  {%- endif -%}
+{%- endmacro %}
+<div class="dna-page" data-dna-diamond-root data-page-images="{{ page_images | tojson | forceescape }}">
 <section class="page-hero page-hero--short">
   {% set _pi = page_image or {} %}
-  {% set _pi_url = _pi.display_url or _pi.image_url or '' %}
+  {% set _pi_url = _pi.display_url or _pi.image_url or _pi.default_image_url or '/static/images/dna-process/what-is-dna-diamond-hero.png' %}
   {% set _pi_webp = _pi.display_webp or _pi.image_webp or '' %}
   {% set _pi_alt = _pi.image_alt or 'DNA 鑽石說明頁主圖' %}
-  <div class="page-hero-media">{% if _pi_url %}<picture>{% if _pi_webp %}<source srcset="{{ _pi_webp }}" type="image/webp">{% endif %}<img src="{{ _pi_url }}" alt="{{ _pi_alt }}" loading="eager" decoding="async" fetchpriority="high" onerror="imgFallback(this)"></picture>{% endif %}</div>
+  <div class="page-hero-media"><picture>{% if _pi_webp %}<source srcset="{{ _pi_webp }}" type="image/webp">{% endif %}<img data-cms-slot="intro" src="{{ _pi_url }}" alt="{{ _pi_alt }}" loading="eager" decoding="async" fetchpriority="high" onerror="imgFallback(this)"></picture></div>
   <div class="page-hero-scrim"></div>
   <div class="container page-hero-inner">
-    <p class="breadcrumb"><a href="/">首頁</a><span class="sep">/</span><span class="current">鑽石知識</span></p>
-    <p class="eyebrow" data-cms-text="hero-eyebrow">WHAT IS DNA DIAMOND</p>
-    <h1 data-cms-text="hero-title">DNA 鑽石的誕生</h1>
-    <p data-cms-text="hero-lead">從一縷髮絲，到一顆會發光的鑽石——完整的製作過程與品質保障。</p>
+    <p class="breadcrumb reveal"><a href="/">首頁</a><span class="sep">/</span><span class="current">鑽石知識</span></p>
+    <p class="eyebrow reveal reveal-d1" data-cms-text="hero-eyebrow">WHAT IS DNA DIAMOND</p>
+    <h1 class="reveal reveal-d2" data-cms-text="hero-title">DNA 鑽石的誕生</h1>
+    <p class="reveal reveal-d3" data-cms-text="hero-lead">從一縷髮絲，到一顆會發光的鑽石——完整的製作過程與品質保障。</p>
   </div>
 </section>
 
-<section class="prose-section">
-  <div class="container prose">
-    <h2 data-cms-text="sec-what-title">什麼是 DNA 鑽石</h2>
-    <p data-cms-text="sec-what-body">每一顆 DNA 鑽石，都是一段無可取代的生命印記。我們溫柔萃取毛髮或骨灰中獨一無二的碳元素，在台灣唯一擁有培育技術的實驗室裡，讓思念隨著時間的沉澱，緩緩結晶成永恆的璀璨。</p>
-    <div class="callout">銘印鑽石是全台唯一擁有在地 DNA 鑽石培育實驗室的紀念鑽石品牌。您珍視的毛髮與骨灰，不需要經歷國際運送，每一份樣本都以單一客戶、單一培育流程處理。</div>
+<section class="prose-section dna-page__body">
+  <div class="container prose dna-prose">
+    <section id="intro" class="dna-section">
+      <h2 class="reveal" data-cms-text="sec-what-title">什麼是 DNA 鑽石</h2>
+      <div class="dna-split">
+        <div class="dna-split__copy">
+          <p class="reveal reveal-d1" data-cms-text="sec-what-body">每一顆 DNA 鑽石，都是一段無可取代的生命印記。我們溫柔萃取毛髮或骨灰中獨一無二的碳元素，在台灣唯一擁有培育技術的實驗室裡，讓思念隨著時間的沉澱，緩緩結晶成永恆的璀璨。</p>
+          <div class="callout reveal reveal-d2">銘印鑽石是全台唯一擁有在地 DNA 鑽石培育實驗室的紀念鑽石品牌。您珍視的毛髮與骨灰，不需要經歷國際運送，每一份樣本都以單一客戶、單一培育流程處理。</div>
+        </div>
+      </div>
+    </section>
 
-    <h2 data-cms-text="sec-process-title">時光與情感的淬鍊｜完整製作流程</h2>
-    <ol>
-      <li><h3>01　樣本萃取</h3><p>毛髮約一顆雞蛋大小、骨灰約 3–5 公克，單一客戶、單一培育流程。</p></li>
-      <li><h3>02　元素注入・晶化培育</h3><p>元素注入生長設備，讓晶體以自己的節奏，慢慢長成，約需 70–90 天。</p></li>
-      <li><h3>03　切割拋光</h3><p>依您選擇的克拉數與形狀，精工切磨。</p></li>
-      <li><h3>04　鑑定保障</h3><p>每顆附銘印保證卡；0.20 克拉以上可代送 <a href="https://www.gia.edu/" target="_blank" rel="noopener">GIA</a> 或 <a href="https://www.igi.org/" target="_blank" rel="noopener">IGI</a> 國際鑑定機構出具證書。</p></li>
-      <li><h3>05　鑲嵌成飾（選擇性）</h3><p>可鑲嵌為戒指、項鍊、耳環或手鍊，材質可選 18K 金、14K 金、9K 金或 PT950 鉑金。</p></li>
-      <li><h3>06　時光封存，璀璨躍然</h3><p>當您緩緩打開專屬的淺藍色影音紀念盒，映入眼簾的那顆專屬於您的 DNA 鑽石，不僅是頂級的珠寶工藝，更是將牽絆化為具象的永恆。</p></li>
-    </ol>
+    <section id="process" class="dna-section">
+      <h2 class="reveal" data-cms-text="sec-process-title">時光與情感的淬鍊｜完整製作流程</h2>
+      <ol class="dna-process">
+        <li class="dna-process__step reveal">
+          <span class="dna-process__num" aria-hidden="true">01</span>
+          <div class="dna-process__copy">
+            <h3>樣本萃取</h3>
+            <div class="dna-process__body">
+              <p>毛髮約一顆雞蛋大小、骨灰約 3–5 公克，單一客戶、單一培育流程。</p>
+              {{ dna_img('process-sample', '/static/images/dna-process/collect-bottle.png', '流程 1・樣本萃取') }}
+            </div>
+          </div>
+        </li>
+        <li class="dna-process__step reveal reveal-d1">
+          <span class="dna-process__num" aria-hidden="true">02</span>
+          <div class="dna-process__copy">
+            <h3>元素注入・晶化培育</h3>
+            <div class="dna-process__body">
+              <p>元素注入生長設備，讓晶體以自己的節奏，慢慢長成，約需 70–90 天。</p>
+              {{ dna_img('process-growth', '/static/images/dna-process/crystal-growth.png', '流程 2・晶化培育') }}
+            </div>
+          </div>
+        </li>
+        <li class="dna-process__step reveal">
+          <span class="dna-process__num" aria-hidden="true">03</span>
+          <div class="dna-process__copy">
+            <h3>切割拋光</h3>
+            <div class="dna-process__body">
+              <p>依您選擇的克拉數與形狀，精工切磨。</p>
+              {{ dna_img('process-cutting', '/static/images/dna-process/diamond-cutting.png', '流程 3・切割拋光') }}
+            </div>
+          </div>
+        </li>
+        <li class="dna-process__step reveal reveal-d1">
+          <span class="dna-process__num" aria-hidden="true">04</span>
+          <div class="dna-process__copy">
+            <h3>鑑定保障</h3>
+            <div class="dna-process__body">
+              <p>每顆附銘印保證卡；0.20 克拉以上可代送 <a href="https://www.gia.edu/" target="_blank" rel="noopener">GIA</a> 或 <a href="https://www.igi.org/" target="_blank" rel="noopener">IGI</a> 國際鑑定機構出具證書。</p>
+              {{ dna_img('process-certificate', '/static/images/dna-process/certificate-guarantee.png', '流程 4・鑑定保障') }}
+            </div>
+          </div>
+        </li>
+        <li class="dna-process__step reveal">
+          <span class="dna-process__num" aria-hidden="true">05</span>
+          <div class="dna-process__copy">
+            <h3>鑲嵌成飾（選擇性）</h3>
+            <div class="dna-process__body">
+              <p>可鑲嵌為戒指、項鍊、耳環或手鍊，材質可選 18K 金、14K 金、9K 金或 PT950 鉑金。</p>
+              {{ dna_img('process-jewelry', '/static/images/products/ring-classic-solitaire-1.jpg', '流程 5・鑲嵌成飾') }}
+            </div>
+          </div>
+        </li>
+        <li class="dna-process__step reveal reveal-d1">
+          <span class="dna-process__num" aria-hidden="true">06</span>
+          <div class="dna-process__copy">
+            <h3>時光封存，璀璨躍然</h3>
+            <div class="dna-process__body">
+              <p>當您緩緩打開專屬的淺藍色影音紀念盒，映入眼簾的那顆專屬於您的 DNA 鑽石，不僅是頂級的珠寶工藝，更是將牽絆化為具象的永恆。</p>
+              {{ dna_img('process-memorial-box', '/static/images/dna-process/memorial-media-box.png', '流程 6・影音紀念盒') }}
+            </div>
+          </div>
+        </li>
+      </ol>
+    </section>
 
-    <h2 data-cms-text="sec-sample-title">需要準備多少樣本</h2>
-    <p data-cms-text="sec-sample-body">毛髮約需一顆雞蛋的大小（或養樂多瓶約 8 分滿）；骨灰約需 3 至 5 公克。若您手邊的份量不如預期，請透過官方 LINE 聯繫我們評估。</p>
+    <section id="sample" class="dna-section">
+      <h2 class="reveal" data-cms-text="sec-sample-title">需要準備多少樣本</h2>
+      <div class="dna-split">
+        <p class="dna-split__copy reveal reveal-d1" data-cms-text="sec-sample-body">毛髮約需一顆雞蛋的大小（或養樂多瓶約 8 分滿）；骨灰約需 3 至 5 公克。若您手邊的份量不如預期，請透過官方 LINE 聯繫我們評估。</p>
+        {{ dna_img('sample-quantity', '/static/images/dna-process/sample-quantity-guide.png', '樣本份量示意') }}
+      </div>
+    </section>
 
-    <h2 data-cms-text="sec-local-title">最近的距離，最深的安心</h2>
-    <p>作為全台唯一擁有在地 DNA 鑽石培育實驗室的品牌，您珍視的記憶無需經歷漫長的國際漂流。歡迎預約蒞臨，親眼見證這份思念逐漸閃耀的過程。</p>
+    <section id="local" class="dna-section">
+      <h2 class="reveal" data-cms-text="sec-local-title">最近的距離，最深的安心</h2>
+      <div class="dna-split">
+        <p class="dna-split__copy reveal reveal-d1">作為全台唯一擁有在地 DNA 鑽石培育實驗室的品牌，您珍視的記憶無需經歷漫長的國際漂流。歡迎預約蒞臨，親眼見證這份思念逐漸閃耀的過程。</p>
+        {{ dna_img('lab-photo', '', '銘印鑽石在地 DNA 鑽石培育實驗室') }}
+      </div>
+    </section>
 
-    <h2 data-cms-text="sec-cert-title">鑑定與保障</h2>
-    <p>每顆鑽石皆附銘印保證卡；0.20 克拉以上的鑽石，可代送 GIA 或 IGI 國際鑑定機構出具證書（費用另計）。</p>
+    <section id="assurance" class="dna-section">
+      <h2 class="reveal" data-cms-text="sec-cert-title">鑑定與保障</h2>
+      <div class="dna-split">
+        <p class="dna-split__copy reveal reveal-d1">每顆鑽石皆附銘印保證卡；0.20 克拉以上的鑽石，可代送 GIA 或 IGI 國際鑑定機構出具證書（費用另計）。</p>
+        {{ dna_img('assurance-certificate', '/static/images/dna-process/certificate-guarantee.png', '鑑定與保障') }}
+      </div>
+      <div class="dna-cta-row reveal reveal-d2">
+        <a class="dna-cta dna-cta--primary" href="/series.html">探索您的專屬紀念｜五大訂製系列</a>
+        <a class="dna-cta dna-cta--ghost" href="/faq.html">與顧問聊聊您的故事</a>
+      </div>
+    </section>
 
-    <h2 data-cms-text="sec-care-title">四大保障，讓您安心託付</h2>
-    <ul>
-      <li><h3>在地實驗室</h3><p>全台唯一擁有在地 DNA 鑽石培育實驗室，樣本不送海外。</p></li>
-      <li><h3>鑑定保障</h3><p>每顆鑽石附銘印保證卡；0.20 克拉以上可代送 GIA 或 IGI。</p></li>
-      <li><h3>影音紀念盒</h3><p>專屬淺藍色影音紀念盒，封存從樣本到成品的珍貴過程。</p></li>
-      <li><h3>飾品鑲嵌</h3><p>可鑲嵌為戒指、項鍊、耳環或手鍊，材質可選 18K／14K／9K 金或 PT950 鉑金。</p></li>
-    </ul>
+    <section id="promise" class="dna-section">
+      <h2 class="reveal" data-cms-text="sec-care-title">四大保障，讓您安心託付</h2>
+      <ul class="dna-promise">
+        <li class="dna-promise__item reveal">
+          {{ dna_img('usp-lab-photo', '', '四大保障・在地實驗室') }}
+          <h3>在地實驗室</h3>
+          <p>全台唯一擁有在地 DNA 鑽石培育實驗室，樣本不送海外。</p>
+        </li>
+        <li class="dna-promise__item reveal reveal-d1">
+          {{ dna_img('usp-certificate', '/static/images/dna-process/certificate-guarantee.png', '四大保障・鑑定') }}
+          <h3>鑑定保障</h3>
+          <p>每顆鑽石附銘印保證卡；0.20 克拉以上可代送 GIA 或 IGI。</p>
+        </li>
+        <li class="dna-promise__item reveal reveal-d2">
+          {{ dna_img('usp-memorial-box', '/static/images/dna-process/memorial-media-box.png', '四大保障・影音盒') }}
+          <h3>影音紀念盒</h3>
+          <p>專屬淺藍色影音紀念盒，封存從樣本到成品的珍貴過程。</p>
+        </li>
+        <li class="dna-promise__item reveal reveal-d3">
+          {{ dna_img('usp-jewelry-making', '/static/images/legacy-live/styles/jewelry-making.jpg', '四大保障・飾品') }}
+          <h3>飾品鑲嵌</h3>
+          <p>可鑲嵌為戒指、項鍊、耳環或手鍊，材質可選 18K／14K／9K 金或 PT950 鉑金。</p>
+        </li>
+      </ul>
+    </section>
+
+    <p class="dna-page__footnote reveal">完整培育週期約 <b>70–90 天</b>｜歡迎<a href="/contact.html">預約蒞臨實驗室</a>親眼見證</p>
   </div>
 </section>
 </div>

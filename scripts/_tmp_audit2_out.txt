@@ -1,0 +1,35 @@
+﻿ASSET_ID_GROUPS
+pendant-A COUNT 16
+  pendant:Gabriel十字架墜鍊:thumb=ite/c8d5658258e245d4aa3145b52aeb70ce.png
+  pendant:Michael十字架墜鍊:thumb=ite/ed40ae204026466ebefeae7fd44e8d9f.png
+  pendant:Raphael十字架墜鍊:thumb=ite/223f1958cc8c45acadcc716593040953.png
+  pendant:水滴單鑽項鍊:thumb=ite/7e59626805a643d0a36dc7bad44a7dd1.jpg
+  pendant:小圈六爪單鑽項鍊:thumb=ite/a7e1794502c1428f84470cd18971e402.png
+  pendant:小圈四爪單鑽項鍊:thumb=ite/31618692817c4d54938485510e7b1c90.png
+  pendant:六爪單鑽項鍊:thumb=ite/686ba8a5e3e8439dab4f812ed73b4b51.jpg
+  pendant:四爪單鑽項鍊:thumb=ite/74807cee977d4fc5a8305a129467fce1.png
+  pendant:兔耳單鑽項鍊:thumb=ite/b51d2b77e0cf4c6c8164634c0afb3921.png
+  pendant:泡泡單鑽項鍊:thumb=ite/e1a0bdc3c678417f962837557cc160a8.png
+  pendant:里拉琴項鍊:thumb=ite/fe6de3d3e6994edcad36f6ab7f561c42.jpg
+  pendant:飛魚項鍊:thumb=ite/3d3112b19af84b08950c59e465aa31da.png
+  pendant:兔兔單鑽項鍊:thumb=ite/8b39bc88b0d24a8faf1eca0c29b0e6fd.png
+  pendant:逗留單鑽項鍊:thumb=ite/11e1e47e5eda411fa107419a0c7eca99.png
+  pendant:糖心項鍊:thumb=ite/e3253396703f4f67895d71d951d77da9.png
+  pendant:銘印單鑽項鍊:thumb=ite/a605e424d0874328a120060d587d5ab8.png
+COLOR_SLOTS_SAMPLE
+{"name": "Gabriel十字架墜鍊", "sort": 0, "thumb_tail": "ross-pendant/white/c8d5658258e245d4aa3145b52aeb70ce.png", "colors": ["rose-blue", "rose-pink", "rose-white", "rose-yellow", "white-blue", "white-pink", "white-white", "white-yellow"], "ww_count": 1, "ww_tail": "ross-pendant/white/c8d5658258e245d4aa3145b52aeb70ce.png", "asset": "pendant-A"}
+{"name": "Michael十字架墜鍊", "sort": 0, "thumb_tail": "ross-pendant/white/ed40ae204026466ebefeae7fd44e8d9f.png", "colors": ["rose-blue", "rose-pink", "rose-white", "rose-yellow", "white-blue", "white-pink", "white-white", "white-yellow"], "ww_count": 1, "ww_tail": "ross-pendant/white/ed40ae204026466ebefeae7fd44e8d9f.png", "asset": "pendant-A"}
+{"name": "Raphael十字架墜鍊", "sort": 0, "thumb_tail": "ross-pendant/white/223f1958cc8c45acadcc716593040953.png", "colors": ["rose-blue", "rose-pink", "rose-white", "rose-yellow", "white-blue", "white-pink", "white-white", "white-yellow"], "ww_count": 1, "ww_tail": "ross-pendant/white/223f1958cc8c45acadcc716593040953.png", "asset": "pendant-A"}
+{"name": "水滴單鑽項鍊", "sort": 0, "thumb_tail": "ire-necklace/white/7e59626805a643d0a36dc7bad44a7dd1.jpg", "colors": ["rose-blue", "rose-pink", "rose-white", "rose-yellow", "white-blue", "white-pink", "white-white", "white-yellow"], "ww_count": 1, "ww_tail": "ire-necklace/white/7e59626805a643d0a36dc7bad44a7dd1.jpg", "asset": "pendant-A"}
+{"name": "小圈六爪單鑽項鍊", "sort": 0, "thumb_tail": "ond-necklace/white/a7e1794502c1428f84470cd18971e402.png", "colors": ["rose-blue", "rose-pink", "rose-white", "rose-yellow", "white-blue", "white-pink", "white-white", "white-yellow"], "ww_count": 1, "ww_tail": "ond-necklace/white/a7e1794502c1428f84470cd18971e402.png", "asset": "pendant-A"}
+{"name": "小圈四爪單鑽項鍊", "sort": 0, "thumb_tail": "ond-necklace/white/31618692817c4d54938485510e7b1c90.png", "colors": ["rose-blue", "rose-pink", "rose-white", "rose-yellow", "white-blue", "white-pink", "white-white", "white-yellow"], "ww_count": 1, "ww_tail": "ond-necklace/white/31618692817c4d54938485510e7b1c90.png", "asset": "pendant-A"}
+{"name": "六爪單鑽項鍊", "sort": 0, "thumb_tail": "ire-necklace/white/686ba8a5e3e8439dab4f812ed73b4b51.jpg", "colors": ["rose-blue", "rose-pink", "rose-white", "rose-yellow", "white-blue", "white-pink", "white-white", "white-yellow"], "ww_count": 1, "ww_tail": "ire-necklace/white/686ba8a5e3e8439dab4f812ed73b4b51.jpg", "asset": "pendant-A"}
+{"name": "四爪單鑽項鍊", "sort": 0, "thumb_tail": "ire-necklace/white/74807cee977d4fc5a8305a129467fce1.png", "colors": ["rose-blue", "rose-pink", "rose-white", "rose-yellow", "white-blue", "white-pink", "white-white", "white-yellow"], "ww_count": 1, "ww_tail": "ire-necklace/white/74807cee977d4fc5a8305a129467fce1.png", "asset": "pendant-A"}
+{"name": "兔耳單鑽項鍊", "sort": 0, "thumb_tail": "ond-necklace/white/b51d2b77e0cf4c6c8164634c0afb3921.png", "colors": ["rose-blue", "rose-pink", "rose-white", "rose-yellow", "white-blue", "white-pink", "white-white", "white-yellow"], "ww_count": 1, "ww_tail": "ond-necklace/white/b51d2b77e0cf4c6c8164634c0afb3921.png", "asset": "pendant-A"}
+{"name": "泡泡單鑽項鍊", "sort": 0, "thumb_tail": "ire-necklace/white/e1a0bdc3c678417f962837557cc160a8.png", "colors": ["rose-blue", "rose-white", "rose-yellow", "white-blue", "white-pink", "white-white", "white-yellow", "yellow-blue"], "ww_count": 1, "ww_tail": "ire-necklace/white/e1a0bdc3c678417f962837557cc160a8.png", "asset": "pendant-A"}
+{"name": "里拉琴項鍊", "sort": 0, "thumb_tail": "yre-necklace/white/fe6de3d3e6994edcad36f6ab7f561c42.jpg", "colors": ["rose-white", "white-white", "yellow-white"], "ww_count": 1, "ww_tail": "yre-necklace/white/fe6de3d3e6994edcad36f6ab7f561c42.jpg", "asset": "pendant-A"}
+{"name": "飛魚項鍊", "sort": 0, "thumb_tail": "ish-necklace/white/3d3112b19af84b08950c59e465aa31da.png", "colors": ["rose-white", "white-white", "yellow-white"], "ww_count": 1, "ww_tail": "ish-necklace/white/3d3112b19af84b08950c59e465aa31da.png", "asset": "pendant-A"}
+{"name": "兔兔單鑽項鍊", "sort": 0, "thumb_tail": "nny-necklace/white/8b39bc88b0d24a8faf1eca0c29b0e6fd.png", "colors": ["rose-white", "white-white", "yellow-white"], "ww_count": 1, "ww_tail": "nny-necklace/white/8b39bc88b0d24a8faf1eca0c29b0e6fd.png", "asset": "pendant-A"}
+{"name": "逗留單鑽項鍊", "sort": 0, "thumb_tail": "ger-necklace/white/11e1e47e5eda411fa107419a0c7eca99.png", "colors": ["rose-white", "white-white", "yellow-white"], "ww_count": 1, "ww_tail": "ger-necklace/white/11e1e47e5eda411fa107419a0c7eca99.png", "asset": "pendant-A"}
+{"name": "糖心項鍊", "sort": 0, "thumb_tail": "gar-necklace/white/e3253396703f4f67895d71d951d77da9.png", "colors": ["rose-blue", "rose-pink", "rose-white", "rose-yellow", "white-blue", "white-pink", "white-white", "yellow-blue"], "ww_count": 1, "ww_tail": "gar-necklace/white/e3253396703f4f67895d71d951d77da9.png", "asset": "pendant-A"}
+{"name": "銘印單鑽項鍊", "sort": 0, "thumb_tail": "int-necklace/white/a605e424d0874328a120060d587d5ab8.png", "colors": ["rose-white", "white-white", "yellow-white"], "ww_count": 2, "ww_tail": "int-necklace/white/a605e424d0874328a120060d587d5ab8.png", "asset": "pendant-A"}

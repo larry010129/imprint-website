@@ -120,7 +120,10 @@ def _load_page_images(route: str) -> list[dict]:
 def _load_page_image(route: str, rows: list[dict] | None = None) -> dict | None:
     """Primary page-image slot for Jinja page context."""
     rows = rows if rows is not None else _load_page_images(route)
-    preferred = "cinema" if route == "/about.html" else "hero"
+    preferred = {
+        "/about.html": "cinema",
+        "/what-is-dna-diamond.html": "intro",
+    }.get(route, "hero")
     return next((row for row in rows if row.get("slot_key") == preferred), None)
 
 

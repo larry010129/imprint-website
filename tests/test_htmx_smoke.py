@@ -65,6 +65,50 @@ def test_member_and_chrome_pages_return_html(client, path):
         assert island not in resp.text, f"{path} still loads {island}"
 
 
+def test_checkout_page_passes_items_without_js_vals(client):
+    """CSP blocks unsafe-eval; checkout must not rely on hx-vals js:."""
+    resp = client.get("/checkout.html?items=abc-123,def-456")
+    assert resp.status_code == 200
+    assert "載入訂單" in resp.text
+    assert 'hx-get="/htmx/checkout?items=' in resp.text
+    assert "abc-123" in resp.text
+    assert "hx-vals=" not in resp.text or "js:" not in resp.text
+    assert "確認訂單" in resp.text
+
+
+def test_htmx_checkout_guest_redirect_preserves_items(client):
+    resp = client.get(
+        "/htmx/checkout?items=cart-item-1",
+        headers={"HX-Request": "true"},
+        follow_redirects=False,
+    )
+    assert resp.status_code == 200
+    loc = resp.headers.get("HX-Redirect", "")
+    assert loc.startswith("/login.html?next=")
+    assert "checkout.html" in loc
+    assert "cart-item-1" in loc
+
+
+def test_htmx_checkout_empty_items_redirects_cart_when_authed(client, monkeypatch):
+    monkeypatch.setattr(
+        "app.controllers.htmx_shop.get_user_id", lambda _request: "user-test-id"
+    )
+    resp = client.get(
+        "/htmx/checkout",
+        headers={"HX-Request": "true"},
+        follow_redirects=False,
+    )
+    assert resp.status_code == 200
+    assert resp.headers.get("HX-Redirect") == "/cart.html"
+
+
+def test_success_page_loads_order_script(client):
+    resp = client.get("/success.html?order=IM-TEST-1")
+    assert resp.status_code == 200
+    assert "訂單已送出" in resp.text
+    assert "/static/js/order-success.js" in resp.text
+
+
 def test_htmx_cart_badge_accepts_hx_request(client):
     resp = client.get("/htmx/cart-badge", headers={"HX-Request": "true"})
     assert resp.status_code == 200

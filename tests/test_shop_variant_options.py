@@ -3,8 +3,13 @@
 from decimal import Decimal
 from pathlib import Path
 
+from unittest.mock import patch
+
 from app.catalog import build_catalog_product
-from app.controllers.shop_controller import _validate_product_variant
+from app.controllers.shop_controller import (
+    _strip_disallowed_engraving,
+    _validate_product_variant,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -20,6 +25,46 @@ class _VariantCursor:
 
     def fetchone(self):
         return self.variant
+
+
+class _EngravingCursor:
+    def __init__(self, allows_engraving=False):
+        self.allows_engraving = allows_engraving
+
+    def execute(self, query, params=None):
+        return None
+
+    def fetchone(self):
+        return {"allows_engraving": self.allows_engraving}
+
+
+def test_strip_disallowed_engraving_keeps_girdle_when_allows_false():
+    """可刻字 off strips band/remark only — 腰圍刻字 always kept for rings."""
+    body = {
+        "category": "ring",
+        "type": "ring-A",
+        "engravingBand": "LOVE",
+        "engravingRemark": "Bear",
+        "engravingGirdle": "DNA",
+    }
+    with patch(
+        "app.controllers.shop_controller.resolve_product_id",
+        return_value="prod-1",
+    ):
+        _strip_disallowed_engraving(_EngravingCursor(allows_engraving=False), body)
+    assert body["engravingBand"] == ""
+    assert body["engravingRemark"] == ""
+    assert body["engravingGirdle"] == "DNA"
+
+
+def test_strip_disallowed_engraving_clears_girdle_for_chain():
+    body = {
+        "category": "chain",
+        "type": "chain-A",
+        "engravingGirdle": "DNA",
+    }
+    _strip_disallowed_engraving(_EngravingCursor(allows_engraving=False), body)
+    assert body["engravingGirdle"] == ""
 
 
 def test_build_catalog_product_limits_golds_and_carats_to_variants():
@@ -245,9 +290,28 @@ def test_shop_js_fancy_carat_dropdown_intersects_admin_min():
     assert "stockFancyDiamondColors" in (
         ROOT / "public" / "js" / "shop-assets.js"
     ).read_text(encoding="utf-8")
-    assert "shop.js?v=127" in (
+    assert "shop.js?v=130" in (
         ROOT / "content" / "site" / "templates" / "pages" / "shop" / "calculator.html"
     ).read_text(encoding="utf-8")
+    # 腰圍刻字 always on for non-chain; 可刻字 must not gate girdle.
+    assert "const hasGirdle = !!state.category && state.category !== 'chain';" in src
+    assert "const hasGirdle = allows && state.category !== 'chain';" not in src
+    # Step 2 must prefer lite thumbUrl before letter stock (sortOrder→A/B/C invent).
+    thumb_idx = src.index("product?.thumbUrl && isUsableCatalogImageUrl(product.thumbUrl)")
+    invent_idx = src.index(
+        "const fromImages = productImageUrl(product, product?.defaultColor || 'white', 'white');",
+        thumb_idx,
+    )
+    assert thumb_idx < invent_idx
+    # Custom UUID products must not invent letter SKU from shared sortOrder=0.
+    assert "Never invent letter SKU from sortOrder alone" in src
+    assert "function productLetterAssetId(product)" in src
+    assert "const letterId = productLetterAssetId(product);" in src
+    # Dead sortOrder→A/B/C invent body must stay gone from productAssetId.
+    asset_fn = src.split("function productAssetId(product)", 1)[1].split(
+        "function productLetterAssetId", 1
+    )[0]
+    assert "String.fromCharCode(65 + order)" not in asset_fn
     assert "shop-assets.js?v=15" in (
         ROOT / "content" / "site" / "templates" / "pages" / "shop" / "calculator.html"
     ).read_text(encoding="utf-8")
@@ -349,11 +413,8 @@ function productAssetId(product) {
   }
   const id = String(product.id || '');
   if (/^[a-z]+-[A-C]$/i.test(id)) return id;
-  const cat = String(product.category || state.category || '').toLowerCase();
-  if (!['pendant', 'ring', 'earring', 'bracelet', 'chain'].includes(cat)) return '';
-  const order = Number(product.sortOrder ?? product.sort_order);
-  if (!Number.isFinite(order) || order < 0 || order > 2) return '';
-  return cat + '-' + String.fromCharCode(65 + order);
+  // Mirror shop.js: never invent letter from sortOrder (UUID customs share 0).
+  return '';
 }
 function addFancyColorsFromSlotKeys(keys, found) {
   if (!keys) return;
@@ -455,9 +516,11 @@ selectedProduct = {
 const yellowBlue = offered();
 
 // Letter SKU with only white uploads — stock fancy PNGs unlock 黃/藍/粉.
+// styleKey (not sortOrder invent) identifies letter stock.
 selectedProduct = {
   id: 'uuid-ring',
   category: 'ring',
+  styleKey: 'ring-A',
   sortOrder: 0,
   carats: ['0.1', '0.3'],
   images: { 'white-white': ['/upload-white.png'] },
@@ -484,6 +547,7 @@ diamondOptions = { diamondColors: [], fancyColors: [], fancyMinCarat: 0.3 };
 selectedProduct = {
   id: 'uuid-earring',
   category: 'earring',
+  styleKey: 'earring-A',
   sortOrder: 0,
   carats: ['0.3'],
   colors: ['white-white'],

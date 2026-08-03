@@ -123,7 +123,39 @@ def _usable_images_by_color(images: list[dict]) -> dict[str, list[str]]:
     return images_by_color
 
 
-def _first_thumb_url(images_by_color: dict[str, list[str]]) -> str | None:
+def _first_thumb_url(
+    images_by_color: dict[str, list[str]],
+    *,
+    default_color: str | None = None,
+) -> str | None:
+    """Pick step-2 card thumb: default-metal white-diamond first, never arbitrary slot."""
+    metal = str(default_color or "white").split("-", 1)[0].lower()
+    if metal not in ("white", "yellow", "rose"):
+        metal = "white"
+
+    preferred = (
+        f"{metal}-white",
+        metal,
+        f"{metal}-white-white",
+        f"{metal}-white-yellow",
+        f"{metal}-white-rose",
+        "white-white",
+        "white",
+    )
+    for key in preferred:
+        urls = images_by_color.get(key)
+        if urls:
+            return urls[0]
+
+    for key, urls in images_by_color.items():
+        if not urls:
+            continue
+        parts = str(key).split("-")
+        if key in ("white", "yellow", "rose"):
+            return urls[0]
+        if len(parts) >= 2 and parts[1] == "white":
+            return urls[0]
+
     for urls in images_by_color.values():
         if urls:
             return urls[0]
@@ -159,7 +191,10 @@ def build_catalog_product_lite(product: dict, variants: list[dict], images: list
         "golds": golds,
         "carats": carats,
         "colors": sorted(images_by_color.keys()),
-        "thumbUrl": _first_thumb_url(images_by_color),
+        "thumbUrl": _first_thumb_url(
+            images_by_color,
+            default_color=product.get("default_color"),
+        ),
         "draft": not product["is_published"],
     }
 

@@ -25,10 +25,6 @@
     ],
     "extra_scripts": [
       {
-        "inline": "\n  const roots = document.querySelectorAll(\"[data-stories-root], [data-home-wall]\");\n  let requested = false;\n  const ensureStylesheet = () => {\n    if (document.querySelector('link[href^=\"/static/react/stories.css\"]')) return;\n    const link = document.createElement(\"link\");\n    link.rel = \"stylesheet\";\n    link.href = \"/static/react/stories.css?v=36\";\n    document.head.append(link);\n  };\n  const load = () => {\n    if (requested) return;\n    requested = true;\n    ensureStylesheet();\n    void import(\"/static/react/stories.js?v=37\");\n  };\n  if (roots.length) {\n    const nearViewport = Array.from(roots).some(\n      (root) => root.getBoundingClientRect().top <= window.innerHeight + 800,\n    );\n    if (nearViewport || !(\"IntersectionObserver\" in window)) {\n      load();\n    } else {\n      const observer = new IntersectionObserver((entries) => {\n        if (!entries.some((entry) => entry.isIntersecting)) return;\n        observer.disconnect();\n        load();\n      }, { rootMargin: \"800px 0px\" });\n      roots.forEach((root) => observer.observe(root));\n    }\n  }\n",
-        "type": "module"
-      },
-      {
         "src": "/static/js/home-banners.js?v=2",
         "defer": true
       }
@@ -739,15 +735,8 @@
     "body_key": "stories_html",
     "layout": "site",
     "main_class": "",
-    "extra_css": [
-      "/static/react/stories.css?v=36"
-    ],
-    "extra_scripts": [
-      {
-        "inline": "\n  const roots = document.querySelectorAll(\"[data-stories-root], [data-home-wall]\");\n  let requested = false;\n  const ensureStylesheet = () => {\n    if (document.querySelector('link[href^=\"/static/react/stories.css\"]')) return;\n    const link = document.createElement(\"link\");\n    link.rel = \"stylesheet\";\n    link.href = \"/static/react/stories.css?v=36\";\n    document.head.append(link);\n  };\n  const load = () => {\n    if (requested) return;\n    requested = true;\n    ensureStylesheet();\n    void import(\"/static/react/stories.js?v=37\");\n  };\n  if (roots.length) {\n    const nearViewport = Array.from(roots).some(\n      (root) => root.getBoundingClientRect().top <= window.innerHeight + 800,\n    );\n    if (nearViewport || !(\"IntersectionObserver\" in window)) {\n      load();\n    } else {\n      const observer = new IntersectionObserver((entries) => {\n        if (!entries.some((entry) => entry.isIntersecting)) return;\n        observer.disconnect();\n        load();\n      }, { rootMargin: \"800px 0px\" });\n      roots.forEach((root) => observer.observe(root));\n    }\n  }\n",
-        "type": "module"
-      }
-    ],
+    "extra_css": [],
+    "extra_scripts": [],
     "head_extras": []
   },
   {
@@ -850,15 +839,8 @@
     "body_key": "what-is-dna-diamond_html",
     "layout": "site",
     "main_class": "",
-    "extra_css": [
-      "/static/react/dna-diamond.css?v=27"
-    ],
-    "extra_scripts": [
-      {
-        "src": "/static/react/dna-diamond.js?v=27",
-        "type": "module"
-      }
-    ],
+    "extra_css": [],
+    "extra_scripts": [],
     "head_extras": []
   },
   {
@@ -990,7 +972,7 @@
         "src": "/static/js/shop-terms.js?v=4"
       },
       {
-        "src": "/static/js/shop.js?v=127"
+        "src": "/static/js/shop.js?v=130"
       }
     ],
     "head_extras": []

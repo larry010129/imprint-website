@@ -522,12 +522,21 @@ function productAssetId(product) {
   }
   const id = String(product.id || '');
   if (/^[a-z]+-[A-C]$/i.test(id)) return id;
-  // UUID letter SKUs: admin A–C = category + sortOrder (stock 內建, not styleKey).
-  const cat = String(product.category || state.category || '').toLowerCase();
-  if (!['pendant', 'ring', 'earring', 'bracelet', 'chain'].includes(cat)) return '';
-  const order = Number(product.sortOrder ?? product.sort_order);
-  if (!Number.isFinite(order) || order < 0 || order > 2) return '';
-  return `${cat}-${String.fromCharCode(65 + order)}`;
+  // Never invent letter SKU from sortOrder alone. Many UUID customs share sortOrder=0
+  // (all pendants → pendant-A), which collapses step-2 fallbacks to one wrong stock PNG.
+  // Letter identity must come from styleKey / image path / letter id above.
+  return '';
+}
+
+/** True letter A–C asset id only — used for stock PNG fallbacks, never sortOrder invent. */
+function productLetterAssetId(product) {
+  if (!product) return '';
+  if (product.styleKey && /^[a-z]+-[A-C]$/i.test(String(product.styleKey))) {
+    return String(product.styleKey);
+  }
+  const id = String(product.id || '');
+  if (/^[a-z]+-[A-C]$/i.test(id)) return id;
+  return styleKeyFromProductImages(product) || '';
 }
 
 /** Skip seed SVG placeholders — /shop/styles/*.svg 404; shop-product PNGs are SoT. */
@@ -991,8 +1000,16 @@ function mergeProductIntoCatalog(category, product) {
   if (!category || !product?.id) return;
   const list = catalog[category] || (catalog[category] = []);
   const idx = list.findIndex((p) => String(p.id) === String(product.id));
-  if (idx >= 0) list[idx] = product;
-  else list.push(product);
+  if (idx >= 0) {
+    // Full detail omits thumbUrl — keep lite admin thumb for step-2 re-render.
+    const prev = list[idx];
+    list[idx] = {
+      ...product,
+      thumbUrl: product.thumbUrl || prev.thumbUrl,
+    };
+  } else {
+    list.push(product);
+  }
 }
 
 async function ensureProductDetail(productId, category) {
@@ -1875,11 +1892,16 @@ function lookupManualPrice(category, type, gold, carat) {
   return p == null ? null : p;
 }
 
-/** Step 2 style grid — always white-diamond preview; fancy color only on step 3 gallery. */
+/** Step 2 style grid — always white-diamond preview; fancy color only on step 3 gallery.
+ * Prefer lite `thumbUrl` (admin upload) before letter stock. After sortOrder→A/B/C
+ * asset mapping, productImageUrl invents shop-product PNGs when `images` is empty
+ * and would beat the real upload if checked first. */
 function styleGridImageUrl(product) {
+  if (product?.thumbUrl && isUsableCatalogImageUrl(product.thumbUrl)) {
+    return product.thumbUrl;
+  }
   const fromImages = productImageUrl(product, product?.defaultColor || 'white', 'white');
   if (fromImages) return fromImages;
-  if (product?.thumbUrl && isUsableCatalogImageUrl(product.thumbUrl)) return product.thumbUrl;
   return '';
 }
 
@@ -2316,10 +2338,10 @@ function renderTypeCards() {
     img.src = imgSrc || '';
     img.alt = productName(product);
     img.loading = "lazy";
-    // Only letter-thumb fallback when product already has real catalog images.
-    const assetId = productAssetId(product);
-    if (imgSrc && assetId) {
-      window.ShopAssets?.attachImageFallback(img, window.ShopAssets.styleThumb(assetId));
+    // Letter stock fallback only for true A–C SKUs — never sortOrder-invented pendant-A.
+    const letterId = productLetterAssetId(product);
+    if (imgSrc && letterId) {
+      window.ShopAssets?.attachImageFallback(img, window.ShopAssets.styleThumb(letterId));
     }
 
     const name = document.createElement("span");
@@ -3525,10 +3547,12 @@ function updateEngravingSteps() {
   const bandStep = document.getElementById('engraving-band-step');
   const remarkStep = document.getElementById('engraving-remark-step');
   const girdleStep = document.getElementById('engraving-girdle-step');
+  // 可刻字 (allowsEngraving) gates band/metal only — never 腰圍刻字.
   const allows = productAllowsEngraving();
   const hasBand = allows && state.category === 'ring';
   const hasRemark = allows && state.category !== 'chain' && !isDiamondOnlyCategory();
-  const hasGirdle = allows && state.category !== 'chain';
+  // 腰圍刻字 always offered for DNA diamond products (any non-chain category).
+  const hasGirdle = !!state.category && state.category !== 'chain';
   bandStep?.classList.toggle('hidden', !hasBand);
   remarkStep?.classList.toggle('hidden', !hasRemark);
   girdleStep?.classList.toggle('hidden', !hasGirdle);
