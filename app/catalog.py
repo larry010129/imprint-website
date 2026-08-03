@@ -124,6 +124,21 @@ def _usable_images_by_color(images: list[dict]) -> dict[str, list[str]]:
 
 
 def _first_thumb_url(images_by_color: dict[str, list[str]]) -> str | None:
+    """Prefer silver (white metal) + white diamond for lite style-grid thumbs."""
+    # Exact slots first (metal-diamond[-chain]); legacy "white" = white metal + white stone.
+    for key in ("white-white", "white", "white-white-white"):
+        urls = images_by_color.get(key)
+        if urls:
+            return urls[0]
+    # Any white-metal + white-diamond slot (skip white-yellow / white-blue / white-pink).
+    for key, urls in images_by_color.items():
+        if not urls:
+            continue
+        parts = str(key).split("-")
+        if parts[0] != "white":
+            continue
+        if len(parts) == 1 or parts[1] == "white":
+            return urls[0]
     for urls in images_by_color.values():
         if urls:
             return urls[0]

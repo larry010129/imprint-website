@@ -61,6 +61,18 @@ def test_normalize_catalog_detail_defaults_lite():
     assert normalize_catalog_detail("FULL") == "full"
 
 
+def test_lite_thumb_url_prefers_silver_white_diamond():
+    fancy = "https://abc123.supabase.co/storage/v1/object/public/shop-media/products/fancy.webp"
+    rose = "https://abc123.supabase.co/storage/v1/object/public/shop-media/products/rose.webp"
+    images = [
+        {"color": "yellow-pink", "file_path": fancy},
+        {"color": "rose", "file_path": rose},
+        {"color": "white-white", "file_path": SUPABASE_PRODUCT},
+    ]
+    entry = build_catalog_product_lite(_product_row(), _variants(), images)
+    assert entry["thumbUrl"] == SUPABASE_PRODUCT
+
+
 def test_build_catalog_product_lite_omits_heavy_maps():
     entry = build_catalog_product_lite(_product_row(), _variants(), _images())
 

@@ -522,10 +522,16 @@ function productAssetId(product) {
   }
   const id = String(product.id || '');
   if (/^[a-z]+-[A-C]$/i.test(id)) return id;
-  // UUID letter SKUs: admin A–C = category + sortOrder (stock 內建, not styleKey).
+  // Custom uploads (lite thumbUrl / catalog rasters) are not letter stock — never invent A–C.
+  // Many admin products share sortOrder=0; inventing pendant-A painted every card the same.
+  if (product.thumbUrl && isUsableCatalogImageUrl(product.thumbUrl)) return '';
+  if (productHasCatalogImages(product)) return '';
+  // UUID letter SKUs with no uploads yet: admin A–C = category + sortOrder.
   const cat = String(product.category || state.category || '').toLowerCase();
   if (!['pendant', 'ring', 'earring', 'bracelet', 'chain'].includes(cat)) return '';
-  const order = Number(product.sortOrder ?? product.sort_order);
+  const rawOrder = product.sortOrder ?? product.sort_order;
+  if (rawOrder == null || rawOrder === '') return '';
+  const order = Number(rawOrder);
   if (!Number.isFinite(order) || order < 0 || order > 2) return '';
   return `${cat}-${String.fromCharCode(65 + order)}`;
 }
@@ -1875,10 +1881,43 @@ function lookupManualPrice(category, type, gold, carat) {
   return p == null ? null : p;
 }
 
-/** Step 2 style grid — always white-diamond preview; fancy color only on step 3 gallery. */
+/** Step 2 style grid — silver (white metal) + white diamond. Fancy/other metals = step 3. */
 function styleGridImageUrl(product) {
-  const fromImages = productImageUrl(product, product?.defaultColor || 'white', 'white');
-  if (fromImages) return fromImages;
+  const cat = String(product?.category || state.category || '').toLowerCase();
+  // Chain A/B/C are color-locked SKUs — keep style metal (not forced silver).
+  if (cat === 'chain') {
+    const chainSrc = productImageUrl(product, product?.defaultColor || 'white', 'white');
+    if (chainSrc) return chainSrc;
+    if (product?.thumbUrl && isUsableCatalogImageUrl(product.thumbUrl)) return product.thumbUrl;
+    return '';
+  }
+
+  // Exact white-metal + white-diamond catalog slots only — never defaultColor / fancy / any-slot.
+  const whiteKeys = window.ShopAssets?.imageSlotKeysForLookup
+    ? window.ShopAssets.imageSlotKeysForLookup('white', 'white', null)
+    : ['white', 'white-white'];
+  const fromCatalog = catalogImagesForKeys(product, whiteKeys)[0];
+  if (fromCatalog) return fromCatalog;
+
+  // Shop-product silver PNG when letter styleKey/id maps (COLOR_DIR.white → silver/).
+  const assetId = productAssetId(product);
+  if (assetId && window.ShopAssets) {
+    const opts = cat === 'pendant' ? { pendantOnly: true } : {};
+    if (window.ShopAssets.productImageResolve) {
+      const resolved = window.ShopAssets.productImageResolve(
+        assetId, 'white', 'white', 'white', opts,
+      );
+      if (resolved.src && !/\/images\/shop\/styles\/[a-z]+-[A-C]\.svg/i.test(resolved.src)) {
+        return resolved.src;
+      }
+    }
+    const png = window.ShopAssets.productImage?.(assetId, 'white', 'white', 'white', opts);
+    if (png) return png;
+    const stockThumb = window.ShopAssets.styleThumb?.(assetId);
+    if (stockThumb) return stockThumb;
+  }
+
+  // Lite catalog: thumbUrl last — server prefers white-white, but may still be sole upload.
   if (product?.thumbUrl && isUsableCatalogImageUrl(product.thumbUrl)) return product.thumbUrl;
   return '';
 }

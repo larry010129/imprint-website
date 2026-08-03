@@ -245,9 +245,15 @@ def test_shop_js_fancy_carat_dropdown_intersects_admin_min():
     assert "stockFancyDiamondColors" in (
         ROOT / "public" / "js" / "shop-assets.js"
     ).read_text(encoding="utf-8")
-    assert "shop.js?v=127" in (
+    assert "shop.js?v=129" in (
         ROOT / "content" / "site" / "templates" / "pages" / "shop" / "calculator.html"
     ).read_text(encoding="utf-8")
+    # Step 2 style grid: force white metal + white diamond (not thumbUrl / defaultColor first).
+    assert "function styleGridImageUrl" in src
+    assert "imageSlotKeysForLookup('white', 'white', null)" in src
+    assert "productImageResolve(\n        assetId, 'white', 'white', 'white'" in src or (
+        "productImageResolve(" in src and "assetId, 'white', 'white', 'white'" in src
+    )
     assert "shop-assets.js?v=15" in (
         ROOT / "content" / "site" / "templates" / "pages" / "shop" / "calculator.html"
     ).read_text(encoding="utf-8")
