@@ -149,6 +149,21 @@ def clear_page_copy_cache() -> None:
     _fetch_page_copy_cached.cache_clear()
 
 
+def _load_faq_public() -> dict:
+    """Published FAQ categories for /faq.html (DB first, seed fallback)."""
+    from app.content import faq_public_from_seed, fetch_faq_public
+    from app.database import get_connection
+
+    try:
+        with get_connection() as conn, conn.cursor() as cur:
+            data = fetch_faq_public(cur)
+        if data.get("categories"):
+            return data
+    except Exception:
+        pass
+    return faq_public_from_seed()
+
+
 def _editable_site_routes() -> set[str]:
     from app.cms_copy_slot_specs import EDITABLE_SITE_PAGES
 
@@ -312,9 +327,12 @@ def _context(request: Request, meta: PageMeta) -> dict:
         "cms_faq_all_items": [],
         "cms_faq_by_category": {},
         "cms_testimonials": [],
+        "faq_public": {"categories": [], "teaser": [], "items": []},
     }
     if meta.content_fragment:
         context["content_html"] = _load_fragment(meta.content_fragment)
+    if meta.route == "/faq.html":
+        context["faq_public"] = _load_faq_public()
     if meta.route in {"/", "/about.html"}:
         context["featured_video"] = load_featured_video()
     if meta.route == "/about.html":

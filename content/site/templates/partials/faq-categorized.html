@@ -1,0 +1,45 @@
+{# Category tabs + details accordion — SSR replacement for retired React FAQ island. #}
+{% set categories = (faq_public.categories if faq_public else []) or [] %}
+{% if categories %}
+<div class="faq-shell">
+  <div class="faq-tabs" role="tablist" aria-label="常見問題分類">
+    {% for cat in categories %}
+    <button
+      type="button"
+      class="faq-tab{% if loop.first %} is-active{% endif %}"
+      role="tab"
+      id="faq-tab-{{ cat.id }}"
+      aria-controls="faq-panel-{{ cat.id }}"
+      aria-selected="{{ 'true' if loop.first else 'false' }}"
+      tabindex="{{ '0' if loop.first else '-1' }}"
+      data-faq-tab="{{ cat.id }}"
+    >{{ cat.title }}</button>
+    {% endfor %}
+  </div>
+  {% for cat in categories %}
+  <div
+    class="faq-panel{% if loop.first %} is-active{% endif %}"
+    role="tabpanel"
+    id="faq-panel-{{ cat.id }}"
+    aria-labelledby="faq-tab-{{ cat.id }}"
+    data-faq-panel="{{ cat.id }}"
+    {% if not loop.first %}hidden{% endif %}
+  >
+    <div class="faq-list faq-list--card">
+      {% for item in cat['items'] %}
+      <div class="faq-item">
+        <details>
+          <summary class="faq-q">{{ item.question }}</summary>
+          <div class="faq-a-inner">{{ item.answer_html|safe }}</div>
+        </details>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="faq-list faq-list--card">
+  <p class="faq-empty">目前尚無常見問題，請稍後再查看。</p>
+</div>
+{% endif %}

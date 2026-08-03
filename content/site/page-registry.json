@@ -25,10 +25,6 @@
     ],
     "extra_scripts": [
       {
-        "inline": "\n  const root = document.querySelector(\"[data-faq-root]\");\n  let requested = false;\n  const ensureStylesheet = () => {\n    if (document.querySelector('link[href^=\"/static/react/faq.css\"]')) return;\n    const link = document.createElement(\"link\");\n    link.rel = \"stylesheet\";\n    link.href = \"/static/react/faq.css?v=5\";\n    document.head.append(link);\n  };\n  const load = () => {\n    if (requested) return;\n    requested = true;\n    ensureStylesheet();\n    void import(\"/static/react/faq.js?v=10\");\n  };\n  if (root) {\n    const nearViewport = root.getBoundingClientRect().top <= window.innerHeight + 800;\n    if (nearViewport || !(\"IntersectionObserver\" in window)) {\n      load();\n    } else {\n      const observer = new IntersectionObserver((entries) => {\n        if (!entries.some((entry) => entry.isIntersecting)) return;\n        observer.disconnect();\n        load();\n      }, { rootMargin: \"800px 0px\" });\n      observer.observe(root);\n    }\n  }\n",
-        "type": "module"
-      },
-      {
         "inline": "\n  const roots = document.querySelectorAll(\"[data-stories-root], [data-home-wall]\");\n  let requested = false;\n  const ensureStylesheet = () => {\n    if (document.querySelector('link[href^=\"/static/react/stories.css\"]')) return;\n    const link = document.createElement(\"link\");\n    link.rel = \"stylesheet\";\n    link.href = \"/static/react/stories.css?v=36\";\n    document.head.append(link);\n  };\n  const load = () => {\n    if (requested) return;\n    requested = true;\n    ensureStylesheet();\n    void import(\"/static/react/stories.js?v=37\");\n  };\n  if (roots.length) {\n    const nearViewport = Array.from(roots).some(\n      (root) => root.getBoundingClientRect().top <= window.innerHeight + 800,\n    );\n    if (nearViewport || !(\"IntersectionObserver\" in window)) {\n      load();\n    } else {\n      const observer = new IntersectionObserver((entries) => {\n        if (!entries.some((entry) => entry.isIntersecting)) return;\n        observer.disconnect();\n        load();\n      }, { rootMargin: \"800px 0px\" });\n      roots.forEach((root) => observer.observe(root));\n    }\n  }\n",
         "type": "module"
       },
@@ -277,15 +273,8 @@
     "body_key": "faq_html",
     "layout": "site",
     "main_class": "",
-    "extra_css": [
-      "/static/react/faq.css?v=5"
-    ],
-    "extra_scripts": [
-      {
-        "inline": "\n  const root = document.querySelector(\"[data-faq-root]\");\n  let requested = false;\n  const ensureStylesheet = () => {\n    if (document.querySelector('link[href^=\"/static/react/faq.css\"]')) return;\n    const link = document.createElement(\"link\");\n    link.rel = \"stylesheet\";\n    link.href = \"/static/react/faq.css?v=5\";\n    document.head.append(link);\n  };\n  const load = () => {\n    if (requested) return;\n    requested = true;\n    ensureStylesheet();\n    void import(\"/static/react/faq.js?v=10\");\n  };\n  if (root) {\n    const nearViewport = root.getBoundingClientRect().top <= window.innerHeight + 800;\n    if (nearViewport || !(\"IntersectionObserver\" in window)) {\n      load();\n    } else {\n      const observer = new IntersectionObserver((entries) => {\n        if (!entries.some((entry) => entry.isIntersecting)) return;\n        observer.disconnect();\n        load();\n      }, { rootMargin: \"800px 0px\" });\n      observer.observe(root);\n    }\n  }\n",
-        "type": "module"
-      }
-    ],
+    "extra_css": [],
+    "extra_scripts": [],
     "head_extras": []
   },
   {
