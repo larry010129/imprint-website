@@ -1,6 +1,6 @@
 {% extends "layouts/base.html" %}
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/member-app.css?v=1">
+<link rel="stylesheet" href="/static/css/member-app.css?v=4">
 {% endblock %}
 {% block content %}
 <section class="page-section member-app" aria-label="訂購紀錄">
@@ -19,5 +19,7 @@
     </div>
   </div>
 </section>
-{# ponytail: order detail dialog deferred; upgrade = HTMX detail partial when UX requires expand #}
+{% endblock %}
+{% block extra_scripts %}
+<script src="/static/js/order-detail.js?v=2" defer></script>
 {% endblock %}

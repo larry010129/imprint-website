@@ -135,7 +135,7 @@ async def history_partial(request: Request) -> HTMLResponse:
     user_id = get_user_id(request)
     if not user_id:
         return html(request, "history_list.html", {"orders": [], "guest": True})
-    from app.orders import attach_order_relations, hydrate_order
+    from app.orders import attach_order_display, enrich_member_order
 
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute(
@@ -144,9 +144,9 @@ async def history_partial(request: Request) -> HTMLResponse:
         )
         orders = cur.fetchall()
         if orders:
-            attach_order_relations(cur, orders)
+            attach_order_display(cur, orders)
             for order in orders:
-                hydrate_order(order)
+                enrich_member_order(order)
     return html(request, "history_list.html", {"orders": orders, "guest": False})
 
 

@@ -27,8 +27,10 @@
         {% if product.descriptionZh %}
         <p class="product-description">{{ product.descriptionZh }}</p>
         {% endif %}
-        {# ponytail: fancy diamond carousel + engraving UI + pendant chain picker #}
-        <p class="shop-htmx-ponytail-note">進階選項（彩鑽、刻字、墜鍊搭配）仍可於顧問確認時調整。</p>
+        {% if category != 'diamond' %}
+        {# ponytail: engraving UI + pendant chain picker still deferred on HTMX #}
+        <p class="shop-htmx-ponytail-note">進階選項（刻字、墜鍊搭配）仍可於顧問確認時調整。</p>
+        {% endif %}
       </div>
 
       <div class="product-buy-col">
@@ -48,9 +50,26 @@
           <input type="hidden" name="category" value="{{ category }}">
           <input type="hidden" name="type" value="{{ product.id }}">
           <input type="hidden" name="summaryZh" value="{{ product.nameZh or '' }}">
-          <input type="hidden" name="diamondKind" value="{{ defaults.diamondKind or 'white' }}">
+          <input type="hidden" name="diamondKind" id="htmx-diamond-kind" value="{{ defaults.diamondKind or 'white' }}">
+          <input type="hidden" name="fancyColor" id="htmx-fancy-color" value="">
           <input type="hidden" name="diamondShape" value="round">
           {% if preview %}<input type="hidden" name="preview" value="1">{% endif %}
+
+          {% if category == 'diamond' and diamond_colors %}
+          <div class="variant-group" id="htmx-diamond-color-step">
+            <label class="variant-label" for="htmx-diamond-color">選擇鑽石顏色</label>
+            <select class="carat-select" id="htmx-diamond-color" name="diamondColor" required>
+              {% for c in diamond_colors %}
+              <option
+                value="{{ c.id }}"
+                data-image="{{ c.imageUrl }}"
+                data-kind="{{ c.kind }}"
+                {% if c.id == defaults.diamondColor %} selected{% endif %}
+              >{{ c.labelZh }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          {% endif %}
 
           {% if carats %}
           <div class="variant-group">
@@ -116,3 +135,25 @@
     </div>
   </section>
 </div>
+{% if category == 'diamond' and diamond_colors %}
+<script>
+(function () {
+  var sel = document.getElementById('htmx-diamond-color');
+  var img = document.getElementById('large-image');
+  var kind = document.getElementById('htmx-diamond-kind');
+  var fancy = document.getElementById('htmx-fancy-color');
+  if (!sel) return;
+  function sync() {
+    var opt = sel.options[sel.selectedIndex];
+    if (!opt) return;
+    var url = opt.getAttribute('data-image') || '';
+    var k = opt.getAttribute('data-kind') || 'white';
+    if (img && url) img.src = url;
+    if (kind) kind.value = k === 'fancy' ? 'fancy' : 'white';
+    if (fancy) fancy.value = k === 'fancy' ? opt.value : '';
+  }
+  sel.addEventListener('change', sync);
+  sync();
+})();
+</script>
+{% endif %}

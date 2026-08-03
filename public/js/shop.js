@@ -2514,9 +2514,29 @@ function addFancyColorsFromSlotKeys(keys, found) {
   });
 }
 
+/** Memorial / loose diamond series (static catalog, not letter SKUs). */
+function isMemorialDiamondProduct(product) {
+  const id = String(product?.id || '');
+  const key = String(product?.styleKey || '');
+  return id.startsWith('diamond-') || key.startsWith('diamond-');
+}
+
+/**
+ * Fancy colors with bundled matrix PNGs under public/images/diamonds/matrix/.
+ * Memorial preview uses these — not shop-product letter SKUs / lifestyle heroes.
+ */
+function matrixFancyDiamondColors() {
+  return FANCY_DIAMOND_COLOR_IDS.slice();
+}
+
 /** Fancy diamond colors from catalog uploads and/or bundled letter-SKU stock PNGs. */
 function designedFancyDiamondColors(product) {
   const found = new Set();
+  // Memorial diamonds: lifestyle heroes are white-only; unlock matrix yellow/blue/pink.
+  if (isMemorialDiamondProduct(product) || isDiamondOnlyCategory()) {
+    matrixFancyDiamondColors().forEach((c) => found.add(c));
+    return FANCY_DIAMOND_COLOR_IDS.filter((c) => found.has(c));
+  }
   const images = product?.images;
   if (images && typeof images === 'object' && !Array.isArray(images)) {
     Object.keys(images).forEach((key) => {
@@ -2539,7 +2559,8 @@ function designedFancyDiamondColors(product) {
 /**
  * Show 黃鑽/藍鑽/粉鑽 only when BOTH:
  *   1) product has at least one admin carat ≥ fancyMinCarat (0.3), AND
- *   2) that color has a catalog image slot OR letter-SKU stock PNG.
+ *   2) that color has a catalog image slot OR letter-SKU stock PNG
+ *      (memorial: bundled matrix PNG under diamonds/matrix/).
  * Do not unlock all fancy colors from carat alone. White always separate.
  * Bracelet/chain: stock remaps fancy→white — no stock fancy offered.
  */

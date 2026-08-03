@@ -67,17 +67,56 @@ a.checkout-stepper-label:hover {
   margin-bottom: 24px;
 }
 
+.checkout-head-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin-bottom: 14px;
+}
+
 .checkout-title {
-  margin: 0 0 14px;
+  margin: 0;
   font-family: var(--serif);
   font-size: clamp(24px, 3.5vw, 32px);
   font-weight: 600;
   letter-spacing: 0.06em;
 }
 
+.checkout-secure {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--mint-deep);
+}
+
 .checkout-notice {
   margin-bottom: 16px;
   width: 100%;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid rgba(198, 40, 40, 0.22);
+  padding: 16px 18px;
+}
+
+.checkout-notice-title {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #c62828;
+}
+
+.checkout-notice-body {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.85;
+  letter-spacing: 0.03em;
+  color: var(--ink);
 }
 
 .checkout-lead {
@@ -88,7 +127,19 @@ a.checkout-stepper-label:hover {
   max-width: 560px;
 }
 
-/* HeroUI Alert — scoped to checkout */
+.checkout-skel-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* HeroUI Alert — scoped to checkout (React island leftover) */
 [data-checkout-root] .checkout-notice .alert {
   width: 100%;
   border-radius: 12px;
@@ -152,6 +203,15 @@ a.checkout-stepper-label:hover {
   letter-spacing: 0.06em;
 }
 
+[data-checkout-root] .checkout-block-note {
+  margin-left: 0.45em;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  color: var(--ink-soft);
+}
+
 [data-checkout-root] .checkout-fields {
   display: flex;
   flex-direction: column;
@@ -176,10 +236,16 @@ a.checkout-stepper-label:hover {
   transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
 }
 
-[data-checkout-root] .checkout-option.is-selected {
+[data-checkout-root] .checkout-option.is-selected,
+[data-checkout-root] .checkout-option:has(input:checked) {
   border-color: var(--mint-deep);
   background: var(--mint-soft);
   box-shadow: 0 0 0 1px rgba(94, 207, 207, 0.2);
+}
+
+[data-checkout-root] .checkout-option input {
+  margin-top: 3px;
+  accent-color: var(--mint-deep);
 }
 
 [data-checkout-root] .checkout-option-title {
@@ -194,6 +260,98 @@ a.checkout-stepper-label:hover {
   font-size: 13px;
   color: var(--ink-soft);
   line-height: 1.7;
+}
+
+[data-checkout-root] .checkout-delivery-fields {
+  display: none;
+  flex-direction: column;
+  gap: 0;
+}
+
+[data-checkout-root] .checkout-fields:has(input[name="fulfillmentMethod"][value="delivery"]:checked) .checkout-delivery-fields {
+  display: flex;
+}
+
+[data-checkout-root] .checkout-fields .form-field {
+  margin-bottom: 0;
+}
+
+[data-checkout-root] .checkout-item-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+[data-checkout-root] .checkout-line-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+[data-checkout-root] .checkout-line-item__thumb {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--mint-line);
+  flex-shrink: 0;
+  background: var(--paper);
+}
+
+[data-checkout-root] .checkout-line-item__thumb--empty {
+  display: inline-block;
+  background: linear-gradient(135deg, #f3efe8, #e8f6f6);
+}
+
+[data-checkout-root] .checkout-line-item__copy {
+  flex: 1;
+  min-width: 0;
+}
+
+[data-checkout-root] .checkout-line-item__title {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+[data-checkout-root] .checkout-line-item__meta {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--ink-soft);
+  line-height: 1.55;
+}
+
+[data-checkout-root] .checkout-line-item__price {
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+[data-checkout-root] .checkout-coupon-label {
+  display: block;
+  font-size: 13px;
+  color: var(--ink-soft);
+  letter-spacing: 0.04em;
+  margin-bottom: 8px;
+}
+
+[data-checkout-root] .checkout-submit-btn,
+[data-checkout-root] .checkout-back-btn {
+  width: 100%;
+  text-align: center;
+  justify-content: center;
+}
+
+[data-checkout-root] .checkout-mobile-bar__label {
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+
+[data-checkout-root] .checkout-mobile-bar__total {
+  font-size: 16px;
+  font-weight: 600;
 }
 
 [data-checkout-root] .checkout-summary {

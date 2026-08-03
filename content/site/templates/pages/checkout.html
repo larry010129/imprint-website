@@ -7,7 +7,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="/static/css/member-app.css?v=3">
-<link rel="stylesheet" href="/static/css/checkout-page.css?v=13">
+<link rel="stylesheet" href="/static/css/checkout-page.css?v=14">
 {% endblock %}
 
 {% block content %}
@@ -29,14 +29,53 @@
       </div>
     </nav>
 
-    {# items via query string — CSP has no unsafe-eval, so hx-vals js: never runs #}
+    {# items via query string — CSP has no unsafe-eval, so hx-vals js: / hx-on:: never run #}
     <div id="htmx-checkout"
       hx-get="/htmx/checkout?items={{ checkout_items|urlencode }}"
       hx-trigger="load"
-      hx-swap="innerHTML"
-      hx-on::response-error="this.innerHTML='<p class=&quot;form-msg is-error&quot; role=&quot;alert&quot;>無法載入訂單，請重新整理或<a href=&quot;/cart.html&quot;>返回購物車</a>。</p>'"
-      hx-on::send-error="this.innerHTML='<p class=&quot;form-msg is-error&quot; role=&quot;alert&quot;>無法載入訂單，請重新整理或<a href=&quot;/cart.html&quot;>返回購物車</a>。</p>'">
-      <div class="checkout-skel" aria-busy="true"><p>載入訂單…</p></div>
+      hx-swap="innerHTML">
+      <div class="checkout-skel" data-checkout-root aria-busy="true" aria-label="載入訂單">
+        <header class="checkout-head">
+          <span class="skel-line skel-line--medium" style="margin-bottom:16px"></span>
+          <span class="skel-line skel-line--full" style="height:64px;margin-bottom:12px"></span>
+          <span class="skel-line skel-line--long"></span>
+        </header>
+        <div class="checkout-layout">
+          <div class="checkout-main">
+            <section class="checkout-block">
+              <span class="skel-line skel-line--medium" style="margin-bottom:16px"></span>
+              <div class="checkout-skel-item">
+                <span class="skel-block skel-block--thumb"></span>
+                <div class="checkout-skel-item-copy">
+                  <span class="skel-line skel-line--short"></span>
+                  <span class="skel-line skel-line--long" style="margin-top:8px"></span>
+                </div>
+              </div>
+            </section>
+            <section class="checkout-block">
+              <span class="skel-line skel-line--medium" style="margin-bottom:16px"></span>
+              <div class="checkout-skel-fields">
+                <span class="skel-line skel-line--full" style="height:40px"></span>
+                <span class="skel-line skel-line--full" style="height:40px"></span>
+                <span class="skel-line skel-line--full" style="height:40px"></span>
+              </div>
+            </section>
+            <section class="checkout-block">
+              <span class="skel-line skel-line--medium" style="margin-bottom:16px"></span>
+              <span class="skel-line skel-line--full" style="height:56px;margin-bottom:10px"></span>
+              <span class="skel-line skel-line--full" style="height:56px"></span>
+            </section>
+          </div>
+          <aside class="checkout-summary">
+            <span class="skel-line skel-line--medium" style="margin-bottom:16px"></span>
+            <span class="skel-line skel-line--full" style="margin-bottom:10px"></span>
+            <span class="skel-line skel-line--full" style="margin-bottom:10px"></span>
+            <span class="skel-line skel-line--short" style="margin-top:16px;height:20px"></span>
+            <span class="skel-block skel-block--btn" style="width:100%;height:40px;margin-top:20px"></span>
+          </aside>
+        </div>
+        <p class="checkout-skel-status">載入訂單…</p>
+      </div>
     </div>
   </div>
 </section>
@@ -47,11 +86,24 @@
 (function () {
   var root = document.getElementById('htmx-checkout');
   if (!root) return;
-  window.setTimeout(function () {
-    if (root.querySelector('.checkout-skel')) {
-      root.innerHTML = '<p class="form-msg is-error" role="alert">無法載入訂單，請重新整理或<a href="/cart.html">返回購物車</a>。</p>';
-    }
-  }, 12000);
+  var errHtml = '<p class="form-msg is-error" role="alert">無法載入訂單，請重新整理或<a href="/cart.html">返回購物車</a>。</p>';
+  function showErr() {
+    if (!root.isConnected) return;
+    root.innerHTML = errHtml;
+  }
+  // CSP blocks unsafe-eval — do not use hx-on:: (new Function). Native listeners OK.
+  root.addEventListener('htmx:responseError', showErr);
+  root.addEventListener('htmx:sendError', showErr);
+  var timer = null;
+  function armTimer() {
+    window.clearTimeout(timer);
+    timer = window.setTimeout(function () {
+      if (root.querySelector('.checkout-skel')) showErr();
+    }, 25000);
+  }
+  armTimer();
+  root.addEventListener('htmx:beforeRequest', armTimer);
+  root.addEventListener('htmx:afterSwap', function () { window.clearTimeout(timer); });
 })();
 </script>
 {% endblock %}

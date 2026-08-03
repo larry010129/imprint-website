@@ -1,0 +1,16 @@
+{% set discount = (coupon.discountAmount if coupon and coupon.discountAmount is defined else 0) or 0 %}
+{% set payable = coupon.total if coupon and coupon.total is defined else subtotal %}
+{% if discount and discount > 0 %}
+<div class="checkout-summary-line">
+  <span>小計</span>
+  <span>{{ format_twd(subtotal) }}</span>
+</div>
+<div class="checkout-summary-line checkout-summary-line--discount">
+  <span>優惠折抵{% if coupon and coupon.code %}（{{ coupon.code }}）{% endif %}</span>
+  <span>−{{ format_twd(discount) }}</span>
+</div>
+{% endif %}
+<div class="checkout-summary-total">
+  <span>總計</span>
+  <span>{{ format_twd(payable) }}</span>
+</div>

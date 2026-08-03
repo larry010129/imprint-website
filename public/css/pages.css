@@ -125,6 +125,20 @@
 }
 .series-related a:hover{ background:var(--mint-soft); color:var(--ink); border-color:var(--mint-deep); }
 
+/* LINE soft-CTA — series / jewelry / product pages (scoped; was homepage-only in home.css) */
+.capture{ background:var(--ink); padding:96px 24px; text-align:center; }
+.capture .rule{ width:40px; height:1px; background:var(--mint); margin:0 auto 30px; }
+.capture h2{
+  font-family:var(--serif); font-size:clamp(24px,3vw,30px); font-weight:500;
+  color:#F7F4F1; letter-spacing:.13em; line-height:1.8; margin:0 0 22px;
+}
+.capture > p{
+  font-size:14.5px; color:#B8AFA8; line-height:1.75; margin:0 0 40px;
+}
+.capture .hint{
+  font-size:12px; color:#7A716B; line-height:1.6; margin:26px 0 0;
+}
+
 /* 客製選單(configurator) */
 .configurator{ background:var(--paper-warm); padding:90px 0 100px; }
 .configurator-inner{ display:grid; grid-template-columns:1fr 380px; gap:50px; align-items:flex-start; }

@@ -26,6 +26,9 @@
     {% endif %}
     <div class="member-cart-item__body">
       <p class="member-cart-item__summary">{{ item.summary_zh or '訂製品項' }}</p>
+      {% if item.details_zh %}
+      <p class="member-cart-item__meta">{{ item.details_zh }}</p>
+      {% endif %}
       <strong class="member-cart-item__price">{{ format_twd(item.total_price) }}</strong>
     </div>
     <div class="member-cart-item__actions">

@@ -27,7 +27,7 @@
     var mainEl = document.querySelector('.main');
     var topMeta = document.getElementById('topMeta');
 
-    var STATUS_OPTIONS = ['received', 'dna_lab', 'deposit_confirmed', 'in_production', 'quality_check', 'shipped', 'completed'];
+    var STATUS_OPTIONS = ['received', 'deposit_confirmed', 'dna_lab', 'in_production', 'quality_check', 'shipped', 'completed'];
     var STATUS_CHIP = {
       received: 'chip-new', dna_lab: 'chip-grow', deposit_confirmed: 'chip-talk',
       in_production: 'chip-grow', quality_check: 'chip-cut', shipped: 'chip-talk', completed: 'chip-done'

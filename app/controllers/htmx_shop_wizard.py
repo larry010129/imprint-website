@@ -1,8 +1,8 @@
 """HTMX shop calculator wizard — catalog → styles → configure → quote → cart.
 
 Reuses app.catalog + app.pricing.compute_order_pricing (no client pricing math).
-ponytail: fancy color carousel, engraving girdle/band UI, pendant+chain picker,
-full shop.js gallery/lightbox — ship core path first.
+ponytail: engraving girdle/band UI, pendant+chain picker, full shop.js
+gallery/lightbox — memorial diamond colors use matrix PNGs (shipped).
 """
 
 from __future__ import annotations
@@ -39,8 +39,14 @@ from app.controllers.shop_controller import (
     _validate_config,
 )
 from app.database import get_connection
-from app.image_urls import category_image_url, shop_product_image_url, shop_style_thumb_url
-from app.pricing import compute_order_pricing
+from app.image_urls import (
+    category_image_url,
+    diamond_matrix_image_url,
+    memorial_diamond_color_options,
+    shop_product_image_url,
+    shop_style_thumb_url,
+)
+from app.pricing import VALID_FANCY_COLORS, compute_order_pricing
 from app.product_categories import fetch_categories
 
 router = APIRouter(prefix="/shop", tags=["htmx-shop-wizard"])
@@ -228,15 +234,26 @@ def _config_from_form(form: Any) -> dict[str, Any]:
         except ValueError:
             length_cm = None
     name = str(form.get("summaryZh") or "").strip()
+    diamond_shape = str(form.get("diamondShape") or "round").strip() or "round"
+    diamond_kind = str(form.get("diamondKind") or "white").strip() or "white"
+    fancy_color = str(form.get("fancyColor") or "").strip() or None
+    # Memorial color select posts diamondColor; map to kind/fancy for pricing.
+    diamond_color = str(form.get("diamondColor") or "").strip().lower()
+    if diamond_color in VALID_FANCY_COLORS:
+        diamond_kind = "fancy"
+        fancy_color = diamond_color
+    elif diamond_color == "white":
+        diamond_kind = "white"
+        fancy_color = None
     return {
         "category": category,
         "type": type_ref,
         "carat": carat,
         "gold": gold,
         "lengthCm": length_cm,
-        "diamondKind": str(form.get("diamondKind") or "white").strip() or "white",
-        "diamondShape": str(form.get("diamondShape") or "round").strip() or "round",
-        "fancyColor": str(form.get("fancyColor") or "").strip() or None,
+        "diamondKind": diamond_kind,
+        "diamondShape": diamond_shape,
+        "fancyColor": fancy_color,
         "includeChain": form_bool(form.get("includeChain")),
         "summaryZh": name,
         # ponytail: chainProductId / chainGold / chainLength / engraving* not in HTMX core path
@@ -380,7 +397,12 @@ async def shop_step_configure(request: Request) -> HTMLResponse:
         "gold": golds[0] if golds else "",
         "lengthCm": 46 if category == "chain" else (18 if category == "bracelet" else ""),
         "diamondKind": "white",
+        "diamondColor": "white",
     }
+    diamond_colors = memorial_diamond_color_options() if category == "diamond" else []
+    thumb = _product_thumb(product)
+    if category == "diamond":
+        thumb = diamond_matrix_image_url("round", "white") or thumb
     preview = is_shop_preview(request)
     require_published = category != "diamond" and not (
         preview and is_admin(get_user_id(request))
@@ -407,11 +429,12 @@ async def shop_step_configure(request: Request) -> HTMLResponse:
             step="product",
             category=category,
             category_label=meta.get("labelZh") or category,
-            product={**product, "thumb": _product_thumb(product)},
+            product={**product, "thumb": thumb},
             golds=golds,
             carats=carats,
             lengths=lengths,
             defaults=defaults,
+            diamond_colors=diamond_colors,
             pricing=pricing,
             quote_error=None,
             cart_msg=None,

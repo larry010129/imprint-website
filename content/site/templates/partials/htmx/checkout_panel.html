@@ -1,94 +1,186 @@
 {% set ids_csv = item_ids|join(',') %}
-<header class="checkout-head">
-  <h1 class="checkout-title">確認訂單資訊</h1>
-  <p class="checkout-lead">請填寫收件人資訊與取貨方式，確認無誤後送出訂單。線上送出僅代表收到訂製申請，仍需顧問確認。</p>
-  {% if form_error %}<p class="form-msg is-error" role="alert">{{ form_error }}</p>{% endif %}
-</header>
+{% set payable = coupon.total if coupon and coupon.total is defined else subtotal %}
+<div data-checkout-root>
+  <header class="checkout-head">
+    <div class="checkout-head-row">
+      <h1 class="checkout-title">確認訂單資訊</h1>
+      <p class="checkout-secure">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M7 11V8a5 5 0 0 1 10 0v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          <rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.8"/>
+        </svg>
+        SSL 加密保護
+      </p>
+    </div>
+    <div class="checkout-notice" role="status">
+      <p class="checkout-notice-title">送出後仍需專人確認</p>
+      <p class="checkout-notice-body">線上送出僅代表收到您的訂製申請，並非已下單定案。銘印顧問將與您聯繫，確認規格、交期與報價後，才會進入付款與製作流程。</p>
+    </div>
+    <p class="checkout-lead">請填寫收件人資訊與取貨方式，確認無誤後送出訂單。</p>
+    {% if form_error %}<p id="checkout-form-error" class="checkout-error" role="alert">{{ form_error }}</p>{% endif %}
+  </header>
 
-<form class="checkout-layout"
-  hx-post="/htmx/checkout/submit"
-  hx-target="#htmx-checkout"
-  hx-swap="innerHTML"
-  hx-disabled-elt="button[type=submit]">
-  <input type="hidden" name="itemIds" value="{{ ids_csv }}">
-  {# couponCode lives on #couponInput only — avoid duplicate name= (form.get takes first) #}
+  <form class="checkout-layout"
+    hx-post="/htmx/checkout/submit"
+    hx-target="#htmx-checkout"
+    hx-swap="innerHTML"
+    hx-disabled-elt="button[type=submit]">
+    <input type="hidden" name="itemIds" value="{{ ids_csv }}">
 
-  <div class="checkout-main">
-    <section class="checkout-block">
-      <h2>訂製品項</h2>
-      <ul class="member-cart-list">
-        {% for item in items %}
-        <li class="member-cart-item">
-          {% if item.image_url %}<img class="member-cart-item__thumb" src="{{ item.image_url }}" alt="" width="64" height="64">{% endif %}
-          <div class="member-cart-item__body">
-            <p>{{ item.summary_zh or '訂製品項' }}</p>
-            <strong>{{ format_twd(item.total_price) }}</strong>
+    <div class="checkout-main">
+      <section class="checkout-block">
+        <h2 class="checkout-block-title">訂製明細</h2>
+        <ul class="checkout-item-list">
+          {% for item in items %}
+          <li class="checkout-line-item">
+            {% if item.image_url %}
+            <img class="checkout-line-item__thumb" src="{{ item.image_url }}" alt="" width="56" height="56">
+            {% else %}
+            <span class="checkout-line-item__thumb checkout-line-item__thumb--empty" aria-hidden="true"></span>
+            {% endif %}
+            <div class="checkout-line-item__copy">
+              <p class="checkout-line-item__title">{{ item.summary_zh or '訂製品項' }}</p>
+              {% if item.details_zh %}
+              <p class="checkout-line-item__meta">{{ item.details_zh }}</p>
+              {% endif %}
+            </div>
+            <strong class="checkout-line-item__price">{{ format_twd(item.total_price) }}</strong>
+          </li>
+          {% endfor %}
+        </ul>
+      </section>
+
+      <section class="checkout-block">
+        <h2 class="checkout-block-title">聯絡資訊</h2>
+        <div class="checkout-fields">
+          <div class="checkout-field-row">
+            <div class="form-field">
+              <label for="customerName">收件人姓名 <span class="req">*</span></label>
+              <input id="customerName" name="customerName" required autocomplete="name" value="{{ profile.full_name or '' }}">
+            </div>
+            <div class="form-field">
+              <label for="customerPhone">聯絡電話 <span class="req">*</span></label>
+              <input id="customerPhone" name="customerPhone" type="tel" required autocomplete="tel" value="{{ profile.phone or '' }}">
+            </div>
           </div>
+          <div class="form-field">
+            <label for="customerEmail">Email</label>
+            <input id="customerEmail" name="customerEmail" type="email" autocomplete="email" value="{{ profile.email or '' }}">
+          </div>
+        </div>
+      </section>
+
+      <section class="checkout-block">
+        <h2 class="checkout-block-title">取貨方式 <span class="checkout-block-note">製作期約三個月</span></h2>
+        <div class="checkout-fields">
+          <label class="checkout-option">
+            <input type="radio" name="fulfillmentMethod" value="pickup" {% if fulfillment != 'delivery' %}checked{% endif %}>
+            <span>
+              <span class="checkout-option-title">門市自取</span>
+              <span class="checkout-option-desc">新北市三重區福德南路 43 號 1 樓（預約制）</span>
+            </span>
+          </label>
+          <label class="checkout-option">
+            <input type="radio" name="fulfillmentMethod" value="delivery" {% if fulfillment == 'delivery' %}checked{% endif %}>
+            <span>
+              <span class="checkout-option-title">宅配到府</span>
+              <span class="checkout-option-desc">由專人配送至您指定的地址</span>
+            </span>
+          </label>
+
+          <div class="checkout-delivery-fields">
+            <div class="form-field">
+              <label for="shippingAddress">收件地址 <span class="req">*</span></label>
+              <input id="shippingAddress" name="shippingAddress" autocomplete="street-address" value="{{ profile.shipping_address or '' }}">
+            </div>
+            <div class="checkout-field-row">
+              <div class="form-field">
+                <label for="shippingCity">縣市 <span class="req">*</span></label>
+                <input id="shippingCity" name="shippingCity" autocomplete="address-level1" value="{{ profile.shipping_city or '' }}">
+              </div>
+              <div class="form-field">
+                <label for="shippingPostal">郵遞區號 <span class="req">*</span></label>
+                <input id="shippingPostal" name="shippingPostal" autocomplete="postal-code" value="{{ profile.shipping_postal or '' }}">
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="checkout-block">
+        <h2 class="checkout-block-title">給銘印鑽石的訊息</h2>
+        <div class="form-field">
+          <label for="orderNote">備註（選填，最多 100 字）</label>
+          <textarea id="orderNote" name="orderNote" maxlength="100" rows="3" placeholder="例如刻字內容、預約時段偏好等">{{ order_note or '' }}</textarea>
+        </div>
+      </section>
+    </div>
+
+    <aside class="checkout-summary">
+      <h2 class="checkout-summary-title">訂單摘要</h2>
+      <ul class="checkout-summary-list">
+        {% for item in items %}
+        <li class="checkout-summary-item checkout-summary-item--stacked">
+          <div class="checkout-summary-item-copy">
+            <span class="checkout-summary-item-title">{{ item.summary_zh or '訂製品項' }}</span>
+          </div>
+          <span>{{ format_twd(item.total_price) }}</span>
         </li>
         {% endfor %}
       </ul>
-    </section>
 
-    <section class="checkout-block">
-      <h2>聯絡資訊</h2>
-      <div class="form-field">
-        <label for="customerName">收件人姓名</label>
-        <input id="customerName" name="customerName" required value="{{ profile.full_name or '' }}">
+      <div class="checkout-coupon">
+        <label class="checkout-coupon-label" for="couponInput">優惠碼</label>
+        <div class="checkout-coupon-row">
+          <input id="couponInput" name="couponCode" value="{{ coupon.code if coupon else '' }}"
+            placeholder="輸入優惠碼" autocomplete="off"
+            hx-post="/htmx/checkout/coupon"
+            hx-target="#checkout-coupon-slot"
+            hx-include="[name='itemIds']"
+            hx-trigger="keyup changed delay:500ms">
+          <button type="button" class="btn btn-line"
+            hx-post="/htmx/checkout/coupon"
+            hx-target="#checkout-coupon-slot"
+            hx-include="#couponInput,[name='itemIds']">套用</button>
+        </div>
+        <div id="checkout-coupon-slot">
+          {% include "partials/htmx/checkout_coupon_result.html" %}
+        </div>
       </div>
-      <div class="form-field">
-        <label for="customerPhone">聯絡電話</label>
-        <input id="customerPhone" name="customerPhone" type="tel" required value="{{ profile.phone or '' }}">
-      </div>
-      <div class="form-field">
-        <label for="customerEmail">Email</label>
-        <input id="customerEmail" name="customerEmail" type="email" value="{{ profile.email or '' }}">
-      </div>
-    </section>
 
-    <section class="checkout-block">
-      <h2>取貨方式</h2>
-      <label><input type="radio" name="fulfillmentMethod" value="pickup" {% if fulfillment != 'delivery' %}checked{% endif %}> 門市自取</label>
-      <label><input type="radio" name="fulfillmentMethod" value="delivery" {% if fulfillment == 'delivery' %}checked{% endif %}> 宅配</label>
-      <div class="form-field">
-        <label for="shippingPostal">郵遞區號</label>
-        <input id="shippingPostal" name="shippingPostal" value="{{ profile.shipping_postal or '' }}">
+      <div id="checkout-totals">
+        {% include "partials/htmx/checkout_totals.html" %}
       </div>
-      <div class="form-field">
-        <label for="shippingCity">縣市</label>
-        <input id="shippingCity" name="shippingCity" value="{{ profile.shipping_city or '' }}">
-      </div>
-      <div class="form-field">
-        <label for="shippingAddress">地址</label>
-        <input id="shippingAddress" name="shippingAddress" value="{{ profile.shipping_address or '' }}">
-      </div>
-      <div class="form-field">
-        <label for="orderNote">備註（最多 100 字）</label>
-        <textarea id="orderNote" name="orderNote" maxlength="100" rows="3">{{ order_note or '' }}</textarea>
-      </div>
-    </section>
-  </div>
 
-  <aside class="checkout-summary">
-    <h2>金額摘要</h2>
-    <p>小計 <strong>{{ format_twd(subtotal) }}</strong></p>
-    <div id="checkout-coupon-slot">
-      {% include "partials/htmx/checkout_coupon_result.html" %}
+      <ul class="checkout-trust">
+        <li>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>全台唯一在地 DNA 鑽石培育實驗室</span>
+        </li>
+        <li>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>銘印保證卡・GIA／IGI 鑑定保障</span>
+        </li>
+        <li>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>封存培育全程的專屬影音紀念盒</span>
+        </li>
+      </ul>
+
+      <p class="checkout-pay-note" role="note">此步驟尚未付款。送出後由專人確認規格與報價，確認後才會進行付款。</p>
+
+      <div class="checkout-actions checkout-actions--desktop">
+        <button type="submit" class="btn btn-dark checkout-submit-btn">確認送出訂單</button>
+        <a class="btn btn-line checkout-back-btn" href="/cart.html">返回購物車</a>
+      </div>
+    </aside>
+
+    <div class="checkout-mobile-bar">
+      <div>
+        <div class="checkout-mobile-bar__label">總計</div>
+        <div class="checkout-mobile-bar__total" id="checkout-mobile-total">{{ format_twd(payable) }}</div>
+      </div>
+      <button type="submit" class="btn btn-dark">確認送出</button>
     </div>
-    <div class="form-field" style="display:flex;gap:.5rem;align-items:flex-end">
-      <div style="flex:1">
-        <label for="couponInput">優惠碼</label>
-        {# name=couponCode matches server form key; no hx-vals js: (CSP blocks eval) #}
-        <input id="couponInput" name="couponCode" value="{{ coupon.code if coupon else '' }}"
-          hx-post="/htmx/checkout/coupon"
-          hx-target="#checkout-coupon-slot"
-          hx-include="[name='itemIds']"
-          hx-trigger="keyup changed delay:500ms">
-      </div>
-      <button type="button" class="btn btn-line"
-        hx-post="/htmx/checkout/coupon"
-        hx-target="#checkout-coupon-slot"
-        hx-include="#couponInput,[name='itemIds']">套用</button>
-    </div>
-    <button type="submit" class="btn btn-dark" style="width:100%;margin-top:1rem">送出訂製申請</button>
-  </aside>
-</form>
+  </form>
+</div>

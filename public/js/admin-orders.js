@@ -21,7 +21,7 @@
   var cancelError = document.getElementById('orderCancelError');
 
   var STATUS_OPTIONS = [
-    'received', 'dna_lab', 'deposit_confirmed', 'in_production',
+    'received', 'deposit_confirmed', 'dna_lab', 'in_production',
     'quality_check', 'shipped', 'completed'
   ];
   var BULK_STATUS_OPTIONS = STATUS_OPTIONS.concat(['cancelled']);

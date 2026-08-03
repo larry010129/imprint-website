@@ -190,6 +190,19 @@
   gap: 12px;
 }
 
+/* Stories masonry — HTMX first-paint placeholders */
+.stories-page-card--skel {
+  pointer-events: none;
+}
+.stories-page-card--skel:hover {
+  transform: none;
+}
+.stories-page-card--skel .stories-page-card__media {
+  background: linear-gradient(90deg, #ede7e0 0%, #f5f0ea 50%, #ede7e0 100%);
+  background-size: 200% 100%;
+  animation: skel-shimmer 1.2s ease-in-out infinite;
+}
+
 @keyframes skel-shimmer {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }

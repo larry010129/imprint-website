@@ -487,15 +487,7 @@ table.price-full-table--multi-xpose tbody tr:nth-child(3) th{ border-bottom:2px 
 .faq-a-inner{ padding:0 40px 30px 6px; font-size:14.5px; color:var(--ink-soft); line-height:2.15; }
 .faq-more{ margin-top:44px; }
 
-/* ---------- LINE 收名單 ---------- */
-.capture{ background:var(--ink); padding:96px 24px; text-align:center; }
-.capture .rule{ width:40px; height:1px; background:var(--mint); margin:0 auto 30px; }
-.capture h2{
-  font-family:var(--serif); font-size:clamp(24px,3vw,30px); font-weight:500;
-  color:#F7F4F1; letter-spacing:.13em; line-height:1.8; margin-bottom:22px;
-}
-.capture p{ font-size:14.5px; color:#B8AFA8; line-height:2.15; margin-bottom:40px; }
-.capture .hint{ font-size:12px; color:#7A716B; margin:26px 0 0; }
+/* LINE soft-CTA (.capture) lives in pages.css — home uses .gh-cta instead */
 
 /* ---------- 首頁精簡版 ---------- */
 .hero-carousel--solo .hc-viewport{

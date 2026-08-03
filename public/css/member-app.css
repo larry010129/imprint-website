@@ -864,6 +864,12 @@
   white-space: nowrap;
 }
 
+.member-order-expand {
+  text-align: center;
+  width: 36px;
+  vertical-align: middle;
+}
+
 .member-order-chevron {
   display: inline-block;
   font-size: 18px;

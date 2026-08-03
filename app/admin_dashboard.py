@@ -7,22 +7,14 @@ import io
 import re
 from datetime import date, datetime, timedelta, timezone
 
+from app.orders import ORDER_STATUS_LABELS_ZH as STATUS_LABELS_ZH
+
 GRANULARITIES = ("day", "week", "month")
 MAX_DAY_SPAN = 90
 DAY_TREND_DEFAULT = 30
 WEEK_TREND_COUNT = 12
 MONTH_TREND_COUNT = 12
 COMPLETE_STATUSES = {"completed", "shipped"}
-
-STATUS_LABELS_ZH = {
-    "received": "已收到申請",
-    "dna_lab": "DNA 萃取鑑定中",
-    "deposit_confirmed": "訂金已確認",
-    "in_production": "製作中",
-    "quality_check": "品管檢驗中",
-    "shipped": "已出貨",
-    "completed": "已完成",
-}
 
 _WEEK_RE = re.compile(r"^(\d{4})-W(\d{2})$")
 

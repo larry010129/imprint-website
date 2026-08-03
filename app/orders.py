@@ -29,6 +29,205 @@ def order_summary_from_config(config: dict) -> str:
     return f"{category} {style}".strip() or "訂製品項"
 
 
+_GOLD_ZH = {"9k": "9K", "14k": "14K", "18k": "18K", "pt950": "PT950", "s925": "925銀"}
+_COLOR_ZH = {"white": "白金", "yellow": "黃金", "rose": "玫瑰金"}
+_FANCY_ZH = {"yellow": "黃", "pink": "粉", "blue": "藍"}
+_SHAPE_ZH = {
+    "round": "圓形",
+    "marquise": "馬眼型",
+    "oval": "橢圓形",
+    "princess": "公主方",
+    "trilliant": "三角形",
+    "emerald": "祖母綠形",
+    "heart": "心形",
+    "radiant": "雷地恩形",
+    "pear": "梨形",
+    "cushion": "枕形",
+}
+
+
+def _material_label(gold: Any, color: Any) -> str:
+    key = str(gold or "").strip().lower()
+    if not key:
+        return ""
+    g = _GOLD_ZH.get(key, str(gold))
+    if key in ("pt950", "s925"):
+        return g
+    c = _COLOR_ZH.get(str(color or "white").strip().lower(), _COLOR_ZH["white"])
+    return f"{g}{c}"
+
+
+def _carat_label(carat: Any) -> str:
+    raw = str(carat or "").strip()
+    if not raw:
+        return ""
+    if raw == "3fen":
+        return "3分"
+    if raw == "4fen":
+        return "4分"
+    if raw.endswith(("ct", "mm", "分")):
+        return raw
+    return f"{raw}ct"
+
+
+def _diamond_label(config: dict) -> str:
+    if str(config.get("category") or "") == "chain":
+        return ""
+    if config.get("diamondKind") == "fancy":
+        fancy = str(config.get("fancyColor") or "").strip().lower()
+        color = _FANCY_ZH.get(fancy, fancy)
+        return f"彩鑽（{color}）" if color else "彩鑽"
+    if config.get("carat") or config.get("diamondKind") == "white":
+        return "白鑽"
+    return ""
+
+
+def _size_chain_parts(cfg: dict) -> list[str]:
+    parts: list[str] = []
+    if cfg.get("ringSize") not in (None, ""):
+        parts.append(f"戒圍 {cfg['ringSize']}")
+    if cfg.get("lengthCm") not in (None, ""):
+        parts.append(f"{cfg['lengthCm']} cm")
+    if cfg.get("chainLength") not in (None, "") and str(cfg.get("category") or "") != "chain":
+        parts.append(f"鍊長 {cfg['chainLength']} cm")
+    if cfg.get("includeChain"):
+        chain = _material_label(cfg.get("chainGold"), cfg.get("chainColor")) or "是"
+        parts.append(f"搭配鍊條 {chain}")
+    return parts
+
+
+def _engraving_parts(cfg: dict) -> list[str]:
+    parts: list[str] = []
+    if cfg.get("engravingBand"):
+        parts.append(f"戒圈刻字 {cfg['engravingBand']}")
+    if cfg.get("engravingRemark"):
+        parts.append(f"金屬刻字 {cfg['engravingRemark']}")
+    if cfg.get("engravingGirdle"):
+        parts.append(f"腰圍刻字 {cfg['engravingGirdle']}")
+    return parts
+
+
+def cart_details_from_config(config: dict | None) -> str:
+    """Compact Traditional Chinese line: metal · carat · diamond · size · chain · engraving."""
+    cfg = _as_dict(config)
+    parts: list[str] = []
+    for value in (
+        _material_label(cfg.get("gold"), cfg.get("color")),
+        _carat_label(cfg.get("carat")),
+        _diamond_label(cfg),
+    ):
+        if value:
+            parts.append(value)
+    shape = str(cfg.get("diamondShape") or "").strip()
+    if shape and shape != "round":
+        parts.append(_SHAPE_ZH.get(shape, shape))
+    try:
+        stones = int(cfg.get("stoneCount") or 0)
+    except (TypeError, ValueError):
+        stones = 0
+    if stones > 1:
+        parts.append(f"{stones}顆")
+    parts.extend(_size_chain_parts(cfg))
+    parts.extend(_engraving_parts(cfg))
+    return " · ".join(parts)
+
+
+# Same pipeline admin sets (admin-orders.js STATUS_OPTIONS + cancelled).
+ORDER_STATUS_FLOW = (
+    "received",
+    "deposit_confirmed",
+    "dna_lab",
+    "in_production",
+    "quality_check",
+    "shipped",
+    "completed",
+)
+
+ORDER_STATUS_LABELS_ZH = {
+    "received": "已收到申請",
+    "dna_lab": "DNA 萃取鑑定中",
+    "deposit_confirmed": "訂金已確認",
+    "in_production": "製作中",
+    "quality_check": "品管檢驗中",
+    "shipped": "已出貨",
+    "completed": "已完成",
+    "cancelled": "已取消",
+}
+
+ORDER_STATUS_COLORS = {
+    "received": "#e0a458",
+    "dna_lab": "#6c9bd1",
+    "deposit_confirmed": "#5bc0de",
+    "in_production": "#9cefef",
+    "quality_check": "#5ecfcf",
+    "shipped": "#9b7fd4",
+    "completed": "#4caf7d",
+    "cancelled": "#8a817b",
+}
+
+_FULFILLMENT_ZH = {"pickup": "門市自取", "delivery": "宅配到府"}
+
+
+def order_status_steps(status: str | None) -> list[dict[str, str]]:
+    """Progress steps for member/admin pipeline; empty when cancelled."""
+    code = (status or "").strip().lower()
+    if code in {"cancelled", "canceled"}:
+        return []
+    idx = ORDER_STATUS_FLOW.index(code) if code in ORDER_STATUS_FLOW else 0
+    steps: list[dict[str, str]] = []
+    for i, step in enumerate(ORDER_STATUS_FLOW):
+        if i < idx:
+            state = "complete"
+        elif i == idx:
+            state = "current"
+        else:
+            state = "incomplete"
+        steps.append(
+            {
+                "code": step,
+                "label": ORDER_STATUS_LABELS_ZH[step],
+                "state": state,
+                "color": ORDER_STATUS_COLORS[step],
+            }
+        )
+    return steps
+
+
+def enrich_member_order(order: dict) -> dict:
+    """Attach member-facing labels, details_zh, and status progress steps."""
+    if not order:
+        return order
+    status = (order.get("status") or "").strip().lower()
+    order["status"] = status
+    order["status_label"] = ORDER_STATUS_LABELS_ZH.get(status, status or "—")
+    order["status_cancelled"] = status in {"cancelled", "canceled"}
+    order["status_steps"] = order_status_steps(status)
+    config = _as_dict(order.get("config_json"))
+    order["details_zh"] = cart_details_from_config(config)
+    method = order.get("fulfillment_method")
+    order["fulfillment_label"] = _FULFILLMENT_ZH.get(method or "", method or "—")
+    if method == "delivery":
+        order["shipping_line"] = " ".join(
+            part
+            for part in (
+                order.get("shipping_city"),
+                order.get("shipping_postal"),
+                order.get("shipping_address"),
+            )
+            if part
+        )
+    else:
+        order["shipping_line"] = ""
+    name = (
+        order.get("product_name")
+        or order.get("summary_zh")
+        or order.get("summary")
+        or "訂製品項"
+    )
+    order["display_name"] = name
+    return order
+
+
 def pack_order_config(config: dict[str, Any]) -> tuple[dict, dict, str | None, str, float | None]:
     """Split shop config into persisted config_json, pricing_json, summary, total."""
     cfg = dict(config)

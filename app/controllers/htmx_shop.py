@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from urllib.parse import quote
 
 from fastapi import APIRouter, Request
@@ -16,6 +17,7 @@ from app.controllers.shop_controller import (
 )
 from app.database import get_connection
 
+logger = logging.getLogger(__name__)
 router = APIRouter(tags=["htmx-shop"])
 
 
@@ -52,6 +54,9 @@ async def cart_delete(request: Request) -> HTMLResponse:
 
 @router.get("/checkout", response_class=HTMLResponse)
 async def checkout_partial(request: Request) -> Response:
+    from app.image_urls import is_uuid
+    from app.profile_schema import fetch_profile
+
     raw_ids = (
         request.query_params.get("items") or request.query_params.get("item") or ""
     ).strip()
@@ -61,24 +66,30 @@ async def checkout_partial(request: Request) -> Response:
         if raw_ids:
             next_path = f"/checkout.html?items={raw_ids}"
         return hx_redirect("/login.html?next=" + quote(next_path, safe=""))
-    item_ids = [s.strip() for s in raw_ids.split(",") if s.strip()]
+    item_ids = [
+        s.strip() for s in raw_ids.split(",") if s.strip() and is_uuid(s.strip())
+    ]
     if not item_ids:
         return hx_redirect("/cart.html")
-    items = fetch_cart_items(user_id, item_ids)
+    try:
+        items = fetch_cart_items(user_id, item_ids)
+    except Exception:
+        logger.exception("htmx checkout fetch_cart_items failed")
+        return hx_redirect("/cart.html")
     if not items:
         return hx_redirect("/cart.html")
     if any(i.get("available") is False for i in items):
         return hx_redirect("/cart.html")
-    with get_connection() as conn, conn.cursor() as cur:
-        cur.execute(
-            """
-            select p.full_name, p.phone, p.shipping_postal, p.shipping_city,
-                   p.shipping_address, u.email
-            from profiles p join users u on u.id = p.id where p.id = %s
-            """,
-            (user_id,),
-        )
-        profile = cur.fetchone()
+    profile: dict = {}
+    try:
+        with get_connection() as conn, conn.cursor() as cur:
+            profile = dict(fetch_profile(cur, user_id) or {})
+            cur.execute("select email from users where id = %s", (user_id,))
+            user_row = cur.fetchone() or {}
+            profile["email"] = user_row.get("email") or profile.get("email") or ""
+    except Exception:
+        logger.exception("htmx checkout profile load failed")
+        profile = {}
     subtotal = sum(float(i.get("total_price") or 0) for i in items)
     return html(
         request,
@@ -86,7 +97,7 @@ async def checkout_partial(request: Request) -> Response:
         {
             "items": items,
             "item_ids": [str(i["id"]) for i in items],
-            "profile": profile or {},
+            "profile": profile,
             "subtotal": subtotal,
             "coupon": None,
             "coupon_error": None,
@@ -101,18 +112,39 @@ async def checkout_partial(request: Request) -> Response:
 async def checkout_coupon(request: Request) -> HTMLResponse:
     user_id = get_user_id(request)
     if not user_id:
-        return html(request, "checkout_coupon_result.html", {"coupon_error": "請先登入"}, 401)
+        return html(
+            request,
+            "checkout_coupon_result.html",
+            {"coupon_error": "請先登入", "oob_totals": False},
+            401,
+        )
     form = await request.form()
     code = str(form.get("couponCode") or "").strip()
     item_ids = [s for s in str(form.get("itemIds") or "").split(",") if s]
+    items = fetch_cart_items(user_id, item_ids) if item_ids else []
+    subtotal = sum(float(i.get("total_price") or 0) for i in items)
     result = await validate_coupon_body(user_id, {"code": code, "itemIds": item_ids or None})
     if isinstance(result, Response) and getattr(result, "status_code", 200) >= 400:
         return html(
             request,
             "checkout_coupon_result.html",
-            {"coupon_error": json_error_message(result, "優惠碼無效"), "coupon": None},
+            {
+                "coupon_error": json_error_message(result, "優惠碼無效"),
+                "coupon": None,
+                "subtotal": subtotal,
+                "oob_totals": True,
+            },
         )
-    return html(request, "checkout_coupon_result.html", {"coupon": result, "coupon_error": None})
+    return html(
+        request,
+        "checkout_coupon_result.html",
+        {
+            "coupon": result,
+            "coupon_error": None,
+            "subtotal": subtotal,
+            "oob_totals": True,
+        },
+    )
 
 
 @router.post("/checkout/submit")

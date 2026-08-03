@@ -1,9 +1,8 @@
 {% if coupon_error %}
-<p class="form-msg is-error" role="alert">{{ coupon_error }}</p>
+<p class="checkout-coupon-error" role="alert">{{ coupon_error }}</p>
 {% elif coupon %}
-<p class="form-msg is-ok" role="status">
+<p class="checkout-coupon-ok" role="status">
   已套用 {{ coupon.code }}{% if coupon.label %}（{{ coupon.label }}）{% endif %}
-  — 折扣 {{ format_twd(coupon.discountAmount) }}，應付 {{ format_twd(coupon.total) }}
 </p>
 <script>
 (function(){
@@ -11,4 +10,11 @@
   if(el) el.value={{ coupon.code|tojson }};
 })();
 </script>
+{% endif %}
+{% if oob_totals and subtotal is defined %}
+<div id="checkout-totals" hx-swap-oob="true">
+  {% include "partials/htmx/checkout_totals.html" %}
+</div>
+{% set payable = coupon.total if coupon and coupon.total is defined else subtotal %}
+<div id="checkout-mobile-total" hx-swap-oob="innerHTML">{{ format_twd(payable) }}</div>
 {% endif %}

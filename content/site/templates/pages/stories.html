@@ -9,6 +9,22 @@
   hx-get="/htmx/stories"
   hx-trigger="load"
   hx-swap="innerHTML">
-  <section class="page-section"><div class="container"><p>載入見證…</p></div></section>
+  <section class="stories-page page-section">
+    <div class="container">
+      <header class="price-reference-head">
+        <p class="eyebrow">STORIES</p>
+        <h1 class="price-reference-title">客戶見證</h1>
+        <p class="price-reference-lead">真實故事，銘印成永恆。</p>
+      </header>
+      <div class="stories-page-masonry skel-panel" aria-busy="true" aria-label="載入見證中">
+        <article class="stories-page-card stories-page-card--skel" data-aspect="0" aria-hidden="true"><div class="stories-page-card__media"></div></article>
+        <article class="stories-page-card stories-page-card--skel" data-aspect="1" aria-hidden="true"><div class="stories-page-card__media"></div></article>
+        <article class="stories-page-card stories-page-card--skel" data-aspect="2" aria-hidden="true"><div class="stories-page-card__media"></div></article>
+        <article class="stories-page-card stories-page-card--skel" data-aspect="3" aria-hidden="true"><div class="stories-page-card__media"></div></article>
+        <article class="stories-page-card stories-page-card--skel" data-aspect="4" aria-hidden="true"><div class="stories-page-card__media"></div></article>
+        <article class="stories-page-card stories-page-card--skel" data-aspect="5" aria-hidden="true"><div class="stories-page-card__media"></div></article>
+      </div>
+    </div>
+  </section>
 </div>
 {% endblock %}

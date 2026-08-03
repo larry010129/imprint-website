@@ -15,7 +15,7 @@
   var COLOR_LABELS = { white: 'K白', yellow: 'K黃', rose: '玫瑰金' };
   var FULFILLMENT_LABELS = { pickup: '門市自取', delivery: '宅配到府' };
   var STATUS_FLOW = [
-    'received', 'dna_lab', 'deposit_confirmed', 'in_production',
+    'received', 'deposit_confirmed', 'dna_lab', 'in_production',
     'quality_check', 'shipped', 'completed',
   ];
   var STATUS_COLORS = {

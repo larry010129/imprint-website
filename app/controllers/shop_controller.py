@@ -14,7 +14,12 @@ from app.catalog import resolve_product_id
 from app.coupons import apply_discount_split, record_redemptions, validate_coupon
 from app.database import get_connection, get_transaction
 from app.image_urls import config_image_url
-from app.orders import attach_order_display, attach_order_relations, pack_order_config
+from app.orders import (
+    attach_order_display,
+    attach_order_relations,
+    cart_details_from_config,
+    pack_order_config,
+)
 from app.pricing import compute_order_pricing, get_product_variant, normalize_gold
 
 router = APIRouter(tags=["shop"])
@@ -427,6 +432,14 @@ async def update_my_order(request: Request) -> dict:
 
 def fetch_cart_items(user_id: str, item_ids: list[str] | None = None) -> list[dict]:
     """Shared cart loader for JSON API + HTMX partials."""
+    from app.image_urls import is_uuid
+
+    # cart_items.id is uuid — bad strings raise InvalidTextRepresentation (500).
+    if item_ids is not None:
+        item_ids = [str(i).strip() for i in item_ids if is_uuid(str(i))]
+        if not item_ids:
+            return []
+
     with get_connection() as conn, conn.cursor() as cur:
         if item_ids:
             cur.execute(
@@ -440,7 +453,7 @@ def fetch_cart_items(user_id: str, item_ids: list[str] | None = None) -> list[di
             )
         items = cur.fetchall()
         for item in items:
-            config = item.get("config_json") or {}
+            config = _cart_item_config(item)
             item["image_url"] = config_image_url(
                 cur,
                 config,
@@ -448,6 +461,7 @@ def fetch_cart_items(user_id: str, item_ids: list[str] | None = None) -> list[di
                 category=item.get("category"),
             )
             annotate_cart_item(cur, item)
+            item["details_zh"] = cart_details_from_config(config)
     return items
 
 

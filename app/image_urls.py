@@ -18,6 +18,22 @@ _UUID = re.compile(
 _VALID_CATEGORIES = frozenset({"pendant", "ring", "earring", "bracelet", "chain"})
 _DIAMOND_COLOR_ORDER = ("white", "yellow", "blue", "pink")
 _DIAMOND_COLORS = frozenset(_DIAMOND_COLOR_ORDER)
+_DIAMOND_MATRIX_SHAPES = frozenset(
+    {
+        "round",
+        "marquise",
+        "oval",
+        "princess",
+        "trilliant",
+        "emerald",
+        "heart",
+        "radiant",
+        "pear",
+        "cushion",
+        "asscher",
+    }
+)
+_DIAMOND_CATEGORY_THUMB = "/static/images/diamonds/colors/catalog-cluster.png"
 
 _IMAGE_ROOT = "/static/images/shop-product/"
 
@@ -330,8 +346,55 @@ def shop_style_thumb_url(style_key: str | None) -> str:
 
 def shop_category_thumb_url(category: str | None) -> str:
     cat = (category or "").strip().lower()
+    if cat == "diamond":
+        return _DIAMOND_CATEGORY_THUMB if static_url_exists(_DIAMOND_CATEGORY_THUMB) else ""
     rel = _CATEGORY_THUMB.get(cat)
     return _join_shop_path(rel) if rel else ""
+
+
+def diamond_matrix_image_url(
+    shape: str | None = None,
+    diamond_color: str | None = None,
+) -> str:
+    """Loose memorial-diamond preview from public/images/diamonds/matrix/."""
+    shape_id = (shape or "round").strip().lower()
+    if shape_id not in _DIAMOND_MATRIX_SHAPES:
+        shape_id = "round"
+    color_id = _resolve_diamond(diamond_color)
+    url = f"/static/images/diamonds/matrix/{shape_id}-{color_id}.png"
+    if static_url_exists(url):
+        return url
+    if color_id != "white":
+        white = f"/static/images/diamonds/matrix/{shape_id}-white.png"
+        if static_url_exists(white):
+            return white
+    return ""
+
+
+def memorial_diamond_color_options() -> list[dict[str, str]]:
+    """White + fancy colors that have a round matrix PNG (preview source of truth)."""
+    options: list[dict[str, str]] = []
+    labels = {
+        "white": ("白鑽", "White"),
+        "yellow": ("黃鑽", "Yellow"),
+        "blue": ("藍鑽", "Blue"),
+        "pink": ("粉鑽", "Pink"),
+    }
+    for color_id in _DIAMOND_COLOR_ORDER:
+        url = diamond_matrix_image_url("round", color_id)
+        if not url:
+            continue
+        label_zh, label_en = labels[color_id]
+        options.append(
+            {
+                "id": color_id,
+                "kind": "white" if color_id == "white" else "fancy",
+                "labelZh": label_zh,
+                "labelEn": label_en,
+                "imageUrl": url,
+            }
+        )
+    return options
 
 
 def category_image_url(category: str | None) -> str:
@@ -375,6 +438,13 @@ def config_image_url(
     color = _resolve_color(config.get("color") or "white")
     diamond = config_diamond_color(config)
     chain_color = config.get("chainColor") if config.get("includeChain") else None
+
+    # Memorial loose diamond — not letter SKUs; matrix PNG is the real preview.
+    if cat == "diamond":
+        matrix = diamond_matrix_image_url(config.get("diamondShape"), diamond)
+        if matrix:
+            return matrix
+        return shop_category_thumb_url("diamond")
 
     pid = product_id
     if not pid and type_ref and cat:
