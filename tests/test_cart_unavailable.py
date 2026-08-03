@@ -222,3 +222,67 @@ def test_delete_cart_item_works_when_unavailable(monkeypatch):
     assert result == {"ok": True}
     assert cur.deleted
     assert cur.deleted[0][0] == item["id"]
+
+
+def test_checkout_reprices_poisoned_client_pricing(monkeypatch):
+    """Stale/low clientPricing must not become order total — server compute wins."""
+    from app.controllers import shop_controller as sc
+
+    server_total = 18500.0
+    item = _ring_item(
+        total_price=1,
+        config_json={
+            "category": "ring",
+            "type": "ring-A",
+            "gold": "14k",
+            "carat": "0.3",
+            "clientPricing": {"total": 1, "ready": True},
+        },
+    )
+    cur = _Cur(rows=[item])
+    inserted: list[dict] = []
+
+    monkeypatch.setattr(sc, "get_connection", lambda: _ConnOuter(cur))
+    monkeypatch.setattr(sc, "get_transaction", lambda: _ConnOuter(cur))
+    monkeypatch.setattr(sc, "_request_is_shop_preview", lambda *a, **k: False)
+    monkeypatch.setattr(sc, "_user_id", lambda request: "user-1")
+    monkeypatch.setattr(sc, "_profile", lambda cur, user_id: None)
+    monkeypatch.setattr(
+        sc,
+        "get_product_variant",
+        lambda cur, **kwargs: {"gold": "14k", "carat": "0.3", "weight_chin": 1.0},
+    )
+    monkeypatch.setattr(
+        sc,
+        "compute_order_pricing",
+        lambda cur, data, **kwargs: {"ready": True, "total": server_total},
+    )
+    monkeypatch.setattr(sc, "_clamp_pendant_chain_sell_mode", lambda *a, **k: None)
+
+    def fake_insert(cur, user_id, customer, config, **kwargs):
+        inserted.append(config)
+        return {
+            "order_id": "ord-1",
+            "order_number": "IM-TEST-1",
+            "order_subtotal": float(config["clientPricing"]["total"]),
+            "discount_amount": 0,
+            "order_total": float(config["clientPricing"]["total"]),
+        }
+
+    monkeypatch.setattr(sc, "_insert_order", fake_insert)
+
+    request = SimpleNamespace(cookies={}, headers={}, query_params={})
+    result = asyncio.run(
+        sc._cart_checkout_impl(
+            request,
+            {
+                "itemIds": [item["id"]],
+                "customerName": "A",
+                "customerPhone": "0912",
+            },
+        )
+    )
+    assert result == {"ok": True, "orderNumbers": ["IM-TEST-1"]}
+    assert len(inserted) == 1
+    assert inserted[0]["clientPricing"]["total"] == server_total
+    assert inserted[0]["clientPricing"]["total"] != 1

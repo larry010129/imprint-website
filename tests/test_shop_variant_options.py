@@ -245,8 +245,11 @@ def test_shop_js_fancy_carat_dropdown_intersects_admin_min():
     assert "stockFancyDiamondColors" in (
         ROOT / "public" / "js" / "shop-assets.js"
     ).read_text(encoding="utf-8")
-    assert "shop.js?v=129" in (
+    assert "shop.js?v=131" in (
         ROOT / "content" / "site" / "templates" / "pages" / "shop" / "calculator.html"
+    ).read_text(encoding="utf-8")
+    assert "shop.js?v=131" in (
+        ROOT / "content" / "site" / "page-registry.json"
     ).read_text(encoding="utf-8")
     # Step 2 style grid: force white metal + white diamond (not thumbUrl / defaultColor first).
     assert "function styleGridImageUrl" in src
@@ -254,6 +257,8 @@ def test_shop_js_fancy_carat_dropdown_intersects_admin_min():
     assert "productImageResolve(\n        assetId, 'white', 'white', 'white'" in src or (
         "productImageResolve(" in src and "assetId, 'white', 'white', 'white'" in src
     )
+    # Lite thumbUrl is preferred when usable (after white-white / stock fallbacks).
+    assert "if (product?.thumbUrl && isUsableCatalogImageUrl(product.thumbUrl)) return product.thumbUrl;" in src
     assert "shop-assets.js?v=15" in (
         ROOT / "content" / "site" / "templates" / "pages" / "shop" / "calculator.html"
     ).read_text(encoding="utf-8")
@@ -636,6 +641,99 @@ console.log(JSON.stringify({
     # Rose metal earring keeps rose_gold fancy.
     assert "rose" in out["earringRoseResolve"]["src"]
     assert "pink" in out["earringRoseResolve"]["src"]
+
+
+def test_shop_js_girdle_not_gated_by_allows_engraving():
+    """腰圍刻字 stays visible when allowsEngraving=false (except chain)."""
+    src = (ROOT / "public" / "js" / "shop.js").read_text(encoding="utf-8")
+    assert "const hasGirdle = state.category !== 'chain';" in src
+    assert "const hasGirdle = allows && state.category !== 'chain';" not in src
+    # Band/remark still follow allowsEngraving.
+    assert "const hasBand = allows && state.category === 'ring';" in src
+    assert (
+        "const hasRemark = allows && state.category !== 'chain' && !isDiamondOnlyCategory();"
+        in src
+    )
+
+
+def test_shop_js_merge_preserves_lite_thumb_url():
+    """Full product detail omit thumbUrl → keep lite catalog thumb for step-2 grid."""
+    import json
+    import subprocess
+
+    src = (ROOT / "public" / "js" / "shop.js").read_text(encoding="utf-8")
+    assert "function mergeProductIntoCatalog" in src
+    assert "!product.thumbUrl && prev?.thumbUrl" in src
+    assert "thumbUrl: prev.thumbUrl" in src
+    # ensureProductDetail must return merged (not raw full that dropped thumbUrl).
+    assert "if (targetCat) return mergeProductIntoCatalog(targetCat, full);" in src
+
+    browser_script = r"""
+function isUsableCatalogImageUrl(url) {
+  if (!url || typeof url !== 'string') return false;
+  const u = url.trim();
+  return u.startsWith('/') || /^https?:\/\//i.test(u);
+}
+function mergeProductIntoCatalog(catalog, category, product) {
+  if (!category || !product?.id) return product;
+  const list = catalog[category] || (catalog[category] = []);
+  const idx = list.findIndex((p) => String(p.id) === String(product.id));
+  if (idx >= 0) {
+    const prev = list[idx];
+    const merged =
+      !product.thumbUrl && prev?.thumbUrl
+        ? { ...product, thumbUrl: prev.thumbUrl }
+        : product;
+    list[idx] = merged;
+    return merged;
+  }
+  list.push(product);
+  return product;
+}
+function styleGridImageUrl(product, isUsable) {
+  if (product?.thumbUrl && isUsable(product.thumbUrl)) return product.thumbUrl;
+  return '';
+}
+
+const catalog = {
+  ring: [{ id: 'prod-1', thumbUrl: '/static/uploads/products/lite-thumb.png' }],
+};
+const full = { id: 'prod-1', weights: { '14k': { '0.3': 1 } }, images: {} };
+const merged = mergeProductIntoCatalog(catalog, 'ring', full);
+const fullWithThumb = { id: 'prod-1', thumbUrl: '/static/uploads/products/full-thumb.png', weights: {} };
+const replaced = mergeProductIntoCatalog(
+  { ring: [{ id: 'prod-1', thumbUrl: '/static/uploads/products/lite-thumb.png' }] },
+  'ring',
+  fullWithThumb,
+);
+console.log(JSON.stringify({
+  preserved: merged.thumbUrl,
+  catalogThumb: catalog.ring[0].thumbUrl,
+  hasWeights: !!merged.weights,
+  preferFullThumb: replaced.thumbUrl,
+  gridUsesThumb: styleGridImageUrl(merged, isUsableCatalogImageUrl),
+  omitKeepsEmpty: mergeProductIntoCatalog(
+    { ring: [{ id: 'prod-2' }] },
+    'ring',
+    { id: 'prod-2', weights: {} },
+  ).thumbUrl || null,
+}));
+"""
+    out = json.loads(
+        subprocess.run(
+            ["node", "-e", browser_script],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout
+    )
+    assert out["preserved"] == "/static/uploads/products/lite-thumb.png"
+    assert out["catalogThumb"] == "/static/uploads/products/lite-thumb.png"
+    assert out["hasWeights"] is True
+    assert out["preferFullThumb"] == "/static/uploads/products/full-thumb.png"
+    assert out["gridUsesThumb"] == "/static/uploads/products/lite-thumb.png"
+    assert out["omitKeepsEmpty"] is None
 
 
 def test_validate_product_variant_rejects_unconfigured_combo(monkeypatch):

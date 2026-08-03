@@ -1248,6 +1248,13 @@ async def account_action(request: Request) -> JSONResponse:
                 return JSONResponse(status_code=403, content={"error": blocked})
             hard_delete_user(cur, account_id)
         elif action == "reset-password":
+            admin_password = str(body.get("password") or body.get("adminPassword") or "")
+            admin_totp = str(body.get("totpCode") or body.get("code") or "").strip()
+            if not admin_password:
+                return JSONResponse(status_code=400, content={"error": "請輸入您的管理員密碼以確認"})
+            step_err = verify_step_up_password(str(admin_id), admin_password, admin_totp or None)
+            if step_err:
+                return JSONResponse(status_code=401, content={"error": step_err})
             new_password = body.get("newPassword") or ""
             if len(str(new_password)) < 8:
                 return JSONResponse(status_code=400, content={"error": "密碼至少需要 8 碼"})
@@ -1256,6 +1263,13 @@ async def account_action(request: Request) -> JSONResponse:
                 (hash_password(str(new_password)), account_id),
             )
         elif action == "set-role":
+            admin_password = str(body.get("password") or body.get("adminPassword") or "")
+            admin_totp = str(body.get("totpCode") or body.get("code") or "").strip()
+            if not admin_password:
+                return JSONResponse(status_code=400, content={"error": "請輸入您的管理員密碼以確認"})
+            step_err = verify_step_up_password(str(admin_id), admin_password, admin_totp or None)
+            if step_err:
+                return JSONResponse(status_code=401, content={"error": step_err})
             role = body.get("role")
             if role not in {"member", "partner", "admin"}:
                 return JSONResponse(status_code=400, content={"error": "invalid role"})

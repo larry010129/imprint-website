@@ -638,11 +638,11 @@ async def validate_coupon_body(user_id: str, body: dict[str, Any]) -> dict:
 
         subtotal = 0.0
         for item in items:
-            config = item.get("config_json") or {}
-            if not isinstance(config, dict):
-                config = {}
-            _cfg, _pricing, _pid, _summary, total = pack_order_config(config)
-            subtotal += float(total or item.get("total_price") or 0)
+            config = _cart_item_config(item)
+            pricing = compute_order_pricing(cur, config, require_published=True)
+            if not pricing.get("ready"):
+                return _err(400, CART_UNAVAILABLE_CHECKOUT_MSG)
+            subtotal += float(pricing.get("total") or 0)
 
         result, err = validate_coupon(cur, code=str(code), user_id=user_id, subtotal=subtotal)
         if err:
@@ -726,18 +726,20 @@ async def _cart_checkout_impl(request: Request, body: dict[str, Any] | None = No
         configs: list[dict[str, Any]] = []
         item_totals: list[float] = []
         for item in items:
-            config = item.get("config_json") or {}
-            if not isinstance(config, dict):
-                config = {}
+            config = _cart_item_config(item)
             err = _validate_config(config)
             if err:
                 return _err(400, err)
             chain_err = _clamp_pendant_chain_sell_mode(cur, config)
             if chain_err:
                 return _err(400, chain_err)
+            # Server reprice — never trust stored clientPricing / total_price.
+            pricing = compute_order_pricing(cur, config, require_published=True)
+            if not pricing.get("ready"):
+                return _err(400, CART_UNAVAILABLE_CHECKOUT_MSG)
+            config["clientPricing"] = pricing
             configs.append(config)
-            _cfg, _pricing, _pid, _summary, total = pack_order_config(config)
-            item_totals.append(float(total or item.get("total_price") or 0))
+            item_totals.append(float(pricing.get("total") or 0))
 
     # Validation is done — now write. get_transaction() (autocommit off) makes
     # this all-or-nothing: if inserting order N of M raises, everything commits

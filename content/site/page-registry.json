@@ -33,7 +33,7 @@
         "type": "module"
       },
       {
-        "src": "/static/js/home-banners.js?v=2",
+        "src": "/static/js/home-banners.js?v=3",
         "defer": true
       }
     ],
@@ -1001,7 +1001,7 @@
         "src": "/static/js/shop-terms.js?v=4"
       },
       {
-        "src": "/static/js/shop.js?v=129"
+        "src": "/static/js/shop.js?v=131"
       }
     ],
     "head_extras": []

@@ -269,9 +269,22 @@ def test_admin_reset_password_min_eight(client):
         )
         assert login.status_code == 200
 
+        missing_step = client.post(
+            "/api/admin/account-action",
+            json={"id": target_id, "action": "reset-password", "newPassword": "longpass1"},
+            cookies=login.cookies,
+        )
+        assert missing_step.status_code == 400
+        assert "密碼" in missing_step.json().get("error", "")
+
         short = client.post(
             "/api/admin/account-action",
-            json={"id": target_id, "action": "reset-password", "newPassword": "short1"},
+            json={
+                "id": target_id,
+                "action": "reset-password",
+                "newPassword": "short1",
+                "password": admin_password,
+            },
             cookies=login.cookies,
         )
         assert short.status_code == 400
@@ -279,13 +292,70 @@ def test_admin_reset_password_min_eight(client):
 
         ok = client.post(
             "/api/admin/account-action",
-            json={"id": target_id, "action": "reset-password", "newPassword": "longpass1"},
+            json={
+                "id": target_id,
+                "action": "reset-password",
+                "newPassword": "longpass1",
+                "password": admin_password,
+            },
             cookies=login.cookies,
         )
         assert ok.status_code == 200
     finally:
         _cleanup_user(target_id)
         _cleanup_user(admin_id)
+
+
+def test_admin_set_role_requires_step_up(client):
+    admin_id, admin_email, admin_password = _create_user(admin=True)
+    target_id, _target_email, _ = _create_user()
+    try:
+        login = client.post(
+            "/api/auth/login",
+            json={"email": admin_email, "password": admin_password},
+        )
+        assert login.status_code == 200
+
+        missing = client.post(
+            "/api/admin/account-action",
+            json={"id": target_id, "action": "set-role", "role": "partner"},
+            cookies=login.cookies,
+        )
+        assert missing.status_code == 400
+        assert "密碼" in missing.json().get("error", "")
+
+        ok = client.post(
+            "/api/admin/account-action",
+            json={
+                "id": target_id,
+                "action": "set-role",
+                "role": "partner",
+                "password": admin_password,
+            },
+            cookies=login.cookies,
+        )
+        assert ok.status_code == 200
+    finally:
+        _cleanup_user(target_id)
+        _cleanup_user(admin_id)
+
+
+def test_csrf_rejects_cross_site_origin_on_cart_post(client):
+    user_id, email, password = _create_user()
+    try:
+        login = client.post("/api/auth/login", json={"email": email, "password": password})
+        assert login.status_code == 200
+
+        resp = client.post(
+            "/api/cart",
+            json={"category": "ring", "type": "ring-A", "gold": "14k", "carat": "0.3"},
+            cookies=login.cookies,
+            headers={"Origin": "https://evil.example"},
+        )
+        assert resp.status_code == 403
+        assert "來源" in resp.json().get("error", "")
+    finally:
+        _cleanup_user(user_id)
 
 
 def test_admin_delete_requires_password(client):

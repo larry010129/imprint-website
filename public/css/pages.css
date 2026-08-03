@@ -751,6 +751,7 @@
 
 /* price.html — Cta4-style planning strip (compact) */
 .price-page-top{ padding-top:4px; }
+.price-page__h1{ margin:0 0 20px; font-size:clamp(28px,4vw,40px); }
 .price-page-body{ padding-bottom:80px; }
 .price-cta{ margin-bottom:20px; }
 .price-cta__card{

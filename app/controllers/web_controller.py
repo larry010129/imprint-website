@@ -97,7 +97,10 @@ def load_youtube_latest_video() -> dict | None:
 
 @lru_cache(maxsize=None)
 def _load_fragment(relpath: str) -> str:
-    return (_FRAGMENTS_DIR / relpath).read_text(encoding="utf-8")
+    path = _FRAGMENTS_DIR / relpath
+    if not path.is_file():
+        raise StarletteHTTPException(status_code=404, detail="Not Found")
+    return path.read_text(encoding="utf-8")
 
 
 @lru_cache(maxsize=512)

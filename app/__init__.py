@@ -169,7 +169,20 @@ def create_app() -> FastAPI:
     application.add_middleware(GZipMiddleware, minimum_size=1024, compresslevel=5)
 
     _CSRF_SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS", "TRACE"})
-    _CSRF_PREFIXES = ("/api/auth/", "/htmx/", "/api/admin/")
+    # Cookie-auth mutating routes. startswith so /api/cart covers cart-item + cart-checkout.
+    _CSRF_PREFIXES = (
+        "/api/auth/",
+        "/htmx/",
+        "/api/admin/",
+        "/api/cart",
+        "/api/order",
+        "/api/coupon",
+        "/api/v1/auth/",
+        "/api/v1/admin/",
+        "/api/v1/cart",
+        "/api/v1/order",
+        "/api/v1/coupon",
+    )
 
     @application.middleware("http")
     async def csrf_same_site_origin(request, call_next):
