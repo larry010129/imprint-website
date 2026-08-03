@@ -1566,7 +1566,7 @@
   }
 
   function pendantSellModeTogglesHtml(product, category) {
-    // Left 可不含鍊賣 = customer may choose with/without chain.
+    // Left 不含鍊賣 = customer may choose with/without chain.
     // Right 含鍊賣 = with-chain only (no choice).
     var chainOnly = !!(product && product.allows_with_chain !== false
       && product.allows_pendant_only === false);
@@ -1575,7 +1575,7 @@
     return (
       '<div class="ap-pendant-sell-modes ap-field-wide" id="apPendantSellModes"' + hiddenAttr + '>' +
         '<div class="ap-sell-mode-dual' + (chainOnly ? ' is-chain' : '') + '" id="apSellModeDual">' +
-          '<button type="button" class="ap-sell-mode-side" data-side="only">可不含鍊賣</button>' +
+          '<button type="button" class="ap-sell-mode-side" data-side="only">不含鍊賣</button>' +
           '<label class="ap-switch ap-cine-switch">' +
             '<input type="checkbox" class="ap-switch-input" name="sellWithChain"' +
               (chainOnly ? ' checked' : '') + ' aria-label="項墜販售方式">' +
@@ -1584,7 +1584,7 @@
           '<button type="button" class="ap-sell-mode-side" data-side="chain">含鍊賣</button>' +
         '</div>' +
         '<p class="ap-section-hint ap-pendant-sell-hint">' +
-          '左＝可不含鍊賣：客人可選要不要鍊；右＝含鍊賣：只能含鍊、客人不能選不含鍊。' +
+          '左＝不含鍊賣：客人可選要不要鍊；右＝含鍊賣：只能含鍊、客人不能選不含鍊。' +
         '</p>' +
       '</div>'
     );

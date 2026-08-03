@@ -272,12 +272,12 @@ def validate_product_fields(body: dict | None, *, valid_categories: set[str] | N
     cleaned["allowsEngraving"] = bool(body.get("allowsEngraving", True))
     cleaned["allowsFancyShapes"] = bool(body.get("allowsFancyShapes", True))
 
-    # Pendant sell modes (可不含鍊賣 / 含鍊賣). Non-pendant rows keep both true.
+    # Pendant sell modes (不含鍊賣 / 含鍊賣). Non-pendant rows keep both true.
     if category == "pendant":
         allows_pendant_only = bool(body.get("allowsPendantOnly", True))
         allows_with_chain = bool(body.get("allowsWithChain", True))
         if not allows_pendant_only and not allows_with_chain:
-            errors.append("pendant must select 可不含鍊賣 or 含鍊賣")
+            errors.append("pendant must select 不含鍊賣 or 含鍊賣")
         cleaned["allowsPendantOnly"] = allows_pendant_only
         cleaned["allowsWithChain"] = allows_with_chain
     else:
@@ -426,8 +426,8 @@ def _format_product_errors(errors: list[str]) -> str:
         "nameZh is required": "請填寫中文名稱",
         "nameEn is required": "請填寫英文名稱（資料用）",
         "invalid defaultColor": "預設顏色無效",
-        "pendant must select 可不含鍊賣 or 含鍊賣": "項墜請選擇「可不含鍊賣」或「含鍊賣」",
-        "pendant must allow 可不含鍊賣 and/or 含鍊賣": "項墜請選擇「可不含鍊賣」或「含鍊賣」",
+        "pendant must select 不含鍊賣 or 含鍊賣": "項墜請選擇「不含鍊賣」或「含鍊賣」",
+        "pendant must allow 不含鍊賣 and/or 含鍊賣": "項墜請選擇「不含鍊賣」或「含鍊賣」",
         "at least one variant is required": "請至少新增一個款式選項（金屬／克拉／蠟重）",
         "at least one product image is required": "請至少上傳一張商品照片",
         "default color must have at least one image": "預設顏色必須至少有一張商品照片",

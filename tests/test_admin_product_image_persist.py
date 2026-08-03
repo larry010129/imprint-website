@@ -175,7 +175,7 @@ def test_validate_pendant_sell_modes():
     assert cleaned["allowsWithChain"] is False
     assert cleaned["allowsFancyShapes"] is True
 
-    # Left mode (可不含鍊賣): customer may choose with/without chain.
+    # Left mode (不含鍊賣): customer may choose with/without chain.
     choose, choose_err = validate_product_fields(
         {
             "category": "pendant",
@@ -239,7 +239,7 @@ def test_validate_pendant_sell_modes():
         }
     )
     assert bad is None
-    assert bad_err and "可不含鍊賣" in bad_err
+    assert bad_err and "不含鍊賣" in bad_err
 
 
 def test_ensure_product_sell_mode_columns_idempotent():

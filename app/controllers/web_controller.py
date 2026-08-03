@@ -378,8 +378,14 @@ def register_pages(app: FastAPI) -> None:
         """Render / load-balancer health — must not 404 or the API service is SIGTERM'd."""
         return JSONResponse({"ok": True, "service": "imprint-api"})
 
+    # Include HEAD: Render probes HEAD / (405 if GET-only → deploy marked unhealthy).
     for meta in [*ALL_PAGES, *STANDALONE_PAGES]:
-        app.add_api_route(meta.route, _make_handler(meta), methods=["GET"], include_in_schema=False)
+        app.add_api_route(
+            meta.route,
+            _make_handler(meta),
+            methods=["GET", "HEAD"],
+            include_in_schema=False,
+        )
 
     @app.get("/favicon.svg", include_in_schema=False)
     async def favicon() -> FileResponse:

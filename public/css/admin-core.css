@@ -428,7 +428,7 @@ button:not(.btn-sm):not(.ap-tab-btn):not([data-slot="button-1"]):not([data-granu
   margin-top:4px;
 }
 .ap-pendant-sell-modes .ap-pendant-sell-hint{flex:1 1 100%;margin:0;}
-/* One switch — left 可不含鍊賣 / right 含鍊賣 */
+/* One switch — left 不含鍊賣 / right 含鍊賣 */
 .ap-sell-mode-dual{
   display:inline-flex;align-items:center;gap:12px;
 }
