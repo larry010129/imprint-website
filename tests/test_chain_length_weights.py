@@ -52,6 +52,7 @@ def test_validate_chain_omits_variant_wax_syncs_from_length_table():
     assert cleaned["variants"][0]["weightChin"] == 0.033
     assert cleaned["variants"][0]["sideStonePriceTwd"] is None
     assert cleaned["variants"][0]["sideStoneCarat"] is None
+    assert cleaned["variants"][0]["sideStoneTotalTwd"] is None
     assert cleaned["lengthWeights"]["1.5mm"]["36"] == 0.099
 
 

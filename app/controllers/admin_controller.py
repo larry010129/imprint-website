@@ -893,10 +893,10 @@ async def product_action(request: Request) -> JSONResponse:
                 """
                 insert into product_variants (
                     product_id, gold, carat, weight_chin, manual_price_twd,
-                    side_stone_price_twd, side_stone_carat
+                    side_stone_price_twd, side_stone_carat, side_stone_total_twd
                 )
                 select %s, gold, carat, weight_chin, manual_price_twd,
-                    side_stone_price_twd, side_stone_carat
+                    side_stone_price_twd, side_stone_carat, side_stone_total_twd
                 from product_variants where product_id = %s
                 """,
                 (copy_id, product_id),

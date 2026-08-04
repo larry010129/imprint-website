@@ -28,6 +28,11 @@
 
 .nav-inner > nav{ flex-shrink:0; }
 
+/* Mobile-first: hide desktop link row (was in React src.css; base.html no longer loads it). */
+[data-site-nav-root] .site-nav-desktop{
+  display:none;
+}
+
 @media (min-width: 861px){
   .nav-inner > nav.site-nav-desktop.nav-menu-col{ flex-shrink:1; min-width:0; }
 }
@@ -37,6 +42,15 @@
 /* Desktop: isolated columns — logo | menu | CTAs never share the same space */
 
 @media (min-width: 861px){
+
+  [data-site-nav-root] .site-nav-desktop{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    width:100%;
+    min-width:0;
+    max-width:100%;
+  }
 
   .nav-inner.container{
 
@@ -617,7 +631,14 @@ a.account-menu-trigger{
     white-space:nowrap;
   }
   [data-site-nav-root] .nav-cta{ flex:0 0 auto; min-width:0; gap:4px; }
-  [data-site-nav-root] .site-nav-account-desktop{ display:none; }
+  /* Cart + account stay in header bar only (not duplicated in drawer). */
+  [data-site-nav-root] .site-nav-account-desktop{ display:flex; align-items:center; }
+  [data-site-nav-root] .site-nav-account-desktop .account-menu-text{ display:none; }
+  [data-site-nav-root] .site-nav-account-desktop .account-menu-trigger{
+    padding:4px;
+    max-width:none;
+    gap:0;
+  }
   [data-site-nav-root] .mobile-menu-toggle,
   .nav-burger.mobile-menu-toggle{
     display:flex;
@@ -634,6 +655,22 @@ a.account-menu-trigger{
   [data-site-nav-root] .nav.is-mobile-menu-open .mobile-menu-toggle{
     position:relative;
     z-index:112;
+    color:var(--ink,#2b2320);
+  }
+  /* Burger bars use background, not color — force ink X on open white drawer. */
+  [data-site-nav-root] .nav.is-mobile-menu-open .nav-burger span{
+    background:var(--ink,#2b2320);
+  }
+  [data-site-nav-root] .nav.is-mobile-menu-open .nav-cart-link{
+    position:relative;
+    z-index:112;
+    color:var(--ink,#2b2320);
+  }
+  [data-site-nav-root] .nav.is-mobile-menu-open .site-nav-account-desktop{
+    position:relative;
+    z-index:112;
+  }
+  [data-site-nav-root] .nav.is-mobile-menu-open .account-menu-name{
     color:var(--ink,#2b2320);
   }
   .mobile-animated-nav{

@@ -468,8 +468,8 @@ button:not(.btn-sm):not(.ap-tab-btn):not([data-slot="button-1"]):not([data-granu
 .ap-variant-block{width:100%;overflow-x:auto;padding-bottom:2px;}
 .ap-variant-head,.ap-variant-row{
   display:grid;
-  grid-template-columns:minmax(70px,0.8fr) minmax(70px,0.8fr) minmax(96px,1fr) minmax(96px,1fr) minmax(88px,0.9fr) minmax(100px,1fr) minmax(110px,1.1fr) 36px;
-  gap:10px;align-items:center;margin-bottom:8px;min-width:min(100%,860px);
+  grid-template-columns:minmax(70px,0.8fr) minmax(70px,0.8fr) minmax(96px,1fr) minmax(96px,1fr) minmax(88px,0.9fr) minmax(100px,1fr) minmax(100px,1fr) minmax(110px,1.1fr) 36px;
+  gap:10px;align-items:center;margin-bottom:8px;min-width:min(100%,960px);
 }
 .ap-variant-block--chain .ap-variant-head,
 .ap-variant-block--chain .ap-variant-row{

@@ -393,7 +393,7 @@
       if (diamondPrice == null) return { ready: false };
     }
 
-    // 配鑽 = 克拉數 × 一克拉價格 (sideStonePrices stores price-per-carat)
+    // 配鑽: fixed total wins; else 克拉數 × 一克拉價格 (sideStonePrices = ppc)
     var sideStonePpc = null;
     var sideTable = product.sideStonePrices && product.sideStonePrices[gold];
     if (category !== 'chain' && sideTable && sideTable[carat] != null) {
@@ -405,7 +405,10 @@
       sideStoneCarat = Number(sideCaratTable[carat]);
     }
     var sideStonePrice = null;
-    if (sideStonePpc != null && sideStoneCarat != null) {
+    var sideTotalTable = product.sideStoneTotals && product.sideStoneTotals[gold];
+    if (category !== 'chain' && sideTotalTable && sideTotalTable[carat] != null) {
+      sideStonePrice = Math.round(Number(sideTotalTable[carat]));
+    } else if (sideStonePpc != null && sideStoneCarat != null) {
       sideStonePrice = Math.round(sideStoneCarat * sideStonePpc);
     }
 

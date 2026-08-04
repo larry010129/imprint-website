@@ -539,7 +539,7 @@ def compute_order_pricing(cur, data: dict[str, Any], *, require_published: bool 
         if diamond_price is None:
             return {"ready": False}
 
-    # 配鑽 = 克拉數 × 一克拉價格 (side_stone_price_twd stores price-per-carat)
+    # 配鑽: fixed total wins; else 克拉數 × 一克拉價格 (side_stone_price_twd = ppc)
     side_stone_ppc = None
     if category != "chain" and variant.get("side_stone_price_twd") is not None:
         side_stone_ppc = float(variant["side_stone_price_twd"])
@@ -547,7 +547,9 @@ def compute_order_pricing(cur, data: dict[str, Any], *, require_published: bool 
     if category != "chain" and variant.get("side_stone_carat") is not None:
         side_stone_carat = float(variant["side_stone_carat"])
     side_stone_price = None
-    if side_stone_ppc is not None and side_stone_carat is not None:
+    if category != "chain" and variant.get("side_stone_total_twd") is not None:
+        side_stone_price = round(float(variant["side_stone_total_twd"]))
+    elif side_stone_ppc is not None and side_stone_carat is not None:
         side_stone_price = round(side_stone_carat * side_stone_ppc)
 
     if earring_qty > 1:

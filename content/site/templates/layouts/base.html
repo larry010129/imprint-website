@@ -30,7 +30,7 @@
 {% endblock %}
 
 <link rel="stylesheet" href="/static/css/base.css?v=4.1">
-<link rel="stylesheet" href="/static/css/nav.css?v=4.6">
+<link rel="stylesheet" href="/static/css/nav.css?v=4.8">
 {% if extra_body_class and 'page-home' in extra_body_class %}
 <link rel="stylesheet" href="/static/css/home.css?v=5.4">
 {% endif %}
@@ -56,7 +56,7 @@
 {% block extra_head %}{% endblock %}
 </head>
 <body class="site-layout{% if extra_body_class %} {{ extra_body_class }}{% endif %}"{% if mvc_page %} data-mvc="{{ mvc_page }}"{% endif %}>
-{# data-site-nav-root: frozen public/react/src.css scopes mobile drawer + hero nav here (was React SiteChrome). #}
+{# data-site-nav-root: nav.css scopes mobile drawer + hero nav here (was React SiteChrome / frozen src.css). #}
 <div class="site-chrome" data-site-nav-root>
 {% include "partials/topbar.html" %}
 {% include "partials/nav.html" %}
@@ -71,14 +71,14 @@
 {% include "partials/footer.html" %}
 <script src="/static/js/htmx.min.js" defer></script>
 <script src="/static/js/nav-dropdown.js?v=1" defer></script>
-<script src="/static/js/nav-chrome.js?v=2" defer></script>
+<script src="/static/js/nav-chrome.js?v=3" defer></script>
 <script src="/static/js/skeleton-ui.js?v=1"></script>
 {% block extra_scripts %}{% endblock %}
 {% if site_cms_sections %}
 <script src="/js/cms-sections.js?v=1" defer></script>
 {% endif %}
 <script src="/static/js/site-layout.js?v=2"></script>
-<script src="/static/js/main.js?v=2.4"></script>
+<script src="/static/js/main.js?v=2.5"></script>
 {% block social_fab %}{% include "partials/social-fab.html" %}{% endblock %}
 {% block botpress_webchat %}{% include "partials/botpress-webchat.html" %}{% endblock %}
 </body>

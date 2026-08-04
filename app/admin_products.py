@@ -342,6 +342,16 @@ def validate_product_fields(body: dict | None, *, valid_categories: set[str] | N
             if side_stone_carat < 0:
                 errors.append(f"invalid side stone carat for {gold}/{carat}")
                 continue
+        side_stone_total = None
+        if variant.get("sideStoneTotalTwd") not in (None, ""):
+            try:
+                side_stone_total = float(variant.get("sideStoneTotalTwd"))
+            except (TypeError, ValueError):
+                errors.append(f"invalid side stone total for {gold}/{carat}")
+                continue
+            if side_stone_total < 0:
+                errors.append(f"invalid side stone total for {gold}/{carat}")
+                continue
         key = f"{gold}:{carat}"
         if key in seen_keys:
             errors.append(f"duplicate variant: {gold} / {carat}")
@@ -355,6 +365,7 @@ def validate_product_fields(body: dict | None, *, valid_categories: set[str] | N
                 "manualPriceTwd": manual_price,
                 "sideStonePriceTwd": side_stone_price,
                 "sideStoneCarat": side_stone_carat,
+                "sideStoneTotalTwd": side_stone_total,
             }
         )
 
@@ -463,6 +474,9 @@ def _format_product_errors(errors: list[str]) -> str:
             continue
         if err.startswith("invalid side stone carat for"):
             parts.append("款式選項：配鑽克拉無效")
+            continue
+        if err.startswith("invalid side stone total for"):
+            parts.append("款式選項：配鑽價錢無效")
             continue
         if err.startswith("duplicate variant"):
             parts.append("款式選項重複：" + err.split(": ", 1)[-1])
@@ -662,9 +676,9 @@ def save_product_children(cur, product_id: str, cleaned: dict) -> None:
             """
             insert into product_variants (
                 product_id, gold, carat, weight_chin, manual_price_twd,
-                side_stone_price_twd, side_stone_carat
+                side_stone_price_twd, side_stone_carat, side_stone_total_twd
             )
-            values (%s, %s, %s, %s, %s, %s, %s)
+            values (%s, %s, %s, %s, %s, %s, %s, %s)
             """,
             (
                 product_id,
@@ -674,6 +688,7 @@ def save_product_children(cur, product_id: str, cleaned: dict) -> None:
                 variant["manualPriceTwd"],
                 variant.get("sideStonePriceTwd"),
                 variant.get("sideStoneCarat"),
+                variant.get("sideStoneTotalTwd"),
             ),
         )
 

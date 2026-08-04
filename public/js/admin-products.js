@@ -726,6 +726,37 @@
     out.textContent = metalWeightLabel(weightInput ? weightInput.value : '', goldSelect ? goldSelect.value : GOLDS[0]);
   }
 
+  /** Auto 配鑽價錢 = cts × 一克拉價格; empty if inputs incomplete. */
+  function sideStoneFormulaTotal(cts, ppc) {
+    var c = parseFloat(cts);
+    var p = parseFloat(ppc);
+    if (!isFinite(c) || !isFinite(p) || c < 0 || p < 0) return '';
+    return String(Math.round(c * p));
+  }
+
+  function syncSideStoneTotalDisplay(row, fromUserEdit) {
+    if (!row) return;
+    var totalInput = row.querySelector('[name="sideStoneTotal"]');
+    if (!totalInput) return;
+    var cts = row.querySelector('[name="sideStoneCarat"]');
+    var ppc = row.querySelector('[name="sideStonePrice"]');
+    var autoVal = sideStoneFormulaTotal(
+      cts ? cts.value : '',
+      ppc ? ppc.value : ''
+    );
+    if (fromUserEdit) {
+      if (totalInput.value === '' || totalInput.value == null) {
+        totalInput.dataset.fixed = '';
+        totalInput.value = autoVal;
+      } else {
+        totalInput.dataset.fixed = '1';
+      }
+      return;
+    }
+    if (totalInput.dataset.fixed === '1') return;
+    totalInput.value = autoVal;
+  }
+
   function chainLengthWaxValue(lengthWeights, thickness, lengthCm) {
     var table = lengthWeights && lengthWeights[thickness];
     if (!table) return '';
@@ -863,7 +894,7 @@
     return (
       '<div class="ap-variant-head">' +
         '<span>金屬</span><span>克拉</span><span>蠟重（錢）</span><span>預估金重</span>' +
-        '<span>配鑽 cts</span><span>一克拉價格</span><span>手動定價</span><span></span>' +
+        '<span>配鑽 cts</span><span>一克拉價格</span><span>配鑽價錢</span><span>手動定價</span><span></span>' +
       '</div>'
     );
   }
@@ -933,6 +964,13 @@
     var weight = variant ? variant.weight_chin : '';
     var sideStone = variant && variant.side_stone_price_twd != null ? variant.side_stone_price_twd : '';
     var sideStoneCts = variant && variant.side_stone_carat != null ? variant.side_stone_carat : '';
+    var sideStoneTotalFixed = variant && variant.side_stone_total_twd != null
+      ? variant.side_stone_total_twd
+      : '';
+    var sideStoneTotalDisplay = sideStoneTotalFixed !== ''
+      ? sideStoneTotalFixed
+      : sideStoneFormulaTotal(sideStoneCts, sideStone);
+    var sideStoneFixedAttr = sideStoneTotalFixed !== '' ? ' data-fixed="1"' : '';
     var gold = (variant && variant.gold) || GOLDS[0];
     return '<div class="ap-variant-row">' +
       '<select name="gold">' + goldOpts + '</select>' +
@@ -941,6 +979,8 @@
       '<output class="ap-metal-weight-out" name="metalWeight">' + metalWeightLabel(weight, gold) + '</output>' +
       '<input type="number" name="sideStoneCarat" step="0.01" min="0" placeholder="配鑽 cts" value="' + esc(sideStoneCts) + '">' +
       '<input type="number" name="sideStonePrice" step="1" min="0" placeholder="一克拉價格" value="' + esc(sideStone) + '">' +
+      '<input type="number" name="sideStoneTotal" step="1" min="0" placeholder="配鑽價錢" value="' +
+        esc(sideStoneTotalDisplay) + '"' + sideStoneFixedAttr + ' title="自動 = 配鑽 cts × 一克拉價格；手動改寫後為固定總價">' +
       '<input type="number" name="price" step="1" min="0" placeholder="手動定價" value="' + esc(price) + '">' +
       '<button type="button" class="ap-remove-row" aria-label="移除">✕</button></div>';
   }
@@ -1730,7 +1770,15 @@
     if (!grid.dataset.metalWeightBound) {
       grid.dataset.metalWeightBound = '1';
       grid.addEventListener('input', function (e) {
-        if (e.target.name === 'weight') updateVariantRowMetalWeight(e.target.closest('.ap-variant-row'));
+        var row = e.target.closest('.ap-variant-row');
+        if (!row) return;
+        if (e.target.name === 'weight') updateVariantRowMetalWeight(row);
+        if (e.target.name === 'sideStoneCarat' || e.target.name === 'sideStonePrice') {
+          syncSideStoneTotalDisplay(row, false);
+        }
+        if (e.target.name === 'sideStoneTotal') {
+          syncSideStoneTotalDisplay(row, true);
+        }
       });
       grid.addEventListener('change', function (e) {
         if (e.target.name === 'gold') updateVariantRowMetalWeight(e.target.closest('.ap-variant-row'));
@@ -1769,6 +1817,7 @@
       }
       var preserved = [];
       grid.querySelectorAll('.ap-variant-row').forEach(function (row) {
+        var totalEl = row.querySelector('[name="sideStoneTotal"]');
         preserved.push({
           gold: row.querySelector('[name="gold"]')?.value,
           carat: row.querySelector('[name="carat"]')?.value,
@@ -1776,6 +1825,9 @@
           manual_price_twd: row.querySelector('[name="price"]')?.value,
           side_stone_price_twd: row.querySelector('[name="sideStonePrice"]')?.value,
           side_stone_carat: row.querySelector('[name="sideStoneCarat"]')?.value,
+          side_stone_total_twd: totalEl && totalEl.dataset.fixed === '1'
+            ? totalEl.value
+            : null,
         });
       });
       var chainType = getFormChainType(form);
@@ -1849,6 +1901,9 @@
       var price = row.querySelector('[name="price"]')?.value;
       var sideStone = row.querySelector('[name="sideStonePrice"]')?.value;
       var sideStoneCts = row.querySelector('[name="sideStoneCarat"]')?.value;
+      var sideStoneTotalEl = row.querySelector('[name="sideStoneTotal"]');
+      var sideStoneTotal = sideStoneTotalEl ? sideStoneTotalEl.value : '';
+      var sideStoneTotalFixed = !!(sideStoneTotalEl && sideStoneTotalEl.dataset.fixed === '1');
       if (!gold || !carat) return;
       // Chain: wax in 長度蠟重; no 配鑽 / no per-variant 46cm wax field.
       if (category !== 'chain' && !weight) return;
@@ -1864,6 +1919,10 @@
         sideStoneCarat: isChain || sideStoneCts === '' || sideStoneCts == null
           ? null
           : parseFloat(sideStoneCts),
+        sideStoneTotalTwd: isChain || !sideStoneTotalFixed
+          || sideStoneTotal === '' || sideStoneTotal == null
+          ? null
+          : parseFloat(sideStoneTotal),
       });
     });
     var images = [];

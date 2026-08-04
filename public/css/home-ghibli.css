@@ -76,6 +76,15 @@
 .page-home .nav .site-nav-desktop .nav-item > a:hover,
 .page-home [data-site-nav-root].is-nav-hero .site-nav-desktop .nav-item > a:hover{ color:var(--gh-mint-soft); }
 .page-home [data-site-nav-root].is-nav-hero .nav-burger span{ background:#fff; }
+/* Open drawer is paper-white — ink X must beat hero white bars. */
+.page-home .nav.is-mobile-menu-open .nav-burger span,
+.page-home [data-site-nav-root].is-nav-hero .nav.is-mobile-menu-open .nav-burger span{
+  background:var(--ink,#2b2320);
+}
+.page-home .nav.is-mobile-menu-open .nav-cart-link,
+.page-home [data-site-nav-root].is-nav-hero .nav.is-mobile-menu-open .nav-cart-link{
+  color:var(--ink,#2b2320);
+}
 .page-home .nav .btn-line,
 .page-home [data-site-nav-root].is-nav-hero .nav-cta .btn-line{
   background:transparent !important;

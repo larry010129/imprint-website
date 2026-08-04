@@ -64,35 +64,37 @@
     }
   }
 
-  /* ---------- 手機選單 ---------- */
-  var burger = document.querySelector('.nav-burger');
-  var menu = document.querySelector('.nav-menu');
-  if (burger && menu) {
-    burger.addEventListener('click', function () {
-      burger.classList.toggle('is-open');
-      menu.classList.toggle('is-open');
-      document.body.style.overflow = menu.classList.contains('is-open') ? 'hidden' : '';
-    });
-    // 手機版:主選單文字本身是連結，點了直接跳轉；
-    // 子選單改由旁邊獨立的展開鈕(.dd-toggle)收合，兩者互不干擾
-    menu.querySelectorAll('.nav-item').forEach(function (item) {
-      var toggle = item.querySelector(':scope > .dd-toggle');
-      if (!toggle) return;
-      toggle.addEventListener('click', function () {
-        var willOpen = !item.classList.contains('is-open');
-        item.classList.toggle('is-open', willOpen);
-        toggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+  /* ---------- 手機選單（SSR chrome uses nav-chrome.js — skip to avoid double-toggle) ---------- */
+  if (!document.querySelector('[data-site-nav-root]')) {
+    var burger = document.querySelector('.nav-burger');
+    var menu = document.querySelector('.nav-menu');
+    if (burger && menu) {
+      burger.addEventListener('click', function () {
+        burger.classList.toggle('is-open');
+        menu.classList.toggle('is-open');
+        document.body.style.overflow = menu.classList.contains('is-open') ? 'hidden' : '';
       });
-    });
-    menu.querySelectorAll('.dropdown a').forEach(function (a) {
-      a.addEventListener('click', function () {
-        if (window.innerWidth <= 860 && a.getAttribute('href') && a.getAttribute('href') !== '#') {
-          burger.classList.remove('is-open');
-          menu.classList.remove('is-open');
-          document.body.style.overflow = '';
-        }
+      // 手機版:主選單文字本身是連結，點了直接跳轉；
+      // 子選單改由旁邊獨立的展開鈕(.dd-toggle)收合，兩者互不干擾
+      menu.querySelectorAll('.nav-item').forEach(function (item) {
+        var toggle = item.querySelector(':scope > .dd-toggle');
+        if (!toggle) return;
+        toggle.addEventListener('click', function () {
+          var willOpen = !item.classList.contains('is-open');
+          item.classList.toggle('is-open', willOpen);
+          toggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+        });
       });
-    });
+      menu.querySelectorAll('.dropdown a').forEach(function (a) {
+        a.addEventListener('click', function () {
+          if (window.innerWidth <= 860 && a.getAttribute('href') && a.getAttribute('href') !== '#') {
+            burger.classList.remove('is-open');
+            menu.classList.remove('is-open');
+            document.body.style.overflow = '';
+          }
+        });
+      });
+    }
   }
 
   /* ---------- 進場顯示（首頁區塊 + 全站 .reveal；hero 輪播自管進場） ---------- */

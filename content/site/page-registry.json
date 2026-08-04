@@ -899,7 +899,7 @@
     "layout": "site",
     "main_class": "",
     "extra_css": [
-      "/static/css/home-ghibli.css?v=28",
+      "/static/css/home-ghibli.css?v=30",
       "/static/css/series-overview.css?v=1"
     ],
     "extra_scripts": [],
