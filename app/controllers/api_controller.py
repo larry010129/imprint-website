@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import logging
+import os
+import secrets
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
-from app.auth import enforce_rate_limit, get_user_id, is_admin
+from app.auth import enforce_rate_limit, get_user_id, is_admin, require_admin
+from app.auth_totp_service import step_up_from_body
 from app.bot_gold import FALLBACK_XAG, FALLBACK_XPT, build_payload_from_cache, fetch_bot_gold_quote
 from app.catalog import (
     build_catalog_product,
@@ -19,7 +22,12 @@ from app.catalog import (
     normalize_catalog_detail,
 )
 from app.product_categories import fetch_categories
-from app.orders import attach_order_display, attach_order_relations, hydrate_order
+from app.orders import (
+    attach_order_display,
+    attach_order_relations,
+    hydrate_order,
+    track_order_public_row,
+)
 from app.database import get_connection, get_transaction
 from app.membership_config import default_config, load_config, save_config
 from app.pricing import compute_order_pricing
@@ -32,9 +40,43 @@ log = logging.getLogger(__name__)
 
 router = APIRouter(tags=["api"])
 
+_TRACK_ORDER_PII_KEYS = frozenset(
+    {
+        "customer_name",
+        "customer_email",
+        "customer_phone",
+        "shipping_name",
+        "shipping_phone",
+        "shipping_city",
+        "shipping_postal",
+        "shipping_address",
+        "shipping_line",
+        "config_json",
+        "pricing_json",
+        "email",
+        "phone",
+        "user_id",
+        "contacts",
+        "items",
+    }
+)
+
 
 def _err(status: int, message: str) -> JSONResponse:
     return JSONResponse(status_code=status, content={"error": message})
+
+
+def _gold_refresh_authorized(request: Request) -> bool:
+    expected = (os.environ.get("GOLD_REFRESH_SECRET") or "").strip()
+    if not expected:
+        return False
+    auth = request.headers.get("Authorization") or ""
+    if not auth.startswith("Bearer "):
+        return False
+    token = auth[7:].strip()
+    if not token:
+        return False
+    return secrets.compare_digest(token, expected)
 
 
 @router.post("/contact")
@@ -158,7 +200,8 @@ async def track_order(request: Request) -> dict:
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute(
             """
-            select o.*
+            select o.order_number, o.status, o.summary_zh, o.created_at, o.updated_at,
+                   o.status_timestamps
             from orders o
             join order_contacts oc on oc.order_id = o.id
             where o.order_number = %s and oc.customer_phone = %s
@@ -169,9 +212,10 @@ async def track_order(request: Request) -> dict:
         order = cur.fetchone()
         if not order:
             return {"rows": []}
-        attach_order_relations(cur, [order])
-        hydrate_order(order)
-    return {"rows": [order]}
+    row = track_order_public_row(dict(order))
+    for key in _TRACK_ORDER_PII_KEYS:
+        row.pop(key, None)
+    return {"rows": [row]}
 
 
 @router.get("/orders")
@@ -347,12 +391,14 @@ def get_pricing() -> dict:
 
 @router.post("/pricing")
 async def post_pricing(request: Request) -> JSONResponse:
-    user_id = get_user_id(request)
-    if not user_id or not is_admin(user_id):
-        raise HTTPException(status_code=403, detail="admin access required")
+    user_id = require_admin(request)
     body = await request.json()
     if not isinstance(body, dict):
         return _err(400, "invalid body")
+    step = step_up_from_body(user_id, body)
+    if step:
+        status, message = step
+        return _err(status, message)
     if body.get("reset"):
         overrides: dict = {}
     else:
@@ -378,21 +424,21 @@ def get_membership_config() -> dict:
 
 @router.get("/admin/membership-config")
 def admin_get_membership_config(request: Request) -> dict:
-    user_id = get_user_id(request)
-    if not user_id or not is_admin(user_id):
-        raise HTTPException(status_code=403, detail="admin access required")
+    require_admin(request)
     with get_connection() as conn, conn.cursor() as cur:
         return {"config": load_config(cur)}
 
 
 @router.post("/admin/membership-config")
 async def admin_post_membership_config(request: Request) -> JSONResponse:
-    user_id = get_user_id(request)
-    if not user_id or not is_admin(user_id):
-        raise HTTPException(status_code=403, detail="admin access required")
+    user_id = require_admin(request)
     body = await request.json()
     if not isinstance(body, dict):
         return _err(400, "invalid body")
+    step = step_up_from_body(user_id, body)
+    if step:
+        status, message = step
+        return _err(status, message)
     if body.get("reset"):
         config = default_config()
     else:
@@ -522,8 +568,13 @@ async def gold_refresh(request: Request) -> dict:
 
     Prefer an optional JSON body (same shape as ``data/gold-quote.json``) so
     GitHub Actions can push a quote it already scraped. Empty body keeps the
-    legacy live re-scrape path.
+    legacy live re-scrape path. Requires ``Authorization: Bearer $GOLD_REFRESH_SECRET``.
     """
+    if not _gold_refresh_authorized(request):
+        raise HTTPException(status_code=401, detail="unauthorized")
+    if not enforce_rate_limit(request, action="gold-refresh", limit=30, window_seconds=3600):
+        raise HTTPException(status_code=429, detail="請求過於頻繁，請稍後再試")
+
     body: dict = {}
     try:
         raw = await request.json()

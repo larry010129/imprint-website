@@ -51,7 +51,12 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<{ ok: bool
 function pendingCount(orders: OrderRow[]): number {
   return orders.filter((o) => {
     const status = String(o.status || "").toLowerCase();
-    return status === "received" || status === "pending" || status === "processing";
+    return (
+      status === "received" ||
+      status === "order_confirming" ||
+      status === "pending" ||
+      status === "processing"
+    );
   }).length;
 }
 

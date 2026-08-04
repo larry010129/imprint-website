@@ -91,16 +91,27 @@
           <div class="checkout-delivery-fields">
             <div class="form-field">
               <label for="shippingAddress">收件地址 <span class="req">*</span></label>
-              <input id="shippingAddress" name="shippingAddress" autocomplete="street-address" value="{{ profile.shipping_address or '' }}">
+              <input id="shippingAddress" name="shippingAddress" autocomplete="street-address"
+                minlength="6" value="{{ profile.shipping_address or '' }}"
+                placeholder="例：忠孝東路四段123號">
             </div>
             <div class="checkout-field-row">
               <div class="form-field">
                 <label for="shippingCity">縣市 <span class="req">*</span></label>
-                <input id="shippingCity" name="shippingCity" autocomplete="address-level1" value="{{ profile.shipping_city or '' }}">
+                {% set selected_city = (profile.shipping_city or '')|replace('臺', '台') %}
+                <select id="shippingCity" name="shippingCity" autocomplete="address-level1">
+                  <option value="">請選擇縣市</option>
+                  {% for city in taiwan_cities %}
+                  <option value="{{ city }}" {% if selected_city == city %}selected{% endif %}>{{ city }}</option>
+                  {% endfor %}
+                </select>
               </div>
               <div class="form-field">
                 <label for="shippingPostal">郵遞區號 <span class="req">*</span></label>
-                <input id="shippingPostal" name="shippingPostal" autocomplete="postal-code" value="{{ profile.shipping_postal or '' }}">
+                <input id="shippingPostal" name="shippingPostal" autocomplete="postal-code"
+                  inputmode="numeric" pattern="\d{3}(\d{2})?" maxlength="5"
+                  title="請填寫 3 碼或 5 碼郵遞區號"
+                  value="{{ profile.shipping_postal or '' }}">
               </div>
             </div>
           </div>

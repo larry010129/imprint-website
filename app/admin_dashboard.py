@@ -5,7 +5,7 @@ from __future__ import annotations
 import csv
 import io
 import re
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 
 from app.orders import ORDER_STATUS_LABELS_ZH as STATUS_LABELS_ZH
 
@@ -15,8 +15,11 @@ DAY_TREND_DEFAULT = 30
 WEEK_TREND_COUNT = 12
 MONTH_TREND_COUNT = 12
 COMPLETE_STATUSES = {"completed", "shipped"}
+# Safety cap so a bad range never hydrates the whole orders table.
+DASHBOARD_ORDER_HARD_LIMIT = 5000
 
 _WEEK_RE = re.compile(r"^(\d{4})-W(\d{2})$")
+_TZ_TAIPEI = timezone(timedelta(hours=8))
 
 
 def _now_local() -> datetime:
@@ -165,6 +168,41 @@ def normalize_range(
         "weekOptions": week_options,
         "bucketKeys": bucket_keys,
     }
+
+
+def dashboard_fetch_bounds(cfg: dict) -> tuple[datetime, datetime]:
+    """UTC [since, until) covering cfg bucketKeys (local +8 calendar).
+
+    Dashboard trend needs the full bucket window, not only the selected period.
+    Callers must filter SQL with these bounds — never hydrate all orders.
+    """
+    keys = list(cfg.get("bucketKeys") or [])
+    gran = cfg.get("granularity") or "month"
+
+    if gran == "day" and keys:
+        start_d = date.fromisoformat(keys[0])
+        end_exclusive = date.fromisoformat(keys[-1]) + timedelta(days=1)
+    elif gran == "week" and keys:
+        start_d = _week_start(keys[0])
+        end_exclusive = _week_start(keys[-1]) + timedelta(days=7)
+    elif gran == "month" and keys:
+        y, m = map(int, keys[0].split("-"))
+        start_d = date(y, m, 1)
+        y2, m2 = map(int, keys[-1].split("-"))
+        if m2 == 12:
+            end_exclusive = date(y2 + 1, 1, 1)
+        else:
+            end_exclusive = date(y2, m2 + 1, 1)
+    else:
+        start_d = _parse_date(cfg.get("start")) or (_now_local().date() - timedelta(days=DAY_TREND_DEFAULT - 1))
+        end_d = _parse_date(cfg.get("end")) or _now_local().date()
+        if start_d > end_d:
+            start_d, end_d = end_d, start_d
+        end_exclusive = end_d + timedelta(days=1)
+
+    since = datetime.combine(start_d, time.min, tzinfo=_TZ_TAIPEI).astimezone(timezone.utc)
+    until = datetime.combine(end_exclusive, time.min, tzinfo=_TZ_TAIPEI).astimezone(timezone.utc)
+    return since, until
 
 
 def _order_in_period(order: dict, cfg: dict) -> bool:

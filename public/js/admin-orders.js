@@ -21,8 +21,8 @@
   var cancelError = document.getElementById('orderCancelError');
 
   var STATUS_OPTIONS = [
-    'received', 'deposit_confirmed', 'dna_lab', 'in_production',
-    'quality_check', 'shipped', 'completed'
+    'received', 'order_confirming', 'deposit_confirmed', 'dna_lab',
+    'in_production', 'quality_check', 'shipped', 'completed'
   ];
   var BULK_STATUS_OPTIONS = STATUS_OPTIONS.concat(['cancelled']);
 
@@ -37,6 +37,7 @@
 
   var STATUS_COLORS = {
     received: '#e0a458',
+    order_confirming: '#e09a6a',
     dna_lab: '#6c9bd1',
     deposit_confirmed: '#5bc0de',
     in_production: '#9cefef',
@@ -51,6 +52,7 @@
   };
   var GOLD_LABELS = { '9k': '9K', '14k': '14K', '18k': '18K', pt950: 'PT950', s925: 'S925' };
   var COLOR_LABELS = { white: 'K白', yellow: 'K黃', rose: '玫瑰金' };
+  var FULFILLMENT_LABELS = { pickup: '門市自取', delivery: '宅配到府' };
 
   var statusLabel = window.ImprintOrderStatus
     ? window.ImprintOrderStatus.label
@@ -152,23 +154,100 @@
     return lines;
   }
 
-  function progressHtml(status) {
+  function formatStatusDate(iso) {
+    if (!iso) return '';
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleDateString('en-US', {
+      timeZone: 'Asia/Taipei',
+      month: 'numeric',
+      day: 'numeric',
+    });
+  }
+
+  function statusTimestamps(order) {
+    var stamps = order && order.status_timestamps;
+    if (!stamps) return {};
+    if (typeof stamps === 'string') {
+      try { return JSON.parse(stamps) || {}; } catch (e) { return {}; }
+    }
+    return stamps;
+  }
+
+  function progressHtml(order) {
+    var status = typeof order === 'string' ? order : (order && order.status);
     if (isCancelled({ status: status })) {
       return '<div class="order-detail-status"><p class="order-detail-cancelled">此訂單已取消</p></div>';
     }
+    var stamps = typeof order === 'object' && order ? statusTimestamps(order) : {};
+    var serverSteps = typeof order === 'object' && order && Array.isArray(order.status_steps)
+      ? order.status_steps
+      : null;
     var idx = statusIndex(status);
-    var steps = STATUS_OPTIONS.map(function (s, i) {
+    var steps = (serverSteps || STATUS_OPTIONS.map(function (s, i) {
       var state = i < idx ? 'complete' : (i === idx ? 'current' : 'incomplete');
-      var color = STATUS_COLORS[s] || '#9cefef';
+      var date = state === 'incomplete' ? '' : formatStatusDate(stamps[s]);
+      return {
+        code: s,
+        label: statusLabel(s),
+        state: state,
+        color: STATUS_COLORS[s] || '#9cefef',
+        date: date,
+      };
+    })).map(function (step) {
+      var state = step.state;
+      var color = step.color || STATUS_COLORS[step.code] || '#9cefef';
       var barStyle = state === 'incomplete' ? '' : ' style="--step-color:' + color + '"';
+      var date = step.date || '';
+      var dateHtml = date
+        ? '<span class="order-steps-date">' + esc(date) + '</span>'
+        : '';
+      var label = step.label || statusLabel(step.code);
       return (
         '<div class="order-steps-item">' +
-          '<div class="order-steps-bar order-steps-bar--' + state + '" data-step="' + s + '"' + barStyle + '></div>' +
-          '<div class="order-steps-label order-steps-label--' + state + '">' + esc(statusLabel(s)) + '</div>' +
+          '<div class="order-steps-bar order-steps-bar--' + state + '" data-step="' + esc(step.code) + '"' + barStyle + '></div>' +
+          '<div class="order-steps-label order-steps-label--' + state + '">' +
+            esc(label) + dateHtml +
+          '</div>' +
         '</div>'
       );
     }).join('');
     return '<div class="order-detail-status"><div class="order-steps" role="list">' + steps + '</div></div>';
+  }
+
+  function orderLengthCm(o) {
+    var raw = o.chain_length_cm != null && o.chain_length_cm !== ''
+      ? o.chain_length_cm
+      : (o.lengthCm != null && o.lengthCm !== ''
+        ? o.lengthCm
+        : (o.chainLength != null && o.chainLength !== '' ? o.chainLength : null));
+    return raw == null || raw === '' ? null : raw;
+  }
+
+  function sizeSpecRow(o) {
+    var cat = String(o.category || '').toLowerCase();
+    if (cat === 'ring') {
+      return o.ring_size != null && o.ring_size !== ''
+        ? specItem('戒圍', o.ring_size)
+        : '';
+    }
+    if (cat === 'pendant' || cat === 'chain' || cat === 'bracelet') {
+      var len = orderLengthCm(o);
+      return len != null ? specItem('長度', String(len) + ' cm') : '';
+    }
+    return '';
+  }
+
+  function fulfillmentRows(o) {
+    var method = o.fulfillment_method;
+    var label = FULFILLMENT_LABELS[method] || method || '-';
+    var rows = specItem('取貨方式', label);
+    if (method === 'delivery') {
+      var shipping = [o.shipping_city, o.shipping_postal, o.shipping_address]
+        .filter(Boolean).join(' ');
+      if (shipping) rows += specItem('收件地址', shipping);
+    }
+    return rows;
   }
 
   function detailPanel(o) {
@@ -195,14 +274,15 @@
               specItem('成色', gold) + specItem('顏色', color) + specItem('克拉', o.carat || '-') +
               specItem('鑽石顏色', diamondLabel(o)) + specItem('計價金價', formatMoney(o.gold_rate_per_gram)) +
               specItem('重量 (克)', o.weight_grams != null ? Number(o.weight_grams).toFixed(3) : '-') +
-              specItem('戒圍', o.ring_size || '-') + specItem('戒圈刻字', o.engraving_band || '-') +
+              sizeSpecRow(o) + specItem('戒圈刻字', o.engraving_band || '-') +
               specItem('金屬刻字', o.engraving_remark || '-') +
               (o.engraving_girdle
                 ? specItemHtml('腰圍刻字', girdleDisplayHtml(o.engraving_girdle))
                 : specItem('腰圍刻字', '-')) +
               priceBreakdownLines(o) +
               specItem('客戶', (o.customer_name || '-') + ' · ' + (o.customer_phone || '')) +
-            '</div>' + progressHtml(o.status) +
+              fulfillmentRows(o) +
+            '</div>' + progressHtml(o) +
           '</div></div></div>'
     );
   }

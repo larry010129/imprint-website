@@ -3,10 +3,14 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from app.admin_products import CATEGORY_LABELS
 from app.image_urls import config_image_url, is_uuid, order_product_id, resolve_product_image_url
+
+_TAIPEI = ZoneInfo("Asia/Taipei")
 
 
 def _as_dict(value: Any) -> dict:
@@ -84,11 +88,12 @@ def _diamond_label(config: dict) -> str:
 
 def _size_chain_parts(cfg: dict) -> list[str]:
     parts: list[str] = []
-    if cfg.get("ringSize") not in (None, ""):
+    category = str(cfg.get("category") or "").strip().lower()
+    if category == "ring" and cfg.get("ringSize") not in (None, ""):
         parts.append(f"戒圍 {cfg['ringSize']}")
     if cfg.get("lengthCm") not in (None, ""):
         parts.append(f"{cfg['lengthCm']} cm")
-    if cfg.get("chainLength") not in (None, "") and str(cfg.get("category") or "") != "chain":
+    if cfg.get("chainLength") not in (None, "") and category != "chain":
         parts.append(f"鍊長 {cfg['chainLength']} cm")
     if cfg.get("includeChain"):
         chain = _material_label(cfg.get("chainGold"), cfg.get("chainColor")) or "是"
@@ -135,6 +140,7 @@ def cart_details_from_config(config: dict | None) -> str:
 # Same pipeline admin sets (admin-orders.js STATUS_OPTIONS + cancelled).
 ORDER_STATUS_FLOW = (
     "received",
+    "order_confirming",
     "deposit_confirmed",
     "dna_lab",
     "in_production",
@@ -145,6 +151,7 @@ ORDER_STATUS_FLOW = (
 
 ORDER_STATUS_LABELS_ZH = {
     "received": "已收到申請",
+    "order_confirming": "訂單已確認",
     "dna_lab": "DNA 萃取鑑定中",
     "deposit_confirmed": "訂金已確認",
     "in_production": "製作中",
@@ -156,6 +163,7 @@ ORDER_STATUS_LABELS_ZH = {
 
 ORDER_STATUS_COLORS = {
     "received": "#e0a458",
+    "order_confirming": "#e09a6a",
     "dna_lab": "#6c9bd1",
     "deposit_confirmed": "#5bc0de",
     "in_production": "#9cefef",
@@ -168,12 +176,79 @@ ORDER_STATUS_COLORS = {
 _FULFILLMENT_ZH = {"pickup": "門市自取", "delivery": "宅配到府"}
 
 
-def order_status_steps(status: str | None) -> list[dict[str, str]]:
+def _stamp_iso(when: datetime | str) -> str:
+    if isinstance(when, datetime):
+        dt = when if when.tzinfo else when.replace(tzinfo=timezone.utc)
+        return dt.isoformat()
+    return str(when)
+
+
+def format_status_date(iso: Any) -> str:
+    """Format stamp as unpadded M/D in Asia/Taipei; empty if missing/invalid."""
+    if iso is None or iso == "":
+        return ""
+    if isinstance(iso, datetime):
+        dt = iso
+    else:
+        raw = str(iso).strip()
+        if not raw:
+            return ""
+        if raw.endswith("Z"):
+            raw = raw[:-1] + "+00:00"
+        try:
+            dt = datetime.fromisoformat(raw)
+        except ValueError:
+            return ""
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    local = dt.astimezone(_TAIPEI)
+    return f"{local.month}/{local.day}"
+
+
+def merge_status_timestamps(
+    existing: Any,
+    old_status: str | None,
+    new_status: str | None,
+    when: datetime | str,
+) -> dict[str, str]:
+    """Stamp unstamped flow steps from old+1 through new; never overwrite."""
+    out: dict[str, str] = {}
+    for key, value in _as_dict(existing).items():
+        if value is None or value == "":
+            continue
+        out[str(key)] = _stamp_iso(value) if isinstance(value, datetime) else str(value)
+
+    new_code = (new_status or "").strip().lower()
+    if new_code not in ORDER_STATUS_FLOW:
+        return out
+
+    new_idx = ORDER_STATUS_FLOW.index(new_code)
+    old_code = (old_status or "").strip().lower()
+    if old_code in ORDER_STATUS_FLOW:
+        start = ORDER_STATUS_FLOW.index(old_code) + 1
+    else:
+        start = 0
+    if start > new_idx:
+        start = new_idx
+
+    stamp = _stamp_iso(when)
+    for i in range(start, new_idx + 1):
+        key = ORDER_STATUS_FLOW[i]
+        if key not in out:
+            out[key] = stamp
+    return out
+
+
+def order_status_steps(
+    status: str | None,
+    timestamps: Any = None,
+) -> list[dict[str, str]]:
     """Progress steps for member/admin pipeline; empty when cancelled."""
     code = (status or "").strip().lower()
     if code in {"cancelled", "canceled"}:
         return []
     idx = ORDER_STATUS_FLOW.index(code) if code in ORDER_STATUS_FLOW else 0
+    stamps = _as_dict(timestamps)
     steps: list[dict[str, str]] = []
     for i, step in enumerate(ORDER_STATUS_FLOW):
         if i < idx:
@@ -182,15 +257,48 @@ def order_status_steps(status: str | None) -> list[dict[str, str]]:
             state = "current"
         else:
             state = "incomplete"
+        date = ""
+        if state in {"complete", "current"}:
+            date = format_status_date(stamps.get(step))
         steps.append(
             {
                 "code": step,
                 "label": ORDER_STATUS_LABELS_ZH[step],
                 "state": state,
                 "color": ORDER_STATUS_COLORS[step],
+                "date": date,
             }
         )
     return steps
+
+
+def ensure_order_status_timestamps_column(cur) -> None:
+    """Idempotent column + one-shot backfill for existing rows."""
+    cur.execute(
+        """
+        alter table orders
+          add column if not exists status_timestamps jsonb not null default '{}'::jsonb
+        """
+    )
+    cur.execute(
+        """
+        update orders
+        set status_timestamps = status_timestamps
+          || jsonb_build_object('received', to_jsonb(created_at))
+        where not (status_timestamps ? 'received')
+        """
+    )
+    cur.execute(
+        """
+        update orders
+        set status_timestamps = status_timestamps
+          || jsonb_build_object(status, to_jsonb(updated_at))
+        where status = any(%s)
+          and status <> 'received'
+          and not (status_timestamps ? status)
+        """,
+        (list(ORDER_STATUS_FLOW),),
+    )
 
 
 def enrich_member_order(order: dict) -> dict:
@@ -201,7 +309,9 @@ def enrich_member_order(order: dict) -> dict:
     order["status"] = status
     order["status_label"] = ORDER_STATUS_LABELS_ZH.get(status, status or "—")
     order["status_cancelled"] = status in {"cancelled", "canceled"}
-    order["status_steps"] = order_status_steps(status)
+    stamps = _as_dict(order.get("status_timestamps"))
+    order["status_timestamps"] = stamps
+    order["status_steps"] = order_status_steps(status, stamps)
     config = _as_dict(order.get("config_json"))
     order["details_zh"] = cart_details_from_config(config)
     method = order.get("fulfillment_method")
@@ -226,6 +336,30 @@ def enrich_member_order(order: dict) -> dict:
     )
     order["display_name"] = name
     return order
+
+
+def track_order_public_row(order: dict) -> dict:
+    """Non-PII status DTO for public track-order (phone match stays server-side)."""
+    enrich_member_order(order)
+    created = order.get("created_at")
+    updated = order.get("updated_at")
+    if hasattr(created, "isoformat"):
+        created = created.isoformat()
+    if hasattr(updated, "isoformat"):
+        updated = updated.isoformat()
+    stamps = order.get("status_timestamps") or {}
+    if not isinstance(stamps, dict):
+        stamps = {}
+    return {
+        "order_number": order.get("order_number"),
+        "status": order.get("status"),
+        "status_label": order.get("status_label"),
+        "summary_zh": order.get("summary_zh"),
+        "created_at": created,
+        "updated_at": updated,
+        "status_timestamps": stamps,
+        "status_cancelled": bool(order.get("status_cancelled")),
+    }
 
 
 def pack_order_config(config: dict[str, Any]) -> tuple[dict, dict, str | None, str, float | None]:

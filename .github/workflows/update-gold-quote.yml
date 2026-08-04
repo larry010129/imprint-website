@@ -40,11 +40,16 @@ jobs:
       - name: Refresh Render gold_price_cache
         env:
           SITE_URL: ${{ secrets.IMPRINT_SITE_URL }}
+          GOLD_REFRESH_SECRET: ${{ secrets.GOLD_REFRESH_SECRET }}
         run: |
           set -euo pipefail
           if [ -z "${SITE_URL:-}" ]; then
             echo "IMPRINT_SITE_URL secret not set; skip live /api/gold-refresh"
             exit 0
+          fi
+          if [ -z "${GOLD_REFRESH_SECRET:-}" ]; then
+            echo "::error::GOLD_REFRESH_SECRET secret not set; cannot call /api/gold-refresh"
+            exit 1
           fi
           base="${SITE_URL%/}"
           health_url="${base}/health"
@@ -82,6 +87,7 @@ jobs:
             -X POST "$refresh_url" \
             -H "Accept: application/json" \
             -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${GOLD_REFRESH_SECRET}" \
             --data-binary @data/gold-quote.json \
             --retry 3 --retry-delay 5 --max-time 90 || true)"
           body="$(cat /tmp/refresh.body 2>/dev/null || true)"

@@ -259,11 +259,21 @@ def fetch_all_testimonials(cur) -> list[dict]:
     return [serialize_testimonial(r) for r in cur.fetchall()]
 
 
+def sanitize_faq_plain_text(value: str) -> str:
+    """Strip HTML tags from FAQ fields on write (plain text + safe link revive on read)."""
+    import re
+    from html import unescape
+
+    text = unescape(str(value or ""))
+    text = re.sub(r"<[^>]*>", "", text)
+    return text.strip()
+
+
 def format_faq_answer_html(answer: str) -> str:
     """Escape FAQ answer text and revive known public links."""
     from html import escape
 
-    text = escape(answer or "")
+    text = escape(sanitize_faq_plain_text(answer or ""))
     text = text.replace(
         "/price.html",
         '<a href="/price.html">價格試算・價格總覽</a>',

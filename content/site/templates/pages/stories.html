@@ -5,6 +5,7 @@
 </script>
 {% endblock %}
 {% block content %}
+{# SSR first N for AI/crawler HTML; HTMX load swaps in full list for users. #}
 <div id="htmx-stories"
   hx-get="/htmx/stories"
   hx-trigger="load"
@@ -16,6 +17,35 @@
         <h1 class="price-reference-title">客戶見證</h1>
         <p class="price-reference-lead">真實故事，銘印成永恆。</p>
       </header>
+      {% if stories_ssr %}
+      <div class="stories-page-masonry">
+        {% for t in stories_ssr %}
+        <article class="stories-page-card" data-aspect="{{ loop.index0 % 6 }}">
+          {% if t.image_url %}
+          <img
+            class="stories-page-card__media"
+            src="{{ t.image_url }}"
+            alt="{{ t.name or '客戶' }}的紀念鑽石見證"
+            loading="{% if loop.index0 < 4 %}eager{% else %}lazy{% endif %}"
+            decoding="async"
+            width="640"
+            height="800"
+          >
+          {% else %}
+          <div class="stories-page-card__media stories-page-card__media--fallback" aria-hidden="true"></div>
+          {% endif %}
+          <div class="stories-page-card__scrim" aria-hidden="true"></div>
+          <div class="stories-page-card__copy">
+            <span class="stories-page-card__name">{{ t.name or '客戶' }}</span>
+            {% if t.role %}<span class="stories-page-card__role">{{ t.role }}</span>{% endif %}
+            {% if t.text %}
+            <p class="stories-page-card__quote">「{{ t.text|replace('「', '')|replace('」', '') }}」</p>
+            {% endif %}
+          </div>
+        </article>
+        {% endfor %}
+      </div>
+      {% else %}
       <div class="stories-page-masonry skel-panel" aria-busy="true" aria-label="載入見證中">
         <article class="stories-page-card stories-page-card--skel" data-aspect="0" aria-hidden="true"><div class="stories-page-card__media"></div></article>
         <article class="stories-page-card stories-page-card--skel" data-aspect="1" aria-hidden="true"><div class="stories-page-card__media"></div></article>
@@ -24,6 +54,7 @@
         <article class="stories-page-card stories-page-card--skel" data-aspect="4" aria-hidden="true"><div class="stories-page-card__media"></div></article>
         <article class="stories-page-card stories-page-card--skel" data-aspect="5" aria-hidden="true"><div class="stories-page-card__media"></div></article>
       </div>
+      {% endif %}
     </div>
   </section>
 </div>

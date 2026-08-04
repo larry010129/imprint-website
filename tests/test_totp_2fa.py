@@ -317,7 +317,7 @@ class TestTotpIntegration:
 
 
 
-    def test_admin_without_totp_can_access_admin_api(self, client):
+    def test_admin_without_totp_blocked_from_admin_api(self, client):
 
         user_id, email, password = self._create_user(admin=True, totp_enabled=False)
 
@@ -333,15 +333,73 @@ class TestTotpIntegration:
 
             assert resp.status_code == 200
 
-            data = resp.json()
-
-            assert data.get("requiresTotpSetup") is not True
-
             assert COOKIE_NAME in resp.cookies
 
-
-
             admin_api = client.get("/api/admin/orders", cookies=resp.cookies)
+
+            assert admin_api.status_code == 403
+
+            assert "雙因素" in (admin_api.text or "")
+
+        finally:
+
+            self._cleanup(user_id)
+
+
+
+    def test_admin_with_totp_requires_pre2fa(self, client):
+
+        from app.database import get_connection
+
+        user_id, email, password = self._create_user(admin=True, totp_enabled=True)
+
+        try:
+
+            with get_connection() as conn, conn.cursor() as cur:
+
+                cur.execute("select totp_secret from users where id = %s", (user_id,))
+
+                secret = cur.fetchone()["totp_secret"]
+
+            login = client.post(
+
+                "/api/auth/login",
+
+                json={"email": email, "password": password},
+
+            )
+
+            assert login.status_code == 200
+
+            data = login.json()
+
+            assert data.get("requires2fa") is True
+
+            assert "/login-2fa.html" in (data.get("next") or "")
+
+            assert COOKIE_NAME not in login.cookies or not login.cookies.get(COOKIE_NAME)
+
+            assert PRE2FA_COOKIE_NAME in login.cookies
+
+
+
+            code = pyotp.TOTP(secret).now()
+
+            verify = client.post(
+
+                "/api/auth/verify-2fa",
+
+                json={"code": code, "next": "/account.html"},
+
+                cookies=login.cookies,
+
+            )
+
+            assert verify.status_code == 200
+
+            assert COOKIE_NAME in verify.cookies
+
+            admin_api = client.get("/api/admin/orders", cookies=verify.cookies)
 
             assert admin_api.status_code != 403
 
@@ -685,15 +743,30 @@ class TestTotpIntegration:
 
             assert login.status_code == 200
 
+            assert login.json().get("requires2fa") is True
 
+            verify = client.post(
+
+                "/api/auth/verify-2fa",
+
+                json={"code": code},
+
+                cookies=login.cookies,
+
+            )
+
+            assert verify.status_code == 200
+
+            # Fresh code after verify consumed the previous window (usually still valid).
+            code2 = pyotp.TOTP(secret).now()
 
             disable = client.post(
 
                 "/api/auth/totp/disable",
 
-                json={"password": password, "code": code},
+                json={"password": password, "code": code2},
 
-                cookies=login.cookies,
+                cookies=verify.cookies,
 
             )
 

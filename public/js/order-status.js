@@ -3,6 +3,7 @@
   'use strict';
   var labels = {
     received: '已收到申請',
+    order_confirming: '訂單已確認',
     dna_lab: 'DNA 萃取鑑定中',
     deposit_confirmed: '訂金已確認',
     in_production: '製作中',

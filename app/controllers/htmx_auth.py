@@ -21,9 +21,11 @@ from app.auth import (
     check_login_lockout,
     check_register_lockout,
     check_totp_verify_lockout,
+    clear_pre2fa_cookie,
     clear_pwreset_cookie,
     consume_invite_code,
     enforce_rate_limit,
+    get_pre2fa_user_id,
     get_pwreset_user_id,
     hash_password,
     is_valid_email,
@@ -39,10 +41,12 @@ from app.auth import (
     validate_register_email,
     verify_password,
 )
-from app.auth_post_login import apply_post_login_cookies, decide_post_login
+from app.auth_post_login import apply_post_login_cookies, decide_post_login, safe_next_url
 from app.auth_totp_service import (
     PWRESET_GENERIC_ERR,
     complete_password_reset,
+    fetch_totp_user,
+    verify_second_factor,
     verify_totp_for_pwreset,
 )
 from app.captcha import recaptcha_error_or_none
@@ -96,9 +100,57 @@ async def auth_login(request: Request) -> Response:
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute("update users set last_login_at = now() where id = %s", (user["id"],))
 
-    decision = decide_post_login(next_url=next_url, user_id=str(user["id"]))
+    decision = decide_post_login(
+        next_url=next_url,
+        user_id=str(user["id"]),
+        totp_enabled=bool(user.get("totp_enabled")),
+        remember=remember,
+    )
     resp = hx_redirect(decision.next_url)
     apply_post_login_cookies(resp, request, user, decision, remember=remember)
+    return resp
+
+
+@router.post("/auth/verify-2fa", response_class=HTMLResponse)
+async def auth_verify_2fa(request: Request) -> Response:
+    user_id = get_pre2fa_user_id(request)
+    if not user_id:
+        return html(request, "auth_error.html", {"error": "驗證已過期，請重新登入"}, 401)
+
+    lockout_keys, locked = check_totp_verify_lockout(request, user_id)
+    if locked:
+        mins = math.ceil(TOTP_VERIFY_LOCKOUT_SECONDS / 60)
+        return html(
+            request,
+            "auth_error.html",
+            {"error": f"驗證失敗次數過多，請 {mins} 分鐘後再試"},
+            429,
+        )
+
+    form = await request.form()
+    code = str(form.get("code") or "").strip()
+    if not code:
+        return html(request, "auth_error.html", {"error": "請輸入驗證碼"}, 400)
+
+    ok, err = verify_second_factor(user_id, code, lockout_key=lockout_keys)
+    if not ok:
+        return html(request, "auth_error.html", {"error": err or "驗證碼不正確"}, 401)
+
+    user = fetch_totp_user(user_id)
+    if not user:
+        return html(request, "auth_error.html", {"error": "驗證已過期，請重新登入"}, 401)
+
+    remember = form_bool(form.get("remember"))
+    next_url = safe_next_url(str(form.get("next") or "/account.html"))
+    decision = decide_post_login(
+        next_url=next_url,
+        user_id=user_id,
+        totp_enabled=False,
+        remember=remember,
+    )
+    resp = hx_redirect(decision.next_url)
+    apply_post_login_cookies(resp, request, user, decision, remember=remember)
+    clear_pre2fa_cookie(resp, request)
     return resp
 
 
@@ -232,10 +284,11 @@ async def auth_register(request: Request) -> Response:
             cur.execute("update profiles set is_partner = true where id = %s", (user["id"],))
 
     record_failures(lockout_keys, REGISTER_MAX_ATTEMPTS, REGISTER_LOCKOUT_SECONDS)
-    token = sign_session(str(user["id"]))
+    admin = bool(grants.get("grants_admin"))
+    token = sign_session(str(user["id"]), is_admin=admin, remember=True)
     decision = decide_post_login(next_url="/account.html", user_id=str(user["id"]))
     resp = hx_redirect(decision.next_url)
-    set_session_cookie(resp, token, request)
+    set_session_cookie(resp, token, request, remember=True, is_admin=admin)
     return resp
 
 

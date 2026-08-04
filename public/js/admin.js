@@ -27,9 +27,9 @@
     var mainEl = document.querySelector('.main');
     var topMeta = document.getElementById('topMeta');
 
-    var STATUS_OPTIONS = ['received', 'deposit_confirmed', 'dna_lab', 'in_production', 'quality_check', 'shipped', 'completed'];
+    var STATUS_OPTIONS = ['received', 'order_confirming', 'deposit_confirmed', 'dna_lab', 'in_production', 'quality_check', 'shipped', 'completed'];
     var STATUS_CHIP = {
-      received: 'chip-new', dna_lab: 'chip-grow', deposit_confirmed: 'chip-talk',
+      received: 'chip-new', order_confirming: 'chip-talk', dna_lab: 'chip-grow', deposit_confirmed: 'chip-talk',
       in_production: 'chip-grow', quality_check: 'chip-cut', shipped: 'chip-talk', completed: 'chip-done'
     };
 
@@ -256,7 +256,7 @@
       if (!host) return;
 
       var groups = [
-        { key: 'pending', label: '待處理', color: 'hsl(200, 70%, 50%)', codes: ['received', 'dna_lab', 'deposit_confirmed'] },
+        { key: 'pending', label: '待處理', color: 'hsl(200, 70%, 50%)', codes: ['received', 'order_confirming', 'dna_lab', 'deposit_confirmed'] },
         { key: 'making', label: '製作中', color: 'hsl(120, 70%, 50%)', codes: ['in_production', 'quality_check'] },
         { key: 'shipped', label: '已出貨', color: 'hsl(340, 70%, 50%)', codes: ['shipped'] },
         { key: 'done', label: '已完成', color: 'hsl(280, 70%, 50%)', codes: ['completed'] },

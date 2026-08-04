@@ -131,6 +131,7 @@ tr.order-row-main.is-detail-open td { background: var(--mint-soft, #f4fbfb); }
 }
 
 .status-select[data-status="received"] { border-color: #e0a458; background: rgba(224, 164, 88, 0.08); }
+.status-select[data-status="order_confirming"] { border-color: #e09a6a; background: rgba(224, 154, 106, 0.08); }
 .status-select[data-status="dna_lab"] { border-color: #6c9bd1; background: rgba(108, 155, 209, 0.08); }
 .status-select[data-status="deposit_confirmed"] { border-color: #5bc0de; background: rgba(91, 192, 222, 0.08); }
 .status-select[data-status="in_production"] { border-color: #9cefef; background: rgba(156, 239, 239, 0.12); }
@@ -140,6 +141,7 @@ tr.order-row-main.is-detail-open td { background: var(--mint-soft, #f4fbfb); }
 
 .status-select option { background: #fff; color: var(--color-text); font-weight: 500; }
 .status-select option[value="received"] { color: #b07c2e; }
+.status-select option[value="order_confirming"] { color: #b8743a; }
 .status-select option[value="dna_lab"] { color: #4a7fb5; }
 .status-select option[value="deposit_confirmed"] { color: #3d8fb8; }
 .status-select option[value="in_production"] { color: #3aa8a8; }
@@ -305,7 +307,17 @@ tr.order-row-main.is-detail-open td { background: var(--mint-soft, #f4fbfb); }
   font-weight: 600;
 }
 
+.order-steps-date {
+  display: block;
+  margin-top: 2px;
+  font-size: 9px;
+  font-weight: 400;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
 .order-status-badge--received { background: rgba(224, 164, 88, 0.15); color: #b07c2e; }
+.order-status-badge--order_confirming { background: rgba(224, 154, 106, 0.15); color: #b8743a; }
 .order-status-badge--dna_lab { background: rgba(108, 155, 209, 0.15); color: #4a7fb5; }
 .order-status-badge--deposit_confirmed { background: rgba(91, 192, 222, 0.15); color: #3d8fb8; }
 .order-status-badge--in_production { background: rgba(156, 239, 239, 0.2); color: #3aa8a8; }
@@ -529,4 +541,5 @@ tr.order-row-main.is-detail-open td { background: var(--mint-soft, #f4fbfb); }
 @media (max-width: 720px) {
   .order-detail-layout { grid-template-columns: 1fr; }
   .order-steps-label { font-size: 9px; }
+  .order-steps-date { font-size: 8px; }
 }

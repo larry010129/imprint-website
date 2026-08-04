@@ -47,6 +47,8 @@ def _clear_security_lockouts():
                or lockout_key like 'check-invite:%'
                or lockout_key like 'track-order:%'
                or lockout_key like 'pwreset-totp:%'
+               or lockout_key like 'account-delete:%'
+               or lockout_key like 'gold-refresh:%'
             """
         )
     yield
@@ -56,19 +58,30 @@ def _unique_email(prefix: str = "sec") -> str:
     return f"{prefix}-{uuid.uuid4().hex[:10]}@example.com"
 
 
-def _create_user(*, email: str | None = None, password: str = "password123", admin: bool = False):
+def _create_user(
+    *,
+    email: str | None = None,
+    password: str = "password123",
+    admin: bool = False,
+    totp_enabled: bool | None = None,
+):
     from app.auth import hash_password
     from app.database import get_connection
+    from app.totp import generate_secret
 
     email = email or _unique_email()
+    # Staff must enroll TOTP before admin APIs work.
+    if totp_enabled is None:
+        totp_enabled = bool(admin)
+    secret = generate_secret() if totp_enabled else None
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute(
             """
-            insert into users (email, password_hash, email_verified, is_active)
-            values (%s, %s, true, true)
+            insert into users (email, password_hash, email_verified, is_active, totp_secret, totp_enabled)
+            values (%s, %s, true, true, %s, %s)
             returning id
             """,
-            (email.lower(), hash_password(password)),
+            (email.lower(), hash_password(password), secret, bool(totp_enabled)),
         )
         user_id = str(cur.fetchone()["id"])
         cur.execute(
@@ -81,6 +94,29 @@ def _create_user(*, email: str | None = None, password: str = "password123", adm
                 (user_id,),
             )
     return user_id, email.lower(), password
+
+
+def _login_cookies(client, email: str, password: str):
+    """Login and complete admin pre2fa when required."""
+    import pyotp
+    from app.database import get_connection
+
+    login = client.post("/api/auth/login", json={"email": email, "password": password})
+    assert login.status_code == 200
+    data = login.json()
+    if not data.get("requires2fa"):
+        return login.cookies
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute("select totp_secret from users where email = %s", (email.lower(),))
+        secret = cur.fetchone()["totp_secret"]
+    code = pyotp.TOTP(secret).now()
+    verify = client.post(
+        "/api/auth/verify-2fa",
+        json={"code": code},
+        cookies=login.cookies,
+    )
+    assert verify.status_code == 200
+    return verify.cookies
 
 
 def _cleanup_user(user_id: str) -> None:
@@ -244,13 +280,28 @@ def test_account_delete_requires_password(client):
 def test_csrf_rejects_cross_site_origin_on_admin_post(client):
     admin_id, email, password = _create_user(admin=True)
     try:
-        login = client.post("/api/auth/login", json={"email": email, "password": password})
-        assert login.status_code == 200
+        cookies = _login_cookies(client, email, password)
 
         resp = client.post(
             "/api/admin/account-action",
             json={"id": admin_id, "action": "toggle-active"},
-            cookies=login.cookies,
+            cookies=cookies,
+            headers={"Origin": "https://evil.example"},
+        )
+        assert resp.status_code == 403
+        assert "來源" in resp.json().get("error", "")
+    finally:
+        _cleanup_user(admin_id)
+
+
+def test_csrf_rejects_cross_site_origin_on_pricing_post(client):
+    admin_id, email, password = _create_user(admin=True)
+    try:
+        cookies = _login_cookies(client, email, password)
+        resp = client.post(
+            "/api/pricing",
+            json={"overrides": {}},
+            cookies=cookies,
             headers={"Origin": "https://evil.example"},
         )
         assert resp.status_code == 403
@@ -260,19 +311,22 @@ def test_csrf_rejects_cross_site_origin_on_admin_post(client):
 
 
 def test_admin_reset_password_min_eight(client):
+    import pyotp
+    from app.database import get_connection
+
     admin_id, admin_email, admin_password = _create_user(admin=True)
     target_id, _target_email, _ = _create_user()
     try:
-        login = client.post(
-            "/api/auth/login",
-            json={"email": admin_email, "password": admin_password},
-        )
-        assert login.status_code == 200
+        cookies = _login_cookies(client, admin_email, admin_password)
+        with get_connection() as conn, conn.cursor() as cur:
+            cur.execute("select totp_secret from users where id = %s", (admin_id,))
+            secret = cur.fetchone()["totp_secret"]
+        totp = pyotp.TOTP(secret).now()
 
         missing_step = client.post(
             "/api/admin/account-action",
             json={"id": target_id, "action": "reset-password", "newPassword": "longpass1"},
-            cookies=login.cookies,
+            cookies=cookies,
         )
         assert missing_step.status_code == 400
         assert "密碼" in missing_step.json().get("error", "")
@@ -284,12 +338,14 @@ def test_admin_reset_password_min_eight(client):
                 "action": "reset-password",
                 "newPassword": "short1",
                 "password": admin_password,
+                "totpCode": totp,
             },
-            cookies=login.cookies,
+            cookies=cookies,
         )
         assert short.status_code == 400
         assert "8" in short.json().get("error", "")
 
+        totp = pyotp.TOTP(secret).now()
         ok = client.post(
             "/api/admin/account-action",
             json={
@@ -297,8 +353,9 @@ def test_admin_reset_password_min_eight(client):
                 "action": "reset-password",
                 "newPassword": "longpass1",
                 "password": admin_password,
+                "totpCode": totp,
             },
-            cookies=login.cookies,
+            cookies=cookies,
         )
         assert ok.status_code == 200
     finally:
@@ -307,19 +364,21 @@ def test_admin_reset_password_min_eight(client):
 
 
 def test_admin_set_role_requires_step_up(client):
+    import pyotp
+    from app.database import get_connection
+
     admin_id, admin_email, admin_password = _create_user(admin=True)
     target_id, _target_email, _ = _create_user()
     try:
-        login = client.post(
-            "/api/auth/login",
-            json={"email": admin_email, "password": admin_password},
-        )
-        assert login.status_code == 200
+        cookies = _login_cookies(client, admin_email, admin_password)
+        with get_connection() as conn, conn.cursor() as cur:
+            cur.execute("select totp_secret from users where id = %s", (admin_id,))
+            secret = cur.fetchone()["totp_secret"]
 
         missing = client.post(
             "/api/admin/account-action",
             json={"id": target_id, "action": "set-role", "role": "partner"},
-            cookies=login.cookies,
+            cookies=cookies,
         )
         assert missing.status_code == 400
         assert "密碼" in missing.json().get("error", "")
@@ -331,8 +390,9 @@ def test_admin_set_role_requires_step_up(client):
                 "action": "set-role",
                 "role": "partner",
                 "password": admin_password,
+                "totpCode": pyotp.TOTP(secret).now(),
             },
-            cookies=login.cookies,
+            cookies=cookies,
         )
         assert ok.status_code == 200
     finally:
@@ -359,19 +419,21 @@ def test_csrf_rejects_cross_site_origin_on_cart_post(client):
 
 
 def test_admin_delete_requires_password(client):
+    import pyotp
+    from app.database import get_connection
+
     admin_id, admin_email, admin_password = _create_user(admin=True)
     target_id, target_email, _ = _create_user()
     try:
-        login = client.post(
-            "/api/auth/login",
-            json={"email": admin_email, "password": admin_password},
-        )
-        assert login.status_code == 200
+        cookies = _login_cookies(client, admin_email, admin_password)
+        with get_connection() as conn, conn.cursor() as cur:
+            cur.execute("select totp_secret from users where id = %s", (admin_id,))
+            secret = cur.fetchone()["totp_secret"]
 
         missing = client.post(
             "/api/admin/account-action",
             json={"id": target_id, "action": "delete", "confirmEmail": target_email},
-            cookies=login.cookies,
+            cookies=cookies,
         )
         assert missing.status_code == 400
         assert "密碼" in missing.json().get("error", "")
@@ -383,12 +445,211 @@ def test_admin_delete_requires_password(client):
                 "action": "delete",
                 "confirmEmail": target_email,
                 "password": admin_password,
+                "totpCode": pyotp.TOTP(secret).now(),
             },
-            cookies=login.cookies,
+            cookies=cookies,
         )
         assert ok.status_code == 200
         target_id = None
     finally:
         if target_id:
             _cleanup_user(target_id)
+        _cleanup_user(admin_id)
+
+
+def test_csrf_rejects_cross_site_origin_on_favorites_post(client):
+    user_id, email, password = _create_user()
+    try:
+        login = client.post("/api/auth/login", json={"email": email, "password": password})
+        assert login.status_code == 200
+
+        resp = client.post(
+            "/api/favorites",
+            json={"category": "ring", "type": "ring-A"},
+            cookies=login.cookies,
+            headers={"Origin": "https://evil.example"},
+        )
+        assert resp.status_code == 403
+        assert "來源" in resp.json().get("error", "")
+    finally:
+        _cleanup_user(user_id)
+
+
+def test_csrf_rejects_cross_site_origin_on_notifications_post(client):
+    user_id, email, password = _create_user()
+    try:
+        login = client.post("/api/auth/login", json={"email": email, "password": password})
+        assert login.status_code == 200
+
+        resp = client.post(
+            "/api/notifications/mark-read",
+            json={"id": str(uuid.uuid4())},
+            cookies=login.cookies,
+            headers={"Origin": "https://evil.example"},
+        )
+        assert resp.status_code == 403
+        assert "來源" in resp.json().get("error", "")
+    finally:
+        _cleanup_user(user_id)
+
+
+def _encode_session_payload(payload: dict) -> str:
+    import jwt
+
+    return jwt.encode(payload, os.environ["JWT_SECRET"], algorithm="HS256")
+
+
+def test_session_absolute_expired_rejects():
+    from datetime import datetime, timedelta, timezone
+
+    from app.auth import verify_session_claims
+
+    now = datetime.now(timezone.utc)
+    token = _encode_session_payload(
+        {
+            "sub": str(uuid.uuid4()),
+            "ver": 0,
+            "iat": now - timedelta(days=2),
+            "exp": now - timedelta(minutes=1),
+            "role": "member",
+            "rem": True,
+        }
+    )
+    assert verify_session_claims(token) is None
+
+
+def test_session_idle_expired_rejects_even_if_exp_future():
+    from datetime import datetime, timedelta, timezone
+
+    from app.auth import SESSION_IDLE_MINUTES, verify_session_claims
+
+    now = datetime.now(timezone.utc)
+    token = _encode_session_payload(
+        {
+            "sub": str(uuid.uuid4()),
+            "ver": 0,
+            "iat": now - timedelta(minutes=SESSION_IDLE_MINUTES + 1),
+            "exp": now + timedelta(days=7),
+            "role": "member",
+            "rem": True,
+        }
+    )
+    assert verify_session_claims(token) is None
+
+
+def test_admin_session_has_shorter_absolute_exp_than_member():
+    import jwt
+    from datetime import datetime, timezone
+
+    from app.auth import ADMIN_SESSION_HOURS, SESSION_DAYS, sign_session
+
+    member = sign_session(str(uuid.uuid4()), is_admin=False, remember=True)
+    admin = sign_session(str(uuid.uuid4()), is_admin=True, remember=True)
+    secret = os.environ["JWT_SECRET"]
+    m = jwt.decode(member, secret, algorithms=["HS256"])
+    a = jwt.decode(admin, secret, algorithms=["HS256"])
+    assert a["role"] == "admin"
+    assert m["role"] == "member"
+    assert (a["exp"] - a["iat"]) <= ADMIN_SESSION_HOURS * 3600 + 5
+    assert (m["exp"] - m["iat"]) >= (SESSION_DAYS * 24 * 3600) - 5
+    assert (a["exp"] - a["iat"]) < (m["exp"] - m["iat"])
+
+
+def test_remember_false_jwt_exp_at_most_24h():
+    from datetime import timedelta
+
+    from app.auth import REMEMBER_FALSE_MAX_HOURS, sign_session, verify_session_claims
+
+    claims = verify_session_claims(sign_session(str(uuid.uuid4()), remember=False))
+    assert claims is not None
+    assert claims.exp - claims.iat <= timedelta(hours=REMEMBER_FALSE_MAX_HOURS, seconds=5)
+
+
+def test_session_slide_updates_iat_keeps_absolute_exp():
+    from datetime import datetime, timedelta, timezone
+
+    from app.auth import (
+        SESSION_DAYS,
+        SESSION_IDLE_MINUTES,
+        SessionClaims,
+        reissue_session_token,
+        session_needs_slide,
+    )
+
+    now = datetime.now(timezone.utc)
+    # Slide triggers after half idle; age past that while absolute exp still valid.
+    age = timedelta(minutes=SESSION_IDLE_MINUTES / 2 + 60)
+    exp = now + timedelta(days=max(1, SESSION_DAYS - 1))
+    claims = SessionClaims(
+        user_id=str(uuid.uuid4()),
+        token_version=0,
+        role="member",
+        iat=now - age,
+        exp=exp,
+        remember=True,
+    )
+    assert session_needs_slide(claims)
+    slid = reissue_session_token(claims)
+    from app.auth import verify_session_claims
+
+    refreshed = verify_session_claims(slid)
+    assert refreshed is not None
+    assert refreshed.exp == exp.replace(microsecond=0) or abs(
+        (refreshed.exp - exp).total_seconds()
+    ) < 2
+    assert refreshed.iat > claims.iat
+
+
+def test_session_touch_middleware_slides_cookie(client):
+    from datetime import datetime, timedelta, timezone
+    from unittest.mock import patch
+
+    from app.auth import COOKIE_NAME, verify_session_claims
+
+    user_id, _email, _password = _create_user()
+    try:
+        now = datetime.now(timezone.utc)
+        with patch("app.auth.SESSION_IDLE_MINUTES", 2):
+            token = _encode_session_payload(
+                {
+                    "sub": user_id,
+                    "ver": 0,
+                    "iat": now - timedelta(seconds=70),
+                    "exp": now + timedelta(days=7),
+                    "role": "member",
+                    "rem": True,
+                }
+            )
+            before = verify_session_claims(token)
+            assert before is not None
+            resp = client.get("/api/auth/session", cookies={COOKIE_NAME: token})
+            assert resp.status_code == 200
+            assert resp.json().get("user") is not None
+            set_cookie = resp.headers.get("set-cookie") or ""
+            assert COOKIE_NAME in set_cookie
+            # Extract new token value from Set-Cookie
+            part = [p for p in set_cookie.split(";") if p.strip().startswith(f"{COOKIE_NAME}=")][0]
+            new_token = part.split("=", 1)[1].strip()
+            after = verify_session_claims(new_token)
+            assert after is not None
+            assert after.iat > before.iat
+            assert abs((after.exp - before.exp).total_seconds()) < 2
+    finally:
+        _cleanup_user(user_id)
+
+
+def test_admin_login_issues_admin_role_cookie(client):
+    import jwt
+
+    from app.auth import ADMIN_SESSION_HOURS, COOKIE_NAME
+
+    admin_id, email, password = _create_user(admin=True)
+    try:
+        cookies = _login_cookies(client, email, password)
+        token = cookies.get(COOKIE_NAME)
+        assert token
+        payload = jwt.decode(token, os.environ["JWT_SECRET"], algorithms=["HS256"])
+        assert payload["role"] == "admin"
+        assert (payload["exp"] - payload["iat"]) <= ADMIN_SESSION_HOURS * 3600 + 5
+    finally:
         _cleanup_user(admin_id)

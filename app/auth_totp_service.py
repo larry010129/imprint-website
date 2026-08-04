@@ -216,6 +216,19 @@ def verify_step_up_password(
     return None
 
 
+def step_up_from_body(user_id: str, body: dict | None) -> tuple[int, str] | None:
+    """Extract password/TOTP from an admin JSON body. Returns (status, error) or None."""
+    payload = body if isinstance(body, dict) else {}
+    password = str(payload.get("password") or payload.get("adminPassword") or "")
+    totp = str(payload.get("totpCode") or payload.get("code") or "").strip()
+    if not password:
+        return 400, "請輸入您的管理員密碼以確認"
+    err = verify_step_up_password(str(user_id), password, totp or None)
+    if err:
+        return 401, err
+    return None
+
+
 def disable_totp(user_id: str, password: str, code: str) -> str | None:
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute(

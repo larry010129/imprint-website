@@ -49,8 +49,33 @@
     return '未知錯誤';
   }
 
+  /** Prompt admin password (+ optional TOTP) for step-up protected mutations. */
+  function collectStepUp(label) {
+    var pwd = global.prompt(
+      '請輸入您的管理員密碼以確認' + (label ? '「' + label + '」' : '') + '：'
+    );
+    if (pwd == null || !String(pwd).trim()) {
+      return { error: '已取消（需管理員密碼）', _cancelled: true };
+    }
+    var totp = global.prompt('若已啟用 Authenticator，請輸入驗證碼；否則留空後確定：') || '';
+    return {
+      password: String(pwd),
+      totpCode: String(totp).trim() || undefined,
+    };
+  }
+
+  function withStepUp(label, body) {
+    var step = collectStepUp(label);
+    if (step.error) return step;
+    var out = Object.assign({}, body || {});
+    out.password = step.password;
+    if (step.totpCode) out.totpCode = step.totpCode;
+    return out;
+  }
+
   global.imprintAPI = {
     apiErrorMessage: apiErrorMessage,
+    collectStepUp: collectStepUp,
     // ---- auth ----
     signup: function (fields) { return request('/api/auth/signup', { method: 'POST', body: fields }); },
     login: function (email, password, remember) {
@@ -104,15 +129,27 @@
 
     // ---- pricing / gold price (public reads, admin-only writes) ----
     getPricingOverrides: function () { return request('/api/pricing'); },
-    savePricingOverrides: function (overrides) { return request('/api/pricing', { method: 'POST', body: { overrides: overrides } }); },
-    resetPricingOverrides: function () { return request('/api/pricing', { method: 'POST', body: { reset: true } }); },
+    savePricingOverrides: function (overrides) {
+      var body = withStepUp('儲存定價覆寫', { overrides: overrides });
+      if (body.error) return Promise.resolve(body);
+      return request('/api/pricing', { method: 'POST', body: body });
+    },
+    resetPricingOverrides: function () {
+      var body = withStepUp('重設定價覆寫', { reset: true });
+      if (body.error) return Promise.resolve(body);
+      return request('/api/pricing', { method: 'POST', body: body });
+    },
     getMembershipConfig: function () { return request('/api/membership-config'); },
     getAdminMembershipConfig: function () { return request('/api/admin/membership-config'); },
     saveAdminMembershipConfig: function (config) {
-      return request('/api/admin/membership-config', { method: 'POST', body: { config: config } });
+      var body = withStepUp('儲存會員階梯設定', { config: config });
+      if (body.error) return Promise.resolve(body);
+      return request('/api/admin/membership-config', { method: 'POST', body: body });
     },
     resetAdminMembershipConfig: function () {
-      return request('/api/admin/membership-config', { method: 'POST', body: { reset: true } });
+      var body = withStepUp('重設會員階梯設定', { reset: true });
+      if (body.error) return Promise.resolve(body);
+      return request('/api/admin/membership-config', { method: 'POST', body: body });
     },
     getLiveGoldPrice: function () { return request('/api/gold-price'); },
     refreshGoldPrice: function () { return request('/api/gold-refresh', { method: 'POST' }); },
@@ -181,11 +218,23 @@
       getOrders: function () { return request('/api/admin/orders'); },
       createOrder: function (fields) { return request('/api/admin/orders', { method: 'POST', body: fields }); },
       updateOrderStatus: function (id, status, statusNote) { return request('/api/admin/order-update', { method: 'POST', body: { id: id, status: status, statusNote: statusNote } }); },
-      cancelOrder: function (id, reason) { return request('/api/admin/order-cancel', { method: 'POST', body: { id: id, reason: reason } }); },
-      bulkUpdateOrders: function (ids, status, cancelReason) {
-        return request('/api/admin/orders-bulk-update', { method: 'POST', body: { ids: ids, status: status, cancelReason: cancelReason || null } });
+      cancelOrder: function (id, reason) {
+        var body = withStepUp('取消訂單', { id: id, reason: reason });
+        if (body.error) return Promise.resolve(body);
+        return request('/api/admin/order-cancel', { method: 'POST', body: body });
       },
-      deleteOrder: function (id, reason) { return request('/api/admin/order-cancel', { method: 'POST', body: { id: id, reason: reason || '管理員取消' } }); },
+      bulkUpdateOrders: function (ids, status, cancelReason) {
+        var body = withStepUp('批次更新訂單', {
+          ids: ids,
+          status: status,
+          cancelReason: cancelReason || null,
+        });
+        if (body.error) return Promise.resolve(body);
+        return request('/api/admin/orders-bulk-update', { method: 'POST', body: body });
+      },
+      deleteOrder: function (id, reason) {
+        return this.cancelOrder(id, reason || '管理員取消');
+      },
       getProducts: function () { return request('/api/admin/products'); },
       createProductCategory: function (fields) { return request('/api/admin/product-category', { method: 'POST', body: fields }); },
       deleteProductCategory: function (slug) { return request('/api/admin/product-category/' + encodeURIComponent(slug), { method: 'DELETE' }); },
@@ -214,12 +263,33 @@
       productAction: function (id, action) { return request('/api/admin/product-action', { method: 'POST', body: { id: id, action: action } }); },
       reorderProducts: function (order) { return request('/api/admin/products-reorder', { method: 'POST', body: { order: order } }); },
       getInvites: function () { return request('/api/admin/invites'); },
-      createInvite: function (fields) { return request('/api/admin/invites', { method: 'POST', body: fields }); },
+      createInvite: function (fields) {
+        var body = Object.assign({}, fields || {});
+        if (!body.password && !body.adminPassword) {
+          var step = collectStepUp('建立邀請碼');
+          if (step.error) return Promise.resolve(step);
+          body.adminPassword = step.password;
+          if (step.totpCode) body.totpCode = step.totpCode;
+        }
+        return request('/api/admin/invites', { method: 'POST', body: body });
+      },
       inviteAction: function (id, action) { return request('/api/admin/invite-action', { method: 'POST', body: { id: id, action: action } }); },
       getCoupons: function () { return request('/api/admin/coupons'); },
-      createCoupon: function (fields) { return request('/api/admin/coupons', { method: 'POST', body: fields }); },
-      updateCoupon: function (fields) { return request('/api/admin/coupon-update', { method: 'POST', body: fields }); },
-      couponAction: function (id, action) { return request('/api/admin/coupon-action', { method: 'POST', body: { id: id, action: action } }); },
+      createCoupon: function (fields) {
+        var body = withStepUp('建立優惠碼', fields || {});
+        if (body.error) return Promise.resolve(body);
+        return request('/api/admin/coupons', { method: 'POST', body: body });
+      },
+      updateCoupon: function (fields) {
+        var body = withStepUp('更新優惠碼', fields || {});
+        if (body.error) return Promise.resolve(body);
+        return request('/api/admin/coupon-update', { method: 'POST', body: body });
+      },
+      couponAction: function (id, action) {
+        var body = withStepUp('優惠碼操作', { id: id, action: action });
+        if (body.error) return Promise.resolve(body);
+        return request('/api/admin/coupon-action', { method: 'POST', body: body });
+      },
       getTestimonials: function () { return request('/api/admin/testimonials'); },
       createTestimonial: function (fields) { return request('/api/admin/testimonials', { method: 'POST', body: fields }); },
       updateTestimonial: function (fields) { return request('/api/admin/testimonial-update', { method: 'POST', body: fields }); },
@@ -251,11 +321,17 @@
       getFaqCategories: function () { return request('/api/admin/faq-categories'); },
       createFaqItem: function (fields) { return request('/api/admin/faq-items', { method: 'POST', body: fields }); },
       updateFaqItem: function (fields) { return request('/api/admin/faq-update', { method: 'POST', body: fields }); },
-      faqAction: function (id, action) { return request('/api/admin/faq-action', { method: 'POST', body: { id: id, action: action } }); },
+      faqAction: function (id, action) {
+        var body = withStepUp('FAQ 發布/刪除', { id: id, action: action });
+        if (body.error) return Promise.resolve(body);
+        return request('/api/admin/faq-action', { method: 'POST', body: body });
+      },
       createFaqCategory: function (fields) { return request('/api/admin/faq-categories', { method: 'POST', body: fields }); },
       updateFaqCategory: function (fields) { return request('/api/admin/faq-category-update', { method: 'POST', body: fields }); },
       faqCategoryAction: function (id, action) {
-        return request('/api/admin/faq-category-action', { method: 'POST', body: { id: id, action: action } });
+        var body = withStepUp('刪除 FAQ 分類', { id: id, action: action });
+        if (body.error) return Promise.resolve(body);
+        return request('/api/admin/faq-category-action', { method: 'POST', body: body });
       },
       listCmsPages: function () { return request('/api/admin/cms-pages'); },
       getCmsPage: function (id) { return request('/api/admin/cms-pages/' + encodeURIComponent(id)); },
@@ -264,7 +340,9 @@
       },
       updateCmsPage: function (fields) { return request('/api/admin/cms-page-update', { method: 'POST', body: fields }); },
       cmsPageAction: function (id, action) {
-        return request('/api/admin/cms-page-action', { method: 'POST', body: { id: id, action: action } });
+        var body = withStepUp('CMS 頁面操作', { id: id, action: action });
+        if (body.error) return Promise.resolve(body);
+        return request('/api/admin/cms-page-action', { method: 'POST', body: body });
       },
       createCmsSection: function (pageId, fields) {
         return request('/api/admin/cms-pages/' + encodeURIComponent(pageId) + '/sections', {
@@ -279,7 +357,12 @@
         return request('/api/admin/cms-sections/' + encodeURIComponent(id) + '/html');
       },
       cmsSectionAction: function (id, action) {
-        return request('/api/admin/cms-section-action', { method: 'POST', body: { id: id, action: action } });
+        var body = { id: id, action: action };
+        if (action === 'delete') {
+          body = withStepUp('刪除 CMS 區塊', body);
+          if (body.error) return Promise.resolve(body);
+        }
+        return request('/api/admin/cms-section-action', { method: 'POST', body: body });
       },
       reorderCmsSections: function (pageId, sectionIds) {
         return request('/api/admin/cms-pages/' + encodeURIComponent(pageId) + '/sections/reorder', {

@@ -300,8 +300,17 @@
         if (action === 'toggle-active') {
           var msg = active ? '確定停用此帳號？停用後無法登入。' : '確定啟用此帳號？';
           if (!confirm(msg)) return;
+          var step = (api.collectStepUp && api.collectStepUp(active ? '停用帳號' : '啟用帳號'))
+            || { error: '已取消（需管理員密碼）' };
+          if (step.error) {
+            alert(step.error);
+            return;
+          }
           btn.disabled = true;
-          api.admin.accountAction(id, 'toggle-active').then(function (res) {
+          api.admin.accountAction(id, 'toggle-active', {
+            password: step.password,
+            totpCode: step.totpCode,
+          }).then(function (res) {
             btn.disabled = false;
             if (res.error) {
               alert('操作失敗：' + (res.error.message || res.error));

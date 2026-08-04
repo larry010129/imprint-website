@@ -154,6 +154,7 @@ create table if not exists orders (
   status text not null default 'received',
   status_note text,
   cancel_reason text,
+  status_timestamps jsonb not null default '{}'::jsonb,
 
   coupon_code text,
   discount_amount numeric not null default 0,
@@ -389,6 +390,8 @@ create index if not exists home_banners_published_sort_idx
 create index if not exists orders_user_id_idx on orders(user_id);
 create index if not exists orders_order_number_phone_idx on orders(order_number);
 create index if not exists orders_summary_zh_idx on orders(summary_zh);
+create index if not exists orders_created_at_desc_idx on orders (created_at desc);
+create index if not exists orders_status_created_at_idx on orders (status, created_at desc);
 create index if not exists order_contacts_phone_idx on order_contacts(customer_phone);
 create index if not exists order_items_order_id_idx on order_items(order_id);
 create index if not exists order_items_product_id_idx on order_items(product_id);
