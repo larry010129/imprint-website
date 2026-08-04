@@ -1036,6 +1036,15 @@
   font-weight: 600;
 }
 
+.order-steps-date {
+  display: block;
+  margin-top: 2px;
+  font-size: 9px;
+  font-weight: 400;
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
+
 .order-detail-actions {
   margin-top: 18px;
   padding-top: 16px;

@@ -10,6 +10,7 @@ import os
 import re
 import secrets
 import socket
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
 import bcrypt
@@ -22,9 +23,26 @@ from app.database import get_connection
 COOKIE_NAME = "imprint_session"
 PRE2FA_COOKIE_NAME = "imprint_pre2fa"
 PWRESET_COOKIE_NAME = "imprint_pwreset"
-SESSION_DAYS = 30
 PRE2FA_MINUTES = 5
 PWRESET_MINUTES = 10
+REMEMBER_FALSE_MAX_HOURS = 24
+
+
+def _env_int(name: str, default: int) -> int:
+    raw = os.environ.get(name)
+    if raw is None or not str(raw).strip():
+        return default
+    try:
+        return int(str(raw).strip())
+    except ValueError:
+        return default
+
+
+# Absolute + idle TTLs (env-tunable). Member default 30d / 14d idle; admin 24h / 12h.
+SESSION_DAYS = _env_int("SESSION_DAYS", 30)
+SESSION_IDLE_MINUTES = _env_int("SESSION_IDLE_MINUTES", 20160)
+ADMIN_SESSION_HOURS = _env_int("ADMIN_SESSION_HOURS", 24)
+ADMIN_IDLE_MINUTES = _env_int("ADMIN_IDLE_MINUTES", 720)
 
 LOGIN_MAX_ATTEMPTS = 5
 LOGIN_LOCKOUT_SECONDS = 300
@@ -150,16 +168,63 @@ def verify_google_id_token(credential: str) -> dict | None:
 
 # ── session cookie ───────────────────────────────────────────────────────
 
-def sign_session(user_id: str, token_version: int = 0) -> str:
+@dataclass(frozen=True)
+class SessionClaims:
+    user_id: str
+    token_version: int
+    role: str
+    iat: datetime
+    exp: datetime
+    remember: bool
+
+
+def _as_utc(value) -> datetime | None:
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        if value.tzinfo is None:
+            return value.replace(tzinfo=timezone.utc)
+        return value.astimezone(timezone.utc)
+    return datetime.fromtimestamp(int(value), tz=timezone.utc)
+
+
+def idle_ttl_for_role(role: str) -> timedelta:
+    minutes = ADMIN_IDLE_MINUTES if role == "admin" else SESSION_IDLE_MINUTES
+    return timedelta(minutes=minutes)
+
+
+def absolute_ttl(*, is_admin: bool, remember: bool) -> timedelta:
+    absolute = (
+        timedelta(hours=ADMIN_SESSION_HOURS)
+        if is_admin
+        else timedelta(days=SESSION_DAYS)
+    )
+    if remember:
+        return absolute
+    return min(absolute, timedelta(hours=REMEMBER_FALSE_MAX_HOURS))
+
+
+def sign_session(
+    user_id: str,
+    token_version: int = 0,
+    *,
+    is_admin: bool = False,
+    remember: bool = True,
+) -> str:
+    now = datetime.now(timezone.utc)
+    role = "admin" if is_admin else "member"
     payload = {
         "sub": user_id,
         "ver": token_version,
-        "exp": datetime.now(timezone.utc) + timedelta(days=SESSION_DAYS),
+        "iat": now,
+        "exp": now + absolute_ttl(is_admin=is_admin, remember=remember),
+        "role": role,
+        "rem": bool(remember),
     }
     return jwt.encode(payload, _jwt_secret(), algorithm="HS256")
 
 
-def verify_session_token(token: str) -> tuple[str, int] | None:
+def verify_session_claims(token: str) -> SessionClaims | None:
     try:
         payload = jwt.decode(token, _jwt_secret(), algorithms=["HS256"])
     except jwt.PyJWTError:
@@ -169,7 +234,50 @@ def verify_session_token(token: str) -> tuple[str, int] | None:
     sub = payload.get("sub")
     if not sub:
         return None
-    return sub, int(payload.get("ver", 0))
+    role = payload.get("role") or "member"
+    if role not in ("member", "admin"):
+        role = "member"
+    iat = _as_utc(payload.get("iat"))
+    exp = _as_utc(payload.get("exp"))
+    if exp is None:
+        return None
+    if iat is not None:
+        if datetime.now(timezone.utc) - iat > idle_ttl_for_role(role):
+            return None
+    return SessionClaims(
+        user_id=str(sub),
+        token_version=int(payload.get("ver", 0)),
+        role=role,
+        iat=iat or datetime.now(timezone.utc),
+        exp=exp,
+        remember=bool(payload.get("rem", True)),
+    )
+
+
+def verify_session_token(token: str) -> tuple[str, int] | None:
+    claims = verify_session_claims(token)
+    if not claims:
+        return None
+    return claims.user_id, claims.token_version
+
+
+def session_needs_slide(claims: SessionClaims) -> bool:
+    idle = idle_ttl_for_role(claims.role)
+    elapsed = datetime.now(timezone.utc) - claims.iat
+    return elapsed > idle / 2
+
+
+def reissue_session_token(claims: SessionClaims) -> str:
+    now = datetime.now(timezone.utc)
+    payload = {
+        "sub": claims.user_id,
+        "ver": claims.token_version,
+        "iat": now,
+        "exp": claims.exp,
+        "role": claims.role,
+        "rem": bool(claims.remember),
+    }
+    return jwt.encode(payload, _jwt_secret(), algorithm="HS256")
 
 
 def sign_pre2fa(user_id: str) -> str:
@@ -301,8 +409,16 @@ def _is_secure_request(request: Request) -> bool:
     return False
 
 
-def set_session_cookie(response: Response, token: str, request: Request, *, remember: bool = True) -> None:
-    """Set signed JWT session cookie. Persistent (30d) when remember=True, else browser-session only."""
+def set_session_cookie(
+    response: Response,
+    token: str,
+    request: Request,
+    *,
+    remember: bool = True,
+    is_admin: bool = False,
+    max_age_seconds: int | None = None,
+) -> None:
+    """Set signed JWT session cookie. Persistent when remember=True, else browser-session only."""
     kwargs: dict = {
         "key": COOKIE_NAME,
         "value": token,
@@ -312,7 +428,12 @@ def set_session_cookie(response: Response, token: str, request: Request, *, reme
         "samesite": "lax",
     }
     if remember:
-        kwargs["max_age"] = SESSION_DAYS * 24 * 60 * 60
+        if max_age_seconds is not None:
+            kwargs["max_age"] = max_age_seconds
+        elif is_admin:
+            kwargs["max_age"] = ADMIN_SESSION_HOURS * 60 * 60
+        else:
+            kwargs["max_age"] = SESSION_DAYS * 24 * 60 * 60
     response.set_cookie(**kwargs)
 
 
@@ -344,6 +465,32 @@ def is_admin(user_id: str | None) -> bool:
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute("select user_id from staff_admins where user_id = %s", (user_id,))
         return cur.fetchone() is not None
+
+
+def user_has_totp(user_id: str | None) -> bool:
+    if not user_id:
+        return False
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute("select totp_enabled from users where id = %s", (user_id,))
+        row = cur.fetchone()
+    return bool(row and row.get("totp_enabled"))
+
+
+def require_admin(request: Request) -> str:
+    """Signed-in staff with TOTP enrolled (belt-and-suspenders for admin APIs)."""
+    from fastapi import HTTPException
+
+    user_id = get_user_id(request)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="not signed in")
+    if not is_admin(user_id):
+        raise HTTPException(status_code=403, detail="admin access required")
+    if not user_has_totp(user_id):
+        raise HTTPException(
+            status_code=403,
+            detail="請先啟用雙因素驗證後再使用管理功能",
+        )
+    return user_id
 
 
 # ── login/register lockout (state lives in login_lockouts, not memory —

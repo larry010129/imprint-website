@@ -1,6 +1,6 @@
 """CSP must allow blob: images for admin/CMS crop previews."""
 
-from app import HTML_CONTENT_SECURITY_POLICY
+from app import HTML_CONTENT_SECURITY_POLICY, HTML_PERMISSIONS_POLICY
 
 
 def _directive(name: str) -> str:
@@ -18,6 +18,20 @@ def test_html_csp_allows_blob_images_for_crop_preview():
     img_src = _directive("img-src")
     assert img_src, "missing img-src directive"
     assert "blob:" in img_src
+    # Phase-1 tighten: no open https: wildcard on img-src.
+    assert " https:;" not in HTML_CONTENT_SECURITY_POLICY
+    assert "https://*.supabase.co" in img_src
+
+
+def test_html_csp_form_action_self():
+    form_action = _directive("form-action")
+    assert form_action
+    assert "'self'" in form_action
+
+
+def test_html_permissions_policy_lockdown():
+    assert "camera=()" in HTML_PERMISSIONS_POLICY
+    assert "geolocation=()" in HTML_PERMISSIONS_POLICY
 
 
 def test_html_csp_allows_recaptcha_v2_hosts():

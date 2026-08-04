@@ -9,6 +9,7 @@ from fastapi.responses import HTMLResponse, Response
 from fastapi.templating import Jinja2Templates
 
 from app.auth import get_user_id, is_admin
+from app.content import TAIWAN_CITIES
 from app.database import get_connection
 from app.profile_schema import fetch_profile
 from config.settings import settings
@@ -16,6 +17,7 @@ from config.settings import settings
 templates = Jinja2Templates(directory=str(settings.templates_dir))
 
 PREVIEW_COOKIE = "shop_preview"
+SHIPPING_CITIES = tuple(c for c in TAIWAN_CITIES if c != "其他")
 
 
 def format_twd(n: Any) -> str:
@@ -28,6 +30,7 @@ def format_twd(n: Any) -> str:
 
 
 templates.env.globals["format_twd"] = format_twd
+templates.env.globals["taiwan_cities"] = SHIPPING_CITIES
 
 
 def html(request: Request, name: str, ctx: dict[str, Any], status: int = 200) -> HTMLResponse:

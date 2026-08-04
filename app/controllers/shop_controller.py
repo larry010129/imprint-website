@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
@@ -11,6 +12,7 @@ from psycopg.types.json import Jsonb
 
 from app.auth import get_user_id
 from app.catalog import resolve_product_id
+from app.content import TAIWAN_CITIES
 from app.coupons import apply_discount_split, record_redemptions, validate_coupon
 from app.database import get_connection, get_transaction
 from app.image_urls import config_image_url
@@ -23,6 +25,30 @@ from app.orders import (
 from app.pricing import compute_order_pricing, get_product_variant, normalize_gold
 
 router = APIRouter(tags=["shop"])
+
+_POSTAL_RE = re.compile(r"^\d{3}(\d{2})?$")
+_STREET_TOKEN_RE = re.compile(r"[路街巷弄段號樓]")
+_CJK_RE = re.compile(r"[\u4e00-\u9fff]")
+_SHIPPING_CITIES = frozenset(c for c in TAIWAN_CITIES if c != "其他")
+
+
+def _normalize_tw_city(city: str) -> str:
+    return (city or "").strip().replace("臺", "台")
+
+
+def _valid_tw_postal(postal: str) -> bool:
+    return bool(_POSTAL_RE.fullmatch(postal or ""))
+
+
+def _valid_tw_city(city: str) -> bool:
+    return _normalize_tw_city(city) in _SHIPPING_CITIES
+
+
+def _valid_tw_street(address: str) -> bool:
+    text = (address or "").strip()
+    if len(text) < 6:
+        return False
+    return bool(_CJK_RE.search(text) or _STREET_TOKEN_RE.search(text))
 
 
 def _err(status: int, message: str) -> JSONResponse:
@@ -227,8 +253,16 @@ def _validate_customer(body: dict[str, Any], profile: dict[str, Any] | None) -> 
         return {}, "請填寫收件人姓名"
     if not phone:
         return {}, "請填寫聯絡電話"
-    if method == "delivery" and not (address and city and postal):
-        return {}, "請填寫完整的收件地址"
+    if method == "delivery":
+        if not (address and city and postal):
+            return {}, "請填寫完整的收件地址"
+        city = _normalize_tw_city(city)
+        if not _valid_tw_postal(postal):
+            return {}, "請填寫有效郵遞區號"
+        if not _valid_tw_city(city):
+            return {}, "請選擇有效縣市"
+        if not _valid_tw_street(address):
+            return {}, "請填寫有效中文地址（含路街巷弄號）"
 
     return {
         "name": name,
@@ -264,9 +298,13 @@ def _insert_order(
         """
         insert into orders (
           user_id, summary_zh, total_price, status,
-          coupon_code, discount_amount, subtotal_before_discount
+          coupon_code, discount_amount, subtotal_before_discount,
+          status_timestamps
         )
-        values (%s, %s, %s, 'received', %s, %s, %s)
+        values (
+          %s, %s, %s, 'received', %s, %s, %s,
+          jsonb_build_object('received', now())
+        )
         returning id, order_number
         """,
         (
@@ -638,11 +676,11 @@ async def validate_coupon_body(user_id: str, body: dict[str, Any]) -> dict:
 
         subtotal = 0.0
         for item in items:
-            config = item.get("config_json") or {}
-            if not isinstance(config, dict):
-                config = {}
-            _cfg, _pricing, _pid, _summary, total = pack_order_config(config)
-            subtotal += float(total or item.get("total_price") or 0)
+            config = _cart_item_config(item)
+            pricing = compute_order_pricing(cur, config, require_published=True)
+            if not pricing.get("ready"):
+                return _err(400, CART_UNAVAILABLE_CHECKOUT_MSG)
+            subtotal += float(pricing.get("total") or 0)
 
         result, err = validate_coupon(cur, code=str(code), user_id=user_id, subtotal=subtotal)
         if err:
@@ -726,18 +764,20 @@ async def _cart_checkout_impl(request: Request, body: dict[str, Any] | None = No
         configs: list[dict[str, Any]] = []
         item_totals: list[float] = []
         for item in items:
-            config = item.get("config_json") or {}
-            if not isinstance(config, dict):
-                config = {}
+            config = _cart_item_config(item)
             err = _validate_config(config)
             if err:
                 return _err(400, err)
             chain_err = _clamp_pendant_chain_sell_mode(cur, config)
             if chain_err:
                 return _err(400, chain_err)
+            # Server reprice — never trust stored clientPricing / total_price.
+            pricing = compute_order_pricing(cur, config, require_published=True)
+            if not pricing.get("ready"):
+                return _err(400, CART_UNAVAILABLE_CHECKOUT_MSG)
+            config["clientPricing"] = pricing
             configs.append(config)
-            _cfg, _pricing, _pid, _summary, total = pack_order_config(config)
-            item_totals.append(float(total or item.get("total_price") or 0))
+            item_totals.append(float(pricing.get("total") or 0))
 
     # Validation is done — now write. get_transaction() (autocommit off) makes
     # this all-or-nothing: if inserting order N of M raises, everything commits

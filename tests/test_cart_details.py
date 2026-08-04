@@ -45,3 +45,19 @@ def test_cart_details_fancy_ring():
 def test_cart_details_empty_config():
     assert cart_details_from_config({}) == ""
     assert cart_details_from_config(None) == ""
+
+
+def test_cart_details_pendant_ignores_ring_size():
+    line = cart_details_from_config(
+        {
+            "category": "pendant",
+            "gold": "14k",
+            "color": "white",
+            "carat": "0.3",
+            "diamondKind": "white",
+            "ringSize": 12,
+            "chainLength": 46,
+        }
+    )
+    assert "戒圍" not in line
+    assert "鍊長 46 cm" in line

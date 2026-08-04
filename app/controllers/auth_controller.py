@@ -27,6 +27,7 @@ from app.auth import (
     clear_session_cookie,
     consume_invite_code,
     enforce_rate_limit,
+    get_pre2fa_user_id,
     get_pwreset_user_id,
     get_user_id,
     hash_password,
@@ -62,7 +63,9 @@ from app.auth_totp_service import (
     complete_password_reset,
     confirm_totp_setup,
     disable_totp,
+    fetch_totp_user,
     start_totp_setup,
+    verify_second_factor,
     verify_totp_for_pwreset,
 )
 from app.database import get_connection
@@ -263,7 +266,8 @@ async def signup(request: Request, response: Response) -> JSONResponse:
     # every attempt would reset the counter back to zero right after it.
     record_failures(lockout_keys, REGISTER_MAX_ATTEMPTS, REGISTER_LOCKOUT_SECONDS)
 
-    token = sign_session(str(user["id"]))
+    admin = bool(grants["grants_admin"])
+    token = sign_session(str(user["id"]), is_admin=admin, remember=True)
     decision = decide_post_login(next_url="/account.html", user_id=str(user["id"]))
     result = JSONResponse(
         content={
@@ -272,7 +276,7 @@ async def signup(request: Request, response: Response) -> JSONResponse:
             "next": decision.next_url,
         }
     )
-    set_session_cookie(result, token, request)
+    set_session_cookie(result, token, request, remember=True, is_admin=admin)
     return result
 
 
@@ -315,9 +319,56 @@ async def login(request: Request) -> JSONResponse:
         remember = remember.strip().lower() not in ("0", "false", "no")
 
     next_url = safe_next_url(body.get("next"))
-    decision = decide_post_login(next_url=next_url, user_id=str(user["id"]))
+    decision = decide_post_login(
+        next_url=next_url,
+        user_id=str(user["id"]),
+        totp_enabled=bool(user.get("totp_enabled")),
+        remember=remember,
+    )
     result = JSONResponse(content=post_login_json(decision, user))
     apply_post_login_cookies(result, request, user, decision, remember=remember)
+    return result
+
+
+@router.post("/verify-2fa")
+async def verify_2fa(request: Request) -> JSONResponse:
+    """Complete staff pre2fa login after password/Google with TOTP enrolled."""
+    user_id = get_pre2fa_user_id(request)
+    if not user_id:
+        return _err(401, "驗證已過期，請重新登入")
+
+    lockout_keys, locked = check_totp_verify_lockout(request, user_id)
+    if locked:
+        return _err(429, f"驗證失敗次數過多，請 {math.ceil(TOTP_VERIFY_LOCKOUT_SECONDS / 60)} 分鐘後再試")
+
+    body = await request.json()
+    if not isinstance(body, dict):
+        return _err(400, "invalid body")
+    code = str(body.get("code") or "").strip()
+    if not code:
+        return _err(400, "請輸入驗證碼")
+
+    ok, err = verify_second_factor(user_id, code, lockout_key=lockout_keys)
+    if not ok:
+        return _err(401, err or "驗證碼不正確")
+
+    user = fetch_totp_user(user_id)
+    if not user:
+        return _err(401, "驗證已過期，請重新登入")
+
+    remember = body.get("remember", True)
+    if isinstance(remember, str):
+        remember = remember.strip().lower() not in ("0", "false", "no")
+    next_url = safe_next_url(body.get("next"))
+    decision = decide_post_login(
+        next_url=next_url,
+        user_id=user_id,
+        totp_enabled=False,  # already verified — issue session
+        remember=remember,
+    )
+    result = JSONResponse(content=post_login_json(decision, user))
+    apply_post_login_cookies(result, request, user, decision, remember=remember)
+    clear_pre2fa_cookie(result, request)
     return result
 
 
@@ -394,7 +445,12 @@ async def google_login(request: Request) -> JSONResponse:
         cur.execute("update users set last_login_at = now() where id = %s", (user["id"],))
 
     next_url = safe_next_url(body.get("next"))
-    decision = decide_post_login(next_url=next_url, user_id=str(user["id"]))
+    decision = decide_post_login(
+        next_url=next_url,
+        user_id=str(user["id"]),
+        totp_enabled=bool(user.get("totp_enabled")),
+        remember=True,
+    )
     result = JSONResponse(content=post_login_json(decision, user))
     apply_post_login_cookies(result, request, user, decision, remember=True)
     return result

@@ -6,10 +6,11 @@ import re
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, File, HTTPException, Request, UploadFile
+from fastapi import APIRouter, File, Request, UploadFile
 from fastapi.responses import JSONResponse
 
-from app.auth import get_user_id, is_admin, log_admin_action
+from app.auth import log_admin_action, require_admin
+from app.auth_totp_service import step_up_from_body
 from app.database import get_connection
 from config.settings import settings
 
@@ -21,12 +22,15 @@ _MAX_IMAGE_BYTES = 1 * 1024 * 1024
 
 
 def _require_admin(request: Request) -> str:
-    user_id = get_user_id(request)
-    if not user_id:
-        raise HTTPException(status_code=401, detail="not signed in")
-    if not is_admin(user_id):
-        raise HTTPException(status_code=403, detail="admin access required")
-    return user_id
+    return require_admin(request)
+
+
+def _step_up_response(admin_id: str, body: dict | None) -> JSONResponse | None:
+    step = step_up_from_body(admin_id, body)
+    if not step:
+        return None
+    status, message = step
+    return JSONResponse(status_code=status, content={"error": message})
 
 
 def _actor_email(user_id: str) -> str | None:
@@ -284,8 +288,13 @@ async def cms_pages_update(request: Request) -> JSONResponse:
 async def cms_page_action(request: Request) -> JSONResponse:
     user_id = _require_admin(request)
     body = await request.json()
-    page_id = str((body or {}).get("id") or "").strip()
-    action = str((body or {}).get("action") or "").strip()
+    if not isinstance(body, dict):
+        body = {}
+    step_resp = _step_up_response(user_id, body)
+    if step_resp:
+        return step_resp
+    page_id = str(body.get("id") or "").strip()
+    action = str(body.get("action") or "").strip()
     if not _valid_uuid(page_id) or action not in {"publish", "unpublish", "delete"}:
         return JSONResponse(status_code=400, content={"error": "invalid id/action"})
     from app.cms_pages import delete_page, update_page
@@ -411,10 +420,16 @@ async def cms_section_update(request: Request) -> JSONResponse:
 async def cms_section_action(request: Request) -> JSONResponse:
     user_id = _require_admin(request)
     body = await request.json()
-    section_id = str((body or {}).get("id") or "").strip()
-    action = str((body or {}).get("action") or "").strip()
+    if not isinstance(body, dict):
+        body = {}
+    section_id = str(body.get("id") or "").strip()
+    action = str(body.get("action") or "").strip()
     if not _valid_uuid(section_id) or action not in {"delete", "show", "hide"}:
         return JSONResponse(status_code=400, content={"error": "invalid id/action"})
+    if action == "delete":
+        step_resp = _step_up_response(user_id, body)
+        if step_resp:
+            return step_resp
     from app.cms_pages import (
         delete_section,
         delete_section_page_image,
@@ -652,8 +667,13 @@ async def faq_category_update(request: Request) -> JSONResponse:
 async def faq_category_action(request: Request) -> JSONResponse:
     user_id = _require_admin(request)
     body = await request.json()
-    cat_id = str((body or {}).get("id") or "").strip()
-    action = str((body or {}).get("action") or "").strip()
+    if not isinstance(body, dict):
+        body = {}
+    step_resp = _step_up_response(user_id, body)
+    if step_resp:
+        return step_resp
+    cat_id = str(body.get("id") or "").strip()
+    action = str(body.get("action") or "").strip()
     if not cat_id or action != "delete":
         return JSONResponse(status_code=400, content={"error": "invalid id/action"})
     with get_connection() as conn, conn.cursor() as cur:

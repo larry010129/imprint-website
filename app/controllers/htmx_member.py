@@ -95,12 +95,14 @@ async def track_order_partial(request: Request) -> HTMLResponse:
         return html(
             request, "track_result.html", {"error": "請輸入訂單編號與電話", "rows": []}, 400
         )
-    from app.orders import attach_order_relations, hydrate_order
+    from app.orders import track_order_public_row
 
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute(
             """
-            select o.* from orders o
+            select o.order_number, o.status, o.summary_zh, o.created_at, o.updated_at,
+                   o.status_timestamps
+            from orders o
             join order_contacts oc on oc.order_id = o.id
             where o.order_number = %s and oc.customer_phone = %s
             limit 1
@@ -108,11 +110,7 @@ async def track_order_partial(request: Request) -> HTMLResponse:
             (order_number, phone),
         )
         order = cur.fetchone()
-        rows = []
-        if order:
-            attach_order_relations(cur, [order])
-            hydrate_order(order)
-            rows = [order]
+        rows = [track_order_public_row(dict(order))] if order else []
     return html(request, "track_result.html", {"error": None, "rows": rows})
 
 

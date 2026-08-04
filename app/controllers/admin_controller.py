@@ -12,7 +12,13 @@ from fastapi.responses import JSONResponse, Response
 from psycopg.types.json import Jsonb
 
 from app.account_delete import delete_blocked_reason, hard_delete_user
-from app.admin_dashboard import build_dashboard_csv, build_dashboard_payload, normalize_range
+from app.admin_dashboard import (
+    DASHBOARD_ORDER_HARD_LIMIT,
+    build_dashboard_csv,
+    build_dashboard_payload,
+    dashboard_fetch_bounds,
+    normalize_range,
+)
 from app.admin_products import (
     CATEGORY_LABELS,
     append_product_image,
@@ -38,19 +44,25 @@ from app.auth import (
     hash_password,
     is_admin,
     log_admin_action,
-    verify_password,
+    require_admin,
 )
-from app.auth_totp_service import verify_step_up_password
+from app.auth_totp_service import step_up_from_body, verify_step_up_password
 from app.catalog import load_product_children
 from app.product_categories import category_labels, create_category, delete_category, fetch_categories, update_category_thumb, valid_category_slugs
 from config.settings import settings
 from app.database import get_connection, get_transaction
-from app.orders import attach_order_display, attach_order_relations, hydrate_order
+from app.orders import (
+    attach_order_display,
+    attach_order_relations,
+    hydrate_order,
+    merge_status_timestamps,
+)
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 ORDER_STATUSES = {
     "received",
+    "order_confirming",
     "dna_lab",
     "deposit_confirmed",
     "in_production",
@@ -82,21 +94,37 @@ def _notify_order_cancelled(cur, order: dict, reason: str) -> None:
 
 
 def _require_admin(request: Request) -> str:
-    user_id = get_user_id(request)
-    if not user_id:
-        raise HTTPException(status_code=401, detail="not signed in")
-    if not is_admin(user_id):
-        raise HTTPException(status_code=403, detail="admin access required")
-    return user_id
+    return require_admin(request)
 
 
-def _fetch_orders(cur) -> list[dict]:
+def _step_up_response(admin_id: str, body: dict | None) -> JSONResponse | None:
+    step = step_up_from_body(admin_id, body)
+    if not step:
+        return None
+    status, message = step
+    return JSONResponse(status_code=status, content={"error": message})
+
+
+def _fetch_orders(
+    cur,
+    *,
+    since: datetime | None = None,
+    until: datetime | None = None,
+    hard_limit: int = DASHBOARD_ORDER_HARD_LIMIT,
+) -> list[dict]:
+    """Load dashboard orders inside [since, until). Never unbounded full-table."""
+    if since is None or until is None:
+        raise ValueError("_fetch_orders requires since/until bounds")
+    limit = max(1, int(hard_limit))
     cur.execute(
         """
         select id, order_number, summary_zh, total_price, created_at, status
         from orders
+        where created_at >= %s and created_at < %s
         order by created_at asc
-        """
+        limit %s
+        """,
+        (since, until, limit),
     )
     rows = cur.fetchall()
     attach_order_relations(cur, rows)
@@ -145,9 +173,10 @@ async def dashboard(
 ) -> dict:
     _require_admin(request)
     cfg = _dashboard_query_params(granularity, period, start, end)
+    since, until = dashboard_fetch_bounds(cfg)
 
     with get_connection() as conn, conn.cursor() as cur:
-        orders = _fetch_orders(cur)
+        orders = _fetch_orders(cur, since=since, until=until)
         new_messages, pending_quotes, active_orders, completed_orders = _lead_counts(cur)
 
     payload = build_dashboard_payload(orders, cfg)
@@ -172,9 +201,10 @@ async def dashboard_export(
 ) -> Response:
     _require_admin(request)
     cfg = _dashboard_query_params(granularity, period, start, end)
+    since, until = dashboard_fetch_bounds(cfg)
 
     with get_connection() as conn, conn.cursor() as cur:
-        orders = _fetch_orders(cur)
+        orders = _fetch_orders(cur, since=since, until=until)
 
     csv_body, slug = build_dashboard_csv(orders, cfg)
     filename = f"orders-{slug}.csv"
@@ -254,12 +284,11 @@ async def orders_list(request: Request, q: str | None = Query(None)) -> dict:
                    or o.summary_zh ilike %s
                    or oc.customer_name ilike %s
                    or oc.customer_phone ilike %s
-                   or oi.config_json::text ilike %s
                    or oi.summary_zh ilike %s
                 order by o.created_at desc
                 limit 200
                 """,
-                (like, like, like, like, like, like, like),
+                (like, like, like, like, like, like),
             )
         else:
             cur.execute("select * from orders order by created_at desc limit 100")
@@ -337,23 +366,38 @@ async def order_update(request: Request) -> JSONResponse:
 
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute(
+            "select status, status_timestamps from orders where id = %s",
+            (order_id,),
+        )
+        order = cur.fetchone()
+        if not order:
+            return JSONResponse(status_code=404, content={"error": "order not found"})
+        stamps = merge_status_timestamps(
+            order.get("status_timestamps"),
+            order.get("status"),
+            status,
+            datetime.now(timezone.utc),
+        )
+        cur.execute(
             """
             update orders
-            set status = %s, status_note = %s, updated_at = now()
+            set status = %s, status_note = %s, updated_at = now(),
+                status_timestamps = %s
             where id = %s
             """,
-            (status, status_note, order_id),
+            (status, status_note, Jsonb(stamps), order_id),
         )
-        if cur.rowcount == 0:
-            return JSONResponse(status_code=404, content={"error": "order not found"})
 
     return JSONResponse(content={"ok": True})
 
 
 @router.post("/order-cancel")
 async def order_cancel(request: Request) -> JSONResponse:
-    _require_admin(request)
+    admin_id = _require_admin(request)
     body = await request.json()
+    step_resp = _step_up_response(admin_id, body if isinstance(body, dict) else {})
+    if step_resp:
+        return step_resp
     order_id = body.get("id")
     reason = (body.get("reason") or "").strip()
     if not order_id or not reason:
@@ -390,8 +434,11 @@ async def order_delete(request: Request) -> JSONResponse:
 
 @router.post("/orders-bulk-update")
 async def orders_bulk_update(request: Request) -> JSONResponse:
-    _require_admin(request)
+    admin_id = _require_admin(request)
     body = await request.json()
+    step_resp = _step_up_response(admin_id, body if isinstance(body, dict) else {})
+    if step_resp:
+        return step_resp
     ids = body.get("ids") or []
     status = body.get("status")
     cancel_reason = (body.get("cancelReason") or "").strip() or None
@@ -425,13 +472,19 @@ async def orders_bulk_update(request: Request) -> JSONResponse:
                 )
                 _notify_order_cancelled(cur, order, cancel_reason or "")
             else:
+                stamps = merge_status_timestamps(
+                    order.get("status_timestamps"),
+                    order.get("status"),
+                    status,
+                    datetime.now(timezone.utc),
+                )
                 cur.execute(
                     """
                     update orders
-                    set status = %s, updated_at = now()
+                    set status = %s, updated_at = now(), status_timestamps = %s
                     where id = %s
                     """,
-                    (status, order_id),
+                    (status, Jsonb(stamps), order_id),
                 )
             updated += 1
 
@@ -940,16 +993,12 @@ async def invites_create(request: Request) -> JSONResponse:
     if not grants_admin and not grants_partner:
         return JSONResponse(status_code=400, content={"error": "請選擇帳號類型：合作廠商或管理員"})
 
+    step_resp = _step_up_response(user_id, body if isinstance(body, dict) else {})
+    if step_resp:
+        return step_resp
+
     max_uses = body.get("maxUses")
     if grants_admin:
-        admin_password = body.get("adminPassword") or ""
-        if not admin_password:
-            return JSONResponse(status_code=400, content={"error": "建立管理員邀請碼需輸入您的登入密碼"})
-        with get_connection() as conn, conn.cursor() as cur:
-            cur.execute("select password_hash from users where id = %s", (user_id,))
-            row = cur.fetchone()
-        if not row or not verify_password(admin_password, row["password_hash"]):
-            return JSONResponse(status_code=400, content={"error": "管理員密碼不正確"})
         max_uses = 1
         grants_partner = False
     elif max_uses not in (None, ""):
@@ -1216,6 +1265,9 @@ async def account_action(request: Request) -> JSONResponse:
             return JSONResponse(status_code=404, content={"error": "account not found"})
 
         if action == "toggle-active":
+            step_resp = _step_up_response(str(admin_id), body if isinstance(body, dict) else {})
+            if step_resp:
+                return step_resp
             cur.execute(
                 "update users set is_active = %s where id = %s",
                 (not user["is_active"], account_id),
@@ -1248,6 +1300,13 @@ async def account_action(request: Request) -> JSONResponse:
                 return JSONResponse(status_code=403, content={"error": blocked})
             hard_delete_user(cur, account_id)
         elif action == "reset-password":
+            admin_password = str(body.get("password") or body.get("adminPassword") or "")
+            admin_totp = str(body.get("totpCode") or body.get("code") or "").strip()
+            if not admin_password:
+                return JSONResponse(status_code=400, content={"error": "請輸入您的管理員密碼以確認"})
+            step_err = verify_step_up_password(str(admin_id), admin_password, admin_totp or None)
+            if step_err:
+                return JSONResponse(status_code=401, content={"error": step_err})
             new_password = body.get("newPassword") or ""
             if len(str(new_password)) < 8:
                 return JSONResponse(status_code=400, content={"error": "密碼至少需要 8 碼"})
@@ -1256,6 +1315,13 @@ async def account_action(request: Request) -> JSONResponse:
                 (hash_password(str(new_password)), account_id),
             )
         elif action == "set-role":
+            admin_password = str(body.get("password") or body.get("adminPassword") or "")
+            admin_totp = str(body.get("totpCode") or body.get("code") or "").strip()
+            if not admin_password:
+                return JSONResponse(status_code=400, content={"error": "請輸入您的管理員密碼以確認"})
+            step_err = verify_step_up_password(str(admin_id), admin_password, admin_totp or None)
+            if step_err:
+                return JSONResponse(status_code=401, content={"error": step_err})
             role = body.get("role")
             if role not in {"member", "partner", "admin"}:
                 return JSONResponse(status_code=400, content={"error": "invalid role"})
@@ -1456,6 +1522,9 @@ async def coupons_create(request: Request) -> JSONResponse:
     body = await request.json()
     if not isinstance(body, dict):
         body = {}
+    step_resp = _step_up_response(user_id, body)
+    if step_resp:
+        return step_resp
 
     from app.coupons import generate_coupon_code, normalize_code
 
@@ -1523,6 +1592,9 @@ async def coupons_update(request: Request) -> JSONResponse:
     body = await request.json()
     if not isinstance(body, dict):
         body = {}
+    step_resp = _step_up_response(user_id, body)
+    if step_resp:
+        return step_resp
 
     from app.coupons import normalize_code
 
@@ -1595,6 +1667,11 @@ async def coupons_update(request: Request) -> JSONResponse:
 async def coupon_action(request: Request) -> JSONResponse:
     user_id = _require_admin(request)
     body = await request.json()
+    if not isinstance(body, dict):
+        body = {}
+    step_resp = _step_up_response(user_id, body)
+    if step_resp:
+        return step_resp
     coupon_id = body.get("id")
     action = body.get("action")
 
@@ -1873,11 +1950,11 @@ async def admin_faq_items_create(request: Request) -> JSONResponse:
     if not isinstance(body, dict):
         body = {}
 
-    from app.content import new_faq_id, serialize_faq_item
+    from app.content import new_faq_id, sanitize_faq_plain_text, serialize_faq_item
 
     category_id = str(body.get("categoryId") or body.get("category_id") or "").strip()
-    question = str(body.get("question") or "").strip()
-    answer = str(body.get("answer") or "").strip()
+    question = sanitize_faq_plain_text(str(body.get("question") or ""))
+    answer = sanitize_faq_plain_text(str(body.get("answer") or ""))
     if not category_id or not question or not answer:
         return JSONResponse(status_code=400, content={"error": "請填寫分類、問題與回答"})
     item_id = str(body.get("id") or "").strip() or new_faq_id()
@@ -1920,14 +1997,14 @@ async def admin_faq_update(request: Request) -> JSONResponse:
     if not isinstance(body, dict):
         body = {}
 
-    from app.content import serialize_faq_item
+    from app.content import sanitize_faq_plain_text, serialize_faq_item
 
     item_id = str(body.get("id") or "").strip()
     if not item_id:
         return JSONResponse(status_code=400, content={"error": "缺少 id"})
     category_id = str(body.get("categoryId") or body.get("category_id") or "").strip()
-    question = str(body.get("question") or "").strip()
-    answer = str(body.get("answer") or "").strip()
+    question = sanitize_faq_plain_text(str(body.get("question") or ""))
+    answer = sanitize_faq_plain_text(str(body.get("answer") or ""))
     if not category_id or not question or not answer:
         return JSONResponse(status_code=400, content={"error": "請填寫分類、問題與回答"})
     try:
@@ -1967,6 +2044,11 @@ async def admin_faq_update(request: Request) -> JSONResponse:
 async def admin_faq_action(request: Request) -> JSONResponse:
     user_id = _require_admin(request)
     body = await request.json()
+    if not isinstance(body, dict):
+        body = {}
+    step_resp = _step_up_response(user_id, body)
+    if step_resp:
+        return step_resp
     item_id = body.get("id")
     action = body.get("action")
     if not item_id or action not in {"publish", "unpublish", "delete"}:

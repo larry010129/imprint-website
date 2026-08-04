@@ -137,9 +137,11 @@
             '<p class="ai-hint ap-field-wide" id="aiPartnerHint">可設定上方「可使用次數」與「有效天數」。</p>' +
             '<label class="ap-checkbox ap-field-wide">' +
               '<input type="checkbox" name="grantsAdmin" id="aiGrantsAdmin"> 以此碼註冊為管理員帳號</label>' +
-            '<p class="ai-hint ap-field-wide" id="aiAdminHint" hidden>管理員邀請碼僅限使用 1 次，建立時需輸入您目前登入帳號的密碼。</p>' +
-            '<label class="ap-field-wide" id="aiPasswordField" hidden><span>管理員密碼</span>' +
-              '<input type="password" name="adminPassword" autocomplete="current-password"></label>' +
+            '<p class="ai-hint ap-field-wide" id="aiAdminHint" hidden>管理員邀請碼僅限使用 1 次。</p>' +
+            '<label class="ap-field-wide" id="aiPasswordField"><span>管理員密碼（確認建立）</span>' +
+              '<input type="password" name="adminPassword" autocomplete="current-password" required></label>' +
+            '<label class="ap-field-wide" id="aiTotpField"><span>Authenticator 驗證碼（已啟用時必填）</span>' +
+              '<input type="text" name="totpCode" inputmode="numeric" autocomplete="one-time-code" maxlength="16" placeholder="未啟用可留空"></label>' +
           '</div>' +
           '<div class="ap-form-actions">' +
             '<button type="button" class="btn-sm" data-modal-close>取消</button>' +
@@ -165,7 +167,7 @@
       var isAdmin = grantsAdmin && grantsAdmin.checked;
       var isPartner = grantsPartner && grantsPartner.checked;
       if (hint) hint.hidden = !isAdmin;
-      if (pwdField) pwdField.hidden = !isAdmin;
+      if (pwdField) pwdField.hidden = false;
       if (partnerHint) partnerHint.hidden = !isPartner || isAdmin;
       if (maxUses) {
         maxUses.disabled = isAdmin;
@@ -212,7 +214,8 @@
       expiresInDays: fd.get('expiresInDays') === '' ? null : fd.get('expiresInDays'),
       grantsAdmin: grantsAdminChecked,
       grantsPartner: grantsPartnerChecked,
-      adminPassword: grantsAdminChecked ? String(fd.get('adminPassword') || '') : undefined,
+      adminPassword: String(fd.get('adminPassword') || ''),
+      totpCode: String(fd.get('totpCode') || '').trim() || undefined,
     };
 
     if (btn) { btn.disabled = true; btn.textContent = '建立中…'; }

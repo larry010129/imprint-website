@@ -99,7 +99,10 @@ def load_youtube_latest_video() -> dict | None:
 
 @lru_cache(maxsize=None)
 def _load_fragment(relpath: str) -> str:
-    return (_FRAGMENTS_DIR / relpath).read_text(encoding="utf-8")
+    path = _FRAGMENTS_DIR / relpath
+    if not path.is_file():
+        raise StarletteHTTPException(status_code=404, detail="Not Found")
+    return path.read_text(encoding="utf-8")
 
 
 @lru_cache(maxsize=512)
@@ -167,6 +170,51 @@ def _load_faq_public() -> dict:
     except Exception:
         pass
     return faq_public_from_seed()
+
+
+def _faq_page_json_ld(faq_public: dict) -> str:
+    """FAQPage JSON-LD from live faq_public (plain-text answers only)."""
+    entities: list[dict] = []
+    for cat in faq_public.get("categories") or []:
+        for item in cat.get("items") or []:
+            question = str(item.get("question") or "").strip()
+            answer = str(item.get("answer") or "").strip()
+            if not question or not answer:
+                continue
+            entities.append(
+                {
+                    "@type": "Question",
+                    "name": question,
+                    "acceptedAnswer": {"@type": "Answer", "text": answer},
+                }
+            )
+    if not entities:
+        return ""
+    return json.dumps(
+        {
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            "mainEntity": entities,
+        },
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
+
+
+STORIES_SSR_LIMIT = 12
+
+
+def _load_stories_ssr(limit: int = STORIES_SSR_LIMIT) -> list[dict]:
+    """First N published testimonials for SSR on /stories.html."""
+    from app.content import fetch_published_testimonials
+    from app.database import get_connection
+
+    try:
+        with get_connection() as conn, conn.cursor() as cur:
+            items = fetch_published_testimonials(cur)
+        return list(items[:limit])
+    except Exception:
+        return []
 
 
 def _editable_site_routes() -> set[str]:
@@ -333,11 +381,16 @@ def _context(request: Request, meta: PageMeta) -> dict:
         "cms_faq_by_category": {},
         "cms_testimonials": [],
         "faq_public": {"categories": [], "teaser": [], "items": []},
+        "faq_json_ld": "",
+        "stories_ssr": [],
     }
     if meta.content_fragment:
         context["content_html"] = _load_fragment(meta.content_fragment)
     if meta.route == "/faq.html":
         context["faq_public"] = _load_faq_public()
+        context["faq_json_ld"] = _faq_page_json_ld(context["faq_public"])
+    if meta.route == "/stories.html":
+        context["stories_ssr"] = _load_stories_ssr()
     if meta.route in {"/", "/about.html"}:
         context["featured_video"] = load_featured_video()
     if meta.route == "/about.html":
@@ -504,7 +557,7 @@ def register_pages(app: FastAPI) -> None:
             "canonical_path": f"p/{page['slug']}",
             "og_title": page.get("title") or "",
             "og_description": page.get("meta_description") or "",
-            "og_image": "images/hero/imprint-diamond-family-memorial.jpg",
+            "og_image": "static/images/hero/imprint-diamond-family-memorial.jpg",
             "breadcrumbs": [],
             "mvc_page": "cms",
             "extra_body_class": "cms-modular",

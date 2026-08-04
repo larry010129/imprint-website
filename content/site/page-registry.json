@@ -33,7 +33,7 @@
         "type": "module"
       },
       {
-        "src": "/static/js/home-banners.js?v=2",
+        "src": "/static/js/home-banners.js?v=3",
         "defer": true
       }
     ],
@@ -375,20 +375,20 @@
     "layout": "site",
     "main_class": "",
     "extra_css": [
-      "/static/css/member-app.css?v=5"
+      "/static/css/member-app.css?v=6"
     ],
     "extra_scripts": [
       {
         "src": "/static/js/api-client.js"
       },
       {
-        "src": "/static/js/order-status.js"
+        "src": "/static/js/order-status.js?v=3"
       },
       {
         "src": "/static/js/girdle-engrave.js?v=11"
       },
       {
-        "src": "/static/js/order-display.js"
+        "src": "/static/js/order-display.js?v=4"
       },
       {
         "src": "/static/js/order-detail.js"
@@ -811,7 +811,7 @@
     ],
     "extra_scripts": [
       {
-        "src": "/static/js/order-status.js"
+        "src": "/static/js/order-status.js?v=3"
       },
       {
         "src": "/static/js/api-client.js"

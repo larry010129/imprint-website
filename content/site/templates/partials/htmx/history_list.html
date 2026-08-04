@@ -117,6 +117,7 @@
                         {% if step.state != 'incomplete' %}style="--step-color: {{ step.color }}"{% endif %}></div>
                       <div class="order-steps-label order-steps-label--{{ step.state }}">
                         {% if step.state == 'complete' %}✓ {% endif %}{{ step.label }}
+                        {% if step.date %}<span class="order-steps-date">{{ step.date }}</span>{% endif %}
                       </div>
                     </div>
                     {% endfor %}

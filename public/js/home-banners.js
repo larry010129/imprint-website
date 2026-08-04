@@ -72,7 +72,7 @@
         '<div class="hc-scrim gh-hc-scrim"></div>' +
         '<div class="container hc-copy gh-hc-copy">' +
           (b.eyebrow ? '<p class="gh-script reveal">' + esc(b.eyebrow) + '</p>' : '') +
-          '<' + titleTag + ' class="gh-hero__title reveal reveal-d1">' + formatTitle(b.title, index) + '</' + titleTag + '>' +
+          '<' + titleTag + ' class="gh-hero__title' + (index === 0 ? '' : ' reveal reveal-d1') + '">' + formatTitle(b.title, index) + '</' + titleTag + '>' +
           (b.lead ? '<p class="gh-hero__lead reveal reveal-d2">' + formatLead(b.lead) + '</p>' : '') +
           ((primary || secondary)
             ? '<div class="gh-hero__actions reveal reveal-d3">' + primary + secondary + '</div>'

@@ -1,23 +1,32 @@
-"""Database connection — Supabase/Neon Postgres via psycopg.
+"""Database connection — Supabase/Neon Postgres via psycopg + ConnectionPool.
 
-A fresh connection per call, not a pool: this app runs as a single Render
-free-tier instance with light traffic, so pool lifecycle management (and its
-failure modes across gunicorn workers) isn't worth the complexity yet. Revisit
-if/when that stops being true.
+Small process-local pool reuses TCP/TLS sessions. Keep max_size low so this stays
+compatible with Supabase **Session pooler** (port 5432) and Direct connections.
+Do not point DATABASE_URL at Transaction pooler (6543) for this long-lived app.
 
-Use Supabase **Direct connection** or **Session pooler** (port 5432) in
-DATABASE_URL for this long-lived FastAPI process. See docs/SUPABASE.md.
+See docs/SUPABASE.md.
 """
 
 from __future__ import annotations
 
+import atexit
+import logging
 import os
+import threading
+from contextlib import contextmanager
+from collections.abc import Iterator
 from urllib.parse import urlparse
 
 import psycopg
 from psycopg.rows import dict_row
+from psycopg_pool import ConnectionPool
+
+log = logging.getLogger(__name__)
 
 _LOCAL_HOSTS = frozenset({"localhost", "127.0.0.1", "::1", "0.0.0.0"})
+
+_pool: ConnectionPool | None = None
+_pool_lock = threading.Lock()
 
 
 def require_database_url() -> str:
@@ -55,16 +64,100 @@ def database_target_label(dsn: str | None = None) -> str:
     return f"{tag} postgres {host}{port}/{db}"
 
 
-def get_connection() -> psycopg.Connection:
-    dsn = require_database_url()
-    return psycopg.connect(dsn, row_factory=dict_row, autocommit=True)
+def _pool_sizes() -> tuple[int, int]:
+    """min/max connections. Cap max for Session pooler headroom across workers."""
+    try:
+        min_size = max(1, int(os.environ.get("DB_POOL_MIN", "1")))
+    except ValueError:
+        min_size = 1
+    try:
+        max_size = max(min_size, int(os.environ.get("DB_POOL_MAX", "4")))
+    except ValueError:
+        max_size = max(min_size, 4)
+    return min_size, max_size
 
 
-def get_transaction() -> psycopg.Connection:
+def _reset_conn(conn: psycopg.Connection) -> None:
+    """Return connections to a clean autocommit state for the next checkout."""
+    if conn.closed:
+        return
+    try:
+        if not conn.autocommit:
+            conn.rollback()
+            conn.autocommit = True
+    except Exception:
+        log.debug("pool reset failed; connection will be discarded", exc_info=True)
+        raise
+
+
+def _ensure_pool() -> ConnectionPool:
+    global _pool
+    if _pool is not None and not _pool.closed:
+        return _pool
+    with _pool_lock:
+        if _pool is not None and not _pool.closed:
+            return _pool
+        dsn = require_database_url()
+        min_size, max_size = _pool_sizes()
+        _pool = ConnectionPool(
+            conninfo=dsn,
+            min_size=min_size,
+            max_size=max_size,
+            kwargs={"row_factory": dict_row, "autocommit": True},
+            check=ConnectionPool.check_connection,
+            reset=_reset_conn,
+            open=True,
+            # Recycle before idle Session-pooler timeouts bite.
+            max_lifetime=1800.0,
+            max_idle=300.0,
+            name="imprint",
+        )
+        return _pool
+
+
+def close_pool() -> None:
+    """Close the process pool (app shutdown / tests)."""
+    global _pool
+    with _pool_lock:
+        pool = _pool
+        _pool = None
+    if pool is not None and not pool.closed:
+        pool.close()
+
+
+atexit.register(close_pool)
+
+
+@contextmanager
+def get_connection() -> Iterator[psycopg.Connection]:
+    """Checkout a pooled autocommit connection."""
+    with _ensure_pool().connection() as conn:
+        if not conn.autocommit:
+            conn.autocommit = True
+        yield conn
+
+
+@contextmanager
+def get_transaction() -> Iterator[psycopg.Connection]:
     """Like get_connection, but for call sites that issue several dependent
     writes that must all succeed or all fail together (e.g. checkout inserting
     N orders then clearing the cart, or admin product saves that replace
     variants/images). autocommit is off, so `with get_transaction() as conn:`
     commits once on clean exit and rolls back everything on an exception."""
-    dsn = require_database_url()
-    return psycopg.connect(dsn, row_factory=dict_row, autocommit=False)
+    with _ensure_pool().connection() as conn:
+        conn.autocommit = False
+        try:
+            yield conn
+            conn.commit()
+        except Exception:
+            try:
+                conn.rollback()
+            except Exception:
+                log.debug("transaction rollback failed", exc_info=True)
+            raise
+        finally:
+            try:
+                if not conn.closed:
+                    conn.autocommit = True
+            except Exception:
+                pass

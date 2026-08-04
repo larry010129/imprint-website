@@ -995,11 +995,21 @@ function findProductCategory(productId) {
 }
 
 function mergeProductIntoCatalog(category, product) {
-  if (!category || !product?.id) return;
+  if (!category || !product?.id) return product;
   const list = catalog[category] || (catalog[category] = []);
   const idx = list.findIndex((p) => String(p.id) === String(product.id));
-  if (idx >= 0) list[idx] = product;
-  else list.push(product);
+  if (idx >= 0) {
+    const prev = list[idx];
+    // Full detail often omits lite thumbUrl — keep usable admin thumb for step-2 grid.
+    const merged =
+      !product.thumbUrl && prev?.thumbUrl
+        ? { ...product, thumbUrl: prev.thumbUrl }
+        : product;
+    list[idx] = merged;
+    return merged;
+  }
+  list.push(product);
+  return product;
 }
 
 async function ensureProductDetail(productId, category) {
@@ -1020,7 +1030,7 @@ async function ensureProductDetail(productId, category) {
     const full = data?.product;
     if (!full?.id) return existing;
     const targetCat = cat || findProductCategory(full.id) || state.category;
-    if (targetCat) mergeProductIntoCatalog(targetCat, full);
+    if (targetCat) return mergeProductIntoCatalog(targetCat, full);
     return full;
   } catch (err) {
     console.error('failed to load product detail', err);
@@ -3819,7 +3829,8 @@ function updateEngravingSteps() {
   const allows = productAllowsEngraving();
   const hasBand = allows && state.category === 'ring';
   const hasRemark = allows && state.category !== 'chain' && !isDiamondOnlyCategory();
-  const hasGirdle = allows && state.category !== 'chain';
+  // Girdle is diamond-surface engraving — always offer except chain (backend keeps it too).
+  const hasGirdle = state.category !== 'chain';
   bandStep?.classList.toggle('hidden', !hasBand);
   remarkStep?.classList.toggle('hidden', !hasRemark);
   girdleStep?.classList.toggle('hidden', !hasGirdle);
