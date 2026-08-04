@@ -27,6 +27,7 @@ from app.admin_products import (
     ensure_product_chain_type_column,
     ensure_product_length_weights_column,
     ensure_product_sell_mode_columns,
+    ensure_product_side_stone_total_column,
     first_published_at_value,
     is_auto_stock_product_image,
     publish_readiness,
@@ -652,6 +653,7 @@ async def product_category_upload(
 
 
 def _products_with_children(cur) -> list[dict]:
+    ensure_product_side_stone_total_column(cur)
     cur.execute("select * from products order by sort_order, created_at desc")
     rows = cur.fetchall()
     product_ids = [row["id"] for row in rows]
@@ -672,6 +674,8 @@ def _products_with_children(cur) -> list[dict]:
                 variant["id"] = str(variant["id"])
             if variant.get("product_id") is not None:
                 variant["product_id"] = str(variant["product_id"])
+            # Missing/null fixed 配鑽 total is OK — admin UI falls back to formula.
+            variant.setdefault("side_stone_total_twd", None)
         for image in product["images"]:
             if image.get("id") is not None:
                 image["id"] = str(image["id"])
@@ -717,6 +721,7 @@ async def products_create(request: Request) -> JSONResponse:
         ensure_product_sell_mode_columns(cur)
         ensure_product_length_weights_column(cur)
         ensure_product_chain_type_column(cur)
+        ensure_product_side_stone_total_column(cur)
         cur.execute(
             """
             insert into products (
@@ -771,6 +776,7 @@ async def product_update(request: Request) -> JSONResponse:
         ensure_product_sell_mode_columns(cur)
         ensure_product_length_weights_column(cur)
         ensure_product_chain_type_column(cur)
+        ensure_product_side_stone_total_column(cur)
         cur.execute(
             "select id, is_published, first_published_at from products where id = %s",
             (product_id,),
@@ -827,6 +833,7 @@ async def product_action(request: Request) -> JSONResponse:
     with get_transaction() as conn, conn.cursor() as cur:
         ensure_product_sell_mode_columns(cur)
         ensure_product_length_weights_column(cur)
+        ensure_product_side_stone_total_column(cur)
         cur.execute("select * from products where id = %s", (product_id,))
         product = cur.fetchone()
         if not product:

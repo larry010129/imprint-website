@@ -105,6 +105,7 @@ async def lifespan(_app: FastAPI):
         ensure_product_chain_type_column,
         ensure_product_length_weights_column,
         ensure_product_sell_mode_columns,
+        ensure_product_side_stone_total_column,
         purge_auto_stock_product_images,
     )
     from app.auth import ensure_google_id_column
@@ -141,12 +142,13 @@ async def lifespan(_app: FastAPI):
             _ensure_invite_schema(cur)
     except Exception:
         log.exception("ensure_invite_schema failed")
-    # Sell-mode columns must not ride the silent try below — missing cols = product-update 500.
+    # Sell-mode / variant columns must not ride the silent try below — missing cols = product 500.
     try:
         with get_connection() as conn, conn.cursor() as cur:
             ensure_product_sell_mode_columns(cur)
             ensure_product_length_weights_column(cur)
             ensure_product_chain_type_column(cur)
+            ensure_product_side_stone_total_column(cur)
     except Exception:
         log.exception("ensure_product_sell_mode_columns failed")
     try:

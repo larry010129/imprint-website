@@ -1,16 +1,63 @@
-/* Admin shell — dark sidebar (diamond-calculator style) */
+/* Admin shell — dark sidebar + RWD off-canvas
+   Breakpoints:
+   - default / ≤960px: off-canvas drawer, full-width main
+   - ≥961px: two-column desktop shell
+*/
 :root {
   --admin-side-bg: #0d0d0d;
   --admin-side-text: #a8a29e;
   --admin-side-active: #1a1a1a;
   --admin-side-mint: var(--mint, #8eedf0);
+  --admin-side-w: min(280px, 86vw);
+  --admin-bp-shell: 960px;
+}
+
+/* ---- Mobile-first shell ---- */
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 100vh;
+  min-width: 0;
+  overflow-x: clip;
 }
 
 .side {
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  width: var(--admin-side-w);
+  max-width: 100%;
+  height: 100%;
+  height: 100dvh;
+  padding: 0;
   background: var(--admin-side-bg);
   color: var(--admin-side-text);
+  transform: translateX(-100%);
+  transition: transform 0.22s ease;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.layout.is-nav-open .side {
+  transform: translateX(0);
+}
+
+.side-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 35;
+  margin: 0;
   padding: 0;
-  width: 220px;
+  border: 0;
+  background: rgba(43, 35, 32, 0.45);
+  cursor: pointer;
+}
+
+.layout.is-nav-open .side-backdrop {
+  display: block;
 }
 
 .side-brand { display: none; }
@@ -19,7 +66,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 22px 18px 14px;
+  gap: 12px;
+  flex: none;
+  padding: 18px 16px 14px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
@@ -36,12 +85,17 @@
   letter-spacing: 0.04em;
   text-decoration: none;
   white-space: nowrap;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 4px;
 }
 
 .side-back:hover { opacity: 0.85; }
 
 .side-nav {
   padding: 12px 10px 24px;
+  flex: 1;
 }
 
 .side-nav p { display: none; }
@@ -51,6 +105,7 @@
   align-items: center;
   gap: 12px;
   width: 100%;
+  min-height: 44px;
   padding: 11px 14px;
   border-radius: 8px;
   color: #d6d3d1;
@@ -105,7 +160,55 @@
   color: #78716c;
 }
 
-.layout { grid-template-columns: 220px 1fr; }
+/* Main — full width on small screens */
+.main {
+  min-width: 0;
+  max-width: 100%;
+  padding: 0 16px 40px;
+}
+
+.main-top {
+  gap: 12px;
+}
+
+.main-top-leading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.main-top-leading h1 {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.nav-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid #EDE7E0;
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink, #2B2320);
+}
+
+.nav-toggle svg {
+  width: 20px;
+  height: 20px;
+}
+
+.nav-toggle:hover {
+  background: #F7F3EE;
+}
 
 .main.is-orders-view {
   padding: 0 0 40px;
@@ -115,8 +218,67 @@
 
 .panel--stub .note { max-width: 520px; }
 
-@media (max-width: 960px) {
-  .side { width: auto; min-width: 100%; }
-  .side-head { flex: none; }
-  .side-nav button span:not(.side-icon) { display: none; }
+/* Charts / media scale inside cards */
+#panel-dash .dash-chart-wrap,
+#panel-dash .dash-chart-card,
+#panel-dash canvas {
+  max-width: 100%;
+}
+
+#panel-dash canvas {
+  width: 100% !important;
+  height: auto !important;
+}
+
+body.is-admin-nav-open {
+  overflow: hidden;
+}
+
+/* ---- Tablet polish (still off-canvas) ---- */
+@media (min-width: 768px) and (max-width: 960px) {
+  .main { padding: 0 24px 48px; }
+  .main.is-orders-view { padding: 0 0 40px; }
+}
+
+/* ---- Desktop: persistent two-column shell ---- */
+@media (min-width: 961px) {
+  .layout {
+    grid-template-columns: 220px minmax(0, 1fr);
+    overflow-x: visible;
+  }
+
+  .side {
+    position: relative;
+    inset: auto;
+    z-index: auto;
+    width: 220px;
+    max-width: none;
+    height: auto;
+    min-height: 100vh;
+    transform: none;
+    transition: none;
+    overflow-y: visible;
+  }
+
+  .layout.is-nav-open .side {
+    transform: none;
+  }
+
+  .side-backdrop,
+  .layout.is-nav-open .side-backdrop,
+  .nav-toggle {
+    display: none !important;
+  }
+
+  .side-head {
+    padding: 22px 18px 14px;
+  }
+
+  .main {
+    padding: 0 36px 60px;
+  }
+
+  .main.is-orders-view {
+    padding: 0 0 40px;
+  }
 }

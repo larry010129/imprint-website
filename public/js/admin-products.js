@@ -119,6 +119,16 @@
   var _loading = false;
   var _slotCounter = 0;
   var LOAD_TIMEOUT_MS = 25000;
+  var AUTOSAVE_MS = 1500;
+  var _imageBusy = 0;
+  var _autosave = {
+    timer: null,
+    waitTimer: null,
+    inFlight: false,
+    queued: false,
+    form: null,
+    ctx: null,
+  };
 
   function esc(s) {
     return window.AdminPanel && window.AdminPanel.escapeHtml
@@ -986,20 +996,8 @@
   }
 
   function imageSlideHtml(url, color) {
-    // Bundled shop-product PNGs are preview-only — show in gallery, never persist.
-    if (isAutoStockProductImage(url)) {
-      return (
-        '<div class="ap-carousel-item ap-carousel-item--stock" data-url="" data-stock="1" data-color="' + esc(color || '') + '">' +
-          '<div class="ap-carousel-card">' +
-            '<div class="ap-carousel-card-media">' +
-              '<img class="ap-carousel-img" src="' + esc(url) + '" alt="內建預覽" loading="eager" decoding="async" width="180" height="180">' +
-              '<span class="ap-stock-label">內建</span>' +
-              '<button type="button" class="ap-remove-image" aria-label="隱藏">X</button>' +
-            '</div>' +
-          '</div>' +
-        '</div>'
-      );
-    }
+    // Bundled shop-product PNGs are never shown — uploads only.
+    if (isAutoStockProductImage(url)) return '';
     var persistUrl = persistableImageUrl(url, color);
     if (!persistUrl) return '';
     return (
@@ -1084,47 +1082,15 @@
     return groups;
   }
 
-  /** Letter SKU (ring-A) from category + sort_order — matches resolve_product_id. */
-  function styleKeyForProduct(product, category) {
-    var cat = String(category || (product && product.category) || '').toLowerCase();
-    if (!cat || CATEGORY_ORDER.indexOf(cat) < 0) return '';
-    var order = product && (product.sort_order != null ? product.sort_order : product.sortOrder);
-    order = Number(order);
-    if (!Number.isFinite(order) || order < 0 || order > 2) return '';
-    return cat + '-' + String.fromCharCode(65 + order);
-  }
-
   /**
-   * Shop-product PNG for a metal×diamond slot. Bracelet has no fancy renders —
-   * skip those so admin does not show white-stone dupes under 黃/藍/粉.
+   * Real uploads only. Legacy metal / metal-diamond-chainMetal keys normalize
+   * into metal-diamond slots. Never invent shop-product letter previews.
    */
-  function stockUrlForSlot(styleKey, slotKey, category) {
-    if (!styleKey || !window.ShopAssets || !window.ShopAssets.productImage) return '';
-    var parsed = parseSlotKey(slotKey);
-    if (!parsed) return '';
-    if ((category === 'bracelet' || category === 'chain') && parsed.diamond !== 'white') {
-      return '';
-    }
-    var opts = category === 'pendant' ? { pendantOnly: true } : {};
-    return window.ShopAssets.productImage(
-      styleKey,
-      parsed.metal,
-      null,
-      parsed.diamond,
-      opts
-    ) || '';
-  }
-
-  /**
-   * Real uploads first. For letter SKUs (sort_order A–C), also show bundled
-   * shop-product metal×diamond previews (incl. ring/earring fancy 黃/藍/粉).
-   * Stock URLs are display-only and never persisted on save.
-   * Legacy pendant 3-part keys (metal-diamond-chainMetal) fold into metal-diamond.
-   */
-  function slotsForEditor(images, category, product) {
+  function slotsForEditor(images, category) {
     var groups = groupImagesForSlots(images);
     var seen = {};
     var slots = [];
+    var presets = presetSlotKeysForCategory(category);
 
     function pushSlot(key) {
       if (!key || seen[key]) return;
@@ -1154,17 +1120,6 @@
       mergeInto(buildSlotKey(parsed.metal, parsed.diamond, null), groups[key]);
       delete groups[key];
     });
-
-    // Fill missing calculator slots from shop-product letter assets (preview only).
-    var styleKey = styleKeyForProduct(product, category);
-    var presets = presetSlotKeysForCategory(category);
-    if (styleKey) {
-      presets.forEach(function (key) {
-        if (groups[key] && groups[key].length) return;
-        var stock = stockUrlForSlot(styleKey, key, category);
-        if (stock) groups[key] = [stock];
-      });
-    }
 
     // Preset order first (metal×diamond matrix), then any leftover custom keys.
     presets.forEach(pushSlot);
@@ -1225,8 +1180,8 @@
     );
   }
 
-  function imageSlotsHtml(images, category, product) {
-    var slots = slotsForEditor(images, category, product);
+  function imageSlotsHtml(images, category) {
+    var slots = slotsForEditor(images, category);
     return slots.map(function (slot) { return imageSlotHtml(slot, category); }).join('');
   }
 
@@ -1339,6 +1294,19 @@
     return next(0);
   }
 
+  function beginImageBusy() {
+    _imageBusy += 1;
+  }
+
+  function endImageBusy() {
+    _imageBusy = Math.max(0, _imageBusy - 1);
+    if (_imageBusy === 0) scheduleAutosave();
+  }
+
+  function isImageBusy() {
+    return _imageBusy > 0 || !!document.getElementById('apProductImageCropMount');
+  }
+
   function uploadFilesToSlot(files, slot, form) {
     var track = slot.querySelector('.ap-carousel-track');
     var uploadItem = slot.querySelector('.ap-carousel-item--upload');
@@ -1349,8 +1317,12 @@
 
     var color = slotColorKey(slot) || 'white';
 
+    beginImageBusy();
     prepareFilesWithCrop(files).then(function (readyFiles) {
-      if (!readyFiles.length) return;
+      if (!readyFiles.length) {
+        endImageBusy();
+        return;
+      }
 
       var progressByIndex = readyFiles.map(function () { return 0; });
 
@@ -1422,7 +1394,12 @@
           uploading.hidden = false;
           uploading.textContent = '上傳失敗';
         }
+        endImageBusy();
+      }, function () {
+        endImageBusy();
       });
+    }, function () {
+      endImageBusy();
     });
   }
 
@@ -1539,7 +1516,78 @@
     });
   }
 
+  function setAutosaveStatus(text) {
+    var el = document.getElementById('apAutosaveStatus');
+    if (el) el.textContent = text || '';
+  }
+
+  function clearAutosaveTimer() {
+    if (_autosave.timer) {
+      clearTimeout(_autosave.timer);
+      _autosave.timer = null;
+    }
+  }
+
+  function clearAutosave() {
+    clearAutosaveTimer();
+    if (_autosave.waitTimer) {
+      clearInterval(_autosave.waitTimer);
+      _autosave.waitTimer = null;
+    }
+    _autosave.inFlight = false;
+    _autosave.queued = false;
+    _autosave.form = null;
+    _autosave.ctx = null;
+    setAutosaveStatus('');
+  }
+
+  function scheduleAutosave() {
+    if (!_autosave.form || !_autosave.ctx || state.view !== 'editor') return;
+    clearAutosaveTimer();
+    _autosave.timer = setTimeout(function () {
+      _autosave.timer = null;
+      flushAutosave();
+    }, AUTOSAVE_MS);
+  }
+
+  function flushAutosave() {
+    if (!_autosave.form || !_autosave.ctx || state.view !== 'editor') return;
+    if (_autosave.inFlight) {
+      _autosave.queued = true;
+      return;
+    }
+    if (isImageBusy()) {
+      scheduleAutosave();
+      return;
+    }
+    _autosave.inFlight = true;
+    saveProduct(_autosave.form, _autosave.ctx, { autosave: true }).then(function (result) {
+      _autosave.inFlight = false;
+      if (result && result.skipped) {
+        if (!result.errorShown) setAutosaveStatus('');
+      } else if (result && result.error) {
+        setAutosaveStatus('自動儲存失敗');
+      } else if (result && result.ok) {
+        setAutosaveStatus('已自動儲存');
+      }
+      if (_autosave.queued) {
+        _autosave.queued = false;
+        scheduleAutosave();
+      }
+    });
+  }
+
+  function bindAutosave(form, ctx) {
+    clearAutosave();
+    _autosave.form = form;
+    _autosave.ctx = ctx;
+    form.addEventListener('input', scheduleAutosave);
+    form.addEventListener('change', scheduleAutosave);
+  }
+
   function closeEditor() {
+    clearAutosave();
+    _imageBusy = 0;
     resetDeferredImages();
     state.view = 'list';
     state.editingId = null;
@@ -1689,10 +1737,11 @@
             '<h4 class="ap-section-title">商品照片</h4>' +
             '<p class="ap-section-hint">試算頁會依「金屬 × 鑽石顏色」切換商品圖' +
               (category === 'pendant' ? '；含鍊預覽沿用項墜金屬色（無需另傳異色鍊圖）' : '') +
-              '。有對應款式時會顯示內建預覽（含彩鑽），上傳圖會覆蓋該格；內建圖不會寫入資料庫。</p>' +
-            '<div class="ap-image-slots" id="apImageSlots">' + imageSlotsHtml(product && product.images, category, product) + '</div>' +
+              '。請為需要的金屬 × 鑽石組合上傳商品照片。</p>' +
+            '<div class="ap-image-slots" id="apImageSlots">' + imageSlotsHtml(product && product.images, category) + '</div>' +
             '<button type="button" class="btn-sm" id="apAddImageSlot">+ 新增圖片選項</button>' +
             '<div class="ap-form-actions ap-editor-actions">' +
+              '<span id="apAutosaveStatus" class="ap-autosave-status" aria-live="polite"></span>' +
               '<button type="button" class="btn-sm" id="apEditorCancel">取消</button>' +
               '<button type="submit" class="btn-sm" id="apSaveProduct">儲存草稿</button>' +
             '</div>' +
@@ -1725,6 +1774,7 @@
     var form = document.getElementById('apProductForm');
     var grid = document.getElementById('apVariantGrid');
     var catSel = document.getElementById('apCategory');
+    var editorCtx = { product: product || null };
 
     document.getElementById('apEditorBack')?.addEventListener('click', closeEditor);
     document.getElementById('apEditorCancel')?.addEventListener('click', closeEditor);
@@ -1797,10 +1847,8 @@
         alert('所有組合都已建立，無法再新增圖片選項');
         return;
       }
-      var styleKey = styleKeyForProduct(product, cat);
-      var stock = styleKey ? stockUrlForSlot(styleKey, pick, cat) : '';
       var wrap = document.createElement('div');
-      wrap.innerHTML = imageSlotHtml({ color: pick, urls: stock ? [stock] : [] }, cat);
+      wrap.innerHTML = imageSlotHtml({ color: pick, urls: [] }, cat);
       var slot = wrap.firstElementChild;
       host.appendChild(slot);
       bindImageSlot(slot, form);
@@ -1848,14 +1896,13 @@
           });
         });
         _slotCounter = 0;
-        var editorProduct = Object.assign({}, product || {}, { category: cat });
-        host.innerHTML = imageSlotsHtml(currentImages, cat, editorProduct);
+        host.innerHTML = imageSlotsHtml(currentImages, cat);
         bindImageSlots(form);
       }
       if (hint) {
         hint.textContent = '試算頁會依「金屬 × 鑽石顏色」切換商品圖'
           + (cat === 'pendant' ? '；含鍊預覽沿用項墜金屬色（無需另傳異色鍊圖）' : '')
-          + '。有對應款式時會顯示內建預覽（含彩鑽），上傳圖會覆蓋該格；內建圖不會寫入資料庫。';
+          + '。請為需要的金屬 × 鑽石組合上傳商品照片。';
       }
       var sellModes = document.getElementById('apPendantSellModes');
       if (sellModes) sellModes.hidden = cat !== 'pendant';
@@ -1863,13 +1910,35 @@
 
     form.addEventListener('submit', function (e) {
       e.preventDefault();
-      saveProduct(form, product);
+      clearAutosaveTimer();
+      _autosave.queued = false;
+      if (_autosave.waitTimer) {
+        clearInterval(_autosave.waitTimer);
+        _autosave.waitTimer = null;
+      }
+      function runManualSave() {
+        saveProduct(form, editorCtx, { autosave: false });
+      }
+      if (_autosave.inFlight) {
+        // Wait for in-flight autosave, then manual save once.
+        _autosave.waitTimer = setInterval(function () {
+          if (_autosave.inFlight) return;
+          clearInterval(_autosave.waitTimer);
+          _autosave.waitTimer = null;
+          if (state.view !== 'editor') return;
+          runManualSave();
+        }, 50);
+        return;
+      }
+      runManualSave();
     });
 
     form.querySelector('[name="saveForLater"]')?.addEventListener('change', function () {
-      updateSaveButton(form, !!product);
+      updateSaveButton(form, !!editorCtx.product);
+      scheduleAutosave();
     });
-    updateSaveButton(form, !!product);
+    updateSaveButton(form, !!editorCtx.product);
+    bindAutosave(form, editorCtx);
   }
 
   function renderEditor(product, defaultCategory) {
@@ -1960,34 +2029,15 @@
     };
   }
 
-  function saveProduct(form, product) {
-    var payload = collectForm(form);
-    if (product) payload.id = product.id;
-    var btn = document.getElementById('apSaveProduct');
-    var errEl = document.getElementById('apFormError');
-    var isDraft = isSaveForLater(form);
-
-    // 英文名稱（資料用）always required — Storage folder slug source of truth.
+  function validateProductPayload(form, payload, isDraft) {
     if (!payload.nameEn) {
-      if (errEl) {
-        errEl.textContent = '請填寫英文名稱（資料用，必填）';
-        errEl.hidden = false;
-      }
-      form.querySelector('[name="nameEn"]')?.focus();
-      return;
+      return { error: '請填寫英文名稱（資料用，必填）', focus: '[name="nameEn"]' };
     }
-
     // 儲存草稿不要求中文／照片；只有正式上架才需要完整資料。
     if (!isDraft) {
       if (!payload.nameZh) {
-        if (errEl) {
-          errEl.textContent = '請填寫中文名稱（必填）';
-          errEl.hidden = false;
-        }
-        form.querySelector('[name="nameZh"]')?.focus();
-        return;
+        return { error: '請填寫中文名稱（必填）', focus: '[name="nameZh"]' };
       }
-
       var slotKeys = [];
       var slotError = '';
       form.querySelectorAll('.ap-image-slot').forEach(function (slot) {
@@ -2006,40 +2056,88 @@
         }
         slotKeys.push(key);
       });
-      if (slotError) {
-        if (errEl) { errEl.textContent = slotError; errEl.hidden = false; }
-        return;
+      if (slotError) return { error: slotError };
+    }
+    return null;
+  }
+
+  function saveProduct(form, ctx, opts) {
+    opts = opts || {};
+    var isAutosave = !!opts.autosave;
+    var product = ctx && ctx.product;
+    var payload = collectForm(form);
+    if (product) payload.id = product.id;
+    var btn = document.getElementById('apSaveProduct');
+    var errEl = document.getElementById('apFormError');
+    var isDraft = isSaveForLater(form);
+
+    var validation = validateProductPayload(form, payload, isDraft);
+    if (validation) {
+      if (isAutosave) return Promise.resolve({ skipped: true });
+      if (errEl) {
+        errEl.textContent = validation.error;
+        errEl.hidden = false;
       }
+      if (validation.focus) form.querySelector(validation.focus)?.focus();
+      return Promise.resolve({ skipped: true, errorShown: true });
     }
 
     if (errEl) errEl.hidden = true;
-    if (btn) { btn.disabled = true; btn.textContent = '儲存中…'; }
-    var toastId = window.Toast && window.Toast.create({
-      type: 'loading',
-      title: isDraft ? '草稿儲存中…' : '商品上架中…',
-      description: '正在將商品資料寫入後台，請稍候。',
-      duration: Infinity
-    });
+    if (isAutosave) setAutosaveStatus('自動儲存中…');
+    if (!isAutosave && btn) {
+      btn.disabled = true;
+      btn.textContent = '儲存中…';
+    }
+    var toastId = null;
+    if (!isAutosave && window.Toast) {
+      toastId = window.Toast.create({
+        type: 'loading',
+        title: isDraft ? '草稿儲存中…' : '商品上架中…',
+        description: '正在將商品資料寫入後台，請稍候。',
+        duration: Infinity
+      });
+    }
+    if (!isAutosave) _autosave.inFlight = true;
+
     var req = product ? api.admin.updateProduct(payload) : api.admin.saveProduct(payload);
-    req.then(function (res) {
-      if (btn) { btn.disabled = false; updateSaveButton(form, !!product); }
-      if (res.error) {
-        if (errEl) {
-          errEl.textContent = apiError(res);
-          errEl.hidden = false;
-        } else {
-          alert(apiError(res));
-        }
-        if (toastId && window.Toast) {
-          window.Toast.update(toastId, {
-            type: 'error',
-            title: isDraft ? '草稿儲存失敗' : '商品上架失敗',
-            description: apiError(res),
-            duration: 6000
-          });
-        }
-        return;
+    return req.then(function (res) {
+      if (!isAutosave) _autosave.inFlight = false;
+      if (!isAutosave && btn) {
+        btn.disabled = false;
+        updateSaveButton(form, !!(ctx && ctx.product));
       }
+      if (res.error) {
+        if (!isAutosave) {
+          if (errEl) {
+            errEl.textContent = apiError(res);
+            errEl.hidden = false;
+          } else {
+            alert(apiError(res));
+          }
+          if (toastId && window.Toast) {
+            window.Toast.update(toastId, {
+              type: 'error',
+              title: isDraft ? '草稿儲存失敗' : '商品上架失敗',
+              description: apiError(res),
+              duration: 6000
+            });
+          }
+        }
+        return { error: true, message: apiError(res) };
+      }
+
+      if (res.product && ctx) {
+        ctx.product = res.product;
+        state.editingId = res.product.id;
+      }
+
+      if (isAutosave) {
+        if (btn) updateSaveButton(form, !!(ctx && ctx.product));
+        // Keep editor open; quietly refresh list cache for when user returns.
+        load(true, true);
+        return { ok: true };
+      }
+
       if (toastId && window.Toast) {
         window.Toast.update(toastId, {
           type: 'success',
@@ -2048,9 +2146,11 @@
           duration: 4000
         });
       }
+      clearAutosave();
       state.view = 'list';
       state.editingId = null;
       load(true, true);
+      return { ok: true };
     });
   }
 

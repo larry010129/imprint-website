@@ -6,9 +6,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>銘印鑽石｜管理後台</title>
 <meta name="robots" content="noindex">
-<link rel="stylesheet" href="/css/admin-core.css?v=26">
+<link rel="stylesheet" href="/css/admin-core.css?v=29">
 <link rel="stylesheet" href="/css/skeleton.css?v=1">
-<link rel="stylesheet" href="/css/admin-shell.css">
+<link rel="stylesheet" href="/css/admin-shell.css?v=3">
 <link rel="stylesheet" href="/css/admin-orders.css?v=11">
 <link rel="stylesheet" href="/css/admin-tables.css?v=28">
 <link rel="stylesheet" href="/static/react/admin-tables.css?v=34">
@@ -22,10 +22,11 @@
 </head>
 <body>
 
-<div class="layout">
+<div class="layout" id="adminLayout">
+  <button type="button" class="side-backdrop" id="sideBackdrop" aria-label="關閉選單" tabindex="-1"></button>
 
   <!-- 側邊欄 -->
-  <aside class="side">
+  <aside class="side" id="adminSide" aria-label="管理選單">
     <div class="side-head">
       <span class="side-head-title">營運</span>
       <a class="side-back" href="/shop/calculator/">〈 返回訂製</a>
@@ -435,7 +436,7 @@
 <script src="js/girdle-engrave.js?v=11"></script>
 <script src="js/admin-orders.js?v=17"></script>
 <script src="js/order-detail.js"></script>
-<script src="js/admin-products.js?v=35"></script>
+<script src="js/admin-products.js?v=36"></script>
 <script src="js/admin-accounts.js?v=12"></script>
 <script src="js/admin-member-search.js?v=3"></script>
 <script src="js/admin-invites.js?v=12"></script>

@@ -612,7 +612,10 @@ button.ap-remove-image:hover{
 .ai-empty,.ai-loading{color:var(--ink-faint);padding:20px 0;}
 .ai-hint{font-size:12px;color:var(--ink-faint);line-height:1.6;margin:0;}
 .ai-section-label{font-size:12px;font-weight:600;color:var(--ink-soft);letter-spacing:.06em;margin:4px 0 0;}
-.ap-form-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px;}
+.ap-form-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px;align-items:center;}
+.ap-autosave-status{
+  margin-right:auto;font-size:12.5px;color:var(--ink-faint);min-height:1.2em;line-height:1.4;
+}
 .ap-editor-page{
   background:var(--card);border:1px solid #EDE7E0;border-radius:10px;
   padding:24px 28px 36px;box-shadow:0 8px 24px rgba(43,35,32,.04);
@@ -811,16 +814,52 @@ a.btn-sm.btn-primary:hover{background:#453A34;color:#fff;border-color:#453A34;}
 .admin-input-sm { width: 90px; }
 .admin-input-md { width: 120px; }
 
+/* Shell layout (≤960 / ≥961) owned by admin-shell.css — off-canvas drawer.
+   Keep panel/content fluid tweaks only here. */
 @media (max-width:960px){
-  .layout{grid-template-columns:1fr;}
-  .side{flex-direction:row;overflow-x:auto;padding:10px;position:sticky;top:0;z-index:10;}
-  .side-brand{border:none;padding:0 14px;}
-  .side-nav{display:flex;padding:0;flex:none;}
-  .side-nav p,.side-foot{display:none;}
   .stats{grid-template-columns:1fr 1fr;}
-  .dash-metrics{grid-template-columns:1fr 1fr;}
-  .dash-grid{grid-template-columns:1fr;}
-  .main{padding:0 16px 40px;}
-  .card{overflow-x:auto;}
+  .card{overflow-x:auto;max-width:100%;}
   table{min-width:720px;}
+
+  /* 儀表板 — phone-safe stack / wrap */
+  #panel-dash{min-width:0;max-width:100%;}
+  #panel-dash .dash-metrics{grid-template-columns:1fr 1fr;gap:12px;}
+  #panel-dash .dash-grid{grid-template-columns:1fr;}
+  #panel-dash .dash-metric{padding:16px;}
+  #panel-dash .dash-metric-v{font-size:24px;}
+  #panel-dash .dash-toolbar{padding:12px 14px;gap:12px;}
+  #panel-dash .dash-toolbar-actions{width:100%;}
+  #panel-dash .dash-chart-wrap{height:220px;padding:8px 12px 12px;max-width:100%;}
+  #panel-dash .dash-chart-card{min-height:0;max-width:100%;}
+  #panel-dash .dash-recent-item,
+  #panel-dash .dash-rank-item{padding:12px 14px;gap:10px;}
+  #panel-dash .dash-summary-list li{padding:12px 14px;}
+  #panel-dash .dash-status-cards{padding:0 14px 14px;}
+}
+
+@media (max-width:560px){
+  #panel-dash .dash-metrics{grid-template-columns:1fr;}
+  #panel-dash .dash-intro h2{font-size:20px;}
+  #panel-dash .dash-toolbar-actions{
+    flex-direction:column;align-items:stretch;gap:10px;
+  }
+  #panel-dash .dash-granularity{display:flex;width:100%;}
+  #panel-dash .dash-granularity button{flex:1;min-height:40px;padding:10px 8px;}
+  #panel-dash .dash-range-form{width:100%;}
+  #panel-dash .dash-range-form select,
+  #panel-dash .dash-range-form input[type="date"]{
+    flex:1;min-width:0;width:100%;min-height:40px;
+  }
+  #panel-dash .dash-export-btn{
+    justify-content:center;width:100%;min-height:40px;padding:10px 14px;
+  }
+  #panel-dash .dash-toggles{width:100%;}
+  #panel-dash .dash-toggle{flex:1;min-width:0;}
+  #panel-dash .dash-toggle button{flex:1;min-height:36px;text-align:center;}
+  #panel-dash .dash-recent-item{flex-wrap:wrap;align-items:flex-start;}
+  #panel-dash .dash-recent-time{white-space:normal;}
+  #panel-dash .dash-metric-d{overflow-wrap:anywhere;}
+  #panel-dash .dash-stat-card-inner{gap:12px;}
+  #panel-dash .dash-stat-ring-wrap,
+  #panel-dash .dash-stat-ring-svg{width:64px;height:64px;}
 }

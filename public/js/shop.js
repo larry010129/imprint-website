@@ -523,26 +523,17 @@ function productAssetId(product) {
   }
   const id = String(product.id || '');
   if (/^[a-z]+-[A-C]$/i.test(id)) return id;
-  // Custom uploads (lite thumbUrl / catalog rasters) are not letter stock — never invent A–C.
-  // Many admin products share sortOrder=0; inventing pendant-A painted every card the same.
-  if (product.thumbUrl && isUsableCatalogImageUrl(product.thumbUrl)) return '';
-  if (productHasCatalogImages(product)) return '';
-  // UUID letter SKUs with no uploads yet: admin A–C = category + sortOrder.
-  const cat = String(product.category || state.category || '').toLowerCase();
-  if (!['pendant', 'ring', 'earring', 'bracelet', 'chain'].includes(cat)) return '';
-  const rawOrder = product.sortOrder ?? product.sort_order;
-  if (rawOrder == null || rawOrder === '') return '';
-  const order = Number(rawOrder);
-  if (!Number.isFinite(order) || order < 0 || order > 2) return '';
-  return `${cat}-${String.fromCharCode(65 + order)}`;
+  // Never invent A–C from sortOrder — shop-product letter PNGs are not product photos.
+  return '';
 }
 
-/** Skip seed SVG placeholders — /shop/styles/*.svg 404; shop-product PNGs are SoT. */
+/** Skip seed SVG placeholders and bundled shop-product letter stock. */
 function isUsableCatalogImageUrl(url) {
   if (!url) return false;
-  const path = String(url).split('?', 1)[0].toLowerCase();
+  const path = String(url).split('?', 1)[0].replace(/\\/g, '/').toLowerCase();
   if (path.endsWith('.svg')) return false;
   if (/\/images\/shop\/styles\//i.test(path)) return false;
+  if (/(?:^|\/)(?:static\/)?images\/shop-product(?:\/|$)/.test(path)) return false;
   return true;
 }
 
@@ -2694,12 +2685,6 @@ function designedFancyDiamondColors(product) {
   }
   // Lite catalog omits `images` but keeps slot keys in `colors`.
   addFancyColorsFromSlotKeys(product?.colors, found);
-  // Admin 內建 previews are not persisted — letter SKUs still have stock fancy PNGs.
-  const styleKey = productAssetId(product);
-  const stock = window.ShopAssets?.stockFancyDiamondColors?.(styleKey) || [];
-  stock.forEach((c) => {
-    if (FANCY_DIAMOND_COLOR_IDS.includes(c)) found.add(c);
-  });
   return FANCY_DIAMOND_COLOR_IDS.filter((c) => found.has(c));
 }
 

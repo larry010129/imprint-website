@@ -87,6 +87,14 @@ def ensure_product_chain_type_column(cur) -> None:
     cur.execute("alter table products add column if not exists chain_type text")
 
 
+def ensure_product_side_stone_total_column(cur) -> None:
+    """Add fixed 配鑽價錢 total column if missing (migration 20260804160000)."""
+    cur.execute(
+        "alter table product_variants "
+        "add column if not exists side_stone_total_twd numeric"
+    )
+
+
 def as_jsonb(value: Any) -> Jsonb | None:
     """Wrap dict/list for jsonb params. Bare dict → ProgrammingError in psycopg3."""
     if value is None:
@@ -670,6 +678,7 @@ def delete_product_image_urls_if_unreferenced(cur, urls) -> int:
 
 
 def save_product_children(cur, product_id: str, cleaned: dict) -> None:
+    ensure_product_side_stone_total_column(cur)
     cur.execute("delete from product_variants where product_id = %s", (product_id,))
     for variant in cleaned["variants"]:
         cur.execute(
