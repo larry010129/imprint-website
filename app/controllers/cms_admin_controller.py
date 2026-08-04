@@ -80,7 +80,7 @@ def _storage_upload(kind: str, name: str, data: bytes, ext: str) -> tuple[str | 
     from app.storage import StorageNotConfiguredError, StorageUploadError, upload_image
 
     try:
-        return upload_image(kind, name, data, ext), None
+        return upload_image(kind, name, data, ext, upsert=True), None
     except StorageNotConfiguredError as exc:
         return None, str(exc)
     except StorageUploadError as exc:

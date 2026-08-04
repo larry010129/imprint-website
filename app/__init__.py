@@ -122,6 +122,7 @@ async def lifespan(_app: FastAPI):
     )
     from app.membership_config import ensure_membership_schema
     from app.orders import ensure_order_status_timestamps_column
+    from app.product_categories import ensure_product_categories_schema
     from app.profile_schema import ensure_profile_address_columns
     from app.seed_catalog import seed_catalog_if_empty
     from app.seed_content import seed_content_if_empty
@@ -160,6 +161,7 @@ async def lifespan(_app: FastAPI):
         log.exception("purge_auto_stock_product_images failed")
     try:
         with get_connection() as conn, conn.cursor() as cur:
+            ensure_product_categories_schema(cur)
             ensure_membership_schema(cur)
             ensure_page_images_schema(cur)
             ensure_banner_mobile_column(cur)
@@ -170,7 +172,7 @@ async def lifespan(_app: FastAPI):
             seed_page_copy_slots(cur)
             remove_legacy_seeded_pages(cur)
     except Exception:
-        pass
+        log.exception("ensure content/cms/product_categories schema failed")
 
     def seed_initial_content() -> None:
         seed_catalog_if_empty()

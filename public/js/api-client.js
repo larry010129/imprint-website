@@ -43,9 +43,15 @@
 
   function apiErrorMessage(data) {
     if (!data) return '未知錯誤';
-    if (typeof data.error === 'string') return data.error;
+    if (typeof data.error === 'string' && data.error) return data.error;
     if (data.error && data.error.message) return data.error.message;
-    if (typeof data.detail === 'string') return data.detail;
+    if (typeof data.detail === 'string' && data.detail) return data.detail;
+    if (Array.isArray(data.detail) && data.detail.length) {
+      return data.detail.map(function (d) {
+        return (d && d.msg) ? d.msg : String(d);
+      }).join('；');
+    }
+    if (typeof data.message === 'string' && data.message) return data.message;
     return '未知錯誤';
   }
 
@@ -247,9 +253,11 @@
           body: fd,
         }).then(function (res) {
           return res.json().catch(function () { return {}; }).then(function (data) {
-            if (!res.ok && !data.error) {
-              if (typeof data.detail === 'string') data.error = data.detail;
-              else data.error = 'HTTP ' + res.status;
+            if (!res.ok) {
+              var msg = apiErrorMessage(data);
+              if (!data.error || data.error === '未知錯誤') {
+                data.error = (msg && msg !== '未知錯誤') ? msg : ('HTTP ' + res.status);
+              }
             }
             data._httpStatus = res.status;
             return data;

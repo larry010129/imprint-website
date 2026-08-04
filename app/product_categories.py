@@ -6,6 +6,8 @@ import re
 import uuid
 from datetime import datetime, timezone
 
+from psycopg import errors as pg_errors
+
 from app.image_urls import resolve_product_image_url
 
 DEFAULT_CATEGORIES: list[dict] = [
@@ -19,6 +21,34 @@ DEFAULT_CATEGORIES: list[dict] = [
 _SLUG_RE = re.compile(r"^[a-z][a-z0-9_-]{1,31}$")
 
 
+def ensure_product_categories_schema(cur) -> None:
+    """Create product_categories + seed defaults (migration may not have run)."""
+    cur.execute(
+        """
+        create table if not exists product_categories (
+          slug text primary key,
+          label_zh text not null,
+          label_en text,
+          thumb_path text,
+          sort_order int not null default 0,
+          created_at timestamptz not null default now(),
+          updated_at timestamptz not null default now()
+        )
+        """
+    )
+    cur.execute(
+        """
+        insert into product_categories (slug, label_zh, label_en, sort_order) values
+          ('pendant', '項墜', 'Pendant', 0),
+          ('ring', '戒指', 'Ring', 1),
+          ('earring', '耳環', 'Earring', 2),
+          ('bracelet', '手鍊', 'Bracelet', 3),
+          ('chain', '鏈條', 'Chain', 4)
+        on conflict (slug) do nothing
+        """
+    )
+
+
 def _serialize_row(row: dict) -> dict:
     out = dict(row)
     for key, value in out.items():
@@ -30,15 +60,12 @@ def _serialize_row(row: dict) -> dict:
 
 
 def fetch_categories(cur) -> list[dict]:
-    rows: list = []
-    try:
-        cur.execute(
-            "select slug, label_zh, label_en, thumb_path, sort_order, created_at, updated_at "
-            "from product_categories order by sort_order, slug"
-        )
-        rows = cur.fetchall()
-    except Exception:
-        rows = []
+    ensure_product_categories_schema(cur)
+    cur.execute(
+        "select slug, label_zh, label_en, thumb_path, sort_order, created_at, updated_at "
+        "from product_categories order by sort_order, slug"
+    )
+    rows = cur.fetchall()
     if rows:
         return [_serialize_row(dict(row)) for row in rows]
     return [_serialize_row(dict(row)) for row in DEFAULT_CATEGORIES]
@@ -89,6 +116,7 @@ def create_category(cur, *, label_zh: str, label_en: str | None = None) -> tuple
     if label_en and len(label_en) > 80:
         return None, "英文名稱過長"
 
+    ensure_product_categories_schema(cur)
     existing = valid_category_slugs(cur)
     slug = make_slug(label_zh, existing)
 
@@ -104,8 +132,11 @@ def create_category(cur, *, label_zh: str, label_en: str | None = None) -> tuple
             (slug, label_zh, label_en, sort_order),
         )
         return _serialize_row(dict(cur.fetchone())), None
-    except Exception:
-        return None, "新增品項失敗"
+    except pg_errors.UniqueViolation:
+        return None, "品項已存在（名稱或代碼重複）"
+    except Exception as exc:
+        msg = str(exc).strip().split("\n", 1)[0][:200]
+        return None, f"新增品項失敗：{msg}" if msg else "新增品項失敗"
 
 
 def delete_category(cur, slug: str) -> tuple[bool, str | None]:
@@ -127,18 +158,23 @@ def delete_category(cur, slug: str) -> tuple[bool, str | None]:
 
 def update_category_thumb(cur, slug: str, thumb_path: str) -> tuple[dict | None, str | None]:
     slug = (slug or "").strip()
+    ensure_product_categories_schema(cur)
     if slug not in valid_category_slugs(cur):
         return None, "品項不存在"
-    cur.execute(
-        """
-        update product_categories
-        set thumb_path = %s, updated_at = %s
-        where slug = %s
-        returning slug, label_zh, label_en, thumb_path, sort_order, created_at, updated_at
-        """,
-        (thumb_path, datetime.now(timezone.utc), slug),
-    )
-    row = cur.fetchone()
+    try:
+        cur.execute(
+            """
+            update product_categories
+            set thumb_path = %s, updated_at = %s
+            where slug = %s
+            returning slug, label_zh, label_en, thumb_path, sort_order, created_at, updated_at
+            """,
+            (thumb_path, datetime.now(timezone.utc), slug),
+        )
+        row = cur.fetchone()
+    except Exception as exc:
+        msg = str(exc).strip().split("\n", 1)[0][:200]
+        return None, f"更新品項圖失敗：{msg}" if msg else "更新品項圖失敗"
     if not row:
         return None, "品項不存在"
     return _serialize_row(dict(row)), None

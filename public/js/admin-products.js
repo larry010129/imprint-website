@@ -665,17 +665,21 @@
         return;
       }
       var cat = state.activeTab.replace('cat-', '');
-      api.admin.uploadProductCategoryThumb(cat, file).then(function (res) {
-        if (res.error) {
-          alert('上傳失敗：' + apiError(res));
-          return;
-        }
-        if (res.category) {
-          var idx = (state.categories || []).findIndex(function (c) { return c.slug === cat; });
-          if (idx >= 0) state.categories[idx] = res.category;
-          else if (state.categories) state.categories.push(res.category);
-        }
-        refreshCategoryPanel();
+      // Same ProductImageCropModal as product slots (freeform; optional 1:1 for catalog tiles).
+      openProductImageCrop(file).then(function (cropped) {
+        if (!cropped) return;
+        return api.admin.uploadProductCategoryThumb(cat, cropped).then(function (res) {
+          if (res.error) {
+            alert('上傳失敗：' + apiError(res));
+            return;
+          }
+          if (res.category) {
+            var idx = (state.categories || []).findIndex(function (c) { return c.slug === cat; });
+            if (idx >= 0) state.categories[idx] = res.category;
+            else if (state.categories) state.categories.push(res.category);
+          }
+          refreshCategoryPanel();
+        });
       });
     });
   }

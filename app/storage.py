@@ -185,6 +185,10 @@ def upload_bytes(
         resp = client.post(api_url, content=data, headers=headers)
         if resp.status_code not in (200, 201):
             detail = (resp.text or "")[:200]
+            if resp.status_code == 409 or "KeyAlreadyExists" in detail:
+                raise StorageUploadError(
+                    "圖片已存在且無法覆寫，請稍後再試或換檔名上傳"
+                )
             raise StorageUploadError(
                 f"Storage upload failed ({resp.status_code}): {detail}"
             )
@@ -209,8 +213,9 @@ def upload_image(
     data: bytes,
     ext: str,
     *,
-    upsert: bool = False,
+    upsert: bool = True,
 ) -> str:
+    """Upload image bytes; upsert=True overwrites same object key (admin replace)."""
     mime = _EXT_MIME.get(ext.lower(), "application/octet-stream")
     return upload_bytes(kind, filename, data, mime, upsert=upsert)
 

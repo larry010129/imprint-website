@@ -530,11 +530,16 @@ def _storage_upload(kind: str, name: str, data: bytes, ext: str) -> tuple[str | 
     from app.storage import StorageNotConfiguredError, StorageUploadError, upload_image
 
     try:
-        return upload_image(kind, name, data, ext), None
+        # Upsert: category thumbs reuse categories/{slug}{ext}; overwrite on re-upload.
+        return upload_image(kind, name, data, ext, upsert=True), None
     except StorageNotConfiguredError as exc:
         return None, str(exc)
     except StorageUploadError as exc:
         return None, str(exc)
+    except Exception as exc:
+        # httpx/network errors must not become opaque HTTP 500 for admin UI.
+        msg = str(exc).strip().split("\n", 1)[0][:200]
+        return None, msg or "Storage upload failed"
 
 
 @router.post("/product-upload")
@@ -645,8 +650,17 @@ async def product_category_upload(
     if upload_err:
         return JSONResponse(status_code=503, content={"error": upload_err})
 
-    with get_transaction() as conn, conn.cursor() as cur:
-        category, error = update_category_thumb(cur, slug, url)
+    category: dict | None = None
+    error: str | None = None
+    try:
+        with get_transaction() as conn, conn.cursor() as cur:
+            category, error = update_category_thumb(cur, slug, url)
+    except Exception as exc:
+        msg = str(exc).strip().split("\n", 1)[0][:200]
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"更新品項圖失敗：{msg}" if msg else "更新品項圖失敗"},
+        )
     if error:
         return JSONResponse(status_code=400, content={"error": error})
     return JSONResponse(content={"url": url, "category": category})

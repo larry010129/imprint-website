@@ -6,9 +6,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>銘印鑽石｜管理後台</title>
 <meta name="robots" content="noindex">
-<link rel="stylesheet" href="/css/admin-core.css?v=29">
+<link rel="stylesheet" href="/css/admin-core.css?v=30">
 <link rel="stylesheet" href="/css/skeleton.css?v=1">
-<link rel="stylesheet" href="/css/admin-shell.css?v=3">
+<link rel="stylesheet" href="/css/admin-shell.css?v=4">
 <link rel="stylesheet" href="/css/admin-orders.css?v=11">
 <link rel="stylesheet" href="/css/admin-tables.css?v=28">
 <link rel="stylesheet" href="/static/react/admin-tables.css?v=34">
@@ -76,7 +76,14 @@
   <!-- 主區 -->
   <main class="main">
     <div class="main-top">
-      <h1 id="pageTitle">儀表板</h1>
+      <div class="main-top-leading">
+        <button type="button" class="nav-toggle" id="navToggle" aria-label="開啟導覽" title="選單" aria-controls="adminSide" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/>
+          </svg>
+        </button>
+        <h1 id="pageTitle">儀表板</h1>
+      </div>
       <span class="meta" id="topMeta"><span class="skel-meta-line"></span></span>
     </div>
 
@@ -436,7 +443,7 @@
 <script src="js/girdle-engrave.js?v=11"></script>
 <script src="js/admin-orders.js?v=17"></script>
 <script src="js/order-detail.js"></script>
-<script src="js/admin-products.js?v=36"></script>
+<script src="js/admin-products.js?v=37"></script>
 <script src="js/admin-accounts.js?v=12"></script>
 <script src="js/admin-member-search.js?v=3"></script>
 <script src="js/admin-invites.js?v=12"></script>
@@ -484,6 +491,39 @@
     var initialBtn = document.querySelector('.side-nav button[data-panel="' + initialPanel + '"]');
     if (initialBtn) initialBtn.click();
   }
+})();
+
+/* Mobile shell: off-canvas nav toggle (≤960px via CSS) */
+(function () {
+  var layout = document.getElementById('adminLayout');
+  var toggle = document.getElementById('navToggle');
+  var backdrop = document.getElementById('sideBackdrop');
+  if (!layout || !toggle) return;
+
+  function setOpen(open) {
+    layout.classList.toggle('is-nav-open', open);
+    document.body.classList.toggle('is-admin-nav-open', open);
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    toggle.setAttribute('aria-label', open ? '關閉導覽' : '開啟導覽');
+  }
+
+  function closeNav() { setOpen(false); }
+
+  toggle.addEventListener('click', function () {
+    setOpen(!layout.classList.contains('is-nav-open'));
+  });
+  if (backdrop) backdrop.addEventListener('click', closeNav);
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeNav();
+  });
+  document.querySelectorAll('.side-nav button').forEach(function (btn) {
+    btn.addEventListener('click', closeNav);
+  });
+
+  var mq = window.matchMedia('(min-width: 961px)');
+  function onDesktop(e) { if (e.matches) closeNav(); }
+  if (mq.addEventListener) mq.addEventListener('change', onDesktop);
+  else if (mq.addListener) mq.addListener(onDesktop);
 })();
 
 /* 價格設定面板：讀寫 window.ImprintPricing */
