@@ -459,7 +459,7 @@ def _format_product_errors(errors: list[str]) -> str:
             parts.append("款式選項：手動定價無效")
             continue
         if err.startswith("invalid side stone price for"):
-            parts.append("款式選項：配鑽價錢無效")
+            parts.append("款式選項：一克拉價格無效")
             continue
         if err.startswith("invalid side stone carat for"):
             parts.append("款式選項：配鑽克拉無效")

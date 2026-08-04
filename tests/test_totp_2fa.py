@@ -317,36 +317,6 @@ class TestTotpIntegration:
 
 
 
-    def test_admin_without_totp_blocked_from_admin_api(self, client):
-
-        user_id, email, password = self._create_user(admin=True, totp_enabled=False)
-
-        try:
-
-            resp = client.post(
-
-                "/api/auth/login",
-
-                json={"email": email, "password": password},
-
-            )
-
-            assert resp.status_code == 200
-
-            assert COOKIE_NAME in resp.cookies
-
-            admin_api = client.get("/api/admin/orders", cookies=resp.cookies)
-
-            assert admin_api.status_code == 403
-
-            assert "雙因素" in (admin_api.text or "")
-
-        finally:
-
-            self._cleanup(user_id)
-
-
-
     def test_admin_with_totp_requires_pre2fa(self, client):
 
         from app.database import get_connection

@@ -17,7 +17,15 @@
     '1.5': 494000, '2.0': 910000, '2': 910000, '3.0': 1287000, '3': 1287000,
   };
 
-  /** Multi-stone memorial discount on unit×qty (not absolute package tables). */
+  /** price.html multi packages for 0.1/0.2/0.3; above 0.3 → unit×qty×discount. */
+  var WHITE_MULTI_DIAMOND_PRICE = {
+    '0.1': { 2: 45600, 3: 61200, 4: 81000 },
+    '0.2': { 2: 86400, 3: 122400, 4: 162000 },
+    '0.3': { 2: 142200, 3: 189600, 4: 250000 },
+  };
+  var COLORED_MULTI_DIAMOND_PRICE = {
+    '0.3': { 2: 173400, 3: 244800, 4: 322300 },
+  };
   var MULTI_STONE_ABOVE_03_MULTIPLIER = { 2: 0.85, 3: 0.80, 4: 0.75 };
   var VALID_FANCY_COLORS = { yellow: 1, pink: 1, blue: 1 };
   var VALID_STONE_COUNTS = { 2: 1, 3: 1, 4: 1 };
@@ -110,13 +118,33 @@
     return Math.max(EARRING_QUANTITY_MIN, Math.min(EARRING_QUANTITY_MAX, n));
   }
 
+  /** Match app.pricing_overrides.canonical_carat ('0.10'→'0.1', '1'→'1.0'). */
+  function canonicalCarat(key) {
+    var n = parseFloat(key);
+    if (Number.isNaN(n)) return null;
+    if (n === Math.floor(n)) return String(Math.floor(n)) + '.0';
+    return String(parseFloat(String(n)));
+  }
+
+  function lookupSinglePrice(table, caratKey) {
+    var ck = canonicalCarat(caratKey) || caratKey;
+    if (table[ck] != null) return table[ck];
+    if (table[caratKey] != null) return table[caratKey];
+    if (ck === '1.0' && table['1'] != null) return table['1'];
+    return null;
+  }
+
+  function applyShapeSurcharge(amount, diamondShape) {
+    var surcharge = shapeSurchargeRate(diamondShape);
+    return surcharge ? Math.round(amount * (1 + surcharge)) : amount;
+  }
+
   function computeDiamondListPrice(caratKey, opts) {
     opts = opts || {};
     var category = opts.category;
     if (!caratKey || category === 'chain') return null;
     var caratNum = parseFloat(caratKey);
     if (Number.isNaN(caratNum)) return null;
-    // Memorial loose diamonds: unit × qty × multi discount (not package tables).
     // Earrings: single-stone list price; quantity applied in computeOrderPricing.
     var multiCount = category === 'diamond' ? asStoneCount(opts.stoneCount) : null;
     if (!isShapeCaratAllowed(caratNum, opts.diamondShape)) return null;
@@ -125,30 +153,44 @@
     var diamondKind = opts.diamondKind || 'white';
     var fancyColor = opts.fancyColor;
     var diamondShape = opts.diamondShape || 'round';
+    var ck = canonicalCarat(caratKey) || caratKey;
 
     if (diamondKind === 'white') {
-      base = DIAMOND_PRICE[caratKey] ?? null;
+      base = lookupSinglePrice(DIAMOND_PRICE, caratKey);
     } else if (diamondKind === 'fancy') {
       if (!VALID_FANCY_COLORS[fancyColor]) return null;
-      // Fancy table starts at 0.3; product may still offer 0.1/0.2 — fall back to white.
-      base = COLORED_SINGLE_DIAMOND_PRICE[caratKey]
-        ?? (caratKey === '1.0' ? COLORED_SINGLE_DIAMOND_PRICE['1'] : null)
-        ?? DIAMOND_PRICE[caratKey]
-        ?? (caratKey === '1.0' ? DIAMOND_PRICE['1'] : null)
-        ?? null;
+      base = lookupSinglePrice(COLORED_SINGLE_DIAMOND_PRICE, caratKey);
+      // Fancy table starts at 0.3; jewelry may still offer 0.1/0.2 — fall back to white.
+      if (base == null && category !== 'diamond') {
+        base = lookupSinglePrice(DIAMOND_PRICE, caratKey);
+      }
     } else {
       return null;
     }
 
-    if (base == null) return null;
-    var surcharge = shapeSurchargeRate(diamondShape);
-    var unitPrice = surcharge ? Math.round(base * (1 + surcharge)) : base;
     if (multiCount) {
-      var discount = MULTI_STONE_ABOVE_03_MULTIPLIER[multiCount];
-      if (!discount) return null;
-      return Math.round(unitPrice * multiCount * discount);
+      var multiTable = diamondKind === 'fancy'
+        ? COLORED_MULTI_DIAMOND_PRICE
+        : WHITE_MULTI_DIAMOND_PRICE;
+      var row = multiTable[ck] || multiTable[caratKey];
+      var packagePrice = row && row[multiCount] != null ? row[multiCount] : null;
+      if (packagePrice != null) {
+        return applyShapeSurcharge(packagePrice, diamondShape);
+      }
+      // price.html: above 0.30ct → 單顆價 × 顆數 × discount
+      if (caratNum > FANCY_MIN_CARAT && base != null) {
+        var discount = MULTI_STONE_ABOVE_03_MULTIPLIER[multiCount];
+        if (!discount) return null;
+        return applyShapeSurcharge(
+          Math.round(base * multiCount * discount),
+          diamondShape
+        );
+      }
+      return null;
     }
-    return unitPrice;
+
+    if (base == null) return null;
+    return applyShapeSurcharge(base, diamondShape);
   }
 
   function getPerGramPrices() {
@@ -351,15 +393,20 @@
       if (diamondPrice == null) return { ready: false };
     }
 
-    var sideStonePrice = null;
+    // 配鑽 = 克拉數 × 一克拉價格 (sideStonePrices stores price-per-carat)
+    var sideStonePpc = null;
     var sideTable = product.sideStonePrices && product.sideStonePrices[gold];
     if (category !== 'chain' && sideTable && sideTable[carat] != null) {
-      sideStonePrice = Number(sideTable[carat]);
+      sideStonePpc = Number(sideTable[carat]);
     }
     var sideStoneCarat = null;
     var sideCaratTable = product.sideStoneCarats && product.sideStoneCarats[gold];
     if (category !== 'chain' && sideCaratTable && sideCaratTable[carat] != null) {
       sideStoneCarat = Number(sideCaratTable[carat]);
+    }
+    var sideStonePrice = null;
+    if (sideStonePpc != null && sideStoneCarat != null) {
+      sideStonePrice = Math.round(sideStoneCarat * sideStonePpc);
     }
 
     if (earringQty > 1) {

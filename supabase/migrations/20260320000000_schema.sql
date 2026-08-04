@@ -101,8 +101,8 @@ create table if not exists product_variants (
   carat text not null, -- diamond carat, or '3fen' for plain chain/mounting-only variants
   weight_chin numeric not null, -- 台錢(chin) — Taiwan's traditional gold-weight unit
   manual_price_twd numeric,
-  side_stone_price_twd numeric, -- optional 配鑽 fixed TWD; added on formula pricing
-  side_stone_carat numeric, -- optional 配鑽 carat (cts); display/info
+  side_stone_price_twd numeric, -- optional 配鑽 一克拉價格 TWD; total = carat × this
+  side_stone_carat numeric, -- optional 配鑽 carat (cts); used in 配鑽 = cts × ppc
   unique (product_id, gold, carat)
 );
 

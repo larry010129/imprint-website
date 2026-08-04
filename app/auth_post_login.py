@@ -40,8 +40,8 @@ def decide_post_login(
     """Route after password/Google check.
 
     Staff with TOTP enrolled get a short-lived pre2fa cookie only — full session
-    is issued after /verify-2fa. Members (and staff without TOTP yet) get a
-    normal session; staff without TOTP are blocked from admin APIs separately.
+    is issued after /verify-2fa. Members and staff without TOTP get a normal
+    session (admin APIs do not require TOTP enrollment).
     """
     safe = safe_next_url(next_url)
     if user_id and totp_enabled and is_admin(user_id):

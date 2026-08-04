@@ -863,7 +863,7 @@
     return (
       '<div class="ap-variant-head">' +
         '<span>金屬</span><span>克拉</span><span>蠟重（錢）</span><span>預估金重</span>' +
-        '<span>配鑽 cts</span><span>配鑽價錢</span><span>手動定價</span><span></span>' +
+        '<span>配鑽 cts</span><span>一克拉價格</span><span>手動定價</span><span></span>' +
       '</div>'
     );
   }
@@ -940,7 +940,7 @@
       '<input type="number" name="weight" step="0.0001" min="0.0001" placeholder="蠟重（錢）" value="' + esc(weight) + '">' +
       '<output class="ap-metal-weight-out" name="metalWeight">' + metalWeightLabel(weight, gold) + '</output>' +
       '<input type="number" name="sideStoneCarat" step="0.01" min="0" placeholder="配鑽 cts" value="' + esc(sideStoneCts) + '">' +
-      '<input type="number" name="sideStonePrice" step="1" min="0" placeholder="配鑽價錢" value="' + esc(sideStone) + '">' +
+      '<input type="number" name="sideStonePrice" step="1" min="0" placeholder="一克拉價格" value="' + esc(sideStone) + '">' +
       '<input type="number" name="price" step="1" min="0" placeholder="手動定價" value="' + esc(price) + '">' +
       '<button type="button" class="ap-remove-row" aria-label="移除">✕</button></div>';
   }

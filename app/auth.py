@@ -477,7 +477,7 @@ def user_has_totp(user_id: str | None) -> bool:
 
 
 def require_admin(request: Request) -> str:
-    """Signed-in staff with TOTP enrolled (belt-and-suspenders for admin APIs)."""
+    """Signed-in staff admin. TOTP is optional (setup/disable remain available)."""
     from fastapi import HTTPException
 
     user_id = get_user_id(request)
@@ -485,11 +485,6 @@ def require_admin(request: Request) -> str:
         raise HTTPException(status_code=401, detail="not signed in")
     if not is_admin(user_id):
         raise HTTPException(status_code=403, detail="admin access required")
-    if not user_has_totp(user_id):
-        raise HTTPException(
-            status_code=403,
-            detail="請先啟用雙因素驗證後再使用管理功能",
-        )
     return user_id
 
 

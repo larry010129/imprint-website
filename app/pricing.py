@@ -120,18 +120,14 @@ def _shape_carat_allowed(carat_num: float, diamond_shape: str | None) -> bool:
     return (diamond_shape or "round") == "round" or carat_num >= FANCY_MIN_CARAT
 
 
-def _shape_surcharge_rate(diamond_shape: str | None) -> float:
-    return NON_ROUND_SHAPE_SURCHARGE if (diamond_shape or "round") != "round" else 0.0
-
-
 def _effective_tables(overrides: dict[str, Any] | None) -> dict[str, Any]:
     """Overlay admin overrides onto the base diamond tables, canonicalizing carat
     keys so client ('0.10') and server ('0.1') formats align. With no overrides
     this yields the module constants unchanged (checkout math is untouched until
     an admin sets a value).
 
-    white_multi / fancy_multi stay available for admin tooling, but memorial
-    diamond totals use unit × qty × multi_above_03 — never absolute packages.
+    Memorial multi: package tables for 0.1/0.2/0.3 (price.html);
+    above 0.3ct uses unit × qty × multi_above_03.
     """
     ov = overrides or {}
     dia = ov.get("diamond") if isinstance(ov.get("diamond"), dict) else {}
@@ -149,6 +145,20 @@ def _effective_tables(overrides: dict[str, Any] | None) -> dict[str, Any]:
         "multi_above_03": multi_above,
         "surcharge_pct": ov.get("shapeSurchargePct"),
     }
+
+
+def _shape_surcharge_fraction(
+    diamond_shape: str | None, surcharge_pct: Any
+) -> float:
+    if (diamond_shape or "round") == "round":
+        return 0.0
+    if isinstance(surcharge_pct, (int, float)):
+        return float(surcharge_pct) / 100.0
+    return NON_ROUND_SHAPE_SURCHARGE
+
+
+def _apply_shape_surcharge(amount: float, surcharge: float) -> float:
+    return round(amount * (1 + surcharge)) if surcharge else amount
 
 
 def compute_diamond_list_price(
@@ -182,28 +192,34 @@ def compute_diamond_list_price(
     elif diamond_kind == "fancy":
         if fancy_color not in VALID_FANCY_COLORS:
             return None
-        # Fancy list starts at 0.3ct; admin product may still offer 0.1/0.2 —
-        # fall back to white table so shop quote does not blank out.
+        # Fancy list starts at 0.3ct; admin jewelry may still offer 0.1/0.2 —
+        # fall back to white so shop quote does not blank out.
         base = eff["fancy"].get(ck)
-        if base is None:
+        if base is None and category != "diamond":
             base = eff["white"].get(ck)
     else:
         return None
 
+    surcharge = _shape_surcharge_fraction(diamond_shape, eff["surcharge_pct"])
+
+    if multi_count:
+        multi_table = eff["fancy_multi"] if diamond_kind == "fancy" else eff["white_multi"]
+        package = (multi_table.get(ck) or {}).get(str(multi_count))
+        if package is not None:
+            return _apply_shape_surcharge(float(package), surcharge)
+        # price.html: above 0.30ct → 單顆價 × 顆數 × discount
+        if carat_num > FANCY_MIN_CARAT and base is not None:
+            discount = eff["multi_above_03"].get(str(multi_count))
+            if not discount:
+                return None
+            return _apply_shape_surcharge(
+                round(float(base) * multi_count * discount), surcharge
+            )
+        return None
+
     if base is None:
         return None
-    if (diamond_shape or "round") != "round":
-        pct = eff["surcharge_pct"]
-        surcharge = (pct / 100.0) if isinstance(pct, (int, float)) else NON_ROUND_SHAPE_SURCHARGE
-    else:
-        surcharge = 0.0
-    unit_price = round(base * (1 + surcharge)) if surcharge else base
-    if multi_count:
-        discount = eff["multi_above_03"].get(str(multi_count))
-        if not discount:
-            return None
-        return round(unit_price * multi_count * discount)
-    return unit_price
+    return _apply_shape_surcharge(float(base), surcharge)
 
 
 def get_metal_prices(cur) -> dict[str, float]:
@@ -523,12 +539,16 @@ def compute_order_pricing(cur, data: dict[str, Any], *, require_published: bool 
         if diamond_price is None:
             return {"ready": False}
 
-    side_stone_price = None
+    # 配鑽 = 克拉數 × 一克拉價格 (side_stone_price_twd stores price-per-carat)
+    side_stone_ppc = None
     if category != "chain" and variant.get("side_stone_price_twd") is not None:
-        side_stone_price = float(variant["side_stone_price_twd"])
+        side_stone_ppc = float(variant["side_stone_price_twd"])
     side_stone_carat = None
     if category != "chain" and variant.get("side_stone_carat") is not None:
         side_stone_carat = float(variant["side_stone_carat"])
+    side_stone_price = None
+    if side_stone_ppc is not None and side_stone_carat is not None:
+        side_stone_price = round(side_stone_carat * side_stone_ppc)
 
     if earring_qty > 1:
         if diamond_price is not None:

@@ -48,7 +48,7 @@
 
     /* ★官方資料(價格頁「多顆珍藏方案」)：整組總價查表(非單顆×折扣估算)。
        只支援 2/3/4 顆(官網未公開 5 顆以上的整組報價，故不再猜測估算)。
-       0.30 克拉以上：沿用 0.30 那一列 × multiStoneAbove03Multiplier 換算。 */
+       0.30 克拉以上：單顆價 × 顆數 × multiStoneAbove03Multiplier。 */
     whiteMultiDiamondPrice: {
       '0.10': { '2': 45600, '3': 61200, '4': 81000 },
       '0.20': { '2': 86400, '3': 122400, '4': 162000 },
@@ -232,8 +232,8 @@
   }
 
   /* 鑽石總價試算(移植自 imprint-calculator 的 compute_diamond_list_price)。
-     qty=1 走單顆價格表；qty=2/3/4 走「多顆珍藏方案」整組查表(非單顆×折扣)；
-     0.30 克拉以上且不在表中的克拉數，沿用 0.30 那一列 × 倍率換算。
+     qty=1 走單顆價格表；qty=2/3/4 於 0.10/0.20/0.30 走「多顆珍藏方案」整組查表；
+     0.30 克拉以上且不在表中：單顆價 × 顆數 × 倍率。
      非圓形切工的加價，統一在最後對「整組總價」加一次，不是對單顆加價後再乘倍數。
      找不到對應組合(例如彩鑽 0.10/0.20、5 顆以上)一律回傳 null。 */
   function computeDiamondPrice(pricing, colorVal, caratVal, shapeVal, qty) {
@@ -253,10 +253,11 @@
       if (table[caratVal] && table[caratVal][q] != null) {
         base = table[caratVal][q];
       } else if (caratNum > 0.30) {
-        var row = table['0.30'];
+        /* price.html: 0.30 克拉以上 → 單顆價 × 顆數 × 折扣（非 0.30 整組列再打折） */
+        var singleForMulti = (pricing.diamond[colorVal] || {})[caratVal];
         var mult = pricing.multiStoneAbove03Multiplier ? pricing.multiStoneAbove03Multiplier[q] : null;
-        if (row && row[q] != null && mult) {
-          base = Math.round(row[q] * mult);
+        if (singleForMulti != null && mult) {
+          base = Math.round(singleForMulti * parseInt(q, 10) * mult);
         }
       }
     } else {
