@@ -46,12 +46,13 @@ def test_non_round_surcharge_applies_to_unit_before_multi():
     ) == round(unit * 2 * 0.85)
 
 
-def test_earring_pair_still_two_singles_no_multi_discount():
+def test_earring_list_price_is_single_unit():
+    """Earrings price one stone; pair qty is applied in compute_order_pricing."""
     unit = DIAMOND_PRICE["0.3"]
-    assert compute_diamond_list_price("0.3", category="earring") == unit * 2
+    assert compute_diamond_list_price("0.3", category="earring") == unit
     assert compute_diamond_list_price(
         "0.3", category="earring", stone_count=2,
-    ) == unit * 2
+    ) == unit
 
 
 def test_fancy_below_table_falls_back_to_white_list_price():

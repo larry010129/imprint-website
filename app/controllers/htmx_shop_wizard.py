@@ -46,7 +46,7 @@ from app.image_urls import (
     shop_product_image_url,
     shop_style_thumb_url,
 )
-from app.pricing import VALID_FANCY_COLORS, compute_order_pricing
+from app.pricing import VALID_FANCY_COLORS, _as_earring_quantity, compute_order_pricing
 from app.product_categories import fetch_categories
 
 router = APIRouter(prefix="/shop", tags=["htmx-shop-wizard"])
@@ -245,7 +245,7 @@ def _config_from_form(form: Any) -> dict[str, Any]:
     elif diamond_color == "white":
         diamond_kind = "white"
         fancy_color = None
-    return {
+    cfg: dict[str, Any] = {
         "category": category,
         "type": type_ref,
         "carat": carat,
@@ -258,6 +258,9 @@ def _config_from_form(form: Any) -> dict[str, Any]:
         "summaryZh": name,
         # ponytail: chainProductId / chainGold / chainLength / engraving* not in HTMX core path
     }
+    if category == "earring":
+        cfg["quantity"] = _as_earring_quantity(form.get("quantity"))
+    return cfg
 
 
 def _with_badge_oob(resp: HTMLResponse, request: Request, user_id: str | None) -> HTMLResponse:
@@ -398,6 +401,7 @@ async def shop_step_configure(request: Request) -> HTMLResponse:
         "lengthCm": 46 if category == "chain" else (18 if category == "bracelet" else ""),
         "diamondKind": "white",
         "diamondColor": "white",
+        "quantity": 1,
     }
     diamond_colors = memorial_diamond_color_options() if category == "diamond" else []
     thumb = _product_thumb(product)
@@ -419,6 +423,8 @@ async def shop_step_configure(request: Request) -> HTMLResponse:
             "diamondShape": "round",
             "summaryZh": product.get("nameZh") or "",
         }
+        if category == "earring":
+            cfg["quantity"] = defaults["quantity"]
         with get_connection() as conn, conn.cursor() as cur:
             pricing = compute_order_pricing(cur, cfg, require_published=require_published)
     return html(

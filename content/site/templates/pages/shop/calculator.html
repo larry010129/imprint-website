@@ -276,6 +276,26 @@
               </div>
             </div>
 
+            <div class="variant-group hidden" id="earring-quantity-step">
+              <h3 class="variant-label" id="earring-quantity-step-label" data-i18n="step_earring_quantity">數量</h3>
+              <div class="stone-count-stepper" id="earring-qty-stepper" hidden>
+                <div class="stone-count-field" role="group" aria-labelledby="earring-quantity-step-label">
+                  <button type="button" class="stone-count-btn stone-count-btn--dec" id="earring-qty-dec"
+                          data-i18n-aria="earring_qty_decrease" aria-label="減少數量">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg>
+                  </button>
+                  <input type="number" id="earring-qty-input" class="stone-count-input"
+                         min="1" max="2" step="1" inputmode="numeric" value="1"
+                         data-i18n-aria="earring_qty_input" aria-label="數量">
+                  <button type="button" class="stone-count-btn stone-count-btn--inc" id="earring-qty-inc"
+                          data-i18n-aria="earring_qty_increase" aria-label="增加數量">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                  </button>
+                </div>
+              </div>
+              <p class="cfg-note" data-i18n="earring_qty_note">單只計價；選 2 為一對。</p>
+            </div>
+
             <div class="variant-group" id="metal-step">
               <h3 class="variant-label" data-i18n="step_metal">選擇材質</h3>
               <div class="variant-chips" id="metal-btn-row"></div>
@@ -812,5 +832,5 @@
 <script src="/static/js/girdle-engrave.js?v=24" defer></script>
 <script src="/static/js/shop-terms.js?v=4" defer></script>
 <script src="/static/js/catalog-multi-filter.js?v=1" defer></script>
-<script src="/static/js/shop.js?v=130" defer></script>
+<script src="/static/js/shop.js?v=131" defer></script>
 {% endblock %}

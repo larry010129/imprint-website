@@ -9,10 +9,12 @@ from pathlib import Path
 from time import monotonic
 
 from fastapi import FastAPI, Request
+from fastapi.exception_handlers import http_exception_handler
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.responses import Response
 
 from config.routes import ALL_PAGES, PAGE_404, STANDALONE_PAGES, STANDALONE_SHARE_SUMMARY, PageMeta
 from config.settings import settings
@@ -524,7 +526,11 @@ def register_pages(app: FastAPI) -> None:
         return templates.TemplateResponse(request, "pages/cms_page.html", context)
 
     @app.exception_handler(StarletteHTTPException)
-    async def not_found(request: Request, exc: StarletteHTTPException) -> HTMLResponse:
+    async def not_found(request: Request, exc: StarletteHTTPException) -> Response:
+        # register_pages used to replace FastAPI's JSON handler entirely, so
+        # /api/* 401/403 became text/html and the admin UI showed "HTTP 403".
+        if request.url.path.startswith("/api/"):
+            return await http_exception_handler(request, exc)
         if exc.status_code != 404:
             return HTMLResponse(content=str(exc.detail), status_code=exc.status_code)
         return await _make_handler(PAGE_404, status_code=404)(request)

@@ -60,9 +60,10 @@
     return goldLabel + (COLOR_ZH[color] || COLOR_ZH.white);
   }
 
-  function caratLabel(carat, stoneCount) {
+  function caratLabel(carat, stoneCount, quantity) {
     if (!carat) return '';
     var label = /mm$/.test(carat) ? carat : carat + 'ct';
+    if (Number(quantity) > 1) return label + ' × ' + quantity;
     return Number(stoneCount) > 1 ? label + ' × ' + stoneCount : label;
   }
 
@@ -78,7 +79,7 @@
     var config = configFor(item);
     return [
       materialLabel(config.gold, config.color),
-      caratLabel(config.carat, config.stoneCount),
+      caratLabel(config.carat, config.stoneCount, config.quantity),
       CAT_ZH[config.category || item.category] || config.category || item.category || '',
     ].filter(Boolean).join(' · ');
   }
@@ -100,6 +101,9 @@
     }
     if (Number(config.stoneCount) > 1) {
       rows.push({ label: '鑽石顆數', value: String(config.stoneCount) });
+    }
+    if (category === 'earring' && Number(config.quantity) >= 1) {
+      rows.push({ label: '數量', value: String(config.quantity) });
     }
     if (config.ringSize) rows.push({ label: '戒圍', value: String(config.ringSize) });
     if (config.lengthCm) rows.push({ label: '長度', value: config.lengthCm + ' cm' });

@@ -21,8 +21,10 @@
   var MULTI_STONE_ABOVE_03_MULTIPLIER = { 2: 0.85, 3: 0.80, 4: 0.75 };
   var VALID_FANCY_COLORS = { yellow: 1, pink: 1, blue: 1 };
   var VALID_STONE_COUNTS = { 2: 1, 3: 1, 4: 1 };
-  var STONE_COUNT_CATEGORIES = { earring: 1 };
-  var DEFAULT_STONE_COUNT_BY_CATEGORY = { earring: 2, ring: 2, pendant: 2, diamond: 1 };
+  var STONE_COUNT_CATEGORIES = {};
+  var DEFAULT_STONE_COUNT_BY_CATEGORY = { ring: 2, pendant: 2, diamond: 1 };
+  var EARRING_QUANTITY_MIN = 1;
+  var EARRING_QUANTITY_MAX = 2;
 
   var WAX_TO_METAL_CHIN = {
     '9k': 11.5, '14k': 14, '18k': 16, pt950: 24, s925: 11,
@@ -102,6 +104,12 @@
     return VALID_STONE_COUNTS[n] ? n : null;
   }
 
+  function asEarringQuantity(value) {
+    var n = parseInt(value, 10);
+    if (Number.isNaN(n)) return EARRING_QUANTITY_MIN;
+    return Math.max(EARRING_QUANTITY_MIN, Math.min(EARRING_QUANTITY_MAX, n));
+  }
+
   function computeDiamondListPrice(caratKey, opts) {
     opts = opts || {};
     var category = opts.category;
@@ -109,8 +117,7 @@
     var caratNum = parseFloat(caratKey);
     if (Number.isNaN(caratNum)) return null;
     // Memorial loose diamonds: unit × qty × multi discount (not package tables).
-    // Earrings are one pair and always use exactly two single-diamond prices.
-    var earringPair = category === 'earring';
+    // Earrings: single-stone list price; quantity applied in computeOrderPricing.
     var multiCount = category === 'diamond' ? asStoneCount(opts.stoneCount) : null;
     if (!isShapeCaratAllowed(caratNum, opts.diamondShape)) return null;
 
@@ -136,7 +143,6 @@
     if (base == null) return null;
     var surcharge = shapeSurchargeRate(diamondShape);
     var unitPrice = surcharge ? Math.round(base * (1 + surcharge)) : base;
-    if (earringPair) return unitPrice * 2;
     if (multiCount) {
       var discount = MULTI_STONE_ABOVE_03_MULTIPLIER[multiCount];
       if (!discount) return null;
@@ -276,6 +282,7 @@
     var chainGold = data.chainGold;
     var chainLength = data.chainLength;
     var chainThickness = data.chainThickness || DEFAULT_ATTACHED_CHAIN_THICKNESS;
+    var earringQty = category === 'earring' ? asEarringQuantity(data.quantity) : 1;
 
     if (!category || !carat || !productId) return { ready: false };
     if (category !== 'diamond' && !gold) return { ready: false };
@@ -310,7 +317,12 @@
 
     var manual = product.manualPrices && product.manualPrices[gold] && product.manualPrices[gold][carat];
     if (category !== 'chain' && manual != null) {
-      return { ready: true, total: Number(manual), manualOverride: true };
+      return {
+        ready: true,
+        total: Number(manual) * earringQty,
+        manualOverride: true,
+        quantity: category === 'earring' ? earringQty : undefined,
+      };
     }
 
     var weightChin;
@@ -350,6 +362,14 @@
       sideStoneCarat = Number(sideCaratTable[carat]);
     }
 
+    if (earringQty > 1) {
+      if (diamondPrice != null) diamondPrice = diamondPrice * earringQty;
+      if (sideStonePrice != null) sideStonePrice = sideStonePrice * earringQty;
+      taijinDisplay = Math.round(taijinDisplay * earringQty);
+      laborDisplay = laborDisplay * earringQty;
+      weightGrams = weightGrams * earringQty;
+    }
+
     var total = (diamondPrice || 0) + (sideStonePrice || 0) + taijinDisplay + laborDisplay;
     var chainDisplay = null;
 
@@ -376,6 +396,7 @@
       metalworkPrice: taijinDisplay + laborDisplay,
       chainPrice: chainDisplay,
       total: Math.round(total),
+      quantity: category === 'earring' ? earringQty : undefined,
     };
   }
 
@@ -441,11 +462,13 @@
           { id: 'other', labelZh: '其它形狀', labelEn: 'Other (+10%)', image: 'diamonds/shapes/round.svg' },
         ],
         stoneCounts: [1, 2, 3, 4],
-        stoneCountCategories: ['earring'],
+        stoneCountCategories: [],
         fancyMinCarat: '0.3',
         nonRoundShapeMinCarat: '0.3',
         nonRoundShapeSurcharge: 0.10,
         defaultStoneCountByCategory: DEFAULT_STONE_COUNT_BY_CATEGORY,
+        earringQuantityMin: EARRING_QUANTITY_MIN,
+        earringQuantityMax: EARRING_QUANTITY_MAX,
       },
     };
   }

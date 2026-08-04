@@ -49,8 +49,11 @@ VALID_FANCY_COLORS = {"yellow", "pink", "blue"}
 VALID_STONE_COUNTS = {2, 3, 4}
 FANCY_MIN_CARAT = 0.3
 NON_ROUND_SHAPE_SURCHARGE = 0.10
-DEFAULT_STONE_COUNT_BY_CATEGORY = {"earring": 2, "ring": 2, "pendant": 2}
-STONE_COUNT_CATEGORIES = {"earring"}
+# Earring stoneCount no longer auto-doubles; use quantity (1–2) instead.
+DEFAULT_STONE_COUNT_BY_CATEGORY = {"ring": 2, "pendant": 2}
+STONE_COUNT_CATEGORIES: set[str] = set()
+EARRING_QUANTITY_MIN = 1
+EARRING_QUANTITY_MAX = 2
 
 # 蠟重(錢) × factor → 成品金屬重(錢)
 WAX_TO_METAL_CHIN = {
@@ -102,6 +105,15 @@ def _as_stone_count(value: Any) -> int | None:
     except (TypeError, ValueError):
         return None
     return count if count in VALID_STONE_COUNTS else None
+
+
+def _as_earring_quantity(value: Any) -> int:
+    """Single-earring units; default 1, max 2 (pair)."""
+    try:
+        n = int(value)
+    except (TypeError, ValueError):
+        return EARRING_QUANTITY_MIN
+    return max(EARRING_QUANTITY_MIN, min(EARRING_QUANTITY_MAX, n))
 
 
 def _shape_carat_allowed(carat_num: float, diamond_shape: str | None) -> bool:
@@ -156,7 +168,7 @@ def compute_diamond_list_price(
     except (TypeError, ValueError):
         return None
 
-    earring_pair = category == "earring"
+    # Earrings: single-stone list price; pair/qty applied in compute_order_pricing.
     multi_count = _as_stone_count(stone_count) if category == "diamond" else None
     if not _shape_carat_allowed(carat_num, diamond_shape):
         return None
@@ -186,8 +198,6 @@ def compute_diamond_list_price(
     else:
         surcharge = 0.0
     unit_price = round(base * (1 + surcharge)) if surcharge else base
-    if earring_pair:
-        return unit_price * 2
     if multi_count:
         discount = eff["multi_above_03"].get(str(multi_count))
         if not discount:
@@ -432,6 +442,7 @@ def compute_order_pricing(cur, data: dict[str, Any], *, require_published: bool 
     chain_length = data.get("chainLength")
     chain_thickness = data.get("chainThickness") or DEFAULT_ATTACHED_CHAIN_THICKNESS
     product_id = data.get("type")
+    earring_qty = _as_earring_quantity(data.get("quantity")) if category == "earring" else 1
 
     if not category or not carat or not product_id:
         return {"ready": False}
@@ -484,13 +495,15 @@ def compute_order_pricing(cur, data: dict[str, Any], *, require_published: bool 
 
     if category != "chain" and variant.get("manual_price_twd") is not None:
         gold_prices = get_metal_prices(cur)
+        unit_total = float(variant["manual_price_twd"])
         return {
             "ready": True,
-            "total": float(variant["manual_price_twd"]),
+            "total": unit_total * earring_qty,
             "manualOverride": True,
-            "weightGrams": weight_grams,
+            "weightGrams": weight_grams * earring_qty,
             "goldRatePerGram": gold_prices[METAL_SYMBOL[gold]] * PURITY_MULTIPLIER[gold],
             "priceSource": "server",
+            "quantity": earring_qty if category == "earring" else None,
         }
 
     gold_prices = get_metal_prices(cur)
@@ -516,6 +529,15 @@ def compute_order_pricing(cur, data: dict[str, Any], *, require_published: bool 
     side_stone_carat = None
     if category != "chain" and variant.get("side_stone_carat") is not None:
         side_stone_carat = float(variant["side_stone_carat"])
+
+    if earring_qty > 1:
+        if diamond_price is not None:
+            diamond_price = diamond_price * earring_qty
+        if side_stone_price is not None:
+            side_stone_price = side_stone_price * earring_qty
+        taijin_display = round(taijin_display * earring_qty)
+        labor_display = labor_display * earring_qty
+        weight_grams = weight_grams * earring_qty
 
     total = (diamond_price or 0) + (side_stone_price or 0) + taijin_display + labor_display
     chain_display = None
@@ -545,4 +567,5 @@ def compute_order_pricing(cur, data: dict[str, Any], *, require_published: bool 
         "goldRatePerGram": rate_used,
         "priceSource": "server",
         "manualOverride": False,
+        "quantity": earring_qty if category == "earring" else None,
     }

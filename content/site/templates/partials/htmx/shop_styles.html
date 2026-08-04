@@ -31,7 +31,7 @@
         class="type-card"
         hx-get="/htmx/shop/step/configure?category={{ category }}&type={{ p.id }}{% if preview %}&preview=1{% endif %}"
         hx-target="#shop-htmx-root"
-        hx-swap="innerHTML"
+        hx-swap="innerHTML show:window:top"
       >
         {% if p.thumb %}
         <img class="type-card__img" src="{{ p.thumb }}" alt="" loading="lazy" width="200" height="200">

@@ -103,6 +103,17 @@
             </select>
           </div>
           {% endif %}
+
+          {% if category == 'earring' %}
+          <div class="variant-group">
+            <label class="variant-label" for="htmx-quantity">數量</label>
+            <select class="carat-select" id="htmx-quantity" name="quantity" required>
+              <option value="1"{% if (defaults.quantity or 1) == 1 %} selected{% endif %}>1（單只）</option>
+              <option value="2"{% if defaults.quantity == 2 %} selected{% endif %}>2（一對）</option>
+            </select>
+            <p class="cfg-note">單只計價；選 2 為一對。</p>
+          </div>
+          {% endif %}
         </form>
 
         <aside class="shop-price-panel" id="shop-price-panel">

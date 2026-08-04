@@ -127,6 +127,13 @@ def cart_details_from_config(config: dict | None) -> str:
         stones = 0
     if stones > 1:
         parts.append(f"{stones}顆")
+    if str(cfg.get("category") or "") == "earring":
+        try:
+            qty = int(cfg.get("quantity") or 1)
+        except (TypeError, ValueError):
+            qty = 1
+        if qty >= 1:
+            parts.append(f"×{qty}")
     parts.extend(_size_chain_parts(cfg))
     parts.extend(_engraving_parts(cfg))
     return " · ".join(parts)

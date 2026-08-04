@@ -120,6 +120,7 @@ function saveShopResumeSnapshot() {
       fancyColor: state.fancyColor,
       stoneCount: state.stoneCount,
       diamondShape: state.diamondShape,
+      quantity: state.quantity,
     }));
   } catch (_) { /* sessionStorage unavailable — resume just won't restore, no big deal */ }
 }
@@ -1192,11 +1193,13 @@ let diamondOptions = {
   fancyColors: [],
   shapes: [],
   stoneCounts: [2, 3, 4],
-  stoneCountCategories: ['earring'],
+  stoneCountCategories: [],
   fancyMinCarat: 0.3,
   nonRoundShapeMinCarat: 0.3,
   nonRoundShapeSurcharge: 0.10,
-  defaultStoneCountByCategory: { earring: 2, ring: 2, pendant: 2 },
+  defaultStoneCountByCategory: { ring: 2, pendant: 2 },
+  earringQuantityMin: 1,
+  earringQuantityMax: 2,
 };
 let pricePerGram = {};  // filled by loadMetalPrices()
 let pricesLoaded = false;
@@ -1229,6 +1232,7 @@ let state = {
   fancyColor: null,
   stoneCount: null,
   diamondShape: 'round',
+  quantity: 1, // earring single units (1–2); ignored for other categories
 };
 
 function isDiamondOnlyCategory(category = state.category) {
@@ -1331,13 +1335,20 @@ document.getElementById('shop-config-hint-close')?.addEventListener('click', () 
 document.getElementById('shop-config-warning-close')?.addEventListener('click', () =>
   dismissConfigNotice(document.querySelector('.shop-config-notices .ui-alert--warning')));
 
-/** Keep the address bar reflecting how deep into the wizard the user is —
-    empty at catalog, ?category= at the style grid, ?category=&product= once
-    a specific item is being configured. Skipped in cart/order-edit mode so we
-    don't clobber the cart_edit=/editOrder= param a refresh depends on. */
-function syncShopUrl() {
-  if (window.cartEditData || window.editData) return;
+/** Wizard history depth from the entry landing (0). Each forward step pushState +1. */
+let shopHistoryDepth = 0;
+
+function shopViewDepth(view) {
+  if (view === 'product') return 2;
+  if (view === 'styles') return 1;
+  return 0;
+}
+
+function buildShopUrl() {
   const params = new URLSearchParams();
+  if (window.shopConfig?.preview || new URLSearchParams(window.location.search).get('preview') === '1') {
+    params.set('preview', '1');
+  }
   if ((shopView === 'styles' || shopView === 'product') && state.category) {
     params.set('category', state.category);
   }
@@ -1345,13 +1356,131 @@ function syncShopUrl() {
     params.set('product', state.type);
   }
   const qs = params.toString();
-  const url = window.location.pathname + (qs ? '?' + qs : '') + window.location.hash;
-  const current = window.location.pathname + window.location.search + window.location.hash;
-  if (url !== current) history.replaceState(history.state, '', url);
+  return window.location.pathname + (qs ? '?' + qs : '') + window.location.hash;
 }
+
+function shopHistoryState() {
+  return {
+    shop: true,
+    depth: shopHistoryDepth,
+    view: shopView,
+    category: state.category || null,
+    type: state.type || null,
+  };
+}
+
+/** Keep address bar in sync with wizard depth.
+    empty at catalog, ?category= at styles, ?category=&product= at configure.
+    Skipped in cart/order-edit so cart_edit=/editOrder= survive refresh.
+    mode: 'push' | 'replace' | 'none' */
+function syncShopUrl(mode) {
+  if (mode === 'none' || window.cartEditData || window.editData) return;
+  const url = buildShopUrl();
+  const current = window.location.pathname + window.location.search + window.location.hash;
+  if (mode === 'push') {
+    shopHistoryDepth += 1;
+    history.pushState(shopHistoryState(), '', url);
+    return;
+  }
+  if (url !== current || !history.state?.shop) {
+    history.replaceState(shopHistoryState(), '', url);
+  }
+}
+
+function clearShopWizardSelection() {
+  state.category = null;
+  state.type = null;
+  state.gold = null;
+  state.color = null;
+  state.carat = null;
+  state.ringSize = null;
+  state.engravingBand = '';
+  state.engravingRemark = '';
+  state.engravingGirdle = '';
+  state.lengthCm = null;
+  state.includeChain = false;
+  state.chainProductId = null;
+  state.chainGold = null;
+  state.chainColor = null;
+  state.chainThickness = null;
+  state.chainLength = null;
+  document.querySelectorAll('.cat-btn, #metal-btn-row .metal-btn, #color-btn-row .color-btn').forEach(b => b.classList.remove('active'));
+  clearRingSizeSelection();
+  updateChainOptions();
+}
+
+/** Prefer real history when we pushed steps; else fall back to caller UI reset. */
+function shopInAppHistoryBack(targetView) {
+  if (shopHistoryDepth <= 0) return false;
+  if (targetView === 'catalog') {
+    history.go(-shopHistoryDepth);
+    return true;
+  }
+  if (targetView === 'styles') {
+    history.back();
+    return true;
+  }
+  return false;
+}
+
+async function applyShopHistoryState(st) {
+  const view = (st && st.view) || 'catalog';
+  const category = st && st.category;
+  const typeId = st && st.type;
+  const opts = { history: 'none', skipScroll: true };
+
+  if (view === 'catalog' || !category) {
+    clearShopWizardSelection();
+    setShopView('catalog', opts);
+    updateSummary();
+    return;
+  }
+
+  if (view === 'styles') {
+    if (state.category !== category || shopView === 'catalog') {
+      await selectCategory(category, opts);
+    } else {
+      setShopView('styles', opts);
+      renderTypeCards();
+      updateSummary();
+    }
+    return;
+  }
+
+  if (state.category !== category || (isDiamondOnlyCategory(category) && shopView !== 'product')) {
+    await selectCategory(category, opts);
+  }
+  if (typeId && state.type !== typeId) {
+    await selectType(typeId, opts);
+  } else {
+    setShopView('product', opts);
+    updateSummary();
+  }
+}
+
+window.addEventListener('popstate', (event) => {
+  if (window.cartEditData || window.editData) return;
+  if (!document.getElementById('shop-catalog')) return;
+
+  const st = event.state;
+  if (st && st.shop) {
+    shopHistoryDepth = typeof st.depth === 'number' ? st.depth : 0;
+    applyShopHistoryState(st);
+    return;
+  }
+
+  shopHistoryDepth = 0;
+  const params = new URLSearchParams(window.location.search);
+  const category = params.get('category');
+  const type = params.get('product') || params.get('type') || params.get('series');
+  if (type && category) applyShopHistoryState({ view: 'product', category, type });
+  else if (category) applyShopHistoryState({ view: 'styles', category });
+  else applyShopHistoryState({ view: 'catalog' });
+});
 
 function setShopView(view, options) {
   const opts = options || {};
+  const prevView = shopView;
   shopView = view;
   const catalogSection = document.getElementById('shop-catalog');
   const styles = document.getElementById('shop-styles');
@@ -1372,10 +1501,17 @@ function setShopView(view, options) {
   updateWizardGuide();
   updateDiamondWizardChrome();
   if (view === 'product') { updateLargeImage(); resetConfigNotices(); }
-  syncShopUrl();
+  const hist = opts.history;
+  if (hist !== 'none') {
+    const mode = hist || (shopViewDepth(view) > shopViewDepth(prevView) ? 'push' : 'replace');
+    syncShopUrl(mode);
+  }
   const skipScroll = opts.skipScroll || document.documentElement.classList.contains('shop-tour-active');
   if (!skipScroll) {
+    // Reset window + nested shop scroller so style→configure lands at top on mobile.
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    document.querySelector('.shop-scroll')?.scrollTo({ top: 0, behavior: 'smooth' });
+    document.querySelector('.shop-main')?.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }
 
@@ -1415,15 +1551,16 @@ function updateDiamondWizardChrome() {
   }
 }
 
-async function enterDiamondLooseProduct() {
+async function enterDiamondLooseProduct(options) {
+  const opts = options || {};
   const typeId = diamondLooseProductId();
   if (!typeId) {
-    setShopView('styles');
+    setShopView('styles', opts);
     renderTypeCards();
     updateSummary();
     return;
   }
-  await selectType(typeId);
+  await selectType(typeId, opts);
 }
 
 const WIZARD_GUIDE = {
@@ -2767,7 +2904,7 @@ function diamondShapeOptions() {
 }
 
 function usesAutoStoneCount(category = state.category) {
-  const cats = diamondOptions.stoneCountCategories || ['earring'];
+  const cats = diamondOptions.stoneCountCategories || [];
   return cats.includes(category);
 }
 
@@ -2775,15 +2912,34 @@ function usesStoneCountPicker(category = state.category) {
   return category === 'diamond';
 }
 
+function usesEarringQuantity(category = state.category) {
+  return category === 'earring';
+}
+
+function earringQuantityMin() {
+  const n = Number(diamondOptions.earringQuantityMin);
+  return Number.isNaN(n) ? 1 : Math.max(1, n);
+}
+
+function earringQuantityMax() {
+  const n = Number(diamondOptions.earringQuantityMax);
+  return Number.isNaN(n) ? 2 : Math.max(earringQuantityMin(), n);
+}
+
+function normalizeEarringQuantity(raw) {
+  const n = parseInt(raw, 10);
+  if (Number.isNaN(n)) return earringQuantityMin();
+  return Math.min(earringQuantityMax(), Math.max(earringQuantityMin(), n));
+}
+
 function defaultStoneCountForCategory(category = state.category) {
-  if (category === 'earring') return 2;
   if (category === 'diamond') return 1;
   return diamondOptions.defaultStoneCountByCategory?.[category] || 2;
 }
 
 function stoneCountBadgeText() {
-  if (state.category === 'earring') {
-    return tr('stone_count_badge').replace('{n}', '1');
+  if (usesEarringQuantity()) {
+    return tr('stone_count_badge').replace('{n}', String(normalizeEarringQuantity(state.quantity)));
   }
   if (usesStoneCountPicker() && state.stoneCount && state.stoneCount > 1) {
     return tr('stone_count_badge').replace('{n}', String(state.stoneCount));
@@ -2793,6 +2949,11 @@ function stoneCountBadgeText() {
 }
 
 function ensureStoneCountDefault() {
+  if (usesEarringQuantity()) {
+    state.quantity = normalizeEarringQuantity(state.quantity || 1);
+    state.stoneCount = null;
+    return;
+  }
   if (usesStoneCountPicker()) {
     if (!state.stoneCount) state.stoneCount = 1;
     return;
@@ -2915,6 +3076,7 @@ function updateDiamondSteps() {
   stoneStep?.classList.toggle('hidden', !isDiamond);
   if (isChain) {
     resetDiamondOptions();
+    updateEarringQuantityStep();
     return;
   }
   enforceRoundOnlyShape();
@@ -2924,6 +3086,7 @@ function updateDiamondSteps() {
   renderDiamondShapeButtons();
   renderStoneCountButtons();
   ensureStoneCountDefault();
+  updateEarringQuantityStep();
   updateGirdlePreview();
 }
 
@@ -3298,6 +3461,73 @@ function selectStoneCount(count) {
   updateSummary();
 }
 
+let earringQtyStepperBound = false;
+
+function bindEarringQuantityStepper() {
+  if (earringQtyStepperBound) return;
+  const dec = document.getElementById('earring-qty-dec');
+  const inc = document.getElementById('earring-qty-inc');
+  const input = document.getElementById('earring-qty-input');
+  if (!dec || !inc || !input) return;
+  earringQtyStepperBound = true;
+
+  dec.addEventListener('click', () => selectEarringQuantity(normalizeEarringQuantity((state.quantity || 1) - 1)));
+  inc.addEventListener('click', () => selectEarringQuantity(normalizeEarringQuantity((state.quantity || 1) + 1)));
+  input.addEventListener('input', () => {
+    const digits = String(input.value || '').replace(/\D/g, '');
+    if (!digits) return;
+    const next = normalizeEarringQuantity(digits);
+    state.quantity = next;
+    input.value = String(next);
+    if (dec) dec.disabled = next <= earringQuantityMin();
+    if (inc) inc.disabled = next >= earringQuantityMax();
+    updateSummary();
+  });
+  input.addEventListener('blur', () => {
+    selectEarringQuantity(normalizeEarringQuantity(input.value || earringQuantityMin()));
+  });
+}
+
+function selectEarringQuantity(count) {
+  state.quantity = normalizeEarringQuantity(count);
+  syncEarringQuantityStepper();
+  updateSummary();
+}
+
+function syncEarringQuantityStepper() {
+  bindEarringQuantityStepper();
+  const stepper = document.getElementById('earring-qty-stepper');
+  const input = document.getElementById('earring-qty-input');
+  const dec = document.getElementById('earring-qty-dec');
+  const inc = document.getElementById('earring-qty-inc');
+  if (!stepper || !input) return;
+
+  const show = usesEarringQuantity();
+  stepper.hidden = !show;
+  if (!show) return;
+
+  const min = earringQuantityMin();
+  const max = earringQuantityMax();
+  const value = normalizeEarringQuantity(state.quantity || min);
+  if (state.quantity !== value) state.quantity = value;
+
+  input.min = String(min);
+  input.max = String(max);
+  input.step = '1';
+  input.value = String(value);
+  if (dec) dec.disabled = value <= min;
+  if (inc) inc.disabled = value >= max;
+}
+
+function updateEarringQuantityStep() {
+  const step = document.getElementById('earring-quantity-step');
+  if (step) step.classList.toggle('hidden', !usesEarringQuantity());
+  if (usesEarringQuantity()) {
+    state.quantity = normalizeEarringQuantity(state.quantity || 1);
+  }
+  syncEarringQuantityStepper();
+}
+
 function selectDiamondColor(colorId) {
   const meta = diamondColorOptions().find(c => c.id === colorId);
   if (!meta) return;
@@ -3339,6 +3569,7 @@ function buildQuotePayload() {
     fancyColor: state.fancyColor,
     stoneCount: state.stoneCount,
     diamondShape: state.diamondShape,
+    quantity: usesEarringQuantity() ? normalizeEarringQuantity(state.quantity) : undefined,
   };
 }
 
@@ -4372,7 +4603,8 @@ function renderRingSizeGuide() {
 
 // ── Selection handlers ────────────────────────────────────────────────────
 
-async function selectCategory(cat) {
+async function selectCategory(cat, options) {
+  const opts = options || {};
   state.category = cat;
   state.type = null;
   state.gold = null;
@@ -4389,6 +4621,7 @@ async function selectCategory(cat) {
   state.chainColor = null;
   state.chainThickness = null;
   state.chainLength = null;
+  state.quantity = 1;
 
   document.querySelectorAll(".cat-btn").forEach(b =>
     b.classList.toggle("active", b.dataset.cat === cat));
@@ -4421,15 +4654,16 @@ async function selectCategory(cat) {
   updateDiamondWizardChrome();
 
   if (cat === 'diamond') {
-    await enterDiamondLooseProduct();
+    await enterDiamondLooseProduct(opts);
     return;
   }
 
-  setShopView('styles');
+  setShopView('styles', opts);
   updateSummary();
 }
 
-async function selectType(typeId) {
+async function selectType(typeId, options) {
+  const opts = options || {};
   state.type = typeId;
   state.carat = null;
   state.gold = null;
@@ -4438,6 +4672,7 @@ async function selectType(typeId) {
   state.engravingBand = '';
   state.engravingRemark = '';
   state.engravingGirdle = '';
+  state.quantity = 1;
   resetDiamondOptions();
 
   document.querySelectorAll(".type-card").forEach(c =>
@@ -4460,7 +4695,7 @@ async function selectType(typeId) {
   updateEngravingSteps();
   updateDiamondSteps();
   await updateChainOptions();
-  setShopView('product', { skipScroll: true });
+  setShopView('product', opts);
   updateSummary();
 }
 
@@ -4652,26 +4887,9 @@ document.getElementById('chain-length-guide-close')?.addEventListener('click', (
   chainLengthGuideDialog?.close());
 
 document.getElementById('back-to-catalog')?.addEventListener('click', () => {
-  state.category = null;
-  state.type = null;
-  state.gold = null;
-  state.color = null;
-  state.carat = null;
-  state.ringSize = null;
-  state.engravingBand = '';
-  state.engravingRemark = '';
-  state.engravingGirdle = '';
-  state.lengthCm = null;
-  state.includeChain = false;
-  state.chainProductId = null;
-  state.chainGold = null;
-  state.chainColor = null;
-  state.chainThickness = null;
-  state.chainLength = null;
-  document.querySelectorAll('.cat-btn, #metal-btn-row .metal-btn, #color-btn-row .color-btn').forEach(b => b.classList.remove('active'));
-  clearRingSizeSelection();
-  updateChainOptions();
-  setShopView('catalog');
+  if (shopInAppHistoryBack('catalog')) return;
+  clearShopWizardSelection();
+  setShopView('catalog', { history: 'replace' });
   updateSummary();
 });
 
@@ -4681,7 +4899,8 @@ document.getElementById('back-to-styles')?.addEventListener('click', () => {
     document.getElementById('back-to-catalog')?.click();
     return;
   }
-  setShopView('styles');
+  if (shopInAppHistoryBack('styles')) return;
+  setShopView('styles', { history: 'replace' });
   renderTypeCards();
   updateSummary();
 });
@@ -4753,6 +4972,9 @@ function buildSubmitPayload() {
     stoneCount: state.stoneCount,
     diamondShape: state.diamondShape,
   };
+  if (usesEarringQuantity()) {
+    payload.quantity = normalizeEarringQuantity(state.quantity);
+  }
   const product = getSelectedProduct();
   if (product) {
     payload.summaryZh = productName(product);
@@ -5300,6 +5522,7 @@ function orderApiRowToEditConfig(o) {
     diamondKind: o.diamond_kind || 'white',
     fancyColor: o.fancy_color,
     stoneCount: o.stone_count,
+    quantity: saved.quantity != null ? saved.quantity : (o.quantity != null ? o.quantity : 1),
     diamondShape: o.diamond_shape || 'round',
     includeChain: !!o.include_chain,
     chainGold: o.chain_gold,
@@ -5356,6 +5579,7 @@ async function restoreShopConfig(cfg) {
   state.diamondKind = cfg.diamondKind || 'white';
   state.fancyColor = cfg.fancyColor || null;
   state.stoneCount = cfg.stoneCount || null;
+  state.quantity = cfg.quantity != null ? cfg.quantity : 1;
   ensureStoneCountDefault();
   state.diamondShape = cfg.diamondShape || 'round';
   if (state.diamondShape !== 'round' && state.diamondShape !== 'other') {
@@ -5376,7 +5600,7 @@ async function restoreShopConfig(cfg) {
   syncVariantChipActiveStates();
   productImageIndex = 0;
   updateLargeImage();
-  setShopView('product', { skipScroll: true });
+  setShopView('product', { skipScroll: true, history: 'replace' });
   updateSummary();
 }
 
@@ -5478,10 +5702,11 @@ async function bootShopCore() {
 
 async function applyInitialShopState() {
   const prefillData = window.cartEditData || window.editData || window.prefillData || takeShopResumeSnapshot();
+  const histReplace = { history: 'replace', skipScroll: true };
   if (prefillData) {
     await restoreShopConfig(prefillData);
   } else {
-    setShopView('catalog');
+    setShopView('catalog', histReplace);
     updateWizardGuide();
   }
 
@@ -5490,24 +5715,22 @@ async function applyInitialShopState() {
     || new URLSearchParams(window.location.search).get('product')
     || new URLSearchParams(window.location.search).get('series');
   if (urlCategory && productsFor(urlCategory).length && !prefillData) {
-    requestAnimationFrame(() => {
-      document.querySelector(`.cat-btn[data-cat="${urlCategory}"]`)?.click();
-      if (urlType && urlCategory !== 'diamond') {
-        setTimeout(() => {
-          const typeId = urlType.startsWith('diamond-') || urlCategory !== 'diamond'
-            ? urlType
-            : `diamond-${urlType}`;
-          document.querySelector(`.type-card[data-type="${typeId}"]`)?.click();
-        }, 60);
+    await selectCategory(urlCategory, histReplace);
+    if (urlType && urlCategory !== 'diamond') {
+      const typeId = urlType.startsWith('diamond-') || urlCategory !== 'diamond'
+        ? urlType
+        : `diamond-${urlType}`;
+      if (productsFor(urlCategory).some((p) => p.id === typeId)) {
+        await selectType(typeId, histReplace);
       }
-    });
+    }
   }
 
   const previewProduct = new URLSearchParams(window.location.search).get('product');
   if (window.shopConfig?.preview && previewProduct && urlCategory && !prefillData && !urlType) {
-    setTimeout(() => {
-      document.querySelector(`.type-card[data-type="${previewProduct}"]`)?.click();
-    }, 50);
+    if (productsFor(urlCategory).some((p) => p.id === previewProduct)) {
+      await selectType(previewProduct, histReplace);
+    }
   }
 }
 

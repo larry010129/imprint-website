@@ -233,6 +233,21 @@
 <p class="stone-count-discount__note cfg-note" data-i18n="stone_count_table_note" id="stone-count-discount-note">（僅供參考）</p>
 </div>
 </div>
+<div class="variant-group hidden" id="earring-quantity-step">
+<h3 class="variant-label" data-i18n="step_earring_quantity" id="earring-quantity-step-label">數量</h3>
+<div class="stone-count-stepper" hidden="" id="earring-qty-stepper">
+<div aria-labelledby="earring-quantity-step-label" class="stone-count-field" role="group">
+<button aria-label="減少數量" class="stone-count-btn stone-count-btn--dec" data-i18n-aria="earring_qty_decrease" id="earring-qty-dec" type="button">
+<svg aria-hidden="true" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-width="2" viewbox="0 0 24 24" width="16"><path d="M5 12h14"></path></svg>
+</button>
+<input aria-label="數量" class="stone-count-input" data-i18n-aria="earring_qty_input" id="earring-qty-input" inputmode="numeric" max="2" min="1" step="1" type="number" value="1"/>
+<button aria-label="增加數量" class="stone-count-btn stone-count-btn--inc" data-i18n-aria="earring_qty_increase" id="earring-qty-inc" type="button">
+<svg aria-hidden="true" fill="none" height="16" stroke="currentColor" stroke-linecap="round" stroke-width="2" viewbox="0 0 24 24" width="16"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>
+</button>
+</div>
+</div>
+<p class="cfg-note" data-i18n="earring_qty_note">單只計價；選 2 為一對。</p>
+</div>
 <div class="variant-group" id="metal-step">
 <h3 class="variant-label" data-i18n="step_metal">選擇材質</h3>
 <div class="variant-chips" id="metal-btn-row"></div>
