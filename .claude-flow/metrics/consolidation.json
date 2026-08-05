@@ -1,16 +1,16 @@
 {
-  "timestamp": "2026-08-05T09:01:29.762Z",
+  "timestamp": "2026-08-05T09:31:29.829Z",
   "distillationEnabled": true,
-  "patternsConsolidated": 4,
-  "memoryCleaned": 4,
+  "patternsConsolidated": 1,
+  "memoryCleaned": 1,
   "duplicatesRemoved": 0,
-  "episodes": 4,
-  "episodeEmbeddings": 4,
-  "patternEmbeddings": 4,
-  "causalEdges": 3,
+  "episodes": 1,
+  "episodeEmbeddings": 1,
+  "patternEmbeddings": 1,
+  "causalEdges": 0,
   "promoted": 0,
   "byProvenance": {
-    "proxy:structural": 4
+    "proxy:structural": 1
   },
   "namespaces": [
     "session",

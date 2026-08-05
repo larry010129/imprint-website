@@ -27,21 +27,27 @@ log = logging.getLogger(__name__)
 
 # blob: required for admin/CMS crop UI (URL.createObjectURL local previews).
 # img-src: self + data/blob + known hosts (Supabase media, Botpress, Google).
+# googletagmanager / google-analytics: GA4 gtag (G-J5QPK34V89) in base layout.
 HTML_CONTENT_SECURITY_POLICY = (
     "default-src 'self'; "
     "script-src 'self' 'unsafe-inline' https://cdn.botpress.cloud "
     "https://files.bpcontent.cloud https://*.botpress.cloud "
-    "https://accounts.google.com https://www.google.com https://www.gstatic.com; "
+    "https://accounts.google.com https://www.google.com https://www.gstatic.com "
+    "https://www.googletagmanager.com; "
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
     "font-src 'self' https://fonts.gstatic.com data:; "
     "img-src 'self' data: blob: https://*.supabase.co https://*.bpcontent.cloud "
     "https://*.botpress.cloud https://www.google.com https://www.gstatic.com "
-    "https://lh3.googleusercontent.com; "
+    "https://lh3.googleusercontent.com https://www.googletagmanager.com "
+    "https://www.google-analytics.com https://*.google-analytics.com; "
     "connect-src 'self' https://*.botpress.cloud wss://*.botpress.cloud "
     "https://cdn.botpress.cloud https://files.bpcontent.cloud "
     "https://accounts.google.com https://oauth2.googleapis.com "
     "https://people.googleapis.com "
-    "https://www.google.com https://www.gstatic.com; "
+    "https://www.google.com https://www.gstatic.com "
+    "https://www.googletagmanager.com https://www.google-analytics.com "
+    "https://analytics.google.com https://*.google-analytics.com "
+    "https://*.analytics.google.com; "
     # 'self' required for CMS page-builder preview iframe (/p/{slug}?preview=1)
     # www.google.com / recaptcha.google.com required for reCAPTCHA v2 checkbox
     "frame-src 'self' https://www.google.com https://recaptcha.google.com "
