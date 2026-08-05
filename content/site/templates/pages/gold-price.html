@@ -1,105 +1,105 @@
-{% extends "layouts/base.html" %}
-{% block extra_css %}
-<link rel="stylesheet" href="/static/css/gold-price.css?v=8">
-{% endblock %}
-{% block content %}
-{% set gq = gold_quote_bootstrap %}
-{% set has_gold = gq and gq.quote and gq.quote.available %}
-<section class="price-detail price-detail--offset">
-  <div class="container">
-    <!-- @component partials/view-gold-price.html -->
-<section class="price-reference gold-price-reference" id="gold-price-page" aria-label="黃金牌價">
-  <div class="price-reference-inner">
-    <div class="price-reference-head">
-      <p class="eyebrow">GOLD QUOTE</p>
-      <h1 class="price-reference-title">黃金最新牌價</h1>
-      <p class="price-reference-lead">即時黃金條塊牌價，9K / 14K / 18K 成色金價換算，供戒台訂製試算參考。</p>
-      <p class="gold-price-source">
-        <span>（依 100 公克條塊換算／公克）</span>
-      </p>
-    </div>
-
-    <div class="gold-price-toolbar">
-      <div class="gold-unit-switch" role="group" aria-label="價格單位">
-        <span class="gold-unit-switch-label">單位</span>
-        <button type="button" class="gold-unit-btn active" data-unit="g">克</button>
-        <button type="button" class="gold-unit-btn" data-unit="chin">錢</button>
-        <button type="button" class="gold-unit-btn" data-unit="tael">兩</button>
-      </div>
-      <button type="button" id="gold-refresh-btn" class="btn btn-mint">重新取得牌價</button>
-    </div>
-    <p id="gold-refresh-msg" class="gold-refresh-msg hidden" role="status"></p>
-    <p id="gold-live-hint" class="gold-live-hint hidden" role="status"></p>
-
-    <div id="gold-price-body">
-      <div class="gold-price-state gold-price-state--loading{% if has_gold %} hidden{% endif %}" id="gold-price-loading">
-        <p>讀取中…</p>
-      </div>
-
-      <div class="gold-price-state{% if not has_gold %} hidden{% endif %}" id="gold-price-live">
-        <div class="gold-price-badge-wrap" id="gold-source-badge"></div>
-
-        <div class="price-ref-snapshot gold-price-snapshot">
-          <div class="price-ref-row price-ref-row--hl">
-            <div class="price-ref-row__ct">
-              <strong id="gold-sell-label">最新牌價</strong>
-              <small id="gold-sell-unit">/ 公克</small>
-            </div>
-            <div class="price-ref-row__amt gold-price-sell-amt" id="gold-sell-val">{% if has_gold %}NT$ {{ "{:,.0f}".format(gq.quote.sell) }}{% else %}NT$ —{% endif %}</div>
-          </div>
-        </div>
-
-        <p class="gold-price-meta{% if not has_gold or not gq.quote.fetched_at_display %} hidden{% endif %}" id="gold-updated-line">{% if has_gold and gq.quote.fetched_at_display %}更新時間：{{ gq.quote.fetched_at_display }}{% endif %}</p>
-        <p class="gold-price-meta hidden" id="gold-fetched-line"></p>
-        <p class="gold-price-stale{% if not has_gold or not gq.quote.is_stale %} hidden{% endif %}" id="gold-stale-warning" role="alert">目前牌價超過 24 小時未更新或正在使用備援價格，試算前請先確認最新金價。</p>
-        <p class="price-ref-note gold-price-note">計算機以黃金條塊牌價換算之公克金價為基準，再依 9K / 14K / 18K 成色係數計價；以下為約略試算，實際成交價可能因牌價波動或訂製條件而有所不同。</p>
-
-        <details class="price-ref-panel" id="gold-alloy-panel" open>
-          <summary id="gold-alloy-heading">試算用成色金價（約 NT$ / 公克）</summary>
-          <div class="price-ref-tabs">
-            <p class="gold-price-approx"><span class="gold-price-approx__mark" aria-hidden="true">*</span>價格僅供參考，與實際試算或下單金額可能略有差異。</p>
-            <div class="price-ref-scroll">
-              <table class="gold-alloy-table" id="gold-alloy-table">
-                <thead>
-                  <tr>
-                    <th>成色</th>
-                    <th>金價</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% if has_gold and gq.alloyRates %}
-                  {% for key, label in [('9k','9K 金'),('14k','14K 金'),('18k','18K 金'),('pt950','Pt950'),('s925','S925 銀')] %}
-                  {% if gq.alloyRates.get(key) is not none %}
-                  <tr><th scope="row">{{ label }}</th><td>NT$ {{ "{:,.0f}".format(gq.alloyRates[key]) }}</td></tr>
-                  {% endif %}
-                  {% endfor %}
-                  {% endif %}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </details>
-      </div>
-
-      <div class="gold-price-state gold-price-state--empty hidden" id="gold-price-empty">
-        <p>目前無法取得牌價。請稍後再試。</p>
-      </div>
-    </div>
-
-    <div class="price-reference-foot gold-price-foot">
-      <a class="btn btn-mint" href="/shop/calculator/">品項訂製試算</a>
-    </div>
-  </div>
-</section>
-
-  </div>
-</section>
-{% endblock %}
-{% block extra_scripts %}
-{% if gold_quote_bootstrap %}
-<script>window.__GOLD_QUOTE_BOOTSTRAP__ = {{ gold_quote_bootstrap | tojson }};</script>
-{% else %}
-<script src="/static/js/gold-quote-data.js" defer></script>
-{% endif %}
-<script src="/static/js/gold-price.js?v=18" defer></script>
-{% endblock %}
+{% extends "layouts/base.html" %}
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/gold-price.css?v=8">
+{% endblock %}
+{% block content %}
+{% set gq = gold_quote_bootstrap %}
+{% set has_gold = gq and gq.quote and gq.quote.available %}
+<section class="price-detail price-detail--offset">
+  <div class="container">
+    <!-- @component partials/view-gold-price.html -->
+<section class="price-reference gold-price-reference" id="gold-price-page" aria-label="黃金牌價">
+  <div class="price-reference-inner">
+    <div class="price-reference-head">
+      <p class="eyebrow">GOLD QUOTE</p>
+      <h1 class="price-reference-title">黃金最新牌價</h1>
+      <p class="price-reference-lead">即時黃金條塊牌價，9K / 14K / 18K 成色金價換算，供戒台訂製試算參考。</p>
+      <p class="gold-price-source">
+        <span>（依 100 公克條塊換算／公克）</span>
+      </p>
+    </div>
+
+    <div class="gold-price-toolbar">
+      <div class="gold-unit-switch" role="group" aria-label="價格單位">
+        <span class="gold-unit-switch-label">單位</span>
+        <button type="button" class="gold-unit-btn active" data-unit="g">克</button>
+        <button type="button" class="gold-unit-btn" data-unit="chin">錢</button>
+        <button type="button" class="gold-unit-btn" data-unit="tael">兩</button>
+      </div>
+      <button type="button" id="gold-refresh-btn" class="btn btn-mint">重新取得牌價</button>
+    </div>
+    <p id="gold-refresh-msg" class="gold-refresh-msg hidden" role="status"></p>
+    <p id="gold-live-hint" class="gold-live-hint hidden" role="status"></p>
+
+    <div id="gold-price-body">
+      <div class="gold-price-state gold-price-state--loading{% if has_gold %} hidden{% endif %}" id="gold-price-loading">
+        <p>讀取中…</p>
+      </div>
+
+      <div class="gold-price-state{% if not has_gold %} hidden{% endif %}" id="gold-price-live">
+        <div class="gold-price-badge-wrap" id="gold-source-badge"></div>
+
+        <div class="price-ref-snapshot gold-price-snapshot">
+          <div class="price-ref-row price-ref-row--hl">
+            <div class="price-ref-row__ct">
+              <strong id="gold-sell-label">最新牌價</strong>
+              <small id="gold-sell-unit">/ 公克</small>
+            </div>
+            <div class="price-ref-row__amt gold-price-sell-amt" id="gold-sell-val">{% if has_gold %}NT$ {{ "{:,.0f}".format(gq.quote.sell) }}{% else %}NT$ —{% endif %}</div>
+          </div>
+        </div>
+
+        <p class="gold-price-meta{% if not has_gold or not gq.quote.fetched_at_display %} hidden{% endif %}" id="gold-updated-line">{% if has_gold and gq.quote.fetched_at_display %}更新時間：{{ gq.quote.fetched_at_display }}{% endif %}</p>
+        <p class="gold-price-meta hidden" id="gold-fetched-line"></p>
+        <p class="gold-price-stale{% if not has_gold or not gq.quote.is_stale %} hidden{% endif %}" id="gold-stale-warning" role="alert">目前牌價超過 24 小時未更新或正在使用備援價格，試算前請先確認最新金價。</p>
+        <p class="price-ref-note gold-price-note">計算機以黃金條塊牌價換算之公克金價為基準，再依 9K / 14K / 18K 成色係數計價；以下為約略試算，實際成交價可能因牌價波動或訂製條件而有所不同。</p>
+
+        <details class="price-ref-panel" id="gold-alloy-panel" open>
+          <summary id="gold-alloy-heading">試算用成色金價（約 NT$ / 公克）</summary>
+          <div class="price-ref-tabs">
+            <p class="gold-price-approx"><span class="gold-price-approx__mark" aria-hidden="true">*</span>價格僅供參考，與實際試算或下單金額可能略有差異。</p>
+            <div class="price-ref-scroll">
+              <table class="gold-alloy-table" id="gold-alloy-table">
+                <thead>
+                  <tr>
+                    <th>成色</th>
+                    <th>金價</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% if has_gold and gq.alloyRates %}
+                  {% for key, label in [('9k','9K 金'),('14k','14K 金'),('18k','18K 金'),('pt950','Pt950'),('s925','S925 銀')] %}
+                  {% if gq.alloyRates.get(key) is not none %}
+                  <tr><th scope="row">{{ label }}</th><td>NT$ {{ "{:,.0f}".format(gq.alloyRates[key]) }}</td></tr>
+                  {% endif %}
+                  {% endfor %}
+                  {% endif %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </details>
+      </div>
+
+      <div class="gold-price-state gold-price-state--empty hidden" id="gold-price-empty">
+        <p>目前無法取得牌價。請稍後再試。</p>
+      </div>
+    </div>
+
+    <div class="price-reference-foot gold-price-foot">
+      <a class="btn btn-mint" href="/shop/calculator/">品項訂製試算</a>
+    </div>
+  </div>
+</section>
+
+  </div>
+</section>
+{% endblock %}
+{% block extra_scripts %}
+{% if gold_quote_bootstrap %}
+<script>window.__GOLD_QUOTE_BOOTSTRAP__ = {{ gold_quote_bootstrap | tojson }};</script>
+{% else %}
+<script src="/static/js/gold-quote-data.js" defer></script>
+{% endif %}
+<script src="/static/js/gold-price.js?v=20" defer></script>
+{% endblock %}

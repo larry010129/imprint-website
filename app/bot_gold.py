@@ -137,22 +137,31 @@ def build_payload(
     }
 
 
-async def fetch_bot_gold_quote() -> dict:
-    """Cached, O(1)-amortized wrapper: only hits the network once per TTL window."""
+def invalidate_bot_gold_memory_cache() -> None:
+    """Drop in-process scrape cache (e.g. after a forced browser refresh)."""
+    global _cached_payload, _cached_at
+    _cached_payload = None
+    _cached_at = 0.0
+
+
+async def fetch_bot_gold_quote(*, force: bool = False) -> dict:
+    """Cached wrapper: network once per TTL unless ``force`` (button refresh)."""
     global _cached_payload, _cached_at
 
-    now = time.monotonic()
-    if _cached_payload is not None and (now - _cached_at) < _CACHE_TTL_SECONDS:
-        return _cached_payload
-
-    async with _cache_lock:
+    if not force:
         now = time.monotonic()
         if _cached_payload is not None and (now - _cached_at) < _CACHE_TTL_SECONDS:
             return _cached_payload
 
+    async with _cache_lock:
+        if not force:
+            now = time.monotonic()
+            if _cached_payload is not None and (now - _cached_at) < _CACHE_TTL_SECONDS:
+                return _cached_payload
+
         payload = await _fetch_bot_gold_quote_live()
         _cached_payload = payload
-        _cached_at = now
+        _cached_at = time.monotonic()
         return payload
 
 

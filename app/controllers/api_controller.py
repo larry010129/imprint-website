@@ -12,7 +12,13 @@ from fastapi.responses import JSONResponse
 
 from app.auth import enforce_rate_limit, get_user_id, is_admin, require_admin
 from app.auth_totp_service import step_up_from_body
-from app.bot_gold import FALLBACK_XAG, FALLBACK_XPT, build_payload_from_cache, fetch_bot_gold_quote
+from app.bot_gold import (
+    FALLBACK_XAG,
+    FALLBACK_XPT,
+    build_payload_from_cache,
+    fetch_bot_gold_quote,
+    invalidate_bot_gold_memory_cache,
+)
 from app.catalog import (
     build_catalog_product,
     build_catalog_response,
@@ -179,6 +185,37 @@ async def bot_gold() -> JSONResponse:
         raise HTTPException(status_code=502, detail="金價暫時無法取得，請稍後再試") from err
     return JSONResponse(
         content=GoldQuote.model_validate(payload).model_dump(),
+        headers={"Cache-Control": "no-store"},
+    )
+
+
+@router.post("/bot-gold/refresh", response_model=GoldQuote)
+async def bot_gold_refresh(request: Request) -> JSONResponse:
+    """Public button refresh — live scrape + persist. Rate-limited; no Bearer secret.
+
+    Distinct from ``POST /api/gold-refresh`` (GHA-only, Bearer ``GOLD_REFRESH_SECRET``).
+    """
+    if not enforce_rate_limit(request, action="bot-gold-refresh", limit=5, window_seconds=600):
+        raise HTTPException(status_code=429, detail="請求過於頻繁，請稍後再試")
+    try:
+        payload = await fetch_bot_gold_quote(force=True)
+    except Exception as err:  # noqa: BLE001
+        log.exception("bot-gold refresh scrape failed")
+        raise HTTPException(status_code=502, detail="金價暫時無法取得，請稍後再試") from err
+    xau, xag, xpt, stamp, source = _quote_fields_from_payload(payload)
+    if xau <= 0:
+        raise HTTPException(status_code=502, detail="金價資料無效")
+    _persist_gold_price_cache(
+        xau=xau, xag=xag, xpt=xpt, bot_posted_at=stamp, source=source
+    )
+    invalidate_bot_gold_memory_cache()
+    out = dict(payload)
+    out["refreshed"] = True
+    if isinstance(out.get("quote"), dict):
+        out["quote"] = dict(out["quote"])
+        out["quote"]["is_stale"] = False
+    return JSONResponse(
+        content=GoldQuote.model_validate(out).model_dump(),
         headers={"Cache-Control": "no-store"},
     )
 

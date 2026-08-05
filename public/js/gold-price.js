@@ -3,11 +3,12 @@
   'use strict';
 
   var API_URL = '/api/bot-gold';
-  var REFRESH_URL = '/api/gold-refresh';
+  /** Public live scrape (rate-limited). Not the GHA Bearer endpoint /api/gold-refresh. */
+  var REFRESH_URL = '/api/bot-gold/refresh';
   var CACHE_KEY = 'imprintGoldQuoteCache';
   var CHIN_TO_GRAMS = 3.75;
   var GOLD_UNITS = ['g', 'chin', 'tael'];
-  /** Soft client re-fetch; server GHA + /api/gold-refresh own durable hourly scrape. */
+  /** Soft poll re-reads cache. Button uses REFRESH_URL to scrape again. */
   var POLL_MS = 60 * 60 * 1000;
 
   var PURITY_LABELS = {
@@ -132,6 +133,7 @@
       .catch(function () { return fallbackPayload(); });
   }
 
+  /** Browser「重新取得牌價」— live scrape via public rate-limited endpoint. */
   function refreshGoldQuote() {
     return fetch(REFRESH_URL, {
       method: 'POST',
@@ -139,11 +141,23 @@
       headers: { Accept: 'application/json' },
     })
       .then(function (res) {
+        if (res.status === 429) throw new Error('rate-limited');
         if (!res.ok) throw new Error('HTTP ' + res.status);
         return res.json();
       })
-      .then(function () { return fetchLiveQuote(); })
-      .catch(function () {
+      .then(function (data) {
+        if (data.error || !data.quote || !data.quote.available) {
+          throw new Error(data.error || '無法取得金價');
+        }
+        writeCache(data);
+        return Object.assign({}, data, { refreshed: true });
+      })
+      .catch(function (err) {
+        if (err && err.message === 'rate-limited') {
+          return fetchLiveQuote().then(function (data) {
+            return Object.assign({}, data, { refreshed: false, rateLimited: true });
+          });
+        }
         var cached = readCache() || readBootstrap();
         if (cached) return Object.assign({}, cached, { refreshed: false });
         return fallbackPayload();
@@ -174,6 +188,9 @@
   }
 
   function refreshMessage(data) {
+    if (data.rateLimited) {
+      return { text: '更新太頻繁，已顯示目前伺服器牌價', ok: false };
+    }
     if (data.refreshed) return { text: '牌價已更新', ok: true };
     if (data.fromCache || data.fromBootstrap) {
       return { text: liveReady ? '金價來源暫時無回應，顯示備援牌價' : '顯示備援牌價（需 FastAPI 伺服器才能即時抓取）', ok: false };
