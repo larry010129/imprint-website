@@ -607,7 +607,29 @@ function catalogUrlsForImageSlot(product, slotKey) {
   return catalogImagesForKeys(product, [slotKey]);
 }
 
-/** Slot keys in admin 圖片選項 block order — API imageSlotOrder, then colors, preset fallback. */
+/** defaultColor is metal-only; slots may be metal, metal-diamond, or metal-diamond-chain. */
+function imageSlotCoversDefaultColor(slotKey, defaultColor) {
+  const key = String(slotKey || '').toLowerCase();
+  const def = String(defaultColor || 'white').toLowerCase();
+  if (!key || !def) return false;
+  if (key === def) return true;
+  return key.startsWith(`${def}-`);
+}
+
+/** Preferred slot keys for 預設顏色 — white diamond first, then fancy on same metal. */
+function defaultColorImageSlotKeys(product) {
+  const metal = String(product?.defaultColor || 'white').toLowerCase();
+  const cat = String(product?.category || '').toLowerCase();
+  if (cat === 'chain') return [`${metal}-white`, metal];
+  const keys = [`${metal}-white`];
+  for (const diamond of IMAGE_SLOT_DIAMONDS) {
+    if (diamond !== 'white') keys.push(`${metal}-${diamond}`);
+  }
+  if (IMAGE_SLOT_METALS.includes(metal)) keys.push(metal);
+  return keys;
+}
+
+/** Slot keys — 預設顏色 first, then admin imageSlotOrder, then colors / preset fallback. */
 function catalogImageSlotKeyOrder(product) {
   if (!product?.images) return [];
   const seen = new Set();
@@ -618,6 +640,7 @@ function catalogImageSlotKeyOrder(product) {
     seen.add(key);
     order.push(key);
   };
+  for (const key of defaultColorImageSlotKeys(product)) pushKey(key);
   for (const key of product.imageSlotOrder || []) pushKey(key);
   for (const key of product.colors || []) pushKey(key);
   for (const key of presetImageSlotKeys(product.category)) pushKey(key);
@@ -2160,14 +2183,10 @@ function styleGridImageCandidates(product) {
   }
 
   const liteCatalog = !product?.images || !Object.keys(product.images).length;
-  // Lite /api/catalog: only thumbUrl + imageSlotOrder metadata — thumb is primary.
-  if (liteCatalog && product?.thumbUrl && isUsableCatalogImageUrl(product.thumbUrl)) {
-    add(product.thumbUrl);
-  }
-
+  // Full catalog: 預設顏色 slots first; lite uses server thumbUrl (same priority).
   for (const url of orderedCatalogImageUrls(product)) add(url);
 
-  if (!liteCatalog && product?.thumbUrl && isUsableCatalogImageUrl(product.thumbUrl)) {
+  if (product?.thumbUrl && isUsableCatalogImageUrl(product.thumbUrl)) {
     add(product.thumbUrl);
   }
 

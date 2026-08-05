@@ -16,6 +16,7 @@ def _sort_golds(golds: set[str]) -> list[str]:
 
 
 from app.admin_products import (
+    image_covers_default_color,
     is_auto_stock_product_image,
     is_dead_catalog_placeholder,
     is_pending_product_image,
@@ -153,25 +154,56 @@ def _catalog_slot_colors(
     return ordered
 
 
+def _default_color_slot_keys(metal: str, category: str | None = None) -> list[str]:
+    """Preferred slot keys for 預設顏色 — white diamond first, then fancy on same metal."""
+    metal = (metal or "white").strip().lower() or "white"
+    if (category or "").strip().lower() == "chain":
+        return [f"{metal}-white", metal]
+    keys = [f"{metal}-white"]
+    for diamond in ("yellow", "blue", "pink"):
+        keys.append(f"{metal}-{diamond}")
+    keys.append(metal)
+    return keys
+
+
 def _first_thumb_url(
     images_by_color: dict[str, list[str]],
     *,
     images: list[dict] | None = None,
     default_color: str | None = None,
+    category: str | None = None,
 ) -> str | None:
-    """First upload in admin 圖片選項 block order; legacy default-metal fallback."""
-    if images:
-        for color in _image_slot_order(images):
-            urls = images_by_color.get(color)
-            if urls:
-                return urls[0]
+    """預設顏色 slot first; then admin block order; then any usable upload."""
     metal = (default_color or "white").strip().lower() or "white"
-    for key in (f"{metal}-white", metal, f"{metal}-white-white"):
+    tried: set[str] = set()
+
+    def pick(key: str) -> str | None:
+        if not key or key in tried:
+            return None
+        tried.add(key)
         urls = images_by_color.get(key)
         if urls:
             return urls[0]
+        return None
+
+    for key in _default_color_slot_keys(metal, category):
+        url = pick(key)
+        if url:
+            return url
+    for key in images_by_color:
+        if key not in tried and image_covers_default_color(key, metal):
+            url = pick(key)
+            if url:
+                return url
+
+    if images:
+        for color in _image_slot_order(images):
+            url = pick(color)
+            if url:
+                return url
+
     for key, urls in images_by_color.items():
-        if not urls:
+        if not urls or key in tried:
             continue
         parts = str(key).split("-")
         if len(parts) == 1 or parts[1] == "white":
@@ -217,6 +249,7 @@ def build_catalog_product_lite(product: dict, variants: list[dict], images: list
             images_by_color,
             images=images,
             default_color=product.get("default_color"),
+            category=product.get("category"),
         ),
         "draft": not product["is_published"],
     }

@@ -62,7 +62,7 @@ def test_normalize_catalog_detail_defaults_lite():
     assert normalize_catalog_detail("FULL") == "full"
 
 
-def test_lite_thumb_url_uses_first_admin_block_in_sort_order():
+def test_lite_thumb_url_prefers_default_color_over_block_order():
     fancy = "https://abc123.supabase.co/storage/v1/object/public/shop-media/products/fancy.webp"
     rose = "https://abc123.supabase.co/storage/v1/object/public/shop-media/products/rose.webp"
     images = [
@@ -71,7 +71,7 @@ def test_lite_thumb_url_uses_first_admin_block_in_sort_order():
         {"color": "white-white", "file_path": SUPABASE_PRODUCT},
     ]
     entry = build_catalog_product_lite(_product_row(), _variants(), images)
-    assert entry["thumbUrl"] == fancy
+    assert entry["thumbUrl"] == SUPABASE_PRODUCT
     assert entry["imageSlotOrder"] == ["yellow-pink", "rose", "white-white"]
 
 
@@ -112,11 +112,11 @@ def test_catalog_image_slot_order_follows_admin_block_save_order():
         {"color": "yellow-pink", "file_path": fancy},
         {"color": "white-white", "file_path": white},
     ]
-    assert _first_thumb_url(images_by_color, images=rows) == fancy
-    assert _first_thumb_url(images_by_color, default_color="white") == white
+    assert _first_thumb_url(images_by_color, images=rows, default_color="white") == white
+    assert _first_thumb_url(images_by_color, images=rows) == white
 
 
-def test_lite_thumb_uses_first_admin_block_not_default_metal():
+def test_lite_thumb_default_metal_before_block_order():
     fancy = "https://cdn.example/rose-yellow.webp"
     white = "https://cdn.example/rose-white.webp"
     images = [
@@ -125,8 +125,21 @@ def test_lite_thumb_uses_first_admin_block_not_default_metal():
     ]
     product = {**_product_row(), "default_color": "rose"}
     entry = build_catalog_product_lite(product, _variants(), images)
-    assert entry["thumbUrl"] == fancy
+    assert entry["thumbUrl"] == white
     assert entry["imageSlotOrder"] == ["rose-yellow", "rose-white"]
+
+
+def test_lite_thumb_skips_pending_default_color_falls_through_block_order():
+    """泡泡手鍊 pattern: 預設顏色=white pending → next slot in block order."""
+    pending = "https://x.supabase.co/storage/v1/object/public/shop-media/products/_pending/x.png"
+    yellow = "https://x.supabase.co/storage/v1/object/public/shop-media/products/yellow.png"
+    images = [
+        {"color": "white-white", "file_path": pending},
+        {"color": "yellow-white", "file_path": yellow},
+    ]
+    product = {**_product_row(category="bracelet"), "name_zh": "泡泡手鍊", "default_color": "white"}
+    entry = build_catalog_product_lite(product, _variants(), images)
+    assert entry["thumbUrl"] == yellow
 
 
 def test_lite_thumb_uses_realistic_supabase_storage_url():
