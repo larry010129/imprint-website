@@ -48,8 +48,8 @@ jobs:
             exit 0
           fi
           if [ -z "${GOLD_REFRESH_SECRET:-}" ]; then
-            echo "::error::GOLD_REFRESH_SECRET secret not set; cannot call /api/gold-refresh"
-            exit 1
+            echo "::warning::GOLD_REFRESH_SECRET secret not set; skip live /api/gold-refresh"
+            exit 0
           fi
           base="${SITE_URL%/}"
           health_url="${base}/health"
