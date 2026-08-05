@@ -15,7 +15,11 @@ def _sort_golds(golds: set[str]) -> list[str]:
     return sorted(golds, key=lambda g: order.get(g, 99))
 
 
-from app.admin_products import is_auto_stock_product_image, is_dead_catalog_placeholder
+from app.admin_products import (
+    is_auto_stock_product_image,
+    is_dead_catalog_placeholder,
+    is_pending_product_image,
+)
 from app.chain_catalog import DEFAULT_NECKLACE_TYPE, necklace_type_length_weights
 from app.image_urls import (
     _is_raster_url,
@@ -117,6 +121,7 @@ def _usable_images_by_color(images: list[dict]) -> dict[str, list[str]]:
             and _is_raster_url(url)
             and not is_dead_catalog_placeholder(url)
             and not is_auto_stock_product_image(url)
+            and not is_pending_product_image(url)
             and (not url.startswith("/static/") or static_url_exists(url))
         ):
             images_by_color.setdefault(image["color"], []).append(url)

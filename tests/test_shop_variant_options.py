@@ -245,20 +245,29 @@ def test_shop_js_fancy_carat_dropdown_intersects_admin_min():
     assert "stockFancyDiamondColors" in (
         ROOT / "public" / "js" / "shop-assets.js"
     ).read_text(encoding="utf-8")
-    assert "shop.js?v=131" in (
+    assert "shop.js?v=135" in (
         ROOT / "content" / "site" / "templates" / "pages" / "shop" / "calculator.html"
     ).read_text(encoding="utf-8")
-    assert "shop.js?v=131" in (
+    assert "shop.js?v=135" in (
         ROOT / "content" / "site" / "page-registry.json"
     ).read_text(encoding="utf-8")
-    # Step 2 style grid: force white metal + white diamond (not thumbUrl / defaultColor first).
+    # Step 2 style grid: admin slot order, then thumb/stock; onerror walks full chain.
     assert "function styleGridImageUrl" in src
-    assert "imageSlotKeysForLookup('white', 'white', null)" in src
-    assert "productImageResolve(\n        assetId, 'white', 'white', 'white'" in src or (
-        "productImageResolve(" in src and "assetId, 'white', 'white', 'white'" in src
+    assert "function styleGridImageCandidates" in src
+    assert "function orderedCatalogImageUrls" in src
+    assert "function catalogImageSlotKeyOrder" in src
+    assert "candidates.slice(1)" in src
+    assert "attachImageFallbackChain" in src
+    assert "catalogImageCrossDiamondFallback" in src
+    assert "function firstAnyCatalogImageUrl" in src
+    assert "productImageResolve(" in src and "assetId, 'white', 'white', 'white'" in src
+    # Lite thumbUrl before letter-stock PNGs when styleKey still maps bracelet-A etc.
+    assert "if (product.thumbUrl && isUsableCatalogImageUrl(product.thumbUrl)) return '';" in src
+    assert "if (productHasCatalogImages(product)) return '';" in src
+    assert (
+        "// Lite catalog has thumbUrl but no images map — prefer upload before letter stock."
+        in src
     )
-    # Lite thumbUrl is preferred when usable (after white-white / stock fallbacks).
-    assert "if (product?.thumbUrl && isUsableCatalogImageUrl(product.thumbUrl)) return product.thumbUrl;" in src
     assert "shop-assets.js?v=15" in (
         ROOT / "content" / "site" / "templates" / "pages" / "shop" / "calculator.html"
     ).read_text(encoding="utf-8")
@@ -734,6 +743,368 @@ console.log(JSON.stringify({
     assert out["preferFullThumb"] == "/static/uploads/products/full-thumb.png"
     assert out["gridUsesThumb"] == "/static/uploads/products/lite-thumb.png"
     assert out["omitKeepsEmpty"] is None
+
+
+def test_shop_js_style_grid_prefers_upload_over_bracelet_stock():
+    """Step 2: lite bracelet with styleKey must show admin thumb, not 手鍊A stock PNG."""
+    import json
+    import subprocess
+
+    browser_script = r"""
+function isUsableCatalogImageUrl(url) {
+  if (!url) return false;
+  const path = String(url).split('?', 1)[0].replace(/\\/g, '/').toLowerCase();
+  if (path.endsWith('.svg')) return false;
+  if (/\/images\/shop\/styles\//i.test(path)) return false;
+  if (/(?:^|\/)(?:static\/)?images\/shop-product(?:\/|$)/.test(path)) return false;
+  return true;
+}
+function productHasCatalogImages(product) {
+  if (!product?.images || typeof product.images !== 'object') return false;
+  return Object.values(product.images).some((list) => {
+    const arr = Array.isArray(list) ? list : list ? [list] : [];
+    return arr.some(isUsableCatalogImageUrl);
+  });
+}
+function productAssetId(product) {
+  if (!product) return '';
+  if (product.thumbUrl && isUsableCatalogImageUrl(product.thumbUrl)) return '';
+  if (productHasCatalogImages(product)) return '';
+  if (product.styleKey && /^[a-z]+-[A-C]$/i.test(String(product.styleKey))) {
+    return String(product.styleKey);
+  }
+  return '';
+}
+function styleGridImageUrl(product) {
+  if (product?.thumbUrl && isUsableCatalogImageUrl(product.thumbUrl)) return product.thumbUrl;
+  const assetId = productAssetId(product);
+  if (assetId) return '/static/images/shop-product/silver/手鍊A_silver.png';
+  return '';
+}
+const upload = '/static/uploads/products/bracelet-custom.png';
+const product = {
+  id: 'uuid-bracelet-1',
+  category: 'bracelet',
+  styleKey: 'bracelet-A',
+  thumbUrl: upload,
+  colors: ['white-white'],
+};
+console.log(JSON.stringify({
+  gridSrc: styleGridImageUrl(product),
+  assetId: productAssetId(product),
+}));
+"""
+    out = json.loads(
+        subprocess.run(
+            ["node", "-e", browser_script],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout
+    )
+    assert out["gridSrc"] == "/static/uploads/products/bracelet-custom.png"
+    assert out["assetId"] == ""
+
+
+def test_shop_js_catalog_cross_diamond_image_fallback():
+    """White↔fancy catalog slots fall back to next upload; preview keeps fancy strict."""
+    import json
+    import subprocess
+
+    browser_script = r"""
+const fs = require('fs');
+const path = require('path');
+const vm = require('vm');
+const assetsSrc = fs.readFileSync(path.join('public', 'js', 'shop-assets.js'), 'utf8');
+const sandbox = { window: { shopConfig: { imageRoot: '/static/images/shop-product/' } }, console };
+sandbox.global = sandbox.window;
+vm.runInNewContext(assetsSrc, sandbox);
+const ShopAssets = sandbox.window.ShopAssets;
+
+function isUsableCatalogImageUrl(url) {
+  if (!url) return false;
+  const path = String(url).split('?', 1)[0].replace(/\\/g, '/').toLowerCase();
+  if (path.endsWith('.svg')) return false;
+  if (/\/images\/shop\/styles\//i.test(path)) return false;
+  if (/(?:^|\/)(?:static\/)?images\/shop-product(?:\/|$)/.test(path)) return false;
+  return true;
+}
+function catalogImagesForKeys(product, keys) {
+  if (!product?.images || !keys?.length) return [];
+  for (const key of keys) {
+    const val = product.images[key];
+    const list = Array.isArray(val) ? val.filter(isUsableCatalogImageUrl) : (typeof val === 'string' && isUsableCatalogImageUrl(val) ? [val] : []);
+    if (list.length) return list;
+  }
+  return [];
+}
+function firstAnyCatalogImageUrl(product) {
+  if (!product?.images) return '';
+  const keyOrder = Array.isArray(product.colors) && product.colors.length ? product.colors : Object.keys(product.images);
+  for (const key of keyOrder) {
+    const urls = catalogImagesForKeys(product, [key]);
+    if (urls.length) return urls[0];
+  }
+  for (const list of Object.values(product.images)) {
+    const normalized = (Array.isArray(list) ? list : list ? [list] : []).filter(isUsableCatalogImageUrl);
+    if (normalized.length) return normalized[0];
+  }
+  return '';
+}
+function catalogImageCrossDiamondFallback(product, metal, diamond, chainMetal, opts) {
+  opts = opts || {};
+  if (!product?.images) return '';
+  const m = metal || 'white';
+  const d = diamond || 'white';
+  const chain = chainMetal || null;
+  const fancyIds = ['yellow', 'blue', 'pink'];
+  if (d === 'white') {
+    for (const fd of fancyIds) {
+      const keys = ShopAssets.imageSlotKeysForLookup(m, fd, chain);
+      const urls = catalogImagesForKeys(product, keys);
+      if (urls.length) return urls[0];
+    }
+  } else if (fancyIds.includes(d) && opts.allowWhiteForFancy !== false) {
+    const keys = ShopAssets.imageSlotKeysForLookup(m, 'white', chain);
+    const urls = catalogImagesForKeys(product, keys);
+    if (urls.length) return urls[0];
+  }
+  return firstAnyCatalogImageUrl(product);
+}
+function catalogPreviewSrc(product, metal, diamond, chainMetal) {
+  if (!product?.images) return '';
+  const d = diamond || 'white';
+  let keys;
+  if (d !== 'white') {
+    keys = [];
+    if (chainMetal) keys.push(ShopAssets.buildImageSlotKey(metal, d, chainMetal));
+    keys.push(ShopAssets.buildImageSlotKey(metal, d));
+  } else {
+    keys = ShopAssets.imageSlotKeysForLookup(metal, d, chainMetal || null);
+  }
+  return catalogImagesForKeys(product, keys)[0] || '';
+}
+function styleGridImageUrl(product) {
+  const whiteKeys = ShopAssets.imageSlotKeysForLookup('white', 'white', null);
+  const fromCatalog = catalogImagesForKeys(product, whiteKeys)[0];
+  if (fromCatalog) return fromCatalog;
+  const crossCatalog = catalogImageCrossDiamondFallback(product, 'white', 'white', null);
+  if (crossCatalog) return crossCatalog;
+  return '';
+}
+function productImagesForColor(product, metalColor, diamondColor) {
+  const metal = metalColor || 'white';
+  const diamond = diamondColor || 'white';
+  if (diamond !== 'white') {
+    const exactKeys = [ShopAssets.buildImageSlotKey(metal, diamond)];
+    const fromExact = catalogImagesForKeys(product, exactKeys);
+    if (fromExact.length) return fromExact;
+  } else {
+    const whiteKeys = ShopAssets.imageSlotKeysForLookup(metal, 'white', null);
+    const fromWhite = catalogImagesForKeys(product, whiteKeys);
+    if (fromWhite.length) return fromWhite;
+    const crossWhite = catalogImageCrossDiamondFallback(product, metal, 'white', null);
+    if (crossWhite) return [crossWhite];
+  }
+  if (diamond !== 'white') {
+    const crossFancy = catalogImageCrossDiamondFallback(product, metal, diamond, null);
+    if (crossFancy) return [crossFancy];
+  }
+  return [];
+}
+
+const fancyOnly = {
+  id: 'uuid-ring-fancy',
+  category: 'ring',
+  colors: ['white-pink'],
+  images: { 'white-pink': ['/static/uploads/products/ring-pink-only.png'] },
+};
+const whiteOnly = {
+  id: 'uuid-ring-white',
+  category: 'ring',
+  colors: ['white-white'],
+  images: { 'white-white': ['/static/uploads/products/ring-white-only.png'] },
+};
+
+console.log(JSON.stringify({
+  gridFancy: styleGridImageUrl(fancyOnly),
+  gridWhite: styleGridImageUrl(whiteOnly),
+  previewPinkStrict: catalogPreviewSrc(whiteOnly, 'white', 'pink', null),
+  previewPinkLoose: productImagesForColor(whiteOnly, 'white', 'pink')[0] || '',
+  previewWhiteFromFancy: productImagesForColor(fancyOnly, 'white', 'white')[0] || '',
+}));
+"""
+    out = json.loads(
+        subprocess.run(
+            ["node", "-e", browser_script],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout
+    )
+    assert out["gridFancy"] == "/static/uploads/products/ring-pink-only.png"
+    assert out["gridWhite"] == "/static/uploads/products/ring-white-only.png"
+    assert out["previewPinkStrict"] == ""
+    assert out["previewPinkLoose"] == "/static/uploads/products/ring-white-only.png"
+    assert out["previewWhiteFromFancy"] == "/static/uploads/products/ring-pink-only.png"
+
+
+def test_shop_js_style_grid_ordered_image_fallback_chain():
+    """Step 2 grid walks admin slot order; broken primary advances via fallback chain."""
+    import json
+    import subprocess
+
+    browser_script = r"""
+const fs = require('fs');
+const path = require('path');
+const vm = require('vm');
+const assetsSrc = fs.readFileSync(path.join('public', 'js', 'shop-assets.js'), 'utf8');
+const sandbox = { window: { shopConfig: { imageRoot: '/static/images/shop-product/' } }, console };
+sandbox.global = sandbox.window;
+vm.runInNewContext(assetsSrc, sandbox);
+const ShopAssets = sandbox.window.ShopAssets;
+
+const IMAGE_SLOT_METALS = ['white', 'yellow', 'rose'];
+const IMAGE_SLOT_DIAMONDS = ['white', 'yellow', 'blue', 'pink'];
+
+function isUsableCatalogImageUrl(url) {
+  if (!url) return false;
+  const p = String(url).split('?', 1)[0].replace(/\\/g, '/').toLowerCase();
+  if (p.endsWith('.svg')) return false;
+  if (/\/images\/shop\/styles\//i.test(p)) return false;
+  if (/(?:^|\/)(?:static\/)?images\/shop-product(?:\/|$)/.test(p)) return false;
+  if (/\/products\/_pending\//i.test(p) || /\/_pending\//i.test(p)) return false;
+  return true;
+}
+function catalogImagesForKeys(product, keys) {
+  if (!product?.images || !keys?.length) return [];
+  const pick = (key) => {
+    const val = product.images[key];
+    if (Array.isArray(val)) return val.filter(isUsableCatalogImageUrl);
+    if (typeof val === 'string' && isUsableCatalogImageUrl(val)) return [val];
+    return [];
+  };
+  for (const key of keys) {
+    const list = pick(key);
+    if (list.length) return list;
+  }
+  return [];
+}
+function presetImageSlotKeys(category) {
+  const cat = String(category || '').toLowerCase();
+  if (cat === 'chain') return IMAGE_SLOT_METALS.map((m) => m + '-white');
+  const keys = [];
+  for (const metal of IMAGE_SLOT_METALS) {
+    for (const diamond of IMAGE_SLOT_DIAMONDS) keys.push(metal + '-' + diamond);
+  }
+  return keys;
+}
+function catalogUrlsForImageSlot(product, slotKey) {
+  const parts = String(slotKey || '').split('-');
+  if (parts.length >= 2 && IMAGE_SLOT_METALS.includes(parts[0]) && IMAGE_SLOT_DIAMONDS.includes(parts[1])) {
+    const keys = ShopAssets.imageSlotKeysForLookup(parts[0], parts[1], null);
+    return catalogImagesForKeys(product, keys);
+  }
+  if (IMAGE_SLOT_METALS.includes(slotKey)) {
+    return catalogImagesForKeys(product, ShopAssets.imageSlotKeysForLookup(slotKey, 'white', null));
+  }
+  return catalogImagesForKeys(product, [slotKey]);
+}
+function catalogImageSlotKeyOrder(product) {
+  if (!product?.images) return [];
+  const seen = new Set();
+  const order = [];
+  const pushKey = (key) => {
+    if (!key || seen.has(key)) return;
+    if (!catalogUrlsForImageSlot(product, key).length) return;
+    seen.add(key);
+    order.push(key);
+  };
+  for (const key of presetImageSlotKeys(product.category)) pushKey(key);
+  for (const key of product.colors || []) pushKey(key);
+  for (const key of Object.keys(product.images)) {
+    if (IMAGE_SLOT_METALS.includes(key)) pushKey(key + '-white');
+    else pushKey(key);
+  }
+  return order;
+}
+function orderedCatalogImageUrls(product) {
+  const out = [];
+  const seen = new Set();
+  for (const slotKey of catalogImageSlotKeyOrder(product)) {
+    for (const url of catalogUrlsForImageSlot(product, slotKey)) {
+      if (!url || !isUsableCatalogImageUrl(url) || seen.has(url)) continue;
+      seen.add(url);
+      out.push(url);
+    }
+  }
+  return out;
+}
+function styleGridImageCandidates(product) {
+  const out = [];
+  const seen = new Set();
+  const add = (url) => {
+    if (!url || seen.has(url)) return;
+    seen.add(url);
+    out.push(url);
+  };
+  for (const url of orderedCatalogImageUrls(product)) add(url);
+  if (product?.thumbUrl && isUsableCatalogImageUrl(product.thumbUrl)) add(product.thumbUrl);
+  return out;
+}
+
+const broken = '/static/uploads/products/platinum-white-broken.png';
+const goodYellow = '/static/uploads/products/platinum-white-yellow.png';
+const goodRose = '/static/uploads/products/rose-white.png';
+const product = {
+  id: 'uuid-ring-broken',
+  category: 'ring',
+  colors: ['white-white', 'white-yellow', 'rose-white'],
+  images: {
+    'white-white': [broken],
+    'white-yellow': [goodYellow],
+    'rose-white': [goodRose],
+  },
+  thumbUrl: '/static/uploads/products/thumb-fallback.png',
+};
+
+const candidates = styleGridImageCandidates(product);
+console.log(JSON.stringify({
+  slotOrder: catalogImageSlotKeyOrder(product),
+  ordered: orderedCatalogImageUrls(product),
+  primary: candidates[0],
+  fallbacks: candidates.slice(1),
+  skipsPending: orderedCatalogImageUrls({
+    category: 'ring',
+    images: { 'white-white': ['/static/products/_pending/x.png'], 'white-yellow': [goodYellow] },
+  }),
+}));
+"""
+    out = json.loads(
+        subprocess.run(
+            ["node", "-e", browser_script],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout
+    )
+    assert out["slotOrder"] == ["white-white", "white-yellow", "rose-white"]
+    assert out["ordered"] == [
+        "/static/uploads/products/platinum-white-broken.png",
+        "/static/uploads/products/platinum-white-yellow.png",
+        "/static/uploads/products/rose-white.png",
+    ]
+    assert out["primary"] == "/static/uploads/products/platinum-white-broken.png"
+    assert out["fallbacks"] == [
+        "/static/uploads/products/platinum-white-yellow.png",
+        "/static/uploads/products/rose-white.png",
+        "/static/uploads/products/thumb-fallback.png",
+    ]
+    assert "/static/uploads/products/platinum-white-yellow.png" in out["ordered"]
+    assert out["skipsPending"] == ["/static/uploads/products/platinum-white-yellow.png"]
 
 
 def test_validate_product_variant_rejects_unconfigured_combo(monkeypatch):

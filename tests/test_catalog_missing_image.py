@@ -31,6 +31,40 @@ def test_build_catalog_includes_supabase_storage_url():
     assert entry["styleKey"] is None
 
 
+def test_build_catalog_drops_pending_autosave_urls():
+    """Temp Storage _pending paths must not appear in shop catalog."""
+    from app.catalog import build_catalog_product_lite
+
+    product = {
+        "id": "11ff6e28-31cd-491b-8a75-16da9c333ed3",
+        "category": "bracelet",
+        "name_zh": "泡泡手鍊",
+        "name_en": "Bubble Bracelet",
+        "default_color": "white",
+        "sort_order": 0,
+        "is_published": True,
+        "allows_engraving": True,
+        "allows_fancy_shapes": True,
+        "allows_pendant_only": True,
+        "allows_with_chain": True,
+    }
+    pending = (
+        "https://x.supabase.co/storage/v1/object/public/shop-media/"
+        "products/_pending/a5ce2ca51cb145ed8fa874ff47095ab8.png"
+    )
+    good = (
+        "https://x.supabase.co/storage/v1/object/public/shop-media/"
+        "products/bubble-bracelet/yellow/23274bf09a66468fb57642f44b93e602.png"
+    )
+    images = [
+        {"color": "white-white", "file_path": pending},
+        {"color": "yellow-white", "file_path": good},
+    ]
+    entry = build_catalog_product_lite(product, [], images)
+    assert pending not in (entry.get("thumbUrl") or "")
+    assert entry["thumbUrl"] == good
+
+
 def test_build_catalog_drops_missing_upload_without_style_fallback():
     product = {
         "id": "c54963cb-7c3d-469e-b26d-ae4372870445",

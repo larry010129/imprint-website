@@ -699,6 +699,30 @@ def _products_with_children(cur) -> list[dict]:
     return products
 
 
+def _product_with_children(cur, product: dict) -> dict:
+    """Attach variants + real upload images to a serialized product row."""
+    pid = product["id"]
+    variants_by_product, images_by_product = load_product_children(cur, [pid])
+    product["variants"] = variants_by_product.get(pid, [])
+    product["images"] = [
+        image
+        for image in images_by_product.get(pid, [])
+        if not is_auto_stock_product_image(image.get("file_path"))
+    ]
+    for variant in product["variants"]:
+        if variant.get("id") is not None:
+            variant["id"] = str(variant["id"])
+        if variant.get("product_id") is not None:
+            variant["product_id"] = str(variant["product_id"])
+        variant.setdefault("side_stone_total_twd", None)
+    for image in product["images"]:
+        if image.get("id") is not None:
+            image["id"] = str(image["id"])
+        if image.get("product_id") is not None:
+            image["product_id"] = str(image["product_id"])
+    return product
+
+
 @router.get("/products")
 async def products_list(request: Request) -> dict:
     _require_admin(request)
@@ -729,6 +753,9 @@ async def products_create(request: Request) -> JSONResponse:
     cleaned, error = validate_product_fields(body, valid_categories=allowed)
     if error:
         return JSONResponse(status_code=400, content={"error": error})
+
+    if body.get("autosave"):
+        cleaned["isPublished"] = False
 
     first_published = first_published_at_value(None, cleaned["isPublished"])
     with get_transaction() as conn, conn.cursor() as cur:
@@ -768,6 +795,7 @@ async def products_create(request: Request) -> JSONResponse:
         )
         product = serialize_product_row(cur.fetchone())
         save_product_children(cur, product["id"], cleaned)
+        product = _product_with_children(cur, product)
 
     return JSONResponse(content={"product": product})
 
@@ -798,6 +826,9 @@ async def product_update(request: Request) -> JSONResponse:
         existing = cur.fetchone()
         if not existing:
             return JSONResponse(status_code=404, content={"error": "product not found"})
+
+        if body.get("autosave"):
+            cleaned["isPublished"] = bool(existing["is_published"])
 
         first_published = first_published_at_value(existing, cleaned["isPublished"])
         cur.execute(
@@ -831,6 +862,7 @@ async def product_update(request: Request) -> JSONResponse:
         )
         product = serialize_product_row(cur.fetchone())
         save_product_children(cur, product_id, cleaned)
+        product = _product_with_children(cur, product)
 
     return JSONResponse(content={"product": product})
 

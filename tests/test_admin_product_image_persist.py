@@ -61,6 +61,37 @@ def test_normalize_keeps_supabase_storage_url():
     assert normalize_product_image_url(url, "white-white") == url
 
 
+def test_normalize_keeps_pending_supabase_storage_url():
+    """Draft uploads land in _pending; admin save must persist them for promotion."""
+    pending = (
+        "https://abc123.supabase.co/storage/v1/object/public/shop-media/"
+        "products/_pending/white/abc.webp"
+    )
+    assert normalize_product_image_url(pending, "white-white") == pending
+
+
+def test_validate_draft_keeps_pending_storage_images():
+    pending = (
+        "https://abc123.supabase.co/storage/v1/object/public/shop-media/"
+        "products/_pending/yellow/abc.webp"
+    )
+    cleaned, err = validate_product_fields(
+        {
+            "category": "bracelet",
+            "nameZh": "泡泡手鍊",
+            "nameEn": "Bubble Bracelet",
+            "defaultColor": "white",
+            "isPublished": False,
+            "variants": [],
+            "images": [{"color": "white-white", "url": pending}],
+        }
+    )
+    assert err is None
+    assert cleaned is not None
+    assert len(cleaned["images"]) == 1
+    assert cleaned["images"][0]["url"] == pending
+
+
 def test_validate_draft_keeps_empty_images_without_inventing():
     cleaned, err = validate_product_fields(
         {

@@ -64,3 +64,44 @@ def test_admin_products_memorial_series_note():
     src = ADMIN_PRODUCTS_JS.read_text(encoding="utf-8")
     assert "紀念鑽石系列" in src
     assert "不在此商品 CRUD 管理" in src
+
+
+def test_admin_products_upload_waits_for_crop_modal():
+    """Product upload must not silently skip crop when AdminTables is still loading."""
+    src = ADMIN_PRODUCTS_JS.read_text(encoding="utf-8")
+    assert "function whenProductCropReady(" in src
+    assert "renderProductImageCropModal" in src
+    assert "裁切元件尚未載入" in src
+    crop_start = src.index("function openProductImageCrop(")
+    crop_body = src[crop_start : src.index("function prepareFilesWithCrop", crop_start)]
+    assert "whenProductCropReady" in crop_body
+    # Regression: silent resolve(file) bypassed crop UI entirely.
+    assert "resolve(file)" not in crop_body
+
+
+def test_admin_products_autosave_never_publishes_from_checkbox():
+    """Autosave must not honor 稍後上架 toggle — only explicit save publishes."""
+    src = ADMIN_PRODUCTS_JS.read_text(encoding="utf-8")
+    save_start = src.index("function saveProduct(")
+    save_body = src[save_start : src.index("function fetchProducts(", save_start)]
+    assert "if (isAutosave)" in save_body
+    assert "payload.isPublished = product ? !!product.is_published : false" in save_body
+    assert "payload.autosave = true" in save_body
+    assert "isDraft = true" in save_body
+
+
+def test_admin_product_update_autosave_preserves_publish_flag():
+    """Server-side guard: autosave requests cannot flip is_published."""
+    from pathlib import Path
+
+    src = Path(__file__).resolve().parents[1].joinpath(
+        "app", "controllers", "admin_controller.py"
+    ).read_text(encoding="utf-8")
+    update_start = src.index("@router.post(\"/product-update\")")
+    update_body = src[update_start : src.index("@router.post(\"/product-action\")", update_start)]
+    assert 'if body.get("autosave"):' in update_body
+    assert 'cleaned["isPublished"] = bool(existing["is_published"])' in update_body
+    create_start = src.index("@router.post(\"/products\")")
+    create_body = src[create_start : update_start]
+    assert 'if body.get("autosave"):' in create_body
+    assert 'cleaned["isPublished"] = False' in create_body

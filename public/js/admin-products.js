@@ -460,6 +460,20 @@
     setTimeout(function () { whenAdminTablesReady(fn, tries - 1); }, 50);
   }
 
+  /** Wait for ProductImageCropModal island (module may load after admin-products.js). */
+  function whenProductCropReady(fn, tries) {
+    tries = tries == null ? 120 : tries;
+    if (window.AdminTables && window.AdminTables.renderProductImageCropModal) {
+      fn(true);
+      return;
+    }
+    if (tries <= 0) {
+      fn(false);
+      return;
+    }
+    setTimeout(function () { whenProductCropReady(fn, tries - 1); }, 50);
+  }
+
   function renderActiveCategoryTable() {
     var container = document.getElementById('apProductsTableRoot');
     if (!container) return;
@@ -1086,6 +1100,27 @@
     return groups;
   }
 
+  /** After save/autosave, replace stale _pending carousel URLs with promoted Storage paths. */
+  function syncEditorImagesFromProduct(form, images) {
+    if (!form || !images || !images.length) return;
+    var groups = groupImagesForSlots(images);
+    form.querySelectorAll('.ap-image-slot').forEach(function (slot) {
+      var color = slotColorKey(slot);
+      var urls = groups[color] || [];
+      var items = slot.querySelectorAll('.ap-carousel-item[data-url]');
+      items.forEach(function (item, index) {
+        var url = urls[index];
+        if (!url) return;
+        item.dataset.url = url;
+        var img = item.querySelector('.ap-carousel-img');
+        if (img) {
+          img.src = url;
+          if (img.dataset) img.dataset.fallback = url;
+        }
+      });
+    });
+  }
+
   /**
    * Real uploads only. Legacy metal / metal-diamond-chainMetal keys normalize
    * into metal-diamond slots. Never invent shop-product letter previews.
@@ -1252,34 +1287,37 @@
    */
   function openProductImageCrop(file) {
     return new Promise(function (resolve) {
-      if (!window.AdminTables || !window.AdminTables.renderProductImageCropModal) {
-        resolve(file);
-        return;
-      }
-      var previewUrl = URL.createObjectURL(file);
-      var mount = document.createElement('div');
-      mount.id = 'apProductImageCropMount';
-      document.body.appendChild(mount);
-
-      function cleanup(result) {
-        try { URL.revokeObjectURL(previewUrl); } catch (e) { /* ignore */ }
-        if (window.AdminTables && window.AdminTables.unmount) {
-          try { window.AdminTables.unmount(mount); } catch (e2) { /* ignore */ }
+      whenProductCropReady(function (ready) {
+        if (!ready) {
+          alert('裁切元件尚未載入，請重新整理後再試。');
+          resolve(null);
+          return;
         }
-        if (mount.parentNode) mount.parentNode.removeChild(mount);
-        resolve(result);
-      }
+        var previewUrl = URL.createObjectURL(file);
+        var mount = document.createElement('div');
+        mount.id = 'apProductImageCropMount';
+        document.body.appendChild(mount);
 
-      window.AdminTables.renderProductImageCropModal(mount, {
-        previewUrl: previewUrl,
-        file: file,
-        fileLabel: file.name || '',
-        onComplete: function (result) {
-          cleanup(result && result.file ? result.file : file);
-        },
-        onCancel: function () {
-          cleanup(null);
-        },
+        function cleanup(result) {
+          try { URL.revokeObjectURL(previewUrl); } catch (e) { /* ignore */ }
+          if (window.AdminTables && window.AdminTables.unmount) {
+            try { window.AdminTables.unmount(mount); } catch (e2) { /* ignore */ }
+          }
+          if (mount.parentNode) mount.parentNode.removeChild(mount);
+          resolve(result);
+        }
+
+        window.AdminTables.renderProductImageCropModal(mount, {
+          previewUrl: previewUrl,
+          file: file,
+          fileLabel: file.name || '',
+          onComplete: function (result) {
+            cleanup(result && result.file ? result.file : file);
+          },
+          onCancel: function () {
+            cleanup(null);
+          },
+        });
       });
     });
   }
@@ -2074,6 +2112,12 @@
     var btn = document.getElementById('apSaveProduct');
     var errEl = document.getElementById('apFormError');
     var isDraft = isSaveForLater(form);
+    if (isAutosave) {
+      // Autosave is draft/temp only — never flip shop visibility from the checkbox.
+      payload.isPublished = product ? !!product.is_published : false;
+      payload.autosave = true;
+      isDraft = true;
+    }
 
     var validation = validateProductPayload(form, payload, isDraft);
     if (validation) {
@@ -2133,6 +2177,7 @@
       if (res.product && ctx) {
         ctx.product = res.product;
         state.editingId = res.product.id;
+        syncEditorImagesFromProduct(form, res.product.images || []);
       }
 
       if (isAutosave) {

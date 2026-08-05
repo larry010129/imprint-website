@@ -22,6 +22,7 @@ from app.image_urls import (
 from app.pricing_overrides import canonical_carat
 from app.storage import (
     delete_by_url,
+    is_pending_product_object_key,
     is_supabase_storage_url,
     metal_color_from_slot,
     object_path_from_public_url,
@@ -180,8 +181,30 @@ def is_auto_stock_product_image(url: str | None) -> bool:
     return bool(_AUTO_STOCK_PRODUCT_IMAGE_RE.search(path))
 
 
+def is_pending_product_image(url: str | None) -> bool:
+    """Autosave temp Storage paths — never serve in shop catalog or persist on publish."""
+    if not url:
+        return False
+    raw = str(url).strip()
+    if not raw:
+        return False
+    resolved = resolve_product_image_url(raw) or raw
+    path = unquote(resolved.split("?", 1)[0]).replace("\\", "/")
+    if "/_pending/" in path or path.endswith("/_pending"):
+        return True
+    if resolved.startswith(("http://", "https://")):
+        obj = object_path_from_public_url(resolved)
+        return bool(obj and is_pending_product_object_key(obj))
+    return False
+
+
 def normalize_product_image_url(url: str | None, color: str | None = None) -> str | None:
-    """Return a persistable server URL, or None if the value must be dropped."""
+    """Return a persistable server URL, or None if the value must be dropped.
+
+    ``_pending`` Storage paths are allowed here so admin save/autosave can persist
+    draft uploads; ``save_product_children`` promotes them to the final folder.
+    Shop catalog still filters pending via ``is_pending_product_image``.
+    """
     del color  # slot color is metadata only; never infer shop-product letter PNGs.
     raw = str(url or "").strip()
     if not raw or is_browser_local_image_url(raw):
