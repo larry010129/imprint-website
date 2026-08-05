@@ -6,6 +6,10 @@ on:
     - cron: '0 * * * *'
   workflow_dispatch:
 
+concurrency:
+  group: update-gold-quote
+  cancel-in-progress: false
+
 permissions:
   contents: write
 
@@ -14,6 +18,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: main
+          fetch-depth: 0
 
       - uses: actions/setup-python@v6
         with:
@@ -30,22 +37,48 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git fetch origin main
+          git pull --rebase origin main
+
           git add data/gold-quote.json public/js/gold-quote-data.js
           if git diff --staged --quiet; then
             echo "No quote changes to commit; skip push"
             exit 0
           fi
           git commit -m "chore: update Allbeauty gold quote fallback"
-          for attempt in 1 2 3; do
-            git pull --rebase origin main
-            if git push origin main; then
+
+          finish_rebase() {
+            while git rev-parse -q --verify REBASE_HEAD >/dev/null; do
+              for f in data/gold-quote.json public/js/gold-quote-data.js; do
+                if git diff --name-only --diff-filter=U | grep -qx "$f"; then
+                  git checkout --theirs -- "$f"
+                  git add -- "$f"
+                fi
+              done
+              if git diff --name-only --diff-filter=U | grep -q .; then
+                echo "::error::Rebase conflict outside quote files"
+                git rebase --abort || true
+                return 1
+              fi
+              GIT_EDITOR=true git rebase --continue
+            done
+            return 0
+          }
+
+          for attempt in 1 2 3 4 5; do
+            git fetch origin main
+            if ! git pull --rebase origin main; then
+              finish_rebase || true
+            fi
+            if git push origin HEAD:main; then
               echo "Push succeeded (attempt $attempt)"
               exit 0
             fi
             echo "Push rejected (attempt $attempt); retrying..."
-            sleep 2
+            sleep $((attempt * 3))
           done
-          echo "::error::Push failed after 3 attempts"
+          echo "::error::Push failed after 5 attempts"
           exit 1
 
       # Proactively refresh Render Postgres gold_price_cache (no redeploy).
