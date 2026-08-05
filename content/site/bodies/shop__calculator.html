@@ -298,7 +298,7 @@
 </div>
 <div class="variant-group hidden" id="pendant-chain-step">
 <h3 class="variant-label" data-i18n="step_pendant_chain">搭配鏈條</h3>
-<div class="pendant-chain-seg" id="pendant-chain-toggle-row" role="group" aria-label="搭配鏈條">
+<div aria-label="搭配鏈條" class="pendant-chain-seg" id="pendant-chain-toggle-row" role="group">
 <button class="pendant-chain-seg__btn" data-i18n="pendant_only" data-include-chain="false" type="button">不含鍊</button>
 <button class="pendant-chain-seg__btn" data-i18n="pendant_with_chain" data-include-chain="true" type="button">含鍊</button>
 </div>
@@ -343,7 +343,7 @@
 <div class="price-breakdown-panel">
 <div class="breakdown-rows">
 <div class="summary-row"><span class="lbl" data-i18n="sum_item">品項</span><span class="colon">：</span><span class="val" id="sum-cat">-</span></div>
-<div class="summary-row" id="sum-type-row"><span class="lbl" data-i18n="sum_style">款式</span><span class="colon">：</span><span class="val" id="sum-type">-</span></div>
+<div class="summary-row"><span class="lbl" data-i18n="sum_style">款式</span><span class="colon">：</span><span class="val" id="sum-type">-</span></div>
 <div class="summary-row"><span class="lbl" data-i18n="sum_material">金屬材質</span><span class="colon">：</span><span class="val" id="sum-material">-</span></div>
 <div class="summary-row" id="sum-carat-row"><span class="lbl" data-i18n="sum_carat">克拉</span><span class="colon">：</span><span class="val" id="sum-carat">-</span></div>
 <div class="summary-row" id="sum-diamond-color-row"><span class="lbl" data-i18n="table_diamond_color">鑽石顏色</span><span class="colon">：</span><span class="val" id="sum-diamond-color">-</span></div>
@@ -423,7 +423,7 @@
 <p class="ring-size-guide-inline__title" data-i18n="chain_length_guide_open">長度參考</p>
 <div class="ring-size-guide-inline__content chain-length-guide-inline__layout">
 <div class="chain-length-guide-inline__aside">
-<p class="chain-length-guide-inline__intro" data-i18n="chain_length_guide_intro">※ 身高及體型等個人因素會影響項鍊配戴效果，示意圖僅供參考，請以實際配戴效果為準。</p>
+<p class="chain-length-guide-inline__intro" data-i18n="chain_length_guide_intro">選擇適合您的項鍊長度；實際配戴效果可能因身形而異。</p>
 <p class="chain-length-guide-inline__subtitle" data-i18n="chain_length_guide_necklace_title">項鍊／鏈條長度</p>
 <p class="chain-length-guide-inline__method" data-i18n="chain_length_guide_necklace_method">將鏈條平量總長度，或比對現有項鍊從扣環到墜子連接處的長度。</p>
 <img alt="項鍊尺寸示意圖" class="guide-image" loading="lazy" src="/static/images/shop/guides/necklace-length-guide.png"/>
@@ -438,13 +438,17 @@
 </tr>
 </thead>
 <tbody>
-<tr><th scope="row">36 cm（14"）</th><td data-i18n="chain_length_36">貼頸／短項鍊</td></tr>
-<tr><th scope="row">41 cm（16"）</th><td data-i18n="chain_length_41">鎖骨／頸基部</td></tr>
-<tr><th scope="row">46 cm（18"）</th><td data-i18n="chain_length_46">鎖骨下方（常見）</td></tr>
-<tr><th scope="row">51 cm（20"）</th><td data-i18n="chain_length_51">胸前上方</td></tr>
-<tr><th scope="row">61 cm（24"）</th><td data-i18n="chain_length_61">胸前中央</td></tr>
-<tr><th scope="row">76 cm（30"）</th><td data-i18n="chain_length_76">胸下／長項鍊</td></tr>
-<tr><th scope="row">80 cm（32"）</th><td data-i18n="chain_length_80">更長／下身</td></tr>
+<tr><th scope="row">35 cm</th><td data-i18n="chain_length_35">貼頸／鎖骨上方（短項鍊）</td></tr>
+<tr><th scope="row">40 cm</th><td data-i18n="chain_length_40">鎖骨位置</td></tr>
+<tr><th scope="row">46 cm</th><td data-i18n="chain_length_46">鎖骨下方至胸前（常見）</td></tr>
+<tr><th scope="row">50 cm</th><td data-i18n="chain_length_50">胸前</td></tr>
+<tr><th scope="row">56 cm</th><td data-i18n="chain_length_56">胸前偏下</td></tr>
+<tr><th scope="row">60 cm</th><td data-i18n="chain_length_60">長項鍊／可雙圈</td></tr>
+<tr><th scope="row">66 cm</th><td data-i18n="chain_length_66">中長項鍊</td></tr>
+<tr><th scope="row">70 cm</th><td data-i18n="chain_length_70">中長項鍊</td></tr>
+<tr><th scope="row">76 cm</th><td data-i18n="chain_length_76">長項鍊</td></tr>
+<tr><th scope="row">90 cm</th><td data-i18n="chain_length_90">長項鍊</td></tr>
+<tr><th scope="row">102 cm</th><td data-i18n="chain_length_102">超長項鍊</td></tr>
 </tbody>
 </table>
 </div>
@@ -488,7 +492,7 @@
 <p class="ring-size-guide-inline__title" data-i18n="chain_length_guide_open">長度參考</p>
 <div class="ring-size-guide-inline__content chain-length-guide-inline__layout">
 <div class="chain-length-guide-inline__aside">
-<p class="chain-length-guide-inline__intro" data-i18n="chain_length_guide_intro">※ 身高及體型等個人因素會影響項鍊配戴效果，示意圖僅供參考，請以實際配戴效果為準。</p>
+<p class="chain-length-guide-inline__intro" data-i18n="chain_length_guide_intro">選擇適合您的項鍊長度；實際配戴效果可能因身形而異。</p>
 <p class="chain-length-guide-inline__subtitle" data-i18n="chain_length_guide_necklace_title">項鍊／鏈條長度</p>
 <p class="chain-length-guide-inline__method" data-i18n="chain_length_guide_necklace_method">將鏈條平量總長度，或比對現有項鍊從扣環到墜子連接處的長度。</p>
 <img alt="項鍊尺寸示意圖" class="guide-image" loading="lazy" src="/static/images/shop/guides/necklace-length-guide.png"/>
@@ -503,13 +507,17 @@
 </tr>
 </thead>
 <tbody>
-<tr><th scope="row">36 cm（14"）</th><td data-i18n="chain_length_36">貼頸／短項鍊</td></tr>
-<tr><th scope="row">41 cm（16"）</th><td data-i18n="chain_length_41">鎖骨／頸基部</td></tr>
-<tr><th scope="row">46 cm（18"）</th><td data-i18n="chain_length_46">鎖骨下方（常見）</td></tr>
-<tr><th scope="row">51 cm（20"）</th><td data-i18n="chain_length_51">胸前上方</td></tr>
-<tr><th scope="row">61 cm（24"）</th><td data-i18n="chain_length_61">胸前中央</td></tr>
-<tr><th scope="row">76 cm（30"）</th><td data-i18n="chain_length_76">胸下／長項鍊</td></tr>
-<tr><th scope="row">80 cm（32"）</th><td data-i18n="chain_length_80">更長／下身</td></tr>
+<tr><th scope="row">35 cm</th><td data-i18n="chain_length_35">貼頸／鎖骨上方（短項鍊）</td></tr>
+<tr><th scope="row">40 cm</th><td data-i18n="chain_length_40">鎖骨位置</td></tr>
+<tr><th scope="row">46 cm</th><td data-i18n="chain_length_46">鎖骨下方至胸前（常見）</td></tr>
+<tr><th scope="row">50 cm</th><td data-i18n="chain_length_50">胸前</td></tr>
+<tr><th scope="row">56 cm</th><td data-i18n="chain_length_56">胸前偏下</td></tr>
+<tr><th scope="row">60 cm</th><td data-i18n="chain_length_60">長項鍊／可雙圈</td></tr>
+<tr><th scope="row">66 cm</th><td data-i18n="chain_length_66">中長項鍊</td></tr>
+<tr><th scope="row">70 cm</th><td data-i18n="chain_length_70">中長項鍊</td></tr>
+<tr><th scope="row">76 cm</th><td data-i18n="chain_length_76">長項鍊</td></tr>
+<tr><th scope="row">90 cm</th><td data-i18n="chain_length_90">長項鍊</td></tr>
+<tr><th scope="row">102 cm</th><td data-i18n="chain_length_102">超長項鍊</td></tr>
 </tbody>
 </table>
 </div>
@@ -626,7 +634,7 @@
 <div class="ring-size-guide-header">
 <div>
 <h2 data-i18n="chain_length_guide_title">鏈條長度參考</h2>
-<p data-i18n="chain_length_guide_intro">※ 身高及體型等個人因素會影響項鍊配戴效果，示意圖僅供參考，請以實際配戴效果為準。</p>
+<p data-i18n="chain_length_guide_intro">選擇適合您的項鍊長度；實際配戴效果可能因身形而異。</p>
 </div>
 <button aria-label="Close" class="ring-size-guide-close" id="chain-length-guide-close" type="button">x</button>
 </div>
@@ -643,13 +651,17 @@
 </tr>
 </thead>
 <tbody>
-<tr><td>36 cm（14"）</td><td data-i18n="chain_length_36">貼頸／短項鍊</td></tr>
-<tr><td>41 cm（16"）</td><td data-i18n="chain_length_41">鎖骨／頸基部</td></tr>
-<tr><td>46 cm（18"）</td><td data-i18n="chain_length_46">鎖骨下方（常見）</td></tr>
-<tr><td>51 cm（20"）</td><td data-i18n="chain_length_51">胸前上方</td></tr>
-<tr><td>61 cm（24"）</td><td data-i18n="chain_length_61">胸前中央</td></tr>
-<tr><td>76 cm（30"）</td><td data-i18n="chain_length_76">胸下／長項鍊</td></tr>
-<tr><td>80 cm（32"）</td><td data-i18n="chain_length_80">更長／下身</td></tr>
+<tr><td>35 cm</td><td data-i18n="chain_length_35">貼頸／鎖骨上方（短項鍊）</td></tr>
+<tr><td>40 cm</td><td data-i18n="chain_length_40">鎖骨位置</td></tr>
+<tr><td>46 cm</td><td data-i18n="chain_length_46">鎖骨下方至胸前（常見）</td></tr>
+<tr><td>50 cm</td><td data-i18n="chain_length_50">胸前</td></tr>
+<tr><td>56 cm</td><td data-i18n="chain_length_56">胸前偏下</td></tr>
+<tr><td>60 cm</td><td data-i18n="chain_length_60">長項鍊／可雙圈</td></tr>
+<tr><td>66 cm</td><td data-i18n="chain_length_66">中長項鍊</td></tr>
+<tr><td>70 cm</td><td data-i18n="chain_length_70">中長項鍊</td></tr>
+<tr><td>76 cm</td><td data-i18n="chain_length_76">長項鍊</td></tr>
+<tr><td>90 cm</td><td data-i18n="chain_length_90">長項鍊</td></tr>
+<tr><td>102 cm</td><td data-i18n="chain_length_102">超長項鍊</td></tr>
 </tbody>
 </table>
 </div>
@@ -699,6 +711,5 @@
 </button>
 <img alt="" id="product-lightbox-img" src=""/>
 </dialog>
-</div><!-- /.shop-calculator-wrap -->
-
+</div> /.shop-calculator-wrap 
 <div data-shop-tour-root=""></div>

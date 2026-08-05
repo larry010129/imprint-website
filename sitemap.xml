@@ -9,6 +9,7 @@
 
   <url>
     <loc>https://www.imprintdiamond.com/</loc>
+    <lastmod>2026-08-05</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
     <image:image>
@@ -39,87 +40,121 @@
 
   <url>
     <loc>https://www.imprintdiamond.com/series.html</loc>
+    <lastmod>2026-08-05</lastmod>
     <changefreq>monthly</changefreq><priority>0.85</priority>
     <image:image><image:loc>https://www.imprintdiamond.com/static/images/hero/imprint-diamond-family-portrait-jewelry.jpg</image:loc><image:title>五大系列總覽－銘印鑽石 DNA 紀念鑽石</image:title></image:image>
   </url>
   <url>
     <loc>https://www.imprintdiamond.com/series/first-love/</loc>
+    <lastmod>2026-08-05</lastmod>
     <changefreq>monthly</changefreq><priority>0.8</priority>
     <image:image><image:loc>https://www.imprintdiamond.com/static/images/hero/imprint-diamond-newborn-baby-necklace.jpg</image:loc><image:title>滿月鑽石－寶寶胎髮紀念鑽石</image:title></image:image>
   </url>
   <url>
     <loc>https://www.imprintdiamond.com/series/pet/</loc>
+    <lastmod>2026-08-05</lastmod>
     <changefreq>monthly</changefreq><priority>0.8</priority>
     <image:image><image:loc>https://www.imprintdiamond.com/static/images/hero/imprint-diamond-pet-memorial-cat.jpg</image:loc><image:title>寵物鑽石－毛孩毛髮紀念鑽石</image:title></image:image>
   </url>
   <url>
     <loc>https://www.imprintdiamond.com/series/love/</loc>
+    <lastmod>2026-08-05</lastmod>
     <changefreq>monthly</changefreq><priority>0.8</priority>
     <image:image><image:loc>https://www.imprintdiamond.com/static/images/hero/imprint-diamond-wedding-couple-ring.jpg</image:loc><image:title>結髮鑽石－夫妻髮絲紀念鑽石</image:title></image:image>
   </url>
   <url>
     <loc>https://www.imprintdiamond.com/series/family/</loc>
+    <lastmod>2026-08-05</lastmod>
     <changefreq>monthly</changefreq><priority>0.8</priority>
     <image:image><image:loc>https://www.imprintdiamond.com/static/images/hero/imprint-diamond-family-portrait-jewelry.jpg</image:loc><image:title>全家福鑽石－全家人髮絲紀念鑽石</image:title></image:image>
   </url>
   <url>
     <loc>https://www.imprintdiamond.com/series/heirloom/</loc>
+    <lastmod>2026-08-05</lastmod>
     <changefreq>monthly</changefreq><priority>0.8</priority>
     <image:image><image:loc>https://www.imprintdiamond.com/static/images/hero/imprint-diamond-heirloom-memorial.jpg</image:loc><image:title>生命鑽石－親人毛髮骨灰紀念鑽石</image:title></image:image>
   </url>
 
-  <url><loc>https://www.imprintdiamond.com/what-is-dna-diamond.html</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://www.imprintdiamond.com/price.html</loc><changefreq>monthly</changefreq><priority>0.85</priority></url>
-  <url><loc>https://www.imprintdiamond.com/gold-price.html</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
-  <url><loc>https://www.imprintdiamond.com/faq.html</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://www.imprintdiamond.com/what-is-dna-diamond.html</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://www.imprintdiamond.com/price.html</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.85</priority></url>
+  <url><loc>https://www.imprintdiamond.com/gold-price.html</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.imprintdiamond.com/faq.html</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url>
     <loc>https://www.imprintdiamond.com/jewelry/</loc>
+    <lastmod>2026-08-05</lastmod>
     <changefreq>monthly</changefreq><priority>0.8</priority>
     <image:image><image:loc>https://www.imprintdiamond.com/static/images/hero/imprint-diamond-family-portrait-jewelry.jpg</image:loc><image:title>時尚珠寶－戒指項鍊耳環手鍊 DNA紀念鑽石</image:title></image:image>
   </url>
 
   <url>
     <loc>https://www.imprintdiamond.com/jewelry/rings/</loc>
+    <lastmod>2026-08-05</lastmod>
     <changefreq>monthly</changefreq><priority>0.75</priority>
     <image:image><image:loc>https://www.imprintdiamond.com/static/images/hero/imprint-diamond-wedding-couple-ring.jpg</image:loc><image:title>戒指系列－DNA紀念鑽石戒指訂製</image:title></image:image>
   </url>
-  <url><loc>https://www.imprintdiamond.com/jewelry/rings/classic-solitaire/</loc><changefreq>monthly</changefreq><priority>0.65</priority></url>
-  <url><loc>https://www.imprintdiamond.com/jewelry/rings/pave-halo/</loc><changefreq>monthly</changefreq><priority>0.65</priority></url>
-  <url><loc>https://www.imprintdiamond.com/jewelry/rings/vintage-vine/</loc><changefreq>monthly</changefreq><priority>0.65</priority></url>
-  <url><loc>https://www.imprintdiamond.com/jewelry/rings/modern-band/</loc><changefreq>monthly</changefreq><priority>0.65</priority></url>
+  <url><loc>https://www.imprintdiamond.com/jewelry/rings/classic-solitaire/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.65</priority></url>
+  <url><loc>https://www.imprintdiamond.com/jewelry/rings/pave-halo/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.65</priority></url>
+  <url><loc>https://www.imprintdiamond.com/jewelry/rings/vintage-vine/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.65</priority></url>
+  <url><loc>https://www.imprintdiamond.com/jewelry/rings/modern-band/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.65</priority></url>
 
   <url>
     <loc>https://www.imprintdiamond.com/jewelry/necklaces/</loc>
+    <lastmod>2026-08-05</lastmod>
     <changefreq>monthly</changefreq><priority>0.75</priority>
     <image:image><image:loc>https://www.imprintdiamond.com/static/images/hero/imprint-diamond-newborn-baby-necklace.jpg</image:loc><image:title>項鍊系列－DNA紀念鑽石項鍊訂製</image:title></image:image>
   </url>
-  <url><loc>https://www.imprintdiamond.com/jewelry/necklaces/classic-pendant/</loc><changefreq>monthly</changefreq><priority>0.65</priority></url>
-  <url><loc>https://www.imprintdiamond.com/jewelry/necklaces/halo-pendant/</loc><changefreq>monthly</changefreq><priority>0.65</priority></url>
-  <url><loc>https://www.imprintdiamond.com/jewelry/necklaces/bar/</loc><changefreq>monthly</changefreq><priority>0.65</priority></url>
-  <url><loc>https://www.imprintdiamond.com/jewelry/necklaces/double-layer/</loc><changefreq>monthly</changefreq><priority>0.65</priority></url>
+  <url><loc>https://www.imprintdiamond.com/jewelry/necklaces/classic-pendant/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.65</priority></url>
+  <url><loc>https://www.imprintdiamond.com/jewelry/necklaces/halo-pendant/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.65</priority></url>
+  <url><loc>https://www.imprintdiamond.com/jewelry/necklaces/bar/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.65</priority></url>
+  <url><loc>https://www.imprintdiamond.com/jewelry/necklaces/double-layer/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.65</priority></url>
 
   <url>
     <loc>https://www.imprintdiamond.com/jewelry/earrings/</loc>
+    <lastmod>2026-08-05</lastmod>
     <changefreq>monthly</changefreq><priority>0.75</priority>
     <image:image><image:loc>https://www.imprintdiamond.com/static/images/hero/imprint-diamond-family-portrait-jewelry.jpg</image:loc><image:title>耳環系列－DNA紀念鑽石耳環訂製</image:title></image:image>
   </url>
-  <url><loc>https://www.imprintdiamond.com/jewelry/earrings/stud/</loc><changefreq>monthly</changefreq><priority>0.65</priority></url>
-  <url><loc>https://www.imprintdiamond.com/jewelry/earrings/drop/</loc><changefreq>monthly</changefreq><priority>0.65</priority></url>
-  <url><loc>https://www.imprintdiamond.com/jewelry/earrings/hoop/</loc><changefreq>monthly</changefreq><priority>0.65</priority></url>
-  <url><loc>https://www.imprintdiamond.com/jewelry/earrings/ear-cuff/</loc><changefreq>monthly</changefreq><priority>0.65</priority></url>
+  <url><loc>https://www.imprintdiamond.com/jewelry/earrings/stud/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.65</priority></url>
+  <url><loc>https://www.imprintdiamond.com/jewelry/earrings/drop/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.65</priority></url>
+  <url><loc>https://www.imprintdiamond.com/jewelry/earrings/hoop/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.65</priority></url>
+  <url><loc>https://www.imprintdiamond.com/jewelry/earrings/ear-cuff/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.65</priority></url>
 
   <url>
     <loc>https://www.imprintdiamond.com/jewelry/bracelets/</loc>
+    <lastmod>2026-08-05</lastmod>
     <changefreq>monthly</changefreq><priority>0.75</priority>
     <image:image><image:loc>https://www.imprintdiamond.com/static/images/hero/imprint-diamond-heirloom-memorial.jpg</image:loc><image:title>手鍊系列－DNA紀念鑽石手鍊訂製</image:title></image:image>
   </url>
-  <url><loc>https://www.imprintdiamond.com/jewelry/bracelets/tennis/</loc><changefreq>monthly</changefreq><priority>0.65</priority></url>
-  <url><loc>https://www.imprintdiamond.com/jewelry/bracelets/chain/</loc><changefreq>monthly</changefreq><priority>0.65</priority></url>
-  <url><loc>https://www.imprintdiamond.com/jewelry/bracelets/charm/</loc><changefreq>monthly</changefreq><priority>0.65</priority></url>
-  <url><loc>https://www.imprintdiamond.com/jewelry/bracelets/bangle/</loc><changefreq>monthly</changefreq><priority>0.65</priority></url>
+  <url><loc>https://www.imprintdiamond.com/jewelry/bracelets/tennis/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.65</priority></url>
+  <url><loc>https://www.imprintdiamond.com/jewelry/bracelets/chain/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.65</priority></url>
+  <url><loc>https://www.imprintdiamond.com/jewelry/bracelets/charm/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.65</priority></url>
+  <url><loc>https://www.imprintdiamond.com/jewelry/bracelets/bangle/</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.65</priority></url>
 
-  <url><loc>https://www.imprintdiamond.com/about.html</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://www.imprintdiamond.com/stories.html</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://www.imprintdiamond.com/contact.html</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://www.imprintdiamond.com/about.html</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://www.imprintdiamond.com/stories.html</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://www.imprintdiamond.com/contact.html</loc>
+    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
 
 </urlset>

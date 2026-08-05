@@ -15,9 +15,8 @@
 <span class="checkout-stepper-label">完成</span>
 </div>
 </nav>
-{# CSP blocks unsafe-eval — set hx-get via inline script; no hx-vals js: / hx-on:: #}
-<div hx-swap="innerHTML" hx-trigger="load" id="htmx-checkout">
-<div aria-busy="true" aria-label="載入訂單" class="checkout-skel" data-checkout-root>
+<div hx-get="/htmx/checkout?items=" hx-swap="innerHTML" hx-trigger="load" id="htmx-checkout">
+<div aria-busy="true" aria-label="載入訂單" class="checkout-skel" data-checkout-root="">
 <header class="checkout-head">
 <span class="skel-line skel-line--medium" style="margin-bottom:16px"></span>
 <span class="skel-line skel-line--full" style="height:64px;margin-bottom:12px"></span>
@@ -60,32 +59,5 @@
 <p class="checkout-skel-status">載入訂單…</p>
 </div>
 </div>
-<script>
-(function () {
-  var el = document.getElementById('htmx-checkout');
-  if (!el) return;
-  var q = new URLSearchParams(location.search);
-  var items = q.get('items') || q.get('item') || '';
-  el.setAttribute('hx-get', '/htmx/checkout?items=' + encodeURIComponent(items));
-  var errHtml = '<p class="form-msg is-error" role="alert">無法載入訂單，請重新整理或<a href="/cart.html">返回購物車</a>。</p>';
-  function showErr() {
-    if (!el.isConnected) return;
-    el.innerHTML = errHtml;
-  }
-  el.addEventListener('htmx:responseError', showErr);
-  el.addEventListener('htmx:sendError', showErr);
-  var timer = null;
-  function armTimer() {
-    window.clearTimeout(timer);
-    timer = window.setTimeout(function () {
-      if (el.querySelector('.checkout-skel')) showErr();
-    }, 25000);
-  }
-  armTimer();
-  el.addEventListener('htmx:beforeRequest', armTimer);
-  el.addEventListener('htmx:afterSwap', function () { window.clearTimeout(timer); });
-  if (window.htmx) window.htmx.process(el);
-})();
-</script>
 </div>
 </section>

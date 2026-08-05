@@ -16,7 +16,7 @@
 <p>登入後可查詢訂製進度、管理購物車與帳戶資料。</p>
 </div>
 <div id="auth-form-msg"></div>
-<form class="login-form" hx-disabled-elt="button[type=submit]" hx-post="/htmx/auth/login" hx-swap="innerHTML" hx-target="#auth-form-msg">
+<form class="login-form" hx-disabled-elt="button[type=submit]" hx-post="/htmx/auth/login" hx-swap="innerHTML" hx-target="#auth-form-msg" id="login-form">
 <input name="next" type="hidden" value="/account.html"/>
 <div class="form-field">
 <input autocomplete="username" id="lEmail" name="email" placeholder=" " required="" type="email"/>
@@ -30,6 +30,7 @@
 <svg aria-hidden="true" data-auth-eye-off-icon="" fill="none" hidden="" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"><path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"></path><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"></path><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"></path><path d="m2 2 20 20"></path></svg>
 </button>
 </div>
+<p class="forgot-password"><a href="/forgot-password.html">忘記密碼？</a></p>
 <label class="partner-check">
 <input checked="" name="remember" type="checkbox" value="1"/>
 <span class="checkmark"></span>
