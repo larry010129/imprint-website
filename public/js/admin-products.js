@@ -1688,7 +1688,7 @@
         '<label class="ap-switch">' +
           '<input type="checkbox" class="ap-switch-input" name="allowsEngraving"' + checked + '>' +
           '<span class="ap-switch-track" aria-hidden="true"><span class="ap-switch-thumb"></span></span>' +
-          '<span class="ap-switch-label">可戒圈刻字</span>' +
+          '<span class="ap-switch-label">可戒圈/金屬刻字</span>' +
         '</label>' +
       '</div>'
     );

@@ -707,7 +707,7 @@ def test_shop_js_girdle_not_gated_by_allows_engraving():
     # Band/remark still follow allowsEngraving.
     assert "const hasBand = allows && state.category === 'ring';" in src
     assert (
-        "const hasRemark = allows && state.category !== 'chain' && !isDiamondOnlyCategory();"
+        "const hasRemark = allows && state.category !== 'chain' && state.category !== 'ring' && !isDiamondOnlyCategory();"
         in src
     )
 

@@ -106,7 +106,7 @@ def _engraving_parts(cfg: dict) -> list[str]:
     if cfg.get("engravingBand"):
         parts.append(f"戒圈刻字 {cfg['engravingBand']}")
     if cfg.get("engravingRemark"):
-        parts.append(f"戒圈刻字 {cfg['engravingRemark']}")
+        parts.append(f"金屬刻字 {cfg['engravingRemark']}")
     if cfg.get("engravingGirdle"):
         parts.append(f"腰圍刻字 {cfg['engravingGirdle']}")
     return parts

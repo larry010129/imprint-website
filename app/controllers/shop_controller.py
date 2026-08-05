@@ -157,6 +157,9 @@ def _strip_disallowed_engraving(cur, body: dict[str, Any]) -> None:
     category = str(body.get("category") or "").strip()
     if category == "chain":
         body["engravingGirdle"] = ""
+    # Rings use band engraving only — drop metal-body remark if client sends it.
+    if category == "ring":
+        body["engravingRemark"] = ""
 
     if not body.get("engravingBand") and not body.get("engravingRemark"):
         return
