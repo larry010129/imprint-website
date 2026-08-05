@@ -607,7 +607,7 @@ function catalogUrlsForImageSlot(product, slotKey) {
   return catalogImagesForKeys(product, [slotKey]);
 }
 
-/** Slot keys in admin 圖片選項 order — preset matrix, then colors, then leftovers. */
+/** Slot keys in admin 圖片選項 block order — API imageSlotOrder, then colors, preset fallback. */
 function catalogImageSlotKeyOrder(product) {
   if (!product?.images) return [];
   const seen = new Set();
@@ -618,8 +618,9 @@ function catalogImageSlotKeyOrder(product) {
     seen.add(key);
     order.push(key);
   };
-  for (const key of presetImageSlotKeys(product.category)) pushKey(key);
+  for (const key of product.imageSlotOrder || []) pushKey(key);
   for (const key of product.colors || []) pushKey(key);
+  for (const key of presetImageSlotKeys(product.category)) pushKey(key);
   for (const key of Object.keys(product.images)) {
     if (IMAGE_SLOT_METALS.includes(key)) pushKey(`${key}-white`);
     else pushKey(key);
@@ -2139,8 +2140,7 @@ function lookupManualPrice(category, type, gold, carat) {
 }
 
 /**
- * Step 2 style grid candidates — admin slot order, then thumb, then letter stock.
- * Primary prefers white-metal slots first (preset matrix); onerror walks the rest.
+ * Step 2 style grid candidates — admin block order, thumb (lite), letter stock.
  */
 function styleGridImageCandidates(product) {
   const cat = String(product?.category || state.category || '').toLowerCase();
@@ -2159,10 +2159,17 @@ function styleGridImageCandidates(product) {
     return out;
   }
 
+  const liteCatalog = !product?.images || !Object.keys(product.images).length;
+  // Lite /api/catalog: only thumbUrl + imageSlotOrder metadata — thumb is primary.
+  if (liteCatalog && product?.thumbUrl && isUsableCatalogImageUrl(product.thumbUrl)) {
+    add(product.thumbUrl);
+  }
+
   for (const url of orderedCatalogImageUrls(product)) add(url);
 
-  // Lite catalog has thumbUrl but no images map — prefer upload before letter stock.
-  if (product?.thumbUrl && isUsableCatalogImageUrl(product.thumbUrl)) add(product.thumbUrl);
+  if (!liteCatalog && product?.thumbUrl && isUsableCatalogImageUrl(product.thumbUrl)) {
+    add(product.thumbUrl);
+  }
 
   const assetId = productAssetId(product);
   if (assetId && window.ShopAssets) {

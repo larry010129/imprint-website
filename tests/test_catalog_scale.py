@@ -62,7 +62,7 @@ def test_normalize_catalog_detail_defaults_lite():
     assert normalize_catalog_detail("FULL") == "full"
 
 
-def test_lite_thumb_url_prefers_silver_white_diamond():
+def test_lite_thumb_url_uses_first_admin_block_in_sort_order():
     fancy = "https://abc123.supabase.co/storage/v1/object/public/shop-media/products/fancy.webp"
     rose = "https://abc123.supabase.co/storage/v1/object/public/shop-media/products/rose.webp"
     images = [
@@ -71,7 +71,8 @@ def test_lite_thumb_url_prefers_silver_white_diamond():
         {"color": "white-white", "file_path": SUPABASE_PRODUCT},
     ]
     entry = build_catalog_product_lite(_product_row(), _variants(), images)
-    assert entry["thumbUrl"] == SUPABASE_PRODUCT
+    assert entry["thumbUrl"] == fancy
+    assert entry["imageSlotOrder"] == ["yellow-pink", "rose", "white-white"]
 
 
 def test_build_catalog_product_lite_omits_heavy_maps():
@@ -91,20 +92,31 @@ def test_build_catalog_product_lite_omits_heavy_maps():
     assert entry["draft"] is False
 
 
-def test_first_thumb_url_prefers_default_metal_white_diamond():
+def test_catalog_image_slot_order_follows_admin_block_save_order():
+    from app.catalog import _image_slot_order
+
+    images = [
+        {"color": "rose-white", "file_path": "https://cdn.example/rose.png"},
+        {"color": "white-white", "file_path": "https://cdn.example/white.png"},
+        {"color": "white-yellow", "file_path": "https://cdn.example/yellow.png"},
+    ]
+    assert _image_slot_order(images) == ["rose-white", "white-white", "white-yellow"]
+
     fancy = "https://cdn.example/fancy-pink.webp"
     white = "https://cdn.example/white-white.webp"
-    # Insertion order puts fancy first — step-2 must still pick white diamond.
-    images = {
+    images_by_color = {
         "yellow-pink": [fancy],
         "white-white": [white],
     }
-    assert _first_thumb_url(images, default_color="white") == white
-    # Missing yellow-white → still prefer any white-diamond slot over fancy.
-    assert _first_thumb_url(images, default_color="yellow") == white
+    rows = [
+        {"color": "yellow-pink", "file_path": fancy},
+        {"color": "white-white", "file_path": white},
+    ]
+    assert _first_thumb_url(images_by_color, images=rows) == fancy
+    assert _first_thumb_url(images_by_color, default_color="white") == white
 
 
-def test_lite_thumb_prefers_default_metal_over_fancy_slot_order():
+def test_lite_thumb_uses_first_admin_block_not_default_metal():
     fancy = "https://cdn.example/rose-yellow.webp"
     white = "https://cdn.example/rose-white.webp"
     images = [
@@ -113,7 +125,8 @@ def test_lite_thumb_prefers_default_metal_over_fancy_slot_order():
     ]
     product = {**_product_row(), "default_color": "rose"}
     entry = build_catalog_product_lite(product, _variants(), images)
-    assert entry["thumbUrl"] == white
+    assert entry["thumbUrl"] == fancy
+    assert entry["imageSlotOrder"] == ["rose-yellow", "rose-white"]
 
 
 def test_lite_thumb_uses_realistic_supabase_storage_url():
@@ -123,8 +136,8 @@ def test_lite_thumb_uses_realistic_supabase_storage_url():
         "shop-media/products/gabriel-cross-pendant/white/c8d5658258e245d4aa3145b52aeb70ce.png"
     )
     images = [
-        {"color": "yellow-pink", "file_path": "https://cdn.example/wrong-fancy.webp"},
         {"color": "white-white", "file_path": url},
+        {"color": "yellow-pink", "file_path": "https://cdn.example/wrong-fancy.webp"},
     ]
     entry = build_catalog_product_lite(
         {**_product_row(category="pendant"), "sort_order": 0},

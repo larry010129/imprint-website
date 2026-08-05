@@ -1,17 +1,24 @@
-"""Move shop-media product keys into products/{name_slug}/{metal}/ and rewrite DB URLs.
+"""Move shop-media product keys into type-scoped folders and rewrite DB URLs.
+
+Target layout:
+  products/{category}/{name_slug}/{metal}/file
+  products/_pending/{category}/{metal}/file
+
+Categories: pendant, ring, earring, bracelet, chain (products.category).
 
 Migrates:
   - legacy flat `products/{file}`
-  - legacy nested `products/{product_uuid}/…`
+  - legacy nested `products/{product_uuid}/…` or `products/{slug}/…`
+  - legacy pending `products/_pending/{metal}/file`
+  - slug-only nested keys missing the category prefix
   - short-id folders when name_en was empty
-  - any nested folder that does not match the current name slug
 
 Folder slug: from `name_en` (admin 英文名稱). Empty/CJK → short product id.
 Does not auto-translate or fill `name_en`.
 
-Leaves `products/_pending/…`, page-images/, site-images/, and local shop-product
-disk stock alone. Shared URLs (multiple product_images rows) are copied; unshared
-URLs are moved.
+Leaves page-images/, site-images/, and local shop-product disk stock alone.
+Shared URLs (multiple product_images rows) are copied; unshared URLs are moved.
+DB rows update only after a successful Storage copy/move.
 
 Usage:
   python scripts/reorganize_supabase_product_images.py --dry-run
@@ -37,6 +44,8 @@ from app.database import get_connection  # noqa: E402
 from app.storage import (  # noqa: E402
     StorageNotConfiguredError,
     StorageUploadError,
+    _nested_product_tail_parts,
+    _pending_key_parts,
     copy_object,
     english_label_for_folder,
     is_flat_product_object_key,
@@ -44,7 +53,10 @@ from app.storage import (  # noqa: E402
     is_pending_product_object_key,
     metal_color_from_slot,
     move_object,
+    normalize_product_category,
     object_path_from_public_url,
+    pending_product_object_key,
+    product_category_from_object_key,
     product_folder_from_object_key,
     product_folder_segment,
     product_object_key,
@@ -93,7 +105,7 @@ def _list_product_prefix_keys(prefix: str = "products/", *, limit: int = 1000) -
 
 
 def _load_products(cur) -> dict[str, dict]:
-    cur.execute("select id, name_en, name_zh from products")
+    cur.execute("select id, name_en, name_zh, category from products")
     return {str(row["id"]): dict(row) for row in cur.fetchall()}
 
 
@@ -126,43 +138,107 @@ def _url_refcount(rows: list[dict]) -> dict[str, int]:
     return counts
 
 
+def _product_category(products: dict[str, dict], product_id: str) -> str | None:
+    prow = products.get(product_id) or {}
+    return normalize_product_category(prow.get("category"))
+
+
+def _dest_for_row(
+    obj: str,
+    *,
+    products: dict[str, dict],
+    folders: dict[str, str],
+    product_id: str,
+    color_slot: str | None,
+) -> str | None:
+    """Compute target Storage key for a product_images row; None → skip."""
+    prow = products.get(product_id) or {}
+    folder = folders.get(product_id) or product_folder_segment(
+        prow.get("name_en"),
+        product_id,
+    )
+    category = _product_category(products, product_id)
+    slot_metal = metal_color_from_slot(color_slot)
+
+    if is_pending_product_object_key(obj):
+        pending_cat, pending_metal, filename = _pending_key_parts(obj)
+        if not filename:
+            return None
+        metal = slot_metal or pending_metal
+        dest_cat = category or pending_cat
+        try:
+            return pending_product_object_key(metal, filename, category=dest_cat)
+        except StorageUploadError:
+            return None
+
+    metal = slot_metal
+    filename: str | None = None
+
+    if is_flat_product_object_key(obj):
+        filename = obj.rsplit("/", 1)[-1]
+    elif is_nested_product_object_key(obj):
+        current_folder = product_folder_from_object_key(obj)
+        current_cat = product_category_from_object_key(obj)
+        tail_metal, tail_file = _nested_product_tail_parts(obj)
+        if not tail_file:
+            return None
+        filename = tail_file
+        metal = metal or tail_metal
+        if current_folder == folder and current_cat == category:
+            return obj
+    else:
+        return None
+
+    if not filename:
+        return None
+    try:
+        return product_object_key(folder, metal, filename, category=category)
+    except StorageUploadError:
+        return None
+
+
 def _print_folder_plan(
     products: dict[str, dict],
     folders: dict[str, str],
     image_rows: list[dict],
-) -> list[tuple[str, str, str, str]]:
-    """Print and return (old_folder, new_folder, name_zh, english_label) unique moves."""
-    old_by_pid: dict[str, set[str]] = defaultdict(set)
+) -> list[tuple[str, str, str, str, str | None]]:
+    """Print and return (old_key, new_key, name_zh, english_label, category) moves."""
+    plan: list[tuple[str, str, str, str, str | None]] = []
+    seen: set[tuple[str, str]] = set()
+    print("-- path plan (old → new | category | name_zh | english)")
     for row in image_rows:
-        obj = object_path_from_public_url(str(row.get("file_path") or "").strip())
-        if not obj or is_pending_product_object_key(obj):
+        url = str(row.get("file_path") or "").strip()
+        obj = object_path_from_public_url(url)
+        if not obj:
             continue
-        current = product_folder_from_object_key(obj)
-        if current:
-            old_by_pid[str(row["product_id"])].add(current)
-
-    plan: list[tuple[str, str, str, str]] = []
-    print("-- folder plan (old → new | name_zh | english)")
-    for pid, new_folder in sorted(folders.items(), key=lambda x: x[1]):
-        row = products.get(pid) or {}
-        zh = (row.get("name_zh") or "").strip()
-        label = english_label_for_folder(row.get("name_en"))
-        olds = sorted(old_by_pid.get(pid) or [])
-        if not olds:
-            print(f"  (no images) → {new_folder} | {zh} | {label}")
+        pid = str(row["product_id"])
+        dest = _dest_for_row(
+            obj,
+            products=products,
+            folders=folders,
+            product_id=pid,
+            color_slot=row.get("color"),
+        )
+        if not dest or dest == obj:
             continue
-        for old in olds:
-            if old == new_folder:
-                continue
-            plan.append((old, new_folder, zh, label))
-            print(f"  {old} → {new_folder} | {zh} | {label}")
+        key = (obj, dest)
+        if key in seen:
+            continue
+        seen.add(key)
+        prow = products.get(pid) or {}
+        zh = (prow.get("name_zh") or "").strip()
+        label = english_label_for_folder(prow.get("name_en"))
+        cat = _product_category(products, pid)
+        plan.append((obj, dest, zh, label, cat))
+        print(f"  {obj} → {dest} | {cat or '?'} | {zh} | {label}")
     return plan
 
 
-def migrate_product_image_folders(*, dry_run: bool) -> tuple[int, int]:
-    """Return (moved_or_would_move, skipped)."""
+def migrate_product_image_folders(*, dry_run: bool) -> tuple[int, int, int]:
+    """Return (moved_or_would_move, db_updated, skipped)."""
     moved = 0
     skipped = 0
+    db_updated = 0
     with get_connection() as conn, conn.cursor() as cur:
         products = _load_products(cur)
         folders = _folder_map(products)
@@ -181,40 +257,19 @@ def migrate_product_image_folders(*, dry_run: bool) -> tuple[int, int]:
         for row in rows:
             url = str(row["file_path"]).strip()
             obj = object_path_from_public_url(url)
-            if not obj or is_pending_product_object_key(obj):
+            if not obj:
                 skipped += 1
                 continue
 
             product_id = str(row["product_id"])
-            prow = products.get(product_id) or {}
-            folder = folders.get(product_id) or product_folder_segment(
-                prow.get("name_en"),
-                product_id,
+            dest = _dest_for_row(
+                obj,
+                products=products,
+                folders=folders,
+                product_id=product_id,
+                color_slot=row.get("color"),
             )
-            metal = metal_color_from_slot(row.get("color"))
-
-            if is_flat_product_object_key(obj):
-                filename = obj.rsplit("/", 1)[-1]
-            elif is_nested_product_object_key(obj):
-                current = product_folder_from_object_key(obj)
-                if current == folder:
-                    skipped += 1
-                    continue
-                parts = [p for p in obj.split("/") if p]
-                filename = parts[-1]
-                if len(parts) == 4 and parts[2] in {"white", "yellow", "rose"}:
-                    metal = metal or parts[2]
-            else:
-                skipped += 1
-                continue
-
-            try:
-                dest = product_object_key(folder, metal, filename)
-            except StorageUploadError as exc:
-                print(f"  skip bad dest for row {row['id']}: {exc}")
-                skipped += 1
-                continue
-            if dest == obj:
+            if not dest or dest == obj:
                 skipped += 1
                 continue
 
@@ -237,13 +292,13 @@ def migrate_product_image_folders(*, dry_run: bool) -> tuple[int, int]:
                 "update product_images set file_path = %s where id = %s",
                 (new_url, row["id"]),
             )
-            # After rewrite, old URL has one fewer ref for later shared decisions.
             refcounts[url] = max(0, refcounts.get(url, 1) - 1)
             refcounts[new_url] = refcounts.get(new_url, 0) + 1
             moved += 1
+            db_updated += 1
         if not dry_run:
             conn.commit()
-    return moved, skipped
+    return moved, db_updated, skipped
 
 
 def _db_object_keys() -> set[str]:
@@ -260,29 +315,41 @@ def _db_object_keys() -> set[str]:
     return found
 
 
-def count_orphan_flat_keys() -> int:
-    """Count flat products/{file} keys in Storage with no product_images URL."""
+def _is_legacy_product_key(key: str) -> bool:
+    """True when key is not yet type-scoped (missing category segment)."""
+    if is_flat_product_object_key(key):
+        return True
+    if is_pending_product_object_key(key):
+        _cat, _metal, filename = _pending_key_parts(key)
+        return bool(filename) and _cat is None
+    if is_nested_product_object_key(key):
+        return product_category_from_object_key(key) is None
+    return False
+
+
+def count_legacy_storage_keys() -> tuple[int, int]:
+    """Count legacy Storage keys with no DB ref (flat + slug-only nested/pending)."""
     try:
         keys = _list_product_prefix_keys("products/")
     except StorageNotConfiguredError:
-        return 0
+        return 0, 0
     db_keys = _db_object_keys()
     orphan = 0
+    legacy_in_db = 0
     seen: set[str] = set()
     for key in keys:
-        parts = [p for p in key.strip("/").split("/") if p]
-        if len(parts) == 2 and parts[0] == "products" and parts[1] != "_pending":
-            flat = f"products/{parts[1]}"
-        elif is_flat_product_object_key(key):
-            flat = key.strip("/")
-        else:
+        norm = key.strip("/")
+        if norm in seen:
             continue
-        if flat in seen or flat in db_keys:
+        seen.add(norm)
+        if not _is_legacy_product_key(key):
             continue
-        seen.add(flat)
+        if norm in db_keys:
+            legacy_in_db += 1
+            continue
         orphan += 1
-        print(f"  orphan flat (left in place): {flat}")
-    return orphan
+        print(f"  orphan legacy (left in place): {norm}")
+    return orphan, legacy_in_db
 
 
 def main() -> int:
@@ -299,7 +366,7 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    print("=== reorganize Supabase product images (name slug folders) ===")
+    print("=== reorganize Supabase product images (type + slug folders) ===")
     if args.dry_run:
         print("DRY RUN — no Storage moves or DB updates\n")
 
@@ -322,14 +389,17 @@ def main() -> int:
             )
             return 2
 
-    moved, skipped = migrate_product_image_folders(dry_run=args.dry_run)
+    moved, db_updated, skipped = migrate_product_image_folders(dry_run=args.dry_run)
     label = "would move/copy" if args.dry_run else "moved/copied"
     print(f"\n{label} {moved} image(s); skipped {skipped}")
+    if not args.dry_run:
+        print(f"DB rows updated: {db_updated}")
 
     if not args.skip_orphan_scan:
-        print("\n-- orphan flat products/* scan (leave in place)")
-        orphans = count_orphan_flat_keys()
-        print(f"orphan flat keys: {orphans}")
+        print("\n-- legacy products/* scan (no category prefix)")
+        orphans, legacy_db = count_legacy_storage_keys()
+        print(f"orphan legacy keys (no DB ref): {orphans}")
+        print(f"legacy keys still referenced in DB (re-run if >0): {legacy_db}")
 
     return 0
 

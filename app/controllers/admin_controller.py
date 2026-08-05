@@ -569,20 +569,22 @@ async def product_upload(
 
     name = f"{uuid.uuid4().hex}{ext}"
     folder = None
+    category = None
     if pid:
         with get_connection() as conn, conn.cursor() as cur:
             cur.execute(
-                "select name_en, name_zh from products where id = %s", (pid,)
+                "select name_en, name_zh, category from products where id = %s", (pid,)
             )
             prow = cur.fetchone()
             if prow:
+                category = prow.get("category")
                 folder = resolve_product_folder(
                     cur, pid, prow.get("name_en"), prow.get("name_zh")
                 )
             else:
                 folder = product_folder_segment(None, pid)
     rel = product_upload_relative_path(
-        name, folder=folder, color_slot=slot or None
+        name, folder=folder, color_slot=slot or None, category=category
     )
     url, upload_err = _storage_upload("products", rel, data, ext)
     if upload_err:

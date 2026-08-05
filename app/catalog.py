@@ -128,19 +128,48 @@ def _usable_images_by_color(images: list[dict]) -> dict[str, list[str]]:
     return images_by_color
 
 
+def _image_slot_order(images: list[dict]) -> list[str]:
+    """Admin 圖片選項 block order — first DB sort_order row per color key."""
+    order: list[str] = []
+    seen: set[str] = set()
+    for image in images:
+        color = str(image.get("color") or "white").strip()
+        if not color or color in seen:
+            continue
+        seen.add(color)
+        order.append(color)
+    return order
+
+
+def _catalog_slot_colors(
+    images: list[dict],
+    images_by_color: dict[str, list[str]],
+) -> list[str]:
+    """Slot keys in admin save order; extras appended in map insertion order."""
+    ordered = [color for color in _image_slot_order(images) if color in images_by_color]
+    for key in images_by_color:
+        if key not in ordered:
+            ordered.append(key)
+    return ordered
+
+
 def _first_thumb_url(
     images_by_color: dict[str, list[str]],
     *,
+    images: list[dict] | None = None,
     default_color: str | None = None,
 ) -> str | None:
-    """Prefer default metal + white diamond for lite style-grid thumbs."""
+    """First upload in admin 圖片選項 block order; legacy default-metal fallback."""
+    if images:
+        for color in _image_slot_order(images):
+            urls = images_by_color.get(color)
+            if urls:
+                return urls[0]
     metal = (default_color or "white").strip().lower() or "white"
-    # Exact slots first (metal-diamond[-chain]); legacy single key = metal.
     for key in (f"{metal}-white", metal, f"{metal}-white-white"):
         urls = images_by_color.get(key)
         if urls:
             return urls[0]
-    # Any white-diamond slot (skip *-yellow / *-blue / *-pink fancy stones).
     for key, urls in images_by_color.items():
         if not urls:
             continue
@@ -167,6 +196,7 @@ def build_catalog_product_lite(product: dict, variants: list[dict], images: list
     golds = _sort_golds({v["gold"] for v in variants})
     carats = _sort_carats({_variant_carat_key(v["carat"]) for v in variants})
     images_by_color = _usable_images_by_color(images)
+    slot_colors = _catalog_slot_colors(images, images_by_color)
     return {
         "id": str(product["id"]),
         "styleKey": legacy_style_key(product, images),
@@ -181,8 +211,13 @@ def build_catalog_product_lite(product: dict, variants: list[dict], images: list
         "allowsWithChain": bool(product.get("allows_with_chain", True)),
         "golds": golds,
         "carats": carats,
-        "colors": sorted(images_by_color.keys()),
-        "thumbUrl": _first_thumb_url(images_by_color, default_color=product.get("default_color")),
+        "colors": slot_colors,
+        "imageSlotOrder": _image_slot_order(images),
+        "thumbUrl": _first_thumb_url(
+            images_by_color,
+            images=images,
+            default_color=product.get("default_color"),
+        ),
         "draft": not product["is_published"],
     }
 
@@ -211,6 +246,7 @@ def build_catalog_product(product: dict, variants: list[dict], images: list[dict
 
     style_key = legacy_style_key(product, images)
     images_by_color = _usable_images_by_color(images)
+    slot_colors = _catalog_slot_colors(images, images_by_color)
 
     return {
         "id": str(product["id"]),
@@ -228,7 +264,8 @@ def build_catalog_product(product: dict, variants: list[dict], images: list[dict
         "allowsWithChain": bool(product.get("allows_with_chain", True)),
         "golds": golds,
         "carats": carats,
-        "colors": sorted(images_by_color.keys()),
+        "colors": slot_colors,
+        "imageSlotOrder": _image_slot_order(images),
         "images": images_by_color,
         "weights": weights,
         "manualPrices": manual_prices,

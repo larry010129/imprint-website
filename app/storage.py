@@ -32,6 +32,8 @@ UPLOAD_KIND_PREFIXES: dict[str, str] = {
 
 # Admin image slots: white | yellow | rose (compound slots like white-pink → white).
 PRODUCT_METAL_FOLDERS = frozenset({"white", "yellow", "rose"})
+# Admin category tabs → Storage type folder (項墜/戒指/耳環/手鍊/鏈條).
+PRODUCT_CATEGORY_KEYS = frozenset({"pendant", "ring", "earring", "bracelet", "chain"})
 _PENDING_PREFIX = "products/_pending/"
 _PENDING_FOLDER = "_pending"
 PRODUCT_FOLDER_MAX_LEN = 80
@@ -376,31 +378,83 @@ def is_uuid_product_folder(segment: str | None) -> bool:
     return bool(segment and _UUID_FOLDER.match(str(segment).strip()))
 
 
+def normalize_product_category(category: str | None) -> str | None:
+    """Map products.category to a Storage type folder key."""
+    cat = (category or "").strip().lower()
+    if cat in PRODUCT_CATEGORY_KEYS:
+        return cat
+    return None
+
+
+def _product_key_segments(object_path: str | None) -> list[str]:
+    return [p for p in (object_path or "").strip().strip("/").split("/") if p]
+
+
+def _product_key_body_index(parts: list[str]) -> int | None:
+    """Index of product slug folder in `products/…` keys; None if not a product key."""
+    if len(parts) < 3 or parts[0] != "products" or parts[1] == _PENDING_FOLDER:
+        return None
+    idx = 1
+    if parts[idx] in PRODUCT_CATEGORY_KEYS:
+        idx += 1
+    if idx >= len(parts):
+        return None
+    return idx
+
+
+def product_category_from_object_key(object_path: str | None) -> str | None:
+    """Return type folder when present (`pendant`, `ring`, …); else None."""
+    parts = _product_key_segments(object_path)
+    if len(parts) < 3 or parts[0] != "products" or parts[1] == _PENDING_FOLDER:
+        return None
+    if parts[1] in PRODUCT_CATEGORY_KEYS:
+        return parts[1]
+    return None
+
+
 def product_object_key(
     folder_segment: str,
     metal_color: str | None,
     filename: str,
+    *,
+    category: str | None = None,
 ) -> str:
-    """Build `products/{folder}/{metal}/{file}` (metal optional)."""
+    """Build `products/{type}/{folder}/{metal}/{file}` (type/metal optional)."""
     folder = _safe_folder_segment(folder_segment, label="product_folder")
     file_part = _safe_path_segment(filename, label="filename")
+    cat = normalize_product_category(category)
     metal = (metal_color or "").strip().lower()
+    if metal and metal not in PRODUCT_METAL_FOLDERS:
+        raise StorageUploadError(f"invalid metal_color for Storage path: {metal}")
+    segments = ["products"]
+    if cat:
+        segments.append(cat)
+    segments.append(folder)
     if metal:
-        if metal not in PRODUCT_METAL_FOLDERS:
-            raise StorageUploadError(f"invalid metal_color for Storage path: {metal}")
-        return f"products/{folder}/{metal}/{file_part}"
-    return f"products/{folder}/{file_part}"
+        segments.append(metal)
+    segments.append(file_part)
+    return "/".join(segments)
 
 
-def pending_product_object_key(metal_color: str | None, filename: str) -> str:
-    """Build `products/_pending/{metal}/{file}` or `products/_pending/{file}`."""
+def pending_product_object_key(
+    metal_color: str | None,
+    filename: str,
+    *,
+    category: str | None = None,
+) -> str:
+    """Build `products/_pending/{type}/{metal}/{file}` (type/metal optional)."""
     file_part = _safe_path_segment(filename, label="filename")
+    cat = normalize_product_category(category)
     metal = (metal_color or "").strip().lower()
+    if metal and metal not in PRODUCT_METAL_FOLDERS:
+        raise StorageUploadError(f"invalid metal_color for Storage path: {metal}")
+    segments = ["products", _PENDING_FOLDER]
+    if cat:
+        segments.append(cat)
     if metal:
-        if metal not in PRODUCT_METAL_FOLDERS:
-            raise StorageUploadError(f"invalid metal_color for Storage path: {metal}")
-        return f"products/_pending/{metal}/{file_part}"
-    return f"products/_pending/{file_part}"
+        segments.append(metal)
+    segments.append(file_part)
+    return "/".join(segments)
 
 
 def is_pending_product_object_key(object_path: str | None) -> bool:
@@ -419,21 +473,24 @@ def is_flat_product_object_key(object_path: str | None) -> bool:
 
 
 def is_nested_product_object_key(object_path: str | None) -> bool:
-    """True for `products/{folder}/{metal}/{file}` (or `products/{folder}/{file}`)."""
-    parts = [p for p in (object_path or "").strip().strip("/").split("/") if p]
-    if len(parts) < 3 or parts[0] != "products" or parts[1] == _PENDING_FOLDER:
+    """True for nested product keys (legacy and type-scoped)."""
+    parts = _product_key_segments(object_path)
+    idx = _product_key_body_index(parts)
+    if idx is None:
         return False
-    if len(parts) == 3:
+    tail_len = len(parts) - idx - 1
+    if tail_len == 1:
         return True
-    return len(parts) == 4 and parts[2] in PRODUCT_METAL_FOLDERS
+    return tail_len == 2 and parts[idx + 1] in PRODUCT_METAL_FOLDERS
 
 
 def product_folder_from_object_key(object_path: str | None) -> str | None:
-    """Return folder segment for nested product keys; None for flat/pending."""
-    parts = [p for p in (object_path or "").strip().strip("/").split("/") if p]
-    if len(parts) < 3 or parts[0] != "products" or parts[1] == _PENDING_FOLDER:
+    """Return slug folder for nested product keys; None for flat/pending."""
+    parts = _product_key_segments(object_path)
+    idx = _product_key_body_index(parts)
+    if idx is None:
         return None
-    return parts[1]
+    return parts[idx]
 
 
 def product_upload_relative_path(
@@ -442,18 +499,29 @@ def product_upload_relative_path(
     folder: str | None = None,
     product_id: str | None = None,
     color_slot: str | None = None,
+    category: str | None = None,
 ) -> str:
     """Relative key under kind `products` for upload_image / upload_bytes.
 
-    Prefer `folder` (name slug). `product_id` kept as legacy alias for folder.
+    Prefer `folder` (name slug). New uploads: `{type}/{folder}/{metal}/file`.
     """
     name = _safe_path_segment(filename, label="filename")
     folder_seg = (folder or product_id or "").strip()
+    folder_seg = _safe_folder_segment(folder_seg) if folder_seg else ""
+    cat = normalize_product_category(category)
     metal = metal_color_from_slot(color_slot)
+    if folder_seg and cat and metal:
+        return f"{cat}/{folder_seg}/{metal}/{name}"
+    if folder_seg and cat:
+        return f"{cat}/{folder_seg}/{name}"
     if folder_seg and metal:
-        return f"{_safe_folder_segment(folder_seg)}/{metal}/{name}"
+        return f"{folder_seg}/{metal}/{name}"
     if folder_seg:
-        return f"{_safe_folder_segment(folder_seg)}/{name}"
+        return f"{folder_seg}/{name}"
+    if cat and metal:
+        return f"{_PENDING_FOLDER}/{cat}/{metal}/{name}"
+    if cat:
+        return f"{_PENDING_FOLDER}/{cat}/{name}"
     if metal:
         return f"{_PENDING_FOLDER}/{metal}/{name}"
     return f"{_PENDING_FOLDER}/{name}"
@@ -522,11 +590,45 @@ def copy_object(source_path: str, dest_path: str) -> str:
     return public_url_for_object(dst)
 
 
+def _pending_key_parts(object_path: str) -> tuple[str | None, str | None, str | None]:
+    """Parse pending key → (category, metal, filename)."""
+    parts = _product_key_segments(object_path)
+    if len(parts) < 3 or parts[0] != "products" or parts[1] != _PENDING_FOLDER:
+        return None, None, None
+    idx = 2
+    cat: str | None = None
+    if idx < len(parts) and parts[idx] in PRODUCT_CATEGORY_KEYS:
+        cat = parts[idx]
+        idx += 1
+    if idx >= len(parts):
+        return cat, None, None
+    if idx == len(parts) - 1:
+        return cat, None, parts[idx]
+    if parts[idx] in PRODUCT_METAL_FOLDERS and idx == len(parts) - 2:
+        return cat, parts[idx], parts[idx + 1]
+    return cat, None, parts[-1]
+
+
+def _nested_product_tail_parts(object_path: str) -> tuple[str | None, str | None]:
+    """Parse nested product key tail → (metal, filename)."""
+    parts = _product_key_segments(object_path)
+    idx = _product_key_body_index(parts)
+    if idx is None:
+        return None, None
+    tail = parts[idx + 1 :]
+    if len(tail) == 1:
+        return None, tail[0]
+    if len(tail) == 2 and tail[0] in PRODUCT_METAL_FOLDERS:
+        return tail[0], tail[1]
+    return None, tail[-1] if tail else None
+
+
 def relocate_product_object_url(
     url: str,
     old_folder: str,
     new_folder: str,
     *,
+    category: str | None = None,
     shared: bool = False,
 ) -> str:
     """Move/copy object from old product folder to new; return new public URL.
@@ -544,12 +646,13 @@ def relocate_product_object_url(
     current = product_folder_from_object_key(obj)
     if current != old_folder:
         return url
-    parts = [p for p in obj.split("/") if p]
-    if len(parts) == 4 and parts[2] in PRODUCT_METAL_FOLDERS:
-        dest = product_object_key(new_folder, parts[2], parts[3])
-    elif len(parts) == 3:
-        dest = product_object_key(new_folder, None, parts[2])
-    else:
+    metal, filename = _nested_product_tail_parts(obj)
+    if not filename:
+        return url
+    dest_cat = normalize_product_category(category) or product_category_from_object_key(obj)
+    try:
+        dest = product_object_key(new_folder, metal, filename, category=dest_cat)
+    except StorageUploadError:
         return url
     if dest == obj:
         return url
@@ -565,8 +668,10 @@ def promote_pending_product_url(
     url: str,
     folder_segment: str,
     metal: str | None = None,
+    *,
+    category: str | None = None,
 ) -> str:
-    """Move `products/_pending/…` object into `products/{folder}/{metal}/…`.
+    """Move `products/_pending/…` into `products/{type}/{folder}/{metal}/…`.
 
     Non-pending or non-Storage URLs are returned unchanged. On Storage errors
     the original URL is kept (best-effort, same spirit as delete_by_url).
@@ -577,25 +682,16 @@ def promote_pending_product_url(
     if not obj or not is_pending_product_object_key(obj):
         return url
 
-    parts = [p for p in obj.split("/") if p]
-    if len(parts) < 3:
+    pending_cat, pending_metal, filename = _pending_key_parts(obj)
+    if not filename:
         return url
-    pending_metal: str | None = None
-    if len(parts) == 4 and parts[2] in PRODUCT_METAL_FOLDERS:
-        pending_metal = parts[2]
-        filename = parts[3]
-    elif len(parts) == 3:
-        filename = parts[2]
-    else:
-        filename = parts[-1]
-        if len(parts) >= 4 and parts[2] in PRODUCT_METAL_FOLDERS:
-            pending_metal = parts[2]
 
     dest_metal = (metal or "").strip().lower() or pending_metal
     if dest_metal and dest_metal not in PRODUCT_METAL_FOLDERS:
         dest_metal = pending_metal
+    dest_cat = normalize_product_category(category) or pending_cat
     try:
-        dest = product_object_key(folder_segment, dest_metal, filename)
+        dest = product_object_key(folder_segment, dest_metal, filename, category=dest_cat)
     except StorageUploadError:
         return url
     if dest == obj:

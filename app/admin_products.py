@@ -649,6 +649,8 @@ def align_product_images_to_folder(
     product_id: str,
     folder: str,
     images: list[dict],
+    *,
+    category: str | None = None,
 ) -> None:
     """Move/copy nested product objects into `folder` (rename / legacy id paths)."""
     if not folder:
@@ -663,7 +665,7 @@ def align_product_images_to_folder(
             continue
         shared = _url_shared_with_other_products(cur, url, product_id)
         new_url = relocate_product_object_url(
-            url, current, folder, shared=shared
+            url, current, folder, category=category, shared=shared
         )
         if new_url != url:
             image["url"] = new_url
@@ -739,8 +741,9 @@ def save_product_children(cur, product_id: str, cleaned: dict) -> None:
         cleaned.get("nameEn"),
         cleaned.get("nameZh"),
     )
+    category = cleaned.get("category")
     align_product_images_to_folder(
-        cur, product_id, folder, cleaned.get("images") or []
+        cur, product_id, folder, cleaned.get("images") or [], category=category
     )
 
     cur.execute(
@@ -757,7 +760,7 @@ def save_product_children(cur, product_id: str, cleaned: dict) -> None:
     for sort_order, image in enumerate(cleaned["images"]):
         url = image["url"]
         metal = metal_color_from_slot(image.get("color"))
-        url = promote_pending_product_url(url, folder, metal)
+        url = promote_pending_product_url(url, folder, metal, category=category)
         image["url"] = url
         cur.execute(
             """

@@ -245,10 +245,10 @@ def test_shop_js_fancy_carat_dropdown_intersects_admin_min():
     assert "stockFancyDiamondColors" in (
         ROOT / "public" / "js" / "shop-assets.js"
     ).read_text(encoding="utf-8")
-    assert "shop.js?v=135" in (
+    assert "shop.js?v=137" in (
         ROOT / "content" / "site" / "templates" / "pages" / "shop" / "calculator.html"
     ).read_text(encoding="utf-8")
-    assert "shop.js?v=135" in (
+    assert "shop.js?v=137" in (
         ROOT / "content" / "site" / "page-registry.json"
     ).read_text(encoding="utf-8")
     # Step 2 style grid: admin slot order, then thumb/stock; onerror walks full chain.
@@ -265,7 +265,7 @@ def test_shop_js_fancy_carat_dropdown_intersects_admin_min():
     assert "if (product.thumbUrl && isUsableCatalogImageUrl(product.thumbUrl)) return '';" in src
     assert "if (productHasCatalogImages(product)) return '';" in src
     assert (
-        "// Lite catalog has thumbUrl but no images map — prefer upload before letter stock."
+        "// Lite /api/catalog: only thumbUrl + imageSlotOrder metadata — thumb is primary."
         in src
     )
     assert "shop-assets.js?v=15" in (
@@ -1022,8 +1022,9 @@ function catalogImageSlotKeyOrder(product) {
     seen.add(key);
     order.push(key);
   };
-  for (const key of presetImageSlotKeys(product.category)) pushKey(key);
+  for (const key of product.imageSlotOrder || []) pushKey(key);
   for (const key of product.colors || []) pushKey(key);
+  for (const key of presetImageSlotKeys(product.category)) pushKey(key);
   for (const key of Object.keys(product.images)) {
     if (IMAGE_SLOT_METALS.includes(key)) pushKey(key + '-white');
     else pushKey(key);
@@ -1050,8 +1051,14 @@ function styleGridImageCandidates(product) {
     seen.add(url);
     out.push(url);
   };
+  const liteCatalog = !product?.images || !Object.keys(product.images).length;
+  if (liteCatalog && product?.thumbUrl && isUsableCatalogImageUrl(product.thumbUrl)) {
+    add(product.thumbUrl);
+  }
   for (const url of orderedCatalogImageUrls(product)) add(url);
-  if (product?.thumbUrl && isUsableCatalogImageUrl(product.thumbUrl)) add(product.thumbUrl);
+  if (!liteCatalog && product?.thumbUrl && isUsableCatalogImageUrl(product.thumbUrl)) {
+    add(product.thumbUrl);
+  }
   return out;
 }
 
@@ -1061,6 +1068,7 @@ const goodRose = '/static/uploads/products/rose-white.png';
 const product = {
   id: 'uuid-ring-broken',
   category: 'ring',
+  imageSlotOrder: ['white-white', 'white-yellow', 'rose-white'],
   colors: ['white-white', 'white-yellow', 'rose-white'],
   images: {
     'white-white': [broken],
@@ -1070,14 +1078,40 @@ const product = {
   thumbUrl: '/static/uploads/products/thumb-fallback.png',
 };
 
+const productRoseFirst = {
+  id: 'uuid-ring-rose-first',
+  category: 'ring',
+  imageSlotOrder: ['rose-white', 'white-yellow', 'white-white'],
+  colors: ['rose-white', 'white-yellow', 'white-white'],
+  images: {
+    'white-white': [broken],
+    'white-yellow': [goodYellow],
+    'rose-white': [goodRose],
+  },
+};
+
+const litePendant = {
+  id: '408642ff-0000-0000-0000-000000000001',
+  category: 'pendant',
+  imageSlotOrder: ['rose-white', 'white-white'],
+  colors: ['rose-white', 'white-white'],
+  thumbUrl: goodRose,
+};
+
 const candidates = styleGridImageCandidates(product);
+const roseFirst = styleGridImageCandidates(productRoseFirst);
+const litePrimary = styleGridImageCandidates(litePendant)[0];
 console.log(JSON.stringify({
   slotOrder: catalogImageSlotKeyOrder(product),
   ordered: orderedCatalogImageUrls(product),
   primary: candidates[0],
   fallbacks: candidates.slice(1),
+  roseFirstPrimary: roseFirst[0],
+  roseFirstOrder: catalogImageSlotKeyOrder(productRoseFirst),
+  litePrimary: litePrimary,
   skipsPending: orderedCatalogImageUrls({
     category: 'ring',
+    imageSlotOrder: ['white-yellow'],
     images: { 'white-white': ['/static/products/_pending/x.png'], 'white-yellow': [goodYellow] },
   }),
 }));
@@ -1103,6 +1137,9 @@ console.log(JSON.stringify({
         "/static/uploads/products/rose-white.png",
         "/static/uploads/products/thumb-fallback.png",
     ]
+    assert out["roseFirstPrimary"] == "/static/uploads/products/rose-white.png"
+    assert out["roseFirstOrder"] == ["rose-white", "white-yellow", "white-white"]
+    assert out["litePrimary"] == "/static/uploads/products/rose-white.png"
     assert "/static/uploads/products/platinum-white-yellow.png" in out["ordered"]
     assert out["skipsPending"] == ["/static/uploads/products/platinum-white-yellow.png"]
 

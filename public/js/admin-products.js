@@ -1121,6 +1121,19 @@
     });
   }
 
+  /** First-seen color in product_images sort_order = admin block order. */
+  function slotOrderFromImages(images) {
+    var order = [];
+    var seen = {};
+    (images || []).forEach(function (img) {
+      var color = img.color || 'white';
+      if (seen[color]) return;
+      seen[color] = true;
+      order.push(color);
+    });
+    return order;
+  }
+
   /**
    * Real uploads only. Legacy metal / metal-diamond-chainMetal keys normalize
    * into metal-diamond slots. Never invent shop-product letter previews.
@@ -1129,7 +1142,6 @@
     var groups = groupImagesForSlots(images);
     var seen = {};
     var slots = [];
-    var presets = presetSlotKeysForCategory(category);
 
     function pushSlot(key) {
       if (!key || seen[key]) return;
@@ -1160,10 +1172,11 @@
       delete groups[key];
     });
 
-    // Preset order first (metal×diamond matrix), then any leftover custom keys.
-    presets.forEach(pushSlot);
+    // Admin save order (DOM block order), then any leftover keys.
+    slotOrderFromImages(images).forEach(pushSlot);
     Object.keys(groups).forEach(function (key) {
       if (COLORS.indexOf(key) >= 0) return; // folded into metal-white above
+      if (seen[key]) return;
       if (!(groups[key] && groups[key].length)) return;
       pushSlot(key);
     });

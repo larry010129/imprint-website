@@ -36,6 +36,8 @@ from app.storage import (
     local_upload_to_object_key,
     metal_color_from_slot,
     pending_product_object_key,
+    product_category_from_object_key,
+    product_folder_from_object_key,
     product_folder_segment,
     product_object_key,
     product_upload_relative_path,
@@ -299,8 +301,17 @@ def test_product_object_key_nested():
     assert product_object_key(folder, "white", "c3d4.webp") == (
         f"products/{folder}/white/c3d4.webp"
     )
+    assert product_object_key(
+        "four-prong-solitaire-necklace", "white", "x.png", category="pendant"
+    ) == "products/pendant/four-prong-solitaire-necklace/white/x.png"
     assert product_object_key("a1b2", "yellow", "x.png") == "products/a1b2/yellow/x.png"
     assert product_object_key("a1b2", None, "x.png") == "products/a1b2/x.png"
+    typed = "products/pendant/four-prong-solitaire-necklace/white/x.png"
+    assert product_folder_from_object_key(typed) == "four-prong-solitaire-necklace"
+    assert product_category_from_object_key(typed) == "pendant"
+    assert product_folder_from_object_key(
+        "products/four-prong-solitaire-necklace/white/x.png"
+    ) == "four-prong-solitaire-necklace"
     with pytest.raises(StorageUploadError):
         product_object_key("../x", "white", "a.webp")
     with pytest.raises(StorageUploadError):
@@ -314,12 +325,21 @@ def test_pending_product_object_key():
         "products/_pending/white/abc.webp"
     )
     assert pending_product_object_key(None, "abc.webp") == "products/_pending/abc.webp"
+    assert pending_product_object_key("white", "abc.webp", category="pendant") == (
+        "products/_pending/pendant/white/abc.webp"
+    )
 
 
 def test_product_upload_relative_path():
     assert product_upload_relative_path(
         "f.webp", folder="ring-abc", color_slot="yellow-blue"
     ) == "ring-abc/yellow/f.webp"
+    assert product_upload_relative_path(
+        "f.webp", folder="ring-abc", color_slot="yellow-blue", category="ring"
+    ) == "ring/ring-abc/yellow/f.webp"
+    assert product_upload_relative_path(
+        "f.webp", folder=None, color_slot="rose", category="pendant"
+    ) == "_pending/pendant/rose/f.webp"
     assert product_upload_relative_path(
         "f.webp", folder=None, color_slot="rose"
     ) == "_pending/rose/f.webp"
@@ -332,9 +352,13 @@ def test_flat_and_nested_key_detectors():
     assert not is_flat_product_object_key("products/pid/white/abc.webp")
     assert is_nested_product_object_key("products/pid/white/abc.webp")
     assert is_nested_product_object_key("products/pid/abc.webp")
+    assert is_nested_product_object_key(
+        "products/pendant/four-prong-solitaire-necklace/white/abc.webp"
+    )
     assert not is_nested_product_object_key("products/abc.webp")
     assert is_pending_product_object_key("products/_pending/white/x.webp")
     assert is_pending_product_object_key("products/_pending/x.webp")
+    assert is_pending_product_object_key("products/_pending/pendant/white/x.webp")
 
 
 def test_promote_pending_product_url(monkeypatch):
@@ -357,6 +381,30 @@ def test_promote_pending_product_url(monkeypatch):
     assert promote_pending_product_url(PUBLIC_PRODUCT, "ring-abc", "white") == PUBLIC_PRODUCT
 
 
+def test_promote_pending_product_url_with_category(monkeypatch):
+    pending = (
+        f"{SUPABASE_URL}/storage/v1/object/public/shop-media/"
+        "products/_pending/pendant/white/abc.webp"
+    )
+    dest_url = (
+        f"{SUPABASE_URL}/storage/v1/object/public/shop-media/"
+        "products/pendant/four-prong/white/abc.webp"
+    )
+
+    def fake_move(src: str, dst: str) -> str:
+        assert src == "products/_pending/pendant/white/abc.webp"
+        assert dst == "products/pendant/four-prong/white/abc.webp"
+        return dest_url
+
+    monkeypatch.setattr("app.storage.move_object", fake_move)
+    assert (
+        promote_pending_product_url(
+            pending, "four-prong", "white", category="pendant"
+        )
+        == dest_url
+    )
+
+
 def test_save_product_children_promotes_pending_urls(monkeypatch):
     pending = (
         f"{SUPABASE_URL}/storage/v1/object/public/shop-media/"
@@ -377,13 +425,14 @@ def test_save_product_children_promotes_pending_urls(monkeypatch):
     )
     monkeypatch.setattr(
         "app.admin_products.promote_pending_product_url",
-        lambda url, folder, metal: promoted if "/_pending/" in url else url,
+        lambda url, folder, metal, **kwargs: promoted if "/_pending/" in url else url,
     )
     monkeypatch.setattr(
         "app.admin_products.delete_product_image_urls_if_unreferenced",
         lambda *_a, **_k: 0,
     )
     cleaned = {
+        "category": "ring",
         "nameZh": "測試商品",
         "nameEn": "Test Product",
         "variants": [],
@@ -478,7 +527,7 @@ def test_save_product_children_deletes_dropped_unreferenced(monkeypatch):
     )
     monkeypatch.setattr(
         "app.admin_products.promote_pending_product_url",
-        lambda url, folder, metal: url,
+        lambda url, folder, metal, **kwargs: url,
     )
 
     def fake_unref(cur, urls):
@@ -490,6 +539,7 @@ def test_save_product_children_deletes_dropped_unreferenced(monkeypatch):
         fake_unref,
     )
     cleaned = {
+        "category": "ring",
         "nameZh": "prod-1",
         "variants": [],
         "lengthWeights": None,
@@ -509,8 +559,8 @@ def test_align_product_images_to_folder_moves_unshared(monkeypatch):
     new = _product_url("products/new-name/white/a.webp")
     moved: list[tuple] = []
 
-    def fake_reloc(url, old_f, new_f, *, shared=False):
-        moved.append((url, old_f, new_f, shared))
+    def fake_reloc(url, old_f, new_f, *, shared=False, category=None):
+        moved.append((url, old_f, new_f, shared, category))
         return new
 
     monkeypatch.setattr("app.admin_products.relocate_product_object_url", fake_reloc)
@@ -519,7 +569,7 @@ def test_align_product_images_to_folder_moves_unshared(monkeypatch):
     images = [{"color": "white", "url": old}]
     align_product_images_to_folder(cur, "pid", "new-name", images)
     assert images[0]["url"] == new
-    assert moved == [(old, "old-name", "new-name", False)]
+    assert moved == [(old, "old-name", "new-name", False, None)]
 
 
 def test_resolve_product_folder_collision():
