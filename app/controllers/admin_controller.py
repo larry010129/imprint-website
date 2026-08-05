@@ -510,28 +510,41 @@ def _image_signature_matches(data: bytes, ext: str) -> bool:
 def _image_upload_error(file: UploadFile, data: bytes, ext: str) -> str | None:
     """Reject non-image MIME/ext, oversize, or magic-byte mismatch."""
     if ext not in _ALLOWED_IMAGE_EXT:
-        return "僅支援 PNG / JPG / JPEG / WEBP"
+        return "僅支援 JPG / PNG / WEBP"
     ct = (file.content_type or "").split(";")[0].strip().lower()
     if ct and ct not in _ALLOWED_IMAGE_MIME and ct not in {
         "application/octet-stream",
         "binary/octet-stream",
     }:
-        return "僅支援 PNG / JPG / JPEG / WEBP"
+        return "僅支援 JPG / PNG / WEBP"
     if not data:
         return "empty file"
     if len(data) > _MAX_IMAGE_BYTES:
-        return "圖片需小於 1MB"
+        return "來源圖片需小於 1MB"
     if not _image_signature_matches(data, ext):
         return "檔案內容與副檔名不符"
     return None
 
 
+class _ClientImageError(str):
+    """ensure_webp / client image failure — HTTP 400 (not storage 503)."""
+
+
+def _upload_err_response(upload_err: str) -> JSONResponse:
+    code = 400 if isinstance(upload_err, _ClientImageError) else 503
+    return JSONResponse(status_code=code, content={"error": str(upload_err)})
+
+
 def _storage_upload(kind: str, name: str, data: bytes, ext: str) -> tuple[str | None, str | None]:
+    from app.image_convert import ImageConvertError, ensure_webp
     from app.storage import StorageNotConfiguredError, StorageUploadError, upload_image
 
     try:
+        data, name, ext = ensure_webp(data, name, ext)
         # Upsert: category thumbs reuse categories/{slug}{ext}; overwrite on re-upload.
         return upload_image(kind, name, data, ext, upsert=True), None
+    except ImageConvertError as exc:
+        return None, _ClientImageError(str(exc))
     except StorageNotConfiguredError as exc:
         return None, str(exc)
     except StorageUploadError as exc:
@@ -588,7 +601,7 @@ async def product_upload(
     )
     url, upload_err = _storage_upload("products", rel, data, ext)
     if upload_err:
-        return JSONResponse(status_code=503, content={"error": upload_err})
+        return _upload_err_response(upload_err)
 
     image_row = None
     if pid and slot:
@@ -650,7 +663,7 @@ async def product_category_upload(
     name = f"{slug}{ext}"
     url, upload_err = _storage_upload("categories", name, data, ext)
     if upload_err:
-        return JSONResponse(status_code=503, content={"error": upload_err})
+        return _upload_err_response(upload_err)
 
     category: dict | None = None
     error: str | None = None
@@ -1847,7 +1860,7 @@ async def testimonial_upload(request: Request, file: UploadFile = File(...)) -> 
     name = f"{uuid.uuid4().hex}{ext}"
     url, upload_err = _storage_upload("testimonials", name, data, ext)
     if upload_err:
-        return JSONResponse(status_code=503, content={"error": upload_err})
+        return _upload_err_response(upload_err)
     return JSONResponse(content={"url": url})
 
 
@@ -2189,7 +2202,7 @@ async def banner_upload(request: Request, file: UploadFile = File(...)) -> JSONR
     name = f"{uuid.uuid4().hex}{ext}"
     url, upload_err = _storage_upload("banners", name, data, ext)
     if upload_err:
-        return JSONResponse(status_code=503, content={"error": upload_err})
+        return _upload_err_response(upload_err)
     return JSONResponse(content={"url": url})
 
 
@@ -2401,7 +2414,7 @@ async def page_image_upload(request: Request, file: UploadFile = File(...)) -> J
     name = f"{uuid.uuid4().hex}{ext}"
     url, upload_err = _storage_upload("page-images", name, data, ext)
     if upload_err:
-        return JSONResponse(status_code=503, content={"error": upload_err})
+        return _upload_err_response(upload_err)
     from app.controllers.web_controller import clear_page_image_cache
 
     clear_page_image_cache()

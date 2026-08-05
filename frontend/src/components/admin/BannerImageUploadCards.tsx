@@ -221,7 +221,7 @@ export default function BannerImageUploadCards({
         />
       </div>
       <p className="text-[11px] text-[#8a817b]">
-        點擊或拖曳圖片至任一欄，依序裁切①電腦版（16:9）與②手機版（9:16）後自動上傳（與頁面圖片相同流程）。
+        JPG / PNG / WEBP，來源 ≤1MB；上傳後轉 WebP 並壓縮至 ≤500KB。點擊或拖曳圖片至任一欄，依序裁切①電腦版（16:9）與②手機版（9:16）後自動上傳（與頁面圖片相同流程）。
       </p>
       {pickError ? <p className="text-xs text-[#c0392b]">{pickError}</p> : null}
       {cropOpen && file && previewUrl ? (

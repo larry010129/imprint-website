@@ -35,7 +35,7 @@ export default function CmsSectionImageField({
       <ImageUploadField
         label={label}
         value={imageUrl}
-        hint="支援 PNG / JPG / WEBP · 1MB 內（與頁面圖片相同流程）"
+        hint="支援 JPG / PNG / WEBP · 來源 ≤1MB · 上傳後轉 WebP 並壓縮至 ≤500KB（與頁面圖片相同流程）"
         targetW={targetW}
         targetH={targetH}
         onValidationError={setError}

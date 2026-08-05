@@ -32,10 +32,10 @@
   var METAL_SLOT_VALUES = METAL_SLOT_OPTIONS.map(function (o) { return o.value; });
   var DIAMOND_SLOT_VALUES = DIAMOND_SLOT_OPTIONS.map(function (o) { return o.value; });
 
-  // Match server _ALLOWED_IMAGE_EXT / UI copy: PNG / JPG / WEBP, 1MB.
-  var IMAGE_ACCEPT = 'image/png,image/jpeg,image/webp';
-  var IMAGE_MIME_OK = { 'image/png': 1, 'image/jpeg': 1, 'image/webp': 1 };
-  var IMAGE_EXT_OK = { '.png': 1, '.jpg': 1, '.jpeg': 1, '.webp': 1 };
+  // Match server _ALLOWED_IMAGE_EXT: JPG / PNG / WEBP. Source ≤1MB; stored ≤500KB WebP.
+  var IMAGE_ACCEPT = 'image/jpeg,image/png,image/webp';
+  var IMAGE_MIME_OK = { 'image/jpeg': 1, 'image/png': 1, 'image/webp': 1 };
+  var IMAGE_EXT_OK = { '.jpg': 1, '.jpeg': 1, '.png': 1, '.webp': 1 };
   var MAX_IMAGE_BYTES = 1 * 1024 * 1024;
 
   function imageFileExt(name) {
@@ -56,8 +56,8 @@
     var list = Array.from(files || []);
     if (!list.length) return '';
     for (var i = 0; i < list.length; i++) {
-      if (!isAllowedImageFile(list[i])) return '僅支援 PNG / JPG / WEBP';
-      if (list[i].size > MAX_IMAGE_BYTES) return '圖片需小於 1MB';
+      if (!isAllowedImageFile(list[i])) return '僅支援 JPG / PNG / WEBP';
+      if (list[i].size > MAX_IMAGE_BYTES) return '來源圖片需小於 1MB';
     }
     return '';
   }
@@ -1215,7 +1215,7 @@
                       '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>' +
                     '</span>' +
                     '<span class="ap-upload-title">上傳圖片</span>' +
-                    '<span class="ap-upload-hint">或點擊瀏覽<br>PNG / JPG / WEBP，1MB 內<br>可選裁切，預設保留原圖</span>' +
+                    '<span class="ap-upload-hint">或點擊瀏覽<br>JPG / PNG / WEBP，來源 ≤1MB<br>上傳後轉 WebP 並壓縮至 ≤500KB<br>可選裁切，預設保留原圖</span>' +
                     '<input type="file" class="ap-image-input" accept="' + IMAGE_ACCEPT + '" multiple hidden>' +
                   '</label>' +
                   '<div class="ap-upload-progress" hidden><div class="ap-upload-progress-bar"></div></div>' +

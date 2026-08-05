@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block title %}{{ title }}{% endblock %}</title>
 {% block meta_description %}<meta name="description" content="{{ description }}">{% endblock %}
-<link rel="canonical" href="https://www.imprint-diamond.com/{% if canonical_path %}{{ canonical_path }}{% else %}{% endif %}">
+<link rel="canonical" href="https://www.imprintdiamond.com/{% if canonical_path %}{{ canonical_path }}{% else %}{% endif %}">
 {% if robots %}
 <meta name="robots" content="{{ robots }}">
 {% else %}
@@ -20,13 +20,13 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="銘印鑽石 IMPRINT DIAMOND">
 <meta property="og:locale" content="zh_TW">
-<meta property="og:url" content="https://www.imprint-diamond.com/{{ canonical_path }}">
+<meta property="og:url" content="https://www.imprintdiamond.com/{{ canonical_path }}">
 {% block og_tags %}
 <meta property="og:title" content="{{ og_title or title }}">
 <meta property="og:description" content="{{ og_description or description }}">
-<meta property="og:image" content="https://www.imprint-diamond.com/{{ og_image or 'static/images/hero/imprint-diamond-family-memorial.jpg' }}">
+<meta property="og:image" content="https://www.imprintdiamond.com/{{ og_image or 'static/images/hero/imprint-diamond-family-memorial.jpg' }}">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="https://www.imprint-diamond.com/{{ og_image or 'static/images/hero/imprint-diamond-family-memorial.jpg' }}">
+<meta name="twitter:image" content="https://www.imprintdiamond.com/{{ og_image or 'static/images/hero/imprint-diamond-family-memorial.jpg' }}">
 {% endblock %}
 
 <link rel="stylesheet" href="/static/css/base.css?v=4.1">
@@ -45,12 +45,12 @@
 {% endif %}
 
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"Organization","@id":"https://www.imprint-diamond.com/#organization","name":"銘印鑽石 IMPRINT DIAMOND","legalName":"心之銘印鑽石有限公司","url":"https://www.imprint-diamond.com/","logo":"https://www.imprint-diamond.com/favicon.svg","telephone":"+886-2-2977-0268","address":{"@type":"PostalAddress","streetAddress":"福德南路43號1樓","addressLocality":"三重區","addressRegion":"新北市","addressCountry":"TW"},"contactPoint":[{"@type":"ContactPoint","telephone":"+886-2-2977-0268","contactType":"customer service","areaServed":"TW","availableLanguage":["zh-Hant"]}],"sameAs":["https://www.facebook.com/Imprintdiamond/","https://lin.ee/ktVBtmx"]}
+{"@context":"https://schema.org","@type":"Organization","@id":"https://www.imprintdiamond.com/#organization","name":"銘印鑽石 IMPRINT DIAMOND","legalName":"心之銘印鑽石有限公司","url":"https://www.imprintdiamond.com/","logo":"https://www.imprintdiamond.com/favicon.svg","telephone":"+886-2-2977-0268","address":{"@type":"PostalAddress","streetAddress":"福德南路43號1樓","addressLocality":"三重區","addressRegion":"新北市","addressCountry":"TW"},"contactPoint":[{"@type":"ContactPoint","telephone":"+886-2-2977-0268","contactType":"customer service","areaServed":"TW","availableLanguage":["zh-Hant"]}],"sameAs":["https://www.facebook.com/Imprintdiamond/","https://lin.ee/ktVBtmx"]}
 </script>
 
 {% if breadcrumbs %}
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{% for name, url in breadcrumbs %}{"@type":"ListItem","position":{{ loop.index }},"name":"{{ name }}"{% if url %},"item":"https://www.imprint-diamond.com{{ url }}"{% endif %}}{% if not loop.last %},{% endif %}{% endfor %}]}
+{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{% for name, url in breadcrumbs %}{"@type":"ListItem","position":{{ loop.index }},"name":"{{ name }}"{% if url %},"item":"https://www.imprintdiamond.com{{ url }}"{% endif %}}{% if not loop.last %},{% endif %}{% endfor %}]}
 </script>
 {% endif %}
 {% block extra_head %}{% endblock %}

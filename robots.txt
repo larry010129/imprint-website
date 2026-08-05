@@ -10,4 +10,4 @@ Disallow: /quote-sheet
 Disallow: /shop/quote-sheet.html
 Disallow: /s/
 
-Sitemap: https://www.imprint-diamond.com/sitemap.xml
+Sitemap: https://www.imprintdiamond.com/sitemap.xml

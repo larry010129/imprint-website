@@ -12,8 +12,8 @@ In [Google Cloud Console → Credentials](https://console.cloud.google.com/apis/
 |-------------|--------|
 | Local | `http://127.0.0.1:8080` |
 | Local alt | `http://localhost:8080` |
-| Production | `https://www.imprint-diamond.com` |
-| Bare domain (if used) | `https://imprint-diamond.com` |
+| Production | `https://www.imprintdiamond.com` |
+| Bare domain (if used) | `https://imprintdiamond.com` |
 
 Set `GOOGLE_CLIENT_ID` in `.env` and on Render to the Web client ID.
 

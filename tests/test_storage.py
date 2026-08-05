@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 from io import BytesIO
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi import UploadFile
+from starlette.datastructures import Headers
 
 from app.admin_products import (
     delete_product_image_urls_if_unreferenced,
@@ -175,10 +177,39 @@ def test_service_role_falls_back_to_secret_key(monkeypatch):
 
 
 def test_storage_upload_helper_success():
-    with patch("app.storage.upload_image", return_value=PUBLIC_PRODUCT):
-        url, err = _storage_upload("products", "abc.webp", b"x", ".webp")
+    webp = _pillow_image_bytes("WEBP", quality=80)
+    with patch("app.storage.upload_image", return_value=PUBLIC_PRODUCT) as mocked:
+        url, err = _storage_upload("products", "abc.webp", webp, ".webp")
     assert url == PUBLIC_PRODUCT
     assert err is None
+    mocked.assert_called_once()
+    args, kwargs = mocked.call_args
+    assert args[0] == "products"
+    assert args[1] == "abc.webp"
+    assert args[2] == webp  # pass-through
+    assert args[3] == ".webp"
+    assert kwargs.get("upsert") is True
+
+
+def test_storage_upload_converts_png_body_and_ext():
+    png = _pillow_image_bytes("PNG")
+    with patch("app.storage.upload_image", return_value=PUBLIC_PRODUCT) as mocked:
+        url, err = _storage_upload("products", "nest/abc.png", png, ".png")
+    assert url == PUBLIC_PRODUCT
+    assert err is None
+    args, kwargs = mocked.call_args
+    assert args[1] == "nest/abc.webp"
+    assert args[3] == ".webp"
+    assert args[2][:4] == b"RIFF" and args[2][8:12] == b"WEBP"
+    assert len(args[2]) <= 500 * 1024
+    assert kwargs.get("upsert") is True
+
+
+def test_storage_upload_convert_failure_returns_err():
+    bad = b"\x89PNG\r\n\x1a\n" + b"\x00" * 64
+    url, err = _storage_upload("products", "broken.png", bad, ".png")
+    assert url is None
+    assert err
 
 
 def test_storage_upload_helper_not_configured():
@@ -238,9 +269,51 @@ def test_delete_by_url_calls_storage_api():
     assert mock_client.delete.called
 
 
+def _pillow_image_bytes(
+    fmt: str = "PNG",
+    size: tuple[int, int] = (32, 32),
+    color: tuple[int, int, int] = (10, 20, 200),
+    **save_kw,
+) -> bytes:
+    from PIL import Image
+
+    img = Image.new("RGB", size, color)
+    buf = BytesIO()
+    img.save(buf, format=fmt, **save_kw)
+    return buf.getvalue()
+
+
+def _image_upload(
+    name: str = "photo.png",
+    *,
+    fmt: str | None = None,
+    content_type: str | None = None,
+    data: bytes | None = None,
+) -> UploadFile:
+    suffix = Path(name).suffix.lower()
+    if fmt is None:
+        fmt = {".png": "PNG", ".jpg": "JPEG", ".jpeg": "JPEG", ".webp": "WEBP", ".gif": "GIF"}.get(
+            suffix, "PNG"
+        )
+    if data is None:
+        save_kw = {"quality": 85} if fmt in {"JPEG", "WEBP"} else {}
+        data = _pillow_image_bytes(fmt, **save_kw)
+    if content_type is None:
+        content_type = {
+            "PNG": "image/png",
+            "JPEG": "image/jpeg",
+            "WEBP": "image/webp",
+            "GIF": "image/gif",
+        }.get(fmt, "application/octet-stream")
+    return UploadFile(
+        filename=name,
+        file=BytesIO(data),
+        headers=Headers({"content-type": content_type}),
+    )
+
+
 def _png_upload(name: str = "photo.png") -> UploadFile:
-    png = b"\x89PNG\r\n\x1a\n" + b"\x00" * 32
-    return UploadFile(filename=name, file=BytesIO(png))
+    return _image_upload(name)
 
 
 def test_metal_color_from_slot():
@@ -709,18 +782,14 @@ def test_product_upload_uses_nested_metal_path(monkeypatch):
     )
     calls: list[tuple] = []
 
-    def fake_upload(kind: str, name: str, data: bytes, ext: str):
-        calls.append((kind, name, ext))
-        url = (
+    def fake_upload_image(kind: str, name: str, data: bytes, ext: str, upsert: bool = False):
+        calls.append((kind, name, data, ext, upsert))
+        return (
             f"{SUPABASE_URL}/storage/v1/object/public/shop-media/"
             f"products/{name}"
         )
-        return url, None
 
-    monkeypatch.setattr(
-        "app.controllers.admin_controller._storage_upload",
-        fake_upload,
-    )
+    monkeypatch.setattr("app.storage.upload_image", fake_upload_image)
     monkeypatch.setattr(
         "app.controllers.admin_controller.append_product_image",
         lambda *_a, **_k: {"id": "img1", "product_id": "prod-1", "color": "white-pink"},
@@ -767,7 +836,10 @@ def test_product_upload_uses_nested_metal_path(monkeypatch):
     assert resp.status_code == 200
     assert calls and calls[0][0] == "products"
     assert calls[0][1].startswith(f"{folder}/white/")
-    assert calls[0][1].endswith(".png")
+    assert calls[0][1].endswith(".webp")
+    assert calls[0][3] == ".webp"
+    assert calls[0][2][:4] == b"RIFF" and calls[0][2][8:12] == b"WEBP"
+    assert calls[0][4] is True
 
 
 def test_product_upload_pending_without_product_id(monkeypatch):
@@ -928,3 +1000,75 @@ def test_cms_media_upload_returns_storage_url(monkeypatch):
     body = resp.body.decode()
     assert PUBLIC_CMS_MEDIA in body
     assert kinds == ["cms-media"]
+
+
+def test_product_upload_rejects_gif(monkeypatch):
+    import asyncio
+
+    monkeypatch.setattr(
+        "app.controllers.admin_controller._require_admin",
+        lambda _req: "admin-user",
+    )
+    with patch("app.storage.upload_image") as mocked:
+        resp = asyncio.run(
+            product_upload(
+                MagicMock(),
+                file=_image_upload("anim.gif", fmt="GIF", content_type="image/gif"),
+                product_id=None,
+                color=None,
+            )
+        )
+    assert resp.status_code == 400
+    assert "僅支援 JPG / PNG / WEBP" in resp.body.decode()
+    mocked.assert_not_called()
+
+
+def test_product_upload_rejects_wrong_mime(monkeypatch):
+    import asyncio
+
+    monkeypatch.setattr(
+        "app.controllers.admin_controller._require_admin",
+        lambda _req: "admin-user",
+    )
+    with patch("app.storage.upload_image") as mocked:
+        resp = asyncio.run(
+            product_upload(
+                MagicMock(),
+                file=_image_upload(
+                    "photo.png",
+                    fmt="PNG",
+                    content_type="image/gif",
+                ),
+                product_id=None,
+                color=None,
+            )
+        )
+    assert resp.status_code == 400
+    assert "僅支援 JPG / PNG / WEBP" in resp.body.decode()
+    mocked.assert_not_called()
+
+
+def test_product_upload_convert_failure_returns_400(monkeypatch):
+    import asyncio
+
+    monkeypatch.setattr(
+        "app.controllers.admin_controller._require_admin",
+        lambda _req: "admin-user",
+    )
+    bad = b"\x89PNG\r\n\x1a\n" + b"\x00" * 64
+    with patch("app.storage.upload_image") as mocked:
+        resp = asyncio.run(
+            product_upload(
+                MagicMock(),
+                file=_image_upload(
+                    "broken.png",
+                    content_type="image/png",
+                    data=bad,
+                ),
+                product_id=None,
+                color=None,
+            )
+        )
+    assert resp.status_code == 400
+    assert b"error" in resp.body
+    mocked.assert_not_called()

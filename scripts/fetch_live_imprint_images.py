@@ -1,4 +1,4 @@
-"""Download brand images from imprint-diamond.com CDN into public/images/legacy-live/."""
+"""Download brand images from imprintdiamond.com CDN into public/images/legacy-live/."""
 
 from __future__ import annotations
 
@@ -93,7 +93,7 @@ def main() -> int:
     manifest_path.write_text(
         json.dumps(
             {
-                "source": "https://www.imprint-diamond.com/",
+                "source": "https://www.imprintdiamond.com/",
                 "cdnBase": CDN,
                 "downloaded": ok,
                 "failed": fail,

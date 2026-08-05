@@ -56,7 +56,7 @@ async function resolveUploadFile(
 
 export function ImageUploadField({
   label,
-  hint = "支援 PNG / JPG / WEBP · 1MB 內",
+  hint = "支援 JPG / PNG / WEBP · 來源 ≤1MB · 上傳後轉 WebP 並壓縮至 ≤500KB",
   value = "",
   onChange,
   onUpload,

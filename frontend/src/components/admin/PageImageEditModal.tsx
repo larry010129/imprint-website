@@ -229,7 +229,7 @@ export default function PageImageEditModal({
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>上傳新圖（PNG / JPG / WEBP，&lt; 1MB）</Label>
+            <Label>上傳新圖（JPG / PNG / WEBP，來源 ≤1MB；存檔 ≤500KB WebP）</Label>
             <Input
               ref={inputRef}
               type="file"
@@ -259,7 +259,9 @@ export default function PageImageEditModal({
                   <p className="text-sm font-medium text-[#2b2320]">點擊選擇圖片</p>
                   <p className="text-xs">或拖曳檔案到此</p>
                 </div>
-                <p className="text-[11px] text-[#8a817b]">支援 PNG / JPG / WEBP · 1MB 內</p>
+                <p className="text-[11px] text-[#8a817b]">
+                  支援 JPG / PNG / WEBP · 來源 ≤1MB · 上傳後轉 WebP 並壓縮至 ≤500KB
+                </p>
               </button>
             ) : (
               <div className="space-y-3">

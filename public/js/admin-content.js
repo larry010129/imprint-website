@@ -1141,7 +1141,7 @@
             countryFieldMarkup(isEdit ? t.country : '', isEdit ? t.city : '') +
             '<label class="ap-field ap-field--full"><span>訂製款式圖片' + reqStar() + '</span>' +
               '<div id="acTestimonialImageUploadMount"></div>' +
-              '<p class="ap-section-hint">PNG / JPG / WEBP，1MB 內。前台顯示角色為「分類・城市／國家」。</p>' +
+              '<p class="ap-section-hint">JPG / PNG / WEBP，來源 ≤1MB；上傳後轉 WebP 並壓縮至 ≤500KB。前台顯示角色為「分類・城市／國家」。</p>' +
               '<input type="hidden" name="imageUrl" id="acTestimonialImageUrl" value="' + esc(imageUrl) + '">' +
             '</label>' +
             '<label class="ap-field ap-field--full"><span>見證內容（完整）' + reqStar() + '</span>' +

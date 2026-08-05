@@ -41,14 +41,16 @@ class Settings:
 
     @property
     def public_base_url(self) -> str:
-        external = os.environ.get("RENDER_EXTERNAL_URL")
-        if external:
-            base = external
-        else:
-            base = f"http://127.0.0.1:{self.port}"
+        # Prefer marketing/canonical URL for email + reset links; Render URL is fallback.
+        base = (
+            os.environ.get("PUBLIC_SITE_URL", "").strip()
+            or os.environ.get("SITE_URL", "").strip()
+            or os.environ.get("RENDER_EXTERNAL_URL", "").strip()
+            or f"http://127.0.0.1:{self.port}"
+        )
         if self.is_render and not base.startswith("http"):
             base = f"https://{base}"
-        return base
+        return base.rstrip("/")
 
     @property
     def supabase_url(self) -> str:

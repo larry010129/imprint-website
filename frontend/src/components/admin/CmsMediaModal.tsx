@@ -51,6 +51,9 @@ export default function CmsMediaModal({
             }}
           />
         </label>
+        <p className="cms-hint">
+          JPG / PNG / WEBP，來源 ≤1MB；上傳後轉 WebP 並壓縮至 ≤500KB
+        </p>
         <div className="cms-media-grid">
           {media.map((item) => (
             <div key={item.id} className="cms-media-item">

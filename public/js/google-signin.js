@@ -24,13 +24,28 @@
     return (api && api.getBase) ? (api.getBase() || '') : '';
   }
 
+  /** Mirror server `safe_next_url`: same-origin relative path only. */
+  function safeNextUrl(raw, fallback) {
+    var next = (raw || '').trim();
+    if (!next) return fallback;
+    try {
+      next = decodeURIComponent(next);
+    } catch (_e) {
+      return fallback;
+    }
+    if (next.charAt(0) !== '/' || next.indexOf('//') === 0) return fallback;
+    return next;
+  }
+
   function handleCredentialResponse(response) {
     setMsg('登入中…', false);
+    var params = new URLSearchParams(window.location.search);
+    var nextSafe = safeNextUrl(params.get('next'), '/account.html');
     fetch(apiBase() + '/api/auth/google', {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ credential: response.credential }),
+      body: JSON.stringify({ credential: response.credential, next: nextSafe }),
     })
       .then(function (res) {
         return res.json().catch(function () { return {}; }).then(function (data) {
@@ -42,11 +57,8 @@
           setMsg((result.data && result.data.error) || 'Google 登入失敗，請再試一次。', true);
           return;
         }
-        var params = new URLSearchParams(window.location.search);
-        var next = params.get('next');
-        // Server `next` wins (soft onboarding prompt shows on /account when incomplete).
-        window.location.href = result.data.next
-          || (next ? decodeURIComponent(next) : '/account.html');
+        // Server `next` wins; query fallback still same-origin path only.
+        window.location.href = safeNextUrl(result.data.next, nextSafe);
       })
       .catch(function () {
         setMsg('連線異常，請稍後再試。', true);
