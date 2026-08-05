@@ -120,7 +120,7 @@
       });
     }
     if (config.engravingBand) rows.push({ label: '戒圈刻字', value: config.engravingBand });
-    if (config.engravingRemark) rows.push({ label: '金屬刻字', value: config.engravingRemark });
+    if (config.engravingRemark) rows.push({ label: '戒圈刻字', value: config.engravingRemark });
     if (config.engravingGirdle) rows.push({ label: '腰圍刻字', value: config.engravingGirdle });
     if (config.series) rows.push({ label: '系列', value: config.series });
     return rows.filter(function (row) { return row.value != null && row.value !== ''; });

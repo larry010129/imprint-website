@@ -5200,7 +5200,7 @@ function buildInquirySummaryLines() {
   if (state.lengthCm) lines.push(`長度：${state.lengthCm} cm`);
   if (pricing?.total != null) lines.push(`試算參考價：NT$ ${Math.round(pricing.total).toLocaleString()}`);
   if (state.engravingBand) lines.push(`戒台刻字：${state.engravingBand}`);
-  if (state.engravingRemark) lines.push(`金屬刻字：${state.engravingRemark}`);
+  if (state.engravingRemark) lines.push(`戒圈刻字：${state.engravingRemark}`);
   if (state.engravingGirdle) lines.push(`腰圍刻字：${state.engravingGirdle}`);
   lines.push('', '請協助確認報價與交期，謝謝。');
   return lines;
