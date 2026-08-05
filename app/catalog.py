@@ -162,7 +162,6 @@ def _default_color_slot_keys(metal: str, category: str | None = None) -> list[st
     keys = [f"{metal}-white"]
     for diamond in ("yellow", "blue", "pink"):
         keys.append(f"{metal}-{diamond}")
-    keys.append(metal)
     return keys
 
 

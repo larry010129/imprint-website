@@ -245,10 +245,10 @@ def test_shop_js_fancy_carat_dropdown_intersects_admin_min():
     assert "stockFancyDiamondColors" in (
         ROOT / "public" / "js" / "shop-assets.js"
     ).read_text(encoding="utf-8")
-    assert "shop.js?v=137" in (
+    assert "shop.js?v=139" in (
         ROOT / "content" / "site" / "templates" / "pages" / "shop" / "calculator.html"
     ).read_text(encoding="utf-8")
-    assert "shop.js?v=137" in (
+    assert "shop.js?v=139" in (
         ROOT / "content" / "site" / "page-registry.json"
     ).read_text(encoding="utf-8")
     # Step 2 style grid: admin slot order, then thumb/stock; onerror walks full chain.
@@ -265,7 +265,7 @@ def test_shop_js_fancy_carat_dropdown_intersects_admin_min():
     assert "if (product.thumbUrl && isUsableCatalogImageUrl(product.thumbUrl)) return '';" in src
     assert "if (productHasCatalogImages(product)) return '';" in src
     assert (
-        "// Lite /api/catalog: only thumbUrl + imageSlotOrder metadata — thumb is primary."
+        "// Full catalog: 預設顏色 slots first; lite uses server thumbUrl (same priority)."
         in src
     )
     assert "shop-assets.js?v=15" in (
@@ -652,6 +652,53 @@ console.log(JSON.stringify({
     assert "pink" in out["earringRoseResolve"]["src"]
 
 
+def test_shop_js_multi_image_gallery_honors_index():
+    """Multi-image slot: main preview must use images[productImageIndex], not catalog [0]."""
+    import json
+    import subprocess
+
+    src = (ROOT / "public" / "js" / "shop.js").read_text(encoding="utf-8")
+    assert "const multiImageGallery = images.length > 1;" in src
+    assert "if (preview.src && !multiImageGallery) primarySrc = preview.src;" in src
+    assert "&& !multiImageGallery" in src
+
+    browser_script = r"""
+function pickPrimarySrc({ multiImageGallery, indexedSrc, previewSrc, keepPrevious, fallbackUrl }) {
+  if (multiImageGallery) return indexedSrc;
+  return previewSrc || (keepPrevious ? '' : (indexedSrc || fallbackUrl || ''));
+}
+const img0 = '/static/uploads/products/earring-top.png';
+const img1 = '/static/uploads/products/earring-side.png';
+console.log(JSON.stringify({
+  multiUsesIndex1: pickPrimarySrc({
+    multiImageGallery: true,
+    indexedSrc: img1,
+    previewSrc: img0,
+    keepPrevious: false,
+    fallbackUrl: '',
+  }),
+  singleUsesPreview: pickPrimarySrc({
+    multiImageGallery: false,
+    indexedSrc: img1,
+    previewSrc: img0,
+    keepPrevious: false,
+    fallbackUrl: '',
+  }),
+}));
+"""
+    out = json.loads(
+        subprocess.run(
+            ["node", "-e", browser_script],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout
+    )
+    assert out["multiUsesIndex1"] == "/static/uploads/products/earring-side.png"
+    assert out["singleUsesPreview"] == "/static/uploads/products/earring-top.png"
+
+
 def test_shop_js_girdle_not_gated_by_allows_engraving():
     """腰圍刻字 stays visible when allowsEngraving=false (except chain)."""
     src = (ROOT / "public" / "js" / "shop.js").read_text(encoding="utf-8")
@@ -1012,6 +1059,16 @@ function catalogUrlsForImageSlot(product, slotKey) {
   }
   return catalogImagesForKeys(product, [slotKey]);
 }
+function defaultColorImageSlotKeys(product) {
+  const metal = String(product?.defaultColor || 'white').toLowerCase();
+  const cat = String(product?.category || '').toLowerCase();
+  if (cat === 'chain') return [metal + '-white', metal];
+  const keys = [metal + '-white'];
+  for (const diamond of IMAGE_SLOT_DIAMONDS) {
+    if (diamond !== 'white') keys.push(metal + '-' + diamond);
+  }
+  return keys;
+}
 function catalogImageSlotKeyOrder(product) {
   if (!product?.images) return [];
   const seen = new Set();
@@ -1022,6 +1079,7 @@ function catalogImageSlotKeyOrder(product) {
     seen.add(key);
     order.push(key);
   };
+  for (const key of defaultColorImageSlotKeys(product)) pushKey(key);
   for (const key of product.imageSlotOrder || []) pushKey(key);
   for (const key of product.colors || []) pushKey(key);
   for (const key of presetImageSlotKeys(product.category)) pushKey(key);
@@ -1051,12 +1109,8 @@ function styleGridImageCandidates(product) {
     seen.add(url);
     out.push(url);
   };
-  const liteCatalog = !product?.images || !Object.keys(product.images).length;
-  if (liteCatalog && product?.thumbUrl && isUsableCatalogImageUrl(product.thumbUrl)) {
-    add(product.thumbUrl);
-  }
   for (const url of orderedCatalogImageUrls(product)) add(url);
-  if (!liteCatalog && product?.thumbUrl && isUsableCatalogImageUrl(product.thumbUrl)) {
+  if (product?.thumbUrl && isUsableCatalogImageUrl(product.thumbUrl)) {
     add(product.thumbUrl);
   }
   return out;
@@ -1081,6 +1135,7 @@ const product = {
 const productRoseFirst = {
   id: 'uuid-ring-rose-first',
   category: 'ring',
+  defaultColor: 'white',
   imageSlotOrder: ['rose-white', 'white-yellow', 'white-white'],
   colors: ['rose-white', 'white-yellow', 'white-white'],
   images: {
@@ -1090,12 +1145,14 @@ const productRoseFirst = {
   },
 };
 
+const goodWhite = '/static/uploads/products/white-white.png';
 const litePendant = {
   id: '408642ff-0000-0000-0000-000000000001',
   category: 'pendant',
+  defaultColor: 'white',
   imageSlotOrder: ['rose-white', 'white-white'],
   colors: ['rose-white', 'white-white'],
-  thumbUrl: goodRose,
+  thumbUrl: goodWhite,
 };
 
 const candidates = styleGridImageCandidates(product);
@@ -1137,9 +1194,9 @@ console.log(JSON.stringify({
         "/static/uploads/products/rose-white.png",
         "/static/uploads/products/thumb-fallback.png",
     ]
-    assert out["roseFirstPrimary"] == "/static/uploads/products/rose-white.png"
-    assert out["roseFirstOrder"] == ["rose-white", "white-yellow", "white-white"]
-    assert out["litePrimary"] == "/static/uploads/products/rose-white.png"
+    assert out["roseFirstPrimary"] == "/static/uploads/products/platinum-white-broken.png"
+    assert out["roseFirstOrder"] == ["white-white", "white-yellow", "rose-white"]
+    assert out["litePrimary"] == "/static/uploads/products/white-white.png"
     assert "/static/uploads/products/platinum-white-yellow.png" in out["ordered"]
     assert out["skipsPending"] == ["/static/uploads/products/platinum-white-yellow.png"]
 

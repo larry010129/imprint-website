@@ -625,7 +625,6 @@ function defaultColorImageSlotKeys(product) {
   for (const diamond of IMAGE_SLOT_DIAMONDS) {
     if (diamond !== 'white') keys.push(`${metal}-${diamond}`);
   }
-  if (IMAGE_SLOT_METALS.includes(metal)) keys.push(metal);
   return keys;
 }
 
@@ -4436,6 +4435,8 @@ function updateLargeImage(layer) {
 
   const images = currentProductImages();
   if (productImageIndex >= images.length) productImageIndex = 0;
+  const multiImageGallery = images.length > 1;
+  const indexedSrc = images[productImageIndex] || '';
 
   // Catalog product.images (e.g. diamond-loose white.png) must not override matrix previews.
   if (isDiamondOnlyCategory()) {
@@ -4456,11 +4457,13 @@ function updateLargeImage(layer) {
     return;
   }
 
-  // pendantPreviewLayers already resolved the correct shop-product URL (incl. combo /
-  // pendant-only). Prefer that; only use productImageResolve for fallback chain.
+  // pendantPreviewLayers resolves slot [0] via catalogPreviewSrc. Multi-image slots must
+  // honor productImageIndex — never swap sibling carousel URLs via preview.src/fallback.
   let primarySrc = preview.composite
     ? ''
-    : (preview.src || (preview.keepPrevious ? '' : (images[productImageIndex] || imageUrl(state.category, state.type) || '')));
+    : (multiImageGallery
+      ? indexedSrc
+      : (preview.src || (preview.keepPrevious ? '' : (indexedSrc || imageUrl(state.category, state.type) || ''))));
   let fallbacks = [];
   const pendantOnly = !!preview.pendantOnly;
   previewRoot?.classList.toggle('is-pendant-only', pendantOnly && !!primarySrc);
@@ -4478,8 +4481,8 @@ function updateLargeImage(layer) {
       if (!primarySrc && resolved.src) primarySrc = resolved.src;
       fallbacks = resolved.fallbacks || [];
       // If layers picked a different URL than resolve, keep layers (it knows chain metal).
-      if (preview.src) primarySrc = preview.src;
-    } else if (preview.src) {
+      if (preview.src && !multiImageGallery) primarySrc = preview.src;
+    } else if (preview.src && !multiImageGallery) {
       primarySrc = preview.src;
     }
     img.onerror = null;
@@ -4504,9 +4507,10 @@ function updateLargeImage(layer) {
       && window.ShopAssets?.attachImageFallbackChain
       && !preview.fromCatalog
       && !preview.keepPrevious
+      && !multiImageGallery
     ) {
       window.ShopAssets.attachImageFallbackChain(img, fallbacks);
-    } else if (usesPendantCompositePreview() && product && !preview.keepPrevious) {
+    } else if (usesPendantCompositePreview() && product && !preview.keepPrevious && !multiImageGallery) {
       const fullFallback = productPreviewFallbackSrc(product);
       if (fullFallback && fullFallback !== primarySrc) {
         img.onerror = () => {
