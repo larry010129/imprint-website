@@ -38,9 +38,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git fetch origin main
-          git pull --rebase origin main
-
+          # Quote fetch leaves dirty files — commit FIRST, then rebase/push.
+          # (pull --rebase before commit fails: "cannot pull with rebase: unstaged changes")
           git add data/gold-quote.json public/js/gold-quote-data.js
           if git diff --staged --quiet; then
             echo "No quote changes to commit; skip push"
@@ -49,6 +48,7 @@ jobs:
           git commit -m "chore: update Allbeauty gold quote fallback"
 
           finish_rebase() {
+            # During rebase: --theirs = our replayed quote commit (keep fresh scrape)
             while git rev-parse -q --verify REBASE_HEAD >/dev/null; do
               for f in data/gold-quote.json public/js/gold-quote-data.js; do
                 if git diff --name-only --diff-filter=U | grep -qx "$f"; then
@@ -68,8 +68,13 @@ jobs:
 
           for attempt in 1 2 3 4 5; do
             git fetch origin main
-            if ! git pull --rebase origin main; then
-              finish_rebase || true
+            if ! git rebase origin/main; then
+              if ! finish_rebase; then
+                git rebase --abort 2>/dev/null || true
+                echo "Rebase failed (attempt $attempt); retrying..."
+                sleep $((attempt * 3))
+                continue
+              fi
             fi
             if git push origin HEAD:main; then
               echo "Push succeeded (attempt $attempt)"
