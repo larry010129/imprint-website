@@ -11,11 +11,12 @@ from psycopg import errors as pg_errors
 from app.image_urls import resolve_product_image_url
 
 DEFAULT_CATEGORIES: list[dict] = [
-    {"slug": "pendant", "label_zh": "項墜", "label_en": "Pendant", "thumb_path": None, "sort_order": 0, "addon_price_twd": 0},
-    {"slug": "ring", "label_zh": "戒指", "label_en": "Ring", "thumb_path": None, "sort_order": 1, "addon_price_twd": 0},
-    {"slug": "earring", "label_zh": "耳環", "label_en": "Earring", "thumb_path": None, "sort_order": 2, "addon_price_twd": 0},
-    {"slug": "bracelet", "label_zh": "手鍊", "label_en": "Bracelet", "thumb_path": None, "sort_order": 3, "addon_price_twd": 0},
-    {"slug": "chain", "label_zh": "鏈條", "label_en": "Chain", "thumb_path": None, "sort_order": 4, "addon_price_twd": 0},
+    {"slug": "diamond", "label_zh": "紀念鑽石", "label_en": "Memorial diamond", "thumb_path": None, "sort_order": 0, "addon_price_twd": 0},
+    {"slug": "pendant", "label_zh": "項墜", "label_en": "Pendant", "thumb_path": None, "sort_order": 1, "addon_price_twd": 0},
+    {"slug": "ring", "label_zh": "戒指", "label_en": "Ring", "thumb_path": None, "sort_order": 2, "addon_price_twd": 0},
+    {"slug": "earring", "label_zh": "耳環", "label_en": "Earring", "thumb_path": None, "sort_order": 3, "addon_price_twd": 0},
+    {"slug": "bracelet", "label_zh": "手鍊", "label_en": "Bracelet", "thumb_path": None, "sort_order": 4, "addon_price_twd": 0},
+    {"slug": "chain", "label_zh": "鏈條", "label_en": "Chain", "thumb_path": None, "sort_order": 5, "addon_price_twd": 0},
 ]
 
 _CATEGORY_SELECT = (
@@ -48,14 +49,35 @@ def ensure_product_categories_schema(cur) -> None:
     cur.execute(
         """
         insert into product_categories (slug, label_zh, label_en, sort_order, addon_price_twd) values
-          ('pendant', '項墜', 'Pendant', 0, 0),
-          ('ring', '戒指', 'Ring', 1, 0),
-          ('earring', '耳環', 'Earring', 2, 0),
-          ('bracelet', '手鍊', 'Bracelet', 3, 0),
-          ('chain', '鏈條', 'Chain', 4, 0)
+          ('diamond', '紀念鑽石', 'Memorial diamond', 0, 0),
+          ('pendant', '項墜', 'Pendant', 1, 0),
+          ('ring', '戒指', 'Ring', 2, 0),
+          ('earring', '耳環', 'Earring', 3, 0),
+          ('bracelet', '手鍊', 'Bracelet', 4, 0),
+          ('chain', '鏈條', 'Chain', 5, 0)
         on conflict (slug) do nothing
         """
     )
+    # Existing DBs seeded jewelry-only — insert diamond + pin default sort order.
+    for cat in DEFAULT_CATEGORIES:
+        cur.execute(
+            """
+            insert into product_categories (slug, label_zh, label_en, sort_order, addon_price_twd)
+            values (%s, %s, %s, %s, %s)
+            on conflict (slug) do update set
+              sort_order = excluded.sort_order,
+              label_zh = excluded.label_zh,
+              label_en = coalesce(product_categories.label_en, excluded.label_en),
+              updated_at = now()
+            """,
+            (
+                cat["slug"],
+                cat["label_zh"],
+                cat["label_en"],
+                cat["sort_order"],
+                int(cat.get("addon_price_twd") or 0),
+            ),
+        )
 
 
 def _serialize_row(row: dict) -> dict:

@@ -207,4 +207,31 @@ def test_admin_js_wires_patch_and_surfaces_errors():
     assert "method: 'PATCH'" in api
     html = ADMIN_HTML.read_text(encoding="utf-8")
     assert "api-client.js?v=18" in html
-    assert "admin-products.js?v=43" in html
+    assert "admin-products.js?v=46" in html
+
+
+def test_default_categories_memorial_diamond_first():
+    pc = _load_product_categories()
+    slugs = [row["slug"] for row in pc.DEFAULT_CATEGORIES]
+    assert slugs[0] == "diamond"
+    assert pc.DEFAULT_CATEGORIES[0]["label_zh"] == "紀念鑽石"
+    assert slugs == [
+        "diamond",
+        "pendant",
+        "ring",
+        "earring",
+        "bracelet",
+        "chain",
+    ]
+    assert [row["sort_order"] for row in pc.DEFAULT_CATEGORIES] == list(range(6))
+
+
+def test_admin_js_category_order_diamond_first():
+    src = ADMIN_PRODUCTS_JS.read_text(encoding="utf-8")
+    assert (
+        "var CATEGORY_ORDER = ['diamond', 'pendant', 'ring', 'earring', 'bracelet', 'chain'];"
+        in src
+    )
+    assert "activeTab: 'cat-diamond'" in src
+    html = ADMIN_HTML.read_text(encoding="utf-8")
+    assert "admin-products.js?v=46" in html

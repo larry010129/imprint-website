@@ -5,7 +5,7 @@
   var api = window.imprintAPI;
   if (!api || !api.admin) return;
 
-  var CATEGORY_ORDER = ['pendant', 'ring', 'earring', 'bracelet', 'chain'];
+  var CATEGORY_ORDER = ['diamond', 'pendant', 'ring', 'earring', 'bracelet', 'chain'];
   var GOLDS = ['9k', '14k', '18k', 'pt950', 's925'];
   var CARATS = [
     '0.1', '0.2', '0.3', '0.5', '0.6', '0.7', '0.8', '0.9', '1.0',
@@ -13,11 +13,14 @@
   ];
   var CHAIN_CARATS = ['1.0mm', '1.5mm', '2.0mm', '2.5mm', '3.0mm'];
   var CHAIN_LENGTHS_CM = [36, 41, 46, 51, 61, 76, 80];
+  var RING_SIZE_MIN = 5;
+  var RING_SIZE_MAX = 18;
   var COLORS = ['white', 'yellow', 'rose'];
   var GOLD_LABELS = { '9k': '9K', '14k': '14K', '18k': '18K', 'pt950': 'PT950', 's925': 'S925' };
   // 蠟重(錢) × factor → 成品金重(錢)；試算頁下單時以後端 app/pricing.py 的同一份係數為準，這裡僅供上架時預覽估算。
   var WAX_TO_METAL_CHIN = { '9k': 11.5, '14k': 14.0, '18k': 16.0, 'pt950': 24.0, 's925': 11.0 };
   var COLOR_LABELS = { white: '白金', yellow: '黃金', rose: '玫瑰金' };
+  var DIAMOND_COLOR_LABELS = { white: '白鑽', yellow: '黃鑽', blue: '藍鑽', pink: '粉鑽' };
   var METAL_SLOT_OPTIONS = [
     { value: 'white', label: '白金' },
     { value: 'yellow', label: '黃金' },
@@ -31,6 +34,14 @@
   ];
   var METAL_SLOT_VALUES = METAL_SLOT_OPTIONS.map(function (o) { return o.value; });
   var DIAMOND_SLOT_VALUES = DIAMOND_SLOT_OPTIONS.map(function (o) { return o.value; });
+  // Shop memorial style keys — seeded into products for admin image/name/color edits.
+  var MEMORIAL_DIAMOND_STYLE_KEYS = [
+    'diamond-first-love',
+    'diamond-pet',
+    'diamond-love',
+    'diamond-family',
+    'diamond-heirloom',
+  ];
 
   // Match server _ALLOWED_IMAGE_EXT: JPG / PNG / WEBP. Source ≤1MB; stored ≤500KB WebP.
   var IMAGE_ACCEPT = 'image/jpeg,image/png,image/webp';
@@ -93,6 +104,9 @@
 
   /** Calculator image axes per category (matches shop.js preview lookup). */
   function presetSlotKeysForCategory(category) {
+    if (category === 'diamond') {
+      return DIAMOND_SLOT_VALUES.slice();
+    }
     if (category === 'chain') {
       return METAL_SLOT_VALUES.map(function (metal) {
         return buildSlotKey(metal, 'white', null);
@@ -111,7 +125,7 @@
     categories: [],
     categoryOrder: [],
     chainCatalog: null,
-    activeTab: 'cat-pendant',
+    activeTab: 'cat-diamond',
     editingId: null,
     view: 'list',
   };
@@ -176,17 +190,24 @@
     return resolved;
   }
 
-  function imageCoversDefaultColor(imageColor, defaultColor) {
+  function imageCoversDefaultColor(imageColor, defaultColor, category) {
     var key = String(imageColor || '').toLowerCase();
     var def = String(defaultColor || '').toLowerCase();
-    if (!key || COLORS.indexOf(def) < 0) return false;
+    if (!key || !def) return false;
+    if (category === 'diamond') {
+      if (DIAMOND_SLOT_VALUES.indexOf(def) < 0) return false;
+      return key === def || key.slice(-(def.length + 1)) === '-' + def;
+    }
+    if (COLORS.indexOf(def) < 0) return false;
     return key === def || key.indexOf(def + '-') === 0;
   }
 
   function productThumb(product) {
     var images = product.images || [];
     var def = product.default_color || 'white';
-    var match = images.find(function (img) { return imageCoversDefaultColor(img.color, def); }) || images[0];
+    var match = images.find(function (img) {
+      return imageCoversDefaultColor(img.color, def, product.category);
+    }) || images[0];
     if (match) {
       var thumb = window.AdminImageUrls && window.AdminImageUrls.productThumbnail
         ? window.AdminImageUrls.productThumbnail(match.file_path, def)
@@ -206,10 +227,15 @@
   function publishReady(product) {
     var variants = product.variants || [];
     var images = product.images || [];
-    if (!variants.length) return { ok: false, reason: '請先新增至少一個款式選項' };
+    // Memorial diamond: name + image + color only (no metal/price variants).
+    if (product.category !== 'diamond' && !variants.length) {
+      return { ok: false, reason: '請先新增至少一個款式選項' };
+    }
     if (!images.length) return { ok: false, reason: '請先上傳至少一張商品照片' };
     var def = product.default_color || 'white';
-    if (!images.some(function (img) { return imageCoversDefaultColor(img.color, def); })) {
+    if (!images.some(function (img) {
+      return imageCoversDefaultColor(img.color, def, product.category);
+    })) {
       return { ok: false, reason: '預設顏色必須至少有一張商品照片' };
     }
     return { ok: true, reason: '' };
@@ -422,8 +448,11 @@
 
     setRoot(
       '<p class="note">管理商品款式、金屬選項與照片。上架後會顯示於客製試算頁；拖曳列可調整排序。</p>' +
-      '<p class="note ap-memorial-note">紀念鑽石系列（滿月／寵物／結髮／全家福／生命鑽石）為試算頁固定款式，不在此商品 CRUD 管理；價格依克拉試算。</p>' +
-      '<div class="ap-toolbar"><button type="button" class="btn-sm btn-primary" id="btnNewProduct">+ 新增商品</button></div>' +
+      '<p class="note ap-memorial-note">紀念鑽石：編輯款式名稱、鑽石顏色與照片以連結試算頁；不含金屬／價格（價格請用「前往價格設定」）。</p>' +
+      '<div class="ap-toolbar">' +
+        '<button type="button" class="btn-sm" id="btnGotoPricing">前往價格設定</button>' +
+        '<button type="button" class="btn-sm btn-primary" id="btnNewProduct">+ 新增商品</button>' +
+      '</div>' +
       '<div class="ap-category-tabs" role="tablist">' + tabs + '</div>' +
       categoryPanelHtml() +
       '<div class="ap-table-root" id="apProductsTableRoot">' + tableAreaSkeletonHtml() + '</div>' +
@@ -538,6 +567,18 @@
       newBtn.addEventListener('click', function () {
         var cat = state.activeTab.replace('cat-', '');
         openEditor(null, cat);
+      });
+    }
+
+    var pricingBtn = document.getElementById('btnGotoPricing');
+    if (pricingBtn) {
+      pricingBtn.addEventListener('click', function () {
+        if (window.Admin1Shell && typeof window.Admin1Shell.switchPanel === 'function') {
+          window.Admin1Shell.switchPanel('pricing');
+          return;
+        }
+        var navBtn = document.querySelector('.side-nav button[data-panel="pricing"]');
+        if (navBtn) navBtn.click();
       });
     }
 
@@ -1103,6 +1144,94 @@
     section.hidden = category !== 'chain';
   }
 
+  function toggleRingSizeSection(form, category) {
+    var section = form.querySelector('#apRingSizeSection');
+    if (!section) return;
+    section.hidden = category !== 'ring';
+  }
+
+  function ringSizeConfigOf(product) {
+    if (!product) return null;
+    return product.ringSizeConfig || product.ring_size_config || null;
+  }
+
+  function ringSizeRowHtml(row) {
+    var size = row && row.size != null ? row.size : '';
+    var addon = '';
+    if (row) {
+      if (row.addonPriceTwd != null && row.addonPriceTwd !== '') addon = row.addonPriceTwd;
+      else if (row.addon_price_twd != null && row.addon_price_twd !== '') addon = row.addon_price_twd;
+    }
+    return (
+      '<div class="ap-variant-row ap-ring-size-row">' +
+        '<input type="number" name="ringSize" min="' + RING_SIZE_MIN + '" max="' + RING_SIZE_MAX +
+          '" step="1" placeholder="戒圍" value="' + esc(size) + '">' +
+        '<input type="number" name="ringSizeAddon" min="0" step="1" placeholder="戒圍品項加價 (NT$)" value="' +
+          esc(addon) + '" title="僅戒圍加價；與款式列／品項通用加價分開疊加">' +
+        '<button type="button" class="ap-remove-row" aria-label="移除">×</button>' +
+      '</div>'
+    );
+  }
+
+  function ringSizeSectionHtml(product, category) {
+    var cfg = ringSizeConfigOf(product);
+    var start = cfg && cfg.startSize != null ? cfg.startSize
+      : (cfg && cfg.start_size != null ? cfg.start_size : '');
+    var sizes = (cfg && Array.isArray(cfg.sizes) && cfg.sizes.length)
+      ? cfg.sizes
+      : [null];
+    var rows = sizes.map(function (r) { return ringSizeRowHtml(r); }).join('');
+    return (
+      '<div id="apRingSizeSection"' + (category === 'ring' ? '' : ' hidden') + '>' +
+        '<h4 class="ap-section-title">戒圍設定</h4>' +
+        '<p class="ap-section-hint">設定試算起始戒圍，以及各戒圍的「戒圍品項加價」。此加價與上方款式列品項加價、品項通用加價分開，會額外疊加在金工價格上；未列的戒圍加價為 0。</p>' +
+        '<div class="ap-ring-start-row">' +
+          '<label><span>起始戒圍（試算預設／下限）</span>' +
+            '<input type="number" name="ringStartSize" min="' + RING_SIZE_MIN + '" max="' + RING_SIZE_MAX +
+              '" step="1" placeholder="' + RING_SIZE_MIN + '" value="' + esc(start) + '">' +
+          '</label>' +
+        '</div>' +
+        '<div class="ap-variant-block ap-variant-block--ring-size">' +
+          '<div class="ap-variant-head"><span>戒圍</span><span>戒圍品項加價 (NT$)</span><span></span></div>' +
+          '<div id="apRingSizeGrid">' + rows + '</div>' +
+        '</div>' +
+        '<div class="ap-variant-actions">' +
+          '<button type="button" class="btn-sm" id="apAddRingSize">+ 新增戒圍</button>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
+  function collectRingSizeConfig(form, category) {
+    if (category !== 'ring') return null;
+    var startEl = form.querySelector('[name="ringStartSize"]');
+    var startRaw = startEl ? String(startEl.value || '').trim() : '';
+    var startSize = startRaw === '' ? null : parseInt(startRaw, 10);
+    var sizes = [];
+    form.querySelectorAll('#apRingSizeGrid .ap-ring-size-row').forEach(function (row) {
+      var sizeRaw = row.querySelector('[name="ringSize"]')?.value;
+      var addonRaw = row.querySelector('[name="ringSizeAddon"]')?.value;
+      if (sizeRaw === '' || sizeRaw == null) return;
+      var size = parseInt(sizeRaw, 10);
+      if (!Number.isFinite(size)) return;
+      var addon = addonRaw === '' || addonRaw == null ? 0 : parseFloat(addonRaw);
+      sizes.push({
+        size: size,
+        addonPriceTwd: Number.isFinite(addon) ? addon : 0,
+      });
+    });
+    if (startSize == null && !sizes.length) return null;
+    return { startSize: Number.isFinite(startSize) ? startSize : null, sizes: sizes };
+  }
+
+  function bindRingSizeRows(form) {
+    var grid = document.getElementById('apRingSizeGrid');
+    if (!grid) return;
+    grid.querySelectorAll('.ap-remove-row').forEach(function (btn) {
+      btn.onclick = function () { btn.closest('.ap-ring-size-row')?.remove(); };
+    });
+  }
+
   function variantHeadHtml(category) {
     if (category === 'chain') {
       return (
@@ -1297,7 +1426,18 @@
     }).join('');
   }
 
-  function slotPairSelectHtml(selectedKey) {
+  function slotPairSelectHtml(selectedKey, category) {
+    if (category === 'diamond') {
+      var color = DIAMOND_SLOT_VALUES.indexOf(selectedKey) >= 0 ? selectedKey : 'white';
+      return (
+        '<label class="ap-image-slot-pair">' +
+          '<span>鑽石顏色</span>' +
+          '<select class="ap-image-slot-diamond-only">' +
+            slotSelectHtml(DIAMOND_SLOT_OPTIONS, color) +
+          '</select>' +
+        '</label>'
+      );
+    }
     var parsed = parseSlotKey(selectedKey) || { metal: 'white', diamond: 'white', chainMetal: null };
     return (
       '<label class="ap-image-slot-pair">' +
@@ -1382,6 +1522,17 @@
       });
     }
 
+    if (category === 'diamond') {
+      slotOrderFromImages(images).forEach(pushSlot);
+      Object.keys(groups).forEach(function (key) {
+        if (seen[key]) return;
+        if (!(groups[key] && groups[key].length)) return;
+        pushSlot(key);
+      });
+      if (!slots.length) slots.push({ color: 'white', urls: [] });
+      return slots;
+    }
+
     // Legacy metal-only (white/yellow/rose) → metal-white so selects stay truthful.
     COLORS.forEach(function (metal) {
       if (!groups[metal] || !groups[metal].length) return;
@@ -1411,7 +1562,7 @@
 
   function imageSlotHtml(slot, category) {
     var slotId = 'slot-' + (++_slotCounter);
-    var color = slot.color || 'white-white';
+    var color = slot.color || (category === 'diamond' ? 'white' : 'white-white');
     var slides = (slot.urls || []).map(function (url) {
       return imageSlideHtml(url, color);
     }).join('');
@@ -1421,7 +1572,7 @@
         '<div class="ap-image-slot-head">' +
           '<div class="ap-image-slot-label ap-image-slot-label--pair">' +
             '<span>圖片選項</span>' +
-            slotPairSelectHtml(color) +
+            slotPairSelectHtml(color, category) +
           '</div>' +
           '<button type="button" class="ap-remove-slot" aria-label="移除此選項">✕</button>' +
         '</div>' +
@@ -1499,6 +1650,8 @@
   }
 
   function slotColorKey(slotEl) {
+    var diamondOnly = slotEl.querySelector('.ap-image-slot-diamond-only');
+    if (diamondOnly) return diamondOnly.value || '';
     var metalSel = slotEl.querySelector('.ap-image-slot-metal');
     var diamondSel = slotEl.querySelector('.ap-image-slot-diamond');
     if (metalSel && diamondSel) {
@@ -1685,6 +1838,7 @@
   function bindSlotKeySelectors(slot, form) {
     var metalSel = slot.querySelector('.ap-image-slot-metal');
     var diamondSel = slot.querySelector('.ap-image-slot-diamond');
+    var diamondOnly = slot.querySelector('.ap-image-slot-diamond-only');
 
     slot.dataset.lastKey = slotColorKey(slot);
 
@@ -1693,9 +1847,14 @@
       var used = usedSlotKeys(form, slot);
       if (used[key]) {
         alert('此組合已用於其他圖片選項，請選擇不同的組合。');
-        var prev = parseSlotKey(slot.dataset.lastKey) || { metal: 'white', diamond: 'white', chainMetal: null };
-        if (metalSel) metalSel.value = prev.metal;
-        if (diamondSel) diamondSel.value = prev.diamond;
+        var prevKey = slot.dataset.lastKey || 'white';
+        if (diamondOnly) {
+          diamondOnly.value = DIAMOND_SLOT_VALUES.indexOf(prevKey) >= 0 ? prevKey : 'white';
+        } else {
+          var prev = parseSlotKey(prevKey) || { metal: 'white', diamond: 'white', chainMetal: null };
+          if (metalSel) metalSel.value = prev.metal;
+          if (diamondSel) diamondSel.value = prev.diamond;
+        }
         return;
       }
       slot.dataset.lastKey = key;
@@ -1706,16 +1865,20 @@
 
     metalSel?.addEventListener('change', onSlotKeyChange);
     diamondSel?.addEventListener('change', onSlotKeyChange);
+    diamondOnly?.addEventListener('change', onSlotKeyChange);
   }
 
   function refreshImageSlotCategory(slot, form, category) {
-    var metalSel = slot.querySelector('.ap-image-slot-metal');
-    var diamondSel = slot.querySelector('.ap-image-slot-diamond');
-    var baseColor = buildSlotKey(metalSel ? metalSel.value : 'white', diamondSel ? diamondSel.value : 'white', null);
+    var currentKey = slotColorKey(slot);
+    var baseColor = category === 'diamond'
+      ? (DIAMOND_SLOT_VALUES.indexOf(currentKey) >= 0 ? currentKey : 'white')
+      : (parseSlotKey(currentKey)
+        ? currentKey
+        : buildSlotKey('white', 'white', null));
     slot.dataset.category = category || '';
     var pairWrap = slot.querySelector('.ap-image-slot-label--pair');
     if (!pairWrap) return;
-    pairWrap.innerHTML = '<span>圖片選項</span>' + slotPairSelectHtml(baseColor);
+    pairWrap.innerHTML = '<span>圖片選項</span>' + slotPairSelectHtml(baseColor, category);
     bindSlotKeySelectors(slot, form);
     var key = slotColorKey(slot);
     slot.querySelectorAll('.ap-carousel-item[data-url]').forEach(function (item) {
@@ -1957,22 +2120,50 @@
     );
   }
 
+  function defaultColorOptionsHtml(product, category) {
+    var current = product ? product.default_color : 'white';
+    if (category === 'diamond') {
+      return DIAMOND_SLOT_VALUES.map(function (c) {
+        var sel = current === c ? ' selected' : '';
+        return '<option value="' + c + '"' + sel + '>' + DIAMOND_COLOR_LABELS[c] + '</option>';
+      }).join('');
+    }
+    return COLORS.map(function (c) {
+      var sel = current === c ? ' selected' : '';
+      return '<option value="' + c + '"' + sel + '>' + COLOR_LABELS[c] + '</option>';
+    }).join('');
+  }
+
+  function productStyleKey(product) {
+    if (!product) return '';
+    return product.styleKey || product.style_key || '';
+  }
+
+  function imageSectionHint(category) {
+    if (category === 'diamond') {
+      return '試算頁款式卡會使用此處照片；依鑽石顏色上傳（不含金屬）。價格請至「前往價格設定」。';
+    }
+    return '試算頁會依「金屬 × 鑽石顏色」切換商品圖'
+      + (category === 'pendant' ? '；含鍊預覽沿用項墜金屬色（無需另傳異色鍊圖）' : '')
+      + '。請為需要的金屬 × 鑽石組合上傳商品照片。';
+  }
+
   function editorFormHtml(product, defaultCategory) {
     var isEdit = !!product;
     var category = (product && product.category) || defaultCategory || 'ring';
+    var isDiamond = category === 'diamond';
     var chainType = resolveChainType(product && (product.chainType || product.chain_type));
     var variants = (product && product.variants && product.variants.length)
       ? product.variants.map(function (v) { return variantRowHtml(v, category, chainType); }).join('')
       : variantRowHtml(null, category, chainType);
+    var styleKey = productStyleKey(product);
+    var styleKeyLocked = MEMORIAL_DIAMOND_STYLE_KEYS.indexOf(styleKey) >= 0;
 
     var catOpts = categoryOrderList().map(function (c) {
       var sel = category === c ? ' selected' : '';
       return '<option value="' + c + '"' + sel + '>' + esc(state.categoryLabels[c] || c) + '</option>';
     }).join('');
-    var colorOpts = COLORS.map(function (c) {
-      var sel = (product ? product.default_color : 'white') === c ? ' selected' : '';
-      return '<option value="' + c + '"' + sel + '>' + COLOR_LABELS[c] + '</option>';
-    }).join('');
+    var colorOpts = defaultColorOptionsHtml(product, category);
 
     return (
       '<div class="ap-editor-page">' +
@@ -1980,7 +2171,11 @@
           '<button type="button" class="btn-sm ap-editor-back" id="apEditorBack">← 返回商品列表</button>' +
           '<div class="ap-editor-head-text">' +
             '<h2>' + (isEdit ? '編輯商品' : '新增商品') + '</h2>' +
-            '<p class="ap-editor-sub">填寫款式選項並上傳商品照片後可上架至客製試算頁。</p>' +
+            '<p class="ap-editor-sub">' +
+              (isDiamond
+                ? '編輯紀念鑽石款式名稱、鑽石顏色與照片以連結試算頁（不含金屬／價格）。'
+                : '填寫款式選項並上傳商品照片後可上架至客製試算頁。') +
+            '</p>' +
           '</div>' +
         '</header>' +
         '<div class="ap-editor-body">' +
@@ -1988,38 +2183,43 @@
           '<form id="apProductForm" class="ap-form">' +
             '<div class="ap-form-grid">' +
               '<label><span>品項</span><select name="category" id="apCategory">' + catOpts + '</select></label>' +
-              '<label><span>預設顏色</span><select name="defaultColor">' + colorOpts + '</select></label>' +
+              '<label><span>' + (isDiamond ? '預設鑽石顏色' : '預設顏色') + '</span><select name="defaultColor" id="apDefaultColor">' + colorOpts + '</select></label>' +
               '<label><span>中文名稱 <span class="ap-required" aria-hidden="true">*</span></span><input name="nameZh" maxlength="150" autocomplete="off" value="' + esc(product && product.name_zh) + '"></label>' +
               '<label><span>英文名稱（資料用） <span class="ap-required" aria-hidden="true">*</span></span><input name="nameEn" maxlength="150" required autocomplete="off" value="' + esc(product && product.name_en) + '"></label>' +
+              '<label id="apStyleKeyField"' + (isDiamond ? '' : ' hidden') + '><span>試算連結代碼</span>' +
+                '<input name="styleKey" maxlength="48" autocomplete="off" placeholder="diamond-…" value="' + esc(styleKey) + '"' +
+                (styleKeyLocked ? ' readonly' : '') + '>' +
+              '</label>' +
               '<label class="ap-field-wide"><span>中文描述</span><textarea class="ap-textarea" name="descriptionZh" rows="3" placeholder="商品中文說明…">' + esc(product && product.description_zh) + '</textarea></label>' +
               '<label class="ap-field-wide"><span>英文描述</span><textarea class="ap-textarea" name="descriptionEn" rows="3" placeholder="Product description…">' + esc(product && product.description_en) + '</textarea></label>' +
               saveForLaterToggleHtml(product) +
-              allowsEngravingToggleHtml(product) +
-              allowsFancyShapesToggleHtml(product) +
+              '<div id="apEngravingToggleWrap"' + (isDiamond ? ' hidden' : '') + '>' + allowsEngravingToggleHtml(product) + '</div>' +
+              '<div id="apFancyShapesToggleWrap"' + (isDiamond ? ' hidden' : '') + '>' + allowsFancyShapesToggleHtml(product) + '</div>' +
               pendantSellModeTogglesHtml(product, category) +
             '</div>' +
-            '<h4 class="ap-section-title">款式選項</h4>' +
-            '<div class="ap-variant-block' +
-              (category === 'chain' ? ' ap-variant-block--chain' : '') +
-              (category === 'earring' ? ' ap-variant-block--earring' : '') +
-            '">' +
-              variantHeadHtml(category) +
-              '<div id="apVariantGrid">' + variants + '</div>' +
+            '<div id="apVariantSection"' + (isDiamond ? ' hidden' : '') + '>' +
+              '<h4 class="ap-section-title">款式選項</h4>' +
+              '<div class="ap-variant-block' +
+                (category === 'chain' ? ' ap-variant-block--chain' : '') +
+                (category === 'earring' ? ' ap-variant-block--earring' : '') +
+              '">' +
+                variantHeadHtml(category) +
+                '<div id="apVariantGrid">' + variants + '</div>' +
+              '</div>' +
+              '<div class="ap-variant-actions">' +
+                '<button type="button" class="btn-sm" id="apAddVariant">+ 新增款式</button>' +
+                '<button type="button" class="btn-sm" id="apGenerateAllChainVariants"' +
+                  (category === 'chain' ? '' : ' hidden') +
+                  '>一鍵產生全部款式</button>' +
+              '</div>' +
             '</div>' +
-            '<div class="ap-variant-actions">' +
-              '<button type="button" class="btn-sm" id="apAddVariant">+ 新增款式</button>' +
-              '<button type="button" class="btn-sm" id="apGenerateAllChainVariants"' +
-                (category === 'chain' ? '' : ' hidden') +
-                '>一鍵產生全部款式</button>' +
-            '</div>' +
+            ringSizeSectionHtml(product, category) +
             '<div id="apChainLengthSection"' + (category === 'chain' ? '' : ' hidden') + '>' +
               chainTypeSelectorHtml(product, category) +
               chainLengthWeightsBlockHtml(product && product.lengthWeights, category, chainType) +
             '</div>' +
             '<h4 class="ap-section-title">商品照片</h4>' +
-            '<p class="ap-section-hint">試算頁會依「金屬 × 鑽石顏色」切換商品圖' +
-              (category === 'pendant' ? '；含鍊預覽沿用項墜金屬色（無需另傳異色鍊圖）' : '') +
-              '。請為需要的金屬 × 鑽石組合上傳商品照片。</p>' +
+            '<p class="ap-section-hint">' + imageSectionHint(category) + '</p>' +
             '<div class="ap-image-slots" id="apImageSlots">' + imageSlotsHtml(product && product.images, category) + '</div>' +
             '<button type="button" class="btn-sm" id="apAddImageSlot">+ 新增圖片選項</button>' +
             '<div class="ap-form-actions ap-editor-actions">' +
@@ -2067,6 +2267,13 @@
       bindRemoveRows();
     });
 
+    document.getElementById('apAddRingSize')?.addEventListener('click', function () {
+      var ringGrid = document.getElementById('apRingSizeGrid');
+      if (!ringGrid) return;
+      ringGrid.insertAdjacentHTML('beforeend', ringSizeRowHtml(null));
+      bindRingSizeRows(form);
+    });
+
     document.getElementById('apGenerateAllChainVariants')?.addEventListener('click', function () {
       if (catSel.value !== 'chain') return;
       var added = generateAllChainVariantRows(grid, form);
@@ -2079,6 +2286,7 @@
     });
 
     rebindChainLengthGrid(form);
+    bindRingSizeRows(form);
 
     document.getElementById('apChainType')?.addEventListener('change', function () {
       refreshChainLengthGrid(form, catSel.value, getFormChainType(form));
@@ -2086,6 +2294,7 @@
 
     catSel?.addEventListener('change', function () {
       toggleChainLengthSection(form, catSel.value);
+      toggleRingSizeSection(form, catSel.value);
       syncChainVariantActions(catSel.value);
       if (catSel.value === 'chain') {
         refreshChainLengthGrid(form, 'chain', getFormChainType(form));
@@ -2134,11 +2343,38 @@
       var slot = wrap.firstElementChild;
       host.appendChild(slot);
       bindImageSlot(slot, form);
-      slot.querySelector('.ap-image-slot-metal')?.focus();
+      (slot.querySelector('.ap-image-slot-diamond-only')
+        || slot.querySelector('.ap-image-slot-metal'))?.focus();
     });
+
+    function syncDiamondEditorChrome(cat) {
+      var isDiamond = cat === 'diamond';
+      var variantSection = document.getElementById('apVariantSection');
+      if (variantSection) variantSection.hidden = isDiamond;
+      var styleKeyField = document.getElementById('apStyleKeyField');
+      if (styleKeyField) styleKeyField.hidden = !isDiamond;
+      var engravingWrap = document.getElementById('apEngravingToggleWrap');
+      if (engravingWrap) engravingWrap.hidden = isDiamond;
+      var fancyWrap = document.getElementById('apFancyShapesToggleWrap');
+      if (fancyWrap) fancyWrap.hidden = isDiamond;
+      var defaultColorSel = document.getElementById('apDefaultColor');
+      if (defaultColorSel) {
+        var prev = defaultColorSel.value;
+        defaultColorSel.innerHTML = defaultColorOptionsHtml(
+          { default_color: prev },
+          cat
+        );
+        var allowed = isDiamond ? DIAMOND_SLOT_VALUES : COLORS;
+        if (allowed.indexOf(prev) >= 0) defaultColorSel.value = prev;
+      }
+      var defaultColorLabel = defaultColorSel && defaultColorSel.closest('label');
+      var labelSpan = defaultColorLabel && defaultColorLabel.querySelector('span');
+      if (labelSpan) labelSpan.textContent = isDiamond ? '預設鑽石顏色' : '預設顏色';
+    }
 
     catSel?.addEventListener('change', function () {
       var cat = catSel.value;
+      syncDiamondEditorChrome(cat);
       var block = form.querySelector('.ap-variant-block');
       if (block) {
         block.classList.toggle('ap-variant-block--chain', cat === 'chain');
@@ -2164,10 +2400,12 @@
         });
       });
       var chainType = getFormChainType(form);
-      grid.innerHTML = (preserved.length ? preserved : [null]).map(function (v) {
-        return variantRowHtml(v, cat, chainType);
-      }).join('');
-      bindRemoveRows();
+      if (grid) {
+        grid.innerHTML = (preserved.length ? preserved : [null]).map(function (v) {
+          return variantRowHtml(v, cat, chainType);
+        }).join('');
+        bindRemoveRows();
+      }
       var host = document.getElementById('apImageSlots');
       var hint = form.querySelector('.ap-section-hint');
       if (host) {
@@ -2184,11 +2422,7 @@
         host.innerHTML = imageSlotsHtml(currentImages, cat);
         bindImageSlots(form);
       }
-      if (hint) {
-        hint.textContent = '試算頁會依「金屬 × 鑽石顏色」切換商品圖'
-          + (cat === 'pendant' ? '；含鍊預覽沿用項墜金屬色（無需另傳異色鍊圖）' : '')
-          + '。請為需要的金屬 × 鑽石組合上傳商品照片。';
-      }
+      if (hint) hint.textContent = imageSectionHint(cat);
       var sellModes = document.getElementById('apPendantSellModes');
       if (sellModes) sellModes.hidden = cat !== 'pendant';
     });
@@ -2248,46 +2482,48 @@
     var fd = new FormData(form);
     var category = fd.get('category');
     var variants = [];
-    form.querySelectorAll('#apVariantGrid .ap-variant-row').forEach(function (row) {
-      var gold = row.querySelector('[name="gold"]')?.value;
-      var carat = row.querySelector('[name="carat"]')?.value;
-      var weight = row.querySelector('[name="weight"]')?.value;
-      var price = row.querySelector('[name="price"]')?.value;
-      var sideStone = row.querySelector('[name="sideStonePrice"]')?.value;
-      var sideStoneCts = row.querySelector('[name="sideStoneCarat"]')?.value;
-      var sideStoneTotalEl = row.querySelector('[name="sideStoneTotal"]');
-      var sideStoneTotal = sideStoneTotalEl ? sideStoneTotalEl.value : '';
-      var sideStoneTotalFixed = !!(sideStoneTotalEl && sideStoneTotalEl.dataset.fixed === '1');
-      var earClasp = row.querySelector('[name="earClaspPrice"]')?.value;
-      var addonPrice = row.querySelector('[name="addonPrice"]')?.value;
-      if (!gold || !carat) return;
-      // Chain: wax in 長度蠟重; no 配鑽 / no per-variant 46cm wax field.
-      if (category !== 'chain' && !weight) return;
-      var isChain = category === 'chain';
-      var isEarring = category === 'earring';
-      variants.push({
-        gold: gold,
-        carat: carat,
-        weightChin: isChain ? null : parseFloat(weight),
-        manualPriceTwd: price === '' || price == null ? null : parseFloat(price),
-        sideStonePriceTwd: isChain || sideStone === '' || sideStone == null
-          ? null
-          : parseFloat(sideStone),
-        sideStoneCarat: isChain || sideStoneCts === '' || sideStoneCts == null
-          ? null
-          : parseFloat(sideStoneCts),
-        sideStoneTotalTwd: isChain || !sideStoneTotalFixed
-          || sideStoneTotal === '' || sideStoneTotal == null
-          ? null
-          : parseFloat(sideStoneTotal),
-        addonPriceTwd: addonPrice === '' || addonPrice == null
-          ? null
-          : parseFloat(addonPrice),
-        earClaspPriceTwd: !isEarring || earClasp === '' || earClasp == null
-          ? null
-          : parseFloat(earClasp),
+    if (category !== 'diamond') {
+      form.querySelectorAll('#apVariantGrid .ap-variant-row').forEach(function (row) {
+        var gold = row.querySelector('[name="gold"]')?.value;
+        var carat = row.querySelector('[name="carat"]')?.value;
+        var weight = row.querySelector('[name="weight"]')?.value;
+        var price = row.querySelector('[name="price"]')?.value;
+        var sideStone = row.querySelector('[name="sideStonePrice"]')?.value;
+        var sideStoneCts = row.querySelector('[name="sideStoneCarat"]')?.value;
+        var sideStoneTotalEl = row.querySelector('[name="sideStoneTotal"]');
+        var sideStoneTotal = sideStoneTotalEl ? sideStoneTotalEl.value : '';
+        var sideStoneTotalFixed = !!(sideStoneTotalEl && sideStoneTotalEl.dataset.fixed === '1');
+        var earClasp = row.querySelector('[name="earClaspPrice"]')?.value;
+        var addonPrice = row.querySelector('[name="addonPrice"]')?.value;
+        if (!gold || !carat) return;
+        // Chain: wax in 長度蠟重; no 配鑽 / no per-variant 46cm wax field.
+        if (category !== 'chain' && !weight) return;
+        var isChain = category === 'chain';
+        var isEarring = category === 'earring';
+        variants.push({
+          gold: gold,
+          carat: carat,
+          weightChin: isChain ? null : parseFloat(weight),
+          manualPriceTwd: price === '' || price == null ? null : parseFloat(price),
+          sideStonePriceTwd: isChain || sideStone === '' || sideStone == null
+            ? null
+            : parseFloat(sideStone),
+          sideStoneCarat: isChain || sideStoneCts === '' || sideStoneCts == null
+            ? null
+            : parseFloat(sideStoneCts),
+          sideStoneTotalTwd: isChain || !sideStoneTotalFixed
+            || sideStoneTotal === '' || sideStoneTotal == null
+            ? null
+            : parseFloat(sideStoneTotal),
+          addonPriceTwd: addonPrice === '' || addonPrice == null
+            ? null
+            : parseFloat(addonPrice),
+          earClaspPriceTwd: !isEarring || earClasp === '' || earClasp == null
+            ? null
+            : parseFloat(earClasp),
+        });
       });
-    });
+    }
     var images = [];
     form.querySelectorAll('.ap-image-slot').forEach(function (slot) {
       var color = slotColorKey(slot);
@@ -2304,14 +2540,16 @@
     // Left: both modes → shop shows choose switch. Right: chain-only.
     var allowsPendantOnly = category === 'pendant' ? !chainOnly : true;
     var allowsWithChain = true;
-    return {
+    var payload = {
       category: category,
       nameZh: String(fd.get('nameZh') || '').trim(),
       nameEn: String(fd.get('nameEn') || '').trim(),
       descriptionZh: String(fd.get('descriptionZh') || '').trim(),
       descriptionEn: String(fd.get('descriptionEn') || '').trim(),
       defaultColor: fd.get('defaultColor') || 'white',
-      allowsEngraving: !!(allowsEngravingInput && allowsEngravingInput.checked),
+      allowsEngraving: category === 'diamond'
+        ? false
+        : !!(allowsEngravingInput && allowsEngravingInput.checked),
       allowsFancyShapes: !!(allowsFancyShapesInput && allowsFancyShapesInput.checked),
       allowsPendantOnly: allowsPendantOnly,
       allowsWithChain: allowsWithChain,
@@ -2319,8 +2557,13 @@
       variants: variants,
       lengthWeights: category === 'chain' ? collectChainLengthWeights(form) : null,
       chainType: category === 'chain' ? getFormChainType(form) : null,
+      ringSizeConfig: collectRingSizeConfig(form, category),
       images: images,
     };
+    if (category === 'diamond') {
+      payload.styleKey = String(fd.get('styleKey') || '').trim();
+    }
+    return payload;
   }
 
   function validateProductPayload(form, payload, isDraft) {

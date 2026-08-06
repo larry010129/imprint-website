@@ -46,6 +46,7 @@ from app.image_urls import (
     shop_product_image_url,
     shop_style_thumb_url,
 )
+from app.memorial_diamonds import merge_memorial_diamond_catalog
 from app.pricing import VALID_FANCY_COLORS, _as_earring_quantity, compute_order_pricing
 from app.product_categories import fetch_categories
 
@@ -60,57 +61,6 @@ GOLD_LABELS = {
 }
 CHAIN_LENGTHS_CM = [36, 41, 46, 51, 61, 76, 80]
 BRACELET_LENGTHS_CM = [15, 16, 17, 18, 19, 20, 21]
-DIAMOND_CARATS = [
-    "0.1", "0.2", "0.3", "0.5", "0.6", "0.7", "0.8", "0.9", "1.0", "1.5", "2.0", "3.0",
-]
-# Static memorial diamond styles (not in products table) — mirrors shop-catalog-data.js.
-DIAMOND_STYLES: list[dict[str, Any]] = [
-    {
-        "id": "diamond-first-love",
-        "styleKey": "diamond-first-love",
-        "nameZh": "滿月鑽石",
-        "descriptionZh": "以寶寶胎髮培育的紀念鑽石（裸鑽試算，不含鑲嵌）",
-        "golds": [],
-        "carats": DIAMOND_CARATS,
-        "images": {"white": ["/static/images/hero/imprint-diamond-newborn-baby-necklace.jpg"]},
-    },
-    {
-        "id": "diamond-pet",
-        "styleKey": "diamond-pet",
-        "nameZh": "寵物鑽石",
-        "descriptionZh": "以毛孩毛髮培育的紀念鑽石（裸鑽試算，不含鑲嵌）",
-        "golds": [],
-        "carats": DIAMOND_CARATS,
-        "images": {"white": ["/static/images/hero/imprint-diamond-pet-memorial-cat.jpg"]},
-    },
-    {
-        "id": "diamond-love",
-        "styleKey": "diamond-love",
-        "nameZh": "結髮鑽石",
-        "descriptionZh": "以夫妻髮絲共同培育的紀念鑽石（裸鑽試算，不含鑲嵌）",
-        "golds": [],
-        "carats": DIAMOND_CARATS,
-        "images": {"white": ["/static/images/hero/imprint-diamond-wedding-couple-ring.jpg"]},
-    },
-    {
-        "id": "diamond-family",
-        "styleKey": "diamond-family",
-        "nameZh": "全家福鑽石",
-        "descriptionZh": "集合全家人髮絲培育的紀念鑽石（裸鑽試算，不含鑲嵌）",
-        "golds": [],
-        "carats": DIAMOND_CARATS,
-        "images": {"white": ["/static/images/hero/imprint-diamond-family-portrait-jewelry.jpg"]},
-    },
-    {
-        "id": "diamond-heirloom",
-        "styleKey": "diamond-heirloom",
-        "nameZh": "生命鑽石",
-        "descriptionZh": "以親人毛髮或骨灰培育的紀念鑽石（裸鑽試算，不含鑲嵌）",
-        "golds": [],
-        "carats": DIAMOND_CARATS,
-        "images": {"white": ["/static/images/hero/imprint-diamond-heirloom-memorial.jpg"]},
-    },
-]
 
 
 def _product_thumb(product: dict[str, Any]) -> str:
@@ -167,10 +117,12 @@ def _load_catalog(*, include_drafts: bool = False, detail: str = "lite") -> dict
         detail=detail,
     )
     categories = dict(catalog.get("categories") or {})
-    categories["diamond"] = DIAMOND_STYLES
+    # Static keys stay; admin products overlay name / image / color.
+    categories["diamond"] = merge_memorial_diamond_catalog(categories.get("diamond") or [])
     order = ["diamond"] + [c for c in (catalog.get("categoryOrder") or []) if c != "diamond"]
     meta = dict(catalog.get("categoryMeta") or {})
-    diamond_thumb = _product_thumb(DIAMOND_STYLES[0]) if DIAMOND_STYLES else ""
+    diamond_list = categories.get("diamond") or []
+    diamond_thumb = _product_thumb(diamond_list[0]) if diamond_list else ""
     meta.setdefault(
         "diamond",
         {

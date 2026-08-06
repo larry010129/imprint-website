@@ -33,7 +33,9 @@ UPLOAD_KIND_PREFIXES: dict[str, str] = {
 # Admin image slots: white | yellow | rose (compound slots like white-pink → white).
 PRODUCT_METAL_FOLDERS = frozenset({"white", "yellow", "rose"})
 # Admin category tabs → Storage type folder (項墜/戒指/耳環/手鍊/鏈條).
-PRODUCT_CATEGORY_KEYS = frozenset({"pendant", "ring", "earring", "bracelet", "chain"})
+PRODUCT_CATEGORY_KEYS = frozenset(
+    {"diamond", "pendant", "ring", "earring", "bracelet", "chain"}
+)
 _PENDING_PREFIX = "products/_pending/"
 _PENDING_FOLDER = "_pending"
 PRODUCT_FOLDER_MAX_LEN = 80

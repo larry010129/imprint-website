@@ -2,7 +2,7 @@
 (function (global) {
   'use strict';
 
-  var CATEGORIES = { pendant: 1, ring: 1, earring: 1, bracelet: 1, chain: 1 };
+  var CATEGORIES = { diamond: 1, pendant: 1, ring: 1, earring: 1, bracelet: 1, chain: 1 };
   var STYLE_ID = /^([a-z]+)-([A-C])$/i;
   var UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

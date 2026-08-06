@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-CATEGORY_DISPLAY_ORDER = ["pendant", "ring", "earring", "bracelet", "chain"]
+CATEGORY_DISPLAY_ORDER = ["diamond", "pendant", "ring", "earring", "bracelet", "chain"]
 METAL_DISPLAY_ORDER = ["9k", "14k", "18k", "pt950", "s925"]
 
 _STYLE_FROM_PATH = re.compile(r"(?:^|/)([a-z]+)-([A-C])\.(?:svg|png|jpe?g)", re.I)
@@ -28,6 +28,7 @@ from app.image_urls import (
     resolve_product_image_url,
     static_url_exists,
 )
+from app.memorial_diamonds import DIAMOND_CARATS, normalize_style_key
 from app.pricing_overrides import canonical_carat
 
 
@@ -78,22 +79,33 @@ def resolve_product_id(
     type_ref: str,
     require_published: bool = True,
 ) -> str | None:
-    """Map API UUID or bundled style key (ring-A) to products.id."""
+    """Map API UUID or bundled style key (ring-A / diamond-*) to products.id."""
     if not type_ref or not category:
         return None
     ref = str(type_ref).strip()
     if is_uuid(ref):
         return ref
 
+    cat = category.strip().lower()
+    memorial_key = normalize_style_key(ref)
+    if cat == "diamond" and memorial_key:
+        sql = "select id from products where category = %s and style_key = %s"
+        params: list = [cat, memorial_key]
+        if require_published:
+            sql += " and is_published = true"
+        cur.execute(sql, params)
+        row = cur.fetchone()
+        return str(row["id"]) if row else None
+
     match = _LEGACY_STYLE_RE.match(ref)
     if match:
-        cat = match.group(1).lower()
+        letter_cat = match.group(1).lower()
         letter = match.group(2).upper()
-        if cat != category.strip().lower():
+        if letter_cat != cat:
             return None
         sort_order = ord(letter) - ord("A")
         sql = "select id from products where category = %s and sort_order = %s"
-        params: list = [cat, sort_order]
+        params = [letter_cat, sort_order]
         if require_published:
             sql += " and is_published = true"
         cur.execute(sql, params)
@@ -104,10 +116,19 @@ def resolve_product_id(
 
 
 def legacy_style_key(product: dict, images: list[dict] | None = None) -> str | None:
-    """Map to shop-product asset ids only when stored image paths contain them."""
+    """Prefer products.style_key; else letter SKU from uploaded image paths."""
+    stored = product.get("style_key") or product.get("styleKey")
+    if stored:
+        key = str(stored).strip()
+        if key:
+            return key
     if images:
         return style_key_from_images(images)
     return None
+
+
+def _diamond_carats_or_default(carats: list[str]) -> list[str]:
+    return carats if carats else list(DIAMOND_CARATS)
 
 
 def _usable_images_by_color(images: list[dict]) -> dict[str, list[str]]:
@@ -185,12 +206,18 @@ def _first_thumb_url(
             return urls[0]
         return None
 
+    if (category or "").strip().lower() == "diamond":
+        url = pick(metal)
+        if url:
+            return url
     for key in _default_color_slot_keys(metal, category):
         url = pick(key)
         if url:
             return url
     for key in images_by_color:
-        if key not in tried and image_covers_default_color(key, metal):
+        if key not in tried and image_covers_default_color(
+            key, metal, category=category
+        ):
             url = pick(key)
             if url:
                 return url
@@ -226,9 +253,12 @@ def build_catalog_product_lite(product: dict, variants: list[dict], images: list
     """Style-grid payload — option lists + thumb, no weights/images maps."""
     golds = _sort_golds({v["gold"] for v in variants})
     carats = _sort_carats({_variant_carat_key(v["carat"]) for v in variants})
+    if product.get("category") == "diamond":
+        golds = []
+        carats = _diamond_carats_or_default(carats)
     images_by_color = _usable_images_by_color(images)
     slot_colors = _catalog_slot_colors(images, images_by_color)
-    return {
+    entry = {
         "id": str(product["id"]),
         "styleKey": legacy_style_key(product, images),
         "category": product.get("category"),
@@ -252,11 +282,20 @@ def build_catalog_product_lite(product: dict, variants: list[dict], images: list
         ),
         "draft": not product["is_published"],
     }
+    # Memorial diamond style cards need images even on lite catalog.
+    if product.get("category") == "diamond":
+        entry["images"] = images_by_color
+        entry["descriptionZh"] = product.get("description_zh")
+        entry["descriptionEn"] = product.get("description_en")
+    return entry
 
 
 def build_catalog_product(product: dict, variants: list[dict], images: list[dict]) -> dict:
     golds = _sort_golds({v["gold"] for v in variants})
     carats = _sort_carats({_variant_carat_key(v["carat"]) for v in variants})
+    if product.get("category") == "diamond":
+        golds = []
+        carats = _diamond_carats_or_default(carats)
 
     weights: dict[str, dict[str, float]] = {}
     manual_prices: dict[str, dict[str, float]] = {}
@@ -322,8 +361,43 @@ def build_catalog_product(product: dict, variants: list[dict], images: list[dict
         "chainType": product.get("chain_type") or (
             DEFAULT_NECKLACE_TYPE if product.get("category") == "chain" else None
         ),
+        "ringSizeConfig": _ring_size_config_for_catalog(product),
         "draft": not product["is_published"],
     }
+
+
+def _ring_size_config_for_catalog(product: dict) -> dict | None:
+    """Expose ring start size + size addons to shop; other categories omit."""
+    if product.get("category") != "ring":
+        return None
+    raw = product.get("ring_size_config")
+    if raw is None:
+        raw = product.get("ringSizeConfig")
+    if not isinstance(raw, dict):
+        return None
+    start = raw.get("startSize")
+    if start is None:
+        start = raw.get("start_size")
+    sizes_out: list[dict] = []
+    for row in raw.get("sizes") or []:
+        if not isinstance(row, dict):
+            continue
+        try:
+            size = int(round(float(row.get("size"))))
+            addon_raw = row.get("addonPriceTwd")
+            if addon_raw is None:
+                addon_raw = row.get("addon_price_twd")
+            addon = float(addon_raw or 0)
+        except (TypeError, ValueError):
+            continue
+        sizes_out.append({"size": size, "addonPriceTwd": addon})
+    if start is None and not sizes_out:
+        return None
+    try:
+        start_out = int(round(float(start))) if start is not None else None
+    except (TypeError, ValueError):
+        start_out = None
+    return {"startSize": start_out, "sizes": sizes_out}
 
 
 def _effective_chain_length_weights(product: dict) -> dict:

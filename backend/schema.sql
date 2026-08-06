@@ -93,16 +93,17 @@ create table if not exists product_categories (
 );
 
 insert into product_categories (slug, label_zh, label_en, sort_order) values
-  ('pendant', '項墜', 'Pendant', 0),
-  ('ring', '戒指', 'Ring', 1),
-  ('earring', '耳環', 'Earring', 2),
-  ('bracelet', '手鍊', 'Bracelet', 3),
-  ('chain', '鏈條', 'Chain', 4)
+  ('diamond', '紀念鑽石', 'Memorial diamond', 0),
+  ('pendant', '項墜', 'Pendant', 1),
+  ('ring', '戒指', 'Ring', 2),
+  ('earring', '耳環', 'Earring', 3),
+  ('bracelet', '手鍊', 'Bracelet', 4),
+  ('chain', '鏈條', 'Chain', 5)
 on conflict (slug) do nothing;
 
 create table if not exists products (
   id uuid primary key default gen_random_uuid(),
-  category text not null, -- 'ring' | 'necklace' | 'earring' | 'bracelet' | 'pendant' | 'chain'
+  category text not null, -- 'diamond' | 'ring' | 'necklace' | 'earring' | 'bracelet' | 'pendant' | 'chain'
   name_zh text not null,
   name_en text,
   description_zh text,
@@ -112,6 +113,8 @@ create table if not exists products (
   allows_fancy_shapes boolean not null default true,
   allows_pendant_only boolean not null default true,
   allows_with_chain boolean not null default true,
+  style_key text, -- stable shop link (e.g. diamond-first-love); null for letter-SKU jewelry
+  ring_size_config jsonb, -- ring-only: {startSize, sizes:[{size, addonPriceTwd}]}; size addon stacks on labor
   is_published boolean not null default false,
   first_published_at timestamptz,
   sort_order int not null default 0,
@@ -119,6 +122,10 @@ create table if not exists products (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+create unique index if not exists products_style_key_uidx
+  on products (style_key)
+  where style_key is not null;
 
 create table if not exists product_variants (
   id uuid primary key default gen_random_uuid(),

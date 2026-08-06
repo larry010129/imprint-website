@@ -30,6 +30,8 @@ from app.admin_products import (
     ensure_product_sell_mode_columns,
     ensure_product_ear_clasp_price_column,
     ensure_product_side_stone_total_column,
+    ensure_product_ring_size_config_column,
+    ensure_product_style_key_column,
     ensure_product_variant_addon_price_column,
     first_published_at_value,
     is_auto_stock_product_image,
@@ -41,6 +43,7 @@ from app.admin_products import (
     valid_image_color,
     validate_product_fields,
 )
+from app.memorial_diamonds import ensure_memorial_diamond_products
 from app.chain_catalog import chain_catalog_for_admin
 from app.auth import (
     generate_invite_code,
@@ -792,6 +795,9 @@ def _products_with_children(cur) -> list[dict]:
     ensure_product_side_stone_total_column(cur)
     ensure_product_ear_clasp_price_column(cur)
     ensure_product_variant_addon_price_column(cur)
+    ensure_product_style_key_column(cur)
+    ensure_product_ring_size_config_column(cur)
+    ensure_memorial_diamond_products(cur)
     cur.execute("select * from products order by sort_order, created_at desc")
     rows = cur.fetchall()
     product_ids = [row["id"] for row in rows]
@@ -893,16 +899,18 @@ async def products_create(request: Request) -> JSONResponse:
         ensure_product_side_stone_total_column(cur)
         ensure_product_ear_clasp_price_column(cur)
         ensure_product_variant_addon_price_column(cur)
+        ensure_product_style_key_column(cur)
+        ensure_product_ring_size_config_column(cur)
         cur.execute(
             """
             insert into products (
                 category, name_zh, name_en, description_zh, description_en,
                 default_color, allows_engraving, allows_fancy_shapes,
                 allows_pendant_only, allows_with_chain,
-                length_weights, chain_type,
+                length_weights, chain_type, style_key, ring_size_config,
                 is_published, first_published_at, created_by_id
             )
-            values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             returning *
             """,
             (
@@ -918,6 +926,8 @@ async def products_create(request: Request) -> JSONResponse:
                 cleaned["allowsWithChain"],
                 as_jsonb(cleaned.get("lengthWeights")),
                 cleaned.get("chainType"),
+                cleaned.get("styleKey"),
+                as_jsonb(cleaned.get("ringSizeConfig")),
                 cleaned["isPublished"],
                 first_published,
                 user_id,
@@ -951,6 +961,8 @@ async def product_update(request: Request) -> JSONResponse:
         ensure_product_side_stone_total_column(cur)
         ensure_product_ear_clasp_price_column(cur)
         ensure_product_variant_addon_price_column(cur)
+        ensure_product_style_key_column(cur)
+        ensure_product_ring_size_config_column(cur)
         cur.execute(
             "select id, is_published, first_published_at from products where id = %s",
             (product_id,),
@@ -969,7 +981,8 @@ async def product_update(request: Request) -> JSONResponse:
                 category = %s, name_zh = %s, name_en = %s, description_zh = %s, description_en = %s,
                 default_color = %s, allows_engraving = %s, allows_fancy_shapes = %s,
                 allows_pendant_only = %s, allows_with_chain = %s,
-                length_weights = %s, chain_type = %s,
+                length_weights = %s, chain_type = %s, style_key = %s,
+                ring_size_config = %s,
                 is_published = %s, first_published_at = %s, updated_at = now()
             where id = %s
             returning *
@@ -987,6 +1000,8 @@ async def product_update(request: Request) -> JSONResponse:
                 cleaned["allowsWithChain"],
                 as_jsonb(cleaned.get("lengthWeights")),
                 cleaned.get("chainType"),
+                cleaned.get("styleKey"),
+                as_jsonb(cleaned.get("ringSizeConfig")),
                 cleaned["isPublished"],
                 first_published,
                 product_id,
@@ -1050,20 +1065,22 @@ async def product_action(request: Request) -> JSONResponse:
             cur.execute("delete from products where id = %s", (product_id,))
             delete_product_image_urls_if_unreferenced(cur, image_urls)
         elif action == "duplicate":
+            ensure_product_style_key_column(cur)
+            ensure_product_ring_size_config_column(cur)
             cur.execute(
                 """
                 insert into products (
                     category, name_zh, name_en, description_zh, description_en,
                     default_color, allows_engraving, allows_fancy_shapes,
                     allows_pendant_only, allows_with_chain,
-                    length_weights, chain_type,
+                    length_weights, chain_type, style_key, ring_size_config,
                     is_published, created_by_id
                 )
                 select
                     category, %s, name_en, description_zh, description_en,
                     default_color, allows_engraving, allows_fancy_shapes,
                     allows_pendant_only, allows_with_chain,
-                    length_weights, chain_type,
+                    length_weights, chain_type, null, ring_size_config,
                     false, %s
                 from products where id = %s
                 returning *

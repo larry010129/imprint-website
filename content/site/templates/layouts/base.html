@@ -1,14 +1,35 @@
 <!DOCTYPE html>
 <html lang="zh-Hant-TW">
 <head>
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-J5QPK34V89"></script>
+<!-- Google tag (gtag.js) — idle / after load -->
 <script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-J5QPK34V89');
+(function () {
+  function injectGtag() {
+    if (window.__gtagInjected) return;
+    window.__gtagInjected = true;
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    window.gtag = gtag;
+    gtag('js', new Date());
+    gtag('config', 'G-J5QPK34V89');
+    var s = document.createElement('script');
+    s.async = true;
+    s.src = 'https://www.googletagmanager.com/gtag/js?id=G-J5QPK34V89';
+    document.head.appendChild(s);
+  }
+  function scheduleGtag() {
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(injectGtag, { timeout: 4000 });
+    } else {
+      setTimeout(injectGtag, 1);
+    }
+  }
+  if (document.readyState === 'complete') {
+    scheduleGtag();
+  } else {
+    window.addEventListener('load', scheduleGtag);
+  }
+})();
 </script>
 <meta charset="utf-8">
 <script>window.imgFallback=function(img){var s=img.dataset.fbStep?parseInt(img.dataset.fbStep,10):0;var e=["jpg","png","jpeg"];var pic=img.parentElement&&img.parentElement.tagName==="PICTURE"?img.parentElement:null;if(s<e.length-1){s++;img.dataset.fbStep=String(s);if(pic){var srcs=pic.querySelectorAll("source");for(var i=0;i<srcs.length;i++){srcs[i].remove();}}img.src=img.src.replace(/\.(jpg|jpeg|png)(\?.*)?$/i,"."+e[s]+"$2");}else{(pic||img).remove();}};</script>
@@ -41,11 +62,15 @@
 <link rel="stylesheet" href="/static/css/base.css?v=4.1">
 <link rel="stylesheet" href="/static/css/nav.css?v=4.8">
 {% if extra_body_class and 'page-home' in extra_body_class %}
-<link rel="stylesheet" href="/static/css/home.css?v=5.4">
+<link rel="stylesheet" href="/static/css/home.css?v=5.5">
 {% endif %}
 <link rel="stylesheet" href="/static/css/footer.css?v=1">
+{% if not (extra_body_class and 'page-home' in extra_body_class) %}
 <link rel="stylesheet" href="/static/css/pages.css?v=5.28">
+{% endif %}
+{% if load_skeleton_css or load_skeleton_ui %}
 <link rel="stylesheet" href="/static/css/skeleton.css?v=3">
+{% endif %}
 <link rel="stylesheet" href="/static/css/responsive.css?v=3.17">
 <link rel="stylesheet" href="/static/css/social-fab.css?v=8">
 {% block extra_css %}{% endblock %}
@@ -81,13 +106,15 @@
 <script src="/static/js/htmx.min.js" defer></script>
 <script src="/static/js/nav-dropdown.js?v=1" defer></script>
 <script src="/static/js/nav-chrome.js?v=3" defer></script>
-<script src="/static/js/skeleton-ui.js?v=1"></script>
+{% if load_skeleton_ui %}
+<script src="/static/js/skeleton-ui.js?v=1" defer></script>
+{% endif %}
 {% block extra_scripts %}{% endblock %}
 {% if site_cms_sections %}
 <script src="/js/cms-sections.js?v=1" defer></script>
 {% endif %}
-<script src="/static/js/site-layout.js?v=2"></script>
-<script src="/static/js/main.js?v=2.5"></script>
+<script src="/static/js/site-layout.js?v=3" defer></script>
+<script src="/static/js/main.js?v=2.6" defer></script>
 {% block social_fab %}{% include "partials/social-fab.html" %}{% endblock %}
 {% block botpress_webchat %}{% include "partials/botpress-webchat.html" %}{% endblock %}
 </body>

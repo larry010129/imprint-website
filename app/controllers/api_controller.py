@@ -27,6 +27,7 @@ from app.catalog import (
     load_product_children,
     normalize_catalog_detail,
 )
+from app.memorial_diamonds import merge_memorial_diamond_catalog
 from app.product_categories import build_category_meta, fetch_categories
 from app.orders import (
     attach_order_display,
@@ -306,6 +307,19 @@ def catalog(
         category_meta=cat_meta,
         detail=detail_mode,
     )
+    categories = dict(payload.get("categories") or {})
+    # Always expose memorial diamond styles; DB overlays name/image/color.
+    if category in (None, "", "diamond"):
+        categories["diamond"] = merge_memorial_diamond_catalog(
+            categories.get("diamond") or []
+        )
+        order = list(payload.get("categoryOrder") or [])
+        if "diamond" not in order:
+            order = ["diamond"] + order
+        else:
+            order = ["diamond"] + [c for c in order if c != "diamond"]
+        payload["categories"] = categories
+        payload["categoryOrder"] = order
     headers = {}
     if detail_mode == "lite" and not include_drafts:
         headers["Cache-Control"] = "public, max-age=60"

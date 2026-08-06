@@ -1,8 +1,9 @@
 /* ---------- Hero 輪播 ---------- */
 .hero-carousel{ position:relative; overflow:hidden; background:var(--ink); }
+/* CLS: fixed box so late home-banners.js #hcTrack swap cannot shove below-fold */
 .hc-viewport{ position:relative; height:92vh; min-height:600px; max-height:900px; overflow:hidden; outline:none; }
 .hc-track{
-  position:relative; height:100%; margin:0; padding:0; list-style:none; touch-action:pan-y;
+  position:relative; height:100%; min-height:100%; margin:0; padding:0; list-style:none; touch-action:pan-y;
 }
 /* 高級感輪播：不再是硬切的水平位移，改成淡入淡出疊圖 + 緩慢的 Ken Burns 微幅放大，
    營造電影感的呼吸律動；文字也會在每次切換到該投影片時重新做一次進場動畫，而不是

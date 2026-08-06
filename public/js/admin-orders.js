@@ -48,7 +48,7 @@
   };
 
   var CATEGORY_LABELS = {
-    pendant: '項墜', ring: '戒指', earring: '耳環', bracelet: '手鍊', chain: '鏈條'
+    diamond: '紀念鑽石', pendant: '項墜', ring: '戒指', earring: '耳環', bracelet: '手鍊', chain: '鏈條'
   };
   var GOLD_LABELS = { '9k': '9K', '14k': '14K', '18k': '18K', pt950: 'PT950', s925: 'S925' };
   var COLOR_LABELS = { white: 'K白', yellow: 'K黃', rose: '玫瑰金' };

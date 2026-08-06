@@ -244,6 +244,7 @@
 .gh-hero--carousel{
   display:block; min-height:0; padding:0;
 }
+/* CLS: hero shell sized before home-banners.js replaces slides */
 .gh-hc-viewport{
   position:relative; z-index:4;
   height:min(92vh, 880px); min-height:600px; max-height:880px;
@@ -580,8 +581,9 @@ button.gh-btn--primary{ border:none; }
 }
 .gh-wall__head{ text-align:center; max-width:640px; margin:0 auto 44px; padding:0 16px; }
 .gh-wall__rows{
-  /* React TestimonialsWall mount (same cards as /stories.html) */
-  min-height:120px;
+  /* CLS: reserve 2 marquee rows before home-wall.js paints .gh-wall__card */
+  /* Desktop card ~420px (quote + meta + 4:3 photo); two stacked rows ≈ 840px */
+  min-height:840px;
 }
 .gh-wall__row{ overflow:hidden; }
 .gh-wall__track{
@@ -655,6 +657,8 @@ button.gh-btn--primary{ border:none; }
   .gh-wall__card{ width:260px; padding:20px; }
   .gh-wall__photo{ margin-top:14px; border-radius:10px; }
   .gh-wall__quote{ font-size:13px; }
+  /* CLS: mobile card ~372px × 2 rows */
+  .gh-wall__rows{ min-height:744px; }
 }
 @media (prefers-reduced-motion: reduce){
   .gh-wall__track,

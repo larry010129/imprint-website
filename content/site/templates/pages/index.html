@@ -1,9 +1,10 @@
 {% extends "layouts/base.html" %}
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/home-ghibli.css?v=30">
+<link rel="stylesheet" href="/static/css/home-ghibli.css?v=31">
 {% endblock %}
 {% block extra_head %}
-<link rel="preload" as="image" href="/static/images/hero/imprint-diamond-family-memorial.webp" type="image/webp" fetchpriority="high">
+<link rel="preload" as="image" href="/static/images/hero/imprint-diamond-family-memorial-1200w.webp" type="image/webp" media="(max-width:860px)" fetchpriority="high">
+<link rel="preload" as="image" href="/static/images/hero/imprint-diamond-family-memorial.webp" type="image/webp" media="(min-width:861px)" fetchpriority="high">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -85,7 +86,7 @@
 
 <section class="gh-hero gh-hero--carousel" aria-label="首頁系列輪播">
   <div class="gh-hero__sky" aria-hidden="true">
-    <img data-cms-slot="hero-sky" src="/static/images/ghibli/hero-sky.jpg" alt="" width="1024" height="1024" fetchpriority="low" decoding="async">
+    <img data-cms-slot="hero-sky" src="/static/images/ghibli/hero-sky.jpg" alt="" width="1024" height="1024" loading="lazy" fetchpriority="low" decoding="async">
   </div>
   <div class="gh-hero__fade-bottom" aria-hidden="true"></div>
 
@@ -95,8 +96,9 @@
       <li class="hc-slide is-active" data-align="left" data-tone="warm">
         <div class="hc-media">
           <picture>
-            <source srcset="/static/images/hero/imprint-diamond-family-memorial.webp" type="image/webp">
-            <img src="/static/images/hero/imprint-diamond-family-memorial.jpg" alt="銘印鑽石品牌意象－家人手心捧著 DNA 紀念鑽石" width="2400" height="1165" loading="eager" fetchpriority="high" decoding="async" onerror="imgFallback(this)">
+            <source media="(max-width:860px)" srcset="/static/images/hero/imprint-diamond-family-memorial-1200w.webp" type="image/webp" sizes="100vw">
+            <source srcset="/static/images/hero/imprint-diamond-family-memorial.webp" type="image/webp" sizes="100vw">
+            <img src="/static/images/hero/imprint-diamond-family-memorial.jpg" alt="銘印鑽石品牌意象－家人手心捧著 DNA 紀念鑽石" width="2400" height="1165" sizes="100vw" loading="eager" fetchpriority="high" decoding="async" onerror="imgFallback(this)">
           </picture>
         </div>
         <div class="hc-scrim gh-hc-scrim"></div>
@@ -311,8 +313,8 @@
     <a class="gh-series-card reveal" href="/series/first-love/">
       <div class="gh-series-card__media">
         <picture>
-          <source srcset="/static/images/hero/imprint-diamond-newborn-baby-necklace.webp" type="image/webp">
-          <img data-cms-slot="series-first-love" src="/static/images/hero/imprint-diamond-newborn-baby-necklace.jpg" alt="滿月鑽石" width="2400" height="1165" loading="lazy" decoding="async" onerror="imgFallback(this)">
+          <source type="image/webp" srcset="/static/images/series-cards/imprint-diamond-newborn-baby-necklace-400.webp 400w, /static/images/series-cards/imprint-diamond-newborn-baby-necklace-800.webp 800w" sizes="(max-width:640px) 92vw, (max-width:900px) 45vw, 320px">
+          <img data-cms-slot="series-first-love" src="/static/images/hero/imprint-diamond-newborn-baby-necklace.jpg" alt="滿月鑽石" width="800" height="388" loading="lazy" decoding="async" onerror="imgFallback(this)">
         </picture>
       </div>
       <div class="gh-series-card__body">
@@ -326,8 +328,8 @@
     <a class="gh-series-card reveal reveal-d1" href="/series/pet/">
       <div class="gh-series-card__media">
         <picture>
-          <source srcset="/static/images/hero/imprint-diamond-pet-memorial-cat.webp" type="image/webp">
-          <img data-cms-slot="series-pet" src="/static/images/hero/imprint-diamond-pet-memorial-cat.jpg" alt="寵物鑽石" width="2400" height="1165" loading="lazy" decoding="async" onerror="imgFallback(this)">
+          <source type="image/webp" srcset="/static/images/series-cards/imprint-diamond-pet-memorial-cat-400.webp 400w, /static/images/series-cards/imprint-diamond-pet-memorial-cat-800.webp 800w" sizes="(max-width:640px) 92vw, (max-width:900px) 45vw, 320px">
+          <img data-cms-slot="series-pet" src="/static/images/hero/imprint-diamond-pet-memorial-cat.jpg" alt="寵物鑽石" width="800" height="388" loading="lazy" decoding="async" onerror="imgFallback(this)">
         </picture>
       </div>
       <div class="gh-series-card__body">
@@ -341,8 +343,8 @@
     <a class="gh-series-card reveal reveal-d2" href="/series/love/">
       <div class="gh-series-card__media">
         <picture>
-          <source srcset="/static/images/hero/imprint-diamond-wedding-couple-ring.webp" type="image/webp">
-          <img data-cms-slot="series-love" src="/static/images/hero/imprint-diamond-wedding-couple-ring.jpg" alt="結髮鑽石" width="2400" height="1165" loading="lazy" decoding="async" onerror="imgFallback(this)">
+          <source type="image/webp" srcset="/static/images/series-cards/imprint-diamond-wedding-couple-ring-400.webp 400w, /static/images/series-cards/imprint-diamond-wedding-couple-ring-800.webp 800w" sizes="(max-width:640px) 92vw, (max-width:900px) 45vw, 320px">
+          <img data-cms-slot="series-love" src="/static/images/hero/imprint-diamond-wedding-couple-ring.jpg" alt="結髮鑽石" width="800" height="388" loading="lazy" decoding="async" onerror="imgFallback(this)">
         </picture>
       </div>
       <div class="gh-series-card__body">
@@ -356,8 +358,8 @@
     <a class="gh-series-card reveal reveal-d3" href="/series/family/">
       <div class="gh-series-card__media">
         <picture>
-          <source srcset="/static/images/hero/imprint-diamond-family-portrait-jewelry.webp" type="image/webp">
-          <img data-cms-slot="series-family" src="/static/images/hero/imprint-diamond-family-portrait-jewelry.jpg" alt="全家福鑽石" width="2400" height="1165" loading="lazy" decoding="async" onerror="imgFallback(this)">
+          <source type="image/webp" srcset="/static/images/series-cards/imprint-diamond-family-portrait-jewelry-400.webp 400w, /static/images/series-cards/imprint-diamond-family-portrait-jewelry-800.webp 800w" sizes="(max-width:640px) 92vw, (max-width:900px) 45vw, 320px">
+          <img data-cms-slot="series-family" src="/static/images/hero/imprint-diamond-family-portrait-jewelry.jpg" alt="全家福鑽石" width="800" height="388" loading="lazy" decoding="async" onerror="imgFallback(this)">
         </picture>
       </div>
       <div class="gh-series-card__body">
@@ -371,8 +373,8 @@
     <a class="gh-series-card reveal reveal-d4" href="/series/heirloom/">
       <div class="gh-series-card__media">
         <picture>
-          <source srcset="/static/images/hero/imprint-diamond-heirloom-memorial.webp" type="image/webp">
-          <img data-cms-slot="series-heirloom" src="/static/images/hero/imprint-diamond-heirloom-memorial.jpg" alt="生命鑽石" width="1500" height="728" loading="lazy" decoding="async" onerror="imgFallback(this)">
+          <source type="image/webp" srcset="/static/images/series-cards/imprint-diamond-heirloom-memorial-400.webp 400w, /static/images/series-cards/imprint-diamond-heirloom-memorial-800.webp 800w" sizes="(max-width:640px) 92vw, (max-width:900px) 45vw, 320px">
+          <img data-cms-slot="series-heirloom" src="/static/images/hero/imprint-diamond-heirloom-memorial.jpg" alt="生命鑽石" width="800" height="388" loading="lazy" decoding="async" onerror="imgFallback(this)">
         </picture>
       </div>
       <div class="gh-series-card__body">
@@ -416,7 +418,10 @@
   <div class="gh-cards">
     <a class="gh-card reveal" href="/what-is-dna-diamond.html">
       <div class="gh-card__media">
-        <img data-cms-slot="learn-dna" src="/static/images/learn-cards/dna-diamond.jpg?v=3" alt="毛髮樣本與培育完成的 DNA 紀念鑽石" width="800" height="600" loading="lazy" decoding="async" onerror="imgFallback(this)">
+        <picture>
+          <source type="image/webp" srcset="/static/images/learn-cards/dna-diamond-400.webp 400w, /static/images/learn-cards/dna-diamond.webp 800w" sizes="(max-width:640px) 92vw, (max-width:900px) 45vw, 280px">
+          <img data-cms-slot="learn-dna" src="/static/images/learn-cards/dna-diamond.jpg?v=4" alt="毛髮樣本與培育完成的 DNA 紀念鑽石" width="800" height="600" loading="lazy" decoding="async" onerror="imgFallback(this)">
+        </picture>
       </div>
       <h3 data-cms-text="learn-dna-title">什麼是 DNA 鑽石</h3>
       <p data-cms-text="learn-dna-text">從樣本萃取到鑑定交付，完整六步驟與四大保障說明。</p>
@@ -424,7 +429,10 @@
     </a>
     <a class="gh-card reveal reveal-d1" href="/price.html">
       <div class="gh-card__media">
-        <img data-cms-slot="learn-price" src="/static/images/learn-cards/price.jpg?v=3" alt="居家試算價格與鑽石款式意象" width="800" height="600" loading="lazy" decoding="async" onerror="imgFallback(this)">
+        <picture>
+          <source type="image/webp" srcset="/static/images/learn-cards/price-400.webp 400w, /static/images/learn-cards/price.webp 800w" sizes="(max-width:640px) 92vw, (max-width:900px) 45vw, 280px">
+          <img data-cms-slot="learn-price" src="/static/images/learn-cards/price.jpg?v=4" alt="居家試算價格與鑽石款式意象" width="800" height="600" loading="lazy" decoding="async" onerror="imgFallback(this)">
+        </picture>
       </div>
       <h3 data-cms-text="learn-price-title">價格試算</h3>
       <p data-cms-text="learn-price-text">依克拉數、切工、彩鑽與飾品款式，線上即時試算參考價格。</p>
@@ -432,7 +440,10 @@
     </a>
     <a class="gh-card reveal reveal-d2" href="/stories.html">
       <div class="gh-card__media">
-        <img data-cms-slot="learn-stories" src="/static/images/learn-cards/stories.jpg?v=3" alt="紀念盒、手寫信與鑽石飾品的客戶故事" width="800" height="600" loading="lazy" decoding="async" onerror="imgFallback(this)">
+        <picture>
+          <source type="image/webp" srcset="/static/images/learn-cards/stories-400.webp 400w, /static/images/learn-cards/stories.webp 800w" sizes="(max-width:640px) 92vw, (max-width:900px) 45vw, 280px">
+          <img data-cms-slot="learn-stories" src="/static/images/learn-cards/stories.jpg?v=4" alt="紀念盒、手寫信與鑽石飾品的客戶故事" width="800" height="600" loading="lazy" decoding="async" onerror="imgFallback(this)">
+        </picture>
       </div>
       <h3 data-cms-text="learn-stories-title">客戶見證</h3>
       <p data-cms-text="learn-stories-text">寵物、生命、結髮、滿月——每一顆鑽石背後的情感故事。</p>
@@ -440,7 +451,10 @@
     </a>
     <a class="gh-card reveal reveal-d3" href="/faq.html">
       <div class="gh-card__media">
-        <img data-cms-slot="learn-faq" src="/static/images/learn-cards/faq.jpg?v=3" alt="鑽石、鑑定書與說明文件的常見問題意象" width="800" height="600" loading="lazy" decoding="async" onerror="imgFallback(this)">
+        <picture>
+          <source type="image/webp" srcset="/static/images/learn-cards/faq-400.webp 400w, /static/images/learn-cards/faq.webp 800w" sizes="(max-width:640px) 92vw, (max-width:900px) 45vw, 280px">
+          <img data-cms-slot="learn-faq" src="/static/images/learn-cards/faq.jpg?v=4" alt="鑽石、鑑定書與說明文件的常見問題意象" width="800" height="600" loading="lazy" decoding="async" onerror="imgFallback(this)">
+        </picture>
       </div>
       <h3 data-cms-text="learn-faq-title">常見問題</h3>
       <p data-cms-text="learn-faq-text">樣本份量、製作時間、鑑定證書與如何開始，一次解答。</p>

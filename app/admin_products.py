@@ -19,6 +19,11 @@ from app.image_urls import (
     resolve_product_image_url,
     static_url_exists,
 )
+from app.memorial_diamonds import (
+    VALID_DIAMOND_COLORS,
+    normalize_style_key,
+    style_key_from_name_en,
+)
 from app.pricing_overrides import canonical_carat
 from app.storage import (
     delete_by_url,
@@ -32,7 +37,10 @@ from app.storage import (
     relocate_product_object_url,
 )
 
-VALID_CATEGORIES = {"pendant", "ring", "earring", "bracelet", "chain"}
+VALID_CATEGORIES = {"diamond", "pendant", "ring", "earring", "bracelet", "chain"}
+
+RING_SIZE_MIN = 5
+RING_SIZE_MAX = 18
 
 VALID_CARATS = {
     "0.1", "0.2", "0.3", "0.5", "0.6", "0.7", "0.8", "0.9", "1.0",
@@ -57,6 +65,7 @@ _AUTO_STOCK_PRODUCT_IMAGE_RE = re.compile(
 )
 
 CATEGORY_LABELS = {
+    "diamond": "紀念鑽石",
     "pendant": "項墜",
     "ring": "戒指",
     "earring": "耳環",
@@ -116,6 +125,18 @@ def ensure_product_variant_addon_price_column(cur) -> None:
     )
 
 
+def ensure_product_style_key_column(cur) -> None:
+    """Add products.style_key if missing (memorial diamond shop linking)."""
+    from app.memorial_diamonds import ensure_product_style_key_column as _ensure
+
+    _ensure(cur)
+
+
+def ensure_product_ring_size_config_column(cur) -> None:
+    """Add products.ring_size_config jsonb if missing (migration 20260806180000)."""
+    cur.execute("alter table products add column if not exists ring_size_config jsonb")
+
+
 def as_jsonb(value: Any) -> Jsonb | None:
     """Wrap dict/list for jsonb params. Bare dict → ProgrammingError in psycopg3."""
     if value is None:
@@ -125,6 +146,83 @@ def as_jsonb(value: Any) -> Jsonb | None:
     if isinstance(value, (dict, list)):
         return Jsonb(value)
     return None
+
+
+def _parse_ring_size_int(raw: Any) -> int | None:
+    """Parse integer ring size in shop range; None if empty/invalid."""
+    if raw in (None, ""):
+        return None
+    try:
+        size = int(round(float(raw)))
+    except (TypeError, ValueError):
+        return None
+    if size < RING_SIZE_MIN or size > RING_SIZE_MAX:
+        return None
+    return size
+
+
+def _parse_ring_size_config(raw: Any, *, errors: list[str]) -> dict[str, Any] | None:
+    """Normalize ringSizeConfig: startSize + sizes[{size, addonPriceTwd}]."""
+    if raw in (None, "", {}):
+        return None
+    if not isinstance(raw, dict):
+        errors.append("invalid ring size config")
+        return None
+    start_raw = raw.get("startSize")
+    if start_raw is None:
+        start_raw = raw.get("start_size")
+    start_size = None
+    if start_raw not in (None, ""):
+        start_size = _parse_ring_size_int(start_raw)
+        if start_size is None:
+            errors.append("invalid ring start size")
+
+    sizes_raw = raw.get("sizes")
+    if sizes_raw is None:
+        sizes_raw = raw.get("addons")
+    sizes: list[dict[str, Any]] = []
+    seen: set[int] = set()
+    if sizes_raw in (None, ""):
+        sizes_raw = []
+    if isinstance(sizes_raw, dict):
+        # Support { "9": 500 } map form from older clients.
+        sizes_raw = [
+            {"size": k, "addonPriceTwd": v} for k, v in sizes_raw.items()
+        ]
+    if not isinstance(sizes_raw, list):
+        errors.append("invalid ring size config")
+        return None
+    for row in sizes_raw:
+        if not isinstance(row, dict):
+            errors.append("invalid ring size row")
+            continue
+        size = _parse_ring_size_int(row.get("size"))
+        if size is None:
+            errors.append("invalid ring size")
+            continue
+        if size in seen:
+            errors.append(f"duplicate ring size: {size}")
+            continue
+        raw_addon = row.get("addonPriceTwd")
+        if raw_addon in (None, ""):
+            raw_addon = row.get("addon_price_twd")
+        if raw_addon in (None, ""):
+            addon = 0.0
+        else:
+            try:
+                addon = float(raw_addon)
+            except (TypeError, ValueError):
+                errors.append(f"invalid ring size addon for {size}")
+                continue
+            if addon < 0:
+                errors.append(f"invalid ring size addon for {size}")
+                continue
+        seen.add(size)
+        sizes.append({"size": size, "addonPriceTwd": addon})
+    sizes.sort(key=lambda r: r["size"])
+    if start_size is None and not sizes:
+        return None
+    return {"startSize": start_size, "sizes": sizes}
 
 
 def _parse_length_weights(raw: Any, *, errors: list[str]) -> dict[str, dict[str, float]] | None:
@@ -259,11 +357,22 @@ def purge_auto_stock_product_images(cur) -> int:
     return int(cur.rowcount or 0)
 
 
-def image_covers_default_color(image_color: str, default_color: str) -> bool:
-    """defaultColor is metal-only; slots may be metal, metal-diamond, or metal-diamond-chain."""
+def image_covers_default_color(
+    image_color: str,
+    default_color: str,
+    *,
+    category: str | None = None,
+) -> bool:
+    """defaultColor is metal-only for jewelry; diamond uses diamond-color keys."""
     key = (image_color or "").strip().lower()
     default = (default_color or "").strip().lower()
-    if not key or default not in VALID_COLORS:
+    if not key or not default:
+        return False
+    if category == "diamond":
+        if default not in VALID_DIAMOND_COLORS:
+            return False
+        return key == default or key.endswith("-" + default)
+    if default not in VALID_COLORS:
         return False
     if key == default:
         return True
@@ -315,13 +424,23 @@ def validate_product_fields(body: dict | None, *, valid_categories: set[str] | N
     cleaned["descriptionEn"] = desc_en or None
 
     default_color = str(body.get("defaultColor") or "white").strip()
-    if default_color not in VALID_COLORS:
+    if category == "diamond":
+        if default_color not in VALID_DIAMOND_COLORS:
+            errors.append("invalid defaultColor")
+        else:
+            cleaned["defaultColor"] = default_color
+    elif default_color not in VALID_COLORS:
         errors.append("invalid defaultColor")
     else:
         cleaned["defaultColor"] = default_color
 
-    cleaned["allowsEngraving"] = bool(body.get("allowsEngraving", True))
-    cleaned["allowsFancyShapes"] = bool(body.get("allowsFancyShapes", True))
+    # Memorial diamond: no metal engraving UI; fancy shapes stay on (shop calculator).
+    if category == "diamond":
+        cleaned["allowsEngraving"] = False
+        cleaned["allowsFancyShapes"] = bool(body.get("allowsFancyShapes", True))
+    else:
+        cleaned["allowsEngraving"] = bool(body.get("allowsEngraving", True))
+        cleaned["allowsFancyShapes"] = bool(body.get("allowsFancyShapes", True))
 
     # Pendant sell modes (不含鍊賣 / 含鍊賣). Non-pendant rows keep both true.
     if category == "pendant":
@@ -334,6 +453,51 @@ def validate_product_fields(body: dict | None, *, valid_categories: set[str] | N
     else:
         cleaned["allowsPendantOnly"] = True
         cleaned["allowsWithChain"] = True
+
+    raw_style_key = body.get("styleKey") if body.get("styleKey") is not None else body.get("style_key")
+    style_key = normalize_style_key(str(raw_style_key) if raw_style_key not in (None, "") else "")
+    if category == "diamond":
+        if raw_style_key not in (None, "") and style_key is None:
+            errors.append("invalid styleKey")
+        elif style_key is None:
+            style_key = style_key_from_name_en(cleaned.get("nameEn"))
+        cleaned["styleKey"] = style_key
+    else:
+        cleaned["styleKey"] = None
+
+    # Memorial diamond: name + image + color only — no metal/price variants.
+    if category == "diamond":
+        cleaned["variants"] = []
+        cleaned["chainType"] = None
+        cleaned["lengthWeights"] = None
+        cleaned["ringSizeConfig"] = None
+        images: list[dict] = []
+        for img in body.get("images") or []:
+            if not img or not img.get("url"):
+                continue
+            color = str(img.get("color") or "").strip().lower()
+            if color not in VALID_DIAMOND_COLORS:
+                errors.append(f"invalid image option: {color or '(empty)'}")
+                continue
+            url = normalize_product_image_url(img.get("url"), color)
+            if not url:
+                continue
+            images.append({"color": color, "url": url})
+        final_colors = {img["color"] for img in images}
+        if not final_colors:
+            if is_published:
+                errors.append("at least one product image is required")
+        elif is_published and cleaned.get("defaultColor"):
+            default = cleaned["defaultColor"]
+            if not any(
+                image_covers_default_color(c, default, category="diamond")
+                for c in final_colors
+            ):
+                errors.append("default color must have at least one image")
+        cleaned["images"] = images
+        if errors:
+            return None, _format_product_errors(errors)
+        return cleaned, None
 
     valid_carats = VALID_CARATS_CHAIN if category == "chain" else VALID_CARATS
     variants: list[dict] = []
@@ -484,6 +648,14 @@ def validate_product_fields(body: dict | None, *, valid_categories: set[str] | N
         cleaned["chainType"] = None
     cleaned["lengthWeights"] = length_weights
 
+    ring_size_config = None
+    if category == "ring":
+        raw_rsc = body.get("ringSizeConfig")
+        if raw_rsc is None:
+            raw_rsc = body.get("ring_size_config")
+        ring_size_config = _parse_ring_size_config(raw_rsc, errors=errors)
+    cleaned["ringSizeConfig"] = ring_size_config
+
     images: list[dict] = []
     for img in body.get("images") or []:
         if not img or not img.get("url"):
@@ -503,7 +675,10 @@ def validate_product_fields(body: dict | None, *, valid_categories: set[str] | N
             errors.append("at least one product image is required")
     elif is_published and cleaned.get("defaultColor"):
         default = cleaned["defaultColor"]
-        if not any(image_covers_default_color(c, default) for c in final_colors):
+        if not any(
+            image_covers_default_color(c, default, category=category)
+            for c in final_colors
+        ):
             errors.append("default color must have at least one image")
     cleaned["images"] = images
 
@@ -518,6 +693,7 @@ def _format_product_errors(errors: list[str]) -> str:
         "nameZh is required": "請填寫中文名稱",
         "nameEn is required": "請填寫英文名稱（資料用）",
         "invalid defaultColor": "預設顏色無效",
+        "invalid styleKey": "款式代碼無效（須為 diamond-…）",
         "pendant must select 不含鍊賣 or 含鍊賣": "項墜請選擇「不含鍊賣」或「含鍊賣」",
         "pendant must allow 不含鍊賣 and/or 含鍊賣": "項墜請選擇「不含鍊賣」或「含鍊賣」",
         "at least one variant is required": "請至少新增一個款式選項（金屬／克拉／蠟重）",
@@ -566,6 +742,21 @@ def _format_product_errors(errors: list[str]) -> str:
             continue
         if err.startswith("invalid addon price for"):
             parts.append("款式選項：品項加價無效")
+            continue
+        if err == "invalid ring size config":
+            parts.append("戒圍設定無效")
+            continue
+        if err == "invalid ring start size":
+            parts.append("起始戒圍無效（須為 5–18）")
+            continue
+        if err == "invalid ring size" or err == "invalid ring size row":
+            parts.append("戒圍尺寸無效（須為 5–18）")
+            continue
+        if err.startswith("duplicate ring size"):
+            parts.append("戒圍尺寸重複：" + err.split(": ", 1)[-1])
+            continue
+        if err.startswith("invalid ring size addon for"):
+            parts.append("戒圍品項加價無效")
             continue
         if err.startswith("duplicate variant"):
             parts.append("款式選項重複：" + err.split(": ", 1)[-1])
@@ -648,6 +839,11 @@ def serialize_product_row(row: dict) -> dict:
     ct = out.pop("chain_type", None)
     if ct is not None:
         out["chainType"] = ct
+    rsc = out.pop("ring_size_config", None)
+    if rsc is not None:
+        out["ringSizeConfig"] = rsc
+    if out.get("style_key") is not None:
+        out["styleKey"] = out["style_key"]
     for key, value in out.items():
         if isinstance(value, datetime):
             out[key] = value.isoformat()
@@ -764,6 +960,7 @@ def save_product_children(cur, product_id: str, cleaned: dict) -> None:
     ensure_product_side_stone_total_column(cur)
     ensure_product_ear_clasp_price_column(cur)
     ensure_product_variant_addon_price_column(cur)
+    ensure_product_ring_size_config_column(cur)
     cur.execute("delete from product_variants where product_id = %s", (product_id,))
     for variant in cleaned["variants"]:
         ear_clasp = variant.get("earClaspPriceTwd")
@@ -793,10 +990,15 @@ def save_product_children(cur, product_id: str, cleaned: dict) -> None:
         )
 
     cur.execute(
-        "update products set length_weights = %s, chain_type = %s where id = %s",
+        """
+        update products set length_weights = %s, chain_type = %s,
+            ring_size_config = %s
+        where id = %s
+        """,
         (
             as_jsonb(cleaned.get("lengthWeights")),
             cleaned.get("chainType"),
+            as_jsonb(cleaned.get("ringSizeConfig")),
             product_id,
         ),
     )
@@ -842,9 +1044,15 @@ def save_product_children(cur, product_id: str, cleaned: dict) -> None:
 
 def publish_readiness(cur, product: dict) -> tuple[bool, str | None]:
     product_id = product["id"]
-    cur.execute("select count(*) as c from product_variants where product_id = %s", (product_id,))
-    if int(cur.fetchone()["c"]) == 0:
-        return False, "請先新增至少一個款式選項"
+    category = str(product.get("category") or "").strip()
+    # Memorial diamond: images only (no metal / price variants).
+    if category != "diamond":
+        cur.execute(
+            "select count(*) as c from product_variants where product_id = %s",
+            (product_id,),
+        )
+        if int(cur.fetchone()["c"]) == 0:
+            return False, "請先新增至少一個款式選項"
     cur.execute("select count(*) as c from product_images where product_id = %s", (product_id,))
     if int(cur.fetchone()["c"]) == 0:
         return False, "請先上傳至少一張商品照片"
@@ -853,7 +1061,10 @@ def publish_readiness(cur, product: dict) -> tuple[bool, str | None]:
         (product_id,),
     )
     default = product["default_color"]
-    if not any(image_covers_default_color(row["color"], default) for row in cur.fetchall()):
+    if not any(
+        image_covers_default_color(row["color"], default, category=category)
+        for row in cur.fetchall()
+    ):
         return False, "預設顏色必須至少有一張商品照片"
     return True, None
 

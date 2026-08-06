@@ -223,7 +223,7 @@ button:not(.btn-sm):not(.ap-tab-btn):not(.nav-toggle):not(.side-backdrop):not([d
 .dash-export-btn:hover{border-color:var(--mint-deep);color:var(--mint-deep);}
 
 /* 商品上架 */
-.ap-toolbar{display:flex;justify-content:flex-end;margin-bottom:14px;}
+.ap-toolbar{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:14px;}
 .ap-category-tabs{display:flex;flex-wrap:wrap;align-items:center;gap:2px;margin-bottom:16px;border-bottom:1px solid #EDE7E0;}
 .ap-tab-btn--add{
   min-width:40px;justify-content:center;font-size:18px;line-height:1;
@@ -502,6 +502,17 @@ button:not(.btn-sm):not(.ap-tab-btn):not(.nav-toggle):not(.side-backdrop):not([d
 .ap-variant-block--chain .ap-variant-head,
 .ap-variant-block--chain .ap-variant-row{
   grid-template-columns:minmax(0,0.8fr) minmax(0,0.8fr) minmax(0,1fr) minmax(0,1.1fr) 36px;
+}
+.ap-variant-block--ring-size .ap-variant-head,
+.ap-variant-block--ring-size .ap-variant-row{
+  grid-template-columns:minmax(0,1fr) minmax(0,1.4fr) 36px;
+}
+.ap-ring-start-row{
+  display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px;margin:0 0 12px;
+}
+.ap-ring-start-row label{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--ink-soft);}
+.ap-ring-start-row input{
+  width:120px;padding:6px 8px;border:1px solid #DDD5CC;border-radius:5px;font-size:13px;box-sizing:border-box;
 }
 .ap-variant-actions{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px;}
 .ap-variant-head{font-size:11px;color:var(--ink-faint);}

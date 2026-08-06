@@ -62,8 +62,12 @@ def test_shop_uses_local_pricing_still_api_gated():
 
 def test_admin_products_memorial_series_note():
     src = ADMIN_PRODUCTS_JS.read_text(encoding="utf-8")
-    assert "紀念鑽石系列" in src
-    assert "不在此商品 CRUD 管理" in src
+    assert "紀念鑽石" in src
+    assert "不含金屬／價格" in src
+    assert "前往價格設定" in src
+    assert "不在此商品 CRUD 管理" not in src
+    assert "ap-image-slot-diamond-only" in src
+    assert "MEMORIAL_DIAMOND_STYLE_KEYS" in src
 
 
 def test_admin_products_upload_waits_for_crop_modal():

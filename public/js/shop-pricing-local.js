@@ -296,6 +296,27 @@
     return Number.isFinite(cat) && cat >= 0 ? Math.round(cat) : 0;
   }
 
+  /** Ring-size 品項加價 from product.ringSizeConfig; 0 when size has no row. */
+  function resolveRingSizeAddon(product, ringSize) {
+    if (ringSize == null || ringSize === '') return 0;
+    var size = Math.round(Number(ringSize));
+    if (!Number.isFinite(size)) return 0;
+    var cfg = product && (product.ringSizeConfig || product.ring_size_config);
+    if (!cfg || typeof cfg !== 'object') return 0;
+    var rows = cfg.sizes;
+    if (Array.isArray(rows)) {
+      for (var i = 0; i < rows.length; i += 1) {
+        var r = rows[i];
+        if (!r) continue;
+        if (Math.round(Number(r.size)) !== size) continue;
+        var addon = r.addonPriceTwd != null ? r.addonPriceTwd : r.addon_price_twd;
+        var n = Number(addon);
+        return Number.isFinite(n) && n > 0 ? Math.round(n) : 0;
+      }
+    }
+    return 0;
+  }
+
   function laborFee(category, gold, addonPriceTwd) {
     // 品項加價 > 0 replaces base labor; 0 keeps base. Folded into 金工價格.
     var base = LABOR_FEE_TWD;
@@ -385,10 +406,12 @@
 
     var manual = product.manualPrices && product.manualPrices[gold] && product.manualPrices[gold][carat];
     if (category !== 'chain' && manual != null) {
+      var manualRingAddon = category === 'ring' ? resolveRingSizeAddon(product, data.ringSize) : 0;
       return {
         ready: true,
-        total: Number(manual) * earringQty,
+        total: (Number(manual) + manualRingAddon) * earringQty,
         manualOverride: true,
+        ringSizePrice: manualRingAddon || undefined,
         quantity: category === 'earring' ? earringQty : undefined,
       };
     }
@@ -402,15 +425,22 @@
 
     var weightGrams = weightChin * CHIN_TO_GRAMS;
     var laborPreTax = laborFee(category, gold, resolveAddonPrice(category, product, gold, carat));
+    var ringSizeAddon = 0;
+    if (category === 'ring') {
+      ringSizeAddon = resolveRingSizeAddon(product, data.ringSize);
+    }
     var metal = metalPreTax(gold, weightChin);
     var taijinDisplay = Math.round(metal.amount * (1 + TAX_RATE));
     // Labor is flat NT$ — not taxed. Tax only on metal (and 搭配鏈條 metal).
     // Earring per-row 耳扣價錢 folds into labor / 金工價格 (with 品項加價).
+    // Ring size 品項加價 stacks on top of category/variant labor addon.
     var laborDisplay = laborPreTax;
     if (category === 'earring') {
       var claspTable = product.earClaspPrices && product.earClaspPrices[gold];
       var claspRaw = claspTable && claspTable[carat] != null ? Number(claspTable[carat]) : 0;
       if (Number.isFinite(claspRaw) && claspRaw > 0) laborDisplay = laborPreTax + Math.round(claspRaw);
+    } else if (category === 'ring' && ringSizeAddon > 0) {
+      laborDisplay = laborPreTax + ringSizeAddon;
     }
 
     var diamondPrice = null;
@@ -476,6 +506,7 @@
       taijinPrice: taijinDisplay,
       laborPrice: laborDisplay,
       metalworkPrice: taijinDisplay + laborDisplay,
+      ringSizePrice: ringSizeAddon || undefined,
       chainPrice: chainDisplay,
       total: Math.round(total),
       quantity: category === 'earring' ? earringQty : undefined,

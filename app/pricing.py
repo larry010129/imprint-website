@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.admin_products import RING_SIZE_MAX, RING_SIZE_MIN
 from app.catalog import resolve_product_id
 from app.chain_catalog import DEFAULT_NECKLACE_TYPE, necklace_type_length_weights
 from app.pricing_overrides import (
@@ -397,6 +398,69 @@ def _ear_clasp_fee(variant: dict | None) -> int:
     return max(0, amount)
 
 
+def _normalize_ring_size(ring_size: Any) -> int | None:
+    if ring_size in (None, ""):
+        return None
+    try:
+        size = int(round(float(ring_size)))
+    except (TypeError, ValueError):
+        return None
+    if size < RING_SIZE_MIN or size > RING_SIZE_MAX:
+        return None
+    return size
+
+
+def ring_size_addon_from_config(config: dict | None, ring_size: Any) -> int:
+    """Per-size 戒圍品項加價; 0 when size has no row. Does not replace labor addon."""
+    size = _normalize_ring_size(ring_size)
+    if size is None or not isinstance(config, dict):
+        return 0
+    for row in config.get("sizes") or []:
+        if not isinstance(row, dict):
+            continue
+        row_size = _normalize_ring_size(row.get("size"))
+        if row_size != size:
+            continue
+        raw = row.get("addonPriceTwd")
+        if raw is None:
+            raw = row.get("addon_price_twd")
+        if raw in (None, ""):
+            return 0
+        try:
+            return max(0, int(round(float(raw))))
+        except (TypeError, ValueError):
+            return 0
+    addons = config.get("addons")
+    if isinstance(addons, dict):
+        raw = addons.get(str(size))
+        if raw is None:
+            raw = addons.get(size)
+        if raw in (None, ""):
+            return 0
+        try:
+            return max(0, int(round(float(raw))))
+        except (TypeError, ValueError):
+            return 0
+    return 0
+
+
+def _product_ring_size_config(cur, *, category: str, product_id: str, require_published: bool) -> dict | None:
+    resolved = resolve_product_id(
+        cur, category=category, type_ref=product_id, require_published=require_published,
+    )
+    if not resolved:
+        return None
+    cur.execute(
+        "select ring_size_config from products where id = %s and category = %s",
+        (resolved, category),
+    )
+    row = cur.fetchone()
+    if not row:
+        return None
+    cfg = row.get("ring_size_config")
+    return cfg if isinstance(cfg, dict) else None
+
+
 def get_product_variant(
     cur, *, category: str, product_id: str, gold: str, carat: str, require_published: bool = True
 ) -> dict | None:
@@ -567,14 +631,22 @@ def compute_order_pricing(cur, data: dict[str, Any], *, require_published: bool 
     labor_pre_tax = _labor_fee(
         category, gold, _effective_addon_price(cur, category, variant)
     )
+    ring_size_addon = 0
+    if category == "ring":
+        ring_cfg = _product_ring_size_config(
+            cur, category=category, product_id=product_id,
+            require_published=require_published,
+        )
+        ring_size_addon = ring_size_addon_from_config(ring_cfg, data.get("ringSize"))
 
     if category != "chain" and variant.get("manual_price_twd") is not None:
         gold_prices = get_metal_prices(cur)
-        unit_total = float(variant["manual_price_twd"])
+        unit_total = float(variant["manual_price_twd"]) + ring_size_addon
         return {
             "ready": True,
             "total": unit_total * earring_qty,
             "manualOverride": True,
+            "ringSizePrice": ring_size_addon or None,
             "weightGrams": weight_grams * earring_qty,
             "goldRatePerGram": gold_prices[METAL_SYMBOL[gold]] * PURITY_MULTIPLIER[gold],
             "priceSource": "server",
@@ -586,9 +658,12 @@ def compute_order_pricing(cur, data: dict[str, Any], *, require_published: bool 
     taijin_display = round(taijin_pre_tax * (1 + tax_rate))
     # Labor is flat NT$ — not taxed. Tax only on metal (and 搭配鏈條 metal).
     # Earring per-row 耳扣價錢 folds into labor / 金工價格 (with 品項加價).
+    # Ring size 品項加價 stacks on top of category/variant labor addon (not a replace).
     labor_display = labor_pre_tax
     if category == "earring":
         labor_display = labor_pre_tax + _ear_clasp_fee(variant)
+    elif category == "ring" and ring_size_addon:
+        labor_display = labor_pre_tax + ring_size_addon
     # Diamond list price is tax-inclusive; metal/chain quotes include tax at display time.
 
     diamond_price = None
@@ -645,6 +720,7 @@ def compute_order_pricing(cur, data: dict[str, Any], *, require_published: bool 
         "taijinPrice": taijin_display,
         "laborPrice": labor_display,
         "metalworkPrice": taijin_display + labor_display,
+        "ringSizePrice": ring_size_addon or None,
         "chainPrice": chain_display,
         "total": round(total),
         "weightGrams": weight_grams,

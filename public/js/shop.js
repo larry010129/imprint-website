@@ -321,7 +321,7 @@ function catalogHasJewelryFromApi() {
   );
 }
 
-/** Memorial diamond series are intentionally static (not in product CRUD); inject after API jewelry loads. */
+/** Memorial diamond: API may already merge admin overlays; fill gaps from static only. */
 function injectMemorialDiamondCatalogIfNeeded() {
   if (shopAllowsStaticCatalog()) return;
   if (!catalogHasJewelryFromApi()) return;
@@ -331,7 +331,34 @@ function injectMemorialDiamondCatalogIfNeeded() {
 function injectDiamondCatalog() {
   const staticDiamond = window.shopCatalogData?.categories?.diamond;
   if (!staticDiamond?.length) return;
-  catalog.diamond = staticDiamond.map((p) => ({ ...p, images: { ...(p.images || {}) } }));
+  const apiList = Array.isArray(catalog.diamond) ? catalog.diamond : [];
+  const byKey = new Map();
+  apiList.forEach((p) => {
+    const key = String(p?.styleKey || p?.id || '');
+    if (key) byKey.set(key, p);
+  });
+  catalog.diamond = staticDiamond.map((staticP) => {
+    const key = String(staticP.styleKey || staticP.id || '');
+    const api = key ? byKey.get(key) : null;
+    if (!api) {
+      return { ...staticP, images: { ...(staticP.images || {}) } };
+    }
+    byKey.delete(key);
+    const images = (api.images && Object.keys(api.images).length)
+      ? { ...api.images }
+      : { ...(staticP.images || {}) };
+    return {
+      ...staticP,
+      ...api,
+      styleKey: key,
+      golds: [],
+      carats: (api.carats && api.carats.length) ? api.carats : staticP.carats,
+      images,
+    };
+  });
+  byKey.forEach((extra) => {
+    if (!extra?.draft) catalog.diamond.push(extra);
+  });
   const order = (window._catalogCategoryOrder && window._catalogCategoryOrder.length)
     ? [...window._catalogCategoryOrder]
     : [...CATEGORY_DISPLAY_ORDER];
@@ -1341,6 +1368,8 @@ let chinToGrams = 3.75;
 let taxRate = 0.05;
 let ringSizeMin = 5;
 let ringSizeMax = 18;
+const RING_SIZE_DEFAULT_MIN = 5;
+const RING_SIZE_DEFAULT_MAX = 18;
 let ringSizeReference = {};
 
 // ── Live price data (from /api/prices) ────────────────────────────────────
@@ -4738,6 +4767,31 @@ function setRingSizeActive(size) {
   selectRingSize(size);
 }
 
+function productRingStartSize(product) {
+  const cfg = product && (product.ringSizeConfig || product.ring_size_config);
+  if (!cfg) return null;
+  const raw = cfg.startSize != null ? cfg.startSize : cfg.start_size;
+  if (raw == null || raw === '') return null;
+  const n = Math.round(Number(raw));
+  if (!Number.isFinite(n) || n < RING_SIZE_DEFAULT_MIN || n > RING_SIZE_DEFAULT_MAX) return null;
+  return n;
+}
+
+/** Apply product starting size as picker min; optionally select as default. */
+function applyProductRingSizeBounds(product, options) {
+  const opts = options || {};
+  const selectDefault = opts.selectDefault !== false;
+  const start = productRingStartSize(product);
+  ringSizeMin = start != null ? start : RING_SIZE_DEFAULT_MIN;
+  ringSizeMax = RING_SIZE_DEFAULT_MAX;
+  if (ringSizeMin > ringSizeMax) ringSizeMin = RING_SIZE_DEFAULT_MIN;
+  populateRingSizeSelect();
+  if (selectDefault && start != null) {
+    setRingSizeActive(start);
+  }
+  return start;
+}
+
 function populateRingSizeSelect() {
   const sel = document.getElementById('ring-size-select');
   if (!sel) return;
@@ -4754,7 +4808,9 @@ function populateRingSizeSelect() {
     opt.textContent = tr('ring_size_option') + s;
     sel.appendChild(opt);
   }
-  if (current != null) sel.value = String(current);
+  if (current != null && current >= ringSizeMin && current <= ringSizeMax) {
+    sel.value = String(current);
+  }
 }
 
 function renderRingSizeGuide() {
@@ -4791,6 +4847,8 @@ async function selectCategory(cat, options) {
   state.color = null;
   state.carat = null;
   state.ringSize = null;
+  ringSizeMin = RING_SIZE_DEFAULT_MIN;
+  ringSizeMax = RING_SIZE_DEFAULT_MAX;
   state.engravingBand = '';
   state.engravingRemark = '';
   state.engravingGirdle = '';
@@ -4868,6 +4926,12 @@ async function selectType(typeId, options) {
   updateMetalButtons();
   document.querySelectorAll("#metal-btn-row .metal-btn, #color-btn-row .color-btn").forEach(b => b.classList.remove("active"));
   clearRingSizeSelection();
+  if (state.category === 'ring') {
+    applyProductRingSizeBounds(product);
+  } else {
+    ringSizeMin = RING_SIZE_DEFAULT_MIN;
+    ringSizeMax = RING_SIZE_DEFAULT_MAX;
+  }
 
   productImageIndex = 0;
   updateLargeImage();
@@ -5767,8 +5831,19 @@ async function restoreShopConfig(cfg) {
     if (!restoredShape) state.diamondShape = 'other';
   }
 
+  if (cfg.category === 'ring') {
+    applyProductRingSizeBounds(getSelectedProduct(), { selectDefault: false });
+  }
   if (cfg.ringSize != null && cfg.ringSize !== '') {
+    const restored = Math.round(Number(cfg.ringSize));
+    if (Number.isFinite(restored) && restored < ringSizeMin) {
+      ringSizeMin = restored;
+      populateRingSizeSelect();
+    }
     setRingSizeActive(cfg.ringSize);
+  } else if (cfg.category === 'ring') {
+    const start = productRingStartSize(getSelectedProduct());
+    if (start != null) setRingSizeActive(start);
   }
 
   updateRingSizeStep();
