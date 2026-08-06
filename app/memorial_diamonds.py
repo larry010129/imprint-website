@@ -323,23 +323,81 @@ def sync_memorial_diamond_seed_images(cur, product_id: Any, color: str | None = 
     return inserted
 
 
+def _backfill_color_style_keys(cur) -> int:
+    """Link orphan diamond rows (no style_key) to diamond-{color} when name matches."""
+    updated = 0
+    for product in DIAMOND_COLOR_PRODUCTS:
+        key = str(product["styleKey"])
+        color = str(product["defaultColor"])
+        cur.execute(
+            """
+            update products p
+            set style_key = %s, updated_at = now()
+            where p.category = 'diamond'
+              and p.default_color = %s
+              and p.style_key is null
+              and p.name_zh = %s
+              and not exists (
+                select 1 from products x where x.style_key = %s
+              )
+            """,
+            (key, color, product["nameZh"], key),
+        )
+        updated += int(cur.rowcount or 0)
+    return updated
+
+
+def _clear_orphan_tombstones_if_catalog_empty(cur) -> int:
+    """When every color product is gone, tombstones block re-seed — clear them.
+
+    Single admin deletes still tombstone (other rows remain). Only resets when
+    zero memorial color products exist in DB.
+    """
+    keys = sorted(known_style_keys())
+    if not keys:
+        return 0
+    cur.execute(
+        """
+        select count(*) as n from products
+        where category = 'diamond'
+          and style_key = any(%s)
+        """,
+        (keys,),
+    )
+    if int((cur.fetchone() or {}).get("n") or 0) > 0:
+        return 0
+    tombstoned = list_tombstoned_style_keys(cur)
+    cleared = 0
+    for key in keys:
+        if key in tombstoned:
+            clear_style_tombstone(cur, key)
+            cleared += 1
+    return cleared
+
+
 def ensure_memorial_diamond_products(cur) -> int:
     """Upsert four color products; retire legacy five-series rows.
 
     Inserts missing color rows unless admin tombstoned that style_key.
-    Syncs shape images on every call (admin list load).
+    Syncs shape images on every call (admin list load / startup seed).
 
     Returns how many product rows were inserted.
     """
     ensure_product_style_key_column(cur)
+    _clear_orphan_tombstones_if_catalog_empty(cur)
     retire_legacy_series_products(cur)
+    _backfill_color_style_keys(cur)
     tombstoned = list_tombstoned_style_keys(cur)
     inserted = 0
     for index, product in enumerate(DIAMOND_COLOR_PRODUCTS):
         key = str(product["styleKey"])
         color = str(product["defaultColor"])
         cur.execute(
-            "select id from products where style_key = %s limit 1",
+            """
+            select id from products
+            where category = 'diamond' and style_key = %s
+            limit 1
+            """,
             (key,),
         )
         row = cur.fetchone()

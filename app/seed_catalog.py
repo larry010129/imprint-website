@@ -6,8 +6,9 @@ import json
 import logging
 from pathlib import Path
 
-from app.database import get_connection
+from app.database import get_connection, get_transaction
 from app.admin_products import is_auto_stock_product_image, is_dead_catalog_placeholder, purge_auto_stock_product_images
+from app.memorial_diamonds import ensure_memorial_diamond_products
 
 log = logging.getLogger(__name__)
 
@@ -135,7 +136,21 @@ def seed_catalog_if_empty() -> int:
         return 0
 
 
+def seed_memorial_diamond_products() -> int:
+    """Idempotent: four gem-color rows + shape matrix images (紀念鑽石 admin tab)."""
+    try:
+        with get_transaction() as conn, conn.cursor() as cur:
+            inserted = ensure_memorial_diamond_products(cur)
+            if inserted:
+                log.info("memorial diamond seed — inserted %s color product(s)", inserted)
+            return inserted
+    except Exception:
+        log.exception("memorial diamond seed failed")
+        return 0
+
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     n = seed_catalog_if_empty()
-    print(f"seeded {n} product(s)")
+    m = seed_memorial_diamond_products()
+    print(f"seeded {n} jewelry product(s), {m} memorial diamond color(s)")

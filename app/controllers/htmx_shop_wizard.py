@@ -79,6 +79,20 @@ def _product_thumb(product: dict[str, Any]) -> str:
     )
 
 
+def _default_memorial_diamond_type_ref(products: list[dict[str, Any]]) -> str:
+    """Shop memorial diamond skips style grid — default white color product."""
+    for product in products:
+        key = str(product.get("styleKey") or "")
+        if key == "diamond-white":
+            return str(product.get("id") or key)
+        if str(product.get("defaultColor") or "").lower() == "white":
+            return str(product.get("id") or key)
+    if products:
+        first = products[0]
+        return str(first.get("id") or first.get("styleKey") or "diamond-white")
+    return "diamond-white"
+
+
 def _type_grid_layout(count: int) -> dict[str, Any]:
     """Mirror retired shop.js applyTypeGridLayout — size classes drive shop.css columns."""
     if count <= 1:
@@ -280,6 +294,11 @@ async def shop_step_catalog(request: Request) -> HTMLResponse:
                 "slug": slug,
                 "label": meta.get("labelZh") or slug,
                 "thumb": thumb or "",
+                "memorial_type": (
+                    _default_memorial_diamond_type_ref(products)
+                    if slug == "diamond"
+                    else None
+                ),
             }
         )
     return html(request, "shop_catalog.html", _step_ctx(request, step="catalog", tiles=tiles))
@@ -291,6 +310,16 @@ async def shop_step_styles(request: Request) -> HTMLResponse:
     if not category:
         return await shop_step_catalog(request)
     catalog = _catalog_for_request(request)
+    if category == "diamond":
+        products = catalog["categories"].get("diamond") or []
+        type_ref = _default_memorial_diamond_type_ref(products)
+        preview = is_shop_preview(request)
+        qs = f"category=diamond&type={quote(type_ref)}"
+        if preview:
+            qs += "&preview=1"
+        scope = dict(request.scope)
+        scope["query_string"] = qs.encode()
+        return await shop_step_configure(Request(scope, request.receive))
     meta = catalog["categoryMeta"].get(category) or {}
     products = []
     for product in catalog["categories"].get(category) or []:

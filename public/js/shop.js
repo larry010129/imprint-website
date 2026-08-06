@@ -324,7 +324,13 @@ function catalogHasJewelryFromApi() {
 /** Memorial diamond: API may already merge admin overlays; fill gaps from static only. */
 function injectMemorialDiamondCatalogIfNeeded() {
   if (shopAllowsStaticCatalog()) return;
-  if (!catalogHasJewelryFromApi()) return;
+  if ((catalog.diamond || []).length) return;
+  injectDiamondCatalog();
+}
+
+/** Before memorial configure, guarantee color products exist (static fallback). */
+function ensureMemorialDiamondCatalog() {
+  if ((catalog.diamond || []).length) return;
   injectDiamondCatalog();
 }
 
@@ -407,7 +413,11 @@ function catalogCategories() {
 
 function getProduct(category, typeId) {
   if (!category || typeId == null) return null;
-  return productsFor(category).find(p => String(p.id) === String(typeId)) || null;
+  const ref = String(typeId);
+  const list = productsFor(category);
+  return list.find((p) => String(p.id) === ref)
+    || list.find((p) => String(p.styleKey || '') === ref)
+    || null;
 }
 
 function getSelectedProduct() {
@@ -1625,6 +1635,17 @@ async function applyShopHistoryState(st) {
   }
 
   if (view === 'styles') {
+    if (category === 'diamond') {
+      if (state.category !== category || shopView === 'catalog') {
+        await selectCategory(category, { ...opts, typeId: typeId || undefined });
+      } else if (typeId && state.type !== typeId) {
+        await selectType(typeId, opts);
+      } else {
+        setShopView('product', opts);
+        updateSummary();
+      }
+      return;
+    }
     if (state.category !== category || shopView === 'catalog') {
       await selectCategory(category, opts);
     } else {
@@ -1662,12 +1683,19 @@ window.addEventListener('popstate', (event) => {
   const category = params.get('category');
   const type = params.get('product') || params.get('type') || params.get('series');
   if (type && category) applyShopHistoryState({ view: 'product', category, type });
-  else if (category) applyShopHistoryState({ view: 'styles', category });
+  else if (category) {
+    applyShopHistoryState({
+      view: category === 'diamond' ? 'product' : 'styles',
+      category,
+      type,
+    });
+  }
   else applyShopHistoryState({ view: 'catalog' });
 });
 
 function setShopView(view, options) {
   const opts = options || {};
+  if (view === 'styles' && isDiamondOnlyCategory()) view = 'product';
   const prevView = shopView;
   shopView = view;
   const catalogSection = document.getElementById('shop-catalog');
@@ -1709,10 +1737,10 @@ const SHOP_STEPS = {
   product: { step: 3, progress: 100 },
 };
 
-// Memorial diamond: catalog → 4 color products → configure shapes (same chrome).
+// Memorial diamond: catalog → configure (skip style grid; color picked on step 3).
 const DIAMOND_SHOP_STEPS = {
-  catalog: { step: 1, progress: 33 },
-  styles: { step: 2, progress: 66 },
+  catalog: { step: 1, progress: 50 },
+  styles: { step: 2, progress: 50 },
   product: { step: 3, progress: 100 },
 };
 
@@ -1740,6 +1768,18 @@ function memorialDiamondProductForColor(colorId) {
     || null;
 }
 
+/** Default memorial SKU when entering configure (white, else first catalog row). */
+function defaultMemorialDiamondTypeId() {
+  const white = memorialDiamondProductForColor('white');
+  if (white?.id != null) return String(white.id);
+  if (white?.styleKey) return String(white.styleKey);
+  const list = productsFor('diamond');
+  const first = list[0];
+  if (first?.id != null) return String(first.id);
+  if (first?.styleKey) return String(first.styleKey);
+  return 'diamond-white';
+}
+
 function applyMemorialDiamondProductColor(product) {
   const color = memorialDiamondColorFromProduct(product);
   if (!color) return;
@@ -1753,10 +1793,11 @@ function applyMemorialDiamondProductColor(product) {
 }
 
 function updateDiamondWizardChrome() {
+  const skipStyles = isDiamondOnlyCategory();
   const stylesStep = document.getElementById('wizard-step-styles');
   const backBtn = document.getElementById('back-to-styles');
-  if (stylesStep) stylesStep.hidden = false;
-  if (backBtn) backBtn.textContent = tr('shop_back_styles');
+  if (stylesStep) stylesStep.hidden = skipStyles;
+  if (backBtn) backBtn.textContent = skipStyles ? tr('shop_back_catalog') : tr('shop_back_styles');
 }
 
 const WIZARD_GUIDE = {
@@ -1778,7 +1819,14 @@ const WIZARD_GUIDE = {
 };
 
 function updateWizardGuide() {
-  const copy = WIZARD_GUIDE[shopView] || WIZARD_GUIDE.catalog;
+  let copy = WIZARD_GUIDE[shopView] || WIZARD_GUIDE.catalog;
+  if (isDiamondOnlyCategory() && shopView === 'product') {
+    copy = {
+      eyebrow: '線上訂製 · 三步完成',
+      title: '配置您的紀念鑽石',
+      desc: '選擇鑽石顏色、切工與克拉，右側即時更新試算價格。',
+    };
+  }
   const eyebrow = document.getElementById('shop-wizard-eyebrow');
   const title = document.getElementById('shop-wizard-title');
   const desc = document.getElementById('shop-wizard-desc');
@@ -1791,11 +1839,18 @@ function updateShopProgress() {
   const steps = activeShopSteps();
   const meta = steps[shopView] || steps.catalog;
 
+  const skipStyles = isDiamondOnlyCategory();
   document.querySelectorAll('.shop-stepper-step').forEach((btn) => {
     const step = btn.dataset.step;
+    if (skipStyles && step === 'styles') {
+      btn.hidden = true;
+      return;
+    }
+    btn.hidden = false;
     const stepNum = steps[step]?.step || 0;
     const current = meta.step;
-    btn.classList.toggle('is-active', step === shopView);
+    const effectiveView = skipStyles && shopView === 'product' ? 'product' : shopView;
+    btn.classList.toggle('is-active', step === effectiveView);
     btn.classList.toggle('is-done', stepNum < current);
     btn.disabled = stepNum > current;
     if (step === 'catalog') btn.disabled = false;
@@ -1818,15 +1873,18 @@ function initWizardRail() {
     if (shopView !== 'catalog') document.getElementById('back-to-catalog')?.click();
   });
   document.getElementById('wizard-step-styles')?.addEventListener('click', () => {
-    if (!state.category) return;
+    if (!state.category || isDiamondOnlyCategory()) return;
     if (shopView === 'product') document.getElementById('back-to-styles')?.click();
     else if (shopView === 'catalog') selectCategory(state.category);
   });
   document.getElementById('wizard-step-product')?.addEventListener('click', () => {
     if (!state.type) return;
     if (shopView !== 'product') {
-      const card = document.querySelector(`.type-card[data-type="${state.type}"]`);
-      if (card) card.click();
+      if (isDiamondOnlyCategory()) selectType(state.type, { skipScroll: true });
+      else {
+        const card = document.querySelector(`.type-card[data-type="${state.type}"]`);
+        if (card) card.click();
+      }
     }
   });
 }
@@ -1866,7 +1924,8 @@ function updateBreadcrumb() {
     } else if (shopView === 'product') {
       if (state.category) {
         addLink(tr('cat_' + state.category), () => {
-          document.getElementById('back-to-styles')?.click();
+          if (isDiamondOnlyCategory()) document.getElementById('back-to-catalog')?.click();
+          else document.getElementById('back-to-styles')?.click();
         });
       }
       const product = getSelectedProduct();
@@ -1998,7 +2057,9 @@ function effectiveColor() {
 
 const SUBMIT_FIELD_TARGETS = {
   category: () => document.getElementById('shop-catalog'),
-  type: () => document.getElementById('shop-styles'),
+  type: () => (isDiamondOnlyCategory()
+    ? document.getElementById('fancy-diamond-step')
+    : document.getElementById('shop-styles')),
   carat: () => document.getElementById('carat-step'),
   gold: () => document.getElementById('metal-step'),
   color: () => document.getElementById('color-step'),
@@ -2072,6 +2133,13 @@ function navigateToMissingSubmitView(missing) {
     return;
   }
   if (first === 'type') {
+    if (isDiamondOnlyCategory()) {
+      const typeId = defaultMemorialDiamondTypeId();
+      if (typeId) {
+        selectType(typeId, { skipScroll: true });
+        return;
+      }
+    }
     setShopView('styles');
     return;
   }
@@ -2740,6 +2808,11 @@ function filteredProductsForCurrentCategory() {
 function renderTypeCards() {
   const grid = document.getElementById("type-grid");
   if (!grid) return;
+  if (isDiamondOnlyCategory()) {
+    grid.innerHTML = '';
+    document.getElementById('catalog-filter-empty')?.classList.add('hidden');
+    return;
+  }
   grid.innerHTML = "";
   const products = filteredProductsForCurrentCategory();
   products.forEach(product => {
@@ -4950,10 +5023,6 @@ async function selectCategory(cat, options) {
   document.querySelectorAll(".cat-btn").forEach(b =>
     b.classList.toggle("active", b.dataset.cat === cat));
 
-  if (cat !== 'diamond') {
-    await ensureCategoryCatalog(cat);
-  }
-
   if (window.CatalogMultiFilter) {
     window.CatalogMultiFilter.setHidden('catalog-metal-filter', cat === 'diamond');
     if (cat === 'diamond') window.CatalogMultiFilter.clearValues('catalog-metal-filter');
@@ -4965,6 +5034,18 @@ async function selectCategory(cat, options) {
     }
   }
   populateCatalogFilters({ keepSelection: false, category: cat });
+  updateDiamondWizardChrome();
+
+  if (cat === 'diamond') {
+    ensureMemorialDiamondCatalog();
+    const typeId = resolveMemorialDiamondTypeRef(
+      opts.typeId || defaultMemorialDiamondTypeId(),
+    );
+    await selectType(typeId, opts);
+    return;
+  }
+
+  await ensureCategoryCatalog(cat);
 
   renderTypeCards();
   const titleEl = document.getElementById("shop-category-title");
@@ -4975,20 +5056,21 @@ async function selectCategory(cat, options) {
   updateMetalButtons();
   updateCaratButtons();
   updateChainOptions();
-  updateDiamondWizardChrome();
 
   setShopView('styles', opts);
   updateSummary();
 }
 
 function resolveMemorialDiamondTypeRef(typeRef) {
-  const raw = String(typeRef || '');
+  const raw = String(typeRef || '').trim();
   // Old series deep-links (滿月/寵物/…) → white color product.
   if (/^diamond-(first-love|pet|love|family|heirloom)$/i.test(raw)) {
-    const white = memorialDiamondProductForColor('white');
-    return white ? String(white.id) : 'diamond-white';
+    return defaultMemorialDiamondTypeId();
   }
-  return raw;
+  const match = getProduct('diamond', raw);
+  if (match?.id != null) return String(match.id);
+  if (match?.styleKey) return String(match.styleKey);
+  return raw || defaultMemorialDiamondTypeId();
 }
 
 async function selectType(typeId, options) {
@@ -5234,6 +5316,10 @@ document.getElementById('back-to-catalog')?.addEventListener('click', () => {
 
 document.getElementById('back-to-styles')?.addEventListener('click', () => {
   if (!state.category) return;
+  if (isDiamondOnlyCategory()) {
+    document.getElementById('back-to-catalog')?.click();
+    return;
+  }
   if (shopInAppHistoryBack('styles')) return;
   setShopView('styles', { history: 'replace' });
   renderTypeCards();
@@ -6063,13 +6149,22 @@ async function applyInitialShopState() {
     || new URLSearchParams(window.location.search).get('product')
     || new URLSearchParams(window.location.search).get('series');
   if (urlCategory && productsFor(urlCategory).length && !prefillData) {
-    await selectCategory(urlCategory, histReplace);
-    if (urlType && urlCategory !== 'diamond') {
-      const typeId = urlType.startsWith('diamond-') || urlCategory !== 'diamond'
-        ? urlType
-        : `diamond-${urlType}`;
-      if (productsFor(urlCategory).some((p) => p.id === typeId)) {
+    if (urlCategory === 'diamond') {
+      const typeId = urlType ? resolveMemorialDiamondTypeRef(urlType) : null;
+      await selectCategory(urlCategory, {
+        ...histReplace,
+        ...(typeId ? { typeId } : {}),
+      });
+      if (typeId && productsFor('diamond').some((p) => String(p.id) === typeId) && state.type !== typeId) {
         await selectType(typeId, histReplace);
+      }
+    } else {
+      await selectCategory(urlCategory, histReplace);
+      if (urlType) {
+        const typeId = urlType;
+        if (productsFor(urlCategory).some((p) => p.id === typeId)) {
+          await selectType(typeId, histReplace);
+        }
       }
     }
   }

@@ -217,6 +217,84 @@ def test_retire_legacy_series_clears_style_key():
     assert set(cur.params[0]) == md.LEGACY_SERIES_STYLE_KEYS
 
 
+def test_ensure_backfills_style_key_on_matching_name():
+    """Orphan diamond row (no style_key) links to diamond-{color} instead of duplicating."""
+    md = _load_memorial()
+
+    class FakeCur:
+        def __init__(self):
+            self.rows = {
+                "orphan-white": {
+                    "id": "orphan-white",
+                    "category": "diamond",
+                    "name_zh": "白鑽",
+                    "default_color": "white",
+                    "style_key": None,
+                }
+            }
+            self.products = {}
+            self.inserts = []
+            self.rowcount = 0
+            self._fetchone = None
+            self._last = None
+
+        def execute(self, sql, params=None):
+            sql_l = " ".join(str(sql).lower().split())
+            if "create table" in sql_l or "alter table" in sql_l or "create unique index" in sql_l:
+                return
+            if sql_l.startswith("update products") and "style_key = any" in sql_l:
+                self.rowcount = 0
+                return
+            if sql_l.startswith("update products p") and "style_key = %s" in sql_l:
+                key, color, name, _dup_key = params
+                n = 0
+                for pid, row in self.rows.items():
+                    if (
+                        row["category"] == "diamond"
+                        and row["default_color"] == color
+                        and row["name_zh"] == name
+                        and row["style_key"] is None
+                        and key not in self.products
+                    ):
+                        row["style_key"] = key
+                        self.products[key] = pid
+                        n += 1
+                self.rowcount = n
+                return
+            if "select style_key from memorial_diamond_style_tombstones" in sql_l:
+                self._last = []
+                return
+            if "select id from products" in sql_l and "category = 'diamond'" in sql_l:
+                key = params[0]
+                pid = self.products.get(key)
+                self._fetchone = {"id": pid} if pid else None
+                return
+            if sql_l.startswith("insert into products"):
+                key = params[-1]
+                pid = f"new-{key}"
+                self.products[key] = pid
+                self.inserts.append(key)
+                self._fetchone = {"id": pid}
+                return
+            if "select id, color, file_path" in sql_l or "group by color" in sql_l:
+                self._last = []
+                return
+            if sql_l.startswith("insert into product_images"):
+                return
+
+        def fetchone(self):
+            return self._fetchone
+
+        def fetchall(self):
+            return self._last or []
+
+    cur = FakeCur()
+    inserted = md.ensure_memorial_diamond_products(cur)
+    assert inserted == 3
+    assert cur.products["diamond-white"] == "orphan-white"
+    assert set(cur.inserts) == {"diamond-yellow", "diamond-blue", "diamond-pink"}
+
+
 def test_ensure_skips_tombstoned_style_keys():
     """Deleted color products must not reappear on admin list ensure."""
     md = _load_memorial()
@@ -251,6 +329,16 @@ def test_ensure_skips_tombstoned_style_keys():
                 else:
                     self._fetchone = None
                 self._last = None
+            elif "select id from products" in sql_l and "category = 'diamond'" in sql_l:
+                key = params[0]
+                if key in self.products:
+                    self._fetchone = {"id": self.products[key]}
+                else:
+                    self._fetchone = None
+                self._last = None
+            elif sql_l.startswith("update products p") and "style_key = %s" in sql_l:
+                self._last = None
+                self._fetchone = None
             elif sql_l.startswith("insert into products"):
                 key = params[-1]
                 pid = f"new-{key}"

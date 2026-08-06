@@ -12,10 +12,14 @@
     <button
       type="button"
       class="shop-back"
+      {% if category == 'diamond' %}
+      hx-get="/htmx/shop/step/catalog{% if preview %}?preview=1{% endif %}"
+      {% else %}
       hx-get="/htmx/shop/step/styles?category={{ category }}{% if preview %}&preview=1{% endif %}"
+      {% endif %}
       hx-target="#shop-htmx-root"
       hx-swap="innerHTML"
-    >← 更換款式</button>
+    >← {% if category == 'diamond' %}返回品項{% else %}更換款式{% endif %}</button>
 
     <div class="product-layout product-layout--wizard">
       <div class="product-gallery-col">

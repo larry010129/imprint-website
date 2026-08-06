@@ -17,7 +17,11 @@
         type="button"
         class="catalog-tile cat-btn"
         data-cat="{{ tile.slug }}"
+        {% if tile.slug == 'diamond' and tile.memorial_type %}
+        hx-get="/htmx/shop/step/configure?category=diamond&type={{ tile.memorial_type }}{% if preview %}&preview=1{% endif %}"
+        {% else %}
         hx-get="/htmx/shop/step/styles?category={{ tile.slug }}{% if preview %}&preview=1{% endif %}"
+        {% endif %}
         hx-target="#shop-htmx-root"
         hx-swap="innerHTML"
       >

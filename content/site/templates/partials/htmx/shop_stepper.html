@@ -10,6 +10,7 @@
     <span class="shop-stepper-bar" aria-hidden="true"></span>
     <span class="shop-stepper-label">選品項</span>
   </a>
+  {% if category != 'diamond' %}
   <button
     type="button"
     class="shop-stepper-step{% if step == 'styles' %} is-active{% elif step == 'product' %} is-done{% endif %}"
@@ -23,6 +24,7 @@
     <span class="shop-stepper-bar" aria-hidden="true"></span>
     <span class="shop-stepper-label">選款式</span>
   </button>
+  {% endif %}
   <button
     type="button"
     class="shop-stepper-step{% if step == 'product' %} is-active{% endif %}"

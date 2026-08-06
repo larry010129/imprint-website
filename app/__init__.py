@@ -187,9 +187,21 @@ async def lifespan(_app: FastAPI):
             remove_legacy_seeded_pages(cur)
     except Exception:
         log.exception("ensure content/cms/product_categories schema failed")
+    try:
+        with get_transaction() as conn, conn.cursor() as cur:
+            from app.memorial_diamonds import ensure_memorial_diamond_products
+
+            n = ensure_memorial_diamond_products(cur)
+            if n:
+                log.info("startup: seeded %s memorial diamond color product(s)", n)
+    except Exception:
+        log.exception("ensure_memorial_diamond_products failed")
 
     def seed_initial_content() -> None:
+        from app.seed_catalog import seed_memorial_diamond_products
+
         seed_catalog_if_empty()
+        seed_memorial_diamond_products()
         seed_content_if_empty()
 
     seed_task: asyncio.Task[None] | None = None

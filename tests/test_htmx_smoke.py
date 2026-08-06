@@ -195,8 +195,9 @@ def test_htmx_shop_diamond_styles_and_configure(client):
         "/htmx/shop/step/styles?category=diamond", headers={"HX-Request": "true"}
     )
     assert styles.status_code == 200
-    assert "diamond-white" in styles.text
-    assert "白鑽" in styles.text
+    assert "shop-styles" not in styles.text
+    assert "shop-product" in styles.text or "shop-section--configure" in styles.text
+    assert "diamond-white" in styles.text or "配置" in styles.text
     assert "diamond-first-love" not in styles.text
     cfg = client.get(
         "/htmx/shop/step/configure?category=diamond&type=diamond-white",

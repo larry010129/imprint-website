@@ -35,14 +35,11 @@ def test_enrich_catalog_from_static_offline_only():
 def test_prod_api_success_injects_memorial_diamonds_not_full_static():
     src = _shop_src()
     assert "function injectMemorialDiamondCatalogIfNeeded()" in src
-    assert "function catalogHasJewelryFromApi()" in src
-    load_start = src.index("async function loadCatalog()")
-    load_body = src[load_start : load_start + 3500]
-    assert "injectMemorialDiamondCatalogIfNeeded();" in load_body
-    assert "if (shopAllowsStaticCatalog())" in load_body
-    assert "enrichCatalogFromStatic();" in load_body
-    # Prod must not fall back to full static catalog when API returns empty
-    assert "if (!catalogCategories().length && applyStaticCatalogFallback())" not in load_body
+    assert "function ensureMemorialDiamondCatalog()" in src
+    inject_start = src.index("function injectMemorialDiamondCatalogIfNeeded()")
+    inject_body = src[inject_start : src.index("function injectDiamondCatalog()", inject_start)]
+    assert "catalog.diamond" in inject_body
+    assert "catalogHasJewelryFromApi()" not in inject_body
 
 
 def test_api_error_does_not_resurrect_static_in_prod():
@@ -77,6 +74,7 @@ def test_shop_memorial_color_first_flow():
     src = _shop_src()
     assert "function memorialDiamondProductForColor" in src
     assert "function applyMemorialDiamondProductColor" in src
+    assert "function defaultMemorialDiamondTypeId" in src
     assert "enterDiamondLooseProduct" not in src
     assert "diamond-first-love" not in (
         ROOT / "public" / "js" / "shop-catalog-data.js"
@@ -84,6 +82,35 @@ def test_shop_memorial_color_first_flow():
     assert "diamond-white" in (
         ROOT / "public" / "js" / "shop-catalog-data.js"
     ).read_text(encoding="utf-8")
+
+
+def test_shop_memorial_skips_style_step_to_configure():
+    src = _shop_src()
+    cat_start = src.index("async function selectCategory(")
+    cat_body = src[cat_start : src.index("function resolveMemorialDiamondTypeRef", cat_start)]
+    assert "if (cat === 'diamond')" in cat_body
+    assert "ensureMemorialDiamondCatalog()" in cat_body
+    assert "await selectType(typeId, opts)" in cat_body
+    assert "return;" in cat_body
+    assert "setShopView('styles', opts)" not in cat_body.split("if (cat === 'diamond')")[1].split("await ensureCategoryCatalog")[0]
+    set_view_start = src.index("function setShopView(")
+    set_view_body = src[set_view_start : set_view_start + 280]
+    assert "view === 'styles' && isDiamondOnlyCategory()" in set_view_body
+    render_start = src.index("function renderTypeCards(")
+    render_body = src[render_start : render_start + 220]
+    assert "isDiamondOnlyCategory()" in render_body
+    chrome_start = src.index("function updateDiamondWizardChrome")
+    chrome_body = src[chrome_start : src.index("const WIZARD_GUIDE", chrome_start)]
+    assert "stylesStep.hidden = skipStyles" in chrome_body
+    back_start = src.index("document.getElementById('back-to-styles')?.addEventListener")
+    back_body = src[back_start : back_start + 450]
+    assert "isDiamondOnlyCategory()" in back_body
+    assert "back-to-catalog" in back_body
+    assert "memorialDiamondShapeImageUrl" in src
+    assert "product?.images?.[shape]" in src
+    get_product_start = src.index("function getProduct(")
+    get_product_body = src[get_product_start : get_product_start + 320]
+    assert "styleKey" in get_product_body
 
 
 def test_admin_products_upload_waits_for_crop_modal():

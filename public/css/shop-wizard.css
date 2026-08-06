@@ -41,6 +41,10 @@
   transition: color 0.2s;
 }
 
+.shop-stepper-step[hidden] {
+  display: none !important;
+}
+
 .shop-stepper-step:disabled {
   cursor: default;
 }
