@@ -297,7 +297,17 @@
 
 .nav-inner > nav:not(.site-nav-desktop) .dd-toggle{ display:none; }
 
-.nav-cta{ display:flex; align-items:center; gap:8px; flex-shrink:0; }
+.nav-cta{ display:flex; align-items:center; gap:12px; flex-shrink:0; }
+
+/* Mid desktop: account avatar only — free CTA column width */
+@media (max-width: 1279px){
+  .account-menu-text{ display:none; }
+  .account-menu-trigger{
+    padding:4px;
+    max-width:none;
+    gap:0;
+  }
+}
 
 .nav-cta .btn{
 

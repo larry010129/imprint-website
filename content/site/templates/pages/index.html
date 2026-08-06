@@ -1,6 +1,8 @@
 {% extends "layouts/base.html" %}
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/home-ghibli.css?v=34">
+<link rel="stylesheet" href="/static/css/home-ghibli-critical.css?v=35">
+<link rel="stylesheet" href="/static/css/home-ghibli.css?v=35" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="/static/css/home-ghibli.css?v=35"></noscript>
 {% endblock %}
 {% block extra_head %}
 <link rel="preload" as="image" href="/static/images/hero/imprint-diamond-family-memorial-800w.webp" type="image/webp" media="(max-width:900px)" fetchpriority="high" imagesrcset="/static/images/hero/imprint-diamond-family-memorial-800w.webp 800w, /static/images/hero/imprint-diamond-family-memorial-960w.webp 960w" imagesizes="100vw">
@@ -526,7 +528,7 @@
   }
   function loadHomeExtras() {
     inject('/static/js/home-wall.js?v=3');
-    inject('/static/js/home-banners.js?v=5');
+    inject('/static/js/home-banners.js?v=6');
   }
   function schedule() {
     if ('requestIdleCallback' in window) {
@@ -538,5 +540,59 @@
   if (document.readyState === 'complete') schedule();
   else window.addEventListener('load', schedule);
 })();
+</script>
+{% endblock %}
+{# Homepage: click-only Botpress — no idle prefetch (PSI). FAB still calls loadImprintChat. #}
+{% block botpress_webchat %}
+<script>
+  (() => {
+    "use strict";
+
+    let loadPromise;
+
+    const appendScript = (src) => new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = src;
+      script.async = true;
+      script.onload = resolve;
+      script.onerror = () => reject(new Error(`Unable to load ${src}`));
+      document.head.append(script);
+    });
+
+    window.loadImprintChat = () => {
+      if (loadPromise) return loadPromise;
+      if (window.botpress) return Promise.resolve(window.botpress);
+      loadPromise = appendScript("https://cdn.botpress.cloud/webchat/v3.6/inject.js")
+        .then(() => appendScript("https://files.bpcontent.cloud/2026/03/15/22/20260315220508-1BHDZ8TO.js"))
+        .then(() => appendScript("/static/js/botpress-theme.js?v=4"))
+        .then(() => window.botpress)
+        .catch((error) => {
+          loadPromise = undefined;
+          throw error;
+        });
+      return loadPromise;
+    };
+
+    const prepareChat = () => {
+      void window.loadImprintChat().catch(() => {});
+    };
+
+    document.addEventListener(
+      "click",
+      (event) => {
+        if (event.target.closest("[data-social-fab-chat]")) prepareChat();
+      },
+      true
+    );
+
+    document.addEventListener(
+      "keydown",
+      (event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        if (event.target.closest("[data-social-fab-chat]")) prepareChat();
+      },
+      true
+    );
+  })();
 </script>
 {% endblock %}

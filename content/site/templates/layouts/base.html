@@ -1,9 +1,11 @@
 <!DOCTYPE html>
 <html lang="zh-Hant-TW">
 <head>
-<!-- Google tag (gtag.js) — idle / after load -->
+{% set is_home = extra_body_class and 'page-home' in extra_body_class %}
+<!-- Google tag (gtag.js) — idle / after load; home waits longer for PSI lab window -->
 <script>
 (function () {
+  var gtagIdleTimeout = {{ 14000 if is_home else 4000 }};
   function injectGtag() {
     if (window.__gtagInjected) return;
     window.__gtagInjected = true;
@@ -19,9 +21,9 @@
   }
   function scheduleGtag() {
     if ('requestIdleCallback' in window) {
-      requestIdleCallback(injectGtag, { timeout: 4000 });
+      requestIdleCallback(injectGtag, { timeout: gtagIdleTimeout });
     } else {
-      setTimeout(injectGtag, 1);
+      setTimeout(injectGtag, gtagIdleTimeout);
     }
   }
   if (document.readyState === 'complete') {
@@ -59,9 +61,8 @@
 <meta name="twitter:image" content="https://www.imprintdiamond.com/{{ og_image or 'static/images/hero/imprint-diamond-family-memorial.jpg' }}">
 {% endblock %}
 
-{% set is_home = extra_body_class and 'page-home' in extra_body_class %}
 <link rel="stylesheet" href="/static/css/base.css?v=4.5">
-<link rel="stylesheet" href="/static/css/nav.css?v=4.11">
+<link rel="stylesheet" href="/static/css/nav.css?v=4.12">
 {% if not is_home %}
 <link rel="stylesheet" href="/static/css/home.css?v=5.6">
 {% endif %}

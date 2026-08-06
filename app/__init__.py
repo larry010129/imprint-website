@@ -334,7 +334,14 @@ def create_app() -> FastAPI:
                 if request.url.query or request.url.path.startswith("/static/uploads/"):
                     cache_control = "public, max-age=31536000, immutable"
                 else:
-                    cache_control = "public, max-age=86400, stale-while-revalidate=604800"
+                    # Unversioned assets (mostly brand images under /static/images/,
+                    # referenced without a ?v= cache-busting query string). 1 day was
+                    # below Lighthouse's efficient-cache-lifetime threshold, flagging
+                    # ~323 KiB of "should use efficient cache lifetimes" savings on
+                    # PageSpeed Insights. These change rarely (git-deploy only); bump
+                    # to 30 days. Any asset that needs immediate busting on edit should
+                    # get a ?v= query string like the CSS/JS files already do.
+                    cache_control = "public, max-age=2592000, stale-while-revalidate=2592000"
                 response.headers.setdefault("Cache-Control", cache_control)
             elif not settings.is_render:
                 response.headers["Cache-Control"] = "no-store"
