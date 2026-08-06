@@ -24,7 +24,7 @@
   --gh-rose-light:var(--gh-dna-light);
   --gh-mint-soft:var(--gh-dna);
   --gh-accent-rgb:142,237,240;
-  --gh-script:"Dancing Script", "Segoe Script", cursive;
+  --gh-script:"Segoe Script", "Apple Chancery", cursive;
   background:var(--gh-cream);
 }
 
@@ -244,6 +244,53 @@
 .gh-hero--carousel{
   display:block; min-height:0; padding:0;
 }
+/* Carousel mechanics (subset of home.css — avoids blocking 27KB home.css on homepage) */
+.page-home .hc-viewport{
+  position:relative; overflow:hidden; outline:none;
+}
+.page-home .hc-track{
+  position:relative; height:100%; min-height:100%; margin:0; padding:0; list-style:none; touch-action:pan-y;
+}
+.page-home .hc-slide{
+  position:absolute; inset:0; height:100%;
+  opacity:0; visibility:hidden; pointer-events:none; z-index:1;
+  transition:opacity 1.3s cubic-bezier(.4,0,.2,1), visibility 0s linear 1.3s;
+}
+.page-home .hc-slide.is-active{
+  opacity:1; visibility:visible; pointer-events:auto; z-index:2;
+  transition:opacity 1.3s cubic-bezier(.4,0,.2,1), visibility 0s linear 0s;
+}
+.page-home .hc-slide.no-anim{ transition:none; }
+.page-home .hc-media{
+  position:absolute; inset:0;
+  background:linear-gradient(160deg, #F6ECDD 0%, #EFE0C9 55%, #E9D8BC 100%);
+  overflow:hidden;
+}
+.page-home .hc-media img{
+  position:absolute; inset:0; width:100%; height:100%;
+  object-fit:cover; object-position:center; transform:scale(1);
+  transition:transform 8s cubic-bezier(.25,.1,.25,1);
+}
+.page-home .hc-media img.kb-reset{ transition:none; }
+.page-home .hc-scrim{ position:absolute; inset:0; }
+.page-home .hc-arrow{
+  position:absolute; top:50%; transform:translateY(-50%); z-index:5;
+  width:46px; height:46px; padding:0; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  background:rgba(156,239,239,.38); border:1px solid rgba(156,239,239,.8); color:#2B2320;
+  box-shadow:0 2px 14px rgba(0,0,0,.22); backdrop-filter:blur(6px); transition:background .25s;
+}
+.page-home .hc-arrow svg{ display:block; flex:none; }
+.page-home .hc-arrow:hover{ background:rgba(156,239,239,.6); }
+.page-home .hc-prev{ left:20px; } .page-home .hc-next{ right:20px; }
+.page-home .hc-dots{
+  position:absolute; left:50%; bottom:26px; transform:translateX(-50%);
+  display:flex; gap:10px; z-index:5;
+}
+.page-home .hc-dot{
+  width:8px; height:8px; border-radius:50%; background:rgba(255,255,255,.42); transition:all .3s;
+}
+.page-home .hc-dot.is-active{ width:26px; border-radius:5px; background:#fff; }
 /* CLS: hero shell sized before home-banners.js replaces slides */
 .gh-hc-viewport{
   position:relative; z-index:4;

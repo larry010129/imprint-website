@@ -60,10 +60,9 @@
 {% endblock %}
 
 {% set is_home = extra_body_class and 'page-home' in extra_body_class %}
-<link rel="stylesheet" href="/static/css/base.css?v=4.4">
-<link rel="stylesheet" href="/static/css/mobile.css?v=1">
+<link rel="stylesheet" href="/static/css/base.css?v=4.5">
 <link rel="stylesheet" href="/static/css/nav.css?v=4.11">
-{% if is_home %}
+{% if not is_home %}
 <link rel="stylesheet" href="/static/css/home.css?v=5.6">
 {% endif %}
 {% if is_home %}
@@ -78,7 +77,12 @@
 {% if load_skeleton_css or load_skeleton_ui %}
 <link rel="stylesheet" href="/static/css/skeleton.css?v=3">
 {% endif %}
-<link rel="stylesheet" href="/static/css/responsive.css?v=3.20">
+{% if is_home %}
+<link rel="stylesheet" href="/static/css/responsive.css?v=3.21" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="/static/css/responsive.css?v=3.21"></noscript>
+{% else %}
+<link rel="stylesheet" href="/static/css/responsive.css?v=3.21">
+{% endif %}
 {% if is_home %}
 <link rel="stylesheet" href="/static/css/social-fab.css?v=10" media="print" onload="this.media='all'">
 <noscript><link rel="stylesheet" href="/static/css/social-fab.css?v=10"></noscript>

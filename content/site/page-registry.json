@@ -21,7 +21,7 @@
     "layout": "site",
     "main_class": "",
     "extra_css": [
-      "/static/css/home-ghibli.css?v=33"
+      "/static/css/home-ghibli.css?v=34"
     ],
     "extra_scripts": [
       {
