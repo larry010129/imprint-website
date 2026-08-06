@@ -426,10 +426,10 @@ body.admin1-body #navToggle {
   position: relative;
   z-index: 30;
   flex: none;
-  width: 36px;
-  height: 36px;
-  min-width: 36px;
-  min-height: 36px;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
   margin: 0;
   padding: 0;
   border: 0;
@@ -1679,4 +1679,24 @@ html.dark body.admin1-body #admin1KpiStrip .dash-metric,
 body.admin1-body.dark #admin1KpiStrip .dash-metric {
   background: var(--a1-muted);
   border-color: var(--a1-border);
+}
+
+/* ---- admin1 mobile polish (≤900) — mirrors admin card/editor patterns ---- */
+@media (max-width: 900px) {
+  body.admin1-body .main {
+    padding: 12px 12px calc(12px + env(safe-area-inset-bottom, 0px));
+  }
+
+  body.admin1-body #panel-orders .adx-orders-page {
+    padding: 8px 0 20px;
+  }
+
+  body.admin1-body .ap-editor-page {
+    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  }
+
+  body.admin1-body .ap-editor-actions {
+    background: var(--a1-main-surface, var(--card));
+    border-top-color: var(--a1-border, #EDE7E0);
+  }
 }

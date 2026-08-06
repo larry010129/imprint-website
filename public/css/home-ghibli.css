@@ -361,6 +361,7 @@
 }
 .gh-btn{
   display:inline-flex; align-items:center; justify-content:center;
+  min-height:var(--tap-target-min, 44px);
   padding:14px 32px; border-radius:999px; font-size:14px; letter-spacing:.14em;
   transition:transform .3s var(--ease), box-shadow .3s var(--ease), filter .3s;
   white-space:nowrap;
@@ -926,26 +927,114 @@ button.gh-btn--primary{ border:none; }
   .gh-stories__copy{ text-align:center; }
   .gh-about-grid{ text-align:center; }
   .gh-about-step{ text-align:left; }
-  .gh-series-cards{ grid-template-columns:1fr 1fr; }
+  .gh-series-grid{ grid-template-columns:repeat(2, 1fr); gap:20px 14px; }
+  .gh-series-cards,
+  .gh-cards{ grid-template-columns:repeat(2, 1fr); gap:16px; }
   .gh-usp-list{ grid-template-columns:1fr; }
-  .gh-hc-copy{ padding-left:72px; padding-right:72px; }
+  .gh-hc-copy{
+    padding:108px var(--page-padding-x, 16px) 80px;
+    align-items:center !important;
+    text-align:center !important;
+  }
+  .gh-hc-copy > *{ width:100%; max-width:520px; }
+  .gh-hc-copy .gh-hero__lead{ margin-left:auto !important; margin-right:auto !important; }
+  .gh-hc-copy .gh-hero__actions{ justify-content:center !important; }
+  .gh-hc-scrim{
+    background:linear-gradient(
+      180deg,
+      rgba(10,10,10,.52) 0%,
+      rgba(10,10,10,.22) 42%,
+      rgba(10,10,10,.72) 100%
+    ) !important;
+  }
+  .hc-slide[data-align="left"] .gh-hc-scrim,
+  .hc-slide[data-align="right"] .gh-hc-scrim{
+    transform:none;
+  }
 }
 @media (max-width:640px){
-  .gh-hc-viewport{ height:max(560px, 82svh); min-height:0; max-height:760px; }
-  .hc-media img{ object-position:center; }
-  .gh-hc-copy{
-    padding:94px 72px 74px; align-items:center !important; text-align:center !important;
+  .gh-hero--carousel,
+  .gh-hc-viewport{
+    width:100%;
+    max-width:100vw;
+    margin-inline:0;
   }
-  .gh-hc-copy > *{ width:100%; }
-  .gh-hc-copy .gh-hero__lead{ margin-left:auto !important; margin-right:auto !important; }
-  .gh-hc-copy .gh-hero__actions{ justify-content:center !important; margin-bottom:0; }
-  .gh-hero__title{ font-size:clamp(27px, 8vw, 38px); line-height:1.5; letter-spacing:.06em; }
-  .gh-hc-arrow{ width:40px; height:40px; }
-  .gh-hc-dots{ bottom:24px; }
+  .gh-hc-viewport{
+    height:max(520px, 88svh);
+    min-height:0;
+    max-height:none;
+  }
+  .hc-media img{ object-position:center 28%; }
+  .gh-hc-copy{
+    padding:calc(88px + var(--safe-area-top, 0px)) var(--page-padding-x, 16px)
+      calc(64px + var(--safe-area-bottom, 0px));
+    align-items:center !important;
+    text-align:center !important;
+  }
+  .gh-hc-copy .gh-script{ margin-bottom:10px; font-size:clamp(18px, 5vw, 24px); }
+  .gh-hc-copy > *{ width:100%; max-width:none; }
+  .gh-hc-copy .gh-hero__lead{
+    margin-left:auto !important;
+    margin-right:auto !important;
+    font-size:14px;
+    line-height:1.85;
+    margin-bottom:22px;
+  }
+  .gh-hc-copy .gh-hero__actions{
+    flex-direction:column;
+    align-items:stretch;
+    justify-content:center !important;
+    gap:10px;
+    width:100%;
+    max-width:320px;
+    margin-inline:auto;
+    margin-bottom:0;
+  }
+  .gh-hc-copy .gh-btn{
+    width:100%;
+    min-height:var(--tap-target-min, 44px);
+    padding:14px 20px;
+  }
+  .gh-hero__title{
+    font-size:clamp(26px, 7.6vw, 36px);
+    line-height:1.45;
+    letter-spacing:.06em;
+    margin-bottom:16px;
+  }
+  .gh-chips{ display:none; }
+  .gh-hc-arrow{
+    width:var(--tap-target-min, 44px);
+    height:var(--tap-target-min, 44px);
+  }
+  .gh-hc-dots{ bottom:calc(16px + var(--safe-area-bottom, 0px)); }
   .gh-about-teaser{ grid-template-columns:1fr; gap:20px; }
   .gh-about-diamond{ width:min(58vw, 230px); margin:0 auto; }
-  .gh-about-actions{ justify-content:center; }
+  .gh-about-actions{
+    justify-content:center;
+    flex-direction:column;
+    align-items:stretch;
+  }
+  .gh-about-actions .gh-btn{
+    min-height:var(--tap-target-min, 44px);
+    width:100%;
+    max-width:320px;
+    margin-inline:auto;
+  }
   .gh-series-cards,
-  .gh-cards{ grid-template-columns:1fr; }
-  .gh-series-grid{ grid-template-columns:repeat(2, 1fr); gap:24px 16px; }
+  .gh-cards,
+  .gh-series-grid{ grid-template-columns:1fr; gap:16px; }
+  .gh-faq-wrap .faq-q{
+    min-height:var(--tap-target-min, 44px);
+    padding-top:18px;
+    padding-bottom:18px;
+  }
+  .gh-poem__links{
+    flex-direction:column;
+    align-items:stretch;
+  }
+  .gh-poem__link,
+  .gh-poem__link--secondary{
+    justify-content:center;
+    min-height:var(--tap-target-min, 44px);
+  }
 }

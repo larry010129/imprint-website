@@ -60,37 +60,38 @@
 {% endblock %}
 
 {% set is_home = extra_body_class and 'page-home' in extra_body_class %}
-<link rel="stylesheet" href="/static/css/base.css?v=4.2">
-<link rel="stylesheet" href="/static/css/nav.css?v=4.9">
+<link rel="stylesheet" href="/static/css/base.css?v=4.4">
+<link rel="stylesheet" href="/static/css/mobile.css?v=1">
+<link rel="stylesheet" href="/static/css/nav.css?v=4.11">
 {% if is_home %}
 <link rel="stylesheet" href="/static/css/home.css?v=5.6">
 {% endif %}
 {% if is_home %}
-<link rel="stylesheet" href="/static/css/footer.css?v=2" media="print" onload="this.media='all'">
-<noscript><link rel="stylesheet" href="/static/css/footer.css?v=2"></noscript>
+<link rel="stylesheet" href="/static/css/footer.css?v=3" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="/static/css/footer.css?v=3"></noscript>
 {% else %}
-<link rel="stylesheet" href="/static/css/footer.css?v=2">
+<link rel="stylesheet" href="/static/css/footer.css?v=3">
 {% endif %}
 {% if not is_home %}
-<link rel="stylesheet" href="/static/css/pages.css?v=5.28">
+<link rel="stylesheet" href="/static/css/pages.css?v=5.29">
 {% endif %}
 {% if load_skeleton_css or load_skeleton_ui %}
 <link rel="stylesheet" href="/static/css/skeleton.css?v=3">
 {% endif %}
-<link rel="stylesheet" href="/static/css/responsive.css?v=3.18">
+<link rel="stylesheet" href="/static/css/responsive.css?v=3.20">
 {% if is_home %}
-<link rel="stylesheet" href="/static/css/social-fab.css?v=9" media="print" onload="this.media='all'">
-<noscript><link rel="stylesheet" href="/static/css/social-fab.css?v=9"></noscript>
+<link rel="stylesheet" href="/static/css/social-fab.css?v=10" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="/static/css/social-fab.css?v=10"></noscript>
 {% else %}
-<link rel="stylesheet" href="/static/css/social-fab.css?v=9">
+<link rel="stylesheet" href="/static/css/social-fab.css?v=10">
 {% endif %}
 {% block extra_css %}{% endblock %}
 {% if site_cms_sections or site_cms_edit %}
 {% if is_home %}
-<link rel="stylesheet" href="/static/css/cms-sections.css?v=6" media="print" onload="this.media='all'">
-<noscript><link rel="stylesheet" href="/static/css/cms-sections.css?v=6"></noscript>
+<link rel="stylesheet" href="/static/css/cms-sections.css?v=7" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="/static/css/cms-sections.css?v=7"></noscript>
 {% else %}
-<link rel="stylesheet" href="/static/css/cms-sections.css?v=6">
+<link rel="stylesheet" href="/static/css/cms-sections.css?v=7">
 {% endif %}
 {% endif %}
 
@@ -147,7 +148,7 @@
 <script src="/static/js/htmx.min.js" defer></script>
 {% endif %}
 <script src="/static/js/nav-dropdown.js?v=1" defer></script>
-<script src="/static/js/nav-chrome.js?v=3" defer></script>
+<script src="/static/js/nav-chrome.js?v=4" defer></script>
 {% if load_skeleton_ui %}
 <script src="/static/js/skeleton-ui.js?v=1" defer></script>
 {% endif %}

@@ -3,6 +3,8 @@
     "use strict";
 
     let loadPromise;
+    let scheduledIdle;
+
     const appendScript = (src) => new Promise((resolve, reject) => {
       const script = document.createElement("script");
       script.src = src;
@@ -29,10 +31,35 @@
     const prepareChat = () => {
       void window.loadImprintChat().catch(() => {});
     };
-    const contactFab = document.querySelector("[data-social-fab]");
-    const contactToggle = document.querySelector("[data-social-fab] [aria-controls]");
-    contactFab?.addEventListener("pointerenter", prepareChat, { once: true });
-    contactFab?.addEventListener("focusin", prepareChat, { once: true });
-    contactToggle?.addEventListener("pointerdown", prepareChat, { once: true });
+
+    const scheduleIdlePrefetch = () => {
+      if (scheduledIdle) return;
+      scheduledIdle = true;
+      if ("requestIdleCallback" in window) {
+        requestIdleCallback(prepareChat, { timeout: 12000 });
+      } else {
+        setTimeout(prepareChat, 8000);
+      }
+    };
+
+    document.addEventListener(
+      "click",
+      (event) => {
+        if (event.target.closest("[data-social-fab-chat]")) prepareChat();
+      },
+      true
+    );
+
+    document.addEventListener(
+      "keydown",
+      (event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        if (event.target.closest("[data-social-fab-chat]")) prepareChat();
+      },
+      true
+    );
+
+    if (document.readyState === "complete") scheduleIdlePrefetch();
+    else window.addEventListener("load", scheduleIdlePrefetch, { once: true });
   })();
 </script>

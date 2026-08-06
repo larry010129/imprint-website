@@ -218,6 +218,14 @@ a.checkout-stepper-label:hover {
   gap: 14px;
 }
 
+[data-checkout-root] .checkout-fields input,
+[data-checkout-root] .checkout-fields select,
+[data-checkout-root] .checkout-fields textarea,
+[data-checkout-root] .checkout-coupon-row input {
+  font-size: 16px;
+  min-height: var(--tap-target-min, 44px);
+}
+
 [data-checkout-root] .checkout-field-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -633,6 +641,18 @@ a.checkout-stepper-label:hover {
 }
 
 @media (max-width: 900px) {
+  .checkout-page {
+    padding-top: 24px;
+    padding-left: var(--page-padding-x, 16px);
+    padding-right: var(--page-padding-x, 16px);
+    padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .checkout-stepper {
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+
   .checkout-stepper-label {
     font-size: 11px;
   }
@@ -641,13 +661,23 @@ a.checkout-stepper-label:hover {
     grid-template-columns: 1fr;
   }
 
+  [data-checkout-root] .checkout-block {
+    padding: 18px 16px 20px;
+  }
+
   [data-checkout-root] .checkout-summary {
     position: static;
     order: -1;
+    padding: 18px 16px;
   }
 
   [data-checkout-root] .checkout-field-row {
     grid-template-columns: 1fr;
+  }
+
+  [data-checkout-root] .checkout-option {
+    min-height: var(--tap-target-min, 44px);
+    padding: 16px;
   }
 
   [data-checkout-root] .checkout-actions--desktop {
@@ -672,7 +702,26 @@ a.checkout-stepper-label:hover {
     box-shadow: 0 -8px 24px rgba(43, 35, 32, 0.08);
   }
 
-  .checkout-page {
-    padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+  [data-checkout-root] .checkout-mobile-bar .checkout-submit-btn {
+    min-height: var(--tap-target-min, 48px);
+    min-width: 140px;
+    flex-shrink: 0;
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 640px) {
+  .checkout-head-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .checkout-title {
+    font-size: 22px;
+  }
+
+  [data-checkout-root] .checkout-line-item__thumb {
+    width: 48px;
+    height: 48px;
   }
 }

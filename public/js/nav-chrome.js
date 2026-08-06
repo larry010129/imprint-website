@@ -23,7 +23,7 @@
           setMobileOpen(false);
         }
       });
-      var mq = window.matchMedia('(min-width: 861px)');
+      var mq = window.matchMedia('(min-width: 901px)');
       mq.addEventListener('change', function () {
         if (mq.matches) setMobileOpen(false);
       });

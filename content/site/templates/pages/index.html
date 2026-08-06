@@ -1,10 +1,18 @@
 {% extends "layouts/base.html" %}
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/home-ghibli.css?v=32">
+<link rel="stylesheet" href="/static/css/home-ghibli.css?v=33">
 {% endblock %}
 {% block extra_head %}
-<link rel="preload" as="image" href="/static/images/hero/imprint-diamond-family-memorial-800w.webp" type="image/webp" media="(max-width:860px)" fetchpriority="high">
-<link rel="preload" as="image" href="/static/images/hero/imprint-diamond-family-memorial.webp" type="image/webp" media="(min-width:861px)" fetchpriority="high">
+<link rel="preload" as="image" href="/static/images/hero/imprint-diamond-family-memorial-800w.webp" type="image/webp" media="(max-width:900px)" fetchpriority="high" imagesrcset="/static/images/hero/imprint-diamond-family-memorial-800w.webp 800w, /static/images/hero/imprint-diamond-family-memorial-960w.webp 960w" imagesizes="100vw">
+<link rel="preload" as="image" href="/static/images/hero/imprint-diamond-family-memorial.webp" type="image/webp" media="(min-width:901px)" fetchpriority="high">
+<style>
+@media (max-width:900px){
+  .page-home .gh-hc-viewport .hc-media img{
+    aspect-ratio:800/388;
+    object-fit:cover;
+  }
+}
+</style>
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -99,9 +107,9 @@
       <li class="hc-slide is-active" data-align="left" data-tone="warm">
         <div class="hc-media">
           <picture>
-            <source media="(max-width:860px)" srcset="/static/images/hero/imprint-diamond-family-memorial-800w.webp 800w, /static/images/hero/imprint-diamond-family-memorial-960w.webp 960w, /static/images/hero/imprint-diamond-family-memorial-1200w.webp 1200w" type="image/webp" sizes="100vw">
+            <source media="(max-width:900px)" srcset="/static/images/hero/imprint-diamond-family-memorial-800w.webp 800w, /static/images/hero/imprint-diamond-family-memorial-960w.webp 960w, /static/images/hero/imprint-diamond-family-memorial-1200w.webp 1200w" type="image/webp" sizes="100vw">
             <source srcset="/static/images/hero/imprint-diamond-family-memorial.webp" type="image/webp" sizes="100vw">
-            <img src="/static/images/hero/imprint-diamond-family-memorial.jpg" alt="銘印鑽石品牌意象－家人手心捧著 DNA 紀念鑽石" width="2400" height="1165" sizes="100vw" loading="eager" fetchpriority="high" decoding="async" onerror="imgFallback(this)">
+            <img src="/static/images/hero/imprint-diamond-family-memorial-800w.webp" srcset="/static/images/hero/imprint-diamond-family-memorial-800w.webp 800w, /static/images/hero/imprint-diamond-family-memorial-960w.webp 960w, /static/images/hero/imprint-diamond-family-memorial-1200w.webp 1200w, /static/images/hero/imprint-diamond-family-memorial.webp 2400w" alt="銘印鑽石品牌意象－家人手心捧著 DNA 紀念鑽石" width="800" height="388" sizes="100vw" loading="eager" fetchpriority="high" decoding="async" onerror="imgFallback(this)">
           </picture>
         </div>
         <div class="hc-scrim gh-hc-scrim"></div>
@@ -245,8 +253,9 @@
       ></iframe>
       {% else %}
       <picture>
-        <source srcset="/static/images/hero/imprint-diamond-family-memorial.webp" type="image/webp">
-        <img data-cms-slot="poem-visual" src="/static/images/hero/imprint-diamond-family-memorial.jpg" alt="家人手心捧著 DNA 紀念鑽石" width="2400" height="1165" loading="lazy" decoding="async" onerror="imgFallback(this)">
+        <source media="(max-width:900px)" type="image/webp" srcset="/static/images/hero/imprint-diamond-family-memorial-800w.webp 800w, /static/images/hero/imprint-diamond-family-memorial-960w.webp 960w" sizes="(max-width:640px) 92vw, 45vw">
+        <source type="image/webp" srcset="/static/images/hero/imprint-diamond-family-memorial.webp">
+        <img data-cms-slot="poem-visual" src="/static/images/hero/imprint-diamond-family-memorial-800w.webp" alt="家人手心捧著 DNA 紀念鑽石" width="800" height="388" loading="lazy" decoding="async" onerror="imgFallback(this)">
       </picture>
       {% endif %}
     </div>
@@ -269,8 +278,8 @@
 
 <div class="gh-scene">
   <picture>
-    <source srcset="/static/images/hero/imprint-diamond-wedding-couple-ring.webp" type="image/webp">
-    <img data-cms-slot="scene-wedding" src="/static/images/hero/imprint-diamond-wedding-couple-ring.jpg" alt="結髮鑽石－以兩人髮絲共同培育的婚戒鑽石" width="2400" height="1165" loading="lazy" decoding="async" onerror="imgFallback(this)">
+    <source type="image/webp" srcset="/static/images/series-cards/imprint-diamond-wedding-couple-ring-400.webp 400w, /static/images/series-cards/imprint-diamond-wedding-couple-ring-800.webp 800w" sizes="100vw">
+    <img data-cms-slot="scene-wedding" src="/static/images/series-cards/imprint-diamond-wedding-couple-ring-800.webp" alt="結髮鑽石－以兩人髮絲共同培育的婚戒鑽石" width="800" height="388" loading="lazy" decoding="async" onerror="imgFallback(this)">
   </picture>
   <div class="gh-scene__fade-top"></div>
   <div class="gh-scene__fade-bottom"></div>
@@ -484,8 +493,9 @@
 <section class="gh-cta" id="contact">
   <div class="gh-cta__scene">
     <picture>
-      <source srcset="/static/images/hero/imprint-diamond-family-memorial.webp" type="image/webp">
-      <img data-cms-slot="cta-scene" src="/static/images/hero/imprint-diamond-family-memorial.jpg" alt="銘印鑽石品牌意象" width="2400" height="1165" loading="lazy" decoding="async" onerror="imgFallback(this)">
+      <source media="(max-width:900px)" type="image/webp" srcset="/static/images/hero/imprint-diamond-family-memorial-800w.webp 800w, /static/images/hero/imprint-diamond-family-memorial-960w.webp 960w" sizes="100vw">
+      <source type="image/webp" srcset="/static/images/hero/imprint-diamond-family-memorial.webp">
+      <img data-cms-slot="cta-scene" src="/static/images/hero/imprint-diamond-family-memorial-800w.webp" alt="銘印鑽石品牌意象" width="800" height="388" loading="lazy" decoding="async" onerror="imgFallback(this)">
     </picture>
     <div class="gh-cta__scene-fade-top"></div>
     <div class="gh-cta__scene-fade-bottom"></div>
@@ -516,7 +526,7 @@
   }
   function loadHomeExtras() {
     inject('/static/js/home-wall.js?v=3');
-    inject('/static/js/home-banners.js?v=4');
+    inject('/static/js/home-banners.js?v=5');
   }
   function schedule() {
     if ('requestIdleCallback' in window) {

@@ -730,11 +730,8 @@
   .stories-page-masonry{ column-count:2; column-gap:1rem; }
   .stories-page-cta{ margin:0; border-radius:0; }
 }
-@media (min-width:1024px){
+@media (min-width:1100px){
   .stories-page-masonry{ column-count:3; }
-}
-@media (min-width:1280px){
-  .stories-page-masonry{ column-count:4; }
 }
 .stories-note{
   background:var(--mint-soft); border:1px solid var(--mint-line); border-radius:8px;
@@ -1017,11 +1014,15 @@
   color:var(--mint-deep); text-decoration:underline; text-underline-offset:2px;
 }
 
-@media (max-width:768px){
+@media (max-width:900px){
   .price-page .pricing-inner{ grid-template-columns:1fr; gap:46px; }
   .price-page .pricing{ padding:80px 0; }
-  .price-page .shape-grid{ grid-template-columns:repeat(3, 1fr); }
-  .price-page .price-tab-labels{ flex-direction:column; align-items:flex-start; }
+  .price-page .shape-grid{ grid-template-columns:repeat(2, 1fr); }
+  .price-page .price-tab-labels{ flex-direction:column; align-items:stretch; }
+  .price-page .price-tab{ min-height:var(--tap-target-min, 44px); }
+}
+@media (max-width:640px){
+  .price-page .shape-grid{ grid-template-columns:1fr; }
 }
 
 /* Quote CTAs — ButtonColorful + glow spin (DNA mint first) */
@@ -1566,7 +1567,7 @@
 .dna-promise__item .dna-figure {
   margin: 0 0 14px;
 }
-@media (min-width: 768px) {
+@media (min-width: 900px) {
   .dna-process__body,
   .dna-split {
     grid-template-columns: 1fr minmax(140px, 42%);
@@ -1671,7 +1672,7 @@
     grid-template-columns: 1fr 1fr;
   }
 }
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .dna-page__body {
     padding-top: 48px;
     padding-bottom: 72px;
@@ -1679,6 +1680,18 @@
   .dna-prose ol.dna-process > li.dna-process__step {
     gap: 14px;
     padding-bottom: 24px;
+  }
+  .dna-prose ul.dna-promise {
+    grid-template-columns: 1fr;
+  }
+  .dna-cta-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .dna-cta {
+    min-height: var(--tap-target-min, 44px);
+    width: 100%;
+    justify-content: center;
   }
 }
 
@@ -1708,6 +1721,168 @@
     opacity: 1;
     transform: none;
     transition: none;
+  }
+}
+
+/* ============================================================
+   Marketing + content pages — mobile-first layout (Phase 3)
+   Breakpoints: 640 phone / 900 tablet / 1100 desk
+============================================================ */
+@media (max-width: 900px) {
+  .page-hero {
+    grid-template-columns: 1fr;
+    gap: 32px;
+    padding: 48px var(--page-padding-x, 16px) 40px;
+    width: 100%;
+  }
+  .page-hero::before {
+    left: 0;
+    width: 100%;
+    margin-left: 0;
+  }
+  .page-hero-inner { order: 2; }
+  .page-hero-media {
+    order: 1;
+    min-height: 220px;
+    aspect-ratio: 16 / 10;
+  }
+  .page-hero h1 {
+    font-size: clamp(24px, 6vw, 34px);
+    line-height: 1.45;
+  }
+  .page-hero p { max-width: none; }
+
+  .series-page-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 32px;
+    padding: 32px 0 64px;
+  }
+  .series-page-intro { padding-top: 48px; }
+
+  .jewelry-block { padding: 56px 0; }
+  .jewelry-block-grid,
+  .jewelry-block-grid.is-rev {
+    grid-template-columns: 1fr;
+    gap: 28px;
+    direction: ltr;
+  }
+  .jewelry-block-media { order: -1; }
+
+  .contact-grid {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+  .contact-section { padding: 64px 0 72px; }
+  .contact-form-card { margin-top: 32px; }
+  .diamond-hub-cta {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 28px 22px;
+    text-align: center;
+  }
+  .diamond-hub-cta p { max-width: none; }
+
+  .price-reference {
+    padding: 24px var(--page-padding-x, 16px) 28px;
+  }
+  .price-ref-panel summary {
+    min-height: var(--tap-target-min, 44px);
+    display: flex;
+    align-items: center;
+  }
+
+  .capture { padding: 72px var(--page-padding-x, 16px); }
+  .capture .btn { min-height: var(--tap-target-min, 44px); }
+
+  .prose-section { padding: 64px 0; }
+}
+
+@media (max-width: 640px) {
+  .page-hero {
+    padding-top: 36px;
+    gap: 24px;
+  }
+  .page-hero-media { min-height: 200px; }
+
+  .series-page-grid {
+    grid-template-columns: 1fr;
+    gap: 28px;
+    padding-bottom: 48px;
+  }
+  .series-related a {
+    min-height: var(--tap-target-min, 44px);
+    display: inline-flex;
+    align-items: center;
+    padding: 10px 16px;
+  }
+
+  .jewelry-jump a {
+    min-height: var(--tap-target-min, 44px);
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .faq-page .faq-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    gap: 0;
+    padding-bottom: 12px;
+    scrollbar-width: none;
+  }
+  .faq-page .faq-tabs::-webkit-scrollbar { display: none; }
+  .faq-page .faq-tab {
+    flex: 0 0 auto;
+    min-height: var(--tap-target-min, 44px);
+    padding: 10px 14px 14px;
+    font-size: 13px;
+  }
+  .faq-page .faq-list--card {
+    padding: 4px 16px;
+  }
+  .faq-page .faq-q {
+    min-height: var(--tap-target-min, 44px);
+    padding: 18px 0;
+    font-size: 15px;
+    gap: 14px;
+  }
+  .faq-page .faq-a-inner {
+    padding: 0 0 20px;
+    font-size: 14px;
+  }
+  .faq--offset { padding: 48px 0 72px; }
+
+  .price-cta__card {
+    padding: 16px;
+  }
+  .price-cta__actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .price-cta__btn,
+  .price-quote-actions .dna-btn-colorful {
+    width: 100%;
+    min-height: var(--tap-target-min, 44px);
+  }
+  .price-quote-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .stories-page-cta__btn {
+    min-height: var(--tap-target-min, 44px);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-width: 320px;
+  }
+
+  .contact-form-panel__submit {
+    min-height: var(--tap-target-min, 44px);
+    position: sticky;
+    bottom: calc(12px + var(--safe-area-bottom, 0px));
+    z-index: 2;
   }
 }
 

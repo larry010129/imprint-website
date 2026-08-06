@@ -46,7 +46,7 @@
     var sourceAttr = index === 0 ? 'srcset' : 'data-srcset';
     var imageAttr = index === 0 ? 'src' : 'data-src';
 
-    /* Mobile ≤860px: prefer CMS mobile crop, else local optimized memorial, else webp, else jpg. */
+    /* Mobile ≤900px: prefer CMS mobile crop, else local optimized memorial, else webp, else jpg. */
     var mobileValue = String(b.image_url_mobile || '').trim();
     var mappedLocal = '';
     if (index === 0 && /imprint-diamond-family-memorial\.(jpe?g|webp)/i.test(String(b.image_url || b.image_webp || ''))) {
@@ -54,7 +54,7 @@
     }
     var mobileSrc = mobileValue || mappedLocal || String(b.image_webp || b.image_url || '');
     var mobileIsWebp = /\.webp(\s|\?|$)/i.test(mobileSrc);
-    var mobileSource = '<source media="(max-width:860px)" ' + sourceAttr + '="' + esc(mobileSrc) + '"' +
+    var mobileSource = '<source media="(max-width:900px)" ' + sourceAttr + '="' + esc(mobileSrc) + '"' +
       (mobileIsWebp ? ' type="image/webp"' : '') + ' sizes="100vw">';
 
     var webp = b.image_webp
@@ -67,8 +67,11 @@
     }
     var secondary = ctaSecondary(b);
     var imgSrc = b.image_url || '';
+    var imgExtra = '';
     if (index === 0 && mappedLocal) {
       imgSrc = '/static/images/hero/imprint-diamond-family-memorial-800w.webp';
+      imgExtra = ' width="800" height="388" sizes="100vw" srcset="' +
+        esc(mappedLocal + ', /static/images/hero/imprint-diamond-family-memorial.webp 2400w') + '"';
     } else if (b.image_webp && !mobileValue) {
       imgSrc = b.image_webp;
     }
@@ -78,8 +81,8 @@
         '<div class="hc-media"><picture>' +
           mobileSource +
           webp +
-          '<img ' + imageAttr + '="' + esc(imgSrc) + '" alt="' + esc(b.image_alt || b.title) + '" ' +
-          loading + ' decoding="async" onerror="imgFallback(this)">' +
+          '<img ' + imageAttr + '="' + esc(imgSrc) + '" alt="' + esc(b.image_alt || b.title) + '"' +
+          imgExtra + ' ' + loading + ' decoding="async" onerror="imgFallback(this)">' +
         '</picture></div>' +
         '<div class="hc-scrim gh-hc-scrim"></div>' +
         '<div class="container hc-copy gh-hc-copy">' +

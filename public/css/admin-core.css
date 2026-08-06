@@ -10,10 +10,16 @@
   --ok:#4CAF7D; --warn:#E0A458; --info:#6C9BD1;
   --sans:"Noto Sans TC","Microsoft JhengHei",sans-serif;
   --serif:"Noto Serif TC",serif;
+  --bp-phone:640px;
+  --bp-tablet:900px;
+  --bp-desk:1100px;
+  --tap-target-min:44px;
+  --safe-area-bottom:env(safe-area-inset-bottom,0px);
+  --admin-sticky-save-h:64px;
 }
 *{margin:0;padding:0;box-sizing:border-box;}
 html{scrollbar-gutter:stable;}
-body{font-family:var(--sans);background:var(--paper);color:var(--ink);font-size:14px;line-height:1.7;}
+body{font-family:var(--sans);background:var(--paper);color:var(--ink);font-size:14px;line-height:1.7;overflow-x:clip;}
 
 /* 全站 <dialog> 的置中靠瀏覽器內建的 margin:auto，但上面的 * reset 會把它歸零，
    所以要在這裡補回來，否則 showModal() 開的視窗會貼齊左上角。 */
@@ -866,8 +872,13 @@ a.btn-sm.btn-primary:hover{background:#453A34;color:#fff;border-color:#453A34;}
    Keep panel/content fluid tweaks only here. */
 @media (max-width:960px){
   .stats{grid-template-columns:1fr 1fr;}
-  .card{overflow-x:auto;max-width:100%;}
-  table{min-width:720px;}
+  .card{max-width:100%;}
+  /* Product/order card lists at ≤900 — see admin-tables.css; legacy H-scroll only where needed */
+  #panel-leads .card{overflow-x:auto;}
+  #panel-leads table{min-width:960px;}
+  .ai-table-wrap{overflow-x:auto;}
+  .ai-table{min-width:640px;}
+  .price-edit-table{min-width:720px;}
 
   /* 儀表板 — phone-safe stack / wrap */
   #panel-dash{min-width:0;max-width:100%;}
@@ -910,4 +921,144 @@ a.btn-sm.btn-primary:hover{background:#453A34;color:#fff;border-color:#453A34;}
   #panel-dash .dash-stat-card-inner{gap:12px;}
   #panel-dash .dash-stat-ring-wrap,
   #panel-dash .dash-stat-ring-svg{width:64px;height:64px;}
+}
+
+/* ---- Phone / tablet admin (≤900) — editor, CMS, product form ---- */
+@media (max-width:900px){
+  .ap-toolbar{
+    flex-direction:column;
+    align-items:stretch;
+    gap:10px;
+  }
+  .ap-toolbar .btn-sm{
+    width:100%;
+    min-height:var(--tap-target-min);
+    justify-content:center;
+  }
+  .ap-category-tabs{
+    flex-wrap:nowrap;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
+    padding-bottom:4px;
+  }
+  .ap-category-tabs::-webkit-scrollbar{display:none;}
+  .ap-tab-btn{flex:none;min-height:var(--tap-target-min);}
+  .ap-category-panel-inner{flex-direction:column;}
+  .ap-category-thumb-row{margin-left:0;width:100%;}
+  .ap-category-addon-block{align-items:flex-start;text-align:left;min-width:0;width:100%;}
+
+  .ap-editor-page{
+    padding:16px 14px calc(var(--admin-sticky-save-h) + var(--safe-area-bottom) + 20px);
+    min-height:0;
+  }
+  .ap-editor-head{
+    flex-direction:column;
+    align-items:stretch;
+    gap:12px;
+    padding-bottom:16px;
+    margin-bottom:18px;
+  }
+  .ap-editor-back{align-self:flex-start;margin-top:0;min-height:var(--tap-target-min);}
+  .ap-editor-head h2{font-size:18px;}
+  .ap-form-grid{grid-template-columns:1fr;}
+  .ap-name-row{flex-direction:column;align-items:stretch;}
+  .ap-name-row select{width:100%;min-width:0;}
+
+  .ap-image-slots{gap:14px;}
+  .ap-image-slot{padding:12px;}
+  .ap-image-slot-label--pair{grid-template-columns:1fr;min-width:0;}
+  .ap-carousel{padding:0 28px;}
+  .ap-carousel-item{flex:0 0 100%;min-width:0;max-width:none;}
+  .ap-carousel-btn{width:var(--tap-target-min);height:var(--tap-target-min);}
+
+  .ap-editor-actions{
+    position:fixed;
+    left:0;
+    right:0;
+    bottom:0;
+    z-index:45;
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:stretch;
+    gap:8px;
+    margin:0;
+    padding:10px 16px calc(10px + var(--safe-area-bottom));
+    background:var(--card);
+    border-top:1px solid #EDE7E0;
+    box-shadow:0 -6px 24px rgba(43,35,32,.08);
+  }
+  .ap-editor-actions .ap-autosave-status{
+    flex:1 1 100%;
+    order:-1;
+    margin:0 0 2px;
+  }
+  .ap-editor-actions .btn-sm{
+    flex:1 1 calc(50% - 4px);
+    min-height:var(--tap-target-min);
+    justify-content:center;
+  }
+  .ap-editor-actions #apSaveProduct{flex:1 1 100%;}
+
+  .ap-form-actions:not(.ap-editor-actions){
+    flex-direction:column;
+    align-items:stretch;
+  }
+  .ap-form-actions:not(.ap-editor-actions) .btn-sm{
+    width:100%;
+    min-height:var(--tap-target-min);
+  }
+
+  .pricing-savebar{
+    flex-direction:column;
+    align-items:stretch;
+    padding-bottom:calc(16px + var(--safe-area-bottom));
+  }
+  .pricing-savebar .btns{
+    flex-direction:column;
+    width:100%;
+  }
+  .pricing-savebar .btns .btn-sm{min-height:var(--tap-target-min);width:100%;}
+
+  /* CMS editor — canvas first, tools below (admin-core override) */
+  .cms-editor__body,
+  .cms-site-editor__body{
+    display:flex;
+    flex-direction:column;
+    grid-template-columns:1fr;
+    height:auto;
+    min-height:0;
+    gap:12px;
+  }
+  .cms-editor__canvas{
+    order:1;
+    min-height:min(52vh,480px);
+  }
+  .cms-editor__palette,
+  .cms-editor__props{
+    order:2;
+    max-height:none;
+  }
+  .cms-editor__top{
+    flex-wrap:wrap;
+    gap:8px;
+  }
+  .cms-editor__title,
+  .cms-editor__slug,
+  .cms-editor__site-route{
+    width:100%;
+    flex:1 1 100%;
+  }
+  .cms-palette-grid{grid-template-columns:1fr;}
+  .cms-device-toggle{width:100%;justify-content:center;}
+  .cms-device-toggle button{min-height:var(--tap-target-min);flex:1;}
+
+  .content-row{
+    flex-direction:column;
+    align-items:flex-start;
+    gap:10px;
+    padding:14px 16px;
+  }
+  .content-row .btn-sm{min-height:var(--tap-target-min);width:100%;text-align:center;}
 }

@@ -2153,6 +2153,8 @@ body.dark-theme .ring-size-guide-table thead th {
 
   .mobile-buy-bar:not(.hidden) {
     display: flex;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+    gap: 12px;
   }
 
   .mobile-buy-price {
@@ -2160,21 +2162,199 @@ body.dark-theme .ring-size-guide-table thead th {
     border: none;
     background: transparent;
     text-align: left;
-    padding: 0;
     cursor: pointer;
     color: inherit;
     font: inherit;
     min-width: 0;
+    min-height: 44px;
+    padding: 6px 8px 6px 0;
+    flex: 1 1 auto;
+  }
+
+  .mobile-buy-amount {
+    font-size: 22px;
   }
 
   .mobile-buy-detail-hint {
     display: block;
     margin-top: 2px;
-    font-size: 11px;
+    font-size: 12px;
     line-height: 1.2;
+    padding-top: 2px;
     color: var(--color-text-muted);
     text-decoration: underline;
     text-underline-offset: 2px;
+  }
+
+  .shop-cta-compact {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 12px 16px;
+  }
+
+  .mobile-buy-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .variant-chips--grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .variant-chips--grid .variant-chip {
+    width: 100%;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .variant-chips--row {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+
+  .variant-chips--row .variant-chip {
+    flex: 1 1 calc(33.333% - 8px);
+    min-width: 0;
+    min-height: 44px;
+  }
+
+  #shop-styles .type-grid,
+  #shop-styles .type-grid.type-grid--size-xl,
+  #shop-styles .type-grid.type-grid--size-lg,
+  #shop-styles .type-grid.type-grid--size-md,
+  #shop-styles .type-grid.type-grid--size-sm,
+  #shop-styles .type-grid.type-grid--size-xs {
+    --type-cols: 2;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    max-width: 100% !important;
+    margin-inline: 0;
+  }
+
+  .catalog-tile,
+  #shop-styles .type-card {
+    min-height: 44px;
+  }
+
+  .catalog-tile span,
+  #shop-styles .type-card .type-name,
+  #shop-styles .type-card .type-card__name {
+    font-size: 15px;
+    padding-bottom: 14px;
+  }
+
+  .product-layout .product-gallery-col {
+    order: -1;
+  }
+
+  .product-layout .product-buy-col {
+    order: 0;
+  }
+
+  .ring-size-guide-inline__scroll,
+  .ring-size-guide-scroll {
+    overflow: visible;
+    border: none;
+    padding: 0;
+  }
+
+  .ring-size-guide-inline__table,
+  .ring-size-guide-table,
+  .chain-length-guide-inline__table {
+    min-width: 0;
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 8px;
+  }
+
+  .ring-size-guide-inline__table thead,
+  .ring-size-guide-table thead,
+  .chain-length-guide-inline__table thead {
+    display: none;
+  }
+
+  .ring-size-guide-inline__table tbody,
+  .ring-size-guide-table tbody,
+  .chain-length-guide-inline__table tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .ring-size-guide-inline__table tbody tr,
+  .ring-size-guide-table tbody tr,
+  .chain-length-guide-inline__table tbody tr {
+    display: grid;
+    grid-template-columns: minmax(4.5rem, auto) 1fr 1fr;
+    gap: 4px 12px;
+    padding: 12px 14px;
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    background: var(--color-surface);
+  }
+
+  .ring-size-guide-inline__table tbody tr:nth-child(even) td,
+  .ring-size-guide-table tbody tr:nth-child(even) td,
+  .chain-length-guide-inline__table tbody tr:nth-child(even) td {
+    background: transparent;
+  }
+
+  .ring-size-guide-inline__table tbody th,
+  .ring-size-guide-inline__table td,
+  .ring-size-guide-table td,
+  .ring-size-guide-table tbody td:first-child,
+  .chain-length-guide-inline__table th,
+  .chain-length-guide-inline__table td {
+    display: block;
+    padding: 0;
+    border: none;
+    text-align: left;
+    white-space: normal;
+    min-width: 0;
+  }
+
+  .ring-size-guide-inline__table tbody th,
+  .ring-size-guide-table tbody td:first-child,
+  .chain-length-guide-inline__table tbody th {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    align-self: center;
+    font-weight: 700;
+    font-size: 15px;
+  }
+
+  .ring-size-guide-inline__table td:nth-child(2),
+  .ring-size-guide-table td:nth-child(2),
+  .chain-length-guide-inline__table td:nth-child(2) {
+    grid-column: 2 / -1;
+    font-size: 13px;
+    color: var(--color-text-muted);
+  }
+
+  .ring-size-guide-inline__table td:nth-child(3),
+  .ring-size-guide-table td:nth-child(3),
+  .chain-length-guide-inline__table td:nth-child(3) {
+    grid-column: 2 / -1;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-text);
+  }
+
+  .chain-length-guide-table td:last-child {
+    min-width: 0;
+    grid-column: 2 / -1;
+  }
+
+  @media (hover: none) {
+    .catalog-tile:hover,
+    #shop-styles .type-card:hover,
+    .shop-fit .catalog-tile:hover,
+    .shop-fit #shop-styles .type-card:hover {
+      transform: none;
+    }
   }
 }
 
@@ -4606,6 +4786,40 @@ body.app-shell .mobile-buy-actions .shop-cta--secondary:hover:not(:disabled) {
 
   .cart-detail-layout {
     grid-template-columns: 1fr;
+  }
+
+  .cart-page .container,
+  #mvc-cart .container {
+    padding-bottom: calc(140px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .cart-summary,
+  .member-cart-summary {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 90;
+    margin: 0;
+    border-radius: 16px 16px 0 0;
+    border-top: 1px solid var(--color-border);
+    box-shadow: 0 -8px 28px rgba(43, 35, 32, 0.12);
+    padding: 16px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+    background: rgba(255, 255, 255, 0.94);
+    backdrop-filter: blur(20px) saturate(1.35);
+    -webkit-backdrop-filter: blur(20px) saturate(1.35);
+  }
+
+  .cart-summary .shop-cta,
+  .member-cart-summary .btn {
+    min-height: 44px;
+    margin-bottom: 8px;
+  }
+
+  .cart-action-btn {
+    min-height: 44px;
+    padding: 10px 16px;
+    font-size: 13px;
   }
 }
 

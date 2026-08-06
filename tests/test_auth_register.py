@@ -190,7 +190,7 @@ def test_register_page_includes_validation_assets(client, monkeypatch):
     resp = client.get("/register.html")
     assert resp.status_code == 200
     assert "auth-shell.js?v=8" in resp.text
-    assert "auth.css?v=11" in resp.text
+    assert "auth.css?v=12" in resp.text
     assert 'id="registerForm"' in resp.text
     assert 'hx-post="/htmx/auth/register"' in resp.text
     assert 'name="g-recaptcha-response"' in resp.text

@@ -1,3 +1,27 @@
+/* ---------- Phone: prevent horizontal overflow ---------- */
+@media (max-width: 640px){
+  html,
+  body{
+    overflow-x:clip;
+    max-width:100%;
+  }
+  body .container{
+    width:min(1160px,100% - 2 * var(--page-padding-x,16px));
+    max-width:100%;
+  }
+  .site-footer__inner,
+  .nav-inner.container{
+    max-width:100%;
+  }
+  img,
+  video,
+  iframe,
+  svg,
+  table{
+    max-width:100%;
+  }
+}
+
 /* ---------- 平板／小筆電：釋出導覽列空間，避免選項文字被擠成兩行 ---------- */
 @media (max-width: 1100px){
   .site-nav-desktop .nav-item > a,
@@ -19,7 +43,7 @@
   .gh-series-grid{ grid-template-columns:repeat(3, 1fr); }
 }
 
-@media (max-width: 860px){
+@media (max-width: 900px){
   /* backdrop-filter 會讓 fixed 子元素(手機抽屜選單)相對導覽列定位,
      手機版改用不透明背景 */
   .nav{ backdrop-filter:none; background:var(--paper); }

@@ -637,11 +637,114 @@
 
   .product-layout--wizard {
     grid-template-columns: 1fr;
+    gap: 20px;
   }
 
-  .product-gallery-col {
-    max-width: 320px;
+  .product-layout--wizard .product-gallery-col {
+    order: -1;
+    max-width: min(100%, 480px);
+    width: 100%;
     margin: 0 auto;
+  }
+
+  .product-layout--wizard .product-buy-col {
+    order: 0;
+  }
+
+  .shop-fit #shop-styles .type-grid {
+    --type-cols: 2;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    max-width: 100% !important;
+    margin-inline: 0;
+  }
+
+  .shop-fit #shop-styles .type-grid.type-grid--size-xl,
+  .shop-fit #shop-styles .type-grid.type-grid--size-lg,
+  .shop-fit #shop-styles .type-grid.type-grid--size-md,
+  .shop-fit #shop-styles .type-grid.type-grid--size-sm,
+  .shop-fit #shop-styles .type-grid.type-grid--size-xs {
+    --type-cols: 2;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    max-width: 100% !important;
+  }
+
+  .shop-fit .catalog-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .shop-fit .catalog-tile,
+  .shop-fit #shop-styles .type-card {
+    min-height: 44px;
+  }
+
+  .shop-fit .catalog-tile span,
+  .shop-fit #shop-styles .type-card .type-name,
+  .shop-fit #shop-styles .type-card .type-card__name {
+    padding-top: 12px;
+    padding-bottom: 14px;
+    font-size: 15px;
+  }
+
+  .shop-fit .product-options-section {
+    grid-template-columns: 1fr;
+    row-gap: 0.75rem;
+  }
+
+  .shop-fit .product-buy-col .variant-chips:not(.variant-chips--colors) {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    overflow-x: visible;
+  }
+
+  .shop-fit .product-buy-col .variant-chips--row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    flex-wrap: unset;
+    overflow-x: visible;
+  }
+
+  .shop-fit .product-buy-col .variant-chips:not(.variant-chips--colors) .variant-chip,
+  .shop-fit .product-buy-col .variant-chips--row .variant-chip {
+    width: 100%;
+    min-height: 44px;
+    min-width: 0;
+    padding: 12px 10px;
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .shop-fit .variant-chips--colors .color-swatch-labeled {
+    min-height: 44px;
+    min-width: 56px;
+  }
+
+  .shop-price-panel.is-mobile-open .shop-price-panel-head::before {
+    content: "";
+    display: block;
+    width: 40px;
+    height: 4px;
+    margin: 0 auto 12px;
+    border-radius: 999px;
+    background: rgba(43, 35, 32, 0.18);
+  }
+
+  .shop-price-panel.is-mobile-open .shop-price-panel-head {
+    padding-top: 4px;
+    cursor: pointer;
+  }
+
+  .shop-price-panel.is-mobile-open .hero-price-amount {
+    font-size: clamp(28px, 7vw, 34px);
+  }
+
+  .shop-price-panel.is-mobile-open .price-breakdown-details > .price-breakdown-title {
+    min-height: 44px;
+    padding: 10px 0;
+    font-size: 14px;
   }
 }
 
@@ -710,9 +813,11 @@
   }
 }
 
-/* Wizard: always show full breakdown (克拉、金工價格) */
-.shop-page.shop-wizard .price-breakdown-details:not([open]) .price-breakdown-panel {
-  display: block !important;
+/* Wizard desktop: always show full breakdown (克拉、金工價格) */
+@media (min-width: 901px) {
+  .shop-page.shop-wizard .price-breakdown-details:not([open]) .price-breakdown-panel {
+    display: block !important;
+  }
 }
 
 /* Pendant-only renders are 573x451. Match the responsive frame to the

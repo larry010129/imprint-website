@@ -164,12 +164,19 @@
   if (chatBtn) {
     chatBtn.addEventListener('click', function () {
       close();
-      if (!openBotpressChat()) {
-        var tries = 0;
-        var poll = window.setInterval(function () {
-          tries += 1;
-          if (openBotpressChat() || tries > 40) window.clearInterval(poll);
-        }, 250);
+      var open = function () {
+        if (!openBotpressChat()) {
+          var tries = 0;
+          var poll = window.setInterval(function () {
+            tries += 1;
+            if (openBotpressChat() || tries > 40) window.clearInterval(poll);
+          }, 250);
+        }
+      };
+      if (typeof window.loadImprintChat === 'function') {
+        window.loadImprintChat().then(open).catch(open);
+      } else {
+        open();
       }
     });
   }

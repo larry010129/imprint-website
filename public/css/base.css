@@ -21,6 +21,31 @@
   --shadow-soft: 0 20px 60px rgba(43,35,32,.08);
   --ease: cubic-bezier(.22,.61,.36,1);
   --radius-ui: 8px;
+  /* Mobile-first contract (Wave 0) — copy px values into @media; see mobile.css */
+  --bp-phone: 640px;
+  --bp-tablet: 900px;
+  --bp-desk: 1100px;
+  --tap-target-min: 44px;
+  --page-padding-x: 16px;
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
+}
+
+@font-face{
+  font-family:"Noto Sans TC";
+  font-style:normal;
+  font-weight:100 900;
+  font-display:swap;
+  src:local("Noto Sans TC"),local("Microsoft JhengHei");
+}
+@font-face{
+  font-family:"Noto Serif TC";
+  font-style:normal;
+  font-weight:100 900;
+  font-display:swap;
+  src:local("Noto Serif TC"),local("PMingLiU");
 }
 
 *{ margin:0; padding:0; box-sizing:border-box; }

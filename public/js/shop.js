@@ -1717,6 +1717,7 @@ function setShopView(view, options) {
   updateWizardGuide();
   updateDiamondWizardChrome();
   if (view === 'product') { updateLargeImage(); resetConfigNotices(); }
+  else resetMobilePriceSheet();
   const hist = opts.history;
   if (hist !== 'none') {
     const mode = hist || (shopViewDepth(view) > shopViewDepth(prevView) ? 'push' : 'replace');
@@ -2253,7 +2254,7 @@ function updateCtaState(total) {
   clearFixedSubmitFieldHighlights();
   updatePriceHint(total);
   const bar = document.getElementById('mobile-buy-bar');
-  const showMobileBar = !!state.category;
+  const showMobileBar = shopView === 'product' && !!state.category;
   if (bar) bar.classList.toggle('hidden', !showMobileBar);
   document.body.classList.toggle('shop-mobile-bar', showMobileBar);
 }
@@ -5816,16 +5817,27 @@ document.getElementById("favorite-btn")?.addEventListener("click", addCurrentFav
   }, 15000);
 })();
 
+function resetMobilePriceSheet() {
+  const details = document.getElementById('price-breakdown-details');
+  const toggle = document.getElementById('mobile-price-toggle');
+  const panel = document.getElementById('shop-price-panel');
+  panel?.classList.remove('is-mobile-open');
+  if (details) {
+    delete details.dataset.userOpened;
+    if (window.matchMedia('(max-width: 900px)').matches) details.open = false;
+  }
+  toggle?.setAttribute('aria-expanded', 'false');
+}
+
 (function setupMobilePricePanel() {
   const details = document.getElementById('price-breakdown-details');
   const toggle = document.getElementById('mobile-price-toggle');
   const panel = document.getElementById('shop-price-panel');
+  const panelHead = panel?.querySelector('.shop-price-panel-head');
 
   function isMobileShop() {
     return window.matchMedia('(max-width: 900px)').matches;
   }
-
-  const isWizard = !!document.querySelector('.shop-page.shop-wizard');
 
   function syncMobileChatVisibility() {
     const hideChat = isMobileShop() && panel?.classList.contains('is-mobile-open');
@@ -5836,9 +5848,20 @@ document.getElementById("favorite-btn")?.addEventListener("click", addCurrentFav
     }
   }
 
+  function setMobileSheetOpen(willOpen) {
+    if (!panel || !details) return;
+    panel.classList.toggle('is-mobile-open', willOpen);
+    if (willOpen) details.dataset.userOpened = '1';
+    else delete details.dataset.userOpened;
+    details.open = willOpen;
+    toggle?.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+    syncMobileChatVisibility();
+    if (willOpen) panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
   function syncDetailsOpen() {
     if (!details) return;
-    if (!isMobileShop() || isWizard) {
+    if (!isMobileShop()) {
       details.open = true;
       panel?.classList.remove('is-mobile-open');
       toggle?.setAttribute('aria-expanded', 'false');
@@ -5860,14 +5883,13 @@ document.getElementById("favorite-btn")?.addEventListener("click", addCurrentFav
 
   toggle?.addEventListener('click', () => {
     if (!panel || !details) return;
-    const willOpen = !panel.classList.contains('is-mobile-open');
-    panel.classList.toggle('is-mobile-open', willOpen);
-    details.dataset.userOpened = '1';
-    details.open = willOpen;
-    toggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
-    if (willOpen) {
-      panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
+    setMobileSheetOpen(!panel.classList.contains('is-mobile-open'));
+  });
+
+  panelHead?.addEventListener('click', (event) => {
+    if (!isMobileShop() || !panel?.classList.contains('is-mobile-open')) return;
+    if (event.target.closest('#mobile-price-toggle, .shop-cta, button, a')) return;
+    setMobileSheetOpen(false);
   });
 })();
 

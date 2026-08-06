@@ -87,7 +87,7 @@
       });
       menu.querySelectorAll('.dropdown a').forEach(function (a) {
         a.addEventListener('click', function () {
-          if (window.innerWidth <= 860 && a.getAttribute('href') && a.getAttribute('href') !== '#') {
+          if (window.innerWidth <= 900 && a.getAttribute('href') && a.getAttribute('href') !== '#') {
             burger.classList.remove('is-open');
             menu.classList.remove('is-open');
             document.body.style.overflow = '';

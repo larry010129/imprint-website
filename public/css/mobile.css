@@ -1,0 +1,15 @@
+/* ============================================================
+   Mobile-first contract (Wave 0 / Phase 0)
+
+   Breakpoint tokens live in base.css :root. CSS cannot use var()
+   inside @media queries yet — new @media rules MUST use only:
+
+     Phone:  (max-width: 640px)   — var(--bp-phone)
+     Tablet: (max-width: 900px)   — var(--bp-tablet); chrome + shop align here
+     Desk:   (min-width: 1100px)  — var(--bp-desk); multi-col layouts unchanged above
+
+   Touch / layout tokens (also in :root):
+     --tap-target-min: 44px
+     --page-padding-x: 16px
+     --safe-area-* for fixed bars (bottom sheets, buy bars, sticky CTAs)
+============================================================ */

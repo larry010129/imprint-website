@@ -171,6 +171,7 @@
   grid-template-columns: 1fr auto;
   gap: 16px;
   align-items: center;
+  min-height: var(--tap-target-min, 44px);
   padding: 16px 20px;
   border-radius: 14px;
   background: #fff;
@@ -302,6 +303,14 @@
   gap: 10px;
 }
 
+.sov-detail__actions .gh-btn {
+  min-height: var(--tap-target-min, 44px);
+}
+
+.sov-next__links .gh-btn {
+  min-height: var(--tap-target-min, 44px);
+}
+
 .sov-cards-wrap {
   padding: 0 16px 64px;
   text-align: center;
@@ -348,8 +357,8 @@
 
 @media (max-width: 900px) {
   .sov-pillars {
-    grid-template-columns: 1fr;
-    max-width: 480px;
+    grid-template-columns: repeat(2, 1fr);
+    max-width: 640px;
   }
 
   .sov-detail,
@@ -362,16 +371,49 @@
   .sov-detail--reverse .sov-detail__copy {
     order: unset;
   }
+
+  .sov-detail__media {
+    order: -1;
+  }
 }
 
 @media (max-width: 640px) {
+  .sov-pillars {
+    grid-template-columns: 1fr;
+    max-width: 480px;
+  }
+
   .sov-guide__row {
     grid-template-columns: 1fr;
     gap: 8px;
     text-align: left;
+    padding: 18px 16px;
   }
 
   .sov-guide__series {
     white-space: normal;
+  }
+
+  .sov-detail__actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .sov-detail__actions .gh-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .sov-next__links {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    max-width: 320px;
+    margin-inline: auto;
+  }
+
+  .sov-next__links .gh-btn {
+    width: 100%;
+    justify-content: center;
   }
 }

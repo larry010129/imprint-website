@@ -33,7 +33,7 @@
   display:none;
 }
 
-@media (min-width: 861px){
+@media (min-width: 901px){
   .nav-inner > nav.site-nav-desktop.nav-menu-col{ flex-shrink:1; min-width:0; }
 }
 
@@ -41,7 +41,7 @@
 
 /* Desktop: isolated columns — logo | menu | CTAs never share the same space */
 
-@media (min-width: 861px){
+@media (min-width: 901px){
 
   [data-site-nav-root] .site-nav-desktop{
     display:flex;
@@ -315,7 +315,7 @@
 
 /* Progressive CTA reveal — phone is already in the topbar */
 
-@media (min-width: 861px) and (max-width: 1399px){
+@media (min-width: 901px) and (max-width: 1399px){
 
   .nav-cta .btn-line,
 
@@ -323,7 +323,7 @@
 
 }
 
-@media (min-width: 861px) and (max-width: 1199px){
+@media (min-width: 901px) and (max-width: 1199px){
 
   .nav-cta .btn-dark{ display:none; }
 
@@ -608,7 +608,7 @@ a.account-menu-trigger{
 
 /* Mobile drawer — migrated from frozen public/react/src.css */
 .mobile-animated-nav{ display:none; }
-@media (max-width:860px){
+@media (max-width:900px){
   [data-site-nav-root] .nav-inner.container{
     width:100%;
     max-width:100%;
@@ -644,9 +644,9 @@ a.account-menu-trigger{
     display:flex;
     align-items:center;
     justify-content:center;
-    width:40px;
-    height:44px;
-    flex:0 0 40px;
+    width:var(--tap-target-min,44px);
+    height:var(--tap-target-min,44px);
+    flex:0 0 var(--tap-target-min,44px);
     border:0;
     background:transparent;
     color:var(--ink,#2b2320);
@@ -715,7 +715,9 @@ a.account-menu-trigger{
   .mobile-animated-nav__item{ border-bottom:1px solid #f0ebe5; }
   .mobile-animated-nav__link{
     display:block;
-    padding:18px 0;
+    padding:14px 0;
+    min-height:var(--tap-target-min,44px);
+    line-height:1.35;
     font-size:17px;
     letter-spacing:.08em;
     color:var(--ink,#2b2320);
@@ -728,14 +730,74 @@ a.account-menu-trigger{
   }
   .mobile-animated-nav__sublink{
     display:block;
-    padding:10px 0;
+    padding:12px 0;
+    min-height:var(--tap-target-min,44px);
+    line-height:1.35;
     font-size:15px;
     letter-spacing:.06em;
     color:var(--ink-soft,#8a817b);
   }
   .mobile-animated-nav__sublink:hover{ color:var(--mint-deep,#1aa8ad); }
 }
-@media (max-width:860px) and (prefers-reduced-motion:reduce){
+@media (max-width:900px) and (prefers-reduced-motion:reduce){
   .mobile-animated-nav,.mobile-animated-nav__list{ transition:none; }
+}
+
+/* Coarse pointer / touch: no hover-only dropdowns on desktop nav (≥901) */
+@media (hover:none),(pointer:coarse){
+  @media (min-width:901px){
+    .site-nav-desktop .nav-item:hover .dropdown{
+      opacity:0;
+      visibility:hidden;
+      transform:translate(-50%,8px);
+    }
+    .site-nav-desktop .nav-item:focus-within .dropdown,
+    .site-nav-desktop .nav-item.is-open .dropdown{
+      opacity:1;
+      visibility:visible;
+      transform:translate(-50%,0);
+    }
+    .site-nav-desktop .nav-item{
+      display:flex;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:center;
+      gap:0 2px;
+    }
+    .site-nav-desktop .dd-toggle{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      flex-shrink:0;
+      width:var(--tap-target-min,44px);
+      height:var(--tap-target-min,44px);
+      margin:0;
+      padding:0;
+      border:0;
+      border-radius:var(--radius-ui,8px);
+      background:transparent;
+      color:inherit;
+      cursor:pointer;
+    }
+    .site-nav-desktop .dd-toggle:focus-visible{
+      outline:2px solid var(--mint-deep,#52c4c8);
+      outline-offset:2px;
+    }
+    .site-nav-desktop .nav-item.is-open .dd-toggle svg{
+      transform:rotate(180deg);
+    }
+    .site-nav-desktop .dd-toggle svg{
+      transition:transform .2s var(--ease,cubic-bezier(.22,.61,.36,1));
+    }
+  }
+}
+
+@media (hover:none),(pointer:coarse){
+  .site-nav-desktop .nav-item > a:hover,
+  .site-nav-mobile .nav-item > a:hover,
+  .gradient-button:hover .gradient-button-inner,
+  .account-menu-trigger:hover{
+    transform:none;
+  }
 }
 

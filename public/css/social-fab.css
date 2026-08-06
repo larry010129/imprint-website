@@ -9,8 +9,8 @@
   --fab-line: #06c755;
   --fab-shadow: 0 6px 18px rgba(43, 35, 32, 0.18);
   position: fixed;
-  right: 24px;
-  bottom: 24px;
+  right: max(24px, env(safe-area-inset-right, 0px));
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
   z-index: 9999;
   display: flex;
   flex-direction: column;
@@ -55,8 +55,10 @@
 
 .imprint-contact-fab__toggle,
 .imprint-contact-fab__item {
-  width: var(--fab-size);
-  height: var(--fab-size);
+  width: max(var(--fab-size), var(--tap-target-min, 44px));
+  height: max(var(--fab-size), var(--tap-target-min, 44px));
+  min-width: var(--tap-target-min, 44px);
+  min-height: var(--tap-target-min, 44px);
   border: 0;
   border-radius: 50%;
   box-shadow: var(--fab-shadow);
@@ -239,8 +241,27 @@
 
 @media (max-width: 900px) {
   .imprint-contact-fab {
-    bottom: calc(var(--shop-mobile-buy-bar-height, 16px) + 16px);
-    right: 16px;
+    bottom: calc(
+      var(--shop-mobile-buy-bar-height, 0px)
+      + 16px
+      + env(safe-area-inset-bottom, 0px)
+    );
+    right: max(16px, env(safe-area-inset-right, 0px));
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .imprint-contact-fab.is-hover-mode {
+    pointer-events: none;
+  }
+
+  .imprint-contact-fab.is-hover-mode .imprint-contact-fab__toggle,
+  .imprint-contact-fab.is-hover-mode .imprint-contact-fab__item {
+    pointer-events: auto;
+  }
+
+  .imprint-contact-fab.is-hover-mode:not(.is-open) .imprint-contact-fab__menu {
+    display: none;
   }
 }
 
