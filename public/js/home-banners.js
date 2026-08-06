@@ -24,6 +24,16 @@
     return String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
   }
 
+  /** Stable image identity so local SSR memorial ≈ CMS memorial URL (keep LCP skip). */
+  function assetKey(url) {
+    var s = String(url || '').trim();
+    if (!s) return '';
+    if (/imprint-diamond-family-memorial/i.test(s)) return 'memorial';
+    var m = s.match(/\/([^\/?#]+)(?:[?#]|$)/);
+    if (!m) return s.toLowerCase();
+    return m[1].replace(/\.(jpe?g|png|webp)$/i, '').toLowerCase();
+  }
+
   function formatLead(lead) {
     var t = esc(lead);
     return t.replace(/\bDNA\b/g, '<span class="gh-dna">DNA</span>');
@@ -36,8 +46,9 @@
     return text.slice(0, splitAt + 1) + '<em>' + text.slice(splitAt + 1) + '</em>';
   }
 
+  /** Desktop memorial only — custom phone crop must still win at ≤900px. */
   function isMemorial(b) {
-    var urls = [b.image_url, b.image_webp, b.image_url_mobile].join(' ');
+    var urls = [b.image_url, b.image_webp].join(' ');
     return /imprint-diamond-family-memorial/i.test(urls);
   }
 
@@ -52,14 +63,23 @@
     return '<a class="gh-btn gh-btn--ghost" href="' + esc(href) + '">' + esc(label) + '</a>';
   }
 
-  /* Slide 0 memorial: always local srcset — never Supabase LCP swap. */
-  function memorialPicture(sourceAttr) {
+  /**
+   * Slide 0 memorial: keep local desktop LCP assets.
+   * When CMS has image_url_mobile, use that for ≤900px (phone crop).
+   */
+  function memorialPicture(sourceAttr, mobileOverride) {
+    var mobileValue = String(mobileOverride || '').trim();
+    var mobileSrc = mobileValue || MEMORIAL_MOBILE;
+    var mobileIsWebp = /\.webp(\s|\?|$)/i.test(mobileSrc);
+    var mobileType = (!mobileValue || mobileIsWebp) ? ' type="image/webp"' : '';
     var mobile = '<source media="(max-width:900px)" ' + sourceAttr + '="' +
-      esc(MEMORIAL_MOBILE) + '" type="image/webp" sizes="100vw">';
+      esc(mobileSrc) + '"' + mobileType + ' sizes="100vw">';
     var webp = '<source ' + sourceAttr + '="' + esc(MEMORIAL_DESKTOP) +
       '" type="image/webp" sizes="100vw">';
-    var imgExtra = ' width="800" height="388" sizes="100vw" srcset="' +
-      esc(MEMORIAL_MOBILE + ', ' + MEMORIAL_DESKTOP + ' 2400w') + '"';
+    var imgExtra = mobileValue
+      ? ''
+      : ' width="800" height="388" sizes="100vw" srcset="' +
+        esc(MEMORIAL_MOBILE + ', ' + MEMORIAL_DESKTOP + ' 2400w') + '"';
     return { mobile: mobile, webp: webp, imgSrc: MEMORIAL_IMG, imgExtra: imgExtra };
   }
 
@@ -86,8 +106,9 @@
       : 'loading="lazy"';
     var sourceAttr = index === 0 ? 'srcset' : 'data-srcset';
     var imageAttr = index === 0 ? 'src' : 'data-src';
+    var mobileValue = String(b.image_url_mobile || '').trim();
     var pic = (index === 0 && isMemorial(b))
-      ? memorialPicture(sourceAttr)
+      ? memorialPicture(sourceAttr, mobileValue)
       : remotePicture(b, sourceAttr);
     var primary = '';
     if (b.cta_primary_label && b.cta_primary_href) {
@@ -127,7 +148,10 @@
       norm(b.cta_primary_label),
       norm(b.cta_primary_href),
       norm(b.cta_secondary_label),
-      norm(b.cta_secondary_href)
+      norm(b.cta_secondary_href),
+      // Phone crop / desktop swap must invalidate SSR skip.
+      norm(b.image_url_mobile || ''),
+      assetKey(b.image_url || b.image_webp || ''),
     ].join('|');
   }
 
@@ -143,6 +167,13 @@
     return scroll ? '#' + scroll : '';
   }
 
+  /** First URL token from a srcset (ignore descriptors). */
+  function firstSrcToken(srcset) {
+    var s = String(srcset || '').trim();
+    if (!s) return '';
+    return s.split(',')[0].trim().split(/\s+/)[0] || '';
+  }
+
   function ssrSig() {
     var slides = track.querySelectorAll('.hc-slide');
     var parts = [];
@@ -151,18 +182,36 @@
       var title = slide.querySelector('.gh-hero__title');
       var primary = slide.querySelector('.gh-btn--primary');
       var secondary = slide.querySelector('.gh-btn--ghost');
+      var mobileSource = slide.querySelector('.hc-media source[media*="900"]');
+      var img = slide.querySelector('.hc-media img');
+      var mobileRaw = '';
+      if (mobileSource) {
+        mobileRaw = mobileSource.getAttribute('srcset') ||
+          mobileSource.getAttribute('data-srcset') || '';
+      }
+      // Local memorial srcset = no custom phone crop (empty in CMS sig).
+      var mobileCustom = '';
+      if (mobileRaw && !/imprint-diamond-family-memorial/i.test(mobileRaw)) {
+        mobileCustom = firstSrcToken(mobileRaw);
+      }
+      var imgSrc = '';
+      if (img) {
+        imgSrc = img.getAttribute('src') || img.getAttribute('data-src') || '';
+      }
       parts.push([
         norm(title && title.textContent),
         norm(primary && primary.textContent),
         norm(primary && primary.getAttribute('href')),
         norm(secondary && secondary.textContent),
-        norm(secondaryHref(secondary))
+        norm(secondaryHref(secondary)),
+        norm(mobileCustom),
+        assetKey(imgSrc || firstSrcToken(mobileRaw)),
       ].join('|'));
     }
     return parts.join('||');
   }
 
-  /* Skip rebuild when CMS titles/CTAs/sort match SSR — keep local LCP DOM. */
+  /* Skip rebuild when CMS copy + images match SSR — keep local LCP DOM. */
   function matchesSsr(list) {
     if (!list.length) return false;
     var slides = track.querySelectorAll('.hc-slide');

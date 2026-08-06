@@ -33,7 +33,7 @@
         "type": "module"
       },
       {
-        "src": "/static/js/home-banners.js?v=3",
+        "src": "/static/js/home-banners.js?v=7",
         "defer": true
       }
     ],

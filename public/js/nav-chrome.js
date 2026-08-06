@@ -33,12 +33,14 @@
     if (isHome) {
       /* Prefer [data-site-nav-root] (site-chrome); fallback parent for older markup */
       var heroRoot = root.closest('[data-site-nav-root]') || root.parentElement;
-      if (heroRoot) heroRoot.classList.add('is-nav-hero');
       var onScroll = function () {
         document.body.classList.toggle('is-nav-scrolled', window.scrollY > 16);
       };
       window.addEventListener('scroll', onScroll, { passive: true });
+      /* Read scrollY (onScroll) before the classList.add write below — reading
+         layout geometry right after a DOM write forces a synchronous reflow. */
       onScroll();
+      if (heroRoot) heroRoot.classList.add('is-nav-hero');
     } else {
       var onScroll2 = function () {
         root.classList.toggle('is-scrolled', window.scrollY > 10);
