@@ -286,8 +286,8 @@
             '<input type="number" id="apCategoryAddonInput" class="ap-category-addon-input" ' +
               'min="0" step="1" inputmode="numeric" value="' + addon + '" data-slug="' + esc(cat) + '">' +
             '<button type="button" class="btn-sm btn-primary" id="apCategoryAddonSave">儲存</button>' +
+            '<button type="button" class="btn-sm" id="apCategoryAddonForce">強制覆蓋</button>' +
           '</div>' +
-          '<p class="ap-category-addon-desc">品項加價會<strong>取代</strong>預設金工費（填 0 則用預設：一般 5000、鏈條 3000／銀 500）。</p>' +
           '<p class="ap-category-addon-hint" id="apCategoryAddonStatus" hidden></p>' +
         '</div>' +
       '</div>'
@@ -624,6 +624,7 @@
   function saveCategoryAddon(opts) {
     opts = opts || {};
     var input = document.getElementById('apCategoryAddonInput');
+    var btn = document.getElementById('apCategoryAddonSave');
     if (!input) return Promise.resolve();
     var slug = input.dataset.slug || state.activeTab.replace('cat-', '');
     var raw = String(input.value || '').trim();
@@ -637,25 +638,120 @@
       setCategoryAddonStatus('');
       return Promise.resolve();
     }
+    if (!api.admin.updateProductCategory) {
+      setCategoryAddonStatus('請強制重新整理頁面（Ctrl+F5）後再儲存', true);
+      return Promise.resolve();
+    }
     setCategoryAddonStatus('儲存中…', false);
+    if (btn) btn.disabled = true;
     return api.admin.updateProductCategory(slug, { addonPrice: amount }).then(function (res) {
+      if (btn) btn.disabled = false;
       if (res.error) {
         setCategoryAddonStatus(apiError(res), true);
+        if (window.Toast) {
+          window.Toast.create({ type: 'error', title: '品項加價儲存失敗', description: apiError(res) });
+        }
         return;
       }
-      if (res.category) {
-        var idx = (state.categories || []).findIndex(function (c) { return c.slug === slug; });
-        if (idx >= 0) state.categories[idx] = res.category;
-        else if (state.categories) state.categories.push(res.category);
-        input.value = categoryAddonValue(slug);
+      if (!res.category || (res.category.addonPrice == null && res.category.addon_price_twd == null)) {
+        setCategoryAddonStatus('儲存回應異常，請重新整理後確認', true);
+        return;
       }
+      var idx = (state.categories || []).findIndex(function (c) { return c.slug === slug; });
+      if (idx >= 0) state.categories[idx] = res.category;
+      else if (state.categories) state.categories.push(res.category);
+      var live = document.getElementById('apCategoryAddonInput');
+      if (live) live.value = categoryAddonValue(slug);
       setCategoryAddonStatus('已儲存', false);
+      if (window.Toast) {
+        window.Toast.create({ type: 'success', title: '品項加價已儲存' });
+      }
+    }).catch(function (err) {
+      if (btn) btn.disabled = false;
+      var msg = (err && err.message) ? String(err.message) : '儲存失敗，請稍後再試';
+      setCategoryAddonStatus(msg, true);
+      if (window.Toast) {
+        window.Toast.create({ type: 'error', title: '品項加價儲存失敗', description: msg });
+      }
+    });
+  }
+
+  function applyForceAddonToLocalProducts(slug, amount) {
+    (state.products || []).forEach(function (p) {
+      if (p.category !== slug || !Array.isArray(p.variants)) return;
+      p.variants.forEach(function (v) {
+        v.addon_price_twd = amount;
+        v.addonPriceTwd = amount;
+      });
+    });
+  }
+
+  function forceOverwriteCategoryAddon() {
+    var input = document.getElementById('apCategoryAddonInput');
+    var btn = document.getElementById('apCategoryAddonForce');
+    var saveBtn = document.getElementById('apCategoryAddonSave');
+    if (!input) return Promise.resolve();
+    var slug = input.dataset.slug || state.activeTab.replace('cat-', '');
+    var raw = String(input.value || '').trim();
+    var amount = Number(raw);
+    if (!Number.isFinite(amount) || amount < 0 || Math.floor(amount) !== amount) {
+      setCategoryAddonStatus('請輸入非負整數', true);
+      return Promise.resolve();
+    }
+    amount = Math.round(amount);
+    if (!window.confirm('確定要以目前品項加價覆蓋此品項下所有款式列？')) {
+      return Promise.resolve();
+    }
+    if (!api.admin.forceProductCategoryAddon) {
+      setCategoryAddonStatus('請強制重新整理頁面（Ctrl+F5）後再試', true);
+      return Promise.resolve();
+    }
+    setCategoryAddonStatus('覆蓋中…', false);
+    if (btn) btn.disabled = true;
+    if (saveBtn) saveBtn.disabled = true;
+    return api.admin.forceProductCategoryAddon(slug, { addonPrice: amount }).then(function (res) {
+      if (btn) btn.disabled = false;
+      if (saveBtn) saveBtn.disabled = false;
+      if (res.error) {
+        setCategoryAddonStatus(apiError(res), true);
+        if (window.Toast) {
+          window.Toast.create({ type: 'error', title: '強制覆蓋失敗', description: apiError(res) });
+        }
+        return;
+      }
+      if (!res.category || (res.category.addonPrice == null && res.category.addon_price_twd == null)) {
+        setCategoryAddonStatus('覆蓋回應異常，請重新整理後確認', true);
+        return;
+      }
+      var idx = (state.categories || []).findIndex(function (c) { return c.slug === slug; });
+      if (idx >= 0) state.categories[idx] = res.category;
+      else if (state.categories) state.categories.push(res.category);
+      applyForceAddonToLocalProducts(slug, categoryAddonValue(slug));
+      var live = document.getElementById('apCategoryAddonInput');
+      if (live) live.value = categoryAddonValue(slug);
+      var n = res.updatedVariants != null ? Number(res.updatedVariants) : 0;
+      var okMsg = Number.isFinite(n) ? ('已覆蓋 ' + n + ' 列款式') : '已強制覆蓋';
+      setCategoryAddonStatus(okMsg, false);
+      if (window.Toast) {
+        window.Toast.create({ type: 'success', title: '品項加價已強制覆蓋', description: okMsg });
+      }
+      _loaded = false;
+      load(true, true);
+    }).catch(function (err) {
+      if (btn) btn.disabled = false;
+      if (saveBtn) saveBtn.disabled = false;
+      var msg = (err && err.message) ? String(err.message) : '覆蓋失敗，請稍後再試';
+      setCategoryAddonStatus(msg, true);
+      if (window.Toast) {
+        window.Toast.create({ type: 'error', title: '強制覆蓋失敗', description: msg });
+      }
     });
   }
 
   function bindCategoryAddonSave() {
     var input = document.getElementById('apCategoryAddonInput');
     var btn = document.getElementById('apCategoryAddonSave');
+    var forceBtn = document.getElementById('apCategoryAddonForce');
     if (input && !input.dataset.bound) {
       input.dataset.bound = '1';
       input.addEventListener('blur', function () { saveCategoryAddon(); });
@@ -669,6 +765,10 @@
     if (btn && !btn.dataset.bound) {
       btn.dataset.bound = '1';
       btn.addEventListener('click', function () { saveCategoryAddon({ force: true }); });
+    }
+    if (forceBtn && !forceBtn.dataset.bound) {
+      forceBtn.dataset.bound = '1';
+      forceBtn.addEventListener('click', function () { forceOverwriteCategoryAddon(); });
     }
   }
 
@@ -1007,7 +1107,7 @@
     if (category === 'chain') {
       return (
         '<div class="ap-variant-head">' +
-          '<span>金屬</span><span>厚度</span><span>手動定價</span><span></span>' +
+          '<span>金屬</span><span>厚度</span><span>品項加價 (NT$)</span><span>手動定價</span><span></span>' +
         '</div>'
       );
     }
@@ -1016,10 +1116,24 @@
       '<div class="ap-variant-head">' +
         '<span>金屬</span><span>克拉</span><span>蠟重（錢）</span><span>預估金重</span>' +
         '<span>配鑽 cts</span><span>一克拉價格</span><span>配鑽價錢</span>' +
+        '<span>品項加價 (NT$)</span>' +
         earClaspHead +
         '<span>手動定價</span><span></span>' +
       '</div>'
     );
+  }
+
+  /** Prefill 品項加價: row value when set, else category default. */
+  function variantAddonDisplayValue(variant, category) {
+    if (variant) {
+      if (variant.addon_price_twd != null && variant.addon_price_twd !== '') {
+        return variant.addon_price_twd;
+      }
+      if (variant.addonPriceTwd != null && variant.addonPriceTwd !== '') {
+        return variant.addonPriceTwd;
+      }
+    }
+    return categoryAddonValue(category);
   }
 
   function variantComboKey(gold, carat) {
@@ -1074,11 +1188,16 @@
       return '<option value="' + c + '"' + sel + '>' + c + '</option>';
     }).join('');
     var price = variant && variant.manual_price_twd != null ? variant.manual_price_twd : '';
+    var addonPrice = variantAddonDisplayValue(variant, category);
+    var addonInput =
+      '<input type="number" name="addonPrice" step="1" min="0" placeholder="品項加價 (NT$)" value="' +
+      esc(addonPrice) + '" title="預設帶入品項加價；可逐列調整。清空則回退品項預設。">';
     if (category === 'chain') {
       return (
         '<div class="ap-variant-row">' +
           '<select name="gold">' + goldOpts + '</select>' +
           '<select name="carat">' + caratOpts + '</select>' +
+          addonInput +
           '<input type="number" name="price" step="1" min="0" placeholder="手動定價" value="' + esc(price) + '">' +
           '<button type="button" class="ap-remove-row" aria-label="移除">✕</button>' +
         '</div>'
@@ -1112,6 +1231,7 @@
       '<input type="number" name="sideStonePrice" step="1" min="0" placeholder="一克拉價格" value="' + esc(sideStone) + '">' +
       '<input type="number" name="sideStoneTotal" step="1" min="0" placeholder="配鑽價錢" value="' +
         esc(sideStoneTotalDisplay) + '"' + sideStoneFixedAttr + ' title="自動 = 配鑽 cts × 一克拉價格；手動改寫後為固定總價">' +
+      addonInput +
       earClaspInput +
       '<input type="number" name="price" step="1" min="0" placeholder="手動定價" value="' + esc(price) + '">' +
       '<button type="button" class="ap-remove-row" aria-label="移除">✕</button></div>';
@@ -2039,6 +2159,7 @@
           side_stone_total_twd: totalEl && totalEl.dataset.fixed === '1'
             ? totalEl.value
             : null,
+          addon_price_twd: row.querySelector('[name="addonPrice"]')?.value,
           ear_clasp_price_twd: row.querySelector('[name="earClaspPrice"]')?.value,
         });
       });
@@ -2138,6 +2259,7 @@
       var sideStoneTotal = sideStoneTotalEl ? sideStoneTotalEl.value : '';
       var sideStoneTotalFixed = !!(sideStoneTotalEl && sideStoneTotalEl.dataset.fixed === '1');
       var earClasp = row.querySelector('[name="earClaspPrice"]')?.value;
+      var addonPrice = row.querySelector('[name="addonPrice"]')?.value;
       if (!gold || !carat) return;
       // Chain: wax in 長度蠟重; no 配鑽 / no per-variant 46cm wax field.
       if (category !== 'chain' && !weight) return;
@@ -2158,6 +2280,9 @@
           || sideStoneTotal === '' || sideStoneTotal == null
           ? null
           : parseFloat(sideStoneTotal),
+        addonPriceTwd: addonPrice === '' || addonPrice == null
+          ? null
+          : parseFloat(addonPrice),
         earClaspPriceTwd: !isEarring || earClasp === '' || earClasp == null
           ? null
           : parseFloat(earClasp),

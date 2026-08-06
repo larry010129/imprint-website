@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>銘印鑽石｜系統設定</title>
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="/css/admin1-shell.css?v=5">
+<style>
+  body.admin1-body .a1-settings-actions { margin-top: 4px; max-width: 28rem; }
+  body.admin1-body .a1-settings-actions button {
+    height: 36px; padding: 0 14px; border: 0; border-radius: 6px;
+    background: var(--a1-fg); color: var(--a1-bg); font-size: 13px;
+    font-weight: 600; cursor: pointer;
+  }
+  body.admin1-body .a1-settings-actions button:disabled { opacity: 0.55; cursor: not-allowed; }
+  body.admin1-body .a1-settings-msg { margin: 8px 0 0; font-size: 12px; color: var(--a1-muted-fg); min-height: 1.2em; }
+  body.admin1-body .a1-field label.a1-check { display: flex; flex-direction: row; align-items: center; gap: 8px; font-weight: 400; }
+  body.admin1-body .a1-field label.a1-check input { width: 16px; height: 16px; }
+</style>
+</head>
+<body class="admin1-body">
+<div class="layout admin1-layout" id="adminLayout" data-menu-state="full">
+  <button type="button" class="side-backdrop" id="sideBackdrop" aria-label="關閉選單" tabindex="-1"></button>
+  <aside class="side" id="adminSide" aria-label="管理選單">
+    <div class="side-head">
+      <div class="side-brand-block">
+        <span class="side-brand-mark" aria-hidden="true">印</span>
+        <span class="side-head-title">銘印鑽石</span>
+      </div>
+    </div>
+    <nav class="side-nav">
+      <div class="side-nav-section">
+        <p class="side-nav-label">導覽</p>
+        <div class="side-nav-items">
+          <a class="side-nav-link" href="/admin1.html">
+            <svg class="side-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+            <span>返回後台</span>
+          </a>
+          <a class="side-nav-link is-active" href="/admin1-settings.html">
+            <svg class="side-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>
+            <span>系統設定</span>
+          </a>
+          <a class="side-nav-link" href="/admin1-plugins.html"><span style="margin-left:28px">插件</span></a>
+        </div>
+      </div>
+    </nav>
+    <div class="side-foot">
+      <div class="side-foot-meta">系統設定 · 管理後台</div>
+    </div>
+  </aside>
+  <div class="admin1-frame">
+    <header class="main-top admin1-topnav">
+      <div class="main-top-leading">
+        <button type="button" class="nav-toggle" id="navToggle" aria-label="開啟導覽" title="選單" aria-controls="adminSide" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+        </button>
+        <nav class="admin1-crumbs" aria-label="目前位置">
+          <a href="/admin1.html" class="admin1-crumb-root">首頁</a>
+          <span class="admin1-crumb-sep" aria-hidden="true">/</span>
+          <h1 id="pageTitle">系統設定</h1>
+        </nav>
+      </div>
+      <div class="admin1-top-trailing">
+        <span class="meta" id="topMeta" data-admin1-meta-static="1">設定</span>
+        <button type="button" class="admin1-icon-btn" id="admin1ThemeToggle" title="切換主題" aria-label="切換淺色／深色">
+          <svg data-admin1-theme-icon="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+          <svg data-admin1-theme-icon="moon" hidden viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 14.5A8.5 8.5 0 1 1 9.5 3 7 7 0 0 0 21 14.5z"/></svg>
+        </button>
+        <a class="admin1-icon-btn" href="/admin1-settings.html" title="設定" aria-label="系統設定">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </a>
+        <div class="admin1-dropdown" id="admin1AvatarWrap">
+          <button type="button" class="admin1-avatar-btn" data-admin1-dropdown-btn id="admin1AvatarBtn" aria-haspopup="true" aria-label="帳戶選單">
+            <span class="admin1-avatar" id="admin1AvatarInitial" aria-hidden="true">管</span>
+            <span class="admin1-avatar-meta">
+              <strong id="admin1AvatarName">管理員</strong>
+              <span id="admin1AvatarEmail"></span>
+            </span>
+          </button>
+          <div class="admin1-dropdown-panel" role="menu">
+            <a class="admin1-dropdown-item" href="/admin1-settings.html#profile">個人資料</a>
+            <a class="admin1-dropdown-item" href="/admin1-settings.html">設定</a>
+            <div class="admin1-dropdown-sep"></div>
+            <a class="admin1-dropdown-item is-danger" href="#" id="admin1SignOut">登出</a>
+          </div>
+        </div>
+      </div>
+    </header>
+    <main class="main">
+      <div class="a1-page-head">
+        <h2>設定</h2>
+        <p>管理帳戶設定與偏好</p>
+      </div>
+      <div data-admin1-tabs>
+        <div class="a1-tabs" role="tablist">
+          <button type="button" class="is-active" data-tab="profile">個人資料</button>
+          <button type="button" data-tab="security">安全性</button>
+          <button type="button" data-tab="notifications">通知</button>
+        </div>
+        <section class="a1-tab-panel is-active" data-tab-panel="profile" id="profile">
+          <div class="a1-field"><label for="a1Name">顯示名稱</label><input id="a1Name" type="text" autocomplete="name" disabled></div>
+          <div class="a1-field"><label for="a1Email">電子郵件</label><input id="a1Email" type="email" autocomplete="email" disabled></div>
+          <div class="a1-field"><label for="a1Phone">聯絡電話</label><input id="a1Phone" type="tel" autocomplete="tel" disabled></div>
+          <div class="a1-settings-actions">
+            <button type="button" id="a1ProfileSave" disabled>儲存個人資料</button>
+          </div>
+          <p class="a1-settings-msg" id="a1ProfileMsg" role="status"></p>
+        </section>
+        <section class="a1-tab-panel" data-tab-panel="security">
+          <div class="a1-field"><label for="a1PwCurrent">目前密碼</label><input id="a1PwCurrent" type="password" autocomplete="current-password" disabled></div>
+          <div class="a1-field"><label for="a1Pw">新密碼</label><input id="a1Pw" type="password" autocomplete="new-password" placeholder="至少 8 碼" disabled></div>
+          <div class="a1-field"><label for="a1Pw2">確認新密碼</label><input id="a1Pw2" type="password" autocomplete="new-password" disabled></div>
+          <div class="a1-field" id="a1TotpWrap" hidden>
+            <label for="a1PwTotp">Authenticator 驗證碼</label>
+            <input id="a1PwTotp" type="text" inputmode="numeric" autocomplete="one-time-code" disabled>
+          </div>
+          <div class="a1-settings-actions">
+            <button type="button" id="a1SecuritySave" disabled>更新密碼</button>
+          </div>
+          <p class="a1-settings-msg" id="a1SecurityMsg" role="status"></p>
+        </section>
+        <section class="a1-tab-panel" data-tab-panel="notifications">
+          <div class="a1-field"><label class="a1-check"><input id="a1PrefOrders" type="checkbox" disabled> 訂單通知</label></div>
+          <div class="a1-field"><label class="a1-check"><input id="a1PrefSystem" type="checkbox" disabled> 系統公告</label></div>
+          <div class="a1-field"><label class="a1-check"><input id="a1PrefMarketing" type="checkbox" disabled> 行銷電子報</label></div>
+          <div class="a1-settings-actions">
+            <button type="button" id="a1PrefsSave" disabled>儲存通知偏好</button>
+          </div>
+          <p class="a1-settings-msg" id="a1PrefsMsg" role="status"></p>
+          <p class="a1-settings-msg">通知偏好儲存於本機（依帳號區分）。</p>
+        </section>
+      </div>
+    </main>
+  </div>
+</div>
+<script src="/js/api-client.js?v=18"></script>
+<script src="/js/admin1-shell.js?v=3"></script>
+<script src="/js/admin1-settings.js?v=1"></script>
+</body>
+</html>

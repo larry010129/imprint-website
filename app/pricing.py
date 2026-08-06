@@ -357,6 +357,30 @@ def _labor_fee(category: str, gold: str, addon_price_twd: int | None = None) -> 
     return addon if addon > 0 else base
 
 
+def _variant_addon_price(variant: dict | None) -> int | None:
+    """Per-row 品項加價 when set; None means fall back to category addon."""
+    if not variant:
+        return None
+    raw = variant.get("addon_price_twd")
+    if raw is None:
+        raw = variant.get("addonPriceTwd")
+    if raw is None or raw == "":
+        return None
+    try:
+        amount = int(round(float(raw)))
+    except (TypeError, ValueError):
+        return None
+    return max(0, amount)
+
+
+def _effective_addon_price(cur, category: str, variant: dict | None) -> int:
+    """Row addon when set; else category 品項加價."""
+    row_addon = _variant_addon_price(variant)
+    if row_addon is not None:
+        return row_addon
+    return category_addon_price(cur, category)
+
+
 def _ear_clasp_fee(variant: dict | None) -> int:
     """Per-variant 耳扣價錢 (earring only); folded into labor / 金工價格."""
     if not variant:
@@ -540,7 +564,9 @@ def compute_order_pricing(cur, data: dict[str, Any], *, require_published: bool 
         return {"ready": False, "error": "product not available"}
     variant, weight_chin = looked_up
     weight_grams = weight_chin * CHIN_TO_GRAMS
-    labor_pre_tax = _labor_fee(category, gold, category_addon_price(cur, category))
+    labor_pre_tax = _labor_fee(
+        category, gold, _effective_addon_price(cur, category, variant)
+    )
 
     if category != "chain" and variant.get("manual_price_twd") is not None:
         gold_prices = get_metal_prices(cur)

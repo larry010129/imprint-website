@@ -12,6 +12,7 @@ from fastapi.responses import JSONResponse, Response
 from psycopg.types.json import Jsonb
 
 from app.account_delete import delete_blocked_reason, hard_delete_user
+from app.admin_plugins import list_plugins, update_plugin
 from app.admin_dashboard import (
     DASHBOARD_ORDER_HARD_LIMIT,
     build_dashboard_csv,
@@ -29,6 +30,7 @@ from app.admin_products import (
     ensure_product_sell_mode_columns,
     ensure_product_ear_clasp_price_column,
     ensure_product_side_stone_total_column,
+    ensure_product_variant_addon_price_column,
     first_published_at_value,
     is_auto_stock_product_image,
     publish_readiness,
@@ -55,6 +57,7 @@ from app.product_categories import (
     create_category,
     delete_category,
     fetch_categories,
+    force_overwrite_category_addon,
     update_category_addon,
     update_category_thumb,
     valid_category_slugs,
@@ -627,6 +630,48 @@ async def product_upload(
     return JSONResponse(content=payload)
 
 
+@router.get("/plugins")
+def admin_plugins_list(request: Request) -> JSONResponse:
+    _require_admin(request)
+    with get_connection() as conn, conn.cursor() as cur:
+        plugins = list_plugins(cur)
+    return JSONResponse(content={"plugins": plugins})
+
+
+@router.patch("/plugins")
+async def admin_plugins_patch(request: Request) -> JSONResponse:
+    """Update one plugin; body must include slug (+ enabled and/or config)."""
+    _require_admin(request)
+    body = await request.json()
+    if not isinstance(body, dict):
+        return JSONResponse(status_code=400, content={"error": "invalid body"})
+    slug = body.get("slug") or ""
+    with get_transaction() as conn, conn.cursor() as cur:
+        plugin, error = update_plugin(
+            cur, slug, enabled=body.get("enabled"), config=body.get("config")
+        )
+    if error:
+        status = 404 if error == "未知外掛" else 400
+        return JSONResponse(status_code=status, content={"error": error})
+    return JSONResponse(content={"plugin": plugin})
+
+
+@router.patch("/plugins/{slug}")
+async def admin_plugins_patch_by_slug(request: Request, slug: str) -> JSONResponse:
+    _require_admin(request)
+    body = await request.json()
+    if not isinstance(body, dict):
+        return JSONResponse(status_code=400, content={"error": "invalid body"})
+    with get_transaction() as conn, conn.cursor() as cur:
+        plugin, error = update_plugin(
+            cur, slug, enabled=body.get("enabled"), config=body.get("config")
+        )
+    if error:
+        status = 404 if error == "未知外掛" else 400
+        return JSONResponse(status_code=status, content={"error": error})
+    return JSONResponse(content={"plugin": plugin})
+
+
 @router.post("/product-category")
 async def product_category_create(request: Request) -> JSONResponse:
     _require_admin(request)
@@ -662,11 +707,45 @@ async def product_category_patch(request: Request, slug: str) -> JSONResponse:
         addon_raw = body.get("addon_price_twd")
     if addon_raw is None:
         return JSONResponse(status_code=400, content={"error": "缺少品項加價"})
-    with get_transaction() as conn, conn.cursor() as cur:
-        category, error = update_category_addon(cur, slug, addon_raw)
+    try:
+        with get_transaction() as conn, conn.cursor() as cur:
+            category, error = update_category_addon(cur, slug, addon_raw)
+    except Exception as exc:
+        msg = str(exc).strip().split("\n", 1)[0][:200]
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"更新品項加價失敗：{msg}" if msg else "更新品項加價失敗"},
+        )
     if error:
         return JSONResponse(status_code=400, content={"error": error})
     return JSONResponse(content={"category": category})
+
+
+@router.post("/product-category/{slug}/force-addon")
+async def product_category_force_addon(request: Request, slug: str) -> JSONResponse:
+    """Save category 品項加價 and force-overwrite all variant rows in that category."""
+    _require_admin(request)
+    body = await request.json()
+    if not isinstance(body, dict):
+        return JSONResponse(status_code=400, content={"error": "invalid body"})
+    addon_raw = body.get("addonPrice")
+    if addon_raw is None:
+        addon_raw = body.get("addon_price_twd")
+    if addon_raw is None:
+        return JSONResponse(status_code=400, content={"error": "缺少品項加價"})
+    try:
+        with get_transaction() as conn, conn.cursor() as cur:
+            ensure_product_variant_addon_price_column(cur)
+            category, updated, error = force_overwrite_category_addon(cur, slug, addon_raw)
+    except Exception as exc:
+        msg = str(exc).strip().split("\n", 1)[0][:200]
+        return JSONResponse(
+            status_code=500,
+            content={"error": f"強制覆蓋失敗：{msg}" if msg else "強制覆蓋失敗"},
+        )
+    if error:
+        return JSONResponse(status_code=400, content={"error": error})
+    return JSONResponse(content={"category": category, "updatedVariants": updated})
 
 
 @router.post("/product-category-upload")
@@ -712,6 +791,7 @@ async def product_category_upload(
 def _products_with_children(cur) -> list[dict]:
     ensure_product_side_stone_total_column(cur)
     ensure_product_ear_clasp_price_column(cur)
+    ensure_product_variant_addon_price_column(cur)
     cur.execute("select * from products order by sort_order, created_at desc")
     rows = cur.fetchall()
     product_ids = [row["id"] for row in rows]
@@ -734,6 +814,7 @@ def _products_with_children(cur) -> list[dict]:
                 variant["product_id"] = str(variant["product_id"])
             # Missing/null fixed 配鑽 total is OK — admin UI falls back to formula.
             variant.setdefault("side_stone_total_twd", None)
+            variant.setdefault("addon_price_twd", None)
             variant.setdefault("ear_clasp_price_twd", None)
         for image in product["images"]:
             if image.get("id") is not None:
@@ -760,6 +841,7 @@ def _product_with_children(cur, product: dict) -> dict:
         if variant.get("product_id") is not None:
             variant["product_id"] = str(variant["product_id"])
         variant.setdefault("side_stone_total_twd", None)
+        variant.setdefault("addon_price_twd", None)
         variant.setdefault("ear_clasp_price_twd", None)
     for image in product["images"]:
         if image.get("id") is not None:
@@ -810,6 +892,7 @@ async def products_create(request: Request) -> JSONResponse:
         ensure_product_chain_type_column(cur)
         ensure_product_side_stone_total_column(cur)
         ensure_product_ear_clasp_price_column(cur)
+        ensure_product_variant_addon_price_column(cur)
         cur.execute(
             """
             insert into products (
@@ -867,6 +950,7 @@ async def product_update(request: Request) -> JSONResponse:
         ensure_product_chain_type_column(cur)
         ensure_product_side_stone_total_column(cur)
         ensure_product_ear_clasp_price_column(cur)
+        ensure_product_variant_addon_price_column(cur)
         cur.execute(
             "select id, is_published, first_published_at from products where id = %s",
             (product_id,),
@@ -929,6 +1013,7 @@ async def product_action(request: Request) -> JSONResponse:
         ensure_product_length_weights_column(cur)
         ensure_product_side_stone_total_column(cur)
         ensure_product_ear_clasp_price_column(cur)
+        ensure_product_variant_addon_price_column(cur)
         cur.execute("select * from products where id = %s", (product_id,))
         product = cur.fetchone()
         if not product:
@@ -996,11 +1081,11 @@ async def product_action(request: Request) -> JSONResponse:
                 insert into product_variants (
                     product_id, gold, carat, weight_chin, manual_price_twd,
                     side_stone_price_twd, side_stone_carat, side_stone_total_twd,
-                    ear_clasp_price_twd
+                    addon_price_twd, ear_clasp_price_twd
                 )
                 select %s, gold, carat, weight_chin, manual_price_twd,
                     side_stone_price_twd, side_stone_carat, side_stone_total_twd,
-                    ear_clasp_price_twd
+                    addon_price_twd, ear_clasp_price_twd
                 from product_variants where product_id = %s
                 """,
                 (copy_id, product_id),

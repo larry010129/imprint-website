@@ -490,16 +490,18 @@ button:not(.btn-sm):not(.ap-tab-btn):not(.nav-toggle):not(.side-backdrop):not([d
 .ap-variant-block{width:100%;overflow-x:visible;padding-bottom:2px;}
 .ap-variant-head,.ap-variant-row{
   display:grid;
-  grid-template-columns:minmax(0,0.75fr) minmax(0,0.75fr) minmax(0,1fr) minmax(0,1fr) minmax(0,0.85fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1.05fr) 36px;
+  /* metal carat wax metalWt sideCts sidePpc sideTotal addon manual × */
+  grid-template-columns:minmax(0,0.7fr) minmax(0,0.7fr) minmax(0,0.95fr) minmax(0,0.95fr) minmax(0,0.8fr) minmax(0,0.9fr) minmax(0,0.9fr) minmax(0,0.95fr) minmax(0,1fr) 36px;
   gap:8px;align-items:center;margin-bottom:8px;min-width:0;
 }
 .ap-variant-block--earring .ap-variant-head,
 .ap-variant-block--earring .ap-variant-row{
-  grid-template-columns:minmax(0,0.7fr) minmax(0,0.7fr) minmax(0,0.95fr) minmax(0,0.95fr) minmax(0,0.8fr) minmax(0,0.95fr) minmax(0,0.95fr) minmax(0,0.95fr) minmax(0,1fr) 36px;
+  /* + 耳扣 after 品項加價 */
+  grid-template-columns:minmax(0,0.65fr) minmax(0,0.65fr) minmax(0,0.9fr) minmax(0,0.9fr) minmax(0,0.75fr) minmax(0,0.85fr) minmax(0,0.85fr) minmax(0,0.9fr) minmax(0,0.85fr) minmax(0,0.95fr) 36px;
 }
 .ap-variant-block--chain .ap-variant-head,
 .ap-variant-block--chain .ap-variant-row{
-  grid-template-columns:minmax(0,0.8fr) minmax(0,0.8fr) minmax(0,1.1fr) 36px;
+  grid-template-columns:minmax(0,0.8fr) minmax(0,0.8fr) minmax(0,1fr) minmax(0,1.1fr) 36px;
 }
 .ap-variant-actions{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px;}
 .ap-variant-head{font-size:11px;color:var(--ink-faint);}

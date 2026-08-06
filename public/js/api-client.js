@@ -95,6 +95,9 @@
     updateProfile: function (fields) {
       return request('/api/auth/profile', { method: 'PATCH', body: fields });
     },
+    changePassword: function (fields) {
+      return request('/api/auth/change-password', { method: 'POST', body: fields || {} });
+    },
     googleEnrichProfile: function (accessToken) {
       return request('/api/auth/google-enrich', {
         method: 'POST',
@@ -246,6 +249,12 @@
       deleteProductCategory: function (slug) { return request('/api/admin/product-category/' + encodeURIComponent(slug), { method: 'DELETE' }); },
       updateProductCategory: function (slug, fields) {
         return request('/api/admin/product-category/' + encodeURIComponent(slug), { method: 'PATCH', body: fields });
+      },
+      forceProductCategoryAddon: function (slug, fields) {
+        return request(
+          '/api/admin/product-category/' + encodeURIComponent(slug) + '/force-addon',
+          { method: 'POST', body: fields }
+        );
       },
       uploadProductCategoryThumb: function (slug, file) {
         var fd = new FormData();
@@ -498,6 +507,19 @@
         var body = { id: id, action: action };
         if (extra) Object.keys(extra).forEach(function (k) { body[k] = extra[k]; });
         return request('/api/admin/account-action', { method: 'POST', body: body });
+      },
+      getPlugins: function () {
+        return request('/api/admin/plugins');
+      },
+      updatePlugin: function (slug, fields) {
+        var body = fields || {};
+        if (slug) {
+          return request('/api/admin/plugins/' + encodeURIComponent(slug), {
+            method: 'PATCH',
+            body: body,
+          });
+        }
+        return request('/api/admin/plugins', { method: 'PATCH', body: body });
       },
     },
   };

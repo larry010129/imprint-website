@@ -113,6 +113,7 @@ async def lifespan(_app: FastAPI):
         ensure_product_length_weights_column,
         ensure_product_sell_mode_columns,
         ensure_product_side_stone_total_column,
+        ensure_product_variant_addon_price_column,
         purge_auto_stock_product_images,
     )
     from app.auth import ensure_google_id_column
@@ -127,6 +128,7 @@ async def lifespan(_app: FastAPI):
         ensure_page_images_schema,
         ensure_testimonial_country_column,
     )
+    from app.admin_plugins import ensure_admin_plugins_schema
     from app.membership_config import ensure_membership_schema
     from app.orders import ensure_order_status_timestamps_column
     from app.product_categories import ensure_product_categories_schema
@@ -158,6 +160,7 @@ async def lifespan(_app: FastAPI):
             ensure_product_chain_type_column(cur)
             ensure_product_side_stone_total_column(cur)
             ensure_product_ear_clasp_price_column(cur)
+            ensure_product_variant_addon_price_column(cur)
     except Exception:
         log.exception("ensure_product_sell_mode_columns failed")
     try:
@@ -170,6 +173,7 @@ async def lifespan(_app: FastAPI):
     try:
         with get_connection() as conn, conn.cursor() as cur:
             ensure_product_categories_schema(cur)
+            ensure_admin_plugins_schema(cur)
             ensure_membership_schema(cur)
             ensure_page_images_schema(cur)
             ensure_banner_mobile_column(cur)

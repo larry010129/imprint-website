@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>銘印鑽石｜管理後台登入</title>
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="/css/admin1-shell.css?v=5">
+</head>
+<body class="admin1-body admin1-auth">
+  <div class="a1-auth-card">
+    <h1>管理登入</h1>
+    <p class="a1-auth-note">請使用正式登入頁 <code>/login.html</code> 進入管理後台</p>
+    <div class="a1-field">
+      <label for="demoEmail">電子郵件</label>
+      <input id="demoEmail" type="email" placeholder="admin@example.com" autocomplete="off">
+    </div>
+    <div class="a1-field">
+      <label for="demoPassword">密碼</label>
+      <input id="demoPassword" type="password" placeholder="••••••••" autocomplete="off">
+    </div>
+    <button type="button" class="a1-btn" id="demoSubmit">前往登入</button>
+    <div class="a1-auth-links">
+      正式登入請用 <a href="/login.html">/login.html</a>
+      · <button type="button" id="admin1ThemeToggle" style="border:0;background:none;color:inherit;text-decoration:underline;cursor:pointer;padding:0;font:inherit">切換深淺</button>
+    </div>
+    <p id="demoMsg" style="display:none;margin-top:12px;font-size:12px;color:#b45309">請改走正式登入頁進入管理後台。</p>
+  </div>
+  <script>
+  (function () {
+    var btn = document.getElementById('demoSubmit');
+    var msg = document.getElementById('demoMsg');
+    if (btn && msg) btn.addEventListener('click', function () { msg.style.display = 'block'; });
+    var themeBtn = document.getElementById('admin1ThemeToggle');
+    if (themeBtn) {
+      themeBtn.addEventListener('click', function () {
+        var dark = document.documentElement.classList.contains('dark');
+        document.documentElement.classList.toggle('dark', !dark);
+        document.body.classList.toggle('dark', !dark);
+      });
+    }
+  })();
+  </script>
+</body>
+</html>

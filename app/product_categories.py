@@ -140,7 +140,14 @@ def parse_addon_price(value) -> tuple[int | None, str | None]:
     if value is None or (isinstance(value, str) and value.strip() == ""):
         return None, "請填寫品項加價"
     try:
-        amount = int(value)
+        if isinstance(value, bool):
+            raise ValueError("bool")
+        if isinstance(value, float):
+            if not value.is_integer():
+                return None, "品項加價須為整數"
+            amount = int(value)
+        else:
+            amount = int(value)
     except (TypeError, ValueError):
         return None, "品項加價須為整數"
     if amount < 0:
@@ -242,10 +249,10 @@ def update_category_addon(cur, slug: str, addon_price_twd: int) -> tuple[dict | 
     amount, err = parse_addon_price(addon_price_twd)
     if err:
         return None, err
-    ensure_product_categories_schema(cur)
-    if slug not in valid_category_slugs(cur):
-        return None, "品項不存在"
     try:
+        ensure_product_categories_schema(cur)
+        if slug not in valid_category_slugs(cur):
+            return None, "品項不存在"
         cur.execute(
             f"""
             update product_categories
@@ -262,3 +269,38 @@ def update_category_addon(cur, slug: str, addon_price_twd: int) -> tuple[dict | 
     if not row:
         return None, "品項不存在"
     return _serialize_row(dict(row)), None
+
+
+def overwrite_variant_addons(cur, slug: str, amount: int) -> tuple[int, str | None]:
+    """Force-set every product_variants.addon_price_twd in category to amount."""
+    slug = (slug or "").strip()
+    try:
+        cur.execute(
+            """
+            update product_variants
+            set addon_price_twd = %s
+            where product_id in (
+              select id from products where category = %s
+            )
+            """,
+            (amount, slug),
+        )
+        count = cur.rowcount if cur.rowcount is not None else 0
+        return max(0, int(count)), None
+    except Exception as exc:
+        msg = str(exc).strip().split("\n", 1)[0][:200]
+        return 0, f"覆蓋款式加價失敗：{msg}" if msg else "覆蓋款式加價失敗"
+
+
+def force_overwrite_category_addon(
+    cur, slug: str, addon_price_twd: int
+) -> tuple[dict | None, int, str | None]:
+    """Save category 品項加價 and overwrite all variant rows in that category."""
+    category, err = update_category_addon(cur, slug, addon_price_twd)
+    if err or not category:
+        return None, 0, err or "品項不存在"
+    amount = int(category["addon_price_twd"])
+    count, err = overwrite_variant_addons(cur, slug, amount)
+    if err:
+        return None, 0, err
+    return category, count, None

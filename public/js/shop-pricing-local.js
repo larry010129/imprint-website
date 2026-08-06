@@ -285,12 +285,23 @@
     return weight;
   }
 
-  function laborFee(category, gold) {
+  /** Effective 品項加價: row addonPrices[gold][carat] when set, else category. */
+  function resolveAddonPrice(category, product, gold, carat) {
+    var table = product && product.addonPrices && product.addonPrices[gold];
+    if (table && table[carat] != null && table[carat] !== '') {
+      var row = Number(table[carat]);
+      if (Number.isFinite(row) && row >= 0) return Math.round(row);
+    }
+    var cat = Number(categoryAddonPrices[category]);
+    return Number.isFinite(cat) && cat >= 0 ? Math.round(cat) : 0;
+  }
+
+  function laborFee(category, gold, addonPriceTwd) {
     // 品項加價 > 0 replaces base labor; 0 keeps base. Folded into 金工價格.
     var base = LABOR_FEE_TWD;
     if (category === 'chain' && gold === 's925') base = CHAIN_LABOR_FEE_TWD.s925;
     else if (category === 'chain') base = CHAIN_LABOR_FEE_TWD.other;
-    var addon = Number(categoryAddonPrices[category]);
+    var addon = addonPriceTwd != null ? Number(addonPriceTwd) : Number(categoryAddonPrices[category]);
     var add = Number.isFinite(addon) && addon > 0 ? Math.round(addon) : 0;
     return add > 0 ? add : base;
   }
@@ -390,7 +401,7 @@
     }
 
     var weightGrams = weightChin * CHIN_TO_GRAMS;
-    var laborPreTax = laborFee(category, gold);
+    var laborPreTax = laborFee(category, gold, resolveAddonPrice(category, product, gold, carat));
     var metal = metalPreTax(gold, weightChin);
     var taijinDisplay = Math.round(metal.amount * (1 + TAX_RATE));
     // Labor is flat NT$ — not taxed. Tax only on metal (and 搭配鏈條 metal).

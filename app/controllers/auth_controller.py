@@ -13,6 +13,7 @@ from fastapi import APIRouter, Request, Response
 from fastapi.responses import JSONResponse
 
 from app.auth import (
+    COOKIE_NAME,
     LOGIN_LOCKOUT_SECONDS,
     LOGIN_MAX_ATTEMPTS,
     REGISTER_LOCKOUT_SECONDS,
@@ -45,6 +46,7 @@ from app.auth import (
     validate_register_email,
     verify_google_id_token,
     verify_password,
+    verify_session_claims,
 )
 from app.captcha import recaptcha_error_or_none
 from app.onboarding import (
@@ -66,6 +68,7 @@ from app.auth_totp_service import (
     fetch_totp_user,
     start_totp_setup,
     verify_second_factor,
+    verify_step_up_password,
     verify_totp_for_pwreset,
 )
 from app.database import get_connection
@@ -757,6 +760,61 @@ async def update_profile(request: Request) -> JSONResponse:
         profile = fetch_profile(cur, user_id)
 
     return JSONResponse(content={"ok": True, "profile": profile})
+
+
+@router.post("/change-password")
+async def change_password(request: Request) -> JSONResponse:
+    """Logged-in password change. Requires current password (+ TOTP when enrolled)."""
+    user_id = get_user_id(request)
+    if not user_id:
+        return _err(401, "請先登入")
+    if not enforce_rate_limit(request, action="change-password", limit=10, window_seconds=600):
+        return _err(429, "操作過於頻繁，請稍後再試")
+
+    body = await request.json()
+    if not isinstance(body, dict):
+        body = {}
+    current = str(body.get("currentPassword") or body.get("password") or "")
+    new_password = str(body.get("newPassword") or "").strip()
+    totp = str(body.get("totpCode") or body.get("code") or "").strip()
+    if not current:
+        return _err(400, "請輸入目前密碼")
+    if not new_password:
+        return _err(400, "請輸入新密碼")
+    if len(new_password) < 8:
+        return _err(400, "密碼至少需要 8 碼")
+    if current == new_password:
+        return _err(400, "新密碼不可與目前密碼相同")
+
+    step_err = verify_step_up_password(user_id, current, totp or None)
+    if step_err:
+        return _err(401, step_err)
+
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute(
+            "update users set password_hash = %s where id = %s",
+            (hash_password(new_password), user_id),
+        )
+    bump_token_version(user_id)
+
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute("select token_version from users where id = %s", (user_id,))
+        row = cur.fetchone()
+    if not row:
+        return _err(401, "請先登入")
+
+    claims = verify_session_claims(request.cookies.get(COOKIE_NAME) or "")
+    remember = True if claims is None else bool(claims.remember)
+    admin = is_admin(user_id)
+    token = sign_session(
+        user_id,
+        int(row["token_version"]),
+        is_admin=admin,
+        remember=remember,
+    )
+    result = JSONResponse(content={"ok": True})
+    set_session_cookie(result, token, request, remember=remember, is_admin=admin)
+    return result
 
 
 @router.post("/totp/setup/start")

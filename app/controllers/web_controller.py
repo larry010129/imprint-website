@@ -490,6 +490,36 @@ def register_pages(app: FastAPI) -> None:
             raise StarletteHTTPException(status_code=404, detail="Not Found")
         return FileResponse(path, media_type="text/html; charset=utf-8")
 
+    def _admin1_gated_html(request: Request, filename: str):
+        from app.auth import get_user_id, is_admin
+
+        if not is_admin(get_user_id(request)):
+            return RedirectResponse(url=f"/login.html?next={filename}", status_code=302)
+        path = settings.site_root / filename
+        if not path.is_file():
+            raise StarletteHTTPException(status_code=404, detail="Not Found")
+        return FileResponse(path, media_type="text/html; charset=utf-8")
+
+    @app.get("/admin1.html", include_in_schema=False)
+    async def admin1_page(request: Request):
+        return _admin1_gated_html(request, "admin1.html")
+
+    @app.get("/admin1-settings.html", include_in_schema=False)
+    async def admin1_settings_page(request: Request):
+        return _admin1_gated_html(request, "admin1-settings.html")
+
+    @app.get("/admin1-plugins.html", include_in_schema=False)
+    async def admin1_plugins_page(request: Request):
+        return _admin1_gated_html(request, "admin1-plugins.html")
+
+    @app.get("/admin1-login.html", include_in_schema=False)
+    async def admin1_login_page(request: Request):
+        """Admin1 login chrome helper; does not replace /login.html."""
+        path = settings.site_root / "admin1-login.html"
+        if not path.is_file():
+            raise StarletteHTTPException(status_code=404, detail="Not Found")
+        return FileResponse(path, media_type="text/html; charset=utf-8")
+
     @app.get("/s/{token}", include_in_schema=False)
     async def share_config(request: Request, token: str) -> HTMLResponse:
         return templates.TemplateResponse(

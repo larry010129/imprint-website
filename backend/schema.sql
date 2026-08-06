@@ -130,6 +130,8 @@ create table if not exists product_variants (
   side_stone_price_twd numeric, -- optional 配鑽 一克拉價格 TWD; formula = carat × this
   side_stone_carat numeric, -- optional 配鑽 carat (cts); used in 配鑽 = cts × ppc
   side_stone_total_twd numeric, -- optional fixed 配鑽價錢 total; overrides formula when set
+  addon_price_twd numeric, -- optional per-row 品項加價; null → category addon_price_twd
+  ear_clasp_price_twd numeric, -- optional earring-only 耳扣價錢
   unique (product_id, gold, carat)
 );
 
