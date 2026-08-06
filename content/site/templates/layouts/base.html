@@ -61,7 +61,7 @@
 <meta name="twitter:image" content="https://www.imprintdiamond.com/{{ og_image or 'static/images/hero/imprint-diamond-family-memorial.jpg' }}">
 {% endblock %}
 
-<link rel="stylesheet" href="/static/css/base.css?v=4.5">
+<style>{{ inline_css('base.css') | safe }}</style>
 <link rel="stylesheet" href="/static/css/nav.css?v=4.12">
 {% if not is_home %}
 <link rel="stylesheet" href="/static/css/home.css?v=5.6">

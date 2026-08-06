@@ -57,6 +57,15 @@
 .gh-poem__visual iframe{
   width:100%; height:100%; display:block; border:0;
 }
+.gh-poem__visual .gh-yt-facade{
+  position:relative; width:100%; height:100%; padding:0; border:0;
+  background-color:#000; background-size:cover; background-position:center;
+  cursor:pointer; display:block; opacity:.92;
+}
+.gh-poem__visual .gh-yt-facade__play{
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+}
+.gh-poem__visual .gh-yt-facade__play svg{ filter:drop-shadow(0 4px 10px rgba(0,0,0,.35)); }
 .gh-poem__brand{
   font-family:var(--serif); font-size:clamp(24px, 3.4vw, 38px);
   font-weight:600; letter-spacing:.08em; line-height:1.55;

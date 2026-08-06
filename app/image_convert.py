@@ -13,6 +13,12 @@ _QUALITY_FLOOR = 40
 _QUALITY_STEP = 8
 _MIN_LONG_EDGE = 640
 _RESIZE_FACTOR = 0.84
+# CMS/hero images render at most ~852px wide on screen; cap the source long
+# edge well above that (2x for retina) instead of only capping byte size.
+# Without this, an already-small-enough-in-bytes WebP (e.g. a photo saved at
+# 1867x1165, ~90KB) passed straight through untouched — oversized dimensions,
+# wasted download/decode cost — since the old gate only checked file size.
+_MAX_UPLOAD_LONG_EDGE = 1800
 _OVERSIZE_MSG = "圖片壓縮後仍超過 500KB，請換較小的圖"
 
 
@@ -21,13 +27,15 @@ class ImageConvertError(ValueError):
 
 
 def ensure_webp(data: bytes, filename: str, ext: str) -> tuple[bytes, str, str]:
-    """Return WebP bytes, `.webp` filename, and `.webp` ext (≤500KB)."""
+    """Return WebP bytes, `.webp` filename, and `.webp` ext (≤500KB, ≤1800px long edge)."""
     if not data:
         raise ImageConvertError("圖片資料為空")
     name_webp = _webp_filename(filename)
     if _is_webp_passthrough(data, ext):
         return data, name_webp, ".webp"
     image = _decode_image(data)
+    if max(image.size) > _MAX_UPLOAD_LONG_EDGE:
+        image = _resize_long_edge(image, _MAX_UPLOAD_LONG_EDGE)
     out = _compress_to_limit(image)
     return out, name_webp, ".webp"
 
@@ -42,7 +50,13 @@ def _webp_filename(filename: str) -> str:
 
 
 def _is_webp_passthrough(data: bytes, ext: str) -> bool:
-    return ext.lower() == ".webp" and len(data) <= MAX_OUTPUT_BYTES
+    if ext.lower() != ".webp" or len(data) > MAX_OUTPUT_BYTES:
+        return False
+    try:
+        with Image.open(BytesIO(data)) as probe:
+            return max(probe.size) <= _MAX_UPLOAD_LONG_EDGE
+    except Exception:
+        return False
 
 
 def _decode_image(data: bytes) -> Image.Image:

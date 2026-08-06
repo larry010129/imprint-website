@@ -24,6 +24,24 @@ templates = Jinja2Templates(directory=str(settings.templates_dir))
 templates.env.globals["google_client_id"] = settings.google_client_id
 templates.env.globals["recaptcha_site_key"] = settings.recaptcha_site_key
 
+
+@lru_cache(maxsize=None)
+def _load_inline_css(filename: str) -> str:
+    """Read a public/css/* file for inlining (e.g. base.css in <head>).
+
+    Removes one render-blocking request on every page load — PageSpeed's
+    network trace showed each small same-origin CSS file costing 160-490ms
+    of request overhead regardless of its (tiny) transfer size. Cached for
+    process lifetime like _load_fragment; a redeploy picks up CSS edits.
+    """
+    path = settings.static_dir / "css" / filename
+    if not path.is_file():
+        return ""
+    return path.read_text(encoding="utf-8")
+
+
+templates.env.globals["inline_css"] = _load_inline_css
+
 # Fragments live under content/site/fragments (not templates/).
 _FRAGMENTS_DIR = settings.site_content_dir / "fragments"
 _FEATURED_VIDEO_PATH = Path(__file__).resolve().parent.parent / "data" / "featured-video.json"

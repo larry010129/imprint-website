@@ -1,8 +1,8 @@
 {% extends "layouts/base.html" %}
 {% block extra_css %}
 <link rel="stylesheet" href="/static/css/home-ghibli-critical.css?v=35">
-<link rel="stylesheet" href="/static/css/home-ghibli.css?v=35" media="print" onload="this.media='all'">
-<noscript><link rel="stylesheet" href="/static/css/home-ghibli.css?v=35"></noscript>
+<link rel="stylesheet" href="/static/css/home-ghibli.css?v=36" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="/static/css/home-ghibli.css?v=36"></noscript>
 {% endblock %}
 {% block extra_head %}
 <link rel="preload" as="image" href="/static/images/hero/imprint-diamond-family-memorial-800w.webp" type="image/webp" media="(max-width:900px)" fetchpriority="high" imagesrcset="/static/images/hero/imprint-diamond-family-memorial-800w.webp 800w, /static/images/hero/imprint-diamond-family-memorial-960w.webp 960w" imagesizes="100vw">
@@ -245,14 +245,23 @@
   <div class="container gh-poem-grid">
     <div class="gh-poem__visual reveal">
       {% if featured_video %}
-      <iframe
-        src="https://www.youtube-nocookie.com/embed/{{ featured_video.youtube_id }}"
-        title="{{ featured_video.title }}"
-        loading="lazy"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-        referrerpolicy="strict-origin-when-cross-origin"
-        allowfullscreen
-      ></iframe>
+      <button
+        type="button"
+        class="gh-yt-facade"
+        data-yt-facade
+        data-yt-id="{{ featured_video.youtube_id }}"
+        data-yt-title="{{ featured_video.title }}"
+        aria-label="播放影片：{{ featured_video.title }}"
+        style="background-image:url('https://i.ytimg.com/vi/{{ featured_video.youtube_id }}/hqdefault.jpg')"
+      >
+        {# No <img> tag here on purpose: app/page_image_slots.py assigns CMS
+           image slots by counting <img> tags positionally in the rendered
+           HTML (e.g. poem-visual = index 7). Adding one would shift every
+           slot index after it. Thumbnail is a CSS background-image instead. #}
+        <span class="gh-yt-facade__play" aria-hidden="true">
+          <svg viewBox="0 0 68 48" width="44" height="32"><path d="M66.52 7.74c-.78-2.93-2.49-5.42-5.42-6.2C55.79.13 34 0 34 0S12.21.13 6.9 1.54c-2.93.78-4.64 3.27-5.42 6.2C.13 13.05 0 24 0 24s.13 10.95 1.48 16.26c.78 2.93 2.49 5.32 5.42 6.1C12.21 47.87 34 48 34 48s21.79-.13 27.1-1.54c2.93-.78 4.64-3.17 5.42-6.1C67.87 34.95 68 24 68 24s-.13-10.95-1.48-16.26z" fill="rgba(20,20,20,.75)"/><path d="M45 24 27 14v20" fill="#fff"/></svg>
+        </span>
+      </button>
       {% else %}
       <picture>
         <source media="(max-width:900px)" type="image/webp" srcset="/static/images/hero/imprint-diamond-family-memorial-800w.webp 800w, /static/images/hero/imprint-diamond-family-memorial-960w.webp 960w" sizes="(max-width:640px) 92vw, 45vw">
@@ -518,6 +527,23 @@
 </div>
 {% endblock %}
 {% block extra_scripts %}
+<script>
+(function () {
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-yt-facade]');
+    if (!btn) return;
+    var iframe = document.createElement('iframe');
+    iframe.src = 'https://www.youtube-nocookie.com/embed/' + btn.dataset.ytId + '?autoplay=1';
+    iframe.title = btn.dataset.ytTitle || '';
+    iframe.loading = 'eager';
+    iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+    iframe.referrerPolicy = 'strict-origin-when-cross-origin';
+    iframe.allowFullscreen = true;
+    iframe.style.border = '0';
+    btn.replaceWith(iframe);
+  });
+})();
+</script>
 <script>
 (function () {
   function inject(src) {
