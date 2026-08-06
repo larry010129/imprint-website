@@ -8,8 +8,9 @@
   var CACHE_KEY = 'imprintGoldQuoteCache';
   var CHIN_TO_GRAMS = 3.75;
   var GOLD_UNITS = ['g', 'chin', 'tael'];
-  /** Soft poll re-reads cache. Button uses REFRESH_URL to scrape again. */
-  var POLL_MS = 60 * 60 * 1000;
+  /** Soft poll: GET cache every ~25s while tab visible. Button POSTs scrape. */
+  var POLL_MS = 25 * 1000;
+  var pollTimer = null;
 
   var PURITY_LABELS = {
     '9k': '9K 金',
@@ -20,9 +21,9 @@
   };
 
   var SOURCE_PILL = {
-    allbeauty: { cls: 'source-pill--bot', label: '黃金最新牌價' },
-    bot: { cls: 'source-pill--bot', label: '黃金最新牌價' },
-    cached: { cls: 'source-pill--cached', label: '黃金最新牌價' },
+    allbeauty: { cls: 'source-pill--bot', label: '黃金飾金 售價' },
+    bot: { cls: 'source-pill--bot', label: '黃金飾金 售價' },
+    cached: { cls: 'source-pill--cached', label: '黃金飾金 售價' },
     fallback: { cls: 'source-pill--fallback', label: '備援牌價' },
   };
 
@@ -316,6 +317,68 @@
     el.classList.add(ok ? 'gold-refresh-msg--ok' : 'gold-refresh-msg--err');
   }
 
+  /** Silent GET re-read of gold_price_cache (no scrape). */
+  function softPoll() {
+    if (document.visibilityState !== 'visible') return;
+    fetchGoldQuote()
+      .then(function (data) {
+        applyQuote(data);
+        return probeLiveEndpoint().then(updateLiveHint);
+      })
+      .catch(function () {});
+  }
+
+  function stopPoll() {
+    if (!pollTimer) return;
+    clearInterval(pollTimer);
+    pollTimer = null;
+  }
+
+  function startPoll() {
+    stopPoll();
+    if (document.visibilityState !== 'visible') return;
+    pollTimer = setInterval(softPoll, POLL_MS);
+  }
+
+  function onVisibilityChange() {
+    if (document.visibilityState === 'visible') {
+      softPoll();
+      startPoll();
+      return;
+    }
+    stopPoll();
+  }
+
+  function wireRefreshButton() {
+    var refreshBtn = document.getElementById('gold-refresh-btn');
+    if (!refreshBtn) return;
+    refreshBtn.addEventListener('click', function () {
+      refreshBtn.disabled = true;
+      refreshBtn.classList.add('is-loading');
+      showMsg('正在取得最新牌價…', true);
+      refreshGoldQuote()
+        .then(function (data) {
+          applyQuote(data);
+          return probeLiveEndpoint().then(function (ok) {
+            updateLiveHint(ok);
+            return data;
+          });
+        })
+        .then(function (data) {
+          var msg = refreshMessage(data);
+          showMsg(msg.text, msg.ok);
+        })
+        .catch(function () {
+          applyQuote(fallbackPayload());
+          showMsg('無法更新牌價', false);
+        })
+        .finally(function () {
+          refreshBtn.disabled = false;
+          refreshBtn.classList.remove('is-loading');
+        });
+    });
+  }
+
   function init() {
     document.querySelectorAll('.gold-unit-btn').forEach(function (b) {
       b.addEventListener('click', function () {
@@ -324,48 +387,15 @@
       });
     });
 
-    var refreshBtn = document.getElementById('gold-refresh-btn');
-    if (refreshBtn) {
-      refreshBtn.addEventListener('click', function () {
-        refreshBtn.disabled = true;
-        refreshBtn.classList.add('is-loading');
-        showMsg('正在取得最新牌價…', true);
-        refreshGoldQuote()
-          .then(function (data) {
-            applyQuote(data);
-            return probeLiveEndpoint().then(function (ok) {
-              updateLiveHint(ok);
-              return data;
-            });
-          })
-          .then(function (data) {
-            var msg = refreshMessage(data);
-            showMsg(msg.text, msg.ok);
-          })
-          .catch(function () {
-            applyQuote(fallbackPayload());
-            showMsg('無法更新牌價', false);
-          })
-          .finally(function () {
-            refreshBtn.disabled = false;
-            refreshBtn.classList.remove('is-loading');
-          });
-      });
-    }
+    wireRefreshButton();
 
     probeLiveEndpoint().then(function (ok) {
       updateLiveHint(ok);
       fetchGoldQuote().then(applyQuote);
     });
 
-    setInterval(function () {
-      refreshGoldQuote()
-        .then(function (data) {
-          applyQuote(data);
-          return probeLiveEndpoint().then(updateLiveHint);
-        })
-        .catch(function () {});
-    }, POLL_MS);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    startPoll();
   }
 
   if (document.readyState === 'loading') {

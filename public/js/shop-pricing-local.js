@@ -57,6 +57,7 @@
     '2.5mm': {36: 0.047, 41: 0.053, 46: 0.059, 51: 0.065, 61: 0.076, 76: 0.095, 80: 0.100},
     '3.0mm': {36: 0.052, 41: 0.060, 46: 0.066, 51: 0.074, 61: 0.086, 76: 0.110, 80: 0.120},
   };
+  /** Excel 鍊條價格.xlsx O字鍊／抖圓鏈 wax table (slug douyuan). */
   var NECKLACE_TYPE_WAX = {
     douyuan: CHAIN_WAX_WEIGHT_CHIN,
   };
@@ -285,12 +286,22 @@
     return weight;
   }
 
-  /** Effective 品項加價: row addonPrices[gold][carat] when set, else category. */
+  /** Effective 品項加價: row addonPrices[gold][carat] when > 0, else category. */
   function resolveAddonPrice(category, product, gold, carat) {
+    gold = normalizeGold(gold);
     var table = product && product.addonPrices && product.addonPrices[gold];
-    if (table && table[carat] != null && table[carat] !== '') {
-      var row = Number(table[carat]);
-      if (Number.isFinite(row) && row >= 0) return Math.round(row);
+    if (!table && product && product.addonPrices && gold === 's925') {
+      table = product.addonPrices.silver925;
+    }
+    if (table) {
+      var caratKeys = caratLookupKeys(carat);
+      for (var i = 0; i < caratKeys.length; i++) {
+        var raw = table[caratKeys[i]];
+        if (raw == null || raw === '') continue;
+        var row = Number(raw);
+        // 0 = unset (follow category); same as server _effective_addon_price.
+        if (Number.isFinite(row) && row > 0) return Math.round(row);
+      }
     }
     var cat = Number(categoryAddonPrices[category]);
     return Number.isFinite(cat) && cat >= 0 ? Math.round(cat) : 0;
@@ -351,7 +362,7 @@
     chainGold = normalizeGold(chainGold);
     var weightChin = lookupWeight(chainProduct, 'chain', chainGold, carat, chainLengthCm);
     var weightGrams = weightChin * CHIN_TO_GRAMS;
-    // 搭配鏈條 = live metal only; standalone chain labor is added in computeOrderPricing
+    // 搭配鏈條 = taxed metal only. Chain 品項加價 / labor: standalone category==='chain' only.
     var metal = metalPreTax(chainGold, weightChin);
     return { chainPreTax: metal.amount, chainWeightChin: weightChin };
   }
@@ -405,7 +416,8 @@
     }
 
     var manual = product.manualPrices && product.manualPrices[gold] && product.manualPrices[gold][carat];
-    if (category !== 'chain' && manual != null) {
+    // 手動定價: fixed unit total for every metal category (incl. standalone chain).
+    if (manual != null) {
       var manualRingAddon = category === 'ring' ? resolveRingSizeAddon(product, data.ringSize) : 0;
       return {
         ready: true,

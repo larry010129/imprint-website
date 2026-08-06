@@ -202,9 +202,18 @@ async def lifespan(_app: FastAPI):
             name="imprint-startup-seed",
         )
 
+    from app.gold_scrape_job import gold_scrape_loop
+
+    gold_task = asyncio.create_task(gold_scrape_loop(), name="imprint-gold-scrape")
+
     try:
         yield
     finally:
+        gold_task.cancel()
+        try:
+            await gold_task
+        except asyncio.CancelledError:
+            pass
         if seed_task is not None:
             await seed_task
         try:

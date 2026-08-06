@@ -92,6 +92,8 @@ def test_effective_addon_falls_back_to_category(monkeypatch):
     cur = MagicMock()
     assert _effective_addon_price(cur, "ring", {}) == 2000
     assert _effective_addon_price(cur, "ring", {"addon_price_twd": None}) == 2000
+    # Explicit 0 must not pin — fall back to category (prefilled zeros).
+    assert _effective_addon_price(cur, "ring", {"addon_price_twd": 0}) == 2000
     assert _labor_fee("ring", "18k", 2000) == 2000
     assert _labor_fee("ring", "18k", 0) == 5000
 
@@ -124,10 +126,24 @@ def test_catalog_exposes_addon_prices():
             "side_stone_carat": None,
             "side_stone_total_twd": None,
             "addon_price_twd": 3500,
-        }
+        },
+        {
+            "gold": "silver925",
+            "carat": "0.3",
+            "weight_chin": 0.02,
+            "manual_price_twd": None,
+            "side_stone_price_twd": None,
+            "side_stone_carat": None,
+            "side_stone_total_twd": None,
+            "addon_price_twd": 2800,
+        },
     ]
     out = build_catalog_product(product, variants, [])
     assert out["addonPrices"]["18k"]["0.3"] == 3500.0
+    # Legacy silver925 key normalized for shop lookup
+    assert out["addonPrices"]["s925"]["0.3"] == 2800.0
+    assert "silver925" not in out["addonPrices"]
+    assert "s925" in out["golds"]
 
 
 def test_quote_uses_variant_addon_over_category(monkeypatch):
@@ -159,6 +175,131 @@ def test_quote_uses_variant_addon_over_category(monkeypatch):
     )
     assert quote["ready"] is True
     assert quote["laborPrice"] == 3500  # row wins over category 2000
+
+
+def test_pendant_s925_necklace_only_uses_row_addon(monkeypatch):
+    """Necklace-only (pendant, no chain): s925 labor = row 品項加價."""
+    variant = {
+        "weight_chin": 0.02,
+        "manual_price_twd": None,
+        "side_stone_price_twd": None,
+        "side_stone_carat": None,
+        "side_stone_total_twd": None,
+        "addon_price_twd": 2800,
+    }
+    seen = {}
+
+    def fake_lookup(cur, **kwargs):
+        seen["gold"] = kwargs.get("gold")
+        seen["category"] = kwargs.get("category")
+        return variant, 0.22
+
+    monkeypatch.setattr("app.pricing._lookup_weight", fake_lookup)
+    monkeypatch.setattr(
+        "app.pricing.get_metal_prices",
+        lambda cur: {"XAU": 1.0, "XPT": 1.0, "XAG": 1.0},
+    )
+    monkeypatch.setattr("app.pricing.load_overrides", lambda cur: {})
+    monkeypatch.setattr("app.pricing.category_addon_price", lambda cur, cat: 9999)
+    monkeypatch.setattr(
+        "app.pricing.compute_diamond_list_price",
+        lambda *a, **k: 10000,
+    )
+    quote = compute_order_pricing(
+        MagicMock(),
+        {
+            "category": "pendant",
+            "type": "p1",
+            "gold": "s925",
+            "carat": "0.3",
+            "includeChain": False,
+        },
+    )
+    assert quote["ready"] is True
+    assert seen["category"] == "pendant"
+    assert seen["gold"] == "s925"
+    assert quote["laborPrice"] == 2800  # row, not category 9999, not base 5000
+    assert quote["chainPrice"] is None
+    # 金工 = 台金 + labor; labor half must be row addon
+    assert quote["metalworkPrice"] == quote["taijinPrice"] + 2800
+
+
+def test_pendant_s925_zero_row_falls_back_to_category(monkeypatch):
+    """Pinned row 0 must not block category 品項加價 for necklace-only s925."""
+    variant = {
+        "weight_chin": 0.02,
+        "manual_price_twd": None,
+        "side_stone_price_twd": None,
+        "side_stone_carat": None,
+        "side_stone_total_twd": None,
+        "addon_price_twd": 0,
+    }
+    monkeypatch.setattr(
+        "app.pricing._lookup_weight",
+        lambda *a, **k: (variant, 0.22),
+    )
+    monkeypatch.setattr(
+        "app.pricing.get_metal_prices",
+        lambda cur: {"XAU": 1.0, "XPT": 1.0, "XAG": 1.0},
+    )
+    monkeypatch.setattr("app.pricing.load_overrides", lambda cur: {})
+    monkeypatch.setattr("app.pricing.category_addon_price", lambda cur, cat: 3200)
+    monkeypatch.setattr(
+        "app.pricing.compute_diamond_list_price",
+        lambda *a, **k: 10000,
+    )
+    quote = compute_order_pricing(
+        MagicMock(),
+        {
+            "category": "pendant",
+            "type": "p1",
+            "gold": "s925",
+            "carat": "0.3",
+            "includeChain": False,
+        },
+    )
+    assert quote["ready"] is True
+    assert quote["laborPrice"] == 3200
+
+
+def test_browser_pendant_s925_necklace_only_row_addon():
+    script = """
+global.window = {};
+require('./public/js/shop-pricing-local.js');
+const pricing = window.ShopPricingLocal;
+pricing.setLiveGoldRates({s925: 1});
+pricing.setCategoryAddons({ pendant: 9999 });
+const product = {
+  id: 'p1',
+  weights: {s925: {'0.3': 0.02}},
+  manualPrices: {},
+  addonPrices: {s925: {'0.3': 2800}},
+};
+const base = {
+  category: 'pendant', type: 'p1', gold: 's925', carat: '0.3',
+  includeChain: false, diamondKind: 'white', diamondShape: 'round',
+};
+const pinnedZero = {
+  id: 'p1',
+  weights: {s925: {'0.3': 0.02}},
+  manualPrices: {},
+  addonPrices: {s925: {'0.3': 0}},
+};
+const q = pricing.computeOrderPricing(base, {pendant: [product]});
+const q0 = pricing.computeOrderPricing(base, {pendant: [pinnedZero]});
+console.log(JSON.stringify({ q, q0 }));
+"""
+    result = subprocess.run(
+        ["node", "-e", script],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    out = json.loads(result.stdout)
+    assert out["q"]["laborPrice"] == 2800
+    assert out["q"]["chainPrice"] is None
+    assert out["q0"]["laborPrice"] == 9999  # 0 row → category
 
 
 def test_quote_falls_back_to_category_addon(monkeypatch):

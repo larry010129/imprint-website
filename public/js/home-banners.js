@@ -46,13 +46,19 @@
     var sourceAttr = index === 0 ? 'srcset' : 'data-srcset';
     var imageAttr = index === 0 ? 'src' : 'data-src';
 
-    /* Mobile crop (9:16 portrait) served on viewports ≤860px — matches home.css breakpoint. */
+    /* Mobile ≤860px: prefer CMS mobile crop, else local optimized memorial, else webp, else jpg. */
     var mobileValue = String(b.image_url_mobile || '').trim();
-    var mobileSrc = mobileValue || String(b.image_url || '');
-    var mobileSource = '<source media="(max-width:860px)" ' + sourceAttr + '="' + esc(mobileSrc) + '">';
+    var mappedLocal = '';
+    if (index === 0 && /imprint-diamond-family-memorial\.(jpe?g|webp)/i.test(String(b.image_url || b.image_webp || ''))) {
+      mappedLocal = '/static/images/hero/imprint-diamond-family-memorial-800w.webp 800w, /static/images/hero/imprint-diamond-family-memorial-960w.webp 960w, /static/images/hero/imprint-diamond-family-memorial-1200w.webp 1200w';
+    }
+    var mobileSrc = mobileValue || mappedLocal || String(b.image_webp || b.image_url || '');
+    var mobileIsWebp = /\.webp(\s|\?|$)/i.test(mobileSrc);
+    var mobileSource = '<source media="(max-width:860px)" ' + sourceAttr + '="' + esc(mobileSrc) + '"' +
+      (mobileIsWebp ? ' type="image/webp"' : '') + ' sizes="100vw">';
 
     var webp = b.image_webp
-      ? '<source ' + sourceAttr + '="' + esc(b.image_webp) + '" type="image/webp">'
+      ? '<source ' + sourceAttr + '="' + esc(b.image_webp) + '" type="image/webp" sizes="100vw">'
       : '';
     var primary = '';
     if (b.cta_primary_label && b.cta_primary_href) {
@@ -60,13 +66,19 @@
         esc(b.cta_primary_label) + '</a>';
     }
     var secondary = ctaSecondary(b);
+    var imgSrc = b.image_url || '';
+    if (index === 0 && mappedLocal) {
+      imgSrc = '/static/images/hero/imprint-diamond-family-memorial-800w.webp';
+    } else if (b.image_webp && !mobileValue) {
+      imgSrc = b.image_webp;
+    }
     return (
       '<li class="hc-slide' + (index === 0 ? ' is-active' : '') +
         '" data-align="' + esc(align) + '" data-tone="' + esc(tone) + '">' +
         '<div class="hc-media"><picture>' +
           mobileSource +
           webp +
-          '<img ' + imageAttr + '="' + esc(b.image_url) + '" alt="' + esc(b.image_alt || b.title) + '" ' +
+          '<img ' + imageAttr + '="' + esc(imgSrc) + '" alt="' + esc(b.image_alt || b.title) + '" ' +
           loading + ' decoding="async" onerror="imgFallback(this)">' +
         '</picture></div>' +
         '<div class="hc-scrim gh-hc-scrim"></div>' +

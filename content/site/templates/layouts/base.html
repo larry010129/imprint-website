@@ -59,23 +59,39 @@
 <meta name="twitter:image" content="https://www.imprintdiamond.com/{{ og_image or 'static/images/hero/imprint-diamond-family-memorial.jpg' }}">
 {% endblock %}
 
-<link rel="stylesheet" href="/static/css/base.css?v=4.1">
-<link rel="stylesheet" href="/static/css/nav.css?v=4.8">
-{% if extra_body_class and 'page-home' in extra_body_class %}
-<link rel="stylesheet" href="/static/css/home.css?v=5.5">
+{% set is_home = extra_body_class and 'page-home' in extra_body_class %}
+<link rel="stylesheet" href="/static/css/base.css?v=4.2">
+<link rel="stylesheet" href="/static/css/nav.css?v=4.9">
+{% if is_home %}
+<link rel="stylesheet" href="/static/css/home.css?v=5.6">
 {% endif %}
-<link rel="stylesheet" href="/static/css/footer.css?v=1">
-{% if not (extra_body_class and 'page-home' in extra_body_class) %}
+{% if is_home %}
+<link rel="stylesheet" href="/static/css/footer.css?v=2" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="/static/css/footer.css?v=2"></noscript>
+{% else %}
+<link rel="stylesheet" href="/static/css/footer.css?v=2">
+{% endif %}
+{% if not is_home %}
 <link rel="stylesheet" href="/static/css/pages.css?v=5.28">
 {% endif %}
 {% if load_skeleton_css or load_skeleton_ui %}
 <link rel="stylesheet" href="/static/css/skeleton.css?v=3">
 {% endif %}
-<link rel="stylesheet" href="/static/css/responsive.css?v=3.17">
-<link rel="stylesheet" href="/static/css/social-fab.css?v=8">
+<link rel="stylesheet" href="/static/css/responsive.css?v=3.18">
+{% if is_home %}
+<link rel="stylesheet" href="/static/css/social-fab.css?v=9" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="/static/css/social-fab.css?v=9"></noscript>
+{% else %}
+<link rel="stylesheet" href="/static/css/social-fab.css?v=9">
+{% endif %}
 {% block extra_css %}{% endblock %}
 {% if site_cms_sections or site_cms_edit %}
-<link rel="stylesheet" href="/static/css/cms-sections.css?v=5">
+{% if is_home %}
+<link rel="stylesheet" href="/static/css/cms-sections.css?v=6" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="/static/css/cms-sections.css?v=6"></noscript>
+{% else %}
+<link rel="stylesheet" href="/static/css/cms-sections.css?v=6">
+{% endif %}
 {% endif %}
 
 <script type="application/ld+json">
@@ -103,7 +119,33 @@
 </main>
 
 {% include "partials/footer.html" %}
+{% if is_home %}
+<script>
+(function () {
+  function injectHtmx() {
+    if (window.__htmxInjected) return;
+    window.__htmxInjected = true;
+    var s = document.createElement('script');
+    s.src = '/static/js/htmx.min.js';
+    s.onload = function () {
+      if (window.htmx) window.htmx.process(document.body);
+    };
+    document.body.appendChild(s);
+  }
+  function scheduleHtmx() {
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(injectHtmx, { timeout: 3500 });
+    } else {
+      setTimeout(injectHtmx, 1);
+    }
+  }
+  if (document.readyState === 'complete') scheduleHtmx();
+  else window.addEventListener('load', scheduleHtmx);
+})();
+</script>
+{% else %}
 <script src="/static/js/htmx.min.js" defer></script>
+{% endif %}
 <script src="/static/js/nav-dropdown.js?v=1" defer></script>
 <script src="/static/js/nav-chrome.js?v=3" defer></script>
 {% if load_skeleton_ui %}
@@ -111,10 +153,34 @@
 {% endif %}
 {% block extra_scripts %}{% endblock %}
 {% if site_cms_sections %}
-<script src="/js/cms-sections.js?v=1" defer></script>
+{% if is_home %}
+<script>
+(function () {
+  function injectCms() {
+    if (window.__cmsSectionsInjected) return;
+    window.__cmsSectionsInjected = true;
+    var s = document.createElement('script');
+    s.src = '/js/cms-sections.js?v=2';
+    s.defer = true;
+    document.body.appendChild(s);
+  }
+  function scheduleCms() {
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(injectCms, { timeout: 5000 });
+    } else {
+      setTimeout(injectCms, 1);
+    }
+  }
+  if (document.readyState === 'complete') scheduleCms();
+  else window.addEventListener('load', scheduleCms);
+})();
+</script>
+{% else %}
+<script src="/js/cms-sections.js?v=2" defer></script>
+{% endif %}
 {% endif %}
 <script src="/static/js/site-layout.js?v=3" defer></script>
-<script src="/static/js/main.js?v=2.6" defer></script>
+<script src="/static/js/main.js?v=2.7" defer></script>
 {% block social_fab %}{% include "partials/social-fab.html" %}{% endblock %}
 {% block botpress_webchat %}{% include "partials/botpress-webchat.html" %}{% endblock %}
 </body>

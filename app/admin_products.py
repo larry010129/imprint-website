@@ -21,6 +21,7 @@ from app.image_urls import (
 )
 from app.memorial_diamonds import (
     VALID_DIAMOND_COLORS,
+    VALID_DIAMOND_SHAPES,
     normalize_style_key,
     style_key_from_name_en,
 )
@@ -369,9 +370,10 @@ def image_covers_default_color(
     if not key or not default:
         return False
     if category == "diamond":
+        # Product = gem color; image slots are shapes (round, oval, …).
         if default not in VALID_DIAMOND_COLORS:
             return False
-        return key == default or key.endswith("-" + default)
+        return key in VALID_DIAMOND_SHAPES
     if default not in VALID_COLORS:
         return False
     if key == default:
@@ -465,7 +467,8 @@ def validate_product_fields(body: dict | None, *, valid_categories: set[str] | N
     else:
         cleaned["styleKey"] = None
 
-    # Memorial diamond: name + image + color only — no metal/price variants.
+    # Memorial diamond: name + shape images only — no metal/price variants.
+    # product_images.color stores shape id (round/marquise/…); product is the gem color.
     if category == "diamond":
         cleaned["variants"] = []
         cleaned["chainType"] = None
@@ -475,23 +478,22 @@ def validate_product_fields(body: dict | None, *, valid_categories: set[str] | N
         for img in body.get("images") or []:
             if not img or not img.get("url"):
                 continue
-            color = str(img.get("color") or "").strip().lower()
-            if color not in VALID_DIAMOND_COLORS:
-                errors.append(f"invalid image option: {color or '(empty)'}")
+            shape = str(img.get("color") or "").strip().lower()
+            if shape not in VALID_DIAMOND_SHAPES:
+                errors.append(f"invalid image option: {shape or '(empty)'}")
                 continue
-            url = normalize_product_image_url(img.get("url"), color)
+            url = normalize_product_image_url(img.get("url"), shape)
             if not url:
                 continue
-            images.append({"color": color, "url": url})
-        final_colors = {img["color"] for img in images}
-        if not final_colors:
+            images.append({"color": shape, "url": url})
+        final_shapes = {img["color"] for img in images}
+        if not final_shapes:
             if is_published:
                 errors.append("at least one product image is required")
         elif is_published and cleaned.get("defaultColor"):
-            default = cleaned["defaultColor"]
             if not any(
-                image_covers_default_color(c, default, category="diamond")
-                for c in final_colors
+                image_covers_default_color(s, cleaned["defaultColor"], category="diamond")
+                for s in final_shapes
             ):
                 errors.append("default color must have at least one image")
         cleaned["images"] = images
@@ -528,9 +530,12 @@ def validate_product_fields(body: dict | None, *, valid_categories: set[str] | N
                 errors.append(f"invalid weight for {gold}/{carat}")
                 continue
         manual_price = None
-        if variant.get("manualPriceTwd") not in (None, ""):
+        raw_manual = variant.get("manualPriceTwd")
+        if raw_manual in (None, ""):
+            raw_manual = variant.get("manual_price_twd")
+        if raw_manual not in (None, ""):
             try:
-                manual_price = float(variant.get("manualPriceTwd"))
+                manual_price = float(raw_manual)
             except (TypeError, ValueError):
                 errors.append(f"invalid manual price for {gold}/{carat}")
                 continue
@@ -632,7 +637,7 @@ def validate_product_fields(body: dict | None, *, valid_categories: set[str] | N
         cleaned["chainType"] = chain_type
 
         length_weights = _parse_length_weights(body.get("lengthWeights"), errors=errors)
-        # Empty admin grid → Excel/type standard table (抖圓鏈 etc.). No per-SKU edit needed.
+        # Empty admin grid → Excel/type standard table (O字鍊). No per-SKU edit needed.
         if not length_weights and chain_type:
             length_weights = necklace_type_length_weights(chain_type)
         _sync_chain_variant_reference_weights(variants, length_weights)
@@ -825,6 +830,46 @@ def append_product_image(cur, product_id: str, color: str, file_path: str) -> di
     )
     row = cur.fetchone()
     return dict(row) if row else None
+
+
+_VARIANT_NUMERIC_KEYS = (
+    "weight_chin",
+    "manual_price_twd",
+    "side_stone_price_twd",
+    "side_stone_carat",
+    "side_stone_total_twd",
+    "addon_price_twd",
+    "ear_clasp_price_twd",
+    "ear_cuff_price_twd",
+)
+
+
+def normalize_variant_row_for_admin(variant: dict) -> dict:
+    """JSON-safe variant row for admin editor (Decimal → float + camel aliases)."""
+    out = dict(variant)
+    if out.get("id") is not None:
+        out["id"] = str(out["id"])
+    if out.get("product_id") is not None:
+        out["product_id"] = str(out["product_id"])
+    for key in _VARIANT_NUMERIC_KEYS:
+        if key not in out or out[key] is None:
+            continue
+        try:
+            out[key] = float(out[key])
+        except (TypeError, ValueError):
+            continue
+    # Missing/null fixed 配鑽 total is OK — admin UI falls back to formula.
+    out.setdefault("side_stone_total_twd", None)
+    out.setdefault("addon_price_twd", None)
+    out.setdefault("ear_clasp_price_twd", None)
+    # Camel aliases so editor load works if a client only reads camelCase.
+    if out.get("manual_price_twd") is not None:
+        out["manualPriceTwd"] = out["manual_price_twd"]
+    if out.get("addon_price_twd") is not None:
+        out["addonPriceTwd"] = out["addon_price_twd"]
+    if out.get("ear_clasp_price_twd") is not None:
+        out["earClaspPriceTwd"] = out["ear_clasp_price_twd"]
+    return out
 
 
 def serialize_product_row(row: dict) -> dict:

@@ -1,4 +1,4 @@
-"""Memorial diamond admin shapes: name + image + color, no metal/price."""
+"""Memorial diamond admin: color products + shape image slots."""
 
 from __future__ import annotations
 
@@ -111,54 +111,288 @@ def _load_admin_products():
     return _load_module("admin_products", "app/admin_products.py")
 
 
-def test_merge_memorial_overlays_name_and_images():
+def test_diamond_products_are_four_colors_with_shape_images():
+    md = _load_memorial()
+    assert len(md.DIAMOND_COLOR_PRODUCTS) == 4
+    keys = {p["styleKey"] for p in md.DIAMOND_COLOR_PRODUCTS}
+    assert keys == {
+        "diamond-white",
+        "diamond-yellow",
+        "diamond-blue",
+        "diamond-pink",
+    }
+    names = {p["nameZh"] for p in md.DIAMOND_COLOR_PRODUCTS}
+    assert names == {"白鑽", "黃鑽", "藍鑽", "粉鑽"}
+    for product in md.DIAMOND_COLOR_PRODUCTS:
+        color = product["defaultColor"]
+        images = product["images"]
+        assert set(images) == md.VALID_DIAMOND_SHAPES
+        assert images["round"] == [md.matrix_shape_image_url("round", color)]
+        assert "/images/diamonds/matrix/" in images["round"][0]
+        assert not md.is_legacy_lifestyle_image(images["round"][0])
+    assert "diamond-first-love" in md.LEGACY_SERIES_STYLE_KEYS
+
+
+def test_sync_replaces_legacy_slots_and_fills_shapes():
+    md = _load_memorial()
+
+    class FakeCur:
+        def __init__(self):
+            self.images = [
+                {
+                    "id": 1,
+                    "color": "white",
+                    "file_path": "/static/images/hero/imprint-diamond-pet-memorial-cat.jpg",
+                    "sort_order": 0,
+                },
+                {
+                    "id": 2,
+                    "color": "yellow",
+                    "file_path": "/static/images/diamonds/colors/yellow.png",
+                    "sort_order": 1,
+                },
+            ]
+            self._last = None
+            self.executed = []
+
+        def execute(self, sql, params=None):
+            sql_l = " ".join(str(sql).lower().split())
+            self.executed.append((sql_l, params))
+            if sql_l.startswith("select id, color, file_path"):
+                self._last = list(self.images)
+            elif sql_l.startswith("delete from product_images"):
+                self.images = [r for r in self.images if r["id"] != params[0]]
+                self._last = None
+            elif "group by color" in sql_l:
+                by_color = {}
+                for row in self.images:
+                    color = str(row["color"]).lower()
+                    by_color[color] = max(by_color.get(color, -1), int(row.get("sort_order", 0)))
+                self._last = [
+                    {"color": color, "max_sort": max_sort}
+                    for color, max_sort in by_color.items()
+                ]
+            elif sql_l.startswith("insert into product_images"):
+                product_id, color, url, sort_order = params
+                self.images.append(
+                    {
+                        "id": len(self.images) + 10,
+                        "product_id": product_id,
+                        "color": color,
+                        "file_path": url,
+                        "sort_order": sort_order,
+                    }
+                )
+                self._last = None
+            else:
+                self._last = None
+
+        def fetchall(self):
+            return self._last or []
+
+    cur = FakeCur()
+    inserted = md.sync_memorial_diamond_seed_images(cur, "pid-1", "pink")
+    assert inserted == len(md.VALID_DIAMOND_SHAPES)
+    slots = {row["color"] for row in cur.images}
+    assert slots == md.VALID_DIAMOND_SHAPES
+    paths = {row["file_path"] for row in cur.images}
+    assert all("/matrix/" in p and "-pink.png" in p for p in paths)
+    assert not any(md.is_legacy_lifestyle_image(p) for p in paths)
+    assert not any(md.is_legacy_gem_color_image(p) for p in paths)
+
+
+def test_retire_legacy_series_clears_style_key():
+    md = _load_memorial()
+
+    class FakeCur:
+        def __init__(self):
+            self.rowcount = 5
+            self.params = None
+
+        def execute(self, sql, params=None):
+            self.params = params
+
+    cur = FakeCur()
+    assert md.retire_legacy_series_products(cur) == 5
+    assert set(cur.params[0]) == md.LEGACY_SERIES_STYLE_KEYS
+
+
+def test_ensure_skips_tombstoned_style_keys():
+    """Deleted color products must not reappear on admin list ensure."""
+    md = _load_memorial()
+
+    class FakeCur:
+        def __init__(self):
+            self.products = {}  # style_key -> id
+            self.tombstones = {"diamond-pink"}
+            self.inserts = []
+            self._last = None
+            self._fetchone = None
+
+        def execute(self, sql, params=None):
+            sql_l = " ".join(str(sql).lower().split())
+            if "create table if not exists memorial_diamond_style_tombstones" in sql_l:
+                self._last = None
+                self._fetchone = None
+            elif "alter table products add column" in sql_l or "create unique index" in sql_l:
+                self._last = None
+                self._fetchone = None
+            elif sql_l.startswith("update products") and "style_key = any" in sql_l:
+                self.rowcount = 0
+                self._last = None
+                self._fetchone = None
+            elif sql_l.startswith("select style_key from memorial_diamond_style_tombstones"):
+                self._last = [{"style_key": k} for k in sorted(self.tombstones)]
+                self._fetchone = None
+            elif sql_l.startswith("select id from products where style_key"):
+                key = params[0]
+                if key in self.products:
+                    self._fetchone = {"id": self.products[key]}
+                else:
+                    self._fetchone = None
+                self._last = None
+            elif sql_l.startswith("insert into products"):
+                key = params[-1]
+                pid = f"new-{key}"
+                self.products[key] = pid
+                self.inserts.append(key)
+                self._fetchone = {"id": pid}
+                self._last = None
+            elif sql_l.startswith("insert into product_images") or "select id, color, file_path" in sql_l:
+                self._last = []
+                self._fetchone = None
+            elif "group by color" in sql_l:
+                self._last = []
+                self._fetchone = None
+            else:
+                self._last = None
+                self._fetchone = None
+
+        def fetchone(self):
+            return self._fetchone
+
+        def fetchall(self):
+            return self._last or []
+
+    cur = FakeCur()
+    # Seed white/yellow/blue as existing; pink tombstoned and missing.
+    cur.products = {
+        "diamond-white": "w1",
+        "diamond-yellow": "y1",
+        "diamond-blue": "b1",
+    }
+    inserted = md.ensure_memorial_diamond_products(cur)
+    assert inserted == 0
+    assert "diamond-pink" not in cur.products
+    assert "diamond-pink" not in cur.inserts
+
+    # Clearing tombstone allows seed on next ensure.
+    cur.tombstones.clear()
+    inserted = md.ensure_memorial_diamond_products(cur)
+    assert inserted == 1
+    assert "diamond-pink" in cur.products
+
+
+def test_merge_skips_excluded_tombstone_without_db_row():
     md = _load_memorial()
     merged = md.merge_memorial_diamond_catalog(
         [
             {
                 "id": "uuid-1",
-                "styleKey": "diamond-first-love",
-                "nameZh": "滿月鑽石（編輯）",
-                "nameEn": "First Love Diamond",
+                "styleKey": "diamond-white",
+                "nameZh": "白鑽",
+                "defaultColor": "white",
+                "images": {},
+                "draft": False,
+            }
+        ],
+        excluded_style_keys={"diamond-pink", "diamond-blue"},
+    )
+    keys = {row["styleKey"] for row in merged}
+    assert "diamond-white" in keys
+    assert "diamond-yellow" in keys  # static fallback still OK
+    assert "diamond-pink" not in keys
+    assert "diamond-blue" not in keys
+
+
+def test_merge_memorial_overlays_name_and_shape_images():
+    md = _load_memorial()
+    merged = md.merge_memorial_diamond_catalog(
+        [
+            {
+                "id": "uuid-1",
+                "styleKey": "diamond-white",
+                "nameZh": "白鑽（編輯）",
+                "nameEn": "White Diamond",
                 "defaultColor": "white",
                 "images": {
-                    "white": ["/static/uploads/custom-moon.jpg"],
-                    "pink": ["/static/uploads/pink.jpg"],
+                    "round": ["/static/uploads/custom-round.jpg"],
+                    "heart": ["/static/uploads/heart.jpg"],
                 },
-                "colors": ["white", "pink"],
+                "colors": ["white"],
                 "carats": [],
+                "draft": False,
+            },
+            {
+                "id": "uuid-old",
+                "styleKey": "diamond-first-love",
+                "nameZh": "滿月鑽石",
+                "draft": False,
+            },
+        ]
+    )
+    by_key = {row["styleKey"]: row for row in merged}
+    assert set(by_key) == {
+        "diamond-white",
+        "diamond-yellow",
+        "diamond-blue",
+        "diamond-pink",
+    }
+    white = by_key["diamond-white"]
+    assert white["id"] == "uuid-1"
+    assert white["nameZh"] == "白鑽（編輯）"
+    assert white["golds"] == []
+    assert "0.3" in white["carats"]
+    assert white["images"]["round"] == ["/static/uploads/custom-round.jpg"]
+    assert white["images"]["heart"] == ["/static/uploads/heart.jpg"]
+    assert white["images"]["oval"] == [md.matrix_shape_image_url("oval", "white")]
+    assert by_key["diamond-pink"]["nameZh"] == "粉鑽"
+
+
+def test_merge_strips_lifestyle_and_gem_swatch_thumbs():
+    md = _load_memorial()
+    merged = md.merge_memorial_diamond_catalog(
+        [
+            {
+                "id": "uuid-y",
+                "styleKey": "diamond-yellow",
+                "nameZh": "黃鑽",
+                "defaultColor": "yellow",
+                "thumbUrl": "/static/images/hero/imprint-diamond-pet-memorial-cat.jpg",
+                "images": {
+                    "white": ["/static/images/diamonds/colors/yellow.png"],
+                },
+                "colors": ["yellow"],
                 "draft": False,
             }
         ]
     )
-    by_key = {row["styleKey"]: row for row in merged}
-    assert set(by_key) >= {
-        "diamond-first-love",
-        "diamond-pet",
-        "diamond-love",
-        "diamond-family",
-        "diamond-heirloom",
-    }
-    moon = by_key["diamond-first-love"]
-    assert moon["id"] == "uuid-1"
-    assert moon["nameZh"] == "滿月鑽石（編輯）"
-    assert moon["golds"] == []
-    assert "0.3" in moon["carats"]
-    assert moon["images"]["white"] == ["/static/uploads/custom-moon.jpg"]
-    assert moon["images"]["pink"] == ["/static/uploads/pink.jpg"]
-    assert by_key["diamond-pet"]["nameZh"] == "寵物鑽石"
+    yellow = {row["styleKey"]: row for row in merged}["diamond-yellow"]
+    assert yellow["images"]["round"] == [md.matrix_shape_image_url("round", "yellow")]
+    assert yellow["thumbUrl"] == md.matrix_shape_image_url("round", "yellow")
+    assert not md.is_legacy_lifestyle_image(yellow["thumbUrl"])
 
 
-def test_validate_diamond_skips_variants_requires_image():
+def test_validate_diamond_skips_variants_requires_shape_image():
     ap = _load_admin_products()
 
     cleaned, err = ap.validate_product_fields(
         {
             "category": "diamond",
-            "nameZh": "滿月鑽石",
-            "nameEn": "First Love Diamond",
+            "nameZh": "白鑽",
+            "nameEn": "White Diamond",
             "defaultColor": "white",
-            "styleKey": "diamond-first-love",
+            "styleKey": "diamond-white",
             "isPublished": True,
             "variants": [{"gold": "18k", "carat": "0.3", "weightChin": 1}],
             "images": [],
@@ -170,16 +404,16 @@ def test_validate_diamond_skips_variants_requires_image():
     cleaned, err = ap.validate_product_fields(
         {
             "category": "diamond",
-            "nameZh": "滿月鑽石",
-            "nameEn": "First Love Diamond",
+            "nameZh": "白鑽",
+            "nameEn": "White Diamond",
             "defaultColor": "white",
-            "styleKey": "diamond-first-love",
+            "styleKey": "diamond-white",
             "isPublished": True,
             "variants": [],
             "images": [
                 {
-                    "color": "white",
-                    "url": "/static/images/hero/imprint-diamond-newborn-baby-necklace.jpg",
+                    "color": "round",
+                    "url": "/static/images/diamonds/matrix/round-white.png",
                 }
             ],
         }
@@ -187,21 +421,21 @@ def test_validate_diamond_skips_variants_requires_image():
     assert err is None
     assert cleaned is not None
     assert cleaned["variants"] == []
-    assert cleaned["styleKey"] == "diamond-first-love"
+    assert cleaned["styleKey"] == "diamond-white"
     assert cleaned["allowsEngraving"] is False
-    assert cleaned["images"][0]["color"] == "white"
+    assert cleaned["images"][0]["color"] == "round"
 
 
-def test_validate_diamond_rejects_metal_default_and_metal_image_slot():
+def test_validate_diamond_rejects_metal_default_and_color_image_slot():
     ap = _load_admin_products()
 
     cleaned, err = ap.validate_product_fields(
         {
             "category": "diamond",
-            "nameZh": "滿月鑽石",
-            "nameEn": "First Love Diamond",
+            "nameZh": "白鑽",
+            "nameEn": "White Diamond",
             "defaultColor": "rose",
-            "styleKey": "diamond-first-love",
+            "styleKey": "diamond-white",
             "isPublished": False,
             "images": [],
         }
@@ -212,15 +446,15 @@ def test_validate_diamond_rejects_metal_default_and_metal_image_slot():
     cleaned, err = ap.validate_product_fields(
         {
             "category": "diamond",
-            "nameZh": "滿月鑽石",
-            "nameEn": "First Love Diamond",
+            "nameZh": "白鑽",
+            "nameEn": "White Diamond",
             "defaultColor": "white",
-            "styleKey": "diamond-first-love",
+            "styleKey": "diamond-white",
             "isPublished": True,
             "images": [
                 {
-                    "color": "white-yellow",
-                    "url": "/static/images/hero/imprint-diamond-newborn-baby-necklace.jpg",
+                    "color": "white",
+                    "url": "/static/images/diamonds/matrix/round-white.png",
                 }
             ],
         }
@@ -229,10 +463,10 @@ def test_validate_diamond_rejects_metal_default_and_metal_image_slot():
     assert err and ("圖片" in err or "顏色" in err or "選項" in err)
 
 
-def test_admin_html_cache_bust_v46():
+def test_admin_html_cache_bust_v50():
     for name in ("admin.html", "admin1.html"):
         html = (ROOT / name).read_text(encoding="utf-8")
-        assert "admin-products.js?v=46" in html
+        assert "admin-products.js?v=52" in html
 
 
 def test_jewelry_validate_still_requires_variant():
@@ -249,7 +483,7 @@ def test_jewelry_validate_still_requires_variant():
             "images": [
                 {
                     "color": "white-white",
-                    "url": "/static/images/hero/imprint-diamond-newborn-baby-necklace.jpg",
+                    "url": "/static/images/diamonds/colors/white.png",
                 }
             ],
         }

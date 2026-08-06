@@ -113,7 +113,7 @@ create table if not exists products (
   allows_fancy_shapes boolean not null default true,
   allows_pendant_only boolean not null default true,
   allows_with_chain boolean not null default true,
-  style_key text, -- stable shop link (e.g. diamond-first-love); null for letter-SKU jewelry
+  style_key text, -- stable shop link (e.g. diamond-white); null for letter-SKU jewelry
   ring_size_config jsonb, -- ring-only: {startSize, sizes:[{size, addonPriceTwd}]}; size addon stacks on labor
   is_published boolean not null default false,
   first_published_at timestamptz,
@@ -126,6 +126,12 @@ create table if not exists products (
 create unique index if not exists products_style_key_uidx
   on products (style_key)
   where style_key is not null;
+
+-- Admin-deleted memorial diamond color keys (skip ensure re-seed + shop static fallback)
+create table if not exists memorial_diamond_style_tombstones (
+  style_key text primary key,
+  deleted_at timestamptz not null default now()
+);
 
 create table if not exists product_variants (
   id uuid primary key default gen_random_uuid(),

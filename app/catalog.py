@@ -10,6 +10,13 @@ METAL_DISPLAY_ORDER = ["9k", "14k", "18k", "pt950", "s925"]
 _STYLE_FROM_PATH = re.compile(r"(?:^|/)([a-z]+)-([A-C])\.(?:svg|png|jpe?g)", re.I)
 
 
+def _canonical_gold_key(gold: object) -> str:
+    """Shop/pricing metal key — silver925/S925 → s925, pt → pt950."""
+    from app.pricing import normalize_gold
+
+    return normalize_gold(gold)
+
+
 def _sort_golds(golds: set[str]) -> list[str]:
     order = {g: i for i, g in enumerate(METAL_DISPLAY_ORDER)}
     return sorted(golds, key=lambda g: order.get(g, 99))
@@ -207,9 +214,18 @@ def _first_thumb_url(
         return None
 
     if (category or "").strip().lower() == "diamond":
-        url = pick(metal)
-        if url:
-            return url
+        # Color product: image slots are shapes — prefer round thumb.
+        for key in ("round", metal):
+            url = pick(key)
+            if url:
+                return url
+        for key in images_by_color:
+            if key not in tried and image_covers_default_color(
+                key, metal, category="diamond"
+            ):
+                url = pick(key)
+                if url:
+                    return url
     for key in _default_color_slot_keys(metal, category):
         url = pick(key)
         if url:
@@ -251,7 +267,7 @@ def _product_sort_order(product: dict) -> int | None:
 
 def build_catalog_product_lite(product: dict, variants: list[dict], images: list[dict]) -> dict:
     """Style-grid payload — option lists + thumb, no weights/images maps."""
-    golds = _sort_golds({v["gold"] for v in variants})
+    golds = _sort_golds({_canonical_gold_key(v["gold"]) for v in variants})
     carats = _sort_carats({_variant_carat_key(v["carat"]) for v in variants})
     if product.get("category") == "diamond":
         golds = []
@@ -291,7 +307,7 @@ def build_catalog_product_lite(product: dict, variants: list[dict], images: list
 
 
 def build_catalog_product(product: dict, variants: list[dict], images: list[dict]) -> dict:
-    golds = _sort_golds({v["gold"] for v in variants})
+    golds = _sort_golds({_canonical_gold_key(v["gold"]) for v in variants})
     carats = _sort_carats({_variant_carat_key(v["carat"]) for v in variants})
     if product.get("category") == "diamond":
         golds = []
@@ -305,7 +321,7 @@ def build_catalog_product(product: dict, variants: list[dict], images: list[dict
     ear_clasp_prices: dict[str, dict[str, float]] = {}
     addon_prices: dict[str, dict[str, float]] = {}
     for variant in variants:
-        gold = variant["gold"]
+        gold = _canonical_gold_key(variant["gold"])
         carat = _variant_carat_key(variant["carat"])
         weights.setdefault(gold, {})[carat] = float(variant["weight_chin"])
         if variant.get("manual_price_twd") is not None:
@@ -319,7 +335,8 @@ def build_catalog_product(product: dict, variants: list[dict], images: list[dict
         addon_raw = variant.get("addon_price_twd")
         if addon_raw is None:
             addon_raw = variant.get("addonPriceTwd")
-        if addon_raw is not None:
+        # Omit 0 so client falls back to category 品項加價 (same as server).
+        if addon_raw is not None and float(addon_raw) > 0:
             addon_prices.setdefault(gold, {})[carat] = float(addon_raw)
         ear_clasp_raw = variant.get("ear_clasp_price_twd")
         if ear_clasp_raw is None:
@@ -401,7 +418,7 @@ def _ring_size_config_for_catalog(product: dict) -> dict | None:
 
 
 def _effective_chain_length_weights(product: dict) -> dict:
-    """Admin overrides win; otherwise Excel/type table (抖圓鏈 etc.)."""
+    """Admin overrides win; otherwise Excel/type table (O字鍊 etc.)."""
     if product.get("category") != "chain":
         return product.get("length_weights") or {}
     lw = product.get("length_weights")

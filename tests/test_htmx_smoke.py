@@ -195,9 +195,11 @@ def test_htmx_shop_diamond_styles_and_configure(client):
         "/htmx/shop/step/styles?category=diamond", headers={"HX-Request": "true"}
     )
     assert styles.status_code == 200
-    assert "diamond-first-love" in styles.text
+    assert "diamond-white" in styles.text
+    assert "白鑽" in styles.text
+    assert "diamond-first-love" not in styles.text
     cfg = client.get(
-        "/htmx/shop/step/configure?category=diamond&type=diamond-first-love",
+        "/htmx/shop/step/configure?category=diamond&type=diamond-white",
         headers={"HX-Request": "true"},
     )
     assert cfg.status_code == 200
@@ -213,11 +215,11 @@ def test_htmx_shop_quote_partial(client):
         headers={"HX-Request": "true"},
         data={
             "category": "diamond",
-            "type": "diamond-first-love",
+            "type": "diamond-white",
             "carat": "0.3",
             "diamondKind": "white",
             "diamondShape": "round",
-            "summaryZh": "滿月鑽石",
+            "summaryZh": "白鑽",
         },
     )
     assert resp.status_code == 200
@@ -231,10 +233,10 @@ def test_htmx_shop_cart_guest_redirects(client):
         headers={"HX-Request": "true"},
         data={
             "category": "diamond",
-            "type": "diamond-first-love",
+            "type": "diamond-white",
             "carat": "0.3",
             "diamondKind": "white",
-            "summaryZh": "滿月鑽石",
+            "summaryZh": "白鑽",
         },
         follow_redirects=False,
     )
@@ -270,10 +272,10 @@ def test_htmx_shop_cart_blocked_in_preview(client):
         headers={"HX-Request": "true"},
         data={
             "category": "diamond",
-            "type": "diamond-first-love",
+            "type": "diamond-white",
             "carat": "0.3",
             "diamondKind": "white",
-            "summaryZh": "滿月鑽石",
+            "summaryZh": "白鑽",
             "preview": "1",
         },
         follow_redirects=False,

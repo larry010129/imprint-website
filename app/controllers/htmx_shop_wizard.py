@@ -46,7 +46,7 @@ from app.image_urls import (
     shop_product_image_url,
     shop_style_thumb_url,
 )
-from app.memorial_diamonds import merge_memorial_diamond_catalog
+from app.memorial_diamonds import list_tombstoned_style_keys, merge_memorial_diamond_catalog
 from app.pricing import VALID_FANCY_COLORS, _as_earring_quantity, compute_order_pricing
 from app.product_categories import fetch_categories
 
@@ -108,6 +108,7 @@ def _load_catalog(*, include_drafts: bool = False, detail: str = "lite") -> dict
             }
             for row in category_rows
         }
+        diamond_tombstones = list_tombstoned_style_keys(cur)
     catalog = build_catalog_response(
         products,
         variants,
@@ -118,7 +119,10 @@ def _load_catalog(*, include_drafts: bool = False, detail: str = "lite") -> dict
     )
     categories = dict(catalog.get("categories") or {})
     # Static keys stay; admin products overlay name / image / color.
-    categories["diamond"] = merge_memorial_diamond_catalog(categories.get("diamond") or [])
+    categories["diamond"] = merge_memorial_diamond_catalog(
+        categories.get("diamond") or [],
+        excluded_style_keys=diamond_tombstones,
+    )
     order = ["diamond"] + [c for c in (catalog.get("categoryOrder") or []) if c != "diamond"]
     meta = dict(catalog.get("categoryMeta") or {})
     diamond_list = categories.get("diamond") or []

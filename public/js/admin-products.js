@@ -32,15 +32,28 @@
     { value: 'blue', label: '藍鑽' },
     { value: 'pink', label: '粉鑽' },
   ];
+  // Memorial diamond product = gem color; image slots = cut shapes (same as shop 選擇鑽石切工).
+  var DIAMOND_SHAPE_SLOT_OPTIONS = [
+    { value: 'round', label: '圓形' },
+    { value: 'marquise', label: '馬眼型' },
+    { value: 'oval', label: '橢圓形' },
+    { value: 'princess', label: '公主方' },
+    { value: 'trilliant', label: '三角形' },
+    { value: 'emerald', label: '祖母綠形' },
+    { value: 'heart', label: '心形' },
+    { value: 'radiant', label: '雷地恩形' },
+    { value: 'pear', label: '梨形' },
+    { value: 'cushion', label: '枕形' },
+  ];
   var METAL_SLOT_VALUES = METAL_SLOT_OPTIONS.map(function (o) { return o.value; });
   var DIAMOND_SLOT_VALUES = DIAMOND_SLOT_OPTIONS.map(function (o) { return o.value; });
-  // Shop memorial style keys — seeded into products for admin image/name/color edits.
+  var DIAMOND_SHAPE_SLOT_VALUES = DIAMOND_SHAPE_SLOT_OPTIONS.map(function (o) { return o.value; });
+  // Shop memorial color product keys — seeded for admin name/shape-image edits.
   var MEMORIAL_DIAMOND_STYLE_KEYS = [
-    'diamond-first-love',
-    'diamond-pet',
-    'diamond-love',
-    'diamond-family',
-    'diamond-heirloom',
+    'diamond-white',
+    'diamond-yellow',
+    'diamond-blue',
+    'diamond-pink',
   ];
 
   // Match server _ALLOWED_IMAGE_EXT: JPG / PNG / WEBP. Source ≤1MB; stored ≤500KB WebP.
@@ -105,7 +118,7 @@
   /** Calculator image axes per category (matches shop.js preview lookup). */
   function presetSlotKeysForCategory(category) {
     if (category === 'diamond') {
-      return DIAMOND_SLOT_VALUES.slice();
+      return DIAMOND_SHAPE_SLOT_VALUES.slice();
     }
     if (category === 'chain') {
       return METAL_SLOT_VALUES.map(function (metal) {
@@ -195,8 +208,9 @@
     var def = String(defaultColor || '').toLowerCase();
     if (!key || !def) return false;
     if (category === 'diamond') {
+      // Product defaultColor is gem color; image slots are shapes.
       if (DIAMOND_SLOT_VALUES.indexOf(def) < 0) return false;
-      return key === def || key.slice(-(def.length + 1)) === '-' + def;
+      return DIAMOND_SHAPE_SLOT_VALUES.indexOf(key) >= 0;
     }
     if (COLORS.indexOf(def) < 0) return false;
     return key === def || key.indexOf(def + '-') === 0;
@@ -205,9 +219,18 @@
   function productThumb(product) {
     var images = product.images || [];
     var def = product.default_color || 'white';
-    var match = images.find(function (img) {
-      return imageCoversDefaultColor(img.color, def, product.category);
-    }) || images[0];
+    var match = null;
+    if (product.category === 'diamond') {
+      match = images.find(function (img) { return img.color === 'round'; })
+        || images.find(function (img) {
+          return imageCoversDefaultColor(img.color, def, product.category);
+        });
+    } else {
+      match = images.find(function (img) {
+        return imageCoversDefaultColor(img.color, def, product.category);
+      });
+    }
+    match = match || images[0];
     if (match) {
       var thumb = window.AdminImageUrls && window.AdminImageUrls.productThumbnail
         ? window.AdminImageUrls.productThumbnail(match.file_path, def)
@@ -618,7 +641,8 @@
     form.addEventListener('submit', function (e) {
       e.preventDefault();
       if (!deleteId) return;
-      runAction(deleteId, 'delete').then(function () {
+      runAction(deleteId, 'delete').then(function (ok) {
+        if (!ok) return;
         dialog.close();
         deleteId = null;
       });
@@ -964,10 +988,16 @@
   function runAction(id, action) {
     return api.admin.productAction(id, action).then(function (res) {
       if (res.error) {
-        alert(apiError(res));
-        return;
+        var msg = apiError(res);
+        if (window.showToast) window.showToast(msg, 'error');
+        else alert(msg);
+        return false;
+      }
+      if (action === 'delete' && window.showToast) {
+        window.showToast('已刪除商品', 'success');
       }
       load(true, true);
+      return true;
     });
   }
 
@@ -1035,7 +1065,7 @@
       return '<option value="' + esc(slug) + '"' + sel + '>' + esc(label) + '</option>';
     }).join('');
     if (!opts) {
-      opts = '<option value="douyuan" selected>抖圓鏈</option>';
+      opts = '<option value="douyuan" selected>O字鍊</option>';
     }
     return (
       '<label class="ap-field-wide ap-chain-type-field">' +
@@ -1078,7 +1108,7 @@
     if (category !== 'chain') return '';
     return (
       '<h4 class="ap-section-title">長度蠟重（選填）</h4>' +
-      '<p class="ap-section-hint">在此填寫各厚度×長度的蠟重（錢）。選項來自 Excel 鍊條價格表（抖圓鏈等）。預設帶入標準值；留空格子＝用標準表。款式選項只選金屬／厚度，不再填 46cm 蠟重。</p>' +
+      '<p class="ap-section-hint">在此填寫各厚度×長度的蠟重（錢）。選項來自 Excel 鍊條價格表（O字鍊／抖圓鏈）。預設帶入標準值；留空格子＝用標準表。款式選項只選金屬／厚度，不再填 46cm 蠟重。</p>' +
       '<div class="ap-chain-length-weights" id="apChainLengthWeights">' +
         chainLengthWeightsGridInnerHtml(lengthWeights, chainType) +
       '</div>' +
@@ -1265,6 +1295,16 @@
     return categoryAddonValue(category);
   }
 
+  /** Prefill 手動定價 from API (snake) or collected form (camel). Empty when unset. */
+  function variantManualPriceDisplayValue(variant) {
+    if (!variant) return '';
+    var raw = variant.manual_price_twd;
+    if (raw == null || raw === '') raw = variant.manualPriceTwd;
+    if (raw == null || raw === '') return '';
+    var n = Number(raw);
+    return Number.isFinite(n) ? n : '';
+  }
+
   function variantComboKey(gold, carat) {
     return String(gold || '') + '|' + String(carat || '');
   }
@@ -1316,18 +1356,21 @@
       var sel = variant && String(variant.carat) === c ? ' selected' : '';
       return '<option value="' + c + '"' + sel + '>' + c + '</option>';
     }).join('');
-    var price = variant && variant.manual_price_twd != null ? variant.manual_price_twd : '';
+    var price = variantManualPriceDisplayValue(variant);
     var addonPrice = variantAddonDisplayValue(variant, category);
     var addonInput =
       '<input type="number" name="addonPrice" step="1" min="0" placeholder="品項加價 (NT$)" value="' +
       esc(addonPrice) + '" title="預設帶入品項加價；可逐列調整。清空則回退品項預設。">';
+    var manualPriceInput =
+      '<input type="number" name="price" step="1" min="0" placeholder="手動定價" value="' +
+      esc(price) + '" title="填寫後試算總價改用此固定價（清空＝公式計價）">';
     if (category === 'chain') {
       return (
         '<div class="ap-variant-row">' +
           '<select name="gold">' + goldOpts + '</select>' +
           '<select name="carat">' + caratOpts + '</select>' +
           addonInput +
-          '<input type="number" name="price" step="1" min="0" placeholder="手動定價" value="' + esc(price) + '">' +
+          manualPriceInput +
           '<button type="button" class="ap-remove-row" aria-label="移除">✕</button>' +
         '</div>'
       );
@@ -1362,7 +1405,7 @@
         esc(sideStoneTotalDisplay) + '"' + sideStoneFixedAttr + ' title="自動 = 配鑽 cts × 一克拉價格；手動改寫後為固定總價">' +
       addonInput +
       earClaspInput +
-      '<input type="number" name="price" step="1" min="0" placeholder="手動定價" value="' + esc(price) + '">' +
+      manualPriceInput +
       '<button type="button" class="ap-remove-row" aria-label="移除">✕</button></div>';
   }
 
@@ -1428,12 +1471,12 @@
 
   function slotPairSelectHtml(selectedKey, category) {
     if (category === 'diamond') {
-      var color = DIAMOND_SLOT_VALUES.indexOf(selectedKey) >= 0 ? selectedKey : 'white';
+      var shape = DIAMOND_SHAPE_SLOT_VALUES.indexOf(selectedKey) >= 0 ? selectedKey : 'round';
       return (
         '<label class="ap-image-slot-pair">' +
-          '<span>鑽石顏色</span>' +
+          '<span>鑽石切工</span>' +
           '<select class="ap-image-slot-diamond-only">' +
-            slotSelectHtml(DIAMOND_SLOT_OPTIONS, color) +
+            slotSelectHtml(DIAMOND_SHAPE_SLOT_OPTIONS, shape) +
           '</select>' +
         '</label>'
       );
@@ -1529,7 +1572,7 @@
         if (!(groups[key] && groups[key].length)) return;
         pushSlot(key);
       });
-      if (!slots.length) slots.push({ color: 'white', urls: [] });
+      if (!slots.length) slots.push({ color: 'round', urls: [] });
       return slots;
     }
 
@@ -1562,7 +1605,7 @@
 
   function imageSlotHtml(slot, category) {
     var slotId = 'slot-' + (++_slotCounter);
-    var color = slot.color || (category === 'diamond' ? 'white' : 'white-white');
+    var color = slot.color || (category === 'diamond' ? 'round' : 'white-white');
     var slides = (slot.urls || []).map(function (url) {
       return imageSlideHtml(url, color);
     }).join('');
@@ -1847,9 +1890,9 @@
       var used = usedSlotKeys(form, slot);
       if (used[key]) {
         alert('此組合已用於其他圖片選項，請選擇不同的組合。');
-        var prevKey = slot.dataset.lastKey || 'white';
+        var prevKey = slot.dataset.lastKey || (diamondOnly ? 'round' : 'white');
         if (diamondOnly) {
-          diamondOnly.value = DIAMOND_SLOT_VALUES.indexOf(prevKey) >= 0 ? prevKey : 'white';
+          diamondOnly.value = DIAMOND_SHAPE_SLOT_VALUES.indexOf(prevKey) >= 0 ? prevKey : 'round';
         } else {
           var prev = parseSlotKey(prevKey) || { metal: 'white', diamond: 'white', chainMetal: null };
           if (metalSel) metalSel.value = prev.metal;
@@ -1871,7 +1914,7 @@
   function refreshImageSlotCategory(slot, form, category) {
     var currentKey = slotColorKey(slot);
     var baseColor = category === 'diamond'
-      ? (DIAMOND_SLOT_VALUES.indexOf(currentKey) >= 0 ? currentKey : 'white')
+      ? (DIAMOND_SHAPE_SLOT_VALUES.indexOf(currentKey) >= 0 ? currentKey : 'round')
       : (parseSlotKey(currentKey)
         ? currentKey
         : buildSlotKey('white', 'white', null));
@@ -2141,7 +2184,7 @@
 
   function imageSectionHint(category) {
     if (category === 'diamond') {
-      return '試算頁款式卡會使用此處照片；依鑽石顏色上傳（不含金屬）。價格請至「前往價格設定」。';
+      return '商品＝鑽石顏色；此處依切工形狀上傳照片（圓形／馬眼／橢圓…）。列表縮圖用圓形。價格請至「前往價格設定」。';
     }
     return '試算頁會依「金屬 × 鑽石顏色」切換商品圖'
       + (category === 'pendant' ? '；含鍊預覽沿用項墜金屬色（無需另傳異色鍊圖）' : '')
@@ -2173,7 +2216,7 @@
             '<h2>' + (isEdit ? '編輯商品' : '新增商品') + '</h2>' +
             '<p class="ap-editor-sub">' +
               (isDiamond
-                ? '編輯紀念鑽石款式名稱、鑽石顏色與照片以連結試算頁（不含金屬／價格）。'
+                ? '商品名稱為鑽石顏色；上傳各切工形狀照片以連結試算頁（不含金屬／價格）。'
                 : '填寫款式選項並上傳商品照片後可上架至客製試算頁。') +
             '</p>' +
           '</div>' +
@@ -2482,6 +2525,11 @@
     var fd = new FormData(form);
     var category = fd.get('category');
     var variants = [];
+    function parseOptionalNumber(raw) {
+      if (raw === '' || raw == null) return null;
+      var n = parseFloat(raw);
+      return Number.isFinite(n) ? n : null;
+    }
     if (category !== 'diamond') {
       form.querySelectorAll('#apVariantGrid .ap-variant-row').forEach(function (row) {
         var gold = row.querySelector('[name="gold"]')?.value;
@@ -2500,27 +2548,23 @@
         if (category !== 'chain' && !weight) return;
         var isChain = category === 'chain';
         var isEarring = category === 'earring';
+        // Prefill shows category default — persist null when unchanged so row
+        // does not pin 0 / category value and block later category updates.
+        var addonParsed = parseOptionalNumber(addonPrice);
+        var catAddon = categoryAddonValue(category);
+        if (addonParsed != null && addonParsed === catAddon) addonParsed = null;
         variants.push({
           gold: gold,
           carat: carat,
           weightChin: isChain ? null : parseFloat(weight),
-          manualPriceTwd: price === '' || price == null ? null : parseFloat(price),
-          sideStonePriceTwd: isChain || sideStone === '' || sideStone == null
-            ? null
-            : parseFloat(sideStone),
-          sideStoneCarat: isChain || sideStoneCts === '' || sideStoneCts == null
-            ? null
-            : parseFloat(sideStoneCts),
+          manualPriceTwd: parseOptionalNumber(price),
+          sideStonePriceTwd: isChain ? null : parseOptionalNumber(sideStone),
+          sideStoneCarat: isChain ? null : parseOptionalNumber(sideStoneCts),
           sideStoneTotalTwd: isChain || !sideStoneTotalFixed
-            || sideStoneTotal === '' || sideStoneTotal == null
             ? null
-            : parseFloat(sideStoneTotal),
-          addonPriceTwd: addonPrice === '' || addonPrice == null
-            ? null
-            : parseFloat(addonPrice),
-          earClaspPriceTwd: !isEarring || earClasp === '' || earClasp == null
-            ? null
-            : parseFloat(earClasp),
+            : parseOptionalNumber(sideStoneTotal),
+          addonPriceTwd: addonParsed,
+          earClaspPriceTwd: !isEarring ? null : parseOptionalNumber(earClasp),
         });
       });
     }

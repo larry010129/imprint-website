@@ -1,4 +1,8 @@
-"""Necklace (chain-only) pricing types — wax tables from 鍊條價格.xlsx."""
+"""Necklace (chain-only) pricing types — wax tables from 鍊條價格.xlsx.
+
+Excel sheet「工作表1」sections are titled 抖圓鏈; formula notes call it O字鍊.
+Slug ``douyuan`` kept for DB/API stability; shop label is O字鍊.
+"""
 
 from __future__ import annotations
 
@@ -7,7 +11,7 @@ from typing import Any
 # Slug keys avoid encoding issues in DB/API; label_zh is the shop-facing name.
 NECKLACE_TYPES: dict[str, dict[str, Any]] = {
     "douyuan": {
-        "labelZh": "抖圓鏈",
+        "labelZh": "O字鍊",
         "thicknesses": ["1.0mm", "1.5mm", "2.0mm", "2.5mm", "3.0mm"],
         "lengthWeights": {
             "1.0mm": {

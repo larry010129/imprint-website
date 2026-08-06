@@ -252,7 +252,7 @@ def _carat_lookup_keys(carat: str) -> list[str]:
 
 
 def wax_to_metal_chin(wax_chin: float, gold: str) -> float:
-    factor = WAX_TO_METAL_CHIN.get(gold)
+    factor = WAX_TO_METAL_CHIN.get(normalize_gold(gold))
     if factor is None:
         raise ValueError(f"unknown gold: {gold}")
     return wax_chin * factor
@@ -375,9 +375,13 @@ def _variant_addon_price(variant: dict | None) -> int | None:
 
 
 def _effective_addon_price(cur, category: str, variant: dict | None) -> int:
-    """Row addon when set; else category 品項加價."""
+    """Row addon when > 0; else category 品項加價.
+
+    Explicit 0 is treated as unset so prefilled/force-written zeros do not
+    block a later category 品項加價 (labor still uses base when both are 0).
+    """
     row_addon = _variant_addon_price(variant)
-    if row_addon is not None:
+    if row_addon:
         return row_addon
     return category_addon_price(cur, category)
 
@@ -461,6 +465,21 @@ def _product_ring_size_config(cur, *, category: str, product_id: str, require_pu
     return cfg if isinstance(cfg, dict) else None
 
 
+def _gold_lookup_keys(gold: str) -> list[str]:
+    """Canonical gold first, then legacy aliases stored in older variant rows."""
+    canonical = normalize_gold(gold)
+    keys = [canonical]
+    if canonical == "s925":
+        for alias in ("silver925", "S925"):
+            if alias not in keys:
+                keys.append(alias)
+    elif canonical == "pt950":
+        for alias in ("pt", "PT950"):
+            if alias not in keys:
+                keys.append(alias)
+    return keys
+
+
 def get_product_variant(
     cur, *, category: str, product_id: str, gold: str, carat: str, require_published: bool = True
 ) -> dict | None:
@@ -469,43 +488,47 @@ def get_product_variant(
     )
     if not resolved:
         return None
+    for gold_key in _gold_lookup_keys(gold):
+        for carat_key in _carat_lookup_keys(carat):
+            if require_published:
+                cur.execute(
+                    """
+                    select pv.* from product_variants pv
+                    join products p on p.id = pv.product_id
+                    where p.id = %s and p.category = %s
+                      and pv.gold = %s and pv.carat = %s and p.is_published = true
+                    """,
+                    (resolved, category, gold_key, carat_key),
+                )
+            else:
+                cur.execute(
+                    """
+                    select pv.* from product_variants pv
+                    join products p on p.id = pv.product_id
+                    where p.id = %s and p.category = %s
+                      and pv.gold = %s and pv.carat = %s
+                    """,
+                    (resolved, category, gold_key, carat_key),
+                )
+            row = cur.fetchone()
+            if row:
+                return row
     gold = normalize_gold(gold)
-    for carat_key in _carat_lookup_keys(carat):
-        if require_published:
-            cur.execute(
-                """
-                select pv.* from product_variants pv
-                join products p on p.id = pv.product_id
-                where p.id = %s and p.category = %s
-                  and pv.gold = %s and pv.carat = %s and p.is_published = true
-                """,
-                (resolved, category, gold, carat_key),
-            )
-        else:
-            cur.execute(
-                """
-                select pv.* from product_variants pv
-                join products p on p.id = pv.product_id
-                where p.id = %s and p.category = %s
-                  and pv.gold = %s and pv.carat = %s
-                """,
-                (resolved, category, gold, carat_key),
-            )
-        row = cur.fetchone()
-        if row:
-            return row
     if category == "chain":
-        sql = """
-            select pv.* from product_variants pv
-            join products p on p.id = pv.product_id
-            where p.id = %s and p.category = 'chain' and pv.gold = %s
-        """
-        params: list[Any] = [resolved, gold]
-        if require_published:
-            sql += " and p.is_published = true"
-        sql += " order by pv.carat limit 1"
-        cur.execute(sql, params)
-        return cur.fetchone()
+        for gold_key in _gold_lookup_keys(gold):
+            sql = """
+                select pv.* from product_variants pv
+                join products p on p.id = pv.product_id
+                where p.id = %s and p.category = 'chain' and pv.gold = %s
+            """
+            params: list[Any] = [resolved, gold_key]
+            if require_published:
+                sql += " and p.is_published = true"
+            sql += " order by pv.carat limit 1"
+            cur.execute(sql, params)
+            row = cur.fetchone()
+            if row:
+                return row
     return None
 
 
@@ -513,6 +536,7 @@ def _lookup_weight(
     cur, *, category: str, product_id: str, gold: str, carat: str,
     length_cm: Any, require_published: bool,
 ) -> tuple[dict, float] | None:
+    gold = normalize_gold(gold)
     variant = get_product_variant(
         cur, category=category, product_id=product_id, gold=gold, carat=carat,
         require_published=require_published,
@@ -537,7 +561,11 @@ def _lookup_weight(
 
 
 def _metal_pre_tax(gold_prices: dict, gold: str, weight_chin: float) -> tuple[float, float]:
-    """Metal cost pre-tax: 金屬重(台錢) × 成色金價(元/台錢). BOT cache is 元/公克."""
+    """Metal cost pre-tax: 金屬重(台錢) × 成色金價(元/台錢).
+
+    Cache stores 黃金飾金 售價 as 元/公克 (board 元/錢 ÷ CHIN_TO_GRAMS).
+    Excel O字鍊: 臘重×factor = 金屬重(錢); × (飾金×成色) + 工費.
+    """
     per_gram = gold_prices[METAL_SYMBOL[gold]] * PURITY_MULTIPLIER[gold]
     per_chin = per_gram * CHIN_TO_GRAMS
     return per_chin * weight_chin, per_gram
@@ -556,9 +584,9 @@ def _compute_chain_addon(
     )
     if not looked_up:
         return None
-    variant, weight_chin = looked_up
-
-    # 搭配鏈條 = live metal only; standalone chain labor is added by compute_order_pricing
+    # Ignore chain variant: 搭配鏈條 = taxed metal only.
+    # Chain 品項加價 / chain labor apply only for standalone category=="chain".
+    _, weight_chin = looked_up
     pre_tax, _ = _metal_pre_tax(gold_prices, chain_gold, weight_chin)
     return {"chainPreTax": pre_tax}
 
@@ -639,7 +667,8 @@ def compute_order_pricing(cur, data: dict[str, Any], *, require_published: bool 
         )
         ring_size_addon = ring_size_addon_from_config(ring_cfg, data.get("ringSize"))
 
-    if category != "chain" and variant.get("manual_price_twd") is not None:
+    # 手動定價: fixed unit total for every metal category (incl. standalone chain).
+    if variant.get("manual_price_twd") is not None:
         gold_prices = get_metal_prices(cur)
         unit_total = float(variant["manual_price_twd"]) + ring_size_addon
         return {

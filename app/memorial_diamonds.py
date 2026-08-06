@@ -1,4 +1,8 @@
-"""Memorial diamond (紀念鑽石) style defaults — shop catalog + admin seed."""
+"""Memorial diamond (紀念鑽石) color products — shop catalog + admin seed.
+
+Product = gem COLOR (白鑽/黃鑽/藍鑽/粉鑽). Images inside = diamond SHAPES.
+Legacy 滿月/寵物/結髮/全家福/生命 series rows are unpublished on seed.
+"""
 
 from __future__ import annotations
 
@@ -9,67 +13,120 @@ DIAMOND_CARATS = [
     "0.1", "0.2", "0.3", "0.5", "0.6", "0.7", "0.8", "0.9", "1.0", "1.5", "2.0", "3.0",
 ]
 
-# Static memorial styles (shop linking keys). Admin edits overlay name/image/color.
-DIAMOND_STYLES: list[dict[str, Any]] = [
-    {
-        "id": "diamond-first-love",
-        "styleKey": "diamond-first-love",
-        "nameZh": "滿月鑽石",
-        "nameEn": "First Love Diamond",
-        "descriptionZh": "以寶寶胎髮培育的紀念鑽石（裸鑽試算，不含鑲嵌）",
-        "golds": [],
-        "carats": DIAMOND_CARATS,
-        "images": {"white": ["/static/images/hero/imprint-diamond-newborn-baby-necklace.jpg"]},
-    },
-    {
-        "id": "diamond-pet",
-        "styleKey": "diamond-pet",
-        "nameZh": "寵物鑽石",
-        "nameEn": "Pet Diamond",
-        "descriptionZh": "以毛孩毛髮培育的紀念鑽石（裸鑽試算，不含鑲嵌）",
-        "golds": [],
-        "carats": DIAMOND_CARATS,
-        "images": {"white": ["/static/images/hero/imprint-diamond-pet-memorial-cat.jpg"]},
-    },
-    {
-        "id": "diamond-love",
-        "styleKey": "diamond-love",
-        "nameZh": "結髮鑽石",
-        "nameEn": "Love Diamond",
-        "descriptionZh": "以夫妻髮絲共同培育的紀念鑽石（裸鑽試算，不含鑲嵌）",
-        "golds": [],
-        "carats": DIAMOND_CARATS,
-        "images": {"white": ["/static/images/hero/imprint-diamond-wedding-couple-ring.jpg"]},
-    },
-    {
-        "id": "diamond-family",
-        "styleKey": "diamond-family",
-        "nameZh": "全家福鑽石",
-        "nameEn": "Family Diamond",
-        "descriptionZh": "集合全家人髮絲培育的紀念鑽石（裸鑽試算，不含鑲嵌）",
-        "golds": [],
-        "carats": DIAMOND_CARATS,
-        "images": {"white": ["/static/images/hero/imprint-diamond-family-portrait-jewelry.jpg"]},
-    },
-    {
-        "id": "diamond-heirloom",
-        "styleKey": "diamond-heirloom",
-        "nameZh": "生命鑽石",
-        "nameEn": "Heirloom Diamond",
-        "descriptionZh": "以親人毛髮或骨灰培育的紀念鑽石（裸鑽試算，不含鑲嵌）",
-        "golds": [],
-        "carats": DIAMOND_CARATS,
-        "images": {"white": ["/static/images/hero/imprint-diamond-heirloom-memorial.jpg"]},
-    },
+VALID_DIAMOND_COLORS = frozenset({"white", "yellow", "blue", "pink"})
+
+DIAMOND_MATRIX_SHAPES: list[dict[str, str]] = [
+    {"id": "round", "labelZh": "圓形", "labelEn": "Round"},
+    {"id": "marquise", "labelZh": "馬眼型", "labelEn": "Marquise"},
+    {"id": "oval", "labelZh": "橢圓形", "labelEn": "Oval"},
+    {"id": "princess", "labelZh": "公主方", "labelEn": "Princess"},
+    {"id": "trilliant", "labelZh": "三角形", "labelEn": "Trilliant"},
+    {"id": "emerald", "labelZh": "祖母綠形", "labelEn": "Emerald"},
+    {"id": "heart", "labelZh": "心形", "labelEn": "Heart"},
+    {"id": "radiant", "labelZh": "雷地恩形", "labelEn": "Radiant"},
+    {"id": "pear", "labelZh": "梨形", "labelEn": "Pear"},
+    {"id": "cushion", "labelZh": "枕形", "labelEn": "Cushion"},
 ]
 
-VALID_DIAMOND_COLORS = frozenset({"white", "yellow", "blue", "pink"})
+VALID_DIAMOND_SHAPES = frozenset(s["id"] for s in DIAMOND_MATRIX_SHAPES)
+
+# Old series products (滿月/寵物/…) — retired from admin listing + shop catalog.
+LEGACY_SERIES_STYLE_KEYS = frozenset(
+    {
+        "diamond-first-love",
+        "diamond-pet",
+        "diamond-love",
+        "diamond-family",
+        "diamond-heirloom",
+    }
+)
+
+_LEGACY_LIFESTYLE_IMAGE_RE = re.compile(
+    r"(?:^|/)(?:static/)?images/hero/imprint-diamond-",
+    re.IGNORECASE,
+)
+_GEM_COLOR_IMAGE_RE = re.compile(
+    r"(?:^|/)(?:static/)?images/diamonds/colors/(?:white|yellow|blue|pink)\.png$",
+    re.IGNORECASE,
+)
+
 STYLE_KEY_RE = re.compile(r"^diamond-[a-z0-9][a-z0-9-]{0,40}$")
 _SLUG_RE = re.compile(r"[^a-z0-9]+")
 
 
+def matrix_shape_image_url(shape: str, color: str) -> str:
+    """Bundled matrix PNG for shape × color."""
+    shape_id = str(shape or "round").strip().lower()
+    if shape_id not in VALID_DIAMOND_SHAPES:
+        shape_id = "round"
+    color_id = str(color or "white").strip().lower()
+    if color_id not in VALID_DIAMOND_COLORS:
+        color_id = "white"
+    return f"/static/images/diamonds/matrix/{shape_id}-{color_id}.png"
+
+
+def default_shape_images(color: str) -> dict[str, list[str]]:
+    """All shape image slots for one color product."""
+    return {
+        shape["id"]: [matrix_shape_image_url(shape["id"], color)]
+        for shape in DIAMOND_MATRIX_SHAPES
+    }
+
+
+def _color_product(
+    color: str,
+    name_zh: str,
+    name_en: str,
+    description_zh: str,
+) -> dict[str, Any]:
+    key = f"diamond-{color}"
+    return {
+        "id": key,
+        "styleKey": key,
+        "nameZh": name_zh,
+        "nameEn": name_en,
+        "descriptionZh": description_zh,
+        "defaultColor": color,
+        "golds": [],
+        "carats": DIAMOND_CARATS,
+        "images": default_shape_images(color),
+    }
+
+
+# Color = product. Shape images live inside each color row.
+DIAMOND_COLOR_PRODUCTS: list[dict[str, Any]] = [
+    _color_product(
+        "white",
+        "白鑽",
+        "White Diamond",
+        "紀念白鑽（裸鑽試算，不含鑲嵌）",
+    ),
+    _color_product(
+        "yellow",
+        "黃鑽",
+        "Yellow Diamond",
+        "紀念黃鑽（裸鑽試算，不含鑲嵌）",
+    ),
+    _color_product(
+        "blue",
+        "藍鑽",
+        "Blue Diamond",
+        "紀念藍鑽（裸鑽試算，不含鑲嵌）",
+    ),
+    _color_product(
+        "pink",
+        "粉鑽",
+        "Pink Diamond",
+        "紀念粉鑽（裸鑽試算，不含鑲嵌）",
+    ),
+]
+
+# Back-compat alias for older imports/tests.
+DIAMOND_STYLES = DIAMOND_COLOR_PRODUCTS
+
+
 def ensure_product_style_key_column(cur) -> None:
-    """Add products.style_key for shop linking (memorial diamond styles)."""
+    """Add products.style_key for shop linking (memorial diamond colors)."""
     cur.execute("alter table products add column if not exists style_key text")
     cur.execute(
         """
@@ -77,6 +134,53 @@ def ensure_product_style_key_column(cur) -> None:
         on products (style_key)
         where style_key is not null
         """
+    )
+
+
+def ensure_memorial_diamond_tombstone_table(cur) -> None:
+    """Tombstones stop ensure/merge from resurrecting admin-deleted color products."""
+    cur.execute(
+        """
+        create table if not exists memorial_diamond_style_tombstones (
+            style_key text primary key,
+            deleted_at timestamptz not null default now()
+        )
+        """
+    )
+
+
+def list_tombstoned_style_keys(cur) -> set[str]:
+    ensure_memorial_diamond_tombstone_table(cur)
+    cur.execute("select style_key from memorial_diamond_style_tombstones")
+    return {str(row["style_key"]) for row in cur.fetchall() if row.get("style_key")}
+
+
+def record_style_tombstone(cur, style_key: str | None) -> bool:
+    """Mark a known color style_key as manually deleted. Returns True if recorded."""
+    key = normalize_style_key(style_key)
+    if not key or key not in known_style_keys():
+        return False
+    ensure_memorial_diamond_tombstone_table(cur)
+    cur.execute(
+        """
+        insert into memorial_diamond_style_tombstones (style_key)
+        values (%s)
+        on conflict (style_key) do update set deleted_at = now()
+        """,
+        (key,),
+    )
+    return True
+
+
+def clear_style_tombstone(cur, style_key: str | None) -> None:
+    """Allow ensure/seed again after admin recreates that color product."""
+    key = normalize_style_key(style_key)
+    if not key:
+        return
+    ensure_memorial_diamond_tombstone_table(cur)
+    cur.execute(
+        "delete from memorial_diamond_style_tombstones where style_key = %s",
+        (key,),
     )
 
 
@@ -97,23 +201,152 @@ def style_key_from_name_en(name_en: str | None) -> str | None:
 
 
 def known_style_keys() -> set[str]:
-    return {str(s["styleKey"]) for s in DIAMOND_STYLES}
+    return {str(s["styleKey"]) for s in DIAMOND_COLOR_PRODUCTS}
+
+
+def color_from_style_key(style_key: str | None) -> str | None:
+    key = str(style_key or "").strip().lower()
+    if key.startswith("diamond-"):
+        color = key[len("diamond-") :]
+        if color in VALID_DIAMOND_COLORS:
+            return color
+    return None
+
+
+def is_legacy_lifestyle_image(path: str | None) -> bool:
+    """True for series lifestyle heroes formerly used as diamond product thumbs."""
+    normalized = str(path or "").replace("\\", "/")
+    return bool(_LEGACY_LIFESTYLE_IMAGE_RE.search(normalized))
+
+
+def is_legacy_gem_color_image(path: str | None) -> bool:
+    """True for color-swatch PNGs wrongly used as product image slots."""
+    normalized = str(path or "").replace("\\", "/")
+    return bool(_GEM_COLOR_IMAGE_RE.search(normalized))
+
+
+def _insert_product_image(cur, product_id: Any, slot: str, url: str, sort_order: int) -> None:
+    cur.execute(
+        """
+        insert into product_images (product_id, color, file_path, sort_order)
+        values (%s, %s, %s, %s)
+        """,
+        (product_id, slot, url, sort_order),
+    )
+
+
+def _seed_shape_images(cur, product_id: Any, color: str) -> None:
+    sort_order = 0
+    for shape in DIAMOND_MATRIX_SHAPES:
+        _insert_product_image(
+            cur,
+            product_id,
+            shape["id"],
+            matrix_shape_image_url(shape["id"], color),
+            sort_order,
+        )
+        sort_order += 1
+
+
+def retire_legacy_series_products(cur) -> int:
+    """Unpublish 滿月/寵物/… rows and clear style_key so color keys own linking.
+
+    Soft-retire only — rows stay for history/orders; not in published catalog.
+    """
+    keys = sorted(LEGACY_SERIES_STYLE_KEYS)
+    if not keys:
+        return 0
+    cur.execute(
+        """
+        update products
+        set is_published = false,
+            style_key = null,
+            updated_at = now()
+        where category = 'diamond'
+          and style_key = any(%s)
+        """,
+        (keys,),
+    )
+    return int(cur.rowcount or 0)
+
+
+def sync_memorial_diamond_seed_images(cur, product_id: Any, color: str | None = None) -> int:
+    """Drop lifestyle/color-swatch thumbs; fill missing shape slots for this color.
+
+    Custom shape uploads kept. Returns how many shape rows inserted.
+    """
+    gem_color = str(color or "white").strip().lower()
+    if gem_color not in VALID_DIAMOND_COLORS:
+        gem_color = "white"
+
+    cur.execute(
+        "select id, color, file_path from product_images where product_id = %s",
+        (product_id,),
+    )
+    rows = list(cur.fetchall() or [])
+    for row in rows:
+        slot = str(row.get("color") or "").strip().lower()
+        path = row.get("file_path")
+        drop = (
+            is_legacy_lifestyle_image(path)
+            or is_legacy_gem_color_image(path)
+            or (slot and slot not in VALID_DIAMOND_SHAPES)
+        )
+        if drop:
+            cur.execute("delete from product_images where id = %s", (row["id"],))
+
+    cur.execute(
+        """
+        select color, coalesce(max(sort_order), -1) as max_sort
+        from product_images
+        where product_id = %s
+        group by color
+        """,
+        (product_id,),
+    )
+    present = {str(r["color"]).lower(): int(r["max_sort"]) for r in (cur.fetchall() or [])}
+    next_sort = max(present.values(), default=-1) + 1
+    inserted = 0
+    for shape in DIAMOND_MATRIX_SHAPES:
+        shape_id = shape["id"]
+        if shape_id in present:
+            continue
+        _insert_product_image(
+            cur,
+            product_id,
+            shape_id,
+            matrix_shape_image_url(shape_id, gem_color),
+            next_sort,
+        )
+        next_sort += 1
+        inserted += 1
+    return inserted
 
 
 def ensure_memorial_diamond_products(cur) -> int:
-    """Upsert the five shop memorial styles into products for admin editing.
+    """Upsert four color products; retire legacy five-series rows.
 
-    Returns how many rows were inserted.
+    Inserts missing color rows unless admin tombstoned that style_key.
+    Syncs shape images on every call (admin list load).
+
+    Returns how many product rows were inserted.
     """
     ensure_product_style_key_column(cur)
+    retire_legacy_series_products(cur)
+    tombstoned = list_tombstoned_style_keys(cur)
     inserted = 0
-    for index, style in enumerate(DIAMOND_STYLES):
-        key = str(style["styleKey"])
+    for index, product in enumerate(DIAMOND_COLOR_PRODUCTS):
+        key = str(product["styleKey"])
+        color = str(product["defaultColor"])
         cur.execute(
             "select id from products where style_key = %s limit 1",
             (key,),
         )
-        if cur.fetchone():
+        row = cur.fetchone()
+        if row:
+            sync_memorial_diamond_seed_images(cur, row["id"], color)
+            continue
+        if key in tombstoned:
             continue
         cur.execute(
             """
@@ -125,95 +358,145 @@ def ensure_memorial_diamond_products(cur) -> int:
             )
             values (
                 'diamond', %s, %s, %s, null,
-                'white', false, true, true, true,
+                %s, false, true, true, true,
                 true, now(), %s, %s
             )
             returning id
             """,
             (
-                style["nameZh"],
-                style.get("nameEn") or key,
-                style.get("descriptionZh"),
+                product["nameZh"],
+                product.get("nameEn") or key,
+                product.get("descriptionZh"),
+                color,
                 index,
                 key,
             ),
         )
-        row = cur.fetchone()
-        product_id = row["id"] if row else None
+        created = cur.fetchone()
+        product_id = created["id"] if created else None
         if not product_id:
             continue
         inserted += 1
-        images = (style.get("images") or {}).get("white") or []
-        for sort_order, url in enumerate(images):
-            cur.execute(
-                """
-                insert into product_images (product_id, color, file_path, sort_order)
-                values (%s, 'white', %s, %s)
-                """,
-                (product_id, url, sort_order),
-            )
+        _seed_shape_images(cur, product_id, color)
     return inserted
 
 
-def _static_entry(style: dict[str, Any]) -> dict[str, Any]:
+def _static_entry(product: dict[str, Any]) -> dict[str, Any]:
     images = {
-        color: list(urls)
-        for color, urls in (style.get("images") or {}).items()
+        shape: list(urls)
+        for shape, urls in (product.get("images") or {}).items()
         if isinstance(urls, list)
     }
+    color = str(product.get("defaultColor") or "white")
     return {
-        "id": style["id"],
-        "styleKey": style["styleKey"],
-        "nameZh": style["nameZh"],
-        "nameEn": style.get("nameEn"),
-        "descriptionZh": style.get("descriptionZh"),
-        "descriptionEn": style.get("descriptionEn"),
-        "defaultColor": style.get("defaultColor") or "white",
+        "id": product["id"],
+        "styleKey": product["styleKey"],
+        "nameZh": product["nameZh"],
+        "nameEn": product.get("nameEn"),
+        "descriptionZh": product.get("descriptionZh"),
+        "descriptionEn": product.get("descriptionEn"),
+        "defaultColor": color,
         "golds": [],
-        "carats": list(style.get("carats") or DIAMOND_CARATS),
-        "colors": list(images.keys()) or ["white"],
+        "carats": list(product.get("carats") or DIAMOND_CARATS),
+        "colors": [color],
         "images": images,
         "weights": {},
         "manualPrices": {},
         "draft": False,
+        "thumbUrl": (images.get("round") or [None])[0],
     }
 
 
-def merge_memorial_diamond_catalog(db_entries: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
-    """Static styles as base; DB products overlay name/images/colors by styleKey."""
+def _images_shape_slots(
+    images: dict[str, Any] | None,
+    base_images: dict[str, list[str]],
+) -> dict[str, list[str]]:
+    """Keep shape-keyed URLs; drop lifestyle/gem-swatch; fill missing shapes."""
+    cleaned: dict[str, list[str]] = {}
+    for slot, urls in (images or {}).items():
+        if not isinstance(urls, list):
+            continue
+        shape = str(slot).strip().lower()
+        if shape not in VALID_DIAMOND_SHAPES:
+            continue
+        kept = [
+            str(u)
+            for u in urls
+            if u
+            and not is_legacy_lifestyle_image(str(u))
+            and not is_legacy_gem_color_image(str(u))
+        ]
+        if kept:
+            cleaned[shape] = kept
+    for shape, urls in base_images.items():
+        if shape not in cleaned and urls:
+            cleaned[shape] = list(urls)
+    return cleaned or {s: list(u) for s, u in base_images.items()}
+
+
+def merge_memorial_diamond_catalog(
+    db_entries: list[dict[str, Any]] | None,
+    excluded_style_keys: set[str] | frozenset[str] | None = None,
+) -> list[dict[str, Any]]:
+    """Static color products as base; DB overlays name/images by styleKey.
+
+    ``excluded_style_keys`` (admin tombstones) skip static fallback when no DB row.
+    """
+    excluded = {str(k).strip().lower() for k in (excluded_style_keys or set()) if k}
     by_key: dict[str, dict[str, Any]] = {}
     extras: list[dict[str, Any]] = []
     for entry in db_entries or []:
         key = str(entry.get("styleKey") or "").strip()
+        # Skip retired series keys if any still appear without style_key clear.
+        if key in LEGACY_SERIES_STYLE_KEYS:
+            continue
         if key in known_style_keys():
             by_key[key] = entry
         else:
             extras.append(entry)
 
     merged: list[dict[str, Any]] = []
-    for style in DIAMOND_STYLES:
-        key = str(style["styleKey"])
-        base = _static_entry(style)
+    for product in DIAMOND_COLOR_PRODUCTS:
+        key = str(product["styleKey"])
+        base = _static_entry(product)
         db = by_key.get(key)
         if not db:
+            if key in excluded:
+                continue
             merged.append(base)
             continue
-        images = db.get("images") if isinstance(db.get("images"), dict) else None
-        if not images:
+        raw_images = db.get("images") if isinstance(db.get("images"), dict) else None
+        if not raw_images:
             thumb = db.get("thumbUrl")
-            if thumb:
-                color_key = str(db.get("defaultColor") or "white")
-                images = {color_key: [str(thumb)]}
-            else:
-                images = base["images"]
-        colors = db.get("colors") if isinstance(db.get("colors"), list) and db.get("colors") else list(images.keys())
-        carats = db.get("carats") if isinstance(db.get("carats"), list) and db.get("carats") else list(DIAMOND_CARATS)
+            if (
+                thumb
+                and not is_legacy_lifestyle_image(str(thumb))
+                and not is_legacy_gem_color_image(str(thumb))
+            ):
+                raw_images = {"round": [str(thumb)]}
+        images = _images_shape_slots(raw_images, base["images"])
+        carats = (
+            db.get("carats")
+            if isinstance(db.get("carats"), list) and db.get("carats")
+            else list(DIAMOND_CARATS)
+        )
         thumb = db.get("thumbUrl")
-        if not thumb:
-            for urls in images.values():
-                if urls:
-                    thumb = urls[0]
-                    break
+        if (
+            not thumb
+            or is_legacy_lifestyle_image(str(thumb))
+            or is_legacy_gem_color_image(str(thumb))
+        ):
+            thumb = (images.get("round") or [None])[0]
+            if not thumb:
+                for urls in images.values():
+                    if urls:
+                        thumb = urls[0]
+                        break
+        color = (
+            db.get("defaultColor")
+            or color_from_style_key(key)
+            or base["defaultColor"]
+        )
         merged.append(
             {
                 **base,
@@ -221,12 +504,16 @@ def merge_memorial_diamond_catalog(db_entries: list[dict[str, Any]] | None) -> l
                 "styleKey": key,
                 "nameZh": db.get("nameZh") or base["nameZh"],
                 "nameEn": db.get("nameEn") or base.get("nameEn"),
-                "descriptionZh": db.get("descriptionZh") if db.get("descriptionZh") is not None else base.get("descriptionZh"),
+                "descriptionZh": (
+                    db.get("descriptionZh")
+                    if db.get("descriptionZh") is not None
+                    else base.get("descriptionZh")
+                ),
                 "descriptionEn": db.get("descriptionEn"),
-                "defaultColor": db.get("defaultColor") or base["defaultColor"],
+                "defaultColor": color,
                 "golds": [],
                 "carats": [str(c) for c in carats],
-                "colors": colors,
+                "colors": [color],
                 "images": images,
                 "thumbUrl": thumb or None,
                 "draft": bool(db.get("draft")),
@@ -236,15 +523,24 @@ def merge_memorial_diamond_catalog(db_entries: list[dict[str, Any]] | None) -> l
     for entry in extras:
         if entry.get("draft"):
             continue
+        # Never re-surface retired series via extras (style_key already cleared).
+        entry_key = str(entry.get("styleKey") or entry.get("id") or "")
+        if entry_key in LEGACY_SERIES_STYLE_KEYS:
+            continue
         images = entry.get("images") if isinstance(entry.get("images"), dict) else {}
-        carats = entry.get("carats") if isinstance(entry.get("carats"), list) and entry.get("carats") else list(DIAMOND_CARATS)
+        carats = (
+            entry.get("carats")
+            if isinstance(entry.get("carats"), list) and entry.get("carats")
+            else list(DIAMOND_CARATS)
+        )
+        color = str(entry.get("defaultColor") or "white")
         merged.append(
             {
                 **entry,
                 "golds": [],
                 "carats": [str(c) for c in carats],
                 "images": images or {},
-                "colors": entry.get("colors") or list((images or {}).keys()) or ["white"],
+                "colors": entry.get("colors") or [color],
             }
         )
     return merged

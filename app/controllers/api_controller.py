@@ -12,12 +12,11 @@ from fastapi.responses import JSONResponse
 
 from app.auth import enforce_rate_limit, get_user_id, is_admin, require_admin
 from app.auth_totp_service import step_up_from_body
-from app.bot_gold import (
-    FALLBACK_XAG,
-    FALLBACK_XPT,
-    build_payload_from_cache,
-    fetch_bot_gold_quote,
-    invalidate_bot_gold_memory_cache,
+from app.bot_gold import build_payload_from_cache
+from app.gold_scrape_job import (
+    persist_gold_price_cache,
+    quote_fields_from_payload,
+    scrape_and_persist_gold,
 )
 from app.catalog import (
     build_catalog_product,
@@ -27,7 +26,7 @@ from app.catalog import (
     load_product_children,
     normalize_catalog_detail,
 )
-from app.memorial_diamonds import merge_memorial_diamond_catalog
+from app.memorial_diamonds import list_tombstoned_style_keys, merge_memorial_diamond_catalog
 from app.product_categories import build_category_meta, fetch_categories
 from app.orders import (
     attach_order_display,
@@ -167,23 +166,39 @@ async def submit_quote_request(request: Request) -> dict:
     return {"ok": True}
 
 
-@router.get("/bot-gold", response_model=GoldQuote)
-async def bot_gold() -> JSONResponse:
-    """Public gold quote — reads ``gold_price_cache`` (same source as orders + /api/prices)."""
+def _gold_cache_row() -> dict | None:
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute("select * from gold_price_cache where id = 1")
-        row = cur.fetchone()
+        return cur.fetchone()
+
+
+def _bot_gold_from_row(row: dict) -> JSONResponse:
+    payload = build_payload_from_cache(row)
+    return JSONResponse(
+        content=GoldQuote.model_validate(payload).model_dump(),
+        headers={"Cache-Control": "no-store"},
+    )
+
+
+@router.get("/bot-gold", response_model=GoldQuote)
+async def bot_gold() -> JSONResponse:
+    """Public gold quote — DB ``gold_price_cache`` only (no scrape on poll).
+
+    Empty-cache bootstrap may scrape once under the shared lock, then persist.
+    """
+    row = _gold_cache_row()
     if row and float(row.get("xau_per_gram") or 0) > 0:
-        payload = build_payload_from_cache(row)
-        return JSONResponse(
-            content=GoldQuote.model_validate(payload).model_dump(),
-            headers={"Cache-Control": "no-store"},
-        )
+        return _bot_gold_from_row(row)
     try:
-        payload = await fetch_bot_gold_quote()
+        payload = await scrape_and_persist_gold(force=True)
     except Exception as err:  # noqa: BLE001
         log.exception("bot-gold cache empty and live fetch failed")
         raise HTTPException(status_code=502, detail="金價暫時無法取得，請稍後再試") from err
+    if payload is None:
+        row = _gold_cache_row()
+        if row and float(row.get("xau_per_gram") or 0) > 0:
+            return _bot_gold_from_row(row)
+        raise HTTPException(status_code=502, detail="金價暫時無法取得，請稍後再試")
     return JSONResponse(
         content=GoldQuote.model_validate(payload).model_dump(),
         headers={"Cache-Control": "no-store"},
@@ -195,21 +210,20 @@ async def bot_gold_refresh(request: Request) -> JSONResponse:
     """Public button refresh — live scrape + persist. Rate-limited; no Bearer secret.
 
     Distinct from ``POST /api/gold-refresh`` (GHA-only, Bearer ``GOLD_REFRESH_SECRET``).
+    Shared 90s min scrape interval with the lifespan loop.
     """
     if not enforce_rate_limit(request, action="bot-gold-refresh", limit=5, window_seconds=600):
         raise HTTPException(status_code=429, detail="請求過於頻繁，請稍後再試")
     try:
-        payload = await fetch_bot_gold_quote(force=True)
+        payload = await scrape_and_persist_gold(force=True)
     except Exception as err:  # noqa: BLE001
         log.exception("bot-gold refresh scrape failed")
         raise HTTPException(status_code=502, detail="金價暫時無法取得，請稍後再試") from err
-    xau, xag, xpt, stamp, source = _quote_fields_from_payload(payload)
-    if xau <= 0:
-        raise HTTPException(status_code=502, detail="金價資料無效")
-    _persist_gold_price_cache(
-        xau=xau, xag=xag, xpt=xpt, bot_posted_at=stamp, source=source
-    )
-    invalidate_bot_gold_memory_cache()
+    if payload is None:
+        row = _gold_cache_row()
+        if row and float(row.get("xau_per_gram") or 0) > 0:
+            return _bot_gold_from_row(row)
+        raise HTTPException(status_code=502, detail="金價暫時無法取得，請稍後再試")
     out = dict(payload)
     out["refreshed"] = True
     if isinstance(out.get("quote"), dict):
@@ -292,6 +306,7 @@ def catalog(
 
     detail_mode = normalize_catalog_detail(detail)
 
+    diamond_tombstones: set[str] = set()
     with get_connection() as conn, conn.cursor() as cur:
         products = fetch_catalog_rows(cur, category=category, include_drafts=include_drafts)
         product_ids = [row["id"] for row in products]
@@ -299,6 +314,8 @@ def catalog(
         category_rows = fetch_categories(cur)
         cat_order = [row["slug"] for row in category_rows]
         cat_meta = build_category_meta(cur)
+        if category in (None, "", "diamond"):
+            diamond_tombstones = list_tombstoned_style_keys(cur)
     payload = build_catalog_response(
         products,
         variants_by_product,
@@ -311,7 +328,8 @@ def catalog(
     # Always expose memorial diamond styles; DB overlays name/image/color.
     if category in (None, "", "diamond"):
         categories["diamond"] = merge_memorial_diamond_catalog(
-            categories.get("diamond") or []
+            categories.get("diamond") or [],
+            excluded_style_keys=diamond_tombstones,
         )
         order = list(payload.get("categoryOrder") or [])
         if "diamond" not in order:
@@ -582,41 +600,9 @@ def gold_price() -> dict:
     }
 
 
-def _quote_fields_from_payload(payload: dict) -> tuple[float, float, float, str | None, str]:
-    """Extract cache columns from fetch_bot_gold_quote / gold-quote.json shape."""
-    quote = payload.get("quote") or {}
-    metals = payload.get("metals") or {}
-    xau = float(quote.get("sell") or metals.get("XAU") or 0)
-    xag = float(metals.get("XAG") or FALLBACK_XAG)
-    xpt = float(metals.get("XPT") or FALLBACK_XPT)
-    source = str(quote.get("source") or "allbeauty")
-    stamp = quote.get("bot_posted_at")
-    return xau, xag, xpt, stamp if stamp is None or isinstance(stamp, str) else str(stamp), source
-
-
-def _persist_gold_price_cache(
-    *,
-    xau: float,
-    xag: float,
-    xpt: float,
-    bot_posted_at: str | None,
-    source: str,
-) -> None:
-    with get_connection() as conn, conn.cursor() as cur:
-        cur.execute(
-            """
-            insert into gold_price_cache (id, xau_per_gram, xpt_per_gram, xag_per_gram, bot_posted_at, source, fetched_at)
-            values (1, %s, %s, %s, %s, %s, now())
-            on conflict (id) do update set
-              xau_per_gram = excluded.xau_per_gram,
-              xpt_per_gram = excluded.xpt_per_gram,
-              xag_per_gram = excluded.xag_per_gram,
-              bot_posted_at = excluded.bot_posted_at,
-              source = excluded.source,
-              fetched_at = now()
-            """,
-            (xau, xpt, xag, bot_posted_at, source),
-        )
+# Compat aliases for tests / callers that imported private helpers.
+_quote_fields_from_payload = quote_fields_from_payload
+_persist_gold_price_cache = persist_gold_price_cache
 
 
 @router.post("/gold-refresh")
@@ -641,10 +627,10 @@ async def gold_refresh(request: Request) -> dict:
         body = {}
 
     if body.get("quote") or body.get("metals"):
-        xau, xag, xpt, stamp, source = _quote_fields_from_payload(body)
+        xau, xag, xpt, stamp, source = quote_fields_from_payload(body)
         if xau <= 0:
             raise HTTPException(status_code=400, detail="金價資料無效")
-        _persist_gold_price_cache(
+        persist_gold_price_cache(
             xau=xau, xag=xag, xpt=xpt, bot_posted_at=stamp, source=source
         )
         return {
@@ -656,16 +642,22 @@ async def gold_refresh(request: Request) -> dict:
         }
 
     try:
-        payload = await fetch_bot_gold_quote()
+        payload = await scrape_and_persist_gold(force=True)
     except Exception as err:  # noqa: BLE001
         log.exception("gold-refresh fetch failed")
         raise HTTPException(status_code=502, detail="金價暫時無法取得，請稍後再試") from err
-    xau, xag, xpt, stamp, source = _quote_fields_from_payload(payload)
-    if xau <= 0:
-        raise HTTPException(status_code=502, detail="金價資料無效")
-    _persist_gold_price_cache(
-        xau=xau, xag=xag, xpt=xpt, bot_posted_at=stamp, source=source
-    )
+    if payload is None:
+        row = _gold_cache_row()
+        if row and float(row.get("xau_per_gram") or 0) > 0:
+            return {
+                "ok": True,
+                "xau_per_gram": float(row["xau_per_gram"]),
+                "xag_per_gram": float(row["xag_per_gram"]),
+                "bot_posted_at": row.get("bot_posted_at"),
+                "throttled": True,
+            }
+        raise HTTPException(status_code=502, detail="金價暫時無法取得，請稍後再試")
+    xau, xag, xpt, stamp, source = quote_fields_from_payload(payload)
     return {
         "ok": True,
         "xau_per_gram": xau,

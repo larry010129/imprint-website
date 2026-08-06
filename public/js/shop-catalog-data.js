@@ -1058,11 +1058,11 @@
     ],
     "diamond": [
       {
-        "id": "diamond-first-love",
-        "styleKey": "diamond-first-love",
-        "nameZh": "滿月鑽石",
-        "nameEn": "First Love Diamond",
-        "descriptionZh": "以寶寶胎髮培育的紀念鑽石（裸鑽試算，不含鑲嵌）",
+        "id": "diamond-white",
+        "styleKey": "diamond-white",
+        "nameZh": "白鑽",
+        "nameEn": "White Diamond",
+        "descriptionZh": "紀念白鑽（裸鑽試算，不含鑲嵌）",
         "descriptionEn": null,
         "defaultColor": "white",
         "golds": [],
@@ -1080,26 +1080,32 @@
           "2.0",
           "3.0"
         ],
-        "colors": [
-          "white"
-        ],
+        "colors": ["white"],
         "images": {
-          "white": [
-            "/static/images/hero/imprint-diamond-newborn-baby-necklace.jpg"
-          ]
+          "round": ["/static/images/diamonds/matrix/round-white.png"],
+          "marquise": ["/static/images/diamonds/matrix/marquise-white.png"],
+          "oval": ["/static/images/diamonds/matrix/oval-white.png"],
+          "princess": ["/static/images/diamonds/matrix/princess-white.png"],
+          "trilliant": ["/static/images/diamonds/matrix/trilliant-white.png"],
+          "emerald": ["/static/images/diamonds/matrix/emerald-white.png"],
+          "heart": ["/static/images/diamonds/matrix/heart-white.png"],
+          "radiant": ["/static/images/diamonds/matrix/radiant-white.png"],
+          "pear": ["/static/images/diamonds/matrix/pear-white.png"],
+          "cushion": ["/static/images/diamonds/matrix/cushion-white.png"]
         },
+        "thumbUrl": "/static/images/diamonds/matrix/round-white.png",
         "weights": {},
         "manualPrices": {},
         "draft": false
       },
       {
-        "id": "diamond-pet",
-        "styleKey": "diamond-pet",
-        "nameZh": "寵物鑽石",
-        "nameEn": "Pet Diamond",
-        "descriptionZh": "以毛孩毛髮培育的紀念鑽石（裸鑽試算，不含鑲嵌）",
+        "id": "diamond-yellow",
+        "styleKey": "diamond-yellow",
+        "nameZh": "黃鑽",
+        "nameEn": "Yellow Diamond",
+        "descriptionZh": "紀念黃鑽（裸鑽試算，不含鑲嵌）",
         "descriptionEn": null,
-        "defaultColor": "white",
+        "defaultColor": "yellow",
         "golds": [],
         "carats": [
           "0.1",
@@ -1115,26 +1121,32 @@
           "2.0",
           "3.0"
         ],
-        "colors": [
-          "white"
-        ],
+        "colors": ["yellow"],
         "images": {
-          "white": [
-            "/static/images/hero/imprint-diamond-pet-memorial-cat.jpg"
-          ]
+          "round": ["/static/images/diamonds/matrix/round-yellow.png"],
+          "marquise": ["/static/images/diamonds/matrix/marquise-yellow.png"],
+          "oval": ["/static/images/diamonds/matrix/oval-yellow.png"],
+          "princess": ["/static/images/diamonds/matrix/princess-yellow.png"],
+          "trilliant": ["/static/images/diamonds/matrix/trilliant-yellow.png"],
+          "emerald": ["/static/images/diamonds/matrix/emerald-yellow.png"],
+          "heart": ["/static/images/diamonds/matrix/heart-yellow.png"],
+          "radiant": ["/static/images/diamonds/matrix/radiant-yellow.png"],
+          "pear": ["/static/images/diamonds/matrix/pear-yellow.png"],
+          "cushion": ["/static/images/diamonds/matrix/cushion-yellow.png"]
         },
+        "thumbUrl": "/static/images/diamonds/matrix/round-yellow.png",
         "weights": {},
         "manualPrices": {},
         "draft": false
       },
       {
-        "id": "diamond-love",
-        "styleKey": "diamond-love",
-        "nameZh": "結髮鑽石",
-        "nameEn": "Love Diamond",
-        "descriptionZh": "以夫妻髮絲共同培育的紀念鑽石（裸鑽試算，不含鑲嵌）",
+        "id": "diamond-blue",
+        "styleKey": "diamond-blue",
+        "nameZh": "藍鑽",
+        "nameEn": "Blue Diamond",
+        "descriptionZh": "紀念藍鑽（裸鑽試算，不含鑲嵌）",
         "descriptionEn": null,
-        "defaultColor": "white",
+        "defaultColor": "blue",
         "golds": [],
         "carats": [
           "0.1",
@@ -1150,26 +1162,32 @@
           "2.0",
           "3.0"
         ],
-        "colors": [
-          "white"
-        ],
+        "colors": ["blue"],
         "images": {
-          "white": [
-            "/static/images/hero/imprint-diamond-wedding-couple-ring.jpg"
-          ]
+          "round": ["/static/images/diamonds/matrix/round-blue.png"],
+          "marquise": ["/static/images/diamonds/matrix/marquise-blue.png"],
+          "oval": ["/static/images/diamonds/matrix/oval-blue.png"],
+          "princess": ["/static/images/diamonds/matrix/princess-blue.png"],
+          "trilliant": ["/static/images/diamonds/matrix/trilliant-blue.png"],
+          "emerald": ["/static/images/diamonds/matrix/emerald-blue.png"],
+          "heart": ["/static/images/diamonds/matrix/heart-blue.png"],
+          "radiant": ["/static/images/diamonds/matrix/radiant-blue.png"],
+          "pear": ["/static/images/diamonds/matrix/pear-blue.png"],
+          "cushion": ["/static/images/diamonds/matrix/cushion-blue.png"]
         },
+        "thumbUrl": "/static/images/diamonds/matrix/round-blue.png",
         "weights": {},
         "manualPrices": {},
         "draft": false
       },
       {
-        "id": "diamond-family",
-        "styleKey": "diamond-family",
-        "nameZh": "全家福鑽石",
-        "nameEn": "Family Diamond",
-        "descriptionZh": "集合全家人髮絲培育的紀念鑽石（裸鑽試算，不含鑲嵌）",
+        "id": "diamond-pink",
+        "styleKey": "diamond-pink",
+        "nameZh": "粉鑽",
+        "nameEn": "Pink Diamond",
+        "descriptionZh": "紀念粉鑽（裸鑽試算，不含鑲嵌）",
         "descriptionEn": null,
-        "defaultColor": "white",
+        "defaultColor": "pink",
         "golds": [],
         "carats": [
           "0.1",
@@ -1185,49 +1203,20 @@
           "2.0",
           "3.0"
         ],
-        "colors": [
-          "white"
-        ],
+        "colors": ["pink"],
         "images": {
-          "white": [
-            "/static/images/hero/imprint-diamond-family-portrait-jewelry.jpg"
-          ]
+          "round": ["/static/images/diamonds/matrix/round-pink.png"],
+          "marquise": ["/static/images/diamonds/matrix/marquise-pink.png"],
+          "oval": ["/static/images/diamonds/matrix/oval-pink.png"],
+          "princess": ["/static/images/diamonds/matrix/princess-pink.png"],
+          "trilliant": ["/static/images/diamonds/matrix/trilliant-pink.png"],
+          "emerald": ["/static/images/diamonds/matrix/emerald-pink.png"],
+          "heart": ["/static/images/diamonds/matrix/heart-pink.png"],
+          "radiant": ["/static/images/diamonds/matrix/radiant-pink.png"],
+          "pear": ["/static/images/diamonds/matrix/pear-pink.png"],
+          "cushion": ["/static/images/diamonds/matrix/cushion-pink.png"]
         },
-        "weights": {},
-        "manualPrices": {},
-        "draft": false
-      },
-      {
-        "id": "diamond-heirloom",
-        "styleKey": "diamond-heirloom",
-        "nameZh": "生命鑽石",
-        "nameEn": "Heirloom Diamond",
-        "descriptionZh": "以親人毛髮或骨灰培育的紀念鑽石（裸鑽試算，不含鑲嵌）",
-        "descriptionEn": null,
-        "defaultColor": "white",
-        "golds": [],
-        "carats": [
-          "0.1",
-          "0.2",
-          "0.3",
-          "0.5",
-          "0.6",
-          "0.7",
-          "0.8",
-          "0.9",
-          "1.0",
-          "1.5",
-          "2.0",
-          "3.0"
-        ],
-        "colors": [
-          "white"
-        ],
-        "images": {
-          "white": [
-            "/static/images/hero/imprint-diamond-heirloom-memorial.jpg"
-          ]
-        },
+        "thumbUrl": "/static/images/diamonds/matrix/round-pink.png",
         "weights": {},
         "manualPrices": {},
         "draft": false

@@ -78,4 +78,29 @@
     </svg>
   </button>
 </div>
-<script src="/static/js/social-fab.js?v=6" defer></script>
+<script>
+(function () {
+  function injectFab() {
+    if (window.__socialFabInjected) return;
+    window.__socialFabInjected = true;
+    var s = document.createElement('script');
+    s.src = '/static/js/social-fab.js?v=7';
+    s.defer = true;
+    document.body.appendChild(s);
+  }
+  var isHome = document.body && document.body.classList.contains('page-home');
+  if (!isHome) {
+    injectFab();
+    return;
+  }
+  function schedule() {
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(injectFab, { timeout: 4000 });
+    } else {
+      setTimeout(injectFab, 1);
+    }
+  }
+  if (document.readyState === 'complete') schedule();
+  else window.addEventListener('load', schedule);
+})();
+</script>

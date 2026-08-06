@@ -1,13 +1,19 @@
-"""Parse Allbeauty (詮美) mobile gold board HTML → retail gold per-gram.
+"""Parse Allbeauty (詮美) mobile gold board HTML → retail metals per-gram.
 
 Source: https://www.allbeauty.com.tw/m/  (`#goldprice` table).
 
-Price field choice
-------------------
-Shop pricing uses **黃金條塊 / 售價** (bar gold sell).
+Board row → metal key (售價 column, unit 元/錢)
+----------------------------------------------
+| Board label   | Metal key | Used?                                      |
+| 黃金飾金      | XAU       | Yes — 9k/14k/18k jewelry + chain gold      |
+| 白金 Pt950    | XPT       | Yes — pt950 jewelry                        |
+| 白銀條塊      | XAG       | Yes — s925 jewelry (fine Ag × 0.925)       |
+| 黃金條塊      | —         | No (bar; not jewelry)                      |
+| 白金條塊      | —         | No (bar; not jewelry Pt950)                |
+| 鈀金條塊      | —         | Unused (no XPD / palladium products)       |
 
 Board quotes are 元/錢 (台錢); convert with CHIN_TO_GRAMS (3.75) → TWD/g
-for the rest of the stack.
+for the rest of the stack. Excel 鍊條價格.xlsx «黃金價» matches 黃金飾金.
 """
 
 from __future__ import annotations
@@ -19,15 +25,20 @@ from bs4 import BeautifulSoup, Tag
 
 from app.pricing import CHIN_TO_GRAMS
 
+JEWELRY_GOLD_LABEL = "黃金飾金"
+# Legacy label kept for table discovery / challenge heuristics only.
 BAR_GOLD_LABEL = "黃金條塊"
 PLATINUM_LABEL = "白金 Pt950"
+SILVER_BAR_LABEL = "白銀條塊"
 GOLDPRICE_TABLE_ID = "goldprice"
 
 # Plausible TWD/錢 bands for Taiwan retail boards (guards parse mistakes).
-BAR_GOLD_PER_CHIN_MIN = 8000.0
-BAR_GOLD_PER_CHIN_MAX = 40000.0
+JEWELRY_GOLD_PER_CHIN_MIN = 8000.0
+JEWELRY_GOLD_PER_CHIN_MAX = 40000.0
 PT950_PER_CHIN_MIN = 2000.0
 PT950_PER_CHIN_MAX = 20000.0
+SILVER_BAR_PER_CHIN_MIN = 50.0
+SILVER_BAR_PER_CHIN_MAX = 2000.0
 
 _STAMP_RE = re.compile(r"(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2})(?::(\d{2}))?")
 _AMOUNT_RE = re.compile(r"[\d,]+(?:\.\d+)?")
@@ -86,7 +97,8 @@ def _find_goldprice_table(soup: BeautifulSoup) -> Tag | None:
         return table
     for candidate in soup.find_all("table"):
         blob = text_of(candidate)
-        if BAR_GOLD_LABEL in blob and ("售價" in blob or "回收價" in blob):
+        has_gold = JEWELRY_GOLD_LABEL in blob or BAR_GOLD_LABEL in blob
+        if has_gold and ("售價" in blob or "回收價" in blob):
             return candidate
     return None
 
@@ -106,7 +118,7 @@ def _per_chin_in_band(amount: float | None, lo: float, hi: float) -> float | Non
 
 
 def find_allbeauty_retail_prices(html: str) -> dict[str, Any] | None:
-    """Parse `#goldprice` rows. Returns perGram (TWD/g) for 黃金條塊 售價."""
+    """Parse `#goldprice` rows. Returns perGram (TWD/g) for 黃金飾金 售價."""
     if not html or not html.strip():
         return None
     soup = BeautifulSoup(html, "html.parser")
@@ -114,14 +126,15 @@ def find_allbeauty_retail_prices(html: str) -> dict[str, Any] | None:
     if table is None:
         return None
 
-    bar_chin: float | None = None
+    jewelry_chin: float | None = None
     pt_chin: float | None = None
+    ag_chin: float | None = None
     for row in table.find_all("tr"):
-        if bar_chin is None:
-            bar_chin = _per_chin_in_band(
-                _sell_from_named_row(row, BAR_GOLD_LABEL),
-                BAR_GOLD_PER_CHIN_MIN,
-                BAR_GOLD_PER_CHIN_MAX,
+        if jewelry_chin is None:
+            jewelry_chin = _per_chin_in_band(
+                _sell_from_named_row(row, JEWELRY_GOLD_LABEL),
+                JEWELRY_GOLD_PER_CHIN_MIN,
+                JEWELRY_GOLD_PER_CHIN_MAX,
             )
         if pt_chin is None:
             pt_chin = _per_chin_in_band(
@@ -129,41 +142,56 @@ def find_allbeauty_retail_prices(html: str) -> dict[str, Any] | None:
                 PT950_PER_CHIN_MIN,
                 PT950_PER_CHIN_MAX,
             )
+        if ag_chin is None:
+            ag_chin = _per_chin_in_band(
+                _sell_from_named_row(row, SILVER_BAR_LABEL),
+                SILVER_BAR_PER_CHIN_MIN,
+                SILVER_BAR_PER_CHIN_MAX,
+            )
 
     # Broken markup sometimes nests cells without clean <tr>; scan flat tds.
-    if bar_chin is None:
+    if jewelry_chin is None or pt_chin is None or ag_chin is None:
         cells = table.find_all(["td", "th"])
         for idx, cell in enumerate(cells):
-            if not _label_matches(text_of(cell), BAR_GOLD_LABEL):
-                continue
+            label = text_of(cell)
             if idx + 1 >= len(cells):
                 break
-            bar_chin = _per_chin_in_band(
-                parse_twd_amount(text_of(cells[idx + 1])),
-                BAR_GOLD_PER_CHIN_MIN,
-                BAR_GOLD_PER_CHIN_MAX,
-            )
-            break
+            nxt = parse_twd_amount(text_of(cells[idx + 1]))
+            if jewelry_chin is None and _label_matches(label, JEWELRY_GOLD_LABEL):
+                jewelry_chin = _per_chin_in_band(
+                    nxt, JEWELRY_GOLD_PER_CHIN_MIN, JEWELRY_GOLD_PER_CHIN_MAX
+                )
+            elif pt_chin is None and _label_matches(label, PLATINUM_LABEL):
+                pt_chin = _per_chin_in_band(
+                    nxt, PT950_PER_CHIN_MIN, PT950_PER_CHIN_MAX
+                )
+            elif ag_chin is None and _label_matches(label, SILVER_BAR_LABEL):
+                ag_chin = _per_chin_in_band(
+                    nxt, SILVER_BAR_PER_CHIN_MIN, SILVER_BAR_PER_CHIN_MAX
+                )
 
-    if bar_chin is None:
+    if jewelry_chin is None:
         return None
 
-    per_gram = bar_chin / CHIN_TO_GRAMS
+    per_gram = jewelry_chin / CHIN_TO_GRAMS
     result: dict[str, Any] = {
         "perGram": per_gram,
-        "perChin": bar_chin,
+        "perChin": jewelry_chin,
         "stamp": _extract_stamp(table, soup),
-        "label": BAR_GOLD_LABEL,
+        "label": JEWELRY_GOLD_LABEL,
         "field": "售價",
     }
     if pt_chin is not None:
         result["xptPerGram"] = pt_chin / CHIN_TO_GRAMS
         result["xptPerChin"] = pt_chin
+    if ag_chin is not None:
+        result["xagPerGram"] = ag_chin / CHIN_TO_GRAMS
+        result["xagPerChin"] = ag_chin
     return result
 
 
 def find_gold_bar_prices(html: str) -> dict[str, float | str | None] | None:
-    """Backward-compatible entry used by `app.bot_gold` (Allbeauty 條塊 售價)."""
+    """Compat entry used by `app.bot_gold` (Allbeauty 黃金飾金 售價)."""
     parsed = find_allbeauty_retail_prices(html)
     if not parsed:
         return None
@@ -173,6 +201,8 @@ def find_gold_bar_prices(html: str) -> dict[str, float | str | None] | None:
     }
     if parsed.get("xptPerGram") is not None:
         out["xptPerGram"] = float(parsed["xptPerGram"])
+    if parsed.get("xagPerGram") is not None:
+        out["xagPerGram"] = float(parsed["xagPerGram"])
     return out
 
 
@@ -185,5 +215,6 @@ def is_bot_challenge(html: str | None) -> bool:
         return True
     if "captcha" in lowered and "allbeauty" not in lowered:
         return True
-    # Need either table id or bar-gold label; otherwise treat as unusable.
-    return GOLDPRICE_TABLE_ID not in html and BAR_GOLD_LABEL not in html
+    # Need table id or a known gold row label; otherwise treat as unusable.
+    has_label = JEWELRY_GOLD_LABEL in html or BAR_GOLD_LABEL in html
+    return GOLDPRICE_TABLE_ID not in html and not has_label

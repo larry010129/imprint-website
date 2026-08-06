@@ -1,9 +1,9 @@
 {% extends "layouts/base.html" %}
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/home-ghibli.css?v=31">
+<link rel="stylesheet" href="/static/css/home-ghibli.css?v=32">
 {% endblock %}
 {% block extra_head %}
-<link rel="preload" as="image" href="/static/images/hero/imprint-diamond-family-memorial-1200w.webp" type="image/webp" media="(max-width:860px)" fetchpriority="high">
+<link rel="preload" as="image" href="/static/images/hero/imprint-diamond-family-memorial-800w.webp" type="image/webp" media="(max-width:860px)" fetchpriority="high">
 <link rel="preload" as="image" href="/static/images/hero/imprint-diamond-family-memorial.webp" type="image/webp" media="(min-width:861px)" fetchpriority="high">
 <script type="application/ld+json">
 {
@@ -86,7 +86,10 @@
 
 <section class="gh-hero gh-hero--carousel" aria-label="首頁系列輪播">
   <div class="gh-hero__sky" aria-hidden="true">
-    <img data-cms-slot="hero-sky" src="/static/images/ghibli/hero-sky.jpg" alt="" width="1024" height="1024" loading="lazy" fetchpriority="low" decoding="async">
+    <picture>
+      <source srcset="/static/images/ghibli/hero-sky.webp" type="image/webp">
+      <img data-cms-slot="hero-sky" src="/static/images/ghibli/hero-sky.jpg" alt="" width="640" height="640" loading="lazy" fetchpriority="low" decoding="async">
+    </picture>
   </div>
   <div class="gh-hero__fade-bottom" aria-hidden="true"></div>
 
@@ -96,7 +99,7 @@
       <li class="hc-slide is-active" data-align="left" data-tone="warm">
         <div class="hc-media">
           <picture>
-            <source media="(max-width:860px)" srcset="/static/images/hero/imprint-diamond-family-memorial-1200w.webp" type="image/webp" sizes="100vw">
+            <source media="(max-width:860px)" srcset="/static/images/hero/imprint-diamond-family-memorial-800w.webp 800w, /static/images/hero/imprint-diamond-family-memorial-960w.webp 960w, /static/images/hero/imprint-diamond-family-memorial-1200w.webp 1200w" type="image/webp" sizes="100vw">
             <source srcset="/static/images/hero/imprint-diamond-family-memorial.webp" type="image/webp" sizes="100vw">
             <img src="/static/images/hero/imprint-diamond-family-memorial.jpg" alt="銘印鑽石品牌意象－家人手心捧著 DNA 紀念鑽石" width="2400" height="1165" sizes="100vw" loading="eager" fetchpriority="high" decoding="async" onerror="imgFallback(this)">
           </picture>
@@ -503,6 +506,27 @@
 </div>
 {% endblock %}
 {% block extra_scripts %}
-<script src="/static/js/home-wall.js?v=2" defer></script>
-<script src="/static/js/home-banners.js?v=3" defer></script>
+<script>
+(function () {
+  function inject(src) {
+    var s = document.createElement('script');
+    s.src = src;
+    s.defer = true;
+    document.body.appendChild(s);
+  }
+  function loadHomeExtras() {
+    inject('/static/js/home-wall.js?v=3');
+    inject('/static/js/home-banners.js?v=4');
+  }
+  function schedule() {
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(loadHomeExtras, { timeout: 5000 });
+    } else {
+      setTimeout(loadHomeExtras, 1);
+    }
+  }
+  if (document.readyState === 'complete') schedule();
+  else window.addEventListener('load', schedule);
+})();
+</script>
 {% endblock %}

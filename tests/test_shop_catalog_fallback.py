@@ -60,7 +60,7 @@ def test_shop_uses_local_pricing_still_api_gated():
     assert "&& !shopUsesApi()" in src.split("function shopUsesLocalPricing()")[1][:120]
 
 
-def test_admin_products_memorial_series_note():
+def test_admin_products_memorial_color_shape_note():
     src = ADMIN_PRODUCTS_JS.read_text(encoding="utf-8")
     assert "紀念鑽石" in src
     assert "不含金屬／價格" in src
@@ -68,6 +68,22 @@ def test_admin_products_memorial_series_note():
     assert "不在此商品 CRUD 管理" not in src
     assert "ap-image-slot-diamond-only" in src
     assert "MEMORIAL_DIAMOND_STYLE_KEYS" in src
+    assert "diamond-white" in src
+    assert "DIAMOND_SHAPE_SLOT_OPTIONS" in src
+    assert "鑽石切工" in src
+
+
+def test_shop_memorial_color_first_flow():
+    src = _shop_src()
+    assert "function memorialDiamondProductForColor" in src
+    assert "function applyMemorialDiamondProductColor" in src
+    assert "enterDiamondLooseProduct" not in src
+    assert "diamond-first-love" not in (
+        ROOT / "public" / "js" / "shop-catalog-data.js"
+    ).read_text(encoding="utf-8")
+    assert "diamond-white" in (
+        ROOT / "public" / "js" / "shop-catalog-data.js"
+    ).read_text(encoding="utf-8")
 
 
 def test_admin_products_upload_waits_for_crop_modal():

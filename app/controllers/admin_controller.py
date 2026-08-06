@@ -35,6 +35,7 @@ from app.admin_products import (
     ensure_product_variant_addon_price_column,
     first_published_at_value,
     is_auto_stock_product_image,
+    normalize_variant_row_for_admin,
     publish_readiness,
     purge_auto_stock_product_images,
     resolve_product_folder,
@@ -43,7 +44,11 @@ from app.admin_products import (
     valid_image_color,
     validate_product_fields,
 )
-from app.memorial_diamonds import ensure_memorial_diamond_products
+from app.memorial_diamonds import (
+    clear_style_tombstone,
+    ensure_memorial_diamond_products,
+    record_style_tombstone,
+)
 from app.chain_catalog import chain_catalog_for_admin
 from app.auth import (
     generate_invite_code,
@@ -806,22 +811,16 @@ def _products_with_children(cur) -> list[dict]:
     for row in rows:
         pid = row["id"]
         product = serialize_product_row(row)
-        product["variants"] = variants_by_product.get(pid, [])
+        product["variants"] = [
+            normalize_variant_row_for_admin(v)
+            for v in variants_by_product.get(pid, [])
+        ]
         # Never surface invented shop-product letter SKUs in admin editor.
         product["images"] = [
             image
             for image in images_by_product.get(pid, [])
             if not is_auto_stock_product_image(image.get("file_path"))
         ]
-        for variant in product["variants"]:
-            if variant.get("id") is not None:
-                variant["id"] = str(variant["id"])
-            if variant.get("product_id") is not None:
-                variant["product_id"] = str(variant["product_id"])
-            # Missing/null fixed 配鑽 total is OK — admin UI falls back to formula.
-            variant.setdefault("side_stone_total_twd", None)
-            variant.setdefault("addon_price_twd", None)
-            variant.setdefault("ear_clasp_price_twd", None)
         for image in product["images"]:
             if image.get("id") is not None:
                 image["id"] = str(image["id"])
@@ -835,20 +834,15 @@ def _product_with_children(cur, product: dict) -> dict:
     """Attach variants + real upload images to a serialized product row."""
     pid = product["id"]
     variants_by_product, images_by_product = load_product_children(cur, [pid])
-    product["variants"] = variants_by_product.get(pid, [])
+    product["variants"] = [
+        normalize_variant_row_for_admin(v)
+        for v in variants_by_product.get(pid, [])
+    ]
     product["images"] = [
         image
         for image in images_by_product.get(pid, [])
         if not is_auto_stock_product_image(image.get("file_path"))
     ]
-    for variant in product["variants"]:
-        if variant.get("id") is not None:
-            variant["id"] = str(variant["id"])
-        if variant.get("product_id") is not None:
-            variant["product_id"] = str(variant["product_id"])
-        variant.setdefault("side_stone_total_twd", None)
-        variant.setdefault("addon_price_twd", None)
-        variant.setdefault("ear_clasp_price_twd", None)
     for image in product["images"]:
         if image.get("id") is not None:
             image["id"] = str(image["id"])
@@ -935,6 +929,7 @@ async def products_create(request: Request) -> JSONResponse:
         )
         product = serialize_product_row(cur.fetchone())
         save_product_children(cur, product["id"], cleaned)
+        clear_style_tombstone(cur, cleaned.get("styleKey"))
         product = _product_with_children(cur, product)
 
     return JSONResponse(content={"product": product})
@@ -1009,6 +1004,7 @@ async def product_update(request: Request) -> JSONResponse:
         )
         product = serialize_product_row(cur.fetchone())
         save_product_children(cur, product_id, cleaned)
+        clear_style_tombstone(cur, cleaned.get("styleKey"))
         product = _product_with_children(cur, product)
 
     return JSONResponse(content={"product": product})
@@ -1053,6 +1049,7 @@ async def product_action(request: Request) -> JSONResponse:
                 (product_id,),
             )
         elif action == "delete":
+            style_key = product.get("style_key")
             cur.execute(
                 "select file_path from product_images where product_id = %s",
                 (product_id,),
@@ -1064,6 +1061,8 @@ async def product_action(request: Request) -> JSONResponse:
             ]
             cur.execute("delete from products where id = %s", (product_id,))
             delete_product_image_urls_if_unreferenced(cur, image_urls)
+            # Color seeds must not reappear on next admin list load.
+            record_style_tombstone(cur, style_key)
         elif action == "duplicate":
             ensure_product_style_key_column(cur)
             ensure_product_ring_size_config_column(cur)

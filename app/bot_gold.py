@@ -1,6 +1,11 @@
 """Fetch + parse Allbeauty mobile gold board for /api/bot-gold.
 
-Retail gold = 黃金條塊 售價 (元/錢 → TWD/g). See app.parse_bot_gold.
+Metals
+------
+- XAU: Allbeauty **黃金飾金** 售價 (元/錢 ÷ CHIN_TO_GRAMS → TWD/g)
+- XPT: Allbeauty **白金 Pt950** 售價 (same conversion)
+- XAG: Allbeauty **白銀條塊** 售價 (same conversion; S925 = XAG × 0.925)
+
 API path `/api/bot-gold` kept for clients; upstream is no longer Bank of Taiwan.
 """
 
@@ -13,11 +18,10 @@ from zoneinfo import ZoneInfo
 
 from curl_cffi.requests import AsyncSession
 
-from app.kitco_silver import fetch_xag_per_gram_twd
 from app.parse_bot_gold import find_gold_bar_prices, is_bot_challenge
 from app.pricing import CHIN_TO_GRAMS, PURITY_MULTIPLIER as _PURITY_ALL
 
-# Board updates often; cache successful fetches. Failures never cached.
+# In-process scrape TTL (refresh / lifespan). GET /api/bot-gold reads DB only.
 _CACHE_TTL_SECONDS = 300
 _cache_lock = asyncio.Lock()
 _cached_payload: dict | None = None
@@ -42,7 +46,7 @@ BOT_HEADERS = {
 PURITY_MULTIPLIER = {k: _PURITY_ALL[k] for k in ("9k", "14k", "18k", "pt950", "s925")}
 METAL_BASE = {"9k": "XAU", "14k": "XAU", "18k": "XAU", "pt950": "XPT", "s925": "XAG"}
 FALLBACK_XPT = 1050.0
-# Fine silver TWD/g fallback (~Kitco Ask × BOT USD cash sell / troy oz grams)
+# Fine silver TWD/g fallback when 白銀條塊 row missing from board HTML
 FALLBACK_XAG = 61.0
 
 TAIPEI = ZoneInfo("Asia/Taipei")
@@ -102,6 +106,14 @@ def build_payload_from_cache(row: dict) -> dict:
     }
 
 
+def _positive_metal(raw: object | None, fallback: float) -> float:
+    try:
+        value = float(raw) if raw is not None else 0.0
+    except (TypeError, ValueError):
+        return fallback
+    return value if value > 0 else fallback
+
+
 def build_payload(
     parsed: dict[str, float | str | None],
     source_url: str,
@@ -110,12 +122,12 @@ def build_payload(
 ) -> dict:
     now = datetime.now(timezone.utc)
     per_gram = float(parsed["perGram"])
-    xag = float(xag_per_gram) if xag_per_gram and xag_per_gram > 0 else FALLBACK_XAG
-    xpt_raw = parsed.get("xptPerGram")
-    try:
-        xpt = float(xpt_raw) if xpt_raw is not None and float(xpt_raw) > 0 else FALLBACK_XPT
-    except (TypeError, ValueError):
-        xpt = FALLBACK_XPT
+    xpt = _positive_metal(parsed.get("xptPerGram"), FALLBACK_XPT)
+    # Prefer explicit override (tests); else board 白銀條塊; else FALLBACK_XAG.
+    if xag_per_gram is not None and xag_per_gram > 0:
+        xag = float(xag_per_gram)
+    else:
+        xag = _positive_metal(parsed.get("xagPerGram"), FALLBACK_XAG)
     raw = {"XAU": per_gram, "XPT": xpt, "XAG": xag}
     alloy_rates = build_alloy_rates(raw)
     return {
@@ -168,7 +180,6 @@ async def fetch_bot_gold_quote(*, force: bool = False) -> dict:
 async def _fetch_bot_gold_quote_live() -> dict:
     last_error: Exception | None = None
     async with AsyncSession(impersonate="chrome120") as client:
-        xag = await fetch_xag_per_gram_twd(client)
         for url in ALLBEAUTY_URLS:
             try:
                 response = await client.get(url, headers=BOT_HEADERS, timeout=30)
@@ -180,7 +191,7 @@ async def _fetch_bot_gold_quote_live() -> dict:
                 parsed = find_gold_bar_prices(html)
                 if not parsed:
                     raise RuntimeError("parse failed")
-                return build_payload(parsed, url, xag_per_gram=xag)
+                return build_payload(parsed, url)
             except Exception as err:  # noqa: BLE001 — try next URL
                 last_error = err
     raise last_error or RuntimeError("Allbeauty gold scrape failed")

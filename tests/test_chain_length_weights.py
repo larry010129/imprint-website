@@ -63,6 +63,7 @@ def test_chain_catalog_admin_exposes_excel_length_options():
     cat = chain_catalog_for_admin()
     assert cat["lengthsCm"] == [36, 41, 46, 51, 61, 76, 80]
     douyuan = cat["types"]["douyuan"]
+    assert douyuan["labelZh"] == "O字鍊"
     assert douyuan["thicknesses"] == ["1.0mm", "1.5mm", "2.0mm", "2.5mm", "3.0mm"]
     assert douyuan["lengthWeights"]["1.0mm"]["36"] == 0.014
     assert douyuan["lengthWeights"]["3.0mm"]["80"] == 0.12
@@ -97,7 +98,8 @@ def test_save_product_children_adapts_length_weights_as_jsonb():
     assert isinstance(params[0], Jsonb)
     assert params[0].obj["1.5mm"]["46"] == 0.033
     assert params[1] == "douyuan"
-    assert params[2] == "product-uuid"
+    assert params[2] is None  # ring_size_config (chain products)
+    assert params[3] == "product-uuid"
     # No bare dict/list in any SQL param (variants/images are scalars only).
     for call in cur.execute.call_args_list:
         if len(call.args) < 2:
