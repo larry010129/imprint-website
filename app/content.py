@@ -1,10 +1,10 @@
-"""Content CMS helpers — FAQ + testimonials + home banners + page images."""
+"""Content CMS helpers — FAQ + testimonials + home banners + page images + journal."""
 
 from __future__ import annotations
 
 import json
 import re
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -257,6 +257,110 @@ def fetch_published_testimonials(cur) -> list[dict]:
 def fetch_all_testimonials(cur) -> list[dict]:
     cur.execute("select * from testimonials order by sort_order asc, created_at asc")
     return [serialize_testimonial(r) for r in cur.fetchall()]
+
+
+def _parse_posted_at(value: Any) -> tuple[str | None, str | None]:
+    raw = str(value or "").strip()
+    if not raw:
+        return None, "請填寫日期"
+    try:
+        parsed = date.fromisoformat(raw[:10])
+    except ValueError:
+        return None, "日期格式無效（YYYY-MM-DD）"
+    return parsed.isoformat(), None
+
+
+def parse_journal_post_payload(body: dict | None) -> tuple[dict | None, str | None]:
+    body = body or {}
+    title = str(body.get("title") or "").strip()
+    body_text = str(body.get("body") or "").strip()
+    image_raw = body.get("imageUrl") if "imageUrl" in body else body.get("image_url")
+    image_url = str(image_raw or "").strip() or None
+    is_archived = bool(
+        body.get("isArchived") if body.get("isArchived") is not None
+        else body.get("is_archived") if body.get("is_archived") is not None
+        else False
+    )
+    is_published = bool(
+        body.get("isPublished") if body.get("isPublished") is not None
+        else body.get("is_published") if body.get("is_published") is not None
+        else True
+    )
+    posted_at, date_err = _parse_posted_at(body.get("postedAt") or body.get("posted_at"))
+    errors: list[str] = []
+    if not title:
+        errors.append("請填寫標題")
+    if date_err:
+        errors.append(date_err)
+    if errors:
+        return None, "；".join(errors)
+
+    cleaned = {
+        "title": title,
+        "body": body_text,
+        "posted_at": posted_at,
+        "image_url": image_url,
+        "is_archived": is_archived,
+        "is_published": is_published,
+    }
+    if body.get("sortOrder") not in (None, "") or body.get("sort_order") not in (None, ""):
+        raw_sort = body.get("sortOrder") if body.get("sortOrder") not in (None, "") else body.get("sort_order")
+        try:
+            cleaned["sort_order"] = max(0, int(raw_sort))
+        except (TypeError, ValueError):
+            return None, "排序無效"
+    return cleaned, None
+
+
+def next_journal_post_sort_order(cur) -> int:
+    cur.execute("select coalesce(max(sort_order), -1) + 1 as next from journal_posts")
+    return int(cur.fetchone()["next"])
+
+
+def serialize_journal_post(row: dict) -> dict:
+    out = dict(row)
+    if out.get("id") is not None:
+        out["id"] = str(out["id"])
+    posted = out.get("posted_at")
+    if isinstance(posted, date) and not isinstance(posted, datetime):
+        out["posted_at"] = posted.isoformat()
+    elif isinstance(posted, datetime):
+        out["posted_at"] = posted.date().isoformat()
+    elif posted is not None:
+        out["posted_at"] = str(posted)[:10]
+    for key in ("created_at", "updated_at"):
+        val = out.get(key)
+        if isinstance(val, datetime):
+            out[key] = val.isoformat()
+    for key in ("is_archived", "is_published"):
+        if key in out:
+            out[key] = bool(out[key])
+    if out.get("sort_order") is not None:
+        out["sort_order"] = int(out["sort_order"])
+    if out.get("image_url") == "":
+        out["image_url"] = None
+    return out
+
+
+def fetch_published_journal_posts(cur) -> list[dict]:
+    cur.execute(
+        """
+        select * from journal_posts
+        where is_published = true
+        order by posted_at desc, sort_order asc, created_at desc
+        """
+    )
+    return [serialize_journal_post(r) for r in cur.fetchall()]
+
+
+def fetch_all_journal_posts(cur) -> list[dict]:
+    cur.execute(
+        """
+        select * from journal_posts
+        order by posted_at desc, sort_order asc, created_at desc
+        """
+    )
+    return [serialize_journal_post(r) for r in cur.fetchall()]
 
 
 def sanitize_faq_plain_text(value: str) -> str:

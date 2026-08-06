@@ -46,7 +46,9 @@
   };
   /** Default flat labor; standalone chains use metal-specific labor below. */
   var LABOR_FEE_TWD = 5000;
-  var CHAIN_LABOR_FEE_TWD = { s925: 500, other: 2000 };
+  var CHAIN_LABOR_FEE_TWD = { s925: 500, other: 3000 };
+  /** Per-category 品項加價 (NT$). Replaces base labor when > 0; from catalog /prices. */
+  var categoryAddonPrices = {};
   var DEFAULT_ATTACHED_CHAIN_THICKNESS = '1.0mm';
   var CHAIN_WAX_WEIGHT_CHIN = {
     '1.0mm': {36: 0.014, 41: 0.016, 46: 0.018, 51: 0.020, 61: 0.024, 76: 0.030, 80: 0.032},
@@ -284,8 +286,21 @@
   }
 
   function laborFee(category, gold) {
-    if (category !== 'chain') return LABOR_FEE_TWD;
-    return gold === 's925' ? CHAIN_LABOR_FEE_TWD.s925 : CHAIN_LABOR_FEE_TWD.other;
+    // 品項加價 > 0 replaces base labor; 0 keeps base. Folded into 金工價格.
+    var base = LABOR_FEE_TWD;
+    if (category === 'chain' && gold === 's925') base = CHAIN_LABOR_FEE_TWD.s925;
+    else if (category === 'chain') base = CHAIN_LABOR_FEE_TWD.other;
+    var addon = Number(categoryAddonPrices[category]);
+    var add = Number.isFinite(addon) && addon > 0 ? Math.round(addon) : 0;
+    return add > 0 ? add : base;
+  }
+
+  function setCategoryAddons(map) {
+    if (!map || typeof map !== 'object') return;
+    Object.keys(map).forEach(function (slug) {
+      var n = Number(map[slug]);
+      if (Number.isFinite(n) && n >= 0) categoryAddonPrices[slug] = Math.round(n);
+    });
   }
 
   function perChinFor(gold) {
@@ -379,7 +394,13 @@
     var metal = metalPreTax(gold, weightChin);
     var taijinDisplay = Math.round(metal.amount * (1 + TAX_RATE));
     // Labor is flat NT$ — not taxed. Tax only on metal (and 搭配鏈條 metal).
+    // Earring per-row 耳扣價錢 folds into labor / 金工價格 (with 品項加價).
     var laborDisplay = laborPreTax;
+    if (category === 'earring') {
+      var claspTable = product.earClaspPrices && product.earClaspPrices[gold];
+      var claspRaw = claspTable && claspTable[carat] != null ? Number(claspTable[carat]) : 0;
+      if (Number.isFinite(claspRaw) && claspRaw > 0) laborDisplay = laborPreTax + Math.round(claspRaw);
+    }
 
     var diamondPrice = null;
     if (category !== 'chain') {
@@ -527,6 +548,7 @@
     computeOrderPricing: computeOrderPricing,
     pricesPayload: pricesPayload,
     setLiveGoldRates: setLiveGoldRates,
+    setCategoryAddons: setCategoryAddons,
     WAX_TO_METAL_CHIN: WAX_TO_METAL_CHIN,
     waxToMetalChin: waxToMetalChin,
     LABOR_FEE_TWD: LABOR_FEE_TWD,

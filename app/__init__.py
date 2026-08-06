@@ -109,6 +109,7 @@ def _slide_max_age(claims) -> int | None:
 async def lifespan(_app: FastAPI):
     from app.admin_products import (
         ensure_product_chain_type_column,
+        ensure_product_ear_clasp_price_column,
         ensure_product_length_weights_column,
         ensure_product_sell_mode_columns,
         ensure_product_side_stone_total_column,
@@ -156,6 +157,7 @@ async def lifespan(_app: FastAPI):
             ensure_product_length_weights_column(cur)
             ensure_product_chain_type_column(cur)
             ensure_product_side_stone_total_column(cur)
+            ensure_product_ear_clasp_price_column(cur)
     except Exception:
         log.exception("ensure_product_sell_mode_columns failed")
     try:

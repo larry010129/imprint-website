@@ -96,6 +96,18 @@ def ensure_product_side_stone_total_column(cur) -> None:
     )
 
 
+def ensure_product_ear_clasp_price_column(cur) -> None:
+    """Add earring-only 耳扣價錢 column if missing (migration 20260806120000)."""
+    cur.execute(
+        "alter table product_variants "
+        "add column if not exists ear_clasp_price_twd numeric"
+    )
+
+
+# Alias kept for older call sites that used ear_cuff naming.
+ensure_product_ear_cuff_price_column = ensure_product_ear_clasp_price_column
+
+
 def as_jsonb(value: Any) -> Jsonb | None:
     """Wrap dict/list for jsonb params. Bare dict → ProgrammingError in psycopg3."""
     if value is None:
@@ -383,6 +395,19 @@ def validate_product_fields(body: dict | None, *, valid_categories: set[str] | N
             if side_stone_total < 0:
                 errors.append(f"invalid side stone total for {gold}/{carat}")
                 continue
+        ear_clasp_price = None
+        raw_ear_clasp = variant.get("earClaspPriceTwd")
+        if raw_ear_clasp in (None, ""):
+            raw_ear_clasp = variant.get("earCuffPriceTwd")
+        if category == "earring" and raw_ear_clasp not in (None, ""):
+            try:
+                ear_clasp_price = float(raw_ear_clasp)
+            except (TypeError, ValueError):
+                errors.append(f"invalid ear clasp price for {gold}/{carat}")
+                continue
+            if ear_clasp_price < 0:
+                errors.append(f"invalid ear clasp price for {gold}/{carat}")
+                continue
         key = f"{gold}:{carat}"
         if key in seen_keys:
             errors.append(f"duplicate variant: {gold} / {carat}")
@@ -397,6 +422,9 @@ def validate_product_fields(body: dict | None, *, valid_categories: set[str] | N
                 "sideStonePriceTwd": side_stone_price,
                 "sideStoneCarat": side_stone_carat,
                 "sideStoneTotalTwd": side_stone_total,
+                "earClaspPriceTwd": ear_clasp_price,
+                # Alias for older admin clients still posting earCuffPriceTwd.
+                "earCuffPriceTwd": ear_clasp_price,
             }
         )
 
@@ -508,6 +536,11 @@ def _format_product_errors(errors: list[str]) -> str:
             continue
         if err.startswith("invalid side stone total for"):
             parts.append("款式選項：配鑽價錢無效")
+            continue
+        if err.startswith("invalid ear cuff price for") or err.startswith(
+            "invalid ear clasp price for"
+        ):
+            parts.append("款式選項：耳扣價錢無效")
             continue
         if err.startswith("duplicate variant"):
             parts.append("款式選項重複：" + err.split(": ", 1)[-1])
@@ -704,15 +737,20 @@ def delete_product_image_urls_if_unreferenced(cur, urls) -> int:
 
 def save_product_children(cur, product_id: str, cleaned: dict) -> None:
     ensure_product_side_stone_total_column(cur)
+    ensure_product_ear_clasp_price_column(cur)
     cur.execute("delete from product_variants where product_id = %s", (product_id,))
     for variant in cleaned["variants"]:
+        ear_clasp = variant.get("earClaspPriceTwd")
+        if ear_clasp is None:
+            ear_clasp = variant.get("earCuffPriceTwd")
         cur.execute(
             """
             insert into product_variants (
                 product_id, gold, carat, weight_chin, manual_price_twd,
-                side_stone_price_twd, side_stone_carat, side_stone_total_twd
+                side_stone_price_twd, side_stone_carat, side_stone_total_twd,
+                ear_clasp_price_twd
             )
-            values (%s, %s, %s, %s, %s, %s, %s, %s)
+            values (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             """,
             (
                 product_id,
@@ -723,6 +761,7 @@ def save_product_children(cur, product_id: str, cleaned: dict) -> None:
                 variant.get("sideStonePriceTwd"),
                 variant.get("sideStoneCarat"),
                 variant.get("sideStoneTotalTwd"),
+                ear_clasp,
             ),
         )
 

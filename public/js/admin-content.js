@@ -12,6 +12,7 @@
   var _tab = 'banners';
   var _pageImagePage = '';
   var _testimonials = [];
+  var _journalPosts = [];
   var _faqItems = [];
   var _faqCategories = [];
   var _faqCategoryId = '';
@@ -383,6 +384,22 @@
     return null;
   }
 
+  function findJournalPost(id) {
+    for (var i = 0; i < _journalPosts.length; i++) {
+      if (String(_journalPosts[i].id) === String(id)) return _journalPosts[i];
+    }
+    return null;
+  }
+
+  function todayDateValue() {
+    var d = new Date();
+    var m = String(d.getMonth() + 1);
+    var day = String(d.getDate());
+    if (m.length < 2) m = '0' + m;
+    if (day.length < 2) day = '0' + day;
+    return d.getFullYear() + '-' + m + '-' + day;
+  }
+
   function findFaq(id) {
     for (var i = 0; i < _faqItems.length; i++) {
       if (String(_faqItems[i].id) === String(id)) return _faqItems[i];
@@ -484,6 +501,7 @@
         '<button type="button" class="adx-tab' + (_tab === 'banners' ? ' is-active' : '') + '" data-tab="banners">首頁圖片</button>' +
         '<button type="button" class="adx-tab' + (_tab === 'page-images' ? ' is-active' : '') + '" data-tab="page-images">頁面圖片</button>' +
         '<button type="button" class="adx-tab' + (_tab === 'testimonials' ? ' is-active' : '') + '" data-tab="testimonials">見證</button>' +
+        '<button type="button" class="adx-tab' + (_tab === 'journal' ? ' is-active' : '') + '" data-tab="journal">日誌</button>' +
         '<button type="button" class="adx-tab' + (_tab === 'faq' ? ' is-active' : '') + '" data-tab="faq">FAQ</button>' +
         '<button type="button" class="adx-tab' + (_tab === 'pages' ? ' is-active' : '') + '" data-tab="pages">頁面 <span class="adx-risk-tag">Beta · 風險</span></button>' +
       '</div>' +
@@ -510,7 +528,10 @@
 
     var body = document.getElementById('contentPanelBody');
     if (_tab === 'pages') renderCmsPages(body);
-    else if (_tab === 'faq') {
+    else if (_tab === 'journal') {
+      body.innerHTML = '';
+      renderJournal(body);
+    } else if (_tab === 'faq') {
       body.innerHTML = '';
       renderFaqCategoryBar(body);
       renderContentReact(body, imagePages);
@@ -1091,6 +1112,169 @@
     });
   }
 
+  function journalRowsSorted() {
+    return _journalPosts.slice().sort(function (a, b) {
+      var da = String(a.posted_at || '');
+      var db = String(b.posted_at || '');
+      if (da !== db) return db.localeCompare(da);
+      return Number(a.sort_order || 0) - Number(b.sort_order || 0);
+    });
+  }
+
+  function renderJournalRow(p) {
+    var published = !!p.is_published;
+    var archived = !!p.is_archived;
+    var thumb = p.image_url
+      ? '<img src="' + esc(p.image_url) + '" alt="" width="40" height="40" style="object-fit:cover;border-radius:4px">'
+      : '—';
+    return (
+      '<tr data-id="' + esc(String(p.id)) + '">' +
+        '<td>' + esc(p.posted_at || '') + '</td>' +
+        '<td>' + esc(p.title || '') + '</td>' +
+        '<td>' + esc(truncate(p.body || '', 48)) + '</td>' +
+        '<td>' + thumb + '</td>' +
+        '<td>' + (archived
+          ? '<span class="ap-status-badge ap-status-badge--offline">活動已結束</span>'
+          : '<span class="ap-status-badge ap-status-badge--draft">進行中</span>') + '</td>' +
+        '<td>' + (published
+          ? '<span class="ap-status-badge ap-status-badge--live">已發布</span>'
+          : '<span class="ap-status-badge ap-status-badge--draft">未發布</span>') + '</td>' +
+        '<td><div class="adx-actions">' +
+          '<button type="button" class="btn-sm" data-j-action="edit" data-id="' + esc(String(p.id)) + '">編輯</button>' +
+          '<button type="button" class="btn-sm" data-j-action="' + (published ? 'unpublish' : 'publish') +
+            '" data-id="' + esc(String(p.id)) + '">' + (published ? '下架' : '發布') + '</button>' +
+          '<button type="button" class="btn-sm adx-action--danger" data-j-action="delete" data-id="' +
+            esc(String(p.id)) + '">刪除</button>' +
+        '</div></td>' +
+      '</tr>'
+    );
+  }
+
+  function renderJournal(body) {
+    if (!body) return;
+    var rows = journalRowsSorted();
+    var tableHtml = !rows.length
+      ? '<p class="adx-table-empty">尚無日誌。點「新增日誌」建立第一則。</p>'
+      : (
+        '<div class="adx-table-card"><div class="adx-table-wrap"><table class="adx-table">' +
+          '<thead><tr>' +
+            '<th>日期</th><th>標題</th><th>內容</th><th>圖片</th><th>活動</th><th>狀態</th><th>操作</th>' +
+          '</tr></thead><tbody>' + rows.map(renderJournalRow).join('') + '</tbody></table></div></div>'
+      );
+    body.innerHTML =
+      '<div class="adx-panel-toolbar">' +
+        '<button type="button" class="btn-sm btn-primary" id="acJournalAddBtn">+ 新增日誌</button>' +
+      '</div>' + tableHtml;
+    var addBtn = document.getElementById('acJournalAddBtn');
+    if (addBtn) addBtn.addEventListener('click', function () { openJournalModal(null); });
+    body.querySelectorAll('[data-j-action]').forEach(bindJournalAction);
+  }
+
+  function bindJournalAction(btn) {
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      var action = btn.getAttribute('data-j-action');
+      var id = btn.getAttribute('data-id');
+      if (!id || !action) return;
+      if (action === 'edit') {
+        openJournalModal(findJournalPost(id));
+        return;
+      }
+      if (action === 'delete' && !confirm('確定刪除此日誌？')) return;
+      btn.disabled = true;
+      api.admin.journalPostAction(id, action).then(function (res) {
+        btn.disabled = false;
+        if (res.error) { alert(res.error.message || res.error); return; }
+        load(true, true);
+      });
+    });
+  }
+
+  function openJournalModal(p) {
+    var isEdit = !!(p && p.id);
+    var imageUrl = isEdit ? (p.image_url || '') : '';
+    var postedAt = String((isEdit && p.posted_at) || '').trim().slice(0, 10) || todayDateValue();
+    var html =
+      '<div class="qr-modal ai-modal" role="dialog" aria-modal="true">' +
+        '<button type="button" class="qr-modal-close" data-modal-close aria-label="關閉">&times;</button>' +
+        '<h3>' + (isEdit ? '編輯日誌' : '新增日誌') + '</h3>' +
+        '<p class="ap-form-error" id="acFormError" hidden></p>' +
+        '<form id="acJournalForm" class="ap-form" data-id="' + esc(isEdit ? p.id : '') + '">' +
+          '<div class="ap-form-grid">' +
+            '<label class="ap-field"><span>日期' + reqStar() + '</span>' +
+              '<input type="date" name="posted_at" required value="' + esc(postedAt) + '"></label>' +
+            '<label class="ap-field ap-field--full"><span>標題' + reqStar() + '</span>' +
+              '<input name="title" required maxlength="200" value="' + esc(isEdit ? (p.title || '') : '') + '"></label>' +
+            '<label class="ap-field ap-field--full"><span>內容</span>' +
+              '<textarea name="body" class="ap-textarea" rows="8" placeholder="日誌內容…">' +
+                esc(isEdit ? (p.body || '') : '') + '</textarea></label>' +
+            '<label class="ap-field ap-field--full"><span>圖片（選填）</span>' +
+              '<div id="acJournalImageUploadMount"></div>' +
+              '<p class="ap-section-hint">JPG / PNG / WEBP；上傳後轉 WebP。可留空。</p>' +
+              '<input type="hidden" name="image_url" id="acJournalImageUrl" value="' + esc(imageUrl) + '">' +
+            '</label>' +
+            '<label class="ap-field ap-field--check"><input type="checkbox" name="is_archived"' +
+              (isEdit && p.is_archived ? ' checked' : '') + '><span>活動已結束</span></label>' +
+            '<label class="ap-field ap-field--check"><input type="checkbox" name="is_published"' +
+              (!isEdit || p.is_published ? ' checked' : '') + '><span>發布</span></label>' +
+          '</div>' +
+          '<div class="ap-form-actions">' +
+            '<button type="button" class="btn-sm" data-modal-close>取消</button>' +
+            '<button type="submit" class="btn-sm btn-primary">' + (isEdit ? '儲存' : '建立') + '</button>' +
+          '</div>' +
+        '</form></div>';
+
+    if (!window.AdminPanel || !window.AdminPanel.openModal) return;
+    window.AdminPanel.openModal(html);
+    var form = document.getElementById('acJournalForm');
+    if (form) form.addEventListener('submit', submitJournal);
+
+    var urlInput = document.getElementById('acJournalImageUrl');
+    if (window.AdminTables && window.AdminTables.renderImageUploadField) {
+      var mount = document.getElementById('acJournalImageUploadMount');
+      if (mount && urlInput) {
+        window.AdminTables.renderImageUploadField(mount, {
+          value: imageUrl,
+          onChange: function (url) { urlInput.value = url || ''; },
+          onUpload: function (file) { return api.admin.uploadPageImage(file); },
+          onValidationError: function (message) { alert(message); },
+        });
+      }
+    }
+  }
+
+  function submitJournal(e) {
+    e.preventDefault();
+    var form = e.target;
+    var fd = new FormData(form);
+    var errEl = document.getElementById('acFormError');
+    var id = form.dataset.id;
+    var payload = {
+      id: id || undefined,
+      title: String(fd.get('title') || '').trim(),
+      body: String(fd.get('body') || '').trim(),
+      posted_at: String(fd.get('posted_at') || '').trim().slice(0, 10) || todayDateValue(),
+      image_url: String(fd.get('image_url') || '').trim() || null,
+      is_archived: !!form.querySelector('[name="is_archived"]').checked,
+      is_published: !!form.querySelector('[name="is_published"]').checked,
+    };
+    if (!payload.title) {
+      if (errEl) { errEl.textContent = '請填寫標題'; errEl.hidden = false; }
+      return;
+    }
+    if (errEl) errEl.hidden = true;
+    var req = id ? api.admin.updateJournalPost(payload) : api.admin.createJournalPost(payload);
+    req.then(function (res) {
+      if (res.error) {
+        if (errEl) { errEl.textContent = res.error.message || res.error; errEl.hidden = false; }
+        else alert(res.error);
+        return;
+      }
+      if (window.AdminPanel.closeModal) window.AdminPanel.closeModal();
+      load(true, true);
+    });
+  }
+
   function renderTestimonials(body) {
     renderContentReact(body);
   }
@@ -1340,11 +1524,13 @@
       api.admin.getFaqItems(),
       api.admin.getBanners(),
       api.admin.getPageImages(),
+      api.admin.getJournalPosts(),
     ]).then(function (results) {
       var tRes = results[0];
       var fRes = results[1];
       var bRes = results[2];
       var pRes = results[3];
+      var jRes = results[4];
       if (tRes.error || fRes.error || bRes.error || pRes.error) {
         root.innerHTML =
           '<p class="note warn">載入失敗：' +
@@ -1357,6 +1543,8 @@
       _faqItems = fRes.items || [];
       _faqCategories = fRes.categories || [];
       _banners = bRes.banners || [];
+      // Soft-fail journal until backend routes land (parallel Phase 1).
+      _journalPosts = (!jRes.error && (jRes.posts || jRes.journal_posts)) || [];
       _pageImages = (pRes.pageImages || []).filter(function (row) {
         var key = String(row.page_key || '');
         var group = String(row.group_key || '');

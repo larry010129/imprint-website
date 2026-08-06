@@ -27,7 +27,7 @@ from app.catalog import (
     load_product_children,
     normalize_catalog_detail,
 )
-from app.product_categories import fetch_categories
+from app.product_categories import build_category_meta, fetch_categories
 from app.orders import (
     attach_order_display,
     attach_order_relations,
@@ -297,14 +297,7 @@ def catalog(
         variants_by_product, images_by_product = load_product_children(cur, product_ids)
         category_rows = fetch_categories(cur)
         cat_order = [row["slug"] for row in category_rows]
-        cat_meta = {
-            row["slug"]: {
-                "labelZh": row["label_zh"],
-                "labelEn": row.get("label_en"),
-                "thumbUrl": row.get("thumbUrl"),
-            }
-            for row in category_rows
-        }
+        cat_meta = build_category_meta(cur)
     payload = build_catalog_response(
         products,
         variants_by_product,
@@ -353,6 +346,14 @@ def public_testimonials() -> dict:
 
     with get_connection() as conn, conn.cursor() as cur:
         return {"testimonials": fetch_published_testimonials(cur)}
+
+
+@router.get("/journal/posts")
+def public_journal_posts() -> dict:
+    from app.content import fetch_published_journal_posts
+
+    with get_connection() as conn, conn.cursor() as cur:
+        return {"posts": fetch_published_journal_posts(cur)}
 
 
 @router.get("/cms/pages/{slug}")
@@ -510,6 +511,10 @@ def shop_prices() -> dict:
     with get_connection() as conn, conn.cursor() as cur:
         overrides = load_overrides(cur)
         metal = get_metal_prices(cur)
+        category_addons = {
+            row["slug"]: int(row.get("addonPrice") or 0)
+            for row in fetch_categories(cur)
+        }
     per_gram = {
         gold: metal[METAL_SYMBOL[gold]] * PURITY_MULTIPLIER[gold]
         for gold in PURITY_MULTIPLIER
@@ -521,6 +526,7 @@ def shop_prices() -> dict:
         "diamond": eff["white"],
         "diamondFancy": eff["fancy"],
         "laborFeeTwd": LABOR_FEE_TWD,
+        "categoryAddonPrices": category_addons,
         "chinToGrams": CHIN_TO_GRAMS,
         "taxRate": ov_tax if isinstance(ov_tax, (int, float)) else TAX_RATE,
     }

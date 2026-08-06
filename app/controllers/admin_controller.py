@@ -27,6 +27,7 @@ from app.admin_products import (
     ensure_product_chain_type_column,
     ensure_product_length_weights_column,
     ensure_product_sell_mode_columns,
+    ensure_product_ear_clasp_price_column,
     ensure_product_side_stone_total_column,
     first_published_at_value,
     is_auto_stock_product_image,
@@ -49,7 +50,15 @@ from app.auth import (
 )
 from app.auth_totp_service import step_up_from_body, verify_step_up_password
 from app.catalog import load_product_children
-from app.product_categories import category_labels, create_category, delete_category, fetch_categories, update_category_thumb, valid_category_slugs
+from app.product_categories import (
+    category_labels,
+    create_category,
+    delete_category,
+    fetch_categories,
+    update_category_addon,
+    update_category_thumb,
+    valid_category_slugs,
+)
 from config.settings import settings
 from app.database import get_connection, get_transaction
 from app.orders import (
@@ -641,6 +650,25 @@ async def product_category_delete(request: Request, slug: str) -> JSONResponse:
     return JSONResponse(content={"ok": ok})
 
 
+@router.patch("/product-category/{slug}")
+async def product_category_patch(request: Request, slug: str) -> JSONResponse:
+    """Update category fields (currently 品項加價 addonPrice)."""
+    _require_admin(request)
+    body = await request.json()
+    if not isinstance(body, dict):
+        return JSONResponse(status_code=400, content={"error": "invalid body"})
+    addon_raw = body.get("addonPrice")
+    if addon_raw is None:
+        addon_raw = body.get("addon_price_twd")
+    if addon_raw is None:
+        return JSONResponse(status_code=400, content={"error": "缺少品項加價"})
+    with get_transaction() as conn, conn.cursor() as cur:
+        category, error = update_category_addon(cur, slug, addon_raw)
+    if error:
+        return JSONResponse(status_code=400, content={"error": error})
+    return JSONResponse(content={"category": category})
+
+
 @router.post("/product-category-upload")
 async def product_category_upload(
     request: Request,
@@ -683,6 +711,7 @@ async def product_category_upload(
 
 def _products_with_children(cur) -> list[dict]:
     ensure_product_side_stone_total_column(cur)
+    ensure_product_ear_clasp_price_column(cur)
     cur.execute("select * from products order by sort_order, created_at desc")
     rows = cur.fetchall()
     product_ids = [row["id"] for row in rows]
@@ -705,6 +734,7 @@ def _products_with_children(cur) -> list[dict]:
                 variant["product_id"] = str(variant["product_id"])
             # Missing/null fixed 配鑽 total is OK — admin UI falls back to formula.
             variant.setdefault("side_stone_total_twd", None)
+            variant.setdefault("ear_clasp_price_twd", None)
         for image in product["images"]:
             if image.get("id") is not None:
                 image["id"] = str(image["id"])
@@ -730,6 +760,7 @@ def _product_with_children(cur, product: dict) -> dict:
         if variant.get("product_id") is not None:
             variant["product_id"] = str(variant["product_id"])
         variant.setdefault("side_stone_total_twd", None)
+        variant.setdefault("ear_clasp_price_twd", None)
     for image in product["images"]:
         if image.get("id") is not None:
             image["id"] = str(image["id"])
@@ -778,6 +809,7 @@ async def products_create(request: Request) -> JSONResponse:
         ensure_product_length_weights_column(cur)
         ensure_product_chain_type_column(cur)
         ensure_product_side_stone_total_column(cur)
+        ensure_product_ear_clasp_price_column(cur)
         cur.execute(
             """
             insert into products (
@@ -834,6 +866,7 @@ async def product_update(request: Request) -> JSONResponse:
         ensure_product_length_weights_column(cur)
         ensure_product_chain_type_column(cur)
         ensure_product_side_stone_total_column(cur)
+        ensure_product_ear_clasp_price_column(cur)
         cur.execute(
             "select id, is_published, first_published_at from products where id = %s",
             (product_id,),
@@ -895,6 +928,7 @@ async def product_action(request: Request) -> JSONResponse:
         ensure_product_sell_mode_columns(cur)
         ensure_product_length_weights_column(cur)
         ensure_product_side_stone_total_column(cur)
+        ensure_product_ear_clasp_price_column(cur)
         cur.execute("select * from products where id = %s", (product_id,))
         product = cur.fetchone()
         if not product:
@@ -961,10 +995,12 @@ async def product_action(request: Request) -> JSONResponse:
                 """
                 insert into product_variants (
                     product_id, gold, carat, weight_chin, manual_price_twd,
-                    side_stone_price_twd, side_stone_carat, side_stone_total_twd
+                    side_stone_price_twd, side_stone_carat, side_stone_total_twd,
+                    ear_clasp_price_twd
                 )
                 select %s, gold, carat, weight_chin, manual_price_twd,
-                    side_stone_price_twd, side_stone_carat, side_stone_total_twd
+                    side_stone_price_twd, side_stone_carat, side_stone_total_twd,
+                    ear_clasp_price_twd
                 from product_variants where product_id = %s
                 """,
                 (copy_id, product_id),
@@ -1988,6 +2024,154 @@ async def admin_testimonial_action(request: Request) -> JSONResponse:
         actor["email"] if actor else None,
         f"testimonial_{action}",
         {"id": str(tid)},
+    )
+    return JSONResponse(content={"ok": True})
+
+
+# ── Content CMS: journal posts ────────────────────────────────────────────────
+
+
+@router.get("/journal-posts")
+async def admin_journal_posts_list(request: Request) -> dict:
+    _require_admin(request)
+    from app.content import fetch_all_journal_posts
+
+    with get_connection() as conn, conn.cursor() as cur:
+        return {"posts": fetch_all_journal_posts(cur)}
+
+
+@router.post("/journal-posts")
+async def admin_journal_posts_create(request: Request) -> JSONResponse:
+    user_id = _require_admin(request)
+    body = await request.json()
+    if not isinstance(body, dict):
+        body = {}
+
+    from app.content import (
+        next_journal_post_sort_order,
+        parse_journal_post_payload,
+        serialize_journal_post,
+    )
+
+    cleaned, error = parse_journal_post_payload(body)
+    if error:
+        return JSONResponse(status_code=400, content={"error": error})
+
+    with get_transaction() as conn, conn.cursor() as cur:
+        sort_order = cleaned.get("sort_order")
+        if sort_order is None:
+            sort_order = next_journal_post_sort_order(cur)
+        cur.execute(
+            """
+            insert into journal_posts (
+              title, body, posted_at, image_url, is_archived, is_published, sort_order
+            ) values (%s, %s, %s, %s, %s, %s, %s)
+            returning *
+            """,
+            (
+                cleaned["title"],
+                cleaned["body"],
+                cleaned["posted_at"],
+                cleaned["image_url"],
+                cleaned["is_archived"],
+                cleaned["is_published"],
+                sort_order,
+            ),
+        )
+        row = serialize_journal_post(cur.fetchone())
+
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute("select email from users where id = %s", (user_id,))
+        actor = cur.fetchone()
+    log_admin_action(actor["email"] if actor else None, "journal_post_created", {"id": row["id"]})
+    return JSONResponse(content={"post": row})
+
+
+@router.post("/journal-post-update")
+async def admin_journal_posts_update(request: Request) -> JSONResponse:
+    user_id = _require_admin(request)
+    body = await request.json()
+    if not isinstance(body, dict):
+        body = {}
+
+    from app.content import parse_journal_post_payload, serialize_journal_post
+
+    pid = body.get("id")
+    if not pid:
+        return JSONResponse(status_code=400, content={"error": "缺少 id"})
+    cleaned, error = parse_journal_post_payload(body)
+    if error:
+        return JSONResponse(status_code=400, content={"error": error})
+
+    with get_transaction() as conn, conn.cursor() as cur:
+        cur.execute("select sort_order from journal_posts where id = %s", (pid,))
+        existing = cur.fetchone()
+        if not existing:
+            return JSONResponse(status_code=404, content={"error": "找不到日誌"})
+        sort_order = cleaned.get("sort_order")
+        if sort_order is None:
+            sort_order = int(existing["sort_order"])
+        cur.execute(
+            """
+            update journal_posts set
+              title = %s, body = %s, posted_at = %s, image_url = %s,
+              is_archived = %s, is_published = %s, sort_order = %s, updated_at = now()
+            where id = %s
+            returning *
+            """,
+            (
+                cleaned["title"],
+                cleaned["body"],
+                cleaned["posted_at"],
+                cleaned["image_url"],
+                cleaned["is_archived"],
+                cleaned["is_published"],
+                sort_order,
+                pid,
+            ),
+        )
+        row = serialize_journal_post(cur.fetchone())
+
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute("select email from users where id = %s", (user_id,))
+        actor = cur.fetchone()
+    log_admin_action(actor["email"] if actor else None, "journal_post_updated", {"id": str(pid)})
+    return JSONResponse(content={"post": row})
+
+
+@router.post("/journal-post-action")
+async def admin_journal_post_action(request: Request) -> JSONResponse:
+    user_id = _require_admin(request)
+    body = await request.json()
+    pid = body.get("id")
+    action = body.get("action")
+    if not pid or action not in {"publish", "unpublish", "delete"}:
+        return JSONResponse(status_code=400, content={"error": "invalid id/action"})
+
+    with get_connection() as conn, conn.cursor() as cur:
+        if action == "publish":
+            cur.execute(
+                "update journal_posts set is_published = true, updated_at = now() where id = %s returning id",
+                (pid,),
+            )
+        elif action == "unpublish":
+            cur.execute(
+                "update journal_posts set is_published = false, updated_at = now() where id = %s returning id",
+                (pid,),
+            )
+        else:
+            cur.execute("delete from journal_posts where id = %s returning id", (pid,))
+        row = cur.fetchone()
+        if not row:
+            return JSONResponse(status_code=404, content={"error": "找不到日誌"})
+
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute("select email from users where id = %s", (user_id,))
+        actor = cur.fetchone()
+    log_admin_action(
+        actor["email"] if actor else None,
+        f"journal_post_{action}",
+        {"id": str(pid)},
     )
     return JSONResponse(content={"ok": True})
 

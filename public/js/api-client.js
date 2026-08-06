@@ -244,6 +244,9 @@
       getProducts: function () { return request('/api/admin/products'); },
       createProductCategory: function (fields) { return request('/api/admin/product-category', { method: 'POST', body: fields }); },
       deleteProductCategory: function (slug) { return request('/api/admin/product-category/' + encodeURIComponent(slug), { method: 'DELETE' }); },
+      updateProductCategory: function (slug, fields) {
+        return request('/api/admin/product-category/' + encodeURIComponent(slug), { method: 'PATCH', body: fields });
+      },
       uploadProductCategoryThumb: function (slug, file) {
         var fd = new FormData();
         fd.append('file', file);
@@ -305,6 +308,12 @@
         return request('/api/admin/testimonial-reorder', { method: 'POST', body: { id: id, direction: direction } });
       },
       testimonialAction: function (id, action) { return request('/api/admin/testimonial-action', { method: 'POST', body: { id: id, action: action } }); },
+      getJournalPosts: function () { return request('/api/admin/journal-posts'); },
+      createJournalPost: function (fields) { return request('/api/admin/journal-posts', { method: 'POST', body: fields }); },
+      updateJournalPost: function (fields) { return request('/api/admin/journal-post-update', { method: 'POST', body: fields }); },
+      journalPostAction: function (id, action) {
+        return request('/api/admin/journal-post-action', { method: 'POST', body: { id: id, action: action } });
+      },
       uploadTestimonial: function (file) {
         var fd = new FormData();
         fd.append('file', file);

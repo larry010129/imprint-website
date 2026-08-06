@@ -53,6 +53,7 @@ def test_validate_chain_omits_variant_wax_syncs_from_length_table():
     assert cleaned["variants"][0]["sideStonePriceTwd"] is None
     assert cleaned["variants"][0]["sideStoneCarat"] is None
     assert cleaned["variants"][0]["sideStoneTotalTwd"] is None
+    assert cleaned["variants"][0]["earClaspPriceTwd"] is None
     assert cleaned["lengthWeights"]["1.5mm"]["36"] == 0.099
 
 
@@ -190,10 +191,10 @@ console.log(JSON.stringify(pricing.computeOrderPricing(payload, catalog)));
     )
     quote = json.loads(result.stdout)
     assert quote["ready"] is True
-    # wax 0.099 → metal 1.584 錢; @ live 元/公克=1 → 5.94 元 metal + tax → taijin 6 + labor 2000
+    # wax 0.099 → metal 1.584 錢; @ live 元/公克=1 → 5.94 元 metal + tax → taijin 6 + labor 3000
     assert quote["taijinPrice"] == 6
-    assert quote["total"] == 2006
-    assert quote["total"] > 2000
+    assert quote["total"] == 3006
+    assert quote["total"] > 3000
 
 
 def test_shop_merge_keeps_api_length_weights_only():

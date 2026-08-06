@@ -24,6 +24,16 @@ export type ApiFaqCategory = {
   items: ApiFaqEntry[]
 }
 
+export type ApiJournalPost = {
+  id: string
+  title: string
+  body: string
+  posted_at: string
+  image_url: string | null
+  is_archived: boolean
+  is_published?: boolean
+}
+
 function apiBase(): string {
   const base = (window as Window & { IMPRINT_API_BASE?: string }).IMPRINT_API_BASE
   return typeof base === "string" ? base : ""
@@ -59,4 +69,9 @@ export async function fetchFaqApi(): Promise<{
     categories: data.categories,
     teaser: data.teaser || [],
   }
+}
+
+export async function fetchJournalPostsApi(): Promise<ApiJournalPost[]> {
+  const data = await getJson<{ posts?: ApiJournalPost[] }>("/api/journal/posts")
+  return Array.isArray(data?.posts) ? data.posts : []
 }

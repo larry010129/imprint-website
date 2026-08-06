@@ -1186,12 +1186,27 @@ async function ensureCategoryCatalog(category) {
         ...(window._catalogCategoryMeta || {}),
         ...data.categoryMeta,
       };
+      applyCategoryAddonPricesFromMeta(window._catalogCategoryMeta);
     }
     if (data.categoryOrder?.length && !window._catalogCategoryOrder?.length) {
       window._catalogCategoryOrder = data.categoryOrder;
     }
   } catch (err) {
     console.error('failed to load category catalog', err);
+  }
+}
+
+function applyCategoryAddonPricesFromMeta(meta) {
+  if (!meta || typeof meta !== 'object') return;
+  const map = {};
+  Object.keys(meta).forEach((slug) => {
+    const row = meta[slug];
+    if (!row || row.addonPrice == null) return;
+    const n = Number(row.addonPrice);
+    if (Number.isFinite(n) && n >= 0) map[slug] = n;
+  });
+  if (Object.keys(map).length) {
+    window.ShopPricingLocal?.setCategoryAddons?.(map);
   }
 }
 
@@ -1218,6 +1233,7 @@ async function loadCatalog() {
     catalog = data.categories || {};
     window._catalogCategoryOrder = data.categoryOrder || null;
     window._catalogCategoryMeta = data.categoryMeta || null;
+    applyCategoryAddonPricesFromMeta(window._catalogCategoryMeta);
     if (shopAllowsStaticCatalog()) {
       enrichCatalogFromStatic();
     } else {
@@ -2291,6 +2307,9 @@ async function loadMetalPrices() {
     Object.assign(diamondPrice, data.diamond);
     if (data.laborFeeTwd != null) laborFeeTwd = Number(data.laborFeeTwd);
     else if (typeof data.laborFee === 'number') laborFeeTwd = data.laborFee;
+    if (data.categoryAddonPrices) {
+      window.ShopPricingLocal?.setCategoryAddons?.(data.categoryAddonPrices);
+    }
     if (data.chinToGrams != null) chinToGrams = data.chinToGrams;
     if (data.taxRate != null) taxRate = data.taxRate;
     if (data.ringSizeMin != null) ringSizeMin = data.ringSizeMin;

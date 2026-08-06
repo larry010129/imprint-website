@@ -231,12 +231,19 @@ button:not(.btn-sm):not(.ap-tab-btn):not(.nav-toggle):not(.side-backdrop):not([d
   border:1px dashed #C9BFB2;background:#fff;color:var(--ink);font-weight:700;
 }
 .ap-tab-btn--add:hover{border-color:var(--ink);background:var(--ink);color:#fff;}
+.ap-category-header{margin-bottom:18px;}
 .ap-category-panel{
-  margin-bottom:18px;padding:14px 16px;border:1px solid #EDE7E0;border-radius:10px;background:#FAF8F5;
+  margin-bottom:0;padding:14px 16px;border:1px solid #EDE7E0;border-radius:10px;background:#FAF8F5;
 }
-.ap-category-panel-inner{display:flex;flex-wrap:wrap;align-items:center;gap:16px;}
+.ap-category-panel-inner{
+  display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:16px;
+}
 .ap-category-panel-text{flex:1;min-width:220px;}
 .ap-section-title--inline{margin:0 0 6px;font-size:13px;}
+.ap-category-thumb-row{
+  display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-left:auto;
+}
+.ap-category-thumb-row .ap-category-delete-btn{margin-left:auto;}
 .ap-category-thumb-block{display:flex;align-items:center;gap:12px;}
 .ap-category-thumb-preview{
   width:72px;height:72px;border-radius:8px;border:1px solid #EDE7E0;background:#fff;
@@ -245,6 +252,20 @@ button:not(.btn-sm):not(.ap-tab-btn):not(.nav-toggle):not(.side-backdrop):not([d
 .ap-category-thumb-preview img{width:100%;height:100%;object-fit:cover;}
 .ap-category-thumb-empty{font-size:11px;color:var(--ink-faint);text-align:center;padding:4px;}
 .ap-category-thumb-upload{cursor:pointer;margin:0;}
+.ap-category-addon-block{
+  display:flex;flex-direction:column;align-items:flex-end;gap:6px;
+  margin-top:12px;min-width:148px;background:transparent;border:none;padding:0;
+  text-align:right;
+}
+.ap-category-addon-label{font-size:12px;font-weight:700;color:var(--ink-soft);margin:0;}
+.ap-category-addon-row{display:flex;align-items:center;gap:8px;}
+.ap-category-addon-input{
+  width:96px;font-family:inherit;font-size:13.5px;padding:7px 10px;
+  border:1px solid #DDD5CC;border-radius:6px;color:var(--ink);background:#fff;
+}
+.ap-category-addon-hint{margin:0;font-size:11px;color:var(--ink-faint);}
+.ap-category-addon-hint.is-ok{color:#3d7a4a;}
+.ap-category-addon-hint.is-error{color:#B5523D;}
 .ap-category-delete-btn{
   color:#B5523D;border-color:#E8C4BC;white-space:nowrap;
 }
@@ -465,25 +486,38 @@ button:not(.btn-sm):not(.ap-tab-btn):not(.nav-toggle):not(.side-backdrop):not([d
   outline:2px solid var(--mint-deep,#5ECFCF);outline-offset:2px;
 }
 .ap-section-title{font-size:13px;letter-spacing:.1em;margin:18px 0 10px;color:var(--ink);}
-.ap-variant-block{width:100%;overflow-x:auto;padding-bottom:2px;}
+/* Variant grid: fit all columns in editor width — no nested H-scroll. */
+.ap-variant-block{width:100%;overflow-x:visible;padding-bottom:2px;}
 .ap-variant-head,.ap-variant-row{
   display:grid;
-  grid-template-columns:minmax(70px,0.8fr) minmax(70px,0.8fr) minmax(96px,1fr) minmax(96px,1fr) minmax(88px,0.9fr) minmax(100px,1fr) minmax(100px,1fr) minmax(110px,1.1fr) 36px;
-  gap:10px;align-items:center;margin-bottom:8px;min-width:min(100%,960px);
+  grid-template-columns:minmax(0,0.75fr) minmax(0,0.75fr) minmax(0,1fr) minmax(0,1fr) minmax(0,0.85fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1.05fr) 36px;
+  gap:8px;align-items:center;margin-bottom:8px;min-width:0;
+}
+.ap-variant-block--earring .ap-variant-head,
+.ap-variant-block--earring .ap-variant-row{
+  grid-template-columns:minmax(0,0.7fr) minmax(0,0.7fr) minmax(0,0.95fr) minmax(0,0.95fr) minmax(0,0.8fr) minmax(0,0.95fr) minmax(0,0.95fr) minmax(0,0.95fr) minmax(0,1fr) 36px;
 }
 .ap-variant-block--chain .ap-variant-head,
 .ap-variant-block--chain .ap-variant-row{
-  grid-template-columns:minmax(70px,0.8fr) minmax(70px,0.8fr) minmax(110px,1.1fr) 36px;
-  min-width:min(100%,420px);
+  grid-template-columns:minmax(0,0.8fr) minmax(0,0.8fr) minmax(0,1.1fr) 36px;
 }
 .ap-variant-actions{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px;}
 .ap-variant-head{font-size:11px;color:var(--ink-faint);}
+.ap-variant-head span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .ap-variant-row input,.ap-variant-row select{
-  width:100%;min-width:0;padding:7px 8px;border:1px solid #DDD5CC;border-radius:5px;font-size:13px;box-sizing:border-box;
+  width:100%;min-width:0;padding:6px 7px;border:1px solid #DDD5CC;border-radius:5px;font-size:13px;box-sizing:border-box;
+}
+/* Narrow: wrap fields to 2–3 rows instead of inner H-scroll. */
+@media (max-width:720px){
+  .ap-variant-block:not(.ap-variant-block--chain) .ap-variant-head,
+  .ap-variant-block:not(.ap-variant-block--chain) .ap-variant-row{
+    grid-template-columns:repeat(3,minmax(0,1fr));
+  }
+  .ap-variant-row .ap-remove-row{grid-column:1 / -1;justify-self:start;}
 }
 .ap-metal-weight-out{
   display:flex;align-items:center;justify-content:center;width:100%;min-width:0;
-  padding:7px 8px;border-radius:5px;font-size:13px;box-sizing:border-box;
+  padding:6px 7px;border-radius:5px;font-size:13px;box-sizing:border-box;
   background:#F3F0EC;color:var(--ink-soft);white-space:nowrap;
 }
 .ap-remove-row{
@@ -629,7 +663,8 @@ button.ap-remove-image:hover{
 .ap-editor-head h2{font-family:var(--serif);font-size:22px;font-weight:600;letter-spacing:.1em;margin-bottom:6px;}
 .ap-editor-sub{font-size:13px;color:var(--ink-faint);line-height:1.7;margin:0;}
 .ap-editor-back{flex-shrink:0;margin-top:4px;}
-.ap-editor-body{max-width:900px;}
+/* Wider so earring variant cols (耳扣價錢 / 手動定價) fit without H-scroll. */
+.ap-editor-body{max-width:min(100%,1200px);}
 .ap-editor-actions{
   position:sticky;bottom:0;margin-top:28px;padding:16px 0 4px;
   background:linear-gradient(180deg,rgba(255,255,255,0) 0%,var(--card) 24%);

@@ -19,6 +19,7 @@ from app.pricing_overrides import (
     canonical_carat,
     load_overrides,
 )
+from app.product_categories import category_addon_price
 
 DIAMOND_PRICE = {
     "0.1": 24000, "0.2": 48000, "0.3": 79000, "0.5": 98000,
@@ -72,7 +73,7 @@ METAL_SYMBOL = {
 }
 # Default flat labor; standalone chains use metal-specific labor below.
 LABOR_FEE_TWD = 5000
-CHAIN_LABOR_FEE_TWD = {"s925": 500, "other": 2000}
+CHAIN_LABOR_FEE_TWD = {"s925": 500, "other": 3000}
 DEFAULT_ATTACHED_CHAIN_THICKNESS = "1.0mm"
 CHAIN_WAX_WEIGHT_CHIN = {
     "1.0mm": {36: 0.014, 41: 0.016, 46: 0.018, 51: 0.020, 61: 0.024, 76: 0.030, 80: 0.032},
@@ -334,10 +335,42 @@ def _resolve_chain_wax(
     raise ValueError("unsupported chain thickness or length")
 
 
-def _labor_fee(category: str, gold: str) -> int:
-    if category != "chain":
-        return LABOR_FEE_TWD
-    return CHAIN_LABOR_FEE_TWD["s925" if gold == "s925" else "other"]
+def _labor_fee(category: str, gold: str, addon_price_twd: int | None = None) -> int:
+    """Labor fee = 品項加價 when set, else built-in base (folded into 金工價格).
+
+    Base (when addon is 0 / unset): chain s925=500, chain other=3000,
+    else LABOR_FEE 5000. Addon > 0 fully replaces that base (no double).
+    Earring 耳扣 is added separately in compute_order_pricing.
+    """
+    if category == "chain" and gold == "s925":
+        base = CHAIN_LABOR_FEE_TWD["s925"]
+    elif category == "chain":
+        base = CHAIN_LABOR_FEE_TWD["other"]
+    else:
+        base = LABOR_FEE_TWD
+    try:
+        addon = int(addon_price_twd) if addon_price_twd is not None else 0
+    except (TypeError, ValueError):
+        addon = 0
+    if addon < 0:
+        addon = 0
+    return addon if addon > 0 else base
+
+
+def _ear_clasp_fee(variant: dict | None) -> int:
+    """Per-variant 耳扣價錢 (earring only); folded into labor / 金工價格."""
+    if not variant:
+        return 0
+    raw = variant.get("ear_clasp_price_twd")
+    if raw is None:
+        raw = variant.get("ear_cuff_price_twd")
+    if raw is None:
+        return 0
+    try:
+        amount = int(round(float(raw)))
+    except (TypeError, ValueError):
+        return 0
+    return max(0, amount)
 
 
 def get_product_variant(
@@ -507,7 +540,7 @@ def compute_order_pricing(cur, data: dict[str, Any], *, require_published: bool 
         return {"ready": False, "error": "product not available"}
     variant, weight_chin = looked_up
     weight_grams = weight_chin * CHIN_TO_GRAMS
-    labor_pre_tax = _labor_fee(category, gold)
+    labor_pre_tax = _labor_fee(category, gold, category_addon_price(cur, category))
 
     if category != "chain" and variant.get("manual_price_twd") is not None:
         gold_prices = get_metal_prices(cur)
@@ -526,7 +559,10 @@ def compute_order_pricing(cur, data: dict[str, Any], *, require_published: bool 
     taijin_pre_tax, rate_used = _metal_pre_tax(gold_prices, gold, weight_chin)
     taijin_display = round(taijin_pre_tax * (1 + tax_rate))
     # Labor is flat NT$ — not taxed. Tax only on metal (and 搭配鏈條 metal).
+    # Earring per-row 耳扣價錢 folds into labor / 金工價格 (with 品項加價).
     labor_display = labor_pre_tax
+    if category == "earring":
+        labor_display = labor_pre_tax + _ear_clasp_fee(variant)
     # Diamond list price is tax-inclusive; metal/chain quotes include tax at display time.
 
     diamond_price = None

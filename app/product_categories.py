@@ -11,14 +11,18 @@ from psycopg import errors as pg_errors
 from app.image_urls import resolve_product_image_url
 
 DEFAULT_CATEGORIES: list[dict] = [
-    {"slug": "pendant", "label_zh": "項墜", "label_en": "Pendant", "thumb_path": None, "sort_order": 0},
-    {"slug": "ring", "label_zh": "戒指", "label_en": "Ring", "thumb_path": None, "sort_order": 1},
-    {"slug": "earring", "label_zh": "耳環", "label_en": "Earring", "thumb_path": None, "sort_order": 2},
-    {"slug": "bracelet", "label_zh": "手鍊", "label_en": "Bracelet", "thumb_path": None, "sort_order": 3},
-    {"slug": "chain", "label_zh": "鏈條", "label_en": "Chain", "thumb_path": None, "sort_order": 4},
+    {"slug": "pendant", "label_zh": "項墜", "label_en": "Pendant", "thumb_path": None, "sort_order": 0, "addon_price_twd": 0},
+    {"slug": "ring", "label_zh": "戒指", "label_en": "Ring", "thumb_path": None, "sort_order": 1, "addon_price_twd": 0},
+    {"slug": "earring", "label_zh": "耳環", "label_en": "Earring", "thumb_path": None, "sort_order": 2, "addon_price_twd": 0},
+    {"slug": "bracelet", "label_zh": "手鍊", "label_en": "Bracelet", "thumb_path": None, "sort_order": 3, "addon_price_twd": 0},
+    {"slug": "chain", "label_zh": "鏈條", "label_en": "Chain", "thumb_path": None, "sort_order": 4, "addon_price_twd": 0},
 ]
 
+_CATEGORY_SELECT = (
+    "slug, label_zh, label_en, thumb_path, sort_order, addon_price_twd, created_at, updated_at"
+)
 _SLUG_RE = re.compile(r"^[a-z][a-z0-9_-]{1,31}$")
+_ADDON_MAX_TWD = 10_000_000
 
 
 def ensure_product_categories_schema(cur) -> None:
@@ -31,19 +35,24 @@ def ensure_product_categories_schema(cur) -> None:
           label_en text,
           thumb_path text,
           sort_order int not null default 0,
+          addon_price_twd int not null default 0,
           created_at timestamptz not null default now(),
           updated_at timestamptz not null default now()
         )
         """
     )
     cur.execute(
+        "alter table product_categories "
+        "add column if not exists addon_price_twd int not null default 0"
+    )
+    cur.execute(
         """
-        insert into product_categories (slug, label_zh, label_en, sort_order) values
-          ('pendant', '項墜', 'Pendant', 0),
-          ('ring', '戒指', 'Ring', 1),
-          ('earring', '耳環', 'Earring', 2),
-          ('bracelet', '手鍊', 'Bracelet', 3),
-          ('chain', '鏈條', 'Chain', 4)
+        insert into product_categories (slug, label_zh, label_en, sort_order, addon_price_twd) values
+          ('pendant', '項墜', 'Pendant', 0, 0),
+          ('ring', '戒指', 'Ring', 1, 0),
+          ('earring', '耳環', 'Earring', 2, 0),
+          ('bracelet', '手鍊', 'Bracelet', 3, 0),
+          ('chain', '鏈條', 'Chain', 4, 0)
         on conflict (slug) do nothing
         """
     )
@@ -56,14 +65,20 @@ def _serialize_row(row: dict) -> dict:
             out[key] = value.isoformat()
     thumb = out.get("thumb_path")
     out["thumbUrl"] = resolve_product_image_url(thumb) if thumb else None
+    addon = out.get("addon_price_twd")
+    try:
+        addon_int = int(addon) if addon is not None else 0
+    except (TypeError, ValueError):
+        addon_int = 0
+    out["addon_price_twd"] = max(0, addon_int)
+    out["addonPrice"] = out["addon_price_twd"]
     return out
 
 
 def fetch_categories(cur) -> list[dict]:
     ensure_product_categories_schema(cur)
     cur.execute(
-        "select slug, label_zh, label_en, thumb_path, sort_order, created_at, updated_at "
-        "from product_categories order by sort_order, slug"
+        f"select {_CATEGORY_SELECT} from product_categories order by sort_order, slug"
     )
     rows = cur.fetchall()
     if rows:
@@ -90,8 +105,49 @@ def build_category_meta(cur) -> dict[str, dict]:
             "labelZh": row["label_zh"],
             "labelEn": row.get("label_en"),
             "thumbUrl": row.get("thumbUrl"),
+            "addonPrice": int(row.get("addonPrice") or 0),
         }
     return meta
+
+
+def category_addon_price(cur, slug: str) -> int:
+    """NT$ 品項加價 for category — replaces default labor when > 0.
+
+    0 / unset keeps built-in labor defaults (chain s925 500 / chain other
+    3000 / else 5000). Folded into labor / 金工價格 (never a separate line).
+    """
+    slug = (slug or "").strip()
+    if not slug:
+        return 0
+    ensure_product_categories_schema(cur)
+    cur.execute(
+        "select addon_price_twd from product_categories where slug = %s",
+        (slug,),
+    )
+    row = cur.fetchone()
+    if row:
+        try:
+            return max(0, int(row["addon_price_twd"] or 0))
+        except (TypeError, ValueError):
+            return 0
+    for default in DEFAULT_CATEGORIES:
+        if default["slug"] == slug:
+            return int(default.get("addon_price_twd") or 0)
+    return 0
+
+
+def parse_addon_price(value) -> tuple[int | None, str | None]:
+    if value is None or (isinstance(value, str) and value.strip() == ""):
+        return None, "請填寫品項加價"
+    try:
+        amount = int(value)
+    except (TypeError, ValueError):
+        return None, "品項加價須為整數"
+    if amount < 0:
+        return None, "品項加價不可為負數"
+    if amount > _ADDON_MAX_TWD:
+        return None, "品項加價過大"
+    return amount, None
 
 
 def make_slug(label_zh: str, existing: set[str]) -> str:
@@ -125,9 +181,10 @@ def create_category(cur, *, label_zh: str, label_en: str | None = None) -> tuple
         sort_order = int(cur.fetchone()["next"])
         cur.execute(
             """
-            insert into product_categories (slug, label_zh, label_en, sort_order)
-            values (%s, %s, %s, %s)
-            returning slug, label_zh, label_en, thumb_path, sort_order, created_at, updated_at
+            insert into product_categories (slug, label_zh, label_en, sort_order, addon_price_twd)
+            values (%s, %s, %s, %s, 0)
+            returning slug, label_zh, label_en, thumb_path, sort_order, addon_price_twd,
+                      created_at, updated_at
             """,
             (slug, label_zh, label_en, sort_order),
         )
@@ -163,11 +220,11 @@ def update_category_thumb(cur, slug: str, thumb_path: str) -> tuple[dict | None,
         return None, "品項不存在"
     try:
         cur.execute(
-            """
+            f"""
             update product_categories
             set thumb_path = %s, updated_at = %s
             where slug = %s
-            returning slug, label_zh, label_en, thumb_path, sort_order, created_at, updated_at
+            returning {_CATEGORY_SELECT}
             """,
             (thumb_path, datetime.now(timezone.utc), slug),
         )
@@ -175,6 +232,33 @@ def update_category_thumb(cur, slug: str, thumb_path: str) -> tuple[dict | None,
     except Exception as exc:
         msg = str(exc).strip().split("\n", 1)[0][:200]
         return None, f"更新品項圖失敗：{msg}" if msg else "更新品項圖失敗"
+    if not row:
+        return None, "品項不存在"
+    return _serialize_row(dict(row)), None
+
+
+def update_category_addon(cur, slug: str, addon_price_twd: int) -> tuple[dict | None, str | None]:
+    slug = (slug or "").strip()
+    amount, err = parse_addon_price(addon_price_twd)
+    if err:
+        return None, err
+    ensure_product_categories_schema(cur)
+    if slug not in valid_category_slugs(cur):
+        return None, "品項不存在"
+    try:
+        cur.execute(
+            f"""
+            update product_categories
+            set addon_price_twd = %s, updated_at = %s
+            where slug = %s
+            returning {_CATEGORY_SELECT}
+            """,
+            (amount, datetime.now(timezone.utc), slug),
+        )
+        row = cur.fetchone()
+    except Exception as exc:
+        msg = str(exc).strip().split("\n", 1)[0][:200]
+        return None, f"更新品項加價失敗：{msg}" if msg else "更新品項加價失敗"
     if not row:
         return None, "品項不存在"
     return _serialize_row(dict(row)), None

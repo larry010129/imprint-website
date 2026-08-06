@@ -263,6 +263,7 @@ def build_catalog_product(product: dict, variants: list[dict], images: list[dict
     side_stone_prices: dict[str, dict[str, float]] = {}
     side_stone_carats: dict[str, dict[str, float]] = {}
     side_stone_totals: dict[str, dict[str, float]] = {}
+    ear_clasp_prices: dict[str, dict[str, float]] = {}
     for variant in variants:
         gold = variant["gold"]
         carat = _variant_carat_key(variant["carat"])
@@ -275,6 +276,11 @@ def build_catalog_product(product: dict, variants: list[dict], images: list[dict
             side_stone_carats.setdefault(gold, {})[carat] = float(variant["side_stone_carat"])
         if variant.get("side_stone_total_twd") is not None:
             side_stone_totals.setdefault(gold, {})[carat] = float(variant["side_stone_total_twd"])
+        ear_clasp_raw = variant.get("ear_clasp_price_twd")
+        if ear_clasp_raw is None:
+            ear_clasp_raw = variant.get("ear_cuff_price_twd")
+        if ear_clasp_raw is not None:
+            ear_clasp_prices.setdefault(gold, {})[carat] = float(ear_clasp_raw)
 
     style_key = legacy_style_key(product, images)
     images_by_color = _usable_images_by_color(images)
@@ -304,6 +310,7 @@ def build_catalog_product(product: dict, variants: list[dict], images: list[dict
         "sideStonePrices": side_stone_prices,
         "sideStoneCarats": side_stone_carats,
         "sideStoneTotals": side_stone_totals,
+        "earClaspPrices": ear_clasp_prices,
         "lengthWeights": _effective_chain_length_weights(product),
         "chainType": product.get("chain_type") or (
             DEFAULT_NECKLACE_TYPE if product.get("category") == "chain" else None
