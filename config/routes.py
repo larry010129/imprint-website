@@ -208,6 +208,22 @@ PAGE_HISTORY = PageMeta(
     robots='noindex, nofollow',
 )
 
+PAGE_JOURNAL = PageMeta(
+    route='/journal.html',
+    template='pages/journal.html',
+    title='品牌日誌｜銘印鑽石 IMPRINT DIAMOND',
+    description='銘印鑽石品牌日誌：培育鑽石知識分享、品牌動態與展會紀錄。',
+    canonical_path='journal.html',
+    og_title='品牌日誌｜銘印鑽石 IMPRINT DIAMOND',
+    og_description='培育鑽石知識分享、品牌動態與展會紀錄。',
+    og_image='static/images/hero/imprint-diamond-family-memorial.jpg',
+    breadcrumbs=[('首頁', '/'), ('品牌日誌', None)],
+    mvc_page=None,
+    extra_body_class=None,
+    content_fragment=None,
+    extra_head_blocks=[],
+)
+
 PAGE_LOGIN = PageMeta(
     route='/login.html',
     template='pages/login.html',
@@ -329,18 +345,17 @@ PAGE_TERMS = PageMeta(
 PAGE_RETURN_POLICY = PageMeta(
     route='/return-policy.html',
     template='pages/return-policy.html',
-    title='退換貨與取消政策（草稿）｜銘印鑽石 IMPRINT DIAMOND',
-    description='',
+    title='退換貨與取消政策｜銘印鑽石 IMPRINT DIAMOND',
+    description='銘印鑽石退換貨與取消政策：一般培育鑽石商品 7 天內可退換；DNA 鑽石等客製化商品因專屬培育，啟動生產後恕無法取消或退款。訂金、尺寸誤差與運送保障說明。',
     canonical_path='return-policy.html',
-    og_title=None,
-    og_description=None,
-    og_image=None,
+    og_title='退換貨與取消政策｜銘印鑽石 IMPRINT DIAMOND',
+    og_description='一般培育鑽石商品 7 天內可退換；DNA 鑽石等客製化商品啟動生產後恕無法取消或退款。',
+    og_image='static/images/hero/imprint-diamond-family-memorial.jpg',
     breadcrumbs=[('首頁', '/'), ('退換貨與取消政策', None)],
     mvc_page=None,
     extra_body_class=None,
     content_fragment=None,
     extra_head_blocks=[],
-    robots='noindex, nofollow',
 )
 
 PAGE_PROFILE = PageMeta(
@@ -966,6 +981,7 @@ ALL_PAGES: list[PageMeta] = [
     PAGE_FAVORITES,
     PAGE_GOLD_PRICE,
     PAGE_HISTORY,
+    PAGE_JOURNAL,
     PAGE_LOGIN,
     PAGE_LOGIN_2FA,
     PAGE_ACCOUNT_SECURITY,

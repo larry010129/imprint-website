@@ -157,4 +157,15 @@
   <url><loc>https://www.imprintdiamond.com/contact.html</loc>
     <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
 
+  <url>
+    <loc>https://www.imprintdiamond.com/return-policy.html</loc>
+    <lastmod>2026-08-05</lastmod>
+    <changefreq>monthly</changefreq><priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://www.imprintdiamond.com/journal.html</loc>
+    <lastmod>2026-08-05</lastmod>
+    <changefreq>monthly</changefreq><priority>0.5</priority>
+  </url>
+
 </urlset>

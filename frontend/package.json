@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite --config vite.admin-tables.config.ts",
     "build": "tsc -b && vite build --config vite.admin-tables.config.ts",
-    "preview": "vite preview --config vite.admin-tables.config.ts"
+    "preview": "vite preview --config vite.admin-tables.config.ts",
+    "build:shop-tour": "vite build --config vite.shop-tour.config.ts",
+    "build:journal": "vite build --config vite.journal.config.ts"
   },
   "dependencies": {
     "@ark-ui/react": "^5.37.2",
