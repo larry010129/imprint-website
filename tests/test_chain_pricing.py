@@ -218,8 +218,8 @@ console.log(JSON.stringify({ withAddon, noAddon }));
     assert out["withAddon"]["total"] == out["noAddon"]["total"] - 3800
 
 
-def test_attached_chain_ignores_chain_addon(monkeypatch):
-    """Pendant + includeChain: chainPrice = metal×tax only; chain 品項加價 never folds in."""
+def test_attached_chain_uses_full_o_chain_price(monkeypatch):
+    """Pendant + includeChain: chainPrice = full standalone O字鍊 (metal+tax + labor/addon)."""
     from unittest.mock import MagicMock
 
     from app.pricing import TAX_RATE, _metal_pre_tax, compute_order_pricing
@@ -269,20 +269,19 @@ def test_attached_chain_ignores_chain_addon(monkeypatch):
         },
     )
     metal_pre, _ = _metal_pre_tax(gold_prices, "18k", 0.014)
-    expected_chain = round(metal_pre * (1 + TAX_RATE))
+    # Row addon 4500 replaces base chain labor (category 9999 ignored when row > 0).
+    expected_chain = round(metal_pre * (1 + TAX_RATE)) + 4500
     assert quote["ready"] is True
     assert quote["laborPrice"] == 1200  # pendant row addon only
     assert quote["chainPrice"] == expected_chain
-    # Chain row 4500 + category 9999 must not appear in labor or chain line
-    assert quote["chainPrice"] != expected_chain + 4500
     assert quote["total"] == 10000 + quote["taijinPrice"] + 1200 + expected_chain
 
 
-def test_attached_chain_price_stable_when_chain_addon_changes(monkeypatch):
-    """Changing chain 品項加價 must not change pendant+chain quote."""
+def test_attached_chain_tracks_chain_addon_changes(monkeypatch):
+    """Changing chain 品項加價 changes pendant+chain quote by the same delta."""
     from unittest.mock import MagicMock
 
-    from app.pricing import compute_order_pricing
+    from app.pricing import TAX_RATE, _metal_pre_tax, compute_order_pricing
 
     pendant = {
         "weight_chin": 0.33,
@@ -334,14 +333,18 @@ def test_attached_chain_price_stable_when_chain_addon_changes(monkeypatch):
     q0 = compute_order_pricing(cur, payload)
     chain_addon["value"] = 4500
     q1 = compute_order_pricing(cur, payload)
+    metal_pre, _ = _metal_pre_tax(gold_prices, "18k", 0.014)
+    metal_taxed = round(metal_pre * (1 + TAX_RATE))
     assert q0["ready"] and q1["ready"]
-    assert q0["chainPrice"] == q1["chainPrice"]
-    assert q0["laborPrice"] == q1["laborPrice"] == 5000
-    assert q0["total"] == q1["total"]
+    # No addon → base chain labor 3000; addon 4500 replaces base.
+    assert q0["chainPrice"] == metal_taxed + 3000
+    assert q1["chainPrice"] == metal_taxed + 4500
+    assert q0["laborPrice"] == q1["laborPrice"] == 5000  # pendant labor unchanged
+    assert q1["total"] == q0["total"] + 1500
 
 
-def test_browser_attached_chain_ignores_chain_addon():
-    """Client parity: includeChain chainPrice ignores chain category/row 品項加價."""
+def test_browser_attached_chain_matches_standalone_o_chain():
+    """Client parity: includeChain chainPrice == standalone O字鍊 total for same SKU."""
     script = """
 global.window = {};
 require('./public/js/shop-pricing-local.js');
@@ -396,7 +399,9 @@ console.log(JSON.stringify({ withAddon, noAddon, alone }));
     assert out["noAddon"]["ready"] is True
     assert out["withAddon"]["laborPrice"] == 1200
     assert out["noAddon"]["laborPrice"] == 1200
-    assert out["withAddon"]["chainPrice"] == out["noAddon"]["chainPrice"]
-    assert out["withAddon"]["total"] == out["noAddon"]["total"]
-    # Standalone chain still takes row/category 品項加價
+    # Attach chain line = full standalone O字鍊 total (row addon 4500).
+    assert out["withAddon"]["chainPrice"] == out["alone"]["total"]
     assert out["alone"]["laborPrice"] == 4500
+    # Base labor 3000 when no addon; attach must include it.
+    assert out["noAddon"]["chainPrice"] == out["withAddon"]["chainPrice"] - 1500
+    assert out["withAddon"]["total"] == out["noAddon"]["total"] + 1500

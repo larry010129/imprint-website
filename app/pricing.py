@@ -575,7 +575,9 @@ def _compute_chain_addon(
     cur, gold_prices: dict, *, chain_product_id: str, chain_gold: str,
     chain_length_cm: Any, require_published: bool,
     chain_thickness: str | None = None,
+    tax_rate: float = TAX_RATE,
 ) -> dict | None:
+    """Full standalone O字鍊 quote for 搭配鏈條 (metal+tax + labor/addon, or manual)."""
     thickness = (chain_thickness or DEFAULT_ATTACHED_CHAIN_THICKNESS).strip()
     looked_up = _lookup_weight(
         cur, category="chain", product_id=chain_product_id, gold=chain_gold,
@@ -584,11 +586,14 @@ def _compute_chain_addon(
     )
     if not looked_up:
         return None
-    # Ignore chain variant: 搭配鏈條 = taxed metal only.
-    # Chain 品項加價 / chain labor apply only for standalone category=="chain".
-    _, weight_chin = looked_up
+    variant, weight_chin = looked_up
+    if variant.get("manual_price_twd") is not None:
+        return {"chainPrice": float(variant["manual_price_twd"])}
+    labor = _labor_fee(
+        "chain", chain_gold, _effective_addon_price(cur, "chain", variant)
+    )
     pre_tax, _ = _metal_pre_tax(gold_prices, chain_gold, weight_chin)
-    return {"chainPreTax": pre_tax}
+    return {"chainPrice": round(pre_tax * (1 + tax_rate)) + labor}
 
 
 def compute_order_pricing(cur, data: dict[str, Any], *, require_published: bool = True) -> dict[str, Any]:
@@ -685,7 +690,8 @@ def compute_order_pricing(cur, data: dict[str, Any], *, require_published: bool 
     gold_prices = get_metal_prices(cur)
     taijin_pre_tax, rate_used = _metal_pre_tax(gold_prices, gold, weight_chin)
     taijin_display = round(taijin_pre_tax * (1 + tax_rate))
-    # Labor is flat NT$ — not taxed. Tax only on metal (and 搭配鏈條 metal).
+    # Labor is flat NT$ — not taxed. Tax only on metal.
+    # 搭配鏈條 uses full O字鍊 quote (taxed metal + chain labor/addon or manual).
     # Earring per-row 耳扣價錢 folds into labor / 金工價格 (with 品項加價).
     # Ring size 品項加價 stacks on top of category/variant labor addon (not a replace).
     labor_display = labor_pre_tax
@@ -734,11 +740,11 @@ def compute_order_pricing(cur, data: dict[str, Any], *, require_published: bool 
         addon = _compute_chain_addon(
             cur, gold_prices, chain_product_id=chain_product_id, chain_gold=chain_gold,
             chain_length_cm=chain_length, require_published=require_published,
-            chain_thickness=chain_thickness,
+            chain_thickness=chain_thickness, tax_rate=tax_rate,
         )
         if not addon:
             return {"ready": False, "error": "invalid chain option"}
-        chain_display = round(addon["chainPreTax"] * (1 + tax_rate))
+        chain_display = round(addon["chainPrice"])
         total += chain_display
 
     return {

@@ -356,15 +356,23 @@
   }
 
   function computeChainAddon(catalog, chainProductId, chainGold, chainLengthCm, chainThickness) {
+    // Full standalone O字鍊 quote for 搭配鏈條 (metal+tax + labor/addon, or manual).
     var chainProduct = findProduct(catalog, 'chain', chainProductId);
     if (!chainProduct) throw new Error('invalid chain');
     var carat = chainThickness || DEFAULT_ATTACHED_CHAIN_THICKNESS;
     chainGold = normalizeGold(chainGold);
+    var manual = chainProduct.manualPrices && chainProduct.manualPrices[chainGold]
+      && chainProduct.manualPrices[chainGold][carat];
+    if (manual != null) return { chainPrice: Number(manual) };
     var weightChin = lookupWeight(chainProduct, 'chain', chainGold, carat, chainLengthCm);
-    var weightGrams = weightChin * CHIN_TO_GRAMS;
-    // 搭配鏈條 = taxed metal only. Chain 品項加價 / labor: standalone category==='chain' only.
     var metal = metalPreTax(chainGold, weightChin);
-    return { chainPreTax: metal.amount, chainWeightChin: weightChin };
+    var labor = laborFee(
+      'chain', chainGold, resolveAddonPrice('chain', chainProduct, chainGold, carat)
+    );
+    return {
+      chainPrice: Math.round(metal.amount * (1 + TAX_RATE)) + labor,
+      chainWeightChin: weightChin,
+    };
   }
 
   function computeOrderPricing(data, catalog) {
@@ -443,7 +451,8 @@
     }
     var metal = metalPreTax(gold, weightChin);
     var taijinDisplay = Math.round(metal.amount * (1 + TAX_RATE));
-    // Labor is flat NT$ — not taxed. Tax only on metal (and 搭配鏈條 metal).
+    // Labor is flat NT$ — not taxed. Tax only on metal.
+    // 搭配鏈條 uses full O字鍊 quote (taxed metal + chain labor/addon or manual).
     // Earring per-row 耳扣價錢 folds into labor / 金工價格 (with 品項加價).
     // Ring size 品項加價 stacks on top of category/variant labor addon.
     var laborDisplay = laborPreTax;
@@ -502,7 +511,7 @@
         var addon = computeChainAddon(
           catalog, chainProductId, chainGold, chainLength, chainThickness
         );
-        chainDisplay = Math.round(addon.chainPreTax * (1 + TAX_RATE));
+        chainDisplay = Math.round(addon.chainPrice);
         total += chainDisplay;
       } catch (e) {
         return { ready: false, error: 'invalid chain option' };
