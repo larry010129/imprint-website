@@ -260,6 +260,43 @@ def test_load_featured_video_backfills_to_six(tmp_path: Path):
     assert reloaded.get("eyebrow") == "VIDEO"
 
 
+def test_repair_persist_keeps_channel_head_id(tmp_path: Path):
+    """Embed repair must not drop channelHeadId (lazy head-diff depends on it)."""
+    path = tmp_path / "featured-video.json"
+    path.write_text(
+        json.dumps(
+            {
+                "enabled": True,
+                "syncedAt": "2026-08-07T10:00:00Z",
+                "channelHeadId": "rawHeadVid0",
+                "source": "fixed",
+                "eyebrow": "VIDEO",
+                "videos": [
+                    {"youtubeId": "blockedVid0", "title": "Bad", "label": "Bad"},
+                    {"youtubeId": "goodVideo00", "title": "G0", "label": "G0"},
+                ],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    payload = load_featured_video(
+        path,
+        check_embeddable=lambda vid: vid != "blockedVid0",
+        fetch_candidates=lambda: [
+            {"youtubeId": "blockedVid0", "title": "Bad"},
+            {"youtubeId": "goodVideo00", "title": "G0"},
+            {"youtubeId": "fillVideo01", "title": "F1"},
+        ],
+    )
+    assert payload is not None
+    reloaded = json.loads(path.read_text(encoding="utf-8"))
+    assert reloaded.get("channelHeadId") == "rawHeadVid0"
+    assert reloaded.get("syncedAt") == "2026-08-07T10:00:00Z"
+    assert reloaded.get("source") == "fixed"
+    assert "blockedVid0" not in [v["youtubeId"] for v in reloaded["videos"]]
+
+
 def test_save_and_admin_payload_roundtrip(tmp_path: Path):
     path = tmp_path / "featured-video.json"
     data = {

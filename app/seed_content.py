@@ -13,12 +13,64 @@ log = logging.getLogger(__name__)
 _SEED_PATH = Path(__file__).resolve().parent / "data" / "content-seed.json"
 _BANNERS_SEED = Path(__file__).resolve().parent / "data" / "banners-seed.json"
 
+# Legacy homepage social-proof names (imprint-diamond.com/imprint/index).
+_LEGACY_HOMEPAGE_TESTIMONIAL_NAMES = frozenset(
+    {
+        "沈小姐",
+        "徐小姐",
+        "賴先生",
+        "朱小姐",
+        "張小姐",
+        "吳小姐",
+        "陳先生",
+        "簡小姐",
+    }
+)
+
 
 def seed_content_if_empty() -> int:
     created = 0
     created += _seed_faq_testimonials()
     created += _seed_banners()
     created += _seed_page_images()
+    return created
+
+
+def _insert_testimonial(cur, entry: dict) -> None:
+    cur.execute(
+        """
+        insert into testimonials (
+          name, role, category, city, text, image_url, rating, sort_order, is_published
+        ) values (%s, %s, %s, %s, %s, %s, %s, %s, true)
+        """,
+        (
+            entry["name"],
+            entry.get("role") or "",
+            entry.get("category") or "",
+            entry.get("city") or "",
+            entry["text"],
+            entry.get("image_url") or "",
+            int(entry.get("rating") or 5),
+            int(entry.get("sort_order") or 0),
+        ),
+    )
+
+
+def _ensure_legacy_homepage_testimonials(cur, data: dict) -> int:
+    """Insert any of the 8 legacy homepage quotes missing by name."""
+    created = 0
+    for entry in data.get("testimonials") or []:
+        name = str(entry.get("name") or "").strip()
+        if name not in _LEGACY_HOMEPAGE_TESTIMONIAL_NAMES:
+            continue
+        cur.execute(
+            "select 1 from testimonials where name = %s limit 1",
+            (name,),
+        )
+        if cur.fetchone():
+            continue
+        _insert_testimonial(cur, entry)
+        created += 1
     return created
 
 
@@ -44,32 +96,16 @@ def _seed_faq_testimonials() -> int:
             t_count = (cur.fetchone() or {}).get("count") or 0
             cur.execute("select count(*)::int as count from faq_items")
             f_count = (cur.fetchone() or {}).get("count") or 0
-            if t_count > 0 and f_count > 0:
-                return 0
 
             data = json.loads(_SEED_PATH.read_text(encoding="utf-8"))
             created = 0
 
             if t_count == 0:
                 for entry in data.get("testimonials") or []:
-                    cur.execute(
-                        """
-                        insert into testimonials (
-                          name, role, category, city, text, image_url, rating, sort_order, is_published
-                        ) values (%s, %s, %s, %s, %s, %s, %s, %s, true)
-                        """,
-                        (
-                            entry["name"],
-                            entry.get("role") or "",
-                            entry.get("category") or "",
-                            entry.get("city") or "",
-                            entry["text"],
-                            entry.get("image_url") or "",
-                            int(entry.get("rating") or 5),
-                            int(entry.get("sort_order") or 0),
-                        ),
-                    )
+                    _insert_testimonial(cur, entry)
                     created += 1
+            else:
+                created += _ensure_legacy_homepage_testimonials(cur, data)
 
             if f_count == 0:
                 for cat in data.get("faq_categories") or []:

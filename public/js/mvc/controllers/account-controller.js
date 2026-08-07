@@ -25,7 +25,7 @@
 
       View.bindCityDistrict();
 
-      M.requireSession('account.html').then(function (res) {
+      M.requireSession('/account').then(function (res) {
         if (!res) return;
         View.renderProfile(res);
       });
@@ -48,7 +48,7 @@
           Model.updateProfile(payload).then(function (res) {
             View.setSaving(false);
             if (res && res._httpStatus === 401) {
-              global.location.href = '/login.html?next=' + encodeURIComponent('/account.html');
+              global.location.href = '/login?next=' + encodeURIComponent('/account');
               return;
             }
             if (!res || res.error || !res.ok) {
@@ -73,7 +73,7 @@
           global.imprintGoogleProfileImport.requestImport(function (res) {
             View.setGoogleImportLoading(false);
             if (res && res._httpStatus === 401) {
-              global.location.href = '/login.html?next=' + encodeURIComponent('/account.html?complete=1');
+              global.location.href = '/login?next=' + encodeURIComponent('/account?complete=1');
               return;
             }
             if (!res || res.error || !res.ok) {

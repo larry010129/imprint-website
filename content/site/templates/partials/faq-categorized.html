@@ -17,6 +17,8 @@
     {% endfor %}
   </div>
   {% for cat in categories %}
+  {% set items = cat['items'] %}
+  {% set half = ((items|length) + 1) // 2 %}
   <div
     class="faq-panel{% if loop.first %} is-active{% endif %}"
     role="tabpanel"
@@ -25,21 +27,33 @@
     data-faq-panel="{{ cat.id }}"
     {% if not loop.first %}hidden{% endif %}
   >
-    <div class="faq-list faq-list--card">
-      {% for item in cat['items'] %}
-      <div class="faq-item">
-        <details>
-          <summary class="faq-q">{{ item.question }}</summary>
-          <div class="faq-a-inner">{{ item.answer_html|safe }}</div>
-        </details>
+    <div class="faq-columns">
+      <div class="faq-col">
+        {% for item in items[:half] %}
+        <div class="faq-item">
+          <details>
+            <summary class="faq-q">{{ item.question }}</summary>
+            <div class="faq-a-inner">{{ item.answer_html|safe }}</div>
+          </details>
+        </div>
+        {% endfor %}
       </div>
-      {% endfor %}
+      <div class="faq-col">
+        {% for item in items[half:] %}
+        <div class="faq-item">
+          <details>
+            <summary class="faq-q">{{ item.question }}</summary>
+            <div class="faq-a-inner">{{ item.answer_html|safe }}</div>
+          </details>
+        </div>
+        {% endfor %}
+      </div>
     </div>
   </div>
   {% endfor %}
 </div>
 {% else %}
-<div class="faq-list faq-list--card">
+<div class="faq-columns">
   <p class="faq-empty">目前尚無常見問題，請稍後再查看。</p>
 </div>
 {% endif %}

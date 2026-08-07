@@ -17,7 +17,7 @@
     '1.5': 494000, '2.0': 910000, '2': 910000, '3.0': 1287000, '3': 1287000,
   };
 
-  /** price.html multi packages for 0.1/0.2/0.3; above 0.3 → unit×qty×discount. */
+  /** price multi packages for 0.1/0.2/0.3; above 0.3 → unit×qty×discount. */
   var WHITE_MULTI_DIAMOND_PRICE = {
     '0.1': { 2: 45600, 3: 61200, 4: 81000 },
     '0.2': { 2: 86400, 3: 122400, 4: 162000 },
@@ -180,7 +180,7 @@
       if (packagePrice != null) {
         return applyShapeSurcharge(packagePrice, diamondShape);
       }
-      // price.html: above 0.30ct → 單顆價 × 顆數 × discount
+      // price: above 0.30ct → 單顆價 × 顆數 × discount
       if (caratNum > FANCY_MIN_CARAT && base != null) {
         var discount = MULTI_STONE_ABOVE_03_MULTIPLIER[multiCount];
         if (!discount) return null;

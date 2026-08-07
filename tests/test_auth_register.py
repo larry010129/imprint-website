@@ -187,7 +187,7 @@ def test_check_email_rejects_unresolvable_domain(_mock_dns, client):
 
 def test_register_page_includes_validation_assets(client, monkeypatch):
     monkeypatch.setenv("RECAPTCHA_SITE_KEY", "test-recaptcha-site-key")
-    resp = client.get("/register.html")
+    resp = client.get("/register")
     assert resp.status_code == 200
     assert "auth-shell.js?v=8" in resp.text
     assert "auth.css?v=12" in resp.text
@@ -213,7 +213,7 @@ def test_register_page_includes_validation_assets(client, monkeypatch):
 
 def test_register_page_shows_config_message_without_site_key(client, monkeypatch):
     monkeypatch.setenv("RECAPTCHA_SITE_KEY", "")
-    resp = client.get("/register.html")
+    resp = client.get("/register")
     assert resp.status_code == 200
     assert "註冊驗證尚未設定" in resp.text
     assert "data-recaptcha-sitekey" not in resp.text

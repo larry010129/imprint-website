@@ -4,7 +4,7 @@
     <div class="shop-wizard-guide" id="shop-wizard-guide">
       <p class="shop-wizard-eyebrow">步驟 3 / 3{% if preview %} · 預覽{% endif %}</p>
       <h1 class="shop-wizard-title">{{ product.nameZh or '配置下單' }}</h1>
-      <p class="shop-wizard-desc">{% if preview %}預覽試算 — 無法加入購物車或送出訂單。{% else %}選擇規格，右側即時顯示伺服器試算價格。{% endif %}</p>
+      <p class="shop-wizard-desc">{% if preview %}預覽試算｜無法加入購物車或送出訂單。{% else %}選擇規格，右側即時顯示伺服器試算價格。{% endif %}</p>
     </div>
   </header>
 
@@ -141,7 +141,7 @@
               hx-target="#shop-cart-msg"
               hx-swap="innerHTML"
             >加入購物車</button>
-            <a class="shop-cta" href="/cart.html">前往購物車</a>
+            <a class="shop-cta" href="/cart">前往購物車</a>
             {% endif %}
           </div>
           <div id="shop-cart-msg">{% if cart_msg %}<p class="form-msg">{{ cart_msg }}</p>{% elif preview %}<p class="form-msg">預覽模式｜不會送出真實訂單</p>{% endif %}</div>

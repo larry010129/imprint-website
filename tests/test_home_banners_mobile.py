@@ -59,3 +59,17 @@ def test_home_banners_expands_local_hero_srcset():
     assert "LOCAL_HERO_MAX_W" in src
     assert "localHeroMobileSrcset" in src
     assert "replace(/-\\d+w$/i, '')" in src
+
+
+def test_home_yt_gallery_autoplay_mute_has_gesture_unmute():
+    """IO autoplay may mute for browser policy; user gesture must unmute."""
+    html = INDEX.read_text(encoding="utf-8")
+    css = (ROOT / "public" / "css" / "home-ghibli.css").read_text(encoding="utf-8")
+    assert "embedFacade(facade, { muted: true })" in html
+    assert "function unmuteActive" in html
+    assert "mountUnmuteCatcher" in html
+    assert 'data-yt-unmute' in html
+    assert "activateThumb(thumb, { play: true, muted: false })" in html
+    assert "embedFacade(btn, { muted: false })" in html
+    assert ".gh-yt-unmute{" in css
+    assert "home-ghibli.css?v=58" in html

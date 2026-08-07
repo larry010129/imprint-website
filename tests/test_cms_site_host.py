@@ -18,7 +18,7 @@ from app.cms_pages import (
 
 def test_site_route_to_slug_stable():
     assert site_route_to_slug("/") == "site-home"
-    about = site_route_to_slug("/about.html")
+    about = site_route_to_slug("/about")
     assert about.startswith("site-")
     assert re.fullmatch(r"[a-z0-9][a-z0-9-]{0,62}", about)
 
@@ -61,7 +61,7 @@ def test_upsert_section_page_image_skips_text_only_types(monkeypatch):
     monkeypatch.setattr("app.content.ensure_page_images_schema", lambda _cur: None)
     result = upsert_section_page_image(
         FakeCur(),
-        page_key="/about.html",
+        page_key="/about",
         section_id=str(uuid.uuid4()),
         section_type="rich_text",
         image_url="/x.jpg",

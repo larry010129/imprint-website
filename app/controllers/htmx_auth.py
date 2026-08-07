@@ -65,9 +65,9 @@ async def auth_login(request: Request) -> Response:
     email = str(form.get("email") or "").strip()
     password = str(form.get("password") or "")
     remember = form_bool(form.get("remember"))
-    next_url = str(form.get("next") or "/account.html").strip() or "/account.html"
+    next_url = str(form.get("next") or "/account").strip() or "/account"
     if not next_url.startswith("/") or next_url.startswith("//"):
-        next_url = "/account.html"
+        next_url = "/account"
 
     if not email or not password:
         return html(request, "auth_error.html", {"error": "請輸入 Email 與密碼"}, 400)
@@ -141,7 +141,7 @@ async def auth_verify_2fa(request: Request) -> Response:
         return html(request, "auth_error.html", {"error": "驗證已過期，請重新登入"}, 401)
 
     remember = form_bool(form.get("remember"))
-    next_url = safe_next_url(str(form.get("next") or "/account.html"))
+    next_url = safe_next_url(str(form.get("next") or "/account"))
     decision = decide_post_login(
         next_url=next_url,
         user_id=user_id,
@@ -286,7 +286,7 @@ async def auth_register(request: Request) -> Response:
     record_failures(lockout_keys, REGISTER_MAX_ATTEMPTS, REGISTER_LOCKOUT_SECONDS)
     admin = bool(grants.get("grants_admin"))
     token = sign_session(str(user["id"]), is_admin=admin, remember=True)
-    decision = decide_post_login(next_url="/account.html", user_id=str(user["id"]))
+    decision = decide_post_login(next_url="/account", user_id=str(user["id"]))
     resp = hx_redirect(decision.next_url)
     set_session_cookie(resp, token, request, remember=True, is_admin=admin)
     return resp
@@ -357,7 +357,7 @@ async def auth_forgot_password(request: Request) -> Response:
         return html(request, "auth_error.html", {"error": "密碼至少需要 8 碼"}, 400)
 
     complete_password_reset(user_id, new_password)
-    resp = hx_redirect("/login.html")
+    resp = hx_redirect("/login")
     clear_pwreset_cookie(resp, request)
     return resp
 
@@ -383,7 +383,7 @@ async def auth_request_reset(request: Request) -> HTMLResponse:
                     "insert into password_reset_tokens (token, user_id, expires_at) values (%s, %s, %s)",
                     (token_hash, user["id"], expires),
                 )
-            reset_url = f"{settings.public_base_url}/reset-password.html?token={raw}"
+            reset_url = f"{settings.public_base_url}/reset-password?token={raw}"
             try:
                 from app.mail import send_email
 
@@ -435,4 +435,4 @@ async def auth_reset_password(request: Request) -> Response:
             (now, token_hash),
         )
     bump_token_version(str(row["user_id"]))
-    return hx_redirect("/login.html")
+    return hx_redirect("/login")

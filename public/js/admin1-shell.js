@@ -8,7 +8,7 @@
   var BP = 961;
   var STORAGE_THEME = 'admin1-theme';
   var STORAGE_MENU = 'admin1-menu-state';
-  var LOGIN_NEXT = 'login.html?next=admin1.html';
+  var LOGIN_NEXT = '/login?next=admin1.html';
   var PENDING_ORDER = {
     received: 1, order_confirming: 1, dna_lab: 1, deposit_confirmed: 1
   };

@@ -10,7 +10,7 @@
       if (!M.isPage('cart')) return;
       View.setState('loading');
 
-      M.requireSession('cart.html').then(function (session) {
+      M.requireSession('/cart').then(function (session) {
         if (!session) return;
         return Model.load();
       }).then(function (res) {
@@ -62,7 +62,7 @@
       e.checkoutBtn.addEventListener('click', function () {
         var ids = View.updateSelection();
         if (!ids.length) return;
-        global.location.href = '/checkout.html?items=' + ids.map(encodeURIComponent).join(',');
+        global.location.href = '/checkout?items=' + ids.map(encodeURIComponent).join(',');
       });
     }
     if (e.dialogClose && e.dialog) e.dialogClose.addEventListener('click', function () { e.dialog.close(); });

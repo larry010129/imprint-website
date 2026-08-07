@@ -5,7 +5,7 @@ def test_copy_slot_specs_exclude_shop_jewelry():
     for spec in copy_slot_specs():
         assert not spec["page_key"].startswith("/shop/")
         assert not spec["page_key"].startswith("/jewelry/")
-        assert spec["page_key"] != "/price.html"
+        assert spec["page_key"] != "/price"
 
 
 def test_apply_text_and_button_slots():
@@ -31,7 +31,7 @@ def test_apply_text_and_button_slots():
             "is_published": True,
         },
     ]
-    out = apply_page_copy_slots(html, "/about.html", rows)
+    out = apply_page_copy_slots(html, "/about", rows)
     assert "NEW TITLE" in out
     assert 'href="/shop/calculator/"' in out
     assert "Start calc" in out
@@ -48,12 +48,12 @@ def test_copy_slots_escape_text_and_reject_script_links():
             "is_published": True,
         }
     ]
-    out = apply_page_copy_slots(html, "/about.html", rows)
+    out = apply_page_copy_slots(html, "/about", rows)
     assert "<script>" not in out
     assert "&lt;script&gt;" in out
     fields, err = parse_copy_slot_payload(
         {
-            "pageKey": "/about.html",
+            "pageKey": "/about",
             "slotKey": "cta-calculator",
             "href": "javascript:alert(1)",
         }

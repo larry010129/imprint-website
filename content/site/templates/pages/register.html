@@ -62,16 +62,16 @@
       <span class="checkmark" aria-hidden="true"></span>
       <span class="terms-check-label">
         我已閱讀並同意
-        <a href="/terms.html" data-register-terms-open>服務條款</a>
+        <a href="/terms" data-register-terms-open>服務條款</a>
         與
-        <a href="/privacy.html" data-register-terms-open>隱私權政策</a>
+        <a href="/privacy" data-register-terms-open>隱私權政策</a>
       </span>
     </label>
     <p class="terms-check-hint">需開啟條款並捲動至底部後才能勾選同意</p>
 
     <button type="submit" class="login-button" id="registerSubmitBtn"{% if not recaptcha_site_key %} disabled{% endif %}>建立會員帳號</button>
   </form>
-  <p class="signup-prompt">已經是會員了？<a href="/login.html">直接登入</a></p>
+  <p class="signup-prompt">已經是會員了？<a href="/login">直接登入</a></p>
 {% endcall %}
 
 <dialog id="register-terms-dialog" class="register-terms-dialog" aria-labelledby="register-terms-title">
@@ -81,7 +81,7 @@
   <div class="register-terms-scroll">
     <article class="register-terms-sections">
       <section class="register-terms-section">
-        <p>請詳閱網站<a href="/terms.html" target="_blank" rel="noopener">服務條款</a>與<a href="/privacy.html" target="_blank" rel="noopener">隱私權政策</a>全文後再同意。</p>
+        <p>請詳閱網站<a href="/terms" target="_blank" rel="noopener">服務條款</a>與<a href="/privacy" target="_blank" rel="noopener">隱私權政策</a>全文後再同意。</p>
       </section>
     </article>
   </div>

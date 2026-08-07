@@ -50,7 +50,7 @@
     if (!a) return Promise.resolve(null);
     return a.getSession().then(function (res) {
       if (!res || !res.user) {
-        global.location.href = 'login.html?next=' + encodeURIComponent(nextPath || global.location.pathname.split('/').pop());
+        global.location.href = '/login?next=' + encodeURIComponent(nextPath || global.location.pathname.split('/').pop());
         return null;
       }
       return res;

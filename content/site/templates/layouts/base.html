@@ -34,7 +34,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block title %}{{ title }}{% endblock %}</title>
 {% block meta_description %}<meta name="description" content="{{ description }}">{% endblock %}
-<link rel="canonical" href="https://www.imprintdiamond.com/{% if canonical_path %}{{ canonical_path }}{% else %}{% endif %}">
+{% if canonical_url %}
+<link rel="canonical" href="{{ canonical_url }}">
+{% endif %}
 {% if robots %}
 <meta name="robots" content="{{ robots }}">
 {% else %}
@@ -50,7 +52,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="銘印鑽石 IMPRINT DIAMOND">
 <meta property="og:locale" content="zh_TW">
-<meta property="og:url" content="https://www.imprintdiamond.com/{{ canonical_path }}">
+<meta property="og:url" content="{{ canonical_url or '' }}">
 {% block og_tags %}
 <meta property="og:title" content="{{ og_title or title }}">
 <meta property="og:description" content="{{ og_description or description }}">
@@ -61,33 +63,27 @@
 
 <style>{{ inline_css('base.css') | safe }}</style>
 {% if is_home %}
-{# Closed-bar shell inlined; full nav (drawer/dropdowns/animations) deferred #}
+{# Closed-bar shell inlined — nav-ihb hover included so CTA works before nav.css #}
 <style>{{ inline_css('nav-critical.css') | safe }}</style>
-<link rel="stylesheet" href="/static/css/nav.css?v=4.20" media="print" onload="this.media='all'">
-<noscript><link rel="stylesheet" href="/static/css/nav.css?v=4.20"></noscript>
-{% else %}
-<link rel="stylesheet" href="/static/css/nav.css?v=4.20">
 {% endif %}
+{# Sync nav.css all pages — InteractiveHoverButton + drawer must not defer on home #}
+<link rel="stylesheet" href="/static/css/nav.css?v=4.26">
 {% if not is_home %}
 <link rel="stylesheet" href="/static/css/home.css?v=5.7">
 {% endif %}
-{% if is_home %}
-<link rel="stylesheet" href="/static/css/footer.css?v=5" media="print" onload="this.media='all'">
-<noscript><link rel="stylesheet" href="/static/css/footer.css?v=5"></noscript>
-{% else %}
-<link rel="stylesheet" href="/static/css/footer.css?v=5">
-{% endif %}
+{# Blocking footer.css — dark site-footer must paint with first layout #}
+<link rel="stylesheet" href="/static/css/footer.css?v=22">
 {% if not is_home %}
-<link rel="stylesheet" href="/static/css/pages.css?v=5.30">
+<link rel="stylesheet" href="/static/css/pages.css?v=5.32">
 {% endif %}
 {% if load_skeleton_css or load_skeleton_ui %}
 <link rel="stylesheet" href="/static/css/skeleton.css?v=3">
 {% endif %}
 {% if is_home %}
-<link rel="stylesheet" href="/static/css/responsive.css?v=3.23" media="print" onload="this.media='all'">
-<noscript><link rel="stylesheet" href="/static/css/responsive.css?v=3.23"></noscript>
+<link rel="stylesheet" href="/static/css/responsive.css?v=3.26" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="/static/css/responsive.css?v=3.26"></noscript>
 {% else %}
-<link rel="stylesheet" href="/static/css/responsive.css?v=3.23">
+<link rel="stylesheet" href="/static/css/responsive.css?v=3.26">
 {% endif %}
 {% if is_home %}
 <link rel="stylesheet" href="/static/css/social-fab.css?v=11" media="print" onload="this.media='all'">
@@ -106,7 +102,7 @@
 {% endif %}
 
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"Organization","@id":"https://www.imprintdiamond.com/#organization","name":"銘印鑽石 IMPRINT DIAMOND","alternateName":["銘印鑽石","IMPRINT DIAMOND","Imprint Diamond"],"legalName":"心之銘印鑽石有限公司","url":"https://www.imprintdiamond.com/","logo":"https://www.imprintdiamond.com/favicon.svg","telephone":"+886-2-2977-0268","address":{"@type":"PostalAddress","streetAddress":"福德南路43號1樓","addressLocality":"三重區","addressRegion":"新北市","addressCountry":"TW"},"contactPoint":[{"@type":"ContactPoint","telephone":"+886-2-2977-0268","contactType":"customer service","areaServed":"TW","availableLanguage":["zh-Hant","zh-TW"]}],"sameAs":["https://www.facebook.com/Imprintdiamond/","https://lin.ee/ktVBtmx"],"areaServed":"TW"}
+{"@context":"https://schema.org","@type":"Organization","@id":"https://www.imprintdiamond.com/#organization","name":"銘印鑽石 IMPRINT DIAMOND","alternateName":["銘印鑽石","IMPRINT DIAMOND","Imprint Diamond"],"legalName":"心之銘印鑽石有限公司","url":"https://www.imprintdiamond.com/","logo":"https://www.imprintdiamond.com/favicon.svg","telephone":"+886-2-2977-0268","address":{"@type":"PostalAddress","streetAddress":"福德南路43號1樓","addressLocality":"三重區","addressRegion":"新北市","addressCountry":"TW"},"contactPoint":[{"@type":"ContactPoint","telephone":"+886-2-2977-0268","contactType":"customer service","areaServed":"TW","availableLanguage":["zh-Hant","zh-TW"]}],"sameAs":["https://www.facebook.com/Imprintdiamond/","https://lin.ee/ktVBtmx","https://www.youtube.com/@imprintdiamond"],"areaServed":"TW"}
 </script>
 
 {% if breadcrumbs %}
@@ -123,13 +119,17 @@
 {% include "partials/nav.html" %}
 </div>
 
-<main{% block main_class %}{% endblock %}>
+<main{% if is_home %} class="site-main--curtain"{% endif %}{% block main_class %}{% endblock %}>
 {% block content %}{% endblock %}
 {% set cms_anchor = 'end' %}
 {% include "partials/cms/site_section_stack.html" %}
 </main>
 
 {% include "partials/footer.html" %}
+{% if is_home %}
+<script src="/static/js/home-section-reveal.js?v=2" defer></script>
+<script src="/static/js/cinematic-footer.js?v=5" defer></script>
+{% endif %}
 {% if is_home %}
 <script>
 (function () {
@@ -189,7 +189,7 @@
 {% endif %}
 {% endif %}
 <script src="/static/js/site-layout.js?v=3" defer></script>
-<script src="/static/js/main.js?v=2.9" defer></script>
+<script src="/static/js/main.js?v=2.10" defer></script>
 {% block social_fab %}{% include "partials/social-fab.html" %}{% endblock %}
 {% block botpress_webchat %}{% include "partials/botpress-webchat.html" %}{% endblock %}
 </body>

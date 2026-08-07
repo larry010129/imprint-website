@@ -62,24 +62,24 @@ async def checkout_partial(request: Request) -> Response:
     ).strip()
     user_id = get_user_id(request)
     if not user_id:
-        next_path = "/checkout.html"
+        next_path = "/checkout"
         if raw_ids:
-            next_path = f"/checkout.html?items={raw_ids}"
-        return hx_redirect("/login.html?next=" + quote(next_path, safe=""))
+            next_path = f"/checkout?items={raw_ids}"
+        return hx_redirect("/login?next=" + quote(next_path, safe=""))
     item_ids = [
         s.strip() for s in raw_ids.split(",") if s.strip() and is_uuid(s.strip())
     ]
     if not item_ids:
-        return hx_redirect("/cart.html")
+        return hx_redirect("/cart")
     try:
         items = fetch_cart_items(user_id, item_ids)
     except Exception:
         logger.exception("htmx checkout fetch_cart_items failed")
-        return hx_redirect("/cart.html")
+        return hx_redirect("/cart")
     if not items:
-        return hx_redirect("/cart.html")
+        return hx_redirect("/cart")
     if any(i.get("available") is False for i in items):
-        return hx_redirect("/cart.html")
+        return hx_redirect("/cart")
     profile: dict = {}
     try:
         with get_connection() as conn, conn.cursor() as cur:
@@ -151,7 +151,7 @@ async def checkout_coupon(request: Request) -> HTMLResponse:
 async def checkout_submit(request: Request) -> Response:
     user_id = get_user_id(request)
     if not user_id:
-        return hx_redirect("/login.html")
+        return hx_redirect("/login")
     form = await request.form()
     item_ids = [s for s in str(form.get("itemIds") or "").split(",") if s]
     body = {
@@ -194,7 +194,7 @@ async def checkout_submit(request: Request) -> Response:
         )
     nums = result.get("orderNumbers") or []
     if len(nums) == 1:
-        return hx_redirect(f"/success.html?order={quote(nums[0])}")
+        return hx_redirect(f"/success?order={quote(nums[0])}")
     if nums:
-        return hx_redirect("/success.html?orders=" + quote(",".join(nums)))
-    return hx_redirect("/success.html")
+        return hx_redirect("/success?orders=" + quote(",".join(nums)))
+    return hx_redirect("/success")

@@ -50,6 +50,7 @@
   .mobile-menu-toggle,
   .nav-burger.mobile-menu-toggle{ display:flex; align-items:center; justify-content:center; }
   /* Drawer open: hide header CTAs so they don't stack over the menu */
+  .nav.is-mobile-menu-open .nav-cta .nav-ihb,
   .nav.is-mobile-menu-open .nav-cta .gradient-button,
   .nav.is-mobile-menu-open .nav-cta .nav-gradient-cta,
   .nav.is-mobile-menu-open .nav-cta .btn-dark{
@@ -67,8 +68,17 @@
   .nav-cta .btn-line{ display:none; }
   .nav-cta .btn-calc,
   .nav-cta .btn-contact{ display:none; }
-  /* Mobile header CTA: 價格試算 — !important beats stale page React CSS
+  /* Mobile header CTA: 開始試算 — !important beats stale page React CSS
      (price.css/checkout.css/…) that still ship display:none after src.css. */
+  .nav-cta .nav-ihb{
+    display:inline-flex !important;
+    flex-shrink:0;
+    min-width:0;
+    max-width:min(8.5rem,38vw);
+    padding:clamp(6px,1.5vw,9px) clamp(10px,2.4vw,14px) !important;
+    font-size:clamp(10.5px,2.85vw,12px) !important;
+    letter-spacing:.02em !important;
+  }
   .nav-cta .gradient-button,
   .nav-cta .nav-gradient-cta{
     display:inline-flex !important;

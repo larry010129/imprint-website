@@ -270,6 +270,26 @@
 .gh-yt-gallery__stage{
   position:relative; width:100%; height:100%;
 }
+/* Autoplay starts muted (browser policy). Top-right chip — avoid YT bottom control bar. */
+.gh-yt-unmute{
+  position:absolute; top:10px; right:10px; z-index:3;
+  display:inline-flex; align-items:center; gap:8px;
+  margin:0; padding:10px 14px; border:0; border-radius:10px;
+  background:rgba(20,18,16,.82); color:#fff;
+  font-size:13px; font-weight:600; letter-spacing:.04em; line-height:1;
+  cursor:pointer; -webkit-tap-highlight-color:transparent;
+  box-shadow:0 6px 20px rgba(0,0,0,.28);
+  min-height:44px;
+}
+.gh-yt-unmute:hover,
+.gh-yt-unmute:focus-visible{
+  background:rgba(20,18,16,.94);
+  outline:2px solid #fff; outline-offset:2px;
+}
+.gh-yt-unmute__icon{
+  display:inline-flex; align-items:center; justify-content:center;
+}
+.gh-yt-unmute__label{ white-space:nowrap; }
 .gh-poem__visual .gh-yt-facade{
   position:relative; width:100%; height:100%; padding:0; border:0;
   background-color:#000; background-size:cover; background-position:center;
@@ -574,25 +594,7 @@
   }
 }
 
-/* ---------- Atmospheric scene dividers ---------- */
-.gh-scene{
-  position:relative; height:clamp(220px, 32vw, 380px); overflow:hidden;
-}
-.gh-scene img{
-  width:100%; height:100%; object-fit:cover; object-position:center;
-}
-.gh-scene__fade-top,
-.gh-scene__fade-bottom{
-  position:absolute; left:0; right:0; height:8rem; pointer-events:none;
-}
-.gh-scene__fade-top{
-  top:0; background:linear-gradient(to bottom, var(--gh-cream), transparent);
-}
-.gh-scene__fade-bottom{
-  bottom:0; background:linear-gradient(to top, var(--gh-cream), transparent);
-}
-
-/* Soft media reveal — scene bands + CTA backdrop (transform/opacity only) */
+/* Soft media reveal — media bands + CTA backdrop (transform/opacity only) */
 .page-home .reveal-media img{
   opacity:0;
   transform:translate3d(0,0,0) scale(1.04);
@@ -601,9 +603,6 @@
 .page-home .reveal-media.is-in img{
   opacity:1;
   transform:none;
-}
-.page-home .gh-cta__scene.reveal-media img{
-  transform:translate3d(0,0,0) scale(1.03);
 }
 
 /* ---------- Section shell ---------- */
@@ -625,7 +624,7 @@
   width:100%; max-width:720px; margin-left:auto; margin-right:auto;
 }
 .page-home .faq--teaser [data-faq-root]{ width:100%; }
-.page-home .faq--teaser .faq-more{ text-align:center; }
+.page-home .faq--teaser .faq-more{ text-align:center; margin-top:50px; }
 /* home.css skipped on homepage — keep FAQ summaries ≥ tap target */
 .page-home .faq--teaser .faq-item{ border-bottom:1px solid rgba(42,36,56,.08); }
 .page-home .faq--teaser .faq-q{
@@ -772,39 +771,15 @@
 .gh-cta{
   position:relative; background:#0f0e14; color:#fff;
   text-align:center; overflow:hidden;
+  margin-bottom:0;
 }
-.gh-cta__scene{
-  position:relative; height:clamp(240px, 36vw, 420px);
-  overflow:hidden;
-}
-.gh-cta__scene img{ width:100%; height:100%; object-fit:cover; }
-.gh-cta__scene-fade-top{
-  position:absolute; inset:0 0 auto; z-index:1; height:8rem;
-  pointer-events:none;
-  background:linear-gradient(to bottom, var(--gh-cream), transparent);
-}
-/* Soft dissolve into body — tall multi-stop wash kills copper hairline
-   from warm photo highlights crushing against flat #0f0e14. */
-.gh-cta__scene-fade-bottom{
-  position:absolute; inset:auto 0 0; z-index:1;
-  height:clamp(10rem, 42%, 16rem);
-  pointer-events:none;
-  background:linear-gradient(
-    to top,
-    #0f0e14 0%,
-    #0f0e14 28%,
-    rgba(15,14,20,.94) 48%,
-    rgba(15,14,20,.62) 68%,
-    rgba(15,14,20,.28) 84%,
-    transparent 100%
-  );
-}
+/* Dark CTA → brown footer: no cream gutter (body --gh-cream would show) */
+.page-home .site-footer{ margin-top:0; }
+.page-home main.site-main--curtain .landing-ghibli{ margin-bottom:0; }
+.page-home main.site-main--curtain .gh-cta{ margin-bottom:0; }
 .gh-cta__body{
   position:relative; z-index:2;
-  margin-top:-1px;
-  padding:48px 16px 72px;
-  /* Extra soft bleed so scene→body never reads as two panels + a bar */
-  box-shadow:0 -56px 64px 28px #0f0e14;
+  padding:64px 16px 72px;
 }
 .gh-cta .gh-script{ margin-bottom:8px; }
 .gh-cta__title{
@@ -817,17 +792,6 @@
   max-width:480px; margin:0 auto 32px;
 }
 .gh-cta .hint{ color:rgba(255,255,255,.78); }
-
-/* CTA already black — drop hard footer hairline so band stays continuous */
-.page-home .footer,
-.page-home [data-hover-footer-root]{
-  background:#0f0e14;
-  border-top:none;
-  box-shadow:none;
-}
-.page-home [data-hover-footer-root] > *{
-  border-top:none;
-}
 
 @media (max-width:900px){
   .gh-poem-grid,
@@ -901,5 +865,50 @@
   }
   .gh-yt-thumb{
     min-height:var(--tap-target-min, 44px);
+  }
+  .gh-yt-unmute{
+    top:8px; right:8px;
+    padding:12px 16px;
+    font-size:14px;
+  }
+}
+
+/* ---------- Section curtain stack (match footer peel feel) ----------
+   Desktop: each section sticks; next scrolls over previous.
+   GSAP stagger on .reveal mirrors cinematic footer stage. */
+@media (min-width:901px){
+  .page-home .home-stack{
+    position:sticky;
+    top:0;
+    z-index:calc(2 + var(--home-stack-i, 1));
+    background:var(--gh-cream, #FBF6ED);
+    box-shadow:0 -12px 40px rgba(36,34,32,.08);
+  }
+  .page-home .home-stack--media{
+    background:transparent;
+    box-shadow:none;
+  }
+  .page-home .home-stack--cta{
+    background:var(--gh-ink, #242220);
+  }
+  .page-home .gh-wall.home-stack{
+    background:linear-gradient(180deg, rgba(142,237,240,.08) 0%, var(--gh-cream, #FBF6ED) 120px);
+  }
+  /* GSAP owns reveal — hide until ScrollTrigger plays */
+  html.home-gsap-sections .page-home .home-stack .reveal:not(.is-in),
+  html.home-gsap-sections .page-home .home-stack .reveal-media:not(.is-in){
+    opacity:0;
+    transform:translate3d(0,28px,0);
+  }
+  html.home-gsap-sections .page-home .home-stack .reveal,
+  html.home-gsap-sections .page-home .home-stack .reveal-media{
+    transition:none;
+  }
+}
+@media (prefers-reduced-motion:reduce){
+  .page-home .home-stack{
+    position:relative;
+    z-index:auto;
+    box-shadow:none;
   }
 }

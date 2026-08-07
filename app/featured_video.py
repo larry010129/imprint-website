@@ -277,7 +277,7 @@ def _persist_repaired_gallery(
     videos: list[dict[str, str]],
     path: Path | None,
 ) -> None:
-    """Write repaired embeddable gallery; preserve about meta + enabled."""
+    """Write repaired embeddable gallery; preserve about meta + sync head."""
     saved: dict[str, Any] = {
         "enabled": bool(data.get("enabled", True)),
         "videos": [
@@ -286,6 +286,9 @@ def _persist_repaired_gallery(
     }
     if data.get("syncedAt") or data.get("synced_at"):
         saved["syncedAt"] = data.get("syncedAt") or data.get("synced_at")
+    head = str(data.get("channelHeadId") or data.get("channel_head_id") or "").strip()
+    if head:
+        saved["channelHeadId"] = head
     for key in _META_KEYS:
         if key in data:
             saved[key] = data[key]

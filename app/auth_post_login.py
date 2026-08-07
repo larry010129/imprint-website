@@ -23,11 +23,20 @@ class PostLoginDecision:
     next_url: str
 
 
-def safe_next_url(raw: str | None, default: str = "/account.html") -> str:
+def safe_next_url(raw: str | None, default: str = "/account") -> str:
     next_url = (raw or default).strip() or default
     if not next_url.startswith("/") or next_url.startswith("//"):
         return default
-    return next_url
+    # Normalize legacy *.html bookmarks (keep admin*.html shells).
+    path, sep, query = next_url.partition("?")
+    if (
+        path.endswith(".html")
+        and not path.startswith("/admin")
+        and path.count("/") <= 2
+    ):
+        path = path[: -len(".html")]
+        next_url = f"{path}?{query}" if sep else path
+    return next_url or default
 
 
 def decide_post_login(
@@ -46,7 +55,7 @@ def decide_post_login(
     safe = safe_next_url(next_url)
     if user_id and totp_enabled and is_admin(user_id):
         q = urlencode({"next": safe, "remember": "1" if remember else "0"})
-        return PostLoginDecision("pre2fa", f"/login-2fa.html?{q}")
+        return PostLoginDecision("pre2fa", f"/login-2fa?{q}")
     return PostLoginDecision("session", safe)
 
 

@@ -1,7 +1,7 @@
 {% if guest %}
 <div class="member-state member-state--empty">
   <p>請先登入以查看購物車。</p>
-  <a href="/login.html?next=/cart.html" class="btn btn-mint">會員登入</a>
+  <a href="/login?next=/cart" class="btn btn-mint">會員登入</a>
 </div>
 {% elif not items %}
 <div class="member-state member-state--empty" id="cart-empty">
@@ -107,7 +107,7 @@
     if(btn.disabled) return;
     var ids=[].slice.call(root.querySelectorAll('[data-cart-check]:checked')).map(function(b){return b.value;});
     if(!ids.length){alert('請至少選擇一件品項');return;}
-    location.href='/checkout.html?items='+encodeURIComponent(ids.join(','));
+    location.href='/checkout?items='+encodeURIComponent(ids.join(','));
   });
   sync();
 })();

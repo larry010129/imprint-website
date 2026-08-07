@@ -7,27 +7,35 @@
 ## 關鍵字 → 主要頁面
 
 - 銘印鑽石／Imprint Diamond／紀念鑽石／DNA鑽石 台灣 → https://www.imprintdiamond.com/
-- DNA鑽石／CVD 鑽石／GIA 培育鑽石（可代送鑑定說明） → https://www.imprintdiamond.com/what-is-dna-diamond.html
+- DNA鑽石／CVD 鑽石／GIA 培育鑽石（可代送鑑定說明） → https://www.imprintdiamond.com/what-is-dna-diamond
+- 鑽石 4C／克拉 顏色 淨度 切工 → https://www.imprintdiamond.com/diamond-4c
+- 培育鑽石／實驗室鑽石 → https://www.imprintdiamond.com/lab-grown-diamond
+- 天然鑽石 vs 培育鑽石／DNA 比較 → https://www.imprintdiamond.com/diamond-comparison
 - 骨灰鑽石／生命鑽石／寵物 骨灰 鑽石 → https://www.imprintdiamond.com/series/heirloom/
 - 寵物鑽石／寵物 毛髮 鑽石／寵物紀念品 → https://www.imprintdiamond.com/series/pet/
 - 結髮鑽石／培育鑽石婚戒 → https://www.imprintdiamond.com/series/love/
+- 求婚戒指／結髮飾品入口 → https://www.imprintdiamond.com/jewelry/engagement/
 - 初生鑽石／滿月鑽石 → https://www.imprintdiamond.com/series/first-love/
 - 客製化鑽石戒指 → https://www.imprintdiamond.com/jewelry/rings/
 - 專屬鑽石 定製 → https://www.imprintdiamond.com/shop/calculator/
-- 訂製 婚戒 三重 → https://www.imprintdiamond.com/contact.html
+- 訂製 婚戒 → https://www.imprintdiamond.com/contact
 - 毛髮鑽石 → 首頁、DNA 知識頁與各系列
-- 常見問題（樣本、時程、CVD／鑑定） → https://www.imprintdiamond.com/faq.html
+- 常見問題（樣本、時程、CVD／鑑定） → https://www.imprintdiamond.com/faq
 
 ## 主要頁面
 
 - [首頁](https://www.imprintdiamond.com/): 品牌總覽與五大系列入口
 - [線上客製試算](https://www.imprintdiamond.com/shop/calculator/): 選品項、款式、金屬與鑽石規格並即時試算
-- [價格總覽](https://www.imprintdiamond.com/price.html): DNA 鑽石價格與試算入口
-- [系列總覽](https://www.imprintdiamond.com/series.html): 五大 DNA 紀念鑽石系列
-- [關於我們](https://www.imprintdiamond.com/about.html): 品牌故事與在地實驗室
-- [常見問題](https://www.imprintdiamond.com/faq.html): 訂製流程、價格、時程與保障
-- [DNA 鑽石知識](https://www.imprintdiamond.com/what-is-dna-diamond.html): DNA／CVD 紀念鑽石製程與說明
-- [聯絡我們](https://www.imprintdiamond.com/contact.html): 表單與三重門市資訊
+- [價格總覽](https://www.imprintdiamond.com/price): DNA 鑽石價格與試算入口
+- [系列總覽](https://www.imprintdiamond.com/series): 五大 DNA 紀念鑽石系列
+- [關於我們](https://www.imprintdiamond.com/about): 品牌故事與在地實驗室
+- [常見問題](https://www.imprintdiamond.com/faq): 訂製流程、價格、時程與保障
+- [DNA 鑽石知識](https://www.imprintdiamond.com/what-is-dna-diamond): DNA／CVD 紀念鑽石製程與說明
+- [鑽石 4C](https://www.imprintdiamond.com/diamond-4c): Carat／Color／Clarity／Cut 說明
+- [培育鑽石](https://www.imprintdiamond.com/lab-grown-diamond): 實驗室培育與 DNA 定位
+- [鑽石比較](https://www.imprintdiamond.com/diamond-comparison): 天然 vs 培育 vs DNA
+- [求婚／結髮](https://www.imprintdiamond.com/jewelry/engagement/): 婚戒戒台與結髮系列入口
+- [聯絡我們](https://www.imprintdiamond.com/contact): 表單與門市資訊
 
 ## 系列
 
@@ -40,13 +48,13 @@
 ## 聯絡
 
 - [官方 LINE](https://lin.ee/ktVBtmx): 預約顧問與專屬報價
-- [聯絡頁](https://www.imprintdiamond.com/contact.html): 線上留言與門市地址
+- [聯絡頁](https://www.imprintdiamond.com/contact): 線上留言與門市地址
 
 ## Optional
 
-- [黃金牌價](https://www.imprintdiamond.com/gold-price.html): 每日金工參考牌價
+- [黃金牌價](https://www.imprintdiamond.com/gold-price): 每日金工參考牌價
 - [時尚珠寶](https://www.imprintdiamond.com/jewelry/): 戒指、項鍊、耳環、手鍊分類
-- [客戶見證](https://www.imprintdiamond.com/stories.html): 真實客戶故事
-- [品牌日誌](https://www.imprintdiamond.com/journal.html): 文章與最新消息
-- [退換貨政策](https://www.imprintdiamond.com/return-policy.html): 退換貨說明
+- [客戶見證](https://www.imprintdiamond.com/stories): 真實客戶故事
+- [品牌日誌](https://www.imprintdiamond.com/journal): 文章與最新消息
+- [退換貨政策](https://www.imprintdiamond.com/return-policy): 退換貨說明
 - [Facebook](https://www.facebook.com/Imprintdiamond/): 社群粉專

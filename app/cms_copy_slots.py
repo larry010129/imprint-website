@@ -59,9 +59,23 @@ def ensure_page_copy_slots_schema(cur) -> None:
         where page_key like '/shop/%%'
            or page_key like '/jewelry/%%'
            or page_key = '/jewelry/'
+           or page_key = '/price'
            or page_key = '/price.html'
         """
     )
+    cur.execute(
+        """
+        update page_copy_slots as p
+        set page_key = left(page_key, length(page_key) - 5)
+        where page_key like '%%.html'
+          and not exists (
+            select 1 from page_copy_slots x
+            where x.page_key = left(p.page_key, length(p.page_key) - 5)
+              and x.slot_key = p.slot_key
+          )
+        """
+    )
+    cur.execute("delete from page_copy_slots where page_key like '%%.html'")
 
 
 def seed_page_copy_slots(cur) -> int:
@@ -146,7 +160,7 @@ def fetch_all_copy_slots(cur) -> list[dict]:
         where page_key not like '/shop/%%'
           and page_key not like '/jewelry/%%'
           and page_key <> '/jewelry/'
-          and page_key <> '/price.html'
+          and page_key <> '/price'
         order by page_key asc, sort_order asc, slot_key asc
         """
     )
@@ -154,11 +168,17 @@ def fetch_all_copy_slots(cur) -> list[dict]:
 
 
 def fetch_copy_slots_for_page(cur, page_key: str) -> list[dict]:
-    cur.execute(
-        "select * from page_copy_slots where page_key = %s order by sort_order, slot_key",
-        (page_key,),
-    )
-    return [serialize_copy_slot(r) for r in cur.fetchall()]
+    from app.cms_boundary import page_key_aliases
+
+    for key in page_key_aliases(page_key):
+        cur.execute(
+            "select * from page_copy_slots where page_key = %s order by sort_order, slot_key",
+            (key,),
+        )
+        rows = cur.fetchall()
+        if rows:
+            return [serialize_copy_slot(r) for r in rows]
+    return []
 
 
 def parse_copy_slot_payload(body: dict | None) -> tuple[dict | None, str | None]:

@@ -31,10 +31,10 @@ HOME = PageMeta(
     route='/',
     template='pages/index.html',
     title='銘印鑽石 IMPRINT DIAMOND｜台灣在地 DNA 紀念鑽石訂製',
-    description='銘印鑽石｜全台唯一在地 DNA 鑽石培育實驗室。毛髮、骨灰可製成專屬紀念鑽石（骨灰、毛髮、生命、寵物、初生）；採 CVD 製程，附鑑定保障與影音紀念盒，三重預約制顧問。',
+    description='銘印鑽石｜全台唯一在地 DNA 鑽石培育實驗室。毛髮、骨灰可製成專屬紀念鑽石（骨灰、毛髮、生命、寵物、初生）；採 CVD 製程，附鑑定保障與影音紀念盒，預約制顧問。',
     canonical_path='',
     og_title='銘印鑽石 IMPRINT DIAMOND｜台灣在地 DNA 紀念鑽石訂製',
-    og_description='全台唯一在地 DNA 鑽石培育實驗室。毛髮、骨灰可製成專屬紀念鑽石；CVD 製程、鑑定保障，三重預約制顧問。',
+    og_description='全台唯一在地 DNA 鑽石培育實驗室。毛髮、骨灰可製成專屬紀念鑽石；CVD 製程、鑑定保障，預約制顧問。',
     og_image='static/images/hero/imprint-diamond-family-memorial.jpg',
     breadcrumbs=[],
     mvc_page=None,
@@ -44,7 +44,7 @@ HOME = PageMeta(
 )
 
 PAGE_404 = PageMeta(
-    route='/404.html',
+    route='/404',
     template='pages/404.html',
     title='找不到頁面｜銘印鑽石 IMPRINT DIAMOND',
     description='',
@@ -57,18 +57,19 @@ PAGE_404 = PageMeta(
     extra_body_class='page-404',
     content_fragment=None,
     extra_head_blocks=[],
+    robots='noindex, nofollow',
 )
 
 PAGE_ABOUT = PageMeta(
-    route='/about.html',
+    route='/about',
     template='pages/about.html',
     title='銘印鑽石品牌故事｜紀念鑽石的陪伴與託付',
-    description='銘印鑽石（IMPRINT DIAMOND／心之銘印鑽石有限公司）品牌故事：我們相信思念可以有具體的形狀，也理解每一段考慮期都值得被尊重。新北三重預約制門市、全程在地託付、不催促成交。DNA 鑽石製程詳見鑽石知識頁。',
-    canonical_path='about.html',
+    description='銘印鑽石（IMPRINT DIAMOND／心之銘印鑽石有限公司）品牌故事：我們相信思念可以有具體的形狀，也理解每一段考慮期都值得被尊重。預約制門市、全程在地託付、不催促成交。DNA 鑽石製程詳見鑽石知識頁。',
+    canonical_path='about',
     og_title='銘印鑽石品牌故事｜IMPRINT DIAMOND',
-    og_description='銘印鑽石｜在您準備好的時候，我們都在。新北三重預約制門市；紀念鑽石的陪伴、託付與服務承諾。',
+    og_description='銘印鑽石｜在您準備好的時候，我們都在。預約制門市；紀念鑽石的陪伴、託付與服務承諾。',
     og_image='static/images/legacy-live/styles/taiwan-local-lab.jpg',
-    breadcrumbs=[('首頁', '/'), ('關於我們', '/about.html'), ('品牌故事', None)],
+    breadcrumbs=[('首頁', '/'), ('關於我們', '/about'), ('品牌故事', None)],
     mvc_page=None,
     extra_body_class=None,
     content_fragment=None,
@@ -76,11 +77,11 @@ PAGE_ABOUT = PageMeta(
 )
 
 PAGE_ACCOUNT = PageMeta(
-    route='/account.html',
+    route='/account',
     template='pages/account.html',
     title='會員專區｜銘印鑽石 IMPRINT DIAMOND',
     description='',
-    canonical_path='account.html',
+    canonical_path='account',
     og_title=None,
     og_description=None,
     og_image=None,
@@ -93,11 +94,11 @@ PAGE_ACCOUNT = PageMeta(
 )
 
 PAGE_CART = PageMeta(
-    route='/cart.html',
+    route='/cart',
     template='pages/cart.html',
     title='購物車｜銘印鑽石 IMPRINT DIAMOND',
     description='',
-    canonical_path='cart.html',
+    canonical_path='cart',
     og_title=None,
     og_description=None,
     og_image=None,
@@ -110,11 +111,11 @@ PAGE_CART = PageMeta(
 )
 
 PAGE_CHECKOUT = PageMeta(
-    route='/checkout.html',
+    route='/checkout',
     template='pages/checkout.html',
     title='確認訂單｜銘印鑽石 IMPRINT DIAMOND',
     description='',
-    canonical_path='checkout.html',
+    canonical_path='checkout',
     og_title=None,
     og_description=None,
     og_image=None,
@@ -127,15 +128,15 @@ PAGE_CHECKOUT = PageMeta(
 )
 
 PAGE_CONTACT = PageMeta(
-    route='/contact.html',
+    route='/contact',
     template='pages/contact.html',
     title='銘印鑽石聯絡我們｜三重門市・02-2977-0268',
     description='銘印鑽石（IMPRINT DIAMOND）聯絡資訊：新北市三重區福德南路 43 號 1 樓（預約制），電話 02-2977-0268。訂製婚戒、結髮鑽石或專屬試算，歡迎官方 LINE 一對一預約，或於本頁留言。',
-    canonical_path='contact.html',
+    canonical_path='contact',
     og_title='銘印鑽石聯絡我們｜三重門市預約制',
     og_description='銘印鑽石｜新北市三重區福德南路 43 號 1 樓（預約制），電話 02-2977-0268。訂製婚戒與結髮鑽石歡迎 LINE 預約。',
     og_image='static/images/hero/imprint-diamond-family-memorial.jpg',
-    breadcrumbs=[('首頁', '/'), ('關於我們', '/about.html'), ('聯絡我們', None)],
+    breadcrumbs=[('首頁', '/'), ('關於我們', '/about'), ('聯絡我們', None)],
     mvc_page='contact',
     extra_body_class=None,
     content_fragment=None,
@@ -143,11 +144,11 @@ PAGE_CONTACT = PageMeta(
 )
 
 PAGE_FAQ = PageMeta(
-    route='/faq.html',
+    route='/faq',
     template='pages/faq.html',
     title='常見問題｜DNA紀念鑽石怎麼做？毛髮骨灰需要多少？－銘印鑽石',
     description='DNA紀念鑽石常見問題一次解答：毛髮約一顆雞蛋大小、骨灰3至5公克即可訂製，製作約3個月，全程於台灣在地實驗室完成，0.20克拉以上可代送GIA/IGI鑑定。',
-    canonical_path='faq.html',
+    canonical_path='faq',
     og_title='常見問題｜DNA紀念鑽石怎麼做？－銘印鑽石',
     og_description='毛髮約一顆雞蛋大小、骨灰3至5公克即可訂製，製作約3個月，全程台灣在地完成。',
     og_image='static/images/hero/imprint-diamond-family-memorial.jpg',
@@ -159,11 +160,11 @@ PAGE_FAQ = PageMeta(
 )
 
 PAGE_FAVORITES = PageMeta(
-    route='/favorites.html',
+    route='/favorites',
     template='pages/favorites.html',
     title='收藏款式｜銘印鑽石 IMPRINT DIAMOND',
     description='',
-    canonical_path='favorites.html',
+    canonical_path='favorites',
     og_title=None,
     og_description=None,
     og_image=None,
@@ -176,11 +177,11 @@ PAGE_FAVORITES = PageMeta(
 )
 
 PAGE_GOLD_PRICE = PageMeta(
-    route='/gold-price.html',
+    route='/gold-price',
     template='pages/gold-price.html',
     title='黃金牌價｜黃金最新牌價－銘印鑽石',
     description='即時黃金飾金牌價，9K/14K/18K 成色金價換算，供戒台訂製試算參考。',
-    canonical_path='gold-price.html',
+    canonical_path='gold-price',
     og_title=None,
     og_description=None,
     og_image=None,
@@ -192,11 +193,11 @@ PAGE_GOLD_PRICE = PageMeta(
 )
 
 PAGE_HISTORY = PageMeta(
-    route='/history.html',
+    route='/history',
     template='pages/history.html',
     title='訂購紀錄｜銘印鑽石 IMPRINT DIAMOND',
     description='',
-    canonical_path='history.html',
+    canonical_path='history',
     og_title=None,
     og_description=None,
     og_image=None,
@@ -209,11 +210,11 @@ PAGE_HISTORY = PageMeta(
 )
 
 PAGE_JOURNAL = PageMeta(
-    route='/journal.html',
+    route='/journal',
     template='pages/journal.html',
     title='品牌日誌｜銘印鑽石 IMPRINT DIAMOND',
     description='銘印鑽石品牌日誌：培育鑽石知識分享、品牌動態與展會紀錄。',
-    canonical_path='journal.html',
+    canonical_path='journal',
     og_title='品牌日誌｜銘印鑽石 IMPRINT DIAMOND',
     og_description='培育鑽石知識分享、品牌動態與展會紀錄。',
     og_image='static/images/hero/imprint-diamond-family-memorial.jpg',
@@ -225,11 +226,11 @@ PAGE_JOURNAL = PageMeta(
 )
 
 PAGE_LOGIN = PageMeta(
-    route='/login.html',
+    route='/login',
     template='pages/login.html',
     title='會員登入｜銘印鑽石 IMPRINT DIAMOND',
     description='',
-    canonical_path='login.html',
+    canonical_path='login',
     og_title=None,
     og_description=None,
     og_image=None,
@@ -242,11 +243,11 @@ PAGE_LOGIN = PageMeta(
 )
 
 PAGE_LOGIN_2FA = PageMeta(
-    route='/login-2fa.html',
+    route='/login-2fa',
     template='pages/login-2fa.html',
     title='雙因素驗證｜銘印鑽石 IMPRINT DIAMOND',
     description='',
-    canonical_path='login-2fa.html',
+    canonical_path='login-2fa',
     og_title=None,
     og_description=None,
     og_image=None,
@@ -259,11 +260,11 @@ PAGE_LOGIN_2FA = PageMeta(
 )
 
 PAGE_ACCOUNT_SECURITY = PageMeta(
-    route='/account-security.html',
+    route='/account-security',
     template='pages/account-security.html',
     title='帳戶安全｜銘印鑽石 IMPRINT DIAMOND',
     description='',
-    canonical_path='account-security.html',
+    canonical_path='account-security',
     og_title=None,
     og_description=None,
     og_image=None,
@@ -276,11 +277,11 @@ PAGE_ACCOUNT_SECURITY = PageMeta(
 )
 
 PAGE_NOTIFICATIONS = PageMeta(
-    route='/notifications.html',
+    route='/notifications',
     template='pages/notifications.html',
     title='通知｜銘印鑽石 IMPRINT DIAMOND',
     description='',
-    canonical_path='notifications.html',
+    canonical_path='notifications',
     og_title=None,
     og_description=None,
     og_image=None,
@@ -293,15 +294,15 @@ PAGE_NOTIFICATIONS = PageMeta(
 )
 
 PAGE_PRICE = PageMeta(
-    route='/price.html',
+    route='/price',
     template='pages/price.html',
     title='價格總覽｜DNA紀念鑽石價格表－銘印鑽石 IMPRINT DIAMOND',
     description='DNA紀念鑽石(骨灰鑽石,毛髮鑽石,寵物鑽石,生命鑽石)價格總覽：0.10克拉NT$24,000起，依克拉數透明報價；非圓形切工加價10%且需0.30克拉以上，0.20克拉以上可代送GIA/IGI鑑定。',
-    canonical_path='price.html',
+    canonical_path='price',
     og_title='價格總覽｜DNA紀念鑽石價格表－銘印鑽石',
     og_description='依克拉數透明報價，沒有看不懂的名目。0.10克拉NT$24,000起。',
     og_image='static/images/hero/imprint-diamond-family-memorial.jpg',
-    breadcrumbs=[('首頁', '/'), ('DNA 鑽石', '/price.html'), ('價格總覽', None)],
+    breadcrumbs=[('首頁', '/'), ('DNA 鑽石', '/price'), ('價格總覽', None)],
     mvc_page=None,
     extra_body_class=None,
     content_fragment=None,
@@ -309,11 +310,11 @@ PAGE_PRICE = PageMeta(
 )
 
 PAGE_PRIVACY = PageMeta(
-    route='/privacy.html',
+    route='/privacy',
     template='pages/privacy.html',
     title='隱私權政策（草稿）｜銘印鑽石 IMPRINT DIAMOND',
     description='',
-    canonical_path='privacy.html',
+    canonical_path='privacy',
     og_title=None,
     og_description=None,
     og_image=None,
@@ -326,11 +327,11 @@ PAGE_PRIVACY = PageMeta(
 )
 
 PAGE_TERMS = PageMeta(
-    route='/terms.html',
+    route='/terms',
     template='pages/terms.html',
     title='服務條款（草稿）｜銘印鑽石 IMPRINT DIAMOND',
     description='',
-    canonical_path='terms.html',
+    canonical_path='terms',
     og_title=None,
     og_description=None,
     og_image=None,
@@ -343,11 +344,11 @@ PAGE_TERMS = PageMeta(
 )
 
 PAGE_RETURN_POLICY = PageMeta(
-    route='/return-policy.html',
+    route='/return-policy',
     template='pages/return-policy.html',
     title='退換貨與取消政策｜銘印鑽石 IMPRINT DIAMOND',
     description='銘印鑽石退換貨與取消政策：一般培育鑽石商品 7 天內可退換；DNA 鑽石等客製化商品因專屬培育，啟動生產後恕無法取消或退款。訂金、尺寸誤差與運送保障說明。',
-    canonical_path='return-policy.html',
+    canonical_path='return-policy',
     og_title='退換貨與取消政策｜銘印鑽石 IMPRINT DIAMOND',
     og_description='一般培育鑽石商品 7 天內可退換；DNA 鑽石等客製化商品啟動生產後恕無法取消或退款。',
     og_image='static/images/hero/imprint-diamond-family-memorial.jpg',
@@ -359,11 +360,11 @@ PAGE_RETURN_POLICY = PageMeta(
 )
 
 PAGE_PROFILE = PageMeta(
-    route='/profile.html',
+    route='/profile',
     template='pages/profile.html',
     title='帳戶設定｜銘印鑽石 IMPRINT DIAMOND',
     description='',
-    canonical_path='profile.html',
+    canonical_path='profile',
     og_title=None,
     og_description=None,
     og_image=None,
@@ -376,11 +377,11 @@ PAGE_PROFILE = PageMeta(
 )
 
 PAGE_REGISTER = PageMeta(
-    route='/register.html',
+    route='/register',
     template='pages/register.html',
     title='加入會員｜銘印鑽石 IMPRINT DIAMOND',
     description='',
-    canonical_path='register.html',
+    canonical_path='register',
     og_title=None,
     og_description=None,
     og_image=None,
@@ -393,11 +394,11 @@ PAGE_REGISTER = PageMeta(
 )
 
 PAGE_RESET_PASSWORD = PageMeta(
-    route='/reset-password.html',
+    route='/reset-password',
     template='pages/reset-password.html',
     title='重設密碼｜銘印鑽石 IMPRINT DIAMOND',
     description='',
-    canonical_path='reset-password.html',
+    canonical_path='reset-password',
     og_title=None,
     og_description=None,
     og_image=None,
@@ -410,11 +411,11 @@ PAGE_RESET_PASSWORD = PageMeta(
 )
 
 PAGE_FORGOT_PASSWORD = PageMeta(
-    route='/forgot-password.html',
+    route='/forgot-password',
     template='pages/forgot-password.html',
     title='忘記密碼｜銘印鑽石 IMPRINT DIAMOND',
     description='',
-    canonical_path='forgot-password.html',
+    canonical_path='forgot-password',
     og_title=None,
     og_description=None,
     og_image=None,
@@ -427,15 +428,15 @@ PAGE_FORGOT_PASSWORD = PageMeta(
 )
 
 PAGE_STORIES = PageMeta(
-    route='/stories.html',
+    route='/stories',
     template='pages/stories.html',
     title='客戶見證｜真實的紀念鑽石故事－銘印鑽石 IMPRINT DIAMOND',
     description='銘印鑽石客戶見證：寵物鑽石、生命鑽石、結髮鑽石、滿月鑽石的真實訂製故事。每一顆銘印鑽石背後，都是一段值得被記住的情感。',
-    canonical_path='stories.html',
+    canonical_path='stories',
     og_title='客戶見證－銘印鑽石 IMPRINT DIAMOND',
     og_description='思念，在他們手中發著光。每一顆銘印鑽石背後，都是一段真實的故事。',
     og_image='static/images/hero/imprint-diamond-family-memorial.jpg',
-    breadcrumbs=[('首頁', '/'), ('關於我們', '/about.html'), ('客戶見證', None)],
+    breadcrumbs=[('首頁', '/'), ('關於我們', '/about'), ('客戶見證', None)],
     mvc_page=None,
     extra_body_class=None,
     content_fragment=None,
@@ -443,11 +444,11 @@ PAGE_STORIES = PageMeta(
 )
 
 PAGE_SUCCESS = PageMeta(
-    route='/success.html',
+    route='/success',
     template='pages/success.html',
     title='訂單送出｜銘印鑽石 IMPRINT DIAMOND',
     description='',
-    canonical_path='success.html',
+    canonical_path='success',
     og_title=None,
     og_description=None,
     og_image=None,
@@ -460,11 +461,11 @@ PAGE_SUCCESS = PageMeta(
 )
 
 PAGE_TRACK_ORDER = PageMeta(
-    route='/track-order.html',
+    route='/track-order',
     template='pages/track-order.html',
     title='查詢訂製進度｜銘印鑽石 IMPRINT DIAMOND',
     description='',
-    canonical_path='track-order.html',
+    canonical_path='track-order',
     og_title=None,
     og_description=None,
     og_image=None,
@@ -476,15 +477,63 @@ PAGE_TRACK_ORDER = PageMeta(
 )
 
 PAGE_WHAT_IS_DNA_DIAMOND = PageMeta(
-    route='/what-is-dna-diamond.html',
+    route='/what-is-dna-diamond',
     template='pages/what-is-dna-diamond.html',
     title='什麼是 DNA 鑽石｜CVD 製程與鑑定保障－銘印鑽石',
     description='DNA 鑽石是萃取毛髮或骨灰中的元素，於台灣以 CVD 等製程培育的專屬鑽石。本頁說明樣本份量、70–90 天培育週期，以及 0.20 克拉以上可代送 GIA／IGI 鑑定。',
-    canonical_path='what-is-dna-diamond.html',
+    canonical_path='what-is-dna-diamond',
     og_title='什麼是 DNA 鑽石｜CVD 製程與鑑定保障－銘印鑽石',
     og_description='台灣 DNA 鑽石怎麼做？說明 CVD 培育、樣本份量、時程與可代送 GIA／IGI 鑑定。',
     og_image='static/images/hero/imprint-diamond-family-memorial.jpg',
-    breadcrumbs=[('首頁', '/'), ('什麼是 DNA 鑽石', None)],
+    breadcrumbs=[('首頁', '/'), ('鑽石知識', '/what-is-dna-diamond'), ('什麼是 DNA 鑽石', None)],
+    mvc_page=None,
+    extra_body_class=None,
+    content_fragment=None,
+    extra_head_blocks=[],
+)
+
+PAGE_DIAMOND_4C = PageMeta(
+    route='/diamond-4c',
+    template='pages/diamond-4c.html',
+    title='鑽石 4C｜Carat・Color・Clarity・Cut－銘印鑽石',
+    description='鑽石 4C（克拉、顏色、淨度、切工）說明：訂製 DNA 紀念鑽石時如何理解規格與報價；並說明銘印保證卡與可代送 GIA／IGI 鑑定。',
+    canonical_path='diamond-4c',
+    og_title='鑽石 4C｜規格語言說明－銘印鑽石',
+    og_description='用 4C 理解克拉、顏色、淨度與切工；連結價格總覽、培育鑽石與 DNA 製程說明。',
+    og_image='static/images/hero/imprint-diamond-family-memorial.jpg',
+    breadcrumbs=[('首頁', '/'), ('鑽石知識', '/what-is-dna-diamond'), ('鑽石 4C', None)],
+    mvc_page=None,
+    extra_body_class=None,
+    content_fragment=None,
+    extra_head_blocks=[],
+)
+
+PAGE_LAB_GROWN_DIAMOND = PageMeta(
+    route='/lab-grown-diamond',
+    template='pages/lab-grown-diamond.html',
+    title='什麼是培育鑽石｜CVD 與 DNA 紀念鑽石－銘印鑽石',
+    description='培育鑽石（lab-grown）是實驗室生長的鑽石晶體。說明 CVD 製程、與 DNA 紀念鑽石的差異，以及銘印在地培育與鑑定保障。',
+    canonical_path='lab-grown-diamond',
+    og_title='什麼是培育鑽石｜CVD 與 DNA－銘印鑽石',
+    og_description='實驗室培育鑽石是什麼？CVD 怎麼長？DNA 紀念鑽石如何與一般培育鑽石不同？',
+    og_image='static/images/hero/imprint-diamond-family-memorial.jpg',
+    breadcrumbs=[('首頁', '/'), ('鑽石知識', '/what-is-dna-diamond'), ('培育鑽石', None)],
+    mvc_page=None,
+    extra_body_class=None,
+    content_fragment=None,
+    extra_head_blocks=[],
+)
+
+PAGE_DIAMOND_COMPARISON = PageMeta(
+    route='/diamond-comparison',
+    template='pages/diamond-comparison.html',
+    title='天然鑽石 vs 培育鑽石 vs DNA 鑽石｜比較說明－銘印鑽石',
+    description='天然鑽石、實驗室培育鑽石與 DNA 紀念鑽石的差異與定位：晶體本質、來源故事、在地託付與鑑定保障。非他牌評比。',
+    canonical_path='diamond-comparison',
+    og_title='天然 vs 培育 vs DNA 鑽石｜比較說明－銘印鑽石',
+    og_description='清楚對照天然、培育與 DNA 紀念鑽石的差異，協助選擇適合的紀念方式。',
+    og_image='static/images/hero/imprint-diamond-family-memorial.jpg',
+    breadcrumbs=[('首頁', '/'), ('鑽石知識', '/what-is-dna-diamond'), ('鑽石比較', None)],
     mvc_page=None,
     extra_body_class=None,
     content_fragment=None,
@@ -492,11 +541,11 @@ PAGE_WHAT_IS_DNA_DIAMOND = PageMeta(
 )
 
 PAGE_SERIES = PageMeta(
-    route='/series.html',
+    route='/series',
     template='pages/series.html',
     title='五大系列總覽｜滿月・寵物・結髮・全家福・生命鑽石－銘印鑽石 IMPRINT DIAMOND',
     description='銘印鑽石五大系列完整介紹：滿月鑽石、寵物鑽石、結髮鑽石、全家福鑽石、生命鑽石。依您的羈絆與生命階段選擇系列，了解樣本來源、培育方式與線上試算。',
-    canonical_path='series.html',
+    canonical_path='series',
     og_title='五大系列總覽｜選擇屬於您的 DNA 鑽石系列－銘印鑽石',
     og_description='每一種羈絆，都有屬於它的光。完整介紹五大系列代表的意義、適合對象與訂製方式。',
     og_image='static/images/hero/imprint-diamond-family-portrait-jewelry.jpg',
@@ -517,6 +566,26 @@ JEWELRY_INDEX = PageMeta(
     og_description='銘印鑽石時尚珠寶系列，提供戒指、項鍊、耳環、手鍊四大分類，以胎髮、髮絲、寵物毛髮或紀念物培育專屬 DNA 鑽石，搭配 18K/14K/9K 金與 PT950 鉑金材質，線上客製與試算，全程台灣在地實驗室培育。',
     og_image='static/images/products/category-ring.jpg',
     breadcrumbs=[('首頁', '/'), ('時尚珠寶', '/jewelry/')],
+    mvc_page=None,
+    extra_body_class=None,
+    content_fragment=None,
+    extra_head_blocks=[],
+)
+
+JEWELRY_ENGAGEMENT = PageMeta(
+    route='/jewelry/engagement/',
+    template='pages/jewelry/engagement.html',
+    title='求婚戒指與結髮鑽石｜培育鑽石婚戒訂製－銘印鑽石',
+    description='求婚與結髮鑽石入口：以兩人髮絲共同培育 DNA 鑽石，再選經典單鑽、排鑽、復古或線戒等戒台；連結結髮系列、戒指分類與線上試算。',
+    canonical_path='jewelry/engagement/',
+    og_title='求婚戒指與結髮鑽石｜銘印鑽石',
+    og_description='結髮 DNA 鑽石 × 求婚／婚戒戒台。先懂系列，再選款式與試算。',
+    og_image='static/images/hero/imprint-diamond-wedding-couple-ring.jpg',
+    breadcrumbs=[
+        ('首頁', '/'),
+        ('時尚珠寶', '/jewelry/'),
+        ('求婚／結髮', None),
+    ],
     mvc_page=None,
     extra_body_class=None,
     content_fragment=None,
@@ -869,7 +938,7 @@ SERIES_FAMILY = PageMeta(
     og_title='全家福鑽石｜全家人髮絲紀念鑽石－銘印鑽石',
     og_description='集合全家人髮絲凝成一顆鑽石，讓家的記憶成為可以傳承的珍藏。',
     og_image='static/images/hero/imprint-diamond-family-portrait-jewelry.jpg',
-    breadcrumbs=[('首頁', '/'), ('五大系列', '/series.html'), ('全家福鑽石', None)],
+    breadcrumbs=[('首頁', '/'), ('五大系列', '/series'), ('全家福鑽石', None)],
     mvc_page=None,
     extra_body_class=None,
     content_fragment='series/family.html',
@@ -885,7 +954,7 @@ SERIES_FIRST_LOVE = PageMeta(
     og_title='滿月鑽石｜初生胎髮紀念鑽石－銘印鑽石',
     og_description='滿月／初生胎髮紀念鑽石：珍藏生命最初印記，台灣在地培育。',
     og_image='static/images/hero/imprint-diamond-newborn-baby-necklace.jpg',
-    breadcrumbs=[('首頁', '/'), ('五大系列', '/series.html'), ('滿月鑽石', None)],
+    breadcrumbs=[('首頁', '/'), ('五大系列', '/series'), ('滿月鑽石', None)],
     mvc_page=None,
     extra_body_class=None,
     content_fragment='series/first-love.html',
@@ -901,7 +970,7 @@ SERIES_HEIRLOOM = PageMeta(
     og_title='骨灰鑽石｜生命鑽石紀念訂製－銘印鑽石',
     og_description='骨灰鑽石／生命鑽石：親人毛髮或骨灰在台灣培育，樣本不送海外，可代送鑑定。',
     og_image='static/images/hero/imprint-diamond-heirloom-memorial.jpg',
-    breadcrumbs=[('首頁', '/'), ('五大系列', '/series.html'), ('生命鑽石', None)],
+    breadcrumbs=[('首頁', '/'), ('五大系列', '/series'), ('生命鑽石', None)],
     mvc_page=None,
     extra_body_class=None,
     content_fragment='series/heirloom.html',
@@ -912,16 +981,16 @@ SERIES_LOVE = PageMeta(
     route='/series/love/',
     template='pages/series_detail.html',
     title='結髮鑽石｜培育鑽石婚戒訂製－銘印鑽石 IMPRINT DIAMOND',
-    description='結髮鑽石｜以夫妻髮絲共同培育鑽石，可鑲嵌為培育鑽石婚戒或對戒。全程台灣在地製作；可先線上試算，或預約三重門市與顧問討論克拉、戒台與預算。',
+    description='結髮鑽石｜以夫妻髮絲共同培育鑽石，可鑲嵌為培育鑽石婚戒或對戒。全程台灣在地製作；可先線上試算，或預約門市與顧問討論克拉、戒台與預算。',
     canonical_path='series/love/',
     og_title='結髮鑽石｜培育鑽石婚戒訂製－銘印鑽石',
-    og_description='結髮鑽石與培育鑽石婚戒：兩人髮絲共同培育，可線上試算或三重預約。',
+    og_description='結髮鑽石與培育鑽石婚戒：兩人髮絲共同培育，可線上試算或預約。',
     og_image='static/images/hero/imprint-diamond-wedding-couple-ring.jpg',
-    breadcrumbs=[('首頁', '/'), ('五大系列', '/series.html'), ('結髮鑽石', None)],
+    breadcrumbs=[('首頁', '/'), ('五大系列', '/series'), ('結髮鑽石', None)],
     mvc_page=None,
     extra_body_class=None,
     content_fragment='series/love.html',
-    extra_head_blocks=['{\n  "@context": "https://schema.org",\n  "@type": "FAQPage",\n  "mainEntity": [\n    {\n      "@type": "Question",\n      "name": "結髮鑽石適合做婚戒嗎？",\n      "acceptedAnswer": {\n        "@type": "Answer",\n        "text": "很適合作為培育鑽石婚戒或對戒主石。兩人髮絲共同培育一顆鑽石後，可至戒指系列選戒台，或先到線上試算規格。"\n      }\n    },\n    {\n      "@type": "Question",\n      "name": "兩人需要準備多少頭髮？",\n      "acceptedAnswer": {\n        "@type": "Answer",\n        "text": "兩人合計約一顆雞蛋大小即可。若不確定份量，請先透過官方 LINE 與顧問確認。"\n      }\n    },\n    {\n      "@type": "Question",\n      "name": "可以只訂鑽石再鑲戒嗎？",\n      "acceptedAnswer": {\n        "@type": "Answer",\n        "text": "可以。鑽石完成後可鑲嵌為戒指、項鍊等；戒台材質可選 18K／14K／9K 金或 PT950 鉑金。"\n      }\n    },\n    {\n      "@type": "Question",\n      "name": "三重可以預約看款嗎？",\n      "acceptedAnswer": {\n        "@type": "Answer",\n        "text": "可以。門市在新北市三重區福德南路 43 號 1 樓（預約制），也可先 LINE 預約討論結髮鑽石與婚戒需求。"\n      }\n    }\n  ]\n}'],
+    extra_head_blocks=['{\n  "@context": "https://schema.org",\n  "@type": "FAQPage",\n  "mainEntity": [\n    {\n      "@type": "Question",\n      "name": "結髮鑽石適合做婚戒嗎？",\n      "acceptedAnswer": {\n        "@type": "Answer",\n        "text": "很適合作為培育鑽石婚戒或對戒主石。兩人髮絲共同培育一顆鑽石後，可至戒指系列選戒台，或先到線上試算規格。"\n      }\n    },\n    {\n      "@type": "Question",\n      "name": "兩人需要準備多少頭髮？",\n      "acceptedAnswer": {\n        "@type": "Answer",\n        "text": "兩人合計約一顆雞蛋大小即可。若不確定份量，請先透過官方 LINE 與顧問確認。"\n      }\n    },\n    {\n      "@type": "Question",\n      "name": "可以只訂鑽石再鑲戒嗎？",\n      "acceptedAnswer": {\n        "@type": "Answer",\n        "text": "可以。鑽石完成後可鑲嵌為戒指、項鍊等；戒台材質可選 18K／14K／9K 金或 PT950 鉑金。"\n      }\n    },\n    {\n      "@type": "Question",\n      "name": "可以預約看款嗎？",\n      "acceptedAnswer": {\n        "@type": "Answer",\n        "text": "可以。門市在新北市三重區福德南路 43 號 1 樓（預約制），也可先 LINE 預約討論結髮鑽石與婚戒需求。"\n      }\n    }\n  ]\n}'],
 )
 
 SERIES_PET = PageMeta(
@@ -933,7 +1002,7 @@ SERIES_PET = PageMeta(
     og_title='寵物鑽石｜毛髮紀念與寵物紀念品－銘印鑽石',
     og_description='以毛孩毛髮培育專屬寵物鑽石，亦可作為可傳承的寵物紀念品；台灣在地實驗室。',
     og_image='static/images/hero/imprint-diamond-pet-memorial-cat.jpg',
-    breadcrumbs=[('首頁', '/'), ('五大系列', '/series.html'), ('寵物鑽石', None)],
+    breadcrumbs=[('首頁', '/'), ('五大系列', '/series'), ('寵物鑽石', None)],
     mvc_page=None,
     extra_body_class=None,
     content_fragment='series/pet.html',
@@ -942,11 +1011,11 @@ SERIES_PET = PageMeta(
 
 
 STANDALONE_QUOTE_SHEET = PageMeta(
-    route='/shop/quote-sheet.html',
+    route='/shop/quote-sheet',
     template='pages/shop/quote-sheet.html',
     title='珠寶報價單｜銘印鑽石',
     description='',
-    canonical_path='shop/quote-sheet.html',
+    canonical_path='shop/quote-sheet',
     robots='noindex, nofollow',
 )
 
@@ -960,11 +1029,11 @@ STANDALONE_QUOTE_SHEET_SHORT = PageMeta(
 )
 
 STANDALONE_SHARE_SUMMARY = PageMeta(
-    route='/share/summary.html',
+    route='/share/summary',
     template='pages/share/summary.html',
     title='分享試算｜銘印鑽石',
     description='',
-    canonical_path='share/summary.html',
+    canonical_path='share/summary',
     robots='noindex, nofollow',
 )
 
@@ -998,8 +1067,12 @@ ALL_PAGES: list[PageMeta] = [
     PAGE_SUCCESS,
     PAGE_TRACK_ORDER,
     PAGE_WHAT_IS_DNA_DIAMOND,
+    PAGE_DIAMOND_4C,
+    PAGE_LAB_GROWN_DIAMOND,
+    PAGE_DIAMOND_COMPARISON,
     PAGE_SERIES,
     JEWELRY_INDEX,
+    JEWELRY_ENGAGEMENT,
     SHOP_CALCULATOR,
     JEWELRY_CATEGORY_BRACELETS,
     JEWELRY_CATEGORY_EARRINGS,

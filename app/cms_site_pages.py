@@ -50,9 +50,30 @@ def page_key_for_cms_page(page: dict) -> str:
 
 
 def fetch_page_by_site_route(cur, route: str) -> dict | None:
-    cur.execute("select * from cms_pages where site_route = %s", (route,))
-    row = cur.fetchone()
-    return _serialize_page(row) if row else None
+    from app.cms_boundary import page_key_aliases
+
+    for key in page_key_aliases(route):
+        cur.execute("select * from cms_pages where site_route = %s", (key,))
+        row = cur.fetchone()
+        if not row:
+            continue
+        page = _serialize_page(row)
+        # Prefer extensionless site_route going forward.
+        if key != route and not str(route).endswith(".html"):
+            cur.execute(
+                """
+                update cms_pages set site_route = %s, updated_at = now()
+                where id = %s and site_route = %s
+                returning *
+                """,
+                (route, page["id"], key),
+            )
+            migrated = cur.fetchone()
+            if migrated:
+                _invalidate_public_cache()
+                return _serialize_page(migrated)
+        return page
+    return None
 
 
 def ensure_site_route_page(cur, route: str, title: str | None = None) -> dict:

@@ -10,7 +10,7 @@
       View.bindTabs();
       View.bindSearch();
       View.bindEdit();
-      M.requireSession('history.html').then(function (s) {
+      M.requireSession('/history').then(function (s) {
         if (!s) return;
         return Model.load();
       }).then(function (res) {

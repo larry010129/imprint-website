@@ -7,7 +7,7 @@
   M.createController({
     run: function () {
       if (!M.isPage('notifications')) return;
-      M.requireSession('notifications.html').then(function (s) {
+      M.requireSession('/notifications').then(function (s) {
         if (!s) return;
         return Model.load();
       }).then(function (data) {

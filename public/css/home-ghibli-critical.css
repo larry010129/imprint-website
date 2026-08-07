@@ -70,29 +70,46 @@
 .page-home .nav .nav-burger span{ background:#fff; }
 .page-home [data-site-nav-root].is-nav-hero .nav-burger span{ background:#fff; }
 .page-home .nav .btn-line,
-.page-home [data-site-nav-root].is-nav-hero .nav-cta .btn-line{
+.page-home .nav .btn-line.btn-neon,
+.page-home [data-site-nav-root].is-nav-hero .nav-cta .btn-line,
+.page-home [data-site-nav-root].is-nav-hero .nav-cta .btn-line.btn-neon{
   background:transparent !important;
   border-color:rgba(255,255,255,.55) !important;
   color:#fff !important;
   box-shadow:none !important;
 }
 .page-home .nav .btn-mint,
-.page-home [data-site-nav-root].is-nav-hero .nav-cta .btn-mint{
+.page-home .nav .btn-mint.btn-neon,
+.page-home [data-site-nav-root].is-nav-hero .nav-cta .btn-mint,
+.page-home [data-site-nav-root].is-nav-hero .nav-cta .btn-mint.btn-neon{
   background:var(--gh-grad-deep) !important;
   color:var(--gh-twilight) !important;
   border-color:transparent !important;
   box-shadow:none !important;
 }
+.page-home .nav .nav-ihb,
+.page-home [data-site-nav-root].is-nav-hero .nav-ihb,
 .page-home .nav .nav-gradient-cta,
 .page-home [data-site-nav-root].is-nav-hero .nav-gradient-cta{
   box-shadow:0 4px 18px rgba(42,24,69,.2);
 }
 .page-home .nav .btn-dark,
-.page-home [data-site-nav-root].is-nav-hero .nav-cta .btn-dark{
+.page-home .nav .btn-dark.btn-neon,
+.page-home .nav .btn-neon--solid,
+.page-home [data-site-nav-root].is-nav-hero .nav-cta .btn-dark,
+.page-home [data-site-nav-root].is-nav-hero .nav-cta .btn-dark.btn-neon,
+.page-home [data-site-nav-root].is-nav-hero .nav-cta .btn-neon--solid{
   background:rgba(255,255,255,.15) !important;
   color:#fff !important;
   border:1px solid rgba(255,255,255,.35) !important;
   box-shadow:none !important;
+}
+/* Hero nav neon lines stay visible (mint via white) */
+.page-home .nav .btn-neon,
+.page-home [data-site-nav-root].is-nav-hero .nav-cta .btn-neon{
+  --neon-via: rgba(255,255,255,.85);
+  overflow:visible;
+  isolation:isolate;
 }
 /* Closed account trigger on hero — light glass */
 .page-home .nav .account-menu-trigger,
@@ -110,6 +127,19 @@
   background:rgba(255,255,255,.14);
   border-color:rgba(255,255,255,.42);
   color:#fff;
+}
+.page-home [data-site-nav-root].is-nav-hero .nav-ihb{
+  color:var(--gh-twilight,#2b2320);
+  background:rgba(255,255,255,.14);
+  border-color:rgba(255,255,255,.5);
+}
+.page-home [data-site-nav-root].is-nav-hero .nav-ihb__dot{
+  background:var(--mint,#8eedf0);
+}
+.page-home [data-site-nav-root].is-nav-hero .nav-ihb:hover,
+.page-home [data-site-nav-root].is-nav-hero .nav-ihb:focus-visible{
+  border-color:rgba(255,255,255,.75);
+  box-shadow:0 4px 18px rgba(42,24,69,.28);
 }
 .page-home [data-site-nav-root].is-nav-hero .gradient-button-inner{
   color:var(--gh-twilight,#2b2320);

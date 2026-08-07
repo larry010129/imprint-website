@@ -99,6 +99,12 @@
 
   /* ---------- 進場顯示（首頁區塊 + 全站 .reveal；hero 輪播自管進場） ---------- */
   var revealReduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  /* Desktop home: home-section-reveal.js + GSAP owns [data-home-stack] reveals */
+  var homeGsapDesktop =
+    document.body.classList.contains('page-home') &&
+    !revealReduce &&
+    window.matchMedia &&
+    window.matchMedia('(min-width:901px)').matches;
   var revealNodes = document.querySelectorAll('.reveal, .reveal-media');
   function revealIn(el) { el.classList.add('is-in'); }
   if (revealReduce || !('IntersectionObserver' in window)) {
@@ -113,6 +119,7 @@
     }, { threshold: 0.14, rootMargin: '0px 0px -6% 0px' });
     revealNodes.forEach(function (el) {
       if (el.closest('.hc-slide')) return;
+      if (homeGsapDesktop && el.closest('[data-home-stack]')) return;
       io.observe(el);
     });
   }

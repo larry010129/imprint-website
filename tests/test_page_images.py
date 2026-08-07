@@ -17,11 +17,11 @@ def test_effective_url_falls_back_to_default():
 def test_home_slot_rewrite_does_not_touch_carousel_duplicate():
     html = (
         '<img src="/static/images/hero/imprint-diamond-family-memorial.jpg">'
-        '<img data-cms-slot="cta-scene" '
+        '<img data-cms-slot="poem-visual" '
         'src="/static/images/hero/imprint-diamond-family-memorial.jpg">'
     )
     row = {
-        "slot_key": "cta-scene",
+        "slot_key": "poem-visual",
         "image_url": "/static/new.jpg",
         "default_image_url": "/static/images/hero/imprint-diamond-family-memorial.jpg",
         "is_published": True,
@@ -86,11 +86,11 @@ def test_home_dna_cta_prefers_local_webp():
 def test_inventory_excludes_empty_calculator_and_jewelry_slots():
     rows = build_page_image_seed()
     counts = Counter(row["page_key"] for row in rows)
-    by_slot = {row["slot_key"]: row for row in rows if row["page_key"] == "/what-is-dna-diamond.html"}
-    assert len(rows) == 46
+    by_slot = {row["slot_key"]: row for row in rows if row["page_key"] == "/what-is-dna-diamond"}
+    assert len(rows) == 45
     assert len(counts) == 9
-    assert counts["/about.html"] == 3
-    assert counts["/what-is-dna-diamond.html"] == 14
+    assert counts["/about"] == 3
+    assert counts["/what-is-dna-diamond"] == 14
     assert "/shop/calculator/" not in counts
     assert not any(key.startswith("/jewelry") for key in counts)
     assert "intro" in by_slot
@@ -113,10 +113,10 @@ def test_payload_requires_valid_slot_key():
     assert fields is None
     assert error == "缺少 slot_key"
     fields, error = parse_page_image_payload(
-        {"pageKey": "/", "slotKey": "cta-scene", "imageUrl": "/x.jpg"}
+        {"pageKey": "/", "slotKey": "poem-visual", "imageUrl": "/x.jpg"}
     )
     assert error is None
-    assert fields and fields["slot_key"] == "cta-scene"
+    assert fields and fields["slot_key"] == "poem-visual"
 
 
 def test_create_page_image_from_registry_inserts_missing_slot():
@@ -162,12 +162,12 @@ def test_create_page_image_from_registry_inserts_missing_slot():
             return getattr(self, "_fetchone", None)
 
     cur = FakeCursor()
-    cur.rows[("/about.html", "cinema")] = {"page_key": "/about.html", "slot_key": "cinema"}
+    cur.rows[("/about", "cinema")] = {"page_key": "/about", "slot_key": "cinema"}
     missing = fetch_missing_page_image_slots(cur)
     assert missing
     assert all(item["page_key"] != "/shop/calculator/" for item in missing)
 
-    target = next(item for item in missing if item["page_key"] == "/about.html")
+    target = next(item for item in missing if item["page_key"] == "/about")
     created, error = create_page_image_from_registry(cur, target["page_key"], target["slot_key"])
     assert error is None
     assert created and created["slot_key"] == target["slot_key"]
@@ -216,7 +216,7 @@ def test_dna_slot_rewrite_updates_marked_process_image():
         "default_image_url": "/static/images/dna-process/collect-bottle.png",
         "is_published": True,
     }
-    out = apply_page_image_slots(html, "/what-is-dna-diamond.html", [row])
+    out = apply_page_image_slots(html, "/what-is-dna-diamond", [row])
     assert "/static/uploads/cms/dna-sample.png" in out
     assert "collect-bottle.png" not in out
 
@@ -238,8 +238,8 @@ def test_page_image_loader_reuses_per_route_cache(monkeypatch):
             {"page_key": "/series/pet/", "slot_key": "hero"},
             {"page_key": "/series/pet/", "slot_key": "intro"},
             {"page_key": "/series/love/", "slot_key": "hero"},
-            {"page_key": "/what-is-dna-diamond.html", "slot_key": "intro"},
-            {"page_key": "/what-is-dna-diamond.html", "slot_key": "process-sample"},
+            {"page_key": "/what-is-dna-diamond", "slot_key": "intro"},
+            {"page_key": "/what-is-dna-diamond", "slot_key": "process-sample"},
     ]
 
     def fetch_page_images(_cur, route):
@@ -253,6 +253,6 @@ def test_page_image_loader_reuses_per_route_cache(monkeypatch):
     assert len(web_controller._load_page_images("/series/pet/")) == 2
     assert web_controller._load_page_image("/series/pet/")["slot_key"] == "hero"
     assert web_controller._load_page_image("/series/love/")["slot_key"] == "hero"
-    assert web_controller._load_page_image("/what-is-dna-diamond.html")["slot_key"] == "intro"
-    assert calls == ["/series/pet/", "/series/love/", "/what-is-dna-diamond.html"]
+    assert web_controller._load_page_image("/what-is-dna-diamond")["slot_key"] == "intro"
+    assert calls == ["/series/pet/", "/series/love/", "/what-is-dna-diamond"]
     web_controller.clear_page_image_cache()

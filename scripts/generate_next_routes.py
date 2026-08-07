@@ -19,7 +19,7 @@ export default page.Page;
 
 NOT_FOUND_TMPL = '''import { createPage } from "@/lib/site-page";
 
-const page = createPage("/404.html");
+const page = createPage("/404");
 
 export default async function NotFound() {
   return page.Page({});
@@ -28,7 +28,7 @@ export default async function NotFound() {
 
 SHARE_TMPL = '''import { createPage } from "@/lib/site-page";
 
-const page = createPage("/share/summary.html");
+const page = createPage("/share/summary");
 
 export const generateMetadata = page.generateMetadata;
 export default page.Page;
@@ -38,7 +38,7 @@ export default page.Page;
 def route_to_dir(route: str) -> Path:
     if route == "/":
         return APP
-    # /about.html → about.html/
+    # /about → about/
     # /jewelry/rings/ → jewelry/rings/
     # /shop/calculator/ → shop/calculator/
     # /s/[token] → s/[token]/
@@ -58,7 +58,7 @@ def main() -> None:
             (dest / "page.tsx").write_text(SHARE_TMPL, encoding="utf-8")
             print("write", dest / "page.tsx")
             continue
-        if route == "/404.html":
+        if route == "/404":
             continue  # handled by not-found.tsx
         dest = route_to_dir(route)
         dest.mkdir(parents=True, exist_ok=True)

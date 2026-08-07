@@ -292,7 +292,7 @@ def main() -> None:
         registry.append(export_page(env, meta))
 
     # /s/{token} uses share summary body
-    share = next(p for p in registry if p["route"] == "/share/summary.html")
+    share = next(p for p in registry if p["route"] == "/share/summary")
     registry.append(
         {
             **share,

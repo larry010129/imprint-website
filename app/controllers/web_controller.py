@@ -25,19 +25,31 @@ templates.env.globals["google_client_id"] = settings.google_client_id
 templates.env.globals["recaptcha_site_key"] = settings.recaptcha_site_key
 
 
-@lru_cache(maxsize=None)
+# mtime-keyed so CSS edits apply without process restart (dev + hot reload).
+_INLINE_CSS_CACHE: dict[str, tuple[float, str]] = {}
+
+
 def _load_inline_css(filename: str) -> str:
     """Read a public/css/* file for inlining (e.g. base.css in <head>).
 
     Removes one render-blocking request on every page load — PageSpeed's
     network trace showed each small same-origin CSS file costing 160-490ms
-    of request overhead regardless of its (tiny) transfer size. Cached for
-    process lifetime like _load_fragment; a redeploy picks up CSS edits.
+    of request overhead regardless of its (tiny) transfer size. Reloads when
+    the file mtime changes so local CSS edits show without a server restart.
     """
     path = settings.static_dir / "css" / filename
     if not path.is_file():
         return ""
-    return path.read_text(encoding="utf-8")
+    try:
+        mtime = path.stat().st_mtime
+    except OSError:
+        return ""
+    cached = _INLINE_CSS_CACHE.get(filename)
+    if cached is not None and cached[0] == mtime:
+        return cached[1]
+    text = path.read_text(encoding="utf-8")
+    _INLINE_CSS_CACHE[filename] = (mtime, text)
+    return text
 
 
 templates.env.globals["inline_css"] = _load_inline_css
@@ -148,8 +160,8 @@ def _load_page_image(route: str, rows: list[dict] | None = None) -> dict | None:
     """Primary page-image slot for Jinja page context."""
     rows = rows if rows is not None else _load_page_images(route)
     preferred = {
-        "/about.html": "cinema",
-        "/what-is-dna-diamond.html": "intro",
+        "/about": "cinema",
+        "/what-is-dna-diamond": "intro",
     }.get(route, "hero")
     return next((row for row in rows if row.get("slot_key") == preferred), None)
 
@@ -180,7 +192,7 @@ def clear_page_copy_cache() -> None:
 
 
 def _load_faq_public() -> dict:
-    """Published FAQ categories for /faq.html (DB first, seed fallback)."""
+    """Published FAQ categories for /faq (DB first, seed fallback)."""
     from app.content import faq_public_from_seed, fetch_faq_public
     from app.database import get_connection
 
@@ -224,16 +236,30 @@ def _faq_page_json_ld(faq_public: dict) -> str:
 
 
 STORIES_SSR_LIMIT = 12
+JOURNAL_SSR_LIMIT = 12
 
 
 def _load_stories_ssr(limit: int = STORIES_SSR_LIMIT) -> list[dict]:
-    """First N published testimonials for SSR on /stories.html."""
+    """First N published testimonials for SSR on /stories."""
     from app.content import fetch_published_testimonials
     from app.database import get_connection
 
     try:
         with get_connection() as conn, conn.cursor() as cur:
             items = fetch_published_testimonials(cur)
+        return list(items[:limit])
+    except Exception:
+        return []
+
+
+def _load_journal_ssr(limit: int = JOURNAL_SSR_LIMIT) -> list[dict]:
+    """Published journal posts for SSR teasers on /journal."""
+    from app.content import fetch_published_journal_posts
+    from app.database import get_connection
+
+    try:
+        with get_connection() as conn, conn.cursor() as cur:
+            items = fetch_published_journal_posts(cur)
         return list(items[:limit])
     except Exception:
         return []
@@ -349,7 +375,7 @@ def _fetch_public_cms_page_cached(slug: str, _time_bucket: int) -> dict | None:
 
 
 def _load_gold_quote_bootstrap() -> dict | None:
-    """Last-known gold quote from DB for SSR on /gold-price.html."""
+    """Last-known gold quote from DB for SSR on /gold-price."""
     try:
         from app.bot_gold import build_payload_from_cache
         from app.database import get_connection
@@ -369,6 +395,17 @@ def _load_gold_quote_bootstrap() -> dict | None:
     return None
 
 
+def _build_canonical_url(canonical_path: str | None, *, omit: bool = False) -> str | None:
+    """Absolute canonical from settings.public_base_url + path; None omits the tag."""
+    if omit:
+        return None
+    base = settings.public_base_url.rstrip("/")
+    path = (canonical_path or "").strip().lstrip("/")
+    if not path:
+        return f"{base}/"
+    return f"{base}/{path}"
+
+
 def _context(request: Request, meta: PageMeta) -> dict:
     page_images = _load_page_images(meta.route)
     page_image = _load_page_image(meta.route, page_images)
@@ -376,11 +413,13 @@ def _context(request: Request, meta: PageMeta) -> dict:
     lcp_image = None
     if page_image and meta.route not in {"/"}:
         lcp_image = page_image.get("display_webp") or page_image.get("display_url")
+    omit_canonical = meta.route == PAGE_404.route
     context = {
         "request": request,
         "title": meta.title,
         "description": meta.description,
         "canonical_path": meta.canonical_path,
+        "canonical_url": _build_canonical_url(meta.canonical_path, omit=omit_canonical),
         "robots": meta.robots,
         "og_title": meta.og_title,
         "og_description": meta.og_description,
@@ -405,19 +444,22 @@ def _context(request: Request, meta: PageMeta) -> dict:
         "faq_public": {"categories": [], "teaser": [], "items": []},
         "faq_json_ld": "",
         "stories_ssr": [],
+        "journal_ssr": [],
     }
     if meta.content_fragment:
         context["content_html"] = _load_fragment(meta.content_fragment)
-    if meta.route == "/faq.html":
+    if meta.route == "/faq":
         context["faq_public"] = _load_faq_public()
         context["faq_json_ld"] = _faq_page_json_ld(context["faq_public"])
-    if meta.route == "/stories.html":
+    if meta.route == "/stories":
         context["stories_ssr"] = _load_stories_ssr()
-    if meta.route in {"/", "/about.html"}:
+    if meta.route == "/journal":
+        context["journal_ssr"] = _load_journal_ssr()
+    if meta.route in {"/", "/about"}:
         context["featured_video"] = load_featured_video(request)
-    if meta.route == "/about.html":
+    if meta.route == "/about":
         context["youtube_latest_video"] = load_youtube_latest_video()
-    if meta.route == "/gold-price.html":
+    if meta.route == "/gold-price":
         context["gold_quote_bootstrap"] = _load_gold_quote_bootstrap()
     # Live env read so register page picks up keys without process restart in tests.
     from app.captcha import recaptcha_site_key as _recaptcha_site_key
@@ -468,6 +510,40 @@ def _make_handler(meta: PageMeta, status_code: int = 200):
     return handler
 
 
+_ADMIN_HTML_SHELLS = frozenset(
+    {
+        "/admin.html",
+        "/admin1.html",
+        "/admin1-settings.html",
+        "/admin1-plugins.html",
+        "/admin1-login.html",
+    }
+)
+
+
+def _legacy_html_redirects() -> dict[str, str]:
+    """Map former `/foo.html` PageMeta routes to extensionless `/foo`."""
+    mapping: dict[str, str] = {}
+    for meta in [*ALL_PAGES, *STANDALONE_PAGES]:
+        route = meta.route
+        if route in {"/",} or route.endswith("/") or route.endswith(".html"):
+            continue
+        legacy = f"{route}.html"
+        if legacy in _ADMIN_HTML_SHELLS:
+            continue
+        mapping[legacy] = route
+    return mapping
+
+
+def _make_html_redirect(target: str):
+    async def redirect_html(request: Request) -> RedirectResponse:
+        query = request.url.query
+        location = f"{target}?{query}" if query else target
+        return RedirectResponse(url=location, status_code=301)
+
+    return redirect_html
+
+
 def register_pages(app: FastAPI) -> None:
     """Register Jinja page routes, health, admin shell, share + CMS public pages."""
 
@@ -475,6 +551,15 @@ def register_pages(app: FastAPI) -> None:
     async def api_health() -> JSONResponse:
         """Render / load-balancer health — must not 404 or the API service is SIGTERM'd."""
         return JSONResponse({"ok": True, "service": "imprint-api"})
+
+    # 301 old *.html public page URLs → extensionless (query string preserved).
+    for legacy, clean in _legacy_html_redirects().items():
+        app.add_api_route(
+            legacy,
+            _make_html_redirect(clean),
+            methods=["GET", "HEAD"],
+            include_in_schema=False,
+        )
 
     # Include HEAD: Render probes HEAD / (405 if GET-only → deploy marked unhealthy).
     for meta in [*ALL_PAGES, *STANDALONE_PAGES]:
@@ -506,7 +591,7 @@ def register_pages(app: FastAPI) -> None:
         from app.auth import get_user_id, is_admin
 
         if not is_admin(get_user_id(request)):
-            return RedirectResponse(url="/login.html?next=admin.html", status_code=302)
+            return RedirectResponse(url="/login?next=admin.html", status_code=302)
         path = settings.site_root / "admin.html"
         if not path.is_file():
             raise StarletteHTTPException(status_code=404, detail="Not Found")
@@ -516,7 +601,7 @@ def register_pages(app: FastAPI) -> None:
         from app.auth import get_user_id, is_admin
 
         if not is_admin(get_user_id(request)):
-            return RedirectResponse(url=f"/login.html?next={filename}", status_code=302)
+            return RedirectResponse(url=f"/login?next={filename}", status_code=302)
         path = settings.site_root / filename
         if not path.is_file():
             raise StarletteHTTPException(status_code=404, detail="Not Found")
@@ -536,7 +621,7 @@ def register_pages(app: FastAPI) -> None:
 
     @app.get("/admin1-login.html", include_in_schema=False)
     async def admin1_login_page(request: Request):
-        """Admin1 login chrome helper; does not replace /login.html."""
+        """Admin1 login chrome helper; does not replace /login."""
         path = settings.site_root / "admin1-login.html"
         if not path.is_file():
             raise StarletteHTTPException(status_code=404, detail="Not Found")
@@ -601,12 +686,14 @@ def register_pages(app: FastAPI) -> None:
         meta = bundle.get("meta") or {}
         lcp_section_id = None if embed else meta.get("lcp_section_id")
         lcp_image = None if embed else meta.get("lcp_image")
+        cms_canonical_path = f"p/{page['slug']}"
         context = {
             "request": request,
             "layout": "layouts/cms-embed.html" if embed else "layouts/base.html",
             "title": page.get("title") or "銘印鑽石",
             "description": page.get("meta_description") or "",
-            "canonical_path": f"p/{page['slug']}",
+            "canonical_path": cms_canonical_path,
+            "canonical_url": _build_canonical_url(cms_canonical_path),
             "og_title": page.get("title") or "",
             "og_description": page.get("meta_description") or "",
             "og_image": "static/images/hero/imprint-diamond-family-memorial.jpg",

@@ -84,7 +84,7 @@
               return;
             }
             View.setMsg('註冊成功，正在為您登入…', 'ok');
-            setTimeout(function () { global.location.href = 'account.html'; }, 300);
+            setTimeout(function () { global.location.href = '/account'; }, 300);
           });
         });
       });

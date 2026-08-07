@@ -483,7 +483,7 @@ async def shop_cart_add(request: Request) -> Response:
     user_id = get_user_id(request)
     if not user_id:
         next_url = quote("/shop/calculator/", safe="")
-        return hx_redirect(f"/login.html?next={next_url}")
+        return hx_redirect(f"/login?next={next_url}")
     config = _config_from_form(form)
     err = _validate_config(config)
     if err:

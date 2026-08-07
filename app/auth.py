@@ -677,7 +677,7 @@ def _url_host_matches(url: str, host: str) -> bool:
     return netloc == host
 
 
-# ── invite codes (register.html doesn't collect one yet — this is a no-op
+# ── invite codes (register doesn't collect one yet — this is a no-op
 # unless REQUIRE_INVITE_CODE / REGISTRATION_INVITE_CODE are set) ───────────
 
 def _invite_required() -> bool:

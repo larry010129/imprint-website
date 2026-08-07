@@ -30,7 +30,7 @@
 
   function redirectAfterLogin() {
     var next = new URLSearchParams(global.location.search).get('next');
-    var target = 'account.html';
+    var target = '/account';
     if (next) {
       try {
         var url = new URL(next, global.location.origin);

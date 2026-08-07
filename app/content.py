@@ -378,14 +378,16 @@ def format_faq_answer_html(answer: str) -> str:
     from html import escape
 
     text = escape(sanitize_faq_plain_text(answer or ""))
-    text = text.replace(
-        "/price.html",
-        '<a href="/price.html">價格試算・價格總覽</a>',
-    )
-    text = text.replace(
-        "/shop/calculator/",
-        '<a href="/shop/calculator/">客製試算頁</a>',
-    )
+    # Longer paths first so shorter tokens do not split them.
+    for path, label in (
+        ("/shop/calculator/", "客製試算頁"),
+        ("/what-is-dna-diamond", "什麼是 DNA 鑽石"),
+        ("/diamond-comparison", "天然 vs 培育／DNA"),
+        ("/lab-grown-diamond", "什麼是培育鑽石"),
+        ("/diamond-4c", "鑽石 4C"),
+        ("/price", "價格試算・價格總覽"),
+    ):
+        text = text.replace(path, f'<a href="{path}">{label}</a>')
     text = text.replace(
         "GIA",
         '<a href="https://www.gia.edu/" target="_blank" rel="noopener">GIA</a>',
@@ -547,7 +549,32 @@ def ensure_page_images_schema(cur) -> None:
     )
     cur.execute("alter table page_images add column if not exists slot_key text")
     cur.execute("update page_images set slot_key = 'hero' where slot_key is null or btrim(slot_key) = ''")
-    cur.execute("update page_images set slot_key = 'cinema' where page_key = '/about.html' and slot_key = 'hero'")
+    cur.execute(
+        "update page_images set slot_key = 'cinema' "
+        "where page_key in ('/about', '/about.html') and slot_key = 'hero'"
+    )
+    # Extensionless public URLs: migrate legacy *.html page_key rows when free.
+    cur.execute(
+        """
+        update page_images as p
+        set page_key = left(page_key, length(page_key) - 5),
+            updated_at = now()
+        where page_key like '%%.html'
+          and page_key not like '/admin%%'
+          and not exists (
+            select 1 from page_images x
+            where x.page_key = left(p.page_key, length(p.page_key) - 5)
+              and x.slot_key = p.slot_key
+          )
+        """
+    )
+    cur.execute(
+        """
+        delete from page_images
+        where page_key like '%%.html'
+          and page_key not like '/admin%%'
+        """
+    )
     cur.execute("alter table page_images alter column slot_key set default 'hero'")
     cur.execute("alter table page_images alter column slot_key set not null")
     cur.execute("alter table page_images add column if not exists slot_label text")
@@ -653,21 +680,32 @@ def fetch_all_page_images(cur) -> list[dict]:
 
 
 def fetch_page_images(cur, page_key: str) -> list[dict]:
-    cur.execute(
-        "select * from page_images where page_key = %s order by sort_order, slot_key",
-        (page_key,),
-    )
-    return [serialize_page_image(row) for row in cur.fetchall()]
+    from app.cms_boundary import page_key_aliases
+
+    for key in page_key_aliases(page_key):
+        cur.execute(
+            "select * from page_images where page_key = %s order by sort_order, slot_key",
+            (key,),
+        )
+        rows = cur.fetchall()
+        if rows:
+            return [serialize_page_image(r) for r in rows]
+    return []
 
 
 def fetch_page_image(cur, page_key: str, slot_key: str = "hero") -> dict | None:
     """Backward-compatible single-slot lookup."""
-    cur.execute(
-        "select * from page_images where page_key = %s and slot_key = %s",
-        (page_key, slot_key),
-    )
-    row = cur.fetchone()
-    return serialize_page_image(row) if row else None
+    from app.cms_boundary import page_key_aliases
+
+    for key in page_key_aliases(page_key):
+        cur.execute(
+            "select * from page_images where page_key = %s and slot_key = %s",
+            (key, slot_key),
+        )
+        row = cur.fetchone()
+        if row:
+            return serialize_page_image(row)
+    return None
 
 
 def parse_page_image_payload(body: dict | None) -> tuple[dict | None, str | None]:

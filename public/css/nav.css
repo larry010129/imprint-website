@@ -633,6 +633,150 @@ a.account-menu-trigger{
   background:rgba(183,244,244,.84);
 }
 
+/* Nav CTA — InteractiveHoverButton (mint), MagicUI-style fill + label/arrow swap */
+.nav-ihb{
+  --nav-ihb-fg: var(--ink, #2b2320);
+  --nav-ihb-fill: var(--mint, #8eedf0);
+  --nav-ihb-fill-deep: var(--mint-deep, #52c4c8);
+  position:relative;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:auto;
+  min-width:7.5rem;
+  margin-top:0px;
+  padding:0.55rem 1.35rem;
+  overflow:hidden;
+  border-radius:999px;
+  border:1px solid color-mix(in srgb, var(--nav-ihb-fill-deep) 45%, #fff);
+  background:var(--paper, #fff);
+  color:var(--nav-ihb-fg);
+  font-size:12.5px;
+  font-weight:600;
+  letter-spacing:.05em;
+  line-height:1;
+  text-decoration:none;
+  white-space:nowrap;
+  cursor:pointer;
+  flex-shrink:0;
+  box-sizing:border-box;
+  transition:border-color .25s ease, box-shadow .25s ease;
+}
+.nav-ihb__idle{
+  position:relative;
+  z-index:0;
+  display:flex;
+  align-items:center;
+  gap:0.5rem;
+  transform:translateX(-0.15rem);
+}
+.nav-ihb__dot{
+  width:0.5rem;
+  height:0.5rem;
+  border-radius:999px;
+  background:var(--nav-ihb-fill);
+  flex-shrink:0;
+  transition:transform .3s ease;
+  transform-origin:center;
+  will-change:transform;
+}
+.nav-ihb__label{
+  display:inline-block;
+  transition:transform .3s ease, opacity .3s ease;
+}
+.nav-ihb__hover{
+  position:absolute;
+  inset:0;
+  z-index:2;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:0.35rem;
+  color:var(--nav-ihb-fg);
+  opacity:0;
+  transform:translateX(1.5rem);
+  transition:transform .3s ease, opacity .3s ease;
+  pointer-events:none;
+}
+.nav-ihb__arrow{
+  display:block;
+  flex-shrink:0;
+}
+.nav-ihb:hover,
+.nav-ihb:focus-visible{
+  border-color:var(--nav-ihb-fill-deep);
+  box-shadow:0 4px 16px color-mix(in srgb, var(--nav-ihb-fill-deep) 28%, transparent);
+  outline:none;
+}
+.nav-ihb:hover .nav-ihb__dot,
+.nav-ihb:focus-visible .nav-ihb__dot{
+  /* Expand mint blob to cover pill (MagicUI scale-[100.8] trick) */
+  transform:scale(90);
+}
+.nav-ihb:hover .nav-ihb__idle .nav-ihb__label,
+.nav-ihb:focus-visible .nav-ihb__idle .nav-ihb__label{
+  transform:translateX(2.5rem);
+  opacity:0;
+}
+.nav-ihb:hover .nav-ihb__hover,
+.nav-ihb:focus-visible .nav-ihb__hover{
+  opacity:1;
+  transform:translateX(-0.15rem);
+}
+[data-site-nav-root].is-nav-hero .nav-ihb{
+  background:rgba(255,255,255,.14);
+  border-color:rgba(255,255,255,.45);
+  color:var(--gh-twilight, #2b2320);
+  box-shadow:0 4px 18px rgba(42,24,69,.18);
+}
+[data-site-nav-root].is-nav-hero .nav-ihb__dot{
+  background:var(--mint, #8eedf0);
+}
+@media (prefers-reduced-motion:reduce){
+  .nav-ihb__dot,
+  .nav-ihb__label,
+  .nav-ihb__hover{
+    transition:none;
+  }
+  .nav-ihb:hover .nav-ihb__dot,
+  .nav-ihb:focus-visible .nav-ihb__dot{
+    transform:none;
+  }
+  .nav-ihb:hover .nav-ihb__idle .nav-ihb__label,
+  .nav-ihb:focus-visible .nav-ihb__idle .nav-ihb__label{
+    transform:none;
+    opacity:1;
+  }
+  .nav-ihb:hover .nav-ihb__hover,
+  .nav-ihb:focus-visible .nav-ihb__hover{
+    opacity:0;
+    transform:none;
+  }
+  .nav-ihb:hover,
+  .nav-ihb:focus-visible{
+    background:color-mix(in srgb, var(--nav-ihb-fill) 55%, #fff);
+  }
+}
+@media (hover:none),(pointer:coarse){
+  .nav-ihb:hover .nav-ihb__dot,
+  .nav-ihb:focus-visible .nav-ihb__dot{
+    transform:none;
+  }
+  .nav-ihb:hover .nav-ihb__idle .nav-ihb__label,
+  .nav-ihb:focus-visible .nav-ihb__idle .nav-ihb__label{
+    transform:none;
+    opacity:1;
+  }
+  .nav-ihb:hover .nav-ihb__hover,
+  .nav-ihb:focus-visible .nav-ihb__hover{
+    opacity:0;
+    transform:none;
+  }
+  .nav-ihb:active{
+    background:color-mix(in srgb, var(--nav-ihb-fill) 45%, #fff);
+  }
+}
+
 /* Mobile drawer — migrated from frozen public/react/src.css */
 .mobile-animated-nav{ display:none; }
 @media (max-width:900px){
@@ -660,7 +804,18 @@ a.account-menu-trigger{
     white-space:nowrap;
   }
   [data-site-nav-root] .nav-cta{ flex:0 0 auto; min-width:0; gap:4px; }
-  /* Phone CTA: shrink 價格試算 so brand + burger keep room; one-line label */
+  /* Phone CTA: keep pill tap-friendly; one-line label */
+  [data-site-nav-root] .nav-cta .nav-ihb{
+    min-width:0;
+    max-width:min(8.5rem,38vw);
+    padding:clamp(6px,1.5vw,9px) clamp(10px,2.4vw,14px);
+    font-size:clamp(10.5px,2.85vw,12px);
+    letter-spacing:.02em;
+  }
+  [data-site-nav-root] .nav-cta .nav-ihb__dot{
+    width:0.4rem;
+    height:0.4rem;
+  }
   [data-site-nav-root] .nav-cta .gradient-button,
   [data-site-nav-root] .nav-cta .nav-gradient-cta{
     border-radius:8px;

@@ -1,7 +1,7 @@
 {% if guest %}
 <div class="member-state member-state--empty">
   <p>請先登入。</p>
-  <a href="/login.html?next=/account.html" class="btn btn-mint">會員登入</a>
+  <a href="/login?next=/account" class="btn btn-mint">會員登入</a>
 </div>
 {% else %}
 {% set display_name = (profile.full_name if profile and profile.full_name else user.email) %}
@@ -162,15 +162,15 @@
       {% endif %}
 
       <footer class="member-id-card__foot">
-        <a class="btn btn-dark member-id-card__cta" href="/profile.html">編輯資料</a>
+        <a class="btn btn-dark member-id-card__cta" href="/profile">編輯資料</a>
       </footer>
     </article>
     {% endif %}
 
     {% if program_on %}
-    <a class="btn btn-dark account-member-card__cta" href="/profile.html">更新帳戶資料</a>
+    <a class="btn btn-dark account-member-card__cta" href="/profile">更新帳戶資料</a>
     {% endif %}
-    <a class="btn btn-line account-member-card__cta" href="/account-security.html">帳戶安全</a>
+    <a class="btn btn-line account-member-card__cta" href="/account-security">帳戶安全</a>
     <button type="button" class="account-member-card__logout" hx-post="/htmx/logout" hx-swap="none">登出</button>
     <button type="button" class="account-member-card__delete" data-account-delete-open>刪除帳號</button>
     {% if totp_enabled %}

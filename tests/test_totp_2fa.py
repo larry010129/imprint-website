@@ -345,7 +345,7 @@ class TestTotpIntegration:
 
             assert data.get("requires2fa") is True
 
-            assert "/login-2fa.html" in (data.get("next") or "")
+            assert "/login-2fa" in (data.get("next") or "")
 
             assert COOKIE_NAME not in login.cookies or not login.cookies.get(COOKIE_NAME)
 
@@ -359,7 +359,7 @@ class TestTotpIntegration:
 
                 "/api/auth/verify-2fa",
 
-                json={"code": code, "next": "/account.html"},
+                json={"code": code, "next": "/account"},
 
                 cookies=login.cookies,
 
@@ -391,15 +391,15 @@ class TestTotpIntegration:
 
                 headers={"HX-Request": "true"},
 
-                data={"email": email, "password": password, "next": "/account.html"},
+                data={"email": email, "password": password, "next": "/account"},
 
             )
 
             assert resp.status_code == 200
 
-            assert "/login-2fa.html" not in resp.headers.get("HX-Redirect", "")
+            assert "/login-2fa" not in resp.headers.get("HX-Redirect", "")
 
-            assert "/account.html" in resp.headers.get("HX-Redirect", "")
+            assert "/account" in resp.headers.get("HX-Redirect", "")
 
             assert COOKIE_NAME in resp.cookies
 
@@ -533,7 +533,7 @@ class TestTotpIntegration:
 
             assert complete.status_code == 200
 
-            assert complete.headers.get("HX-Redirect") == "/login.html"
+            assert complete.headers.get("HX-Redirect") == "/login"
 
             assert PWRESET_COOKIE_NAME not in complete.cookies or complete.cookies.get(PWRESET_COOKIE_NAME) == ""
 

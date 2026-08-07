@@ -136,7 +136,7 @@ function takeShopResumeSnapshot() {
 }
 
 function guestLoginUrl() {
-  const base = (window.shopConfig && window.shopConfig.loginUrl) || '/login.html';
+  const base = (window.shopConfig && window.shopConfig.loginUrl) || '/login';
   const returnTo = window.location.pathname + window.location.search + window.location.hash;
   const sep = base.indexOf('?') === -1 ? '?' : '&';
   saveShopResumeSnapshot();
@@ -144,7 +144,7 @@ function guestLoginUrl() {
 }
 
 function orderSuccessUrl(orderNumber, options) {
-  const base = (window.shopConfig && window.shopConfig.successUrl) || '/success.html';
+  const base = (window.shopConfig && window.shopConfig.successUrl) || '/success';
   const params = new URLSearchParams();
   if (orderNumber) params.set('order', String(orderNumber));
   if (options && options.updated) params.set('updated', '1');
@@ -5493,7 +5493,7 @@ function openContactForOrder() {
   try {
     sessionStorage.setItem('shopInquiryDraft', buildInquirySummaryLines().join('\n'));
   } catch (_) { /* ignore */ }
-  window.location.href = window.shopConfig?.contactUrl || '../../contact.html';
+  window.location.href = window.shopConfig?.contactUrl || '/contact';
 }
 
 async function addCurrentFavorite() {
@@ -5633,11 +5633,11 @@ async function handleCartUpdate() {
       const params = new URLSearchParams(window.location.search);
       if (params.get('returnTo') === 'checkout') {
         const items = params.get('items') || window.cartEditData.id;
-        const base = window.shopConfig?.checkoutUrl || '/checkout.html';
+        const base = window.shopConfig?.checkoutUrl || '/checkout';
         window.location.href = base + '?items=' + encodeURIComponent(items);
         return;
       }
-      window.location.href = window.shopConfig?.cartUrl || '/cart.html';
+      window.location.href = window.shopConfig?.cartUrl || '/cart';
     } else {
       toast(tr('save_failed') + shopApiErrorMessage(data, res));
     }
@@ -5736,7 +5736,7 @@ async function handleSubmit() {
     }
 
     const itemId = addResult.data.item.id;
-    const checkoutUrl = window.shopConfig?.checkoutUrl || '/checkout.html';
+    const checkoutUrl = window.shopConfig?.checkoutUrl || '/checkout';
     window.location.href = checkoutUrl + '?item=' + encodeURIComponent(itemId);
   } catch (err) {
     console.error(err);

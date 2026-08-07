@@ -1,7 +1,7 @@
 {% if guest %}
 <div class="member-state member-state--empty">
   <p>請先登入。</p>
-  <a href="/login.html?next=/profile.html" class="btn btn-mint">會員登入</a>
+  <a href="/login?next=/profile" class="btn btn-mint">會員登入</a>
 </div>
 {% else %}
 <div class="account-card-only{% if onboarding %} is-onboarding{% endif %}">
@@ -56,9 +56,9 @@
     </form>
     {% if not onboarding %}
     <p class="account-profile-card__footer">
-      <a href="/account.html">返回我的帳戶</a>
+      <a href="/account">返回我的帳戶</a>
       <span aria-hidden="true">·</span>
-      <a href="/reset-password.html">重設密碼</a>
+      <a href="/reset-password">重設密碼</a>
     </p>
     {% endif %}
   </aside>

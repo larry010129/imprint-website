@@ -1,0 +1,63 @@
+
+<section aria-label="確認訂單" class="page-section member-app checkout-page">
+<div class="container checkout-container">
+<nav aria-label="結帳步驟" class="checkout-stepper">
+<div class="checkout-stepper-step is-done">
+<span aria-hidden="true" class="checkout-stepper-bar"></span>
+<a class="checkout-stepper-label" href="/cart">購物車</a>
+</div>
+<div class="checkout-stepper-step is-active">
+<span aria-hidden="true" class="checkout-stepper-bar"></span>
+<span class="checkout-stepper-label">確認訂單</span>
+</div>
+<div class="checkout-stepper-step">
+<span aria-hidden="true" class="checkout-stepper-bar"></span>
+<span class="checkout-stepper-label">完成</span>
+</div>
+</nav>
+<div hx-get="/htmx/checkout?items=" hx-swap="innerHTML" hx-trigger="load" id="htmx-checkout">
+<div aria-busy="true" aria-label="載入訂單" class="checkout-skel" data-checkout-root="">
+<header class="checkout-head">
+<span class="skel-line skel-line--medium" style="margin-bottom:16px"></span>
+<span class="skel-line skel-line--full" style="height:64px;margin-bottom:12px"></span>
+<span class="skel-line skel-line--long"></span>
+</header>
+<div class="checkout-layout">
+<div class="checkout-main">
+<section class="checkout-block">
+<span class="skel-line skel-line--medium" style="margin-bottom:16px"></span>
+<div class="checkout-skel-item">
+<span class="skel-block skel-block--thumb"></span>
+<div class="checkout-skel-item-copy">
+<span class="skel-line skel-line--short"></span>
+<span class="skel-line skel-line--long" style="margin-top:8px"></span>
+</div>
+</div>
+</section>
+<section class="checkout-block">
+<span class="skel-line skel-line--medium" style="margin-bottom:16px"></span>
+<div class="checkout-skel-fields">
+<span class="skel-line skel-line--full" style="height:40px"></span>
+<span class="skel-line skel-line--full" style="height:40px"></span>
+<span class="skel-line skel-line--full" style="height:40px"></span>
+</div>
+</section>
+<section class="checkout-block">
+<span class="skel-line skel-line--medium" style="margin-bottom:16px"></span>
+<span class="skel-line skel-line--full" style="height:56px;margin-bottom:10px"></span>
+<span class="skel-line skel-line--full" style="height:56px"></span>
+</section>
+</div>
+<aside class="checkout-summary">
+<span class="skel-line skel-line--medium" style="margin-bottom:16px"></span>
+<span class="skel-line skel-line--full" style="margin-bottom:10px"></span>
+<span class="skel-line skel-line--full" style="margin-bottom:10px"></span>
+<span class="skel-line skel-line--short" style="margin-top:16px;height:20px"></span>
+<span class="skel-block skel-block--btn" style="width:100%;height:40px;margin-top:20px"></span>
+</aside>
+</div>
+<p class="checkout-skel-status">載入訂單…</p>
+</div>
+</div>
+</div>
+</section>

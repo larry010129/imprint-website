@@ -57,7 +57,6 @@ _HOME_RESPONSIVE_SLOTS = frozenset(
     {
         "poem-visual",
         "scene-wedding",
-        "cta-scene",
         *(f"series-{key}" for key in _SERIES),
     }
 )
@@ -92,7 +91,6 @@ def _home_specs() -> list[SlotSpec]:
             (("dna", "DNA 鑽石"), ("price", "價格"), ("stories", "見證"), ("faq", "FAQ"))
         )
     ]
-    entries.append(("cta-scene", "頁尾行動情境", (19,), (2400, 1165)))
     specs = [
         _slot("/", "首頁", key, label, "brand", template, indexes, size, indexed=True)
         for key, label, indexes, size in entries
@@ -145,7 +143,7 @@ def _about_specs() -> list[SlotSpec]:
     ]
     return [
         _slot(
-            "/about.html",
+            "/about",
             "品牌故事",
             key,
             label,
@@ -163,7 +161,7 @@ def _about_specs() -> list[SlotSpec]:
 def _series_overview_specs() -> list[SlotSpec]:
     return [
         _slot(
-            "/series.html",
+            "/series",
             "五大系列總覽",
             key,
             f"系列・{label}",
@@ -192,7 +190,7 @@ def _series_detail_specs() -> list[SlotSpec]:
 
 def _dna_specs() -> list[SlotSpec]:
     base = "/static/images/"
-    page = "/what-is-dna-diamond.html"
+    page = "/what-is-dna-diamond"
     label_page = "DNA 鑽石的誕生"
     template = "pages/what-is-dna-diamond.html"
     values = (

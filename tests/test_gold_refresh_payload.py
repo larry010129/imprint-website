@@ -64,7 +64,7 @@ def test_gold_price_js_refresh_posts_public_bot_gold_refresh() -> None:
     assert "REFRESH_URL" not in soft_block
     assert "fetch(API_URL" in js
     assert "gold-price.js?v=24" in (
-        _ROOT / "content" / "site" / "templates" / "pages" / "gold-price.html"
+        _ROOT / "content" / "site" / "templates" / "pages" / "gold-price"
     ).read_text(encoding="utf-8")
     assert "gold-price.js?v=24" in (
         _ROOT / "content" / "site" / "page-registry.json"
@@ -88,7 +88,7 @@ def test_shop_js_live_gold_poll_get_and_cache_bust() -> None:
 
 def test_gold_schedule_copy_zh_en_aligned() -> None:
     gold_html = (
-        _ROOT / "content" / "site" / "templates" / "pages" / "gold-price.html"
+        _ROOT / "content" / "site" / "templates" / "pages" / "gold-price"
     ).read_text(encoding="utf-8")
     body = (_ROOT / "content" / "site" / "bodies" / "gold-price_html.html").read_text(
         encoding="utf-8"

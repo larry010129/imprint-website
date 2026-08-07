@@ -7,7 +7,7 @@
   M.createController({
     run: function () {
       if (!M.isPage('favorites')) return;
-      M.requireSession('favorites.html').then(function (s) {
+      M.requireSession('/favorites').then(function (s) {
         if (!s) return;
         return Model.load();
       }).then(function (res) {

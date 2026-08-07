@@ -253,7 +253,7 @@
       if (table[caratVal] && table[caratVal][q] != null) {
         base = table[caratVal][q];
       } else if (caratNum > 0.30) {
-        /* price.html: 0.30 克拉以上 → 單顆價 × 顆數 × 折扣（非 0.30 整組列再打折） */
+        /* price: 0.30 克拉以上 → 單顆價 × 顆數 × 折扣（非 0.30 整組列再打折） */
         var singleForMulti = (pricing.diamond[colorVal] || {})[caratVal];
         var mult = pricing.multiStoneAbove03Multiplier ? pricing.multiStoneAbove03Multiplier[q] : null;
         if (singleForMulti != null && mult) {

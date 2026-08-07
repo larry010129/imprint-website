@@ -37,7 +37,7 @@ def test_otp_input_js_caches_group_api_and_read_digits():
 
 
 def test_forgot_password_page_wires_otp_hidden_target(client):
-    resp = client.get("/forgot-password.html")
+    resp = client.get("/forgot-password")
     assert resp.status_code == 200
     assert 'data-otp-target="fpCodeHidden"' in resp.text
     assert 'id="fpCodeHidden"' in resp.text

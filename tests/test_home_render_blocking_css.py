@@ -25,10 +25,16 @@ def test_home_inlines_nav_and_hero_critical():
     assert GHIBLI_CRITICAL.is_file()
 
 
-def test_home_defers_full_nav_and_ghibli_remainder():
+def test_home_sync_nav_defers_ghibli_remainder():
+    """nav.css is sync (InteractiveHoverButton); ghibli remainder still deferred."""
     base = BASE.read_text(encoding="utf-8")
     index = INDEX.read_text(encoding="utf-8")
-    assert 'nav.css?v=' in base and 'media="print"' in base
+    assert 'nav.css?v=' in base
+    # Sync all pages — do not defer nav.css (hover CTA needs full rules)
+    assert 'href="/static/css/nav.css?v=' in base
+    nav_link_idx = base.index('href="/static/css/nav.css?v=')
+    nav_snippet = base[nav_link_idx : nav_link_idx + 80]
+    assert 'media="print"' not in nav_snippet
     assert "is_home" in base and "nav-critical.css" in base
     assert 'home-ghibli.css?v=' in index and 'media="print"' in index
     # No sync stylesheet link for hero critical on home
@@ -79,8 +85,9 @@ def test_critical_css_budget():
     """Keep inlined critical CSS small enough to justify inlining over blocking fetch."""
     nav = NAV_CRITICAL.stat().st_size
     hero = GHIBLI_CRITICAL.stat().st_size
-    assert nav < 8_000, f"nav-critical too fat: {nav}"
-    assert hero < 16_000, f"home-ghibli-critical too fat: {hero}"
+    # nav-critical includes InteractiveHoverButton hover (first paint)
+    assert nav < 12_000, f"nav-critical too fat: {nav}"
+    assert hero < 18_000, f"home-ghibli-critical too fat: {hero}"
 
 
 @pytest.fixture(scope="module")
@@ -98,12 +105,11 @@ def test_live_home_has_no_sync_critical_css(client):
     assert ".nav-inner{" in text
     assert ".gh-hero--carousel" in text
     assert 'href="/static/css/home-ghibli-critical.css' not in text
-    assert "nav.css" in text and 'media="print"' in text
-    idx = 0
-    while True:
-        pos = text.find('href="/static/css/nav.css', idx)
-        if pos < 0:
-            break
-        snippet = text[pos : pos + 120]
-        assert 'media="print"' in snippet, snippet
-        idx = pos + 1
+    assert 'class="nav-ihb"' in text
+    assert ".btn-neon" in text
+    assert ".nav-ihb:hover" in text or ".nav-ihb:hover," in text
+    # nav.css loads sync (not media=print)
+    pos = text.find('href="/static/css/nav.css')
+    assert pos >= 0
+    snippet = text[pos : pos + 100]
+    assert 'media="print"' not in snippet, snippet

@@ -56,13 +56,13 @@ RESERVED_PAGE_KEYS = frozenset(
     {
         "/jewelry/",
         "/shop/calculator/",
-        "/cart.html",
-        "/checkout.html",
-        "/login.html",
-        "/register.html",
-        "/account.html",
-        "/profile.html",
-        "/price.html",  # price table code-owned; no CMS ownership of pricing
+        "/cart",
+        "/checkout",
+        "/login",
+        "/register",
+        "/account",
+        "/profile",
+        "/price",  # price table code-owned; no CMS ownership of pricing
     }
 )
 
@@ -109,6 +109,19 @@ def normalize_page_key(raw: str) -> str | None:
     key = re.sub(r"/+", "/", key).lower()
     key = normpath(key)
     return key if key.startswith("/") else None
+
+
+def page_key_aliases(page_key: str) -> tuple[str, ...]:
+    """Current key plus legacy `*.html` form for pre-extensionless CMS rows."""
+    key = str(page_key or "").strip()
+    if not key:
+        return ()
+    if key.endswith(".html"):
+        clean = key[: -len(".html")]
+        return (key, clean) if clean and clean != key else (key,)
+    if key != "/" and not key.endswith("/"):
+        return (key, f"{key}.html")
+    return (key,)
 
 
 def is_reserved_page_key(page_key: str) -> bool:

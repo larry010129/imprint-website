@@ -40,7 +40,7 @@
   function handleCredentialResponse(response) {
     setMsg('登入中…', false);
     var params = new URLSearchParams(window.location.search);
-    var nextSafe = safeNextUrl(params.get('next'), '/account.html');
+    var nextSafe = safeNextUrl(params.get('next'), '/account');
     fetch(apiBase() + '/api/auth/google', {
       method: 'POST',
       credentials: 'include',

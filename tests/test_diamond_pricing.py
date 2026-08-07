@@ -1,4 +1,4 @@
-"""Memorial diamond list pricing: price.html packages + above-0.3 unit×qty×discount."""
+"""Memorial diamond list pricing: price packages + above-0.3 unit×qty×discount."""
 
 import json
 import subprocess

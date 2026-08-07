@@ -6,20 +6,25 @@ from typing import Any
 
 EDITABLE_SITE_PAGES: tuple[dict[str, str], ...] = (
     {"route": "/", "title": "首頁", "content_tab": "page"},
-    {"route": "/about.html", "title": "品牌故事", "content_tab": "page"},
-    {"route": "/series.html", "title": "五大系列總覽", "content_tab": "page"},
+    {"route": "/about", "title": "品牌故事", "content_tab": "page"},
+    {"route": "/series", "title": "五大系列總覽", "content_tab": "page"},
     {"route": "/series/first-love/", "title": "滿月鑽石", "content_tab": "page"},
     {"route": "/series/pet/", "title": "寵物鑽石", "content_tab": "page"},
     {"route": "/series/love/", "title": "結髮鑽石", "content_tab": "page"},
     {"route": "/series/family/", "title": "全家福鑽石", "content_tab": "page"},
     {"route": "/series/heirloom/", "title": "生命鑽石", "content_tab": "page"},
-    {"route": "/what-is-dna-diamond.html", "title": "DNA 鑽石的誕生", "content_tab": "page"},
-    {"route": "/contact.html", "title": "聯絡我們", "content_tab": "page"},
-    {"route": "/faq.html", "title": "常見問題", "content_tab": "faq"},
-    {"route": "/stories.html", "title": "客戶見證", "content_tab": "testimonials"},
-    {"route": "/privacy.html", "title": "隱私權政策", "content_tab": "page"},
-    {"route": "/terms.html", "title": "服務條款", "content_tab": "page"},
-    {"route": "/return-policy.html", "title": "退換貨政策", "content_tab": "page"},
+    {"route": "/what-is-dna-diamond", "title": "DNA 鑽石的誕生", "content_tab": "page"},
+    {"route": "/diamond-4c", "title": "鑽石 4C", "content_tab": "page"},
+    {"route": "/lab-grown-diamond", "title": "什麼是培育鑽石", "content_tab": "page"},
+    {"route": "/diamond-comparison", "title": "天然 vs 培育／DNA", "content_tab": "page"},
+    {"route": "/jewelry/engagement/", "title": "求婚／結髮", "content_tab": "page"},
+    {"route": "/contact", "title": "聯絡我們", "content_tab": "page"},
+    {"route": "/faq", "title": "常見問題", "content_tab": "faq"},
+    {"route": "/stories", "title": "客戶見證", "content_tab": "testimonials"},
+    {"route": "/journal", "title": "品牌日誌", "content_tab": "page"},
+    {"route": "/privacy", "title": "隱私權政策", "content_tab": "page"},
+    {"route": "/terms", "title": "服務條款", "content_tab": "page"},
+    {"route": "/return-policy", "title": "退換貨政策", "content_tab": "page"},
 )
 
 
@@ -67,39 +72,39 @@ def _home_slots() -> list[dict[str, Any]]:
             p,
             "hero-lead",
             "首頁・主視覺引言",
-            "銘印鑽石是全台唯一擁有在地 DNA 鑽石培育實驗室的紀念鑽石品牌。萃取毛髮、骨灰中的元素，於台灣在地（新北三重門市預約制）培育成專屬於您的紀念鑽石，附鑑定保障與專屬影音紀念盒。",
+            "我們樂意傾聽您的故事。銘印鑽石是全台唯一擁有在地 DNA 鑽石培育實驗室的紀念鑽石品牌——萃取毛髮、骨灰中的元素，於台灣在地（預約制）培育成專屬紀念鑽石，附鑑定保障與專屬影音紀念盒。",
             2,
         ),
         _btn(p, "hero-cta", "首頁・主視覺主按鈕", "開始訂製", "/shop/calculator/", 3),
         _t(p, "poem-brand", "首頁・詩文品牌名", "銘印鑽石", 10),
-        _t(p, "poem-title", "首頁・詩文標題", "不只是鑽石，是把羈絆留成可以觸碰的光。", 11),
+        _t(p, "poem-title", "首頁・詩文標題", "一段思念，如何成為永恆。", 11),
         _t(
             p,
             "poem-text",
             "首頁・詩文內文",
-            "從您珍視的樣本中，真實培育而成的專屬鑽石——讓羈絆留成可以觸碰的光。",
+            "我們樂意傾聽您的故事。照片無法滿足思念、信物無法填補情感——為了讓思親更親，才有了 DNA 鑽石，煉製獨一無二的專屬寶物。DNA 鑽石與天然鑽石唯一的不同：天然鑽石來自地底挖採；DNA 鑽石來自您的摯愛。",
             12,
         ),
         _t(p, "poem-link-dna", "首頁・詩文連結・DNA文字", "了解 DNA 鑽石的誕生", 13),
-        _btn(p, "poem-link-about", "首頁・詩文連結・品牌", "認識銘印鑽石 →", "/about.html", 14),
+        _btn(p, "poem-link-about", "首頁・詩文連結・品牌", "認識銘印鑽石 →", "/about", 14),
         _t(p, "dna-script", "首頁・DNA區塊眉標", "What is DNA Diamond", 20),
         _t(p, "dna-title", "首頁・DNA區塊標題", "什麼是 DNA 鑽石", 21),
         _t(
             p,
             "dna-lead",
             "首頁・DNA區塊引言",
-            "從樣本萃取到鑲嵌交付，全程於台灣在地實驗室完成——完整製程、樣本份量與四大保障，請見鑽石知識頁。",
+            "無需漂洋過海——從萃取、培育到飾品設計，全程於台灣完成。想將專屬 DNA 鑽石製作成飾品、時時刻刻配戴？在地更能瞭解您的需求。專業認證與真品保障細節，請見鑽石知識頁。",
             22,
         ),
-        _btn(p, "dna-cta-process", "首頁・DNA主按鈕", "了解完整製程與保障", "/what-is-dna-diamond.html", 23),
-        _btn(p, "dna-cta-about", "首頁・DNA次按鈕", "為什麼選擇銘印 →", "/about.html", 24),
+        _btn(p, "dna-cta-process", "首頁・DNA主按鈕", "了解完整製程與保障", "/what-is-dna-diamond", 23),
+        _btn(p, "dna-cta-about", "首頁・DNA次按鈕", "為什麼選擇銘印 →", "/about", 24),
         _t(p, "series-script", "首頁・系列眉標", "Five Collections", 30),
         _t(p, "series-title", "首頁・系列標題", "選擇屬於您的系列", 31),
         _t(
             p,
             "series-lead",
             "首頁・系列引言",
-            "每一種羈絆，都有屬於它的光。先了解五大系列代表的意義，再點進系列頁選擇克拉數、形狀與飾品款式。",
+            "每一種羈絆，都有屬於它的光。先了解五大系列；若從紀念物、鑽石尺寸到珠寶設計都想量身打造，也可走 Signature｜專屬訂製——世界上不會有第二顆與您相同的 DNA 鑽石。再點進系列頁選擇克拉數、形狀與飾品款式。",
             32,
         ),
         _t(p, "card-first-love-title", "首頁・滿月卡標題", "滿月鑽石", 33),
@@ -139,10 +144,10 @@ def _home_slots() -> list[dict[str, Any]]:
             p,
             "card-heirloom-text",
             "首頁・生命卡說明",
-            "以摯愛親人的毛髮或骨灰，讓思念有永恆的形狀，靜靜陪在您身邊。",
+            "回憶如汩汩泉湧，思念如雲煙繞樑——請永遠留在我身邊，讓記憶成為永恆的存在。",
             42,
         ),
-        _btn(p, "series-cta", "首頁・系列總覽按鈕", "查看系列總覽", "/series.html", 43),
+        _btn(p, "series-cta", "首頁・系列總覽按鈕", "查看系列總覽", "/series", 43),
         _t(p, "wall-script", "首頁・見證眉標", "Testimonials", 50),
         _t(p, "wall-title", "首頁・見證標題", "他們選擇把思念，留成永恆", 51),
         _t(
@@ -152,7 +157,7 @@ def _home_slots() -> list[dict[str, Any]]:
             "來自不同城市、不同故事的顧客，寫下他們與銘印鑽石相遇的片刻。",
             52,
         ),
-        _btn(p, "wall-cta", "首頁・見證按鈕", "閱讀更多客戶見證 →", "/stories.html", 53),
+        _btn(p, "wall-cta", "首頁・見證按鈕", "閱讀更多客戶見證 →", "/stories", 53),
         _t(p, "learn-script", "首頁・了解更多眉標", "Learn More", 60),
         _t(p, "learn-title", "首頁・了解更多標題", "想多了解一點？", 61),
         _t(
@@ -172,9 +177,9 @@ def _home_slots() -> list[dict[str, Any]]:
         _t(p, "learn-faq-text", "首頁・學習卡・FAQ說明", "樣本份量、製作時間、鑑定證書與如何開始，一次解答。", 70),
         _t(p, "faq-script", "首頁・FAQ眉標", "FAQ", 80),
         _t(p, "faq-title", "首頁・FAQ標題", "常見問題", 81),
-        _btn(p, "faq-more", "首頁・FAQ更多", "查看全部常見問題", "/faq.html", 82),
+        _btn(p, "faq-more", "首頁・FAQ更多", "查看全部常見問題", "/faq", 82),
         _t(p, "cta-script", "首頁・頁尾眉標", "Join Us", 90),
-        _t(p, "cta-title", "首頁・頁尾標題", "讓思念，有個可以慢慢決定的地方", 91),
+        _t(p, "cta-title", "首頁・頁尾標題", "我們樂意傾聽您的故事", 91),
         _t(
             p,
             "cta-lead",
@@ -188,10 +193,10 @@ def _home_slots() -> list[dict[str, Any]]:
 
 
 def _about_slots() -> list[dict[str, Any]]:
-    p = "/about.html"
+    p = "/about"
     return [
         _t(p, "hero-overline", "品牌故事・眉標", "銘印鑽石 IMPRINT DIAMOND · TAIWAN", 1),
-        _t(p, "hero-title", "品牌故事・主標", "銘印鑽石｜在您準備好的時候，我們都在。", 2),
+        _t(p, "hero-title", "品牌故事・主標", "銘印鑽石｜我們樂意傾聽您的故事", 2),
         _t(
             p,
             "hero-lead",
@@ -200,19 +205,19 @@ def _about_slots() -> list[dict[str, Any]]:
             3,
         ),
         _btn(p, "hero-scroll", "品牌故事・閱讀承諾", "閱讀我們的承諾", "#story-begins", 4),
-        _t(p, "belief-title", "品牌故事・信念標題", "思念，可以有一個具體的形狀。", 10),
+        _t(p, "belief-title", "品牌故事・信念標題", "我們樂意傾聽您的故事", 10),
         _t(
             p,
             "belief-p1",
             "品牌故事・信念段落一",
-            "每個人與所愛之間，都有一段獨一無二的連結——可能是剛出生的寶寶、陪伴多年的毛孩、攜手一生的伴侶，或是已經離開、卻仍在心裡佔有位置的親人。",
+            "在這個充滿快速變化的社會中，人與人之間是否有許多情感都被忽略了？我們相信，照片無法滿足思念、信物無法填補情感——為了讓思親更親，才會有銘印鑽石來煉製獨一無二的 DNA 專屬貼身寶物；難忘時刻所化成的寶石，便是所愛的見證。",
             11,
         ),
         _t(
             p,
             "belief-p2",
             "品牌故事・信念段落二",
-            "這些關係很難用言語完整表達。銘印鑽石的角色，是為這份羈絆找到一個能觸碰、能傳承的形狀——從您珍視的樣本中，真實生長而成，而非符號或替代品。",
+            "銘印鑽石與天然鑽石唯一的不同：天然鑽石來自地底挖採；銘印鑽石來自您的摯愛。我們以現代高科技與高工藝，模擬大自然鑽石生長環境，將碳化後的毛髮銘印封存於鑽石之中，以鑽石形式乘載記憶、留下感動，並堅持 4C 高品質原則。",
             12,
         ),
         _t(p, "local-title", "品牌故事・在地標題", "留在離您最近的地方", 20),
@@ -248,12 +253,12 @@ def _about_slots() -> list[dict[str, Any]]:
             51,
         ),
         _btn(p, "cta-calculator", "品牌故事・試算按鈕", "開始客製試算", "/shop/calculator/", 52),
-        _btn(p, "cta-dna", "品牌故事・DNA按鈕", "了解 DNA 鑽石的誕生", "/what-is-dna-diamond.html", 53),
+        _btn(p, "cta-dna", "品牌故事・DNA按鈕", "了解 DNA 鑽石的誕生", "/what-is-dna-diamond", 53),
     ]
 
 
 def _series_slots() -> list[dict[str, Any]]:
-    p = "/series.html"
+    p = "/series"
     return [
         _t(p, "hero-eyebrow", "系列總覽・眉標", "Five Collections", 1),
         _t(p, "hero-title", "系列總覽・主標", "選擇屬於您的系列", 2),
@@ -261,7 +266,7 @@ def _series_slots() -> list[dict[str, Any]]:
             p,
             "hero-lead",
             "系列總覽・引言",
-            "銘印鑽石依不同的羈絆與生命階段，整理成五個系列。每一顆鑽石都從您珍視的樣本中真實培育而成——先了解各系列代表的意義，再進一步選擇克拉數、形狀與飾品款式。",
+            "銘印鑽石依不同的羈絆與生命階段，整理成五個系列；若故事無法被既有系列完整涵蓋，也可走 Signature｜專屬訂製。每一顆鑽石都從您珍視的樣本中真實培育而成——先了解各系列意義，再選擇克拉數、形狀與飾品款式。",
             3,
         ),
         _t(p, "intro-title", "系列總覽・介紹標題", "五大系列，對應五種珍視的連結", 10),
@@ -269,7 +274,7 @@ def _series_slots() -> list[dict[str, Any]]:
             p,
             "intro-body",
             "系列總覽・介紹內文",
-            "無論是寶寶的第一縷胎髮、毛孩多年的陪伴、伴侶之間的誓約、全家人的髮絲，或是已離開的摯愛——我們以相同的在地培育技術，為不同故事找到最貼切的起點。系列之間沒有優劣，只有「哪一種連結，此刻最貼近您的心」。",
+            "無論是寶寶的第一縷胎髮、毛孩多年的陪伴、伴侶之間的誓約、全家人的髮絲，或是已離開的摯愛——我們以相同的在地培育技術，為不同故事找到最貼切的起點。系列之間沒有優劣，只有「哪一種連結，此刻最貼近您的心」。Signature｜專屬訂製則從紀念物、鑽石尺寸到珠寶設計皆依您的故事量身打造——世界上不會有第二顆與您相同的 DNA 鑽石。",
             11,
         ),
         _t(p, "guide-title", "系列總覽・導引標題", "不確定從哪個系列開始？", 20),
@@ -280,14 +285,14 @@ def _series_slots() -> list[dict[str, Any]]:
 
 
 def _contact_slots() -> list[dict[str, Any]]:
-    p = "/contact.html"
+    p = "/contact"
     return [
         _t(p, "card-title", "聯絡・卡片標題", "聯絡銘印鑽石｜三重門市", 1),
         _t(
             p,
             "card-lead",
             "聯絡・卡片說明",
-            "銘印鑽石（IMPRINT DIAMOND／心之銘印鑽石有限公司）門市位於新北市三重區福德南路 43 號 1 樓，採預約制；電話 02-2977-0268。全台唯一擁有在地 DNA 鑽石培育實驗室；若想了解結髮鑽石／訂製婚戒，也可先到線上客製試算，再預約蒞臨親眼見證鑽石生長。",
+            "銘印鑽石（IMPRINT DIAMOND／心之銘印鑽石有限公司）門市位於新北市三重區福德南路 43 號 1 樓，採預約制；電話 02-2977-0268。歡迎預約來店，親眼見證鑽石生長——可先到線上客製試算，或了解結髮鑽石／訂製婚戒後再蒞臨。",
             2,
         ),
         _btn(p, "card-line", "聯絡・LINE按鈕", "加入官方 LINE 諮詢", "https://lin.ee/ktVBtmx", 3),
@@ -296,14 +301,14 @@ def _contact_slots() -> list[dict[str, Any]]:
             p,
             "form-lead",
             "聯絡・表單引言",
-            "不方便加 LINE 也沒關係，留下您的聯絡方式與需求，顧問會盡快與您聯繫。",
+            "不方便加 LINE 也沒關係，留下您的聯絡方式、需求與希望預約時段（上午 10:00–12:00 或下午 1:30–6:30），顧問會盡快與您聯繫。",
             11,
         ),
     ]
 
 
 def _dna_slots() -> list[dict[str, Any]]:
-    p = "/what-is-dna-diamond.html"
+    p = "/what-is-dna-diamond"
     return [
         _t(p, "hero-eyebrow", "DNA知識・眉標", "WHAT IS DNA DIAMOND", 1),
         _t(p, "hero-title", "DNA知識・主標", "DNA 鑽石的誕生", 2),
@@ -339,9 +344,9 @@ def _dna_slots() -> list[dict[str, Any]]:
 
 def _legal_slots() -> list[dict[str, Any]]:
     return [
-        _t("/privacy.html", "hero-title", "隱私權・標題", "隱私權政策", 1),
-        _t("/terms.html", "hero-title", "服務條款・標題", "服務條款", 1),
-        _t("/return-policy.html", "hero-title", "退換貨・標題", "退換貨與取消政策", 1),
+        _t("/privacy", "hero-title", "隱私權・標題", "隱私權政策", 1),
+        _t("/terms", "hero-title", "服務條款・標題", "服務條款", 1),
+        _t("/return-policy", "hero-title", "退換貨・標題", "退換貨與取消政策", 1),
     ]
 
 

@@ -340,7 +340,7 @@ def test_htmx_register_non_partner_unchanged(_mock_dns, _mock_captcha, client):
         data=_register_form(email=email),
     )
     assert resp.status_code == 200
-    assert resp.headers.get("HX-Redirect") == "/account.html"
+    assert resp.headers.get("HX-Redirect") == "/account"
     try:
         with get_connection() as conn, conn.cursor() as cur:
             cur.execute(
@@ -478,17 +478,17 @@ def test_login_incomplete_profile_soft_onboarding_prompt(_mock_dns, client):
         resp = client.post(
             "/htmx/auth/login",
             headers={"HX-Request": "true"},
-            data={"email": email, "password": password, "next": "/account.html"},
+            data={"email": email, "password": password, "next": "/account"},
         )
         assert resp.status_code == 200
-        assert resp.headers.get("HX-Redirect") == "/account.html"
+        assert resp.headers.get("HX-Redirect") == "/account"
 
         client.cookies.set("imprint_session", sign_session(str(user["id"])))
         account = client.get("/htmx/account", headers={"HX-Request": "true"})
         assert not account.headers.get("HX-Redirect")
         assert account.status_code == 200
         assert "請完善個人資料" in account.text
-        assert "/profile.html?onboarding=1" in account.text
+        assert "/profile?onboarding=1" in account.text
         assert "稍後再說" in account.text
 
         # Later cookie suppresses the soft prompt for this period
@@ -511,7 +511,7 @@ def test_login_incomplete_profile_soft_onboarding_prompt(_mock_dns, client):
             },
         )
         assert save.status_code == 200
-        assert save.headers.get("HX-Redirect") == "/account.html"
+        assert save.headers.get("HX-Redirect") == "/account"
 
         with get_connection() as conn, conn.cursor() as cur:
             cur.execute(

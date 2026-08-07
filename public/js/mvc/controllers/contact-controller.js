@@ -41,7 +41,7 @@
           phone: phone,
           email: email || null,
           message: message,
-          sourcePage: 'contact.html',
+          sourcePage: 'contact',
         }).then(function (res) {
           View.setLoading(false);
           if (res.error) {

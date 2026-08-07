@@ -32,12 +32,12 @@ function answerWithLinks(entry: FaqEntry): ReactNode {
         您可以選擇以下任一方式開始訂製：
         <br />
         <br />
-        <strong>線上客製試算</strong> — 前往
+        <strong>線上客製試算</strong>｜前往
         <a href="/shop/calculator/"> 客製試算頁</a>
         ，依步驟選擇品項、款式、金屬與鑽石規格，系統即時試算價格；確認後可加入購物車並送出訂單，我們會與您聯繫確認樣本與細節。
         <br />
         <br />
-        <strong>預約顧問</strong> — 也可透過官方 LINE 預約，由專屬顧問一對一討論需求、確認樣本份量與報價，再進行採樣與培育。官方
+        <strong>預約顧問</strong>｜也可透過官方 LINE 預約，由專屬顧問一對一討論需求、確認樣本份量與報價，再進行採樣與培育。官方
         LINE：
         <a href="https://lin.ee/ktVBtmx" target="_blank" rel="noopener">
           {" "}

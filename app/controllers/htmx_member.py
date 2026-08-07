@@ -59,6 +59,9 @@ async def contact_submit(request: Request) -> HTMLResponse:
     phone = str(form.get("phone") or "").strip()
     message = str(form.get("message") or "").strip()
     email = str(form.get("email") or "").strip() or None
+    preferred_slot = str(form.get("preferred_slot") or "").strip()
+    if preferred_slot:
+        message = f"{message}\n\n【希望預約時段】{preferred_slot}"
     if not name or not phone or not message:
         return html(
             request, "form_msg.html", {"ok": False, "message": "請填寫姓名、電話與您的需求"}, 400
@@ -69,13 +72,13 @@ async def contact_submit(request: Request) -> HTMLResponse:
             insert into contact_messages (name, phone, email, message, source_page)
             values (%s, %s, %s, %s, %s)
             """,
-            (name, phone, email, message, "/contact.html"),
+            (name, phone, email, message, "/contact"),
         )
     try:
         from app.mail import notify_contact_message
 
         notify_contact_message(
-            name=name, phone=phone, email=email, message=message, source_page="/contact.html"
+            name=name, phone=phone, email=email, message=message, source_page="/contact"
         )
     except Exception:
         pass
@@ -313,7 +316,7 @@ async def profile_save(request: Request) -> Response:
         profile = fetch_profile(cur, user_id)
 
     if onboarding and profile_fields_complete(profile):
-        return hx_redirect("/account.html")
+        return hx_redirect("/account")
 
     return html(
         request,

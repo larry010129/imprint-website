@@ -5,27 +5,56 @@
 {% endif %}
 {% endblock %}
 {% block content %}
-<section class="page-hero page-hero--short">
-  {% set _pi = page_image or {} %}
-  {% set _pi_url = _pi.display_url or _pi.image_url or '' %}
-  {% set _pi_webp = _pi.display_webp or _pi.image_webp or '' %}
-  {% set _pi_alt = _pi.image_alt or '常見問題頁主圖' %}
-  <div class="page-hero-media">{% if _pi_url %}<picture>{% if _pi_webp %}<source srcset="{{ _pi_webp }}" type="image/webp">{% endif %}<img src="{{ _pi_url }}" alt="{{ _pi_alt }}" loading="eager" decoding="async" fetchpriority="high" onerror="imgFallback(this)"></picture>{% endif %}</div>
-  <div class="page-hero-scrim"></div>
+<section class="page-hero page-hero--short page-hero--text page-hero--faq">
   <div class="container page-hero-inner">
     <p class="breadcrumb"><a href="/">首頁</a><span class="sep">/</span><span class="current">常見問題</span></p>
-    <p class="eyebrow">FAQ</p>
-    <h1>常見問題</h1>
-    <p>訂製一顆 DNA 紀念鑽石，是一個需要時間與信任的決定。願這些答案，讓您安心地慢慢考慮。</p>
+    <div class="faq-intro">
+      <p class="eyebrow">FAQ</p>
+      <h1>常見問題</h1>
+      <p class="faq-intro__lead">訂製一顆 DNA 紀念鑽石，是一個需要時間與信任的決定。願這些答案，讓您安心地慢慢考慮。</p>
+      <a class="btn btn-mint btn-neon btn-neon--solid faq-intro__cta" href="https://lin.ee/ktVBtmx" target="_blank" rel="noopener">還有想了解的？問問顧問</a>
+    </div>
   </div>
 </section>
 
-<section class="faq faq--offset">
+<section class="faq faq--offset" id="faq-content">
   <div class="container faq-page">
+    <aside class="faq-knowledge" aria-label="鑽石知識延伸閱讀">
+      <p class="eyebrow">鑽石知識</p>
+      <h2 class="section-title section-title--mb-sm faq-knowledge__title">想先讀完整說明？</h2>
+      <p class="faq-knowledge__lead">下列頁面補充 FAQ 未盡之處：</p>
+      <ul class="faq-knowledge-links">
+        <li>
+          <a href="/what-is-dna-diamond" class="faq-knowledge-link">
+            <span class="faq-knowledge-link__title">什麼是 DNA 鑽石</span>
+            <span class="faq-knowledge-link__desc">CVD 製程、樣本與時程</span>
+            <span class="faq-knowledge-link__chev" aria-hidden="true">→</span>
+          </a>
+        </li>
+        <li>
+          <a href="/diamond-4c" class="faq-knowledge-link">
+            <span class="faq-knowledge-link__title">鑽石 4C</span>
+            <span class="faq-knowledge-link__desc">克拉、顏色、淨度、切工</span>
+            <span class="faq-knowledge-link__chev" aria-hidden="true">→</span>
+          </a>
+        </li>
+        <li>
+          <a href="/lab-grown-diamond" class="faq-knowledge-link">
+            <span class="faq-knowledge-link__title">什麼是培育鑽石</span>
+            <span class="faq-knowledge-link__desc">實驗室培育與 DNA 定位</span>
+            <span class="faq-knowledge-link__chev" aria-hidden="true">→</span>
+          </a>
+        </li>
+        <li>
+          <a href="/diamond-comparison" class="faq-knowledge-link">
+            <span class="faq-knowledge-link__title">天然 vs 培育／DNA</span>
+            <span class="faq-knowledge-link__desc">差異對照（非他牌評比）</span>
+            <span class="faq-knowledge-link__chev" aria-hidden="true">→</span>
+          </a>
+        </li>
+      </ul>
+    </aside>
     {% include "partials/faq-categorized.html" %}
-    <div class="faq-more">
-      <a class="btn btn-line" href="https://lin.ee/ktVBtmx" target="_blank" rel="noopener">還有想了解的？問問顧問</a>
-    </div>
   </div>
 </section>
 {% endblock %}

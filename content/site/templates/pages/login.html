@@ -20,13 +20,13 @@
     hx-target="#auth-form-msg"
     hx-swap="innerHTML"
     hx-disabled-elt="button[type=submit]">
-    <input type="hidden" name="next" value="{{ request.query_params.get('next', '/account.html') }}">
+    <input type="hidden" name="next" value="{{ request.query_params.get('next', '/account') }}">
     <div class="form-field">
       <input type="email" id="lEmail" name="email" placeholder=" " autocomplete="username" required>
       <label for="lEmail">電子郵件</label>
     </div>
     {{ auth_password_field('lPassword', label='密碼', autocomplete='current-password') }}
-    <p class="forgot-password"><a href="/forgot-password.html">忘記密碼？</a></p>
+    <p class="forgot-password"><a href="/forgot-password">忘記密碼？</a></p>
     <label class="partner-check">
       <input type="checkbox" name="remember" value="1" checked>
       <span class="checkmark"></span>
@@ -39,7 +39,7 @@
   <div id="googleSignInMsg" class="form-msg" aria-live="polite"></div>
   <div id="googleSignInBtn" class="google-signin-btn"></div>
   {% endif %}
-  <p class="signup-prompt">還不是會員？<a href="/register.html">立即註冊</a></p>
+  <p class="signup-prompt">還不是會員？<a href="/register">立即註冊</a></p>
 {% endcall %}
 {% endblock %}
 {% block extra_scripts %}

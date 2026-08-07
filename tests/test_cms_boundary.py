@@ -27,8 +27,8 @@ def test_reserved_cms_slugs_blocked():
 def test_reserved_page_keys_block_shop_jewelry_price():
     assert is_reserved_page_key("/shop/calculator/")
     assert is_reserved_page_key("/jewelry/rings/")
-    assert is_reserved_page_key("/price.html")
-    assert assert_content_page_key("/about.html")[1] is None
+    assert is_reserved_page_key("/price")
+    assert assert_content_page_key("/about")[1] is None
     assert assert_content_page_key("/shop/x/")[0] is None
     assert assert_content_page_key("/SHOP/calculator/")[0] is None
     assert assert_content_page_key("\\shop\\calculator\\")[0] is None

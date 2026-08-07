@@ -104,6 +104,255 @@ input[type="reset"]{
 .btn-ghost-light{ border:1px solid rgba(255,255,255,.5); color:#fff; }
 .btn-ghost-light:hover{ background:rgba(255,255,255,.12); }
 
+/* ---------- Neon button (mint) — page-nav CTAs ----------
+   Demo: pill + soft/solid/ghost + hover center/bottom gradient lines.
+   Prefer ::before/::after so single-class anchors need no child spans.
+   Opt-in: .btn-neon / .btn-neon--solid / .btn-neon--ghost
+   Also: common page-nav anchors (a.btn.*, a.gh-btn--*, a.dna-cta).
+   Skip: button/submit, .nav-ihb, admin, cart qty, accordion triggers.
+*/
+.btn-neon{
+  --neon-via: var(--mint-deep);
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--mint-deep) 22%, transparent);
+  background: color-mix(in srgb, var(--mint) 8%, transparent);
+  color: var(--ink);
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  min-height: var(--tap-target-min, 44px);
+  padding: 14px 36px;
+  font-size: 14.5px;
+  letter-spacing: .18em;
+  white-space: nowrap;
+  transition: background .2s var(--ease), border-color .2s var(--ease), color .2s var(--ease), box-shadow .2s var(--ease), transform .2s var(--ease);
+  overflow: visible;
+  isolation: isolate;
+}
+.btn-neon:hover,
+.btn-neon:focus-visible{
+  background: transparent;
+  border-color: color-mix(in srgb, var(--mint-deep) 40%, transparent);
+  outline: none;
+}
+.btn-neon--solid{
+  background: var(--mint);
+  border-color: transparent;
+  color: var(--ink);
+  font-weight: 500;
+}
+.btn-neon--solid:hover,
+.btn-neon--solid:focus-visible{
+  background: color-mix(in srgb, var(--mint) 55%, var(--mint-deep));
+  border-color: color-mix(in srgb, var(--ink) 35%, transparent);
+  color: var(--ink);
+}
+.btn-neon--ghost{
+  background: transparent;
+  border-color: transparent;
+  color: var(--ink);
+}
+.btn-neon--ghost:hover,
+.btn-neon--ghost:focus-visible{
+  border-color: var(--ink-soft);
+  background: color-mix(in srgb, #fff 10%, transparent);
+  color: var(--ink);
+}
+
+/* Neon lines + pill on common page-nav anchors (no markup change required) */
+.btn-neon,
+a.btn.btn-line,
+a.btn.btn-mint,
+a.btn.btn-dark,
+a.gh-btn.gh-btn--primary,
+a.gh-btn.gh-btn--dark,
+a.dna-cta{
+  --neon-via: var(--mint-deep);
+  position: relative;
+  border-radius: 999px;
+  overflow: visible;
+  isolation: isolate;
+}
+a.btn.btn-line:hover,
+a.btn.btn-line:focus-visible{
+  /* Keep neon line readable — avoid solid ink fill covering the glow */
+  background: var(--mint-soft);
+  color: var(--ink);
+  border-color: color-mix(in srgb, var(--mint-deep) 45%, var(--ink));
+}
+/* Bottom neon underline only — center ::before removed (was strikethrough on text) */
+.btn-neon::before,
+a.btn.btn-line::before,
+a.btn.btn-mint::before,
+a.btn.btn-dark::before,
+a.gh-btn.gh-btn--primary::before,
+a.gh-btn.gh-btn--dark::before,
+a.dna-cta::before{
+  content: none;
+  display: none;
+}
+.btn-neon::after,
+a.btn.btn-line::after,
+a.btn.btn-mint::after,
+a.btn.btn-dark::after,
+a.gh-btn.gh-btn--primary::after,
+a.gh-btn.gh-btn--dark::after,
+a.dna-cta::after{
+  content: "";
+  position: absolute;
+  left: 12.5%;
+  right: 12.5%;
+  bottom: -1px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--neon-via, var(--mint-deep)), transparent);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 1;
+  transition: opacity .5s ease-in-out;
+}
+.btn-neon:hover::after,
+.btn-neon:focus-visible::after,
+a.btn.btn-line:hover::after,
+a.btn.btn-line:focus-visible::after,
+a.btn.btn-mint:hover::after,
+a.btn.btn-mint:focus-visible::after,
+a.btn.btn-dark:hover::after,
+a.btn.btn-dark:focus-visible::after,
+a.gh-btn.gh-btn--primary:hover::after,
+a.gh-btn.gh-btn--primary:focus-visible::after,
+a.gh-btn.gh-btn--dark:hover::after,
+a.gh-btn.gh-btn--dark:focus-visible::after,
+a.dna-cta:hover::after,
+a.dna-cta:focus-visible::after{
+  opacity: .55;
+}
+
+@media (max-width: 640px){
+  .btn-neon{
+    max-width: 100%;
+    white-space: normal;
+    text-align: center;
+    line-height: 1.45;
+    padding: 12px 22px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce){
+  .btn-neon,
+  a.btn.btn-line,
+  a.btn.btn-mint,
+  a.btn.btn-dark,
+  a.gh-btn.gh-btn--primary,
+  a.gh-btn.gh-btn--dark,
+  a.dna-cta{
+    transition: background .15s ease, border-color .15s ease, color .15s ease;
+  }
+  .btn-neon::after,
+  a.btn.btn-line::after,
+  a.btn.btn-mint::after,
+  a.btn.btn-dark::after,
+  a.gh-btn.gh-btn--primary::after,
+  a.gh-btn.gh-btn--dark::after,
+  a.dna-cta::after{
+    transition: opacity .15s ease;
+  }
+  .btn-neon:hover::after,
+  .btn-neon:focus-visible::after,
+  a.btn.btn-line:hover::after,
+  a.btn.btn-line:focus-visible::after,
+  a.btn.btn-mint:hover::after,
+  a.btn.btn-mint:focus-visible::after,
+  a.btn.btn-dark:hover::after,
+  a.btn.btn-dark:focus-visible::after,
+  a.gh-btn.gh-btn--primary:hover::after,
+  a.gh-btn.gh-btn--primary:focus-visible::after,
+  a.gh-btn.gh-btn--dark:hover::after,
+  a.gh-btn.gh-btn--dark:focus-visible::after,
+  a.dna-cta:hover::after,
+  a.dna-cta:focus-visible::after{
+    opacity: .35;
+  }
+}
+
+/* Higher specificity — beat .btn-dark / .gh-btn--primary rest styles */
+a.btn.btn-neon,
+a.gh-btn.btn-neon,
+a.dna-cta.btn-neon{
+  --neon-via: var(--mint-deep);
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  overflow: visible;
+  isolation: isolate;
+  text-decoration: none;
+  cursor: pointer;
+  min-height: var(--tap-target-min, 44px);
+  transition: background .2s var(--ease), border-color .2s var(--ease), color .2s var(--ease), box-shadow .2s var(--ease);
+}
+a.btn.btn-neon:not(.btn-neon--solid):not(.btn-neon--ghost),
+a.gh-btn.btn-neon:not(.btn-neon--solid):not(.btn-neon--ghost),
+a.dna-cta.btn-neon:not(.btn-neon--solid):not(.btn-neon--ghost){
+  border: 1px solid color-mix(in srgb, var(--mint-deep) 28%, transparent);
+  background: color-mix(in srgb, var(--mint) 10%, transparent);
+  color: var(--ink);
+}
+a.btn.btn-neon.btn-neon--solid,
+a.gh-btn.btn-neon.btn-neon--solid,
+a.dna-cta.btn-neon.btn-neon--solid{
+  background: var(--mint);
+  border: 1px solid transparent;
+  color: var(--ink);
+  font-weight: 500;
+  box-shadow: 0 2px 12px color-mix(in srgb, var(--mint-deep) 22%, transparent);
+}
+a.btn.btn-neon.btn-neon--ghost,
+a.gh-btn.btn-neon.btn-neon--ghost,
+a.dna-cta.btn-neon.btn-neon--ghost{
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--mint-deep) 20%, transparent);
+  color: var(--ink);
+}
+a.btn.btn-neon:hover,
+a.btn.btn-neon:focus-visible,
+a.gh-btn.btn-neon:hover,
+a.gh-btn.btn-neon:focus-visible,
+a.dna-cta.btn-neon:hover,
+a.dna-cta.btn-neon:focus-visible{
+  transform: none;
+  outline: none;
+}
+a.btn.btn-neon.btn-neon--solid:hover,
+a.btn.btn-neon.btn-neon--solid:focus-visible,
+a.gh-btn.btn-neon.btn-neon--solid:hover,
+a.gh-btn.btn-neon.btn-neon--solid:focus-visible,
+a.dna-cta.btn-neon.btn-neon--solid:hover,
+a.dna-cta.btn-neon.btn-neon--solid:focus-visible{
+  background: color-mix(in srgb, var(--mint) 55%, var(--mint-deep));
+  border-color: color-mix(in srgb, var(--ink) 30%, transparent);
+  color: var(--ink);
+}
+a.btn.btn-dark.btn-neon:hover,
+a.btn.btn-dark.btn-neon:focus-visible,
+a.btn.btn-mint.btn-neon:hover,
+a.btn.btn-mint.btn-neon:focus-visible{
+  background: color-mix(in srgb, var(--mint) 55%, var(--mint-deep));
+  color: var(--ink);
+  transform: none;
+}
+a.btn.btn-line.btn-neon:hover,
+a.btn.btn-line.btn-neon:focus-visible{
+  background: var(--mint-soft);
+  color: var(--ink);
+  border-color: color-mix(in srgb, var(--mint-deep) 45%, var(--ink));
+  transform: none;
+}
+
 /* 進場顯示動畫（transform/opacity only — IntersectionObserver in main.js） */
 .reveal{
   opacity:0;

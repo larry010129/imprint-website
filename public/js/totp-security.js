@@ -91,7 +91,7 @@
 
     if (backupDone) {
       backupDone.addEventListener('click', function () {
-        window.location.href = '/account-security.html';
+        window.location.href = '/account-security';
       });
     }
 

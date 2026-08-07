@@ -1,7 +1,7 @@
 {% if guest %}
 <div class="member-state member-state--empty">
   <p>請先登入以查看訂購紀錄。</p>
-  <a href="/login.html?next=/history.html" class="btn btn-mint">會員登入</a>
+  <a href="/login?next=/history" class="btn btn-mint">會員登入</a>
 </div>
 {% elif not orders %}
 <div class="member-state member-state--empty"><p>尚無訂購紀錄。</p></div>

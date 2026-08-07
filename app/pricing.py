@@ -128,7 +128,7 @@ def _effective_tables(overrides: dict[str, Any] | None) -> dict[str, Any]:
     this yields the module constants unchanged (checkout math is untouched until
     an admin sets a value).
 
-    Memorial multi: package tables for 0.1/0.2/0.3 (price.html);
+    Memorial multi: package tables for 0.1/0.2/0.3 (price);
     above 0.3ct uses unit × qty × multi_above_03.
     """
     ov = overrides or {}
@@ -209,7 +209,7 @@ def compute_diamond_list_price(
         package = (multi_table.get(ck) or {}).get(str(multi_count))
         if package is not None:
             return _apply_shape_surcharge(float(package), surcharge)
-        # price.html: above 0.30ct → 單顆價 × 顆數 × discount
+        # price: above 0.30ct → 單顆價 × 顆數 × discount
         if carat_num > FANCY_MIN_CARAT and base is not None:
             discount = eff["multi_above_03"].get(str(multi_count))
             if not discount:

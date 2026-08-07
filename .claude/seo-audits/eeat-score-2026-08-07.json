@@ -1,0 +1,46 @@
+{
+  "findings_count": 13,
+  "search_seo": {
+    "value": 60.8,
+    "band": "D",
+    "capped": false,
+    "needs_api_count": 1,
+    "categories": [
+      { "name": "Indexability & Crawl", "weight": 22, "value": 0, "active": false },
+      { "name": "Core Web Vitals / Performance", "weight": 16, "value": 0, "active": false },
+      { "name": "On-Page & Meta", "weight": 12, "value": 0, "active": false },
+      { "name": "Structured Data", "weight": 12, "value": 0, "active": false },
+      { "name": "Rendering", "weight": 8, "value": 0, "active": false },
+      { "name": "Internal Linking & Semantics", "weight": 8, "value": 0, "active": false },
+      { "name": "E-E-A-T", "weight": 7, "value": 60.8, "active": true },
+      { "name": "Images / Media", "weight": 5, "value": 0, "active": false },
+      { "name": "Sitemaps & Discovery", "weight": 5, "value": 0, "active": false },
+      { "name": "Freshness", "weight": 3, "value": 0, "active": false },
+      { "name": "Social Cards", "weight": 2, "value": 0, "active": false },
+      { "name": "E-commerce", "weight": 15, "value": 0, "active": false },
+      { "name": "Local", "weight": 10, "value": 0, "active": false },
+      { "name": "International", "weight": 8, "value": 0, "active": false }
+    ],
+    "interpretation": "Mixed — see the prioritized actions."
+  },
+  "ai_visibility": {
+    "value": 60.8,
+    "band": "D",
+    "capped": false,
+    "needs_api_count": 1,
+    "categories": [
+      { "name": "Answer Extractability", "weight": 20, "value": 0, "active": false },
+      { "name": "Structured Data", "weight": 16, "value": 0, "active": false },
+      { "name": "Fact Density / Original Data", "weight": 14, "value": 0, "active": false },
+      { "name": "AI Crawler Access", "weight": 12, "value": 0, "active": false },
+      { "name": "Rendering (non-JS)", "weight": 10, "value": 0, "active": false },
+      { "name": "Entity / Knowledge-Graph", "weight": 10, "value": 0, "active": false },
+      { "name": "E-E-A-T / Authority", "weight": 9, "value": 60.8, "active": true },
+      { "name": "Freshness", "weight": 6, "value": 0, "active": false },
+      { "name": "Images / Multimodal", "weight": 3, "value": 0, "active": false },
+      { "name": "llms.txt", "weight": 0, "value": 0, "active": false }
+    ],
+    "interpretation": "Mixed — see the prioritized actions."
+  },
+  "note": "M16-only audit: inactive categories dropped; both scores equal E-E-A-T category value. Not a full-site SEO score."
+}

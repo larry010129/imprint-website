@@ -8,7 +8,7 @@ const DNA = "dna-process";
 export const INTRO = {
   eyebrow: "WHAT IS DNA DIAMOND",
   title: "DNA 鑽石的誕生",
-  lead: "從一縷髮絲，到一顆會發光的鑽石——完整的製作過程與品質保障。",
+  lead: "從一縷髮絲，到一顆會發光的鑽石：完整的製作過程與品質保障。",
 };
 
 export const WHAT_IS = {
@@ -18,7 +18,7 @@ export const WHAT_IS = {
     "銘印鑽石是全台唯一擁有在地 DNA 鑽石培育實驗室的紀念鑽石品牌。您珍視的毛髮與骨灰，不需要經歷國際運送，每一份樣本都以單一客戶、單一培育流程處理。",
   image: photoImage(
     `${DNA}/what-is-dna-diamond-hero.png`,
-    "DNA 鑽石意象——將珍視的樣本培育成專屬鑽石"
+    "DNA 鑽石意象｜將珍視的樣本培育成專屬鑽石"
   ),
 };
 
@@ -45,19 +45,19 @@ export const FLOW_PHASES: Array<{
     id: "flow-1",
     title: "樣本萃取",
     description:
-      "毛髮約一顆雞蛋大小、骨灰約 3–5 公克，單一客戶、單一培育流程。",
+      "毛髮約一顆雞蛋大小、骨灰約 3～5 公克，單一客戶、單一培育流程。",
     image: photoImage(
       `${DNA}/collect-bottle.png`,
-      "銘印鑽石樣本採集瓶——IMPRINT 專用採集容器"
+      "銘印鑽石樣本採集瓶｜IMPRINT 專用採集容器"
     ),
   },
   {
     id: "flow-2",
     title: "元素注入・晶化培育",
-    description: "元素注入生長設備，讓晶體以自己的節奏，慢慢長成，約需 70–90 天。",
+    description: "元素注入生長設備，讓晶體以自己的節奏，慢慢長成，約需 70～90 天。",
     image: photoImage(
       `${DNA}/crystal-growth.png`,
-      "DNA 鑽石晶化培育——實驗室生長設備中的鑽石晶體"
+      "DNA 鑽石晶化培育｜實驗室生長設備中的鑽石晶體"
     ),
   },
   {
@@ -66,7 +66,7 @@ export const FLOW_PHASES: Array<{
     description: "依您選擇的克拉數與形狀，精工切磨。",
     image: photoImage(
       `${DNA}/diamond-cutting.png`,
-      "DNA 鑽石切割拋光——精工切磨工序"
+      "DNA 鑽石切割拋光｜精工切磨工序"
     ),
   },
   {
@@ -105,7 +105,7 @@ export const SAMPLE_SECTION = {
   body: "毛髮約需一顆雞蛋的大小（或養樂多瓶約 8 分滿）；骨灰約需 3 至 5 公克。我們明白每一縷髮絲、每一份骨灰都無比珍貴。若您手邊的份量不如預期，請無需焦慮。透過官方 LINE 聯繫我們，專屬顧問會細心為您評估各種可能的培育方案，在確認可行之前，您完全不需要先行寄出任何樣本。",
   image: photoImage(
     `${DNA}/sample-quantity-guide.png`,
-    "樣本份量示意——毛髮約雞蛋大小或養樂多瓶 8 分滿、骨灰約 3 至 5 公克"
+    "樣本份量示意｜毛髮約雞蛋大小或養樂多瓶 8 分滿、骨灰約 3 至 5 公克"
   ),
 };
 
@@ -128,12 +128,12 @@ export const ABOUT_STEPS = [
   {
     no: "01",
     title: "樣本萃取",
-    body: "毛髮約一顆雞蛋大小、骨灰約 3–5 公克。每一份樣本都以單一客戶、單一培育流程處理，確保專屬與純粹。",
+    body: "毛髮約一顆雞蛋大小、骨灰約 3～5 公克。每一份樣本都以單一客戶、單一培育流程處理，確保專屬與純粹。",
   },
   {
     no: "02",
     title: "晶化培育",
-    body: "元素注入生長設備，讓晶體以自己的節奏慢慢長成。全程於台灣在地實驗室完成，約需 70–90 天。",
+    body: "元素注入生長設備，讓晶體以自己的節奏慢慢長成。全程於台灣在地實驗室完成，約需 70～90 天。",
   },
   {
     no: "03",

@@ -27,15 +27,15 @@ def client():
     "path",
     [
         "/",
-        "/login.html",
-        "/register.html",
-        "/cart.html",
-        "/checkout.html",
-        "/account.html",
-        "/contact.html",
-        "/track-order.html",
-        "/stories.html",
-        "/what-is-dna-diamond.html",
+        "/login",
+        "/register",
+        "/cart",
+        "/checkout",
+        "/account",
+        "/contact",
+        "/track-order",
+        "/stories",
+        "/what-is-dna-diamond",
     ],
 )
 def test_member_and_chrome_pages_return_html(client, path):
@@ -46,7 +46,7 @@ def test_member_and_chrome_pages_return_html(client, path):
     assert "htmx.min.js" in resp.text or path.endswith(
         (".html",)
     )  # auth layout also includes htmx
-    if path in ("/", "/cart.html", "/stories.html"):
+    if path in ("/", "/cart", "/stories"):
         assert "/static/js/htmx.min.js" in resp.text
     # Public pages must not load retired React islands (admin-tables is admin-only).
     for island in (
@@ -67,7 +67,7 @@ def test_member_and_chrome_pages_return_html(client, path):
 
 def test_checkout_page_passes_items_without_js_vals(client):
     """CSP blocks unsafe-eval; checkout must not rely on hx-vals js:."""
-    resp = client.get("/checkout.html?items=abc-123,def-456")
+    resp = client.get("/checkout?items=abc-123,def-456")
     assert resp.status_code == 200
     assert "載入訂單" in resp.text
     assert 'hx-get="/htmx/checkout?items=' in resp.text
@@ -84,8 +84,8 @@ def test_htmx_checkout_guest_redirect_preserves_items(client):
     )
     assert resp.status_code == 200
     loc = resp.headers.get("HX-Redirect", "")
-    assert loc.startswith("/login.html?next=")
-    assert "checkout.html" in loc
+    assert loc.startswith("/login?next=")
+    assert "checkout" in loc
     assert "cart-item-1" in loc
 
 
@@ -99,11 +99,11 @@ def test_htmx_checkout_empty_items_redirects_cart_when_authed(client, monkeypatc
         follow_redirects=False,
     )
     assert resp.status_code == 200
-    assert resp.headers.get("HX-Redirect") == "/cart.html"
+    assert resp.headers.get("HX-Redirect") == "/cart"
 
 
 def test_success_page_loads_order_script(client):
-    resp = client.get("/success.html?order=IM-TEST-1")
+    resp = client.get("/success?order=IM-TEST-1")
     assert resp.status_code == 200
     assert "訂單已送出" in resp.text
     assert "/static/js/order-success.js" in resp.text
@@ -132,16 +132,16 @@ def test_htmx_cart_partial_guest(client):
 
 
 def test_login_page_has_htmx_form(client):
-    resp = client.get("/login.html")
+    resp = client.get("/login")
     assert resp.status_code == 200
     assert 'hx-post="/htmx/auth/login"' in resp.text
     assert 'id="forgot-form"' not in resp.text
-    assert 'href="/forgot-password.html"' in resp.text
+    assert 'href="/forgot-password"' in resp.text
     assert "accounts.google.com/gsi/client" in resp.text or "google_client_id" not in resp.text
 
 
 def test_forgot_password_page_explains_totp_requirement(client):
-    resp = client.get("/forgot-password.html")
+    resp = client.get("/forgot-password")
     assert resp.status_code == 200
     assert 'hx-post="/htmx/auth/forgot-password-verify"' in resp.text
     assert 'hx-post="/htmx/auth/forgot-password"' in resp.text
@@ -152,12 +152,12 @@ def test_forgot_password_page_explains_totp_requirement(client):
     assert "forgot-password.js?v=3" in resp.text
     assert "otp-input.js?v=3" in resp.text
     assert "已啟用 Authenticator" in resp.text
-    assert 'href="/account-security.html"' in resp.text
-    assert 'href="/login.html?next=/account-security.html"' in resp.text
+    assert 'href="/account-security"' in resp.text
+    assert 'href="/login?next=/account-security"' in resp.text
 
 
 def test_account_security_page_has_htmx_and_totp_script(client):
-    resp = client.get("/account-security.html")
+    resp = client.get("/account-security")
     assert resp.status_code == 200
     assert 'hx-get="/htmx/account-security"' in resp.text
     assert "totp-security.js" in resp.text
@@ -242,7 +242,7 @@ def test_htmx_shop_cart_guest_redirects(client):
         follow_redirects=False,
     )
     assert resp.status_code == 200
-    assert resp.headers.get("HX-Redirect", "").startswith("/login.html")
+    assert resp.headers.get("HX-Redirect", "").startswith("/login")
 
 
 def test_calculator_preview_banner_and_flag(client):

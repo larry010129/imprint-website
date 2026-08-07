@@ -52,7 +52,7 @@
 
   function redirectLogin() {
     window.location.href =
-      '/login.html?next=' + encodeURIComponent('/admin1-settings.html');
+      '/login?next=' + encodeURIComponent('/admin1-settings.html');
   }
 
   function avatarInitial(name, email) {

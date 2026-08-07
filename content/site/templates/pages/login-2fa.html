@@ -15,7 +15,7 @@
     hx-target="#auth-form-msg"
     hx-swap="innerHTML"
     hx-disabled-elt="button[type=submit]">
-    <input type="hidden" name="next" value="{{ request.query_params.get('next', '/account.html') }}">
+    <input type="hidden" name="next" value="{{ request.query_params.get('next', '/account') }}">
     <input type="hidden" name="remember" value="{{ request.query_params.get('remember', '1') }}">
     <div class="form-field">
       <input type="text" id="l2faCode" name="code" placeholder=" " inputmode="numeric"
@@ -26,7 +26,7 @@
   </form>
   <p class="signup-prompt">
     <a href="#" id="toggle-backup-mode">使用備用碼</a>
-    · <a href="/login.html">返回登入</a>
+    · <a href="/login">返回登入</a>
   </p>
 {% endcall %}
 {% endblock %}

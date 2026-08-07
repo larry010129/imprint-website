@@ -1,6 +1,6 @@
 {% extends "layouts/base.html" %}
 {% set q_preview = request.query_params.get('preview', '') in ('1', 'true', 'yes') %}
-{% block title %}{% if q_preview %}預覽模式｜不會送出真實訂單 — {% endif %}{{ title }}{% endblock %}
+{% block title %}{% if q_preview %}預覽模式｜不會送出真實訂單｜{% endif %}{{ title }}{% endblock %}
 {% block main_class %} class="main-content shop-calculator-page{% if q_preview %} is-shop-preview{% endif %}"{% endblock %}
 {% block extra_css %}
 <link rel="stylesheet" href="/static/css/shop.css?v=6.29">
@@ -33,7 +33,7 @@
     <div class="shop-wizard-guide" id="shop-wizard-guide">
       <p class="shop-wizard-eyebrow" id="shop-wizard-eyebrow">線上訂製 · 三步完成</p>
       <h1 class="shop-wizard-title" id="shop-wizard-title">先選擇您要的品項</h1>
-      <p class="shop-wizard-desc" id="shop-wizard-desc">紀念鑽石、戒指、項墜、耳飾、手鍊或鍊條——點選一個類別即可開始。</p>
+      <p class="shop-wizard-desc" id="shop-wizard-desc">紀念鑽石、戒指、項墜、耳飾、手鍊或鍊條。點選一個類別即可開始。</p>
     </div>
 
   </header>
@@ -534,7 +534,7 @@
               <div class="chain-length-guide-inline__aside">
                 <p class="chain-length-guide-inline__intro" data-i18n="bracelet_length_guide_intro">選擇適合您的手鍊長度；實際配戴效果可能因腕圍而異。</p>
                 <p class="chain-length-guide-inline__subtitle" data-i18n="chain_length_guide_bracelet_title">手鍊長度</p>
-                <p class="chain-length-guide-inline__method" data-i18n="chain_length_guide_bracelet_method">用軟尺繞手腕最細處一圈並記錄；手鍊通常比手圍長 1–2 cm 較舒適。</p>
+                <p class="chain-length-guide-inline__method" data-i18n="chain_length_guide_bracelet_method">用軟尺繞手腕最細處一圈並記錄；手鍊通常比手圍長 1～2 cm 較舒適。</p>
               </div>
               <div class="chain-length-guide-inline__table-col">
                 <div class="ring-size-guide-inline__scroll" role="region" aria-label="手鍊長度表" tabindex="0">
@@ -745,7 +745,7 @@
   </section>
   <section class="guide-section hidden" id="chain-length-guide-bracelet">
     <h3 class="guide-section-title" data-i18n="chain_length_guide_bracelet_title">手鍊長度</h3>
-    <p class="guide-section-text" data-i18n="chain_length_guide_bracelet_method">用軟尺繞手腕最細處一圈並記錄；手鍊通常比手圍長 1–2 cm 較舒適。</p>
+    <p class="guide-section-text" data-i18n="chain_length_guide_bracelet_method">用軟尺繞手腕最細處一圈並記錄；手鍊通常比手圍長 1～2 cm 較舒適。</p>
     <div class="ring-size-guide-scroll">
       <table class="ring-size-guide-table chain-length-guide-table">
         <thead>
@@ -816,10 +816,10 @@
   window.shopConfig = Object.assign({
     mode: 'order',
     useApi: true,
-    loginUrl: '/login.html',
-    cartUrl: '/cart.html',
-    checkoutUrl: '/checkout.html',
-    successUrl: '/success.html',
+    loginUrl: '/login',
+    cartUrl: '/cart',
+    checkoutUrl: '/checkout',
+    successUrl: '/success',
     quoteSheetUrl: '/quote-sheet',
     shareBaseUrl: '/s/TOKEN',
     preview: {% if q_preview %}true{% else %}false{% endif %},

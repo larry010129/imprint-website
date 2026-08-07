@@ -12,7 +12,7 @@ User-agent: *
 Allow: /
 Disallow: /admin.html
 Disallow: /quote-sheet
-Disallow: /shop/quote-sheet.html
+Disallow: /shop/quote-sheet
 Disallow: /s/
 
 # Citation / search retrieval (allow)

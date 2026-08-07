@@ -271,7 +271,7 @@ async def signup(request: Request, response: Response) -> JSONResponse:
 
     admin = bool(grants["grants_admin"])
     token = sign_session(str(user["id"]), is_admin=admin, remember=True)
-    decision = decide_post_login(next_url="/account.html", user_id=str(user["id"]))
+    decision = decide_post_login(next_url="/account", user_id=str(user["id"]))
     result = JSONResponse(
         content={
             "ok": True,
@@ -498,7 +498,7 @@ async def request_password_reset(request: Request) -> JSONResponse:
             (_hash_reset_token(raw_token), user["id"], expires),
         )
 
-    reset_url = f"{settings.public_base_url}/reset-password.html?token={raw_token}"
+    reset_url = f"{settings.public_base_url}/reset-password?token={raw_token}"
     try:
         from app.mail import send_email
 

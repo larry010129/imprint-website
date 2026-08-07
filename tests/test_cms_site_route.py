@@ -18,9 +18,9 @@ from app.cms_pages import (
 
 def test_site_route_to_slug_stable():
     assert site_route_to_slug("/") == "site-home"
-    assert site_route_to_slug("/about.html") == "site-about-html"
+    assert site_route_to_slug("/about") == "site-about"
     assert site_route_to_slug("/series/first-love/") == "site-series-first-love"
-    assert site_route_to_slug("/about.html") == site_route_to_slug("/about.html")
+    assert site_route_to_slug("/about") == site_route_to_slug("/about")
 
 
 def test_page_key_prefers_site_route():
@@ -87,8 +87,8 @@ def test_ensure_site_route_page_find_or_create():
     again = ensure_site_route_page(cur, "/", "首頁")
     assert again["id"] == page["id"]
 
-    about = ensure_site_route_page(cur, "/about.html", "品牌故事")
-    assert about["slug"] == "site-about-html"
+    about = ensure_site_route_page(cur, "/about", "品牌故事")
+    assert about["slug"] == "site-about"
     assert about["title"] == "品牌故事"
 
 

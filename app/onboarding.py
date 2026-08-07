@@ -8,7 +8,7 @@ from app.auth import is_admin
 from app.database import get_connection
 from app.profile_schema import fetch_profile
 
-ONBOARDING_URL = "/profile.html?onboarding=1"
+ONBOARDING_URL = "/profile?onboarding=1"
 ONBOARD_LATER_COOKIE = "imprint_onboard_later"
 ONBOARD_LATER_MAX_AGE = 60 * 60 * 24  # 24h
 REQUIRED_PROFILE_FIELDS = (

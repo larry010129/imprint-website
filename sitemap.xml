@@ -39,7 +39,7 @@
   </url>
 
   <url>
-    <loc>https://www.imprintdiamond.com/series.html</loc>
+    <loc>https://www.imprintdiamond.com/series</loc>
     <lastmod>2026-08-05</lastmod>
     <changefreq>monthly</changefreq><priority>0.85</priority>
     <image:image><image:loc>https://www.imprintdiamond.com/static/images/hero/imprint-diamond-family-portrait-jewelry.jpg</image:loc><image:title>五大系列總覽－銘印鑽石 DNA 紀念鑽石</image:title></image:image>
@@ -75,19 +75,31 @@
     <image:image><image:loc>https://www.imprintdiamond.com/static/images/hero/imprint-diamond-heirloom-memorial.jpg</image:loc><image:title>生命鑽石－親人毛髮骨灰紀念鑽石</image:title></image:image>
   </url>
 
-  <url><loc>https://www.imprintdiamond.com/what-is-dna-diamond.html</loc>
-    <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://www.imprintdiamond.com/price.html</loc>
+  <url><loc>https://www.imprintdiamond.com/what-is-dna-diamond</loc>
+    <lastmod>2026-08-07</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://www.imprintdiamond.com/diamond-4c</loc>
+    <lastmod>2026-08-07</lastmod><changefreq>monthly</changefreq><priority>0.65</priority></url>
+  <url><loc>https://www.imprintdiamond.com/lab-grown-diamond</loc>
+    <lastmod>2026-08-07</lastmod><changefreq>monthly</changefreq><priority>0.65</priority></url>
+  <url><loc>https://www.imprintdiamond.com/diamond-comparison</loc>
+    <lastmod>2026-08-07</lastmod><changefreq>monthly</changefreq><priority>0.65</priority></url>
+  <url><loc>https://www.imprintdiamond.com/price</loc>
     <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.85</priority></url>
-  <url><loc>https://www.imprintdiamond.com/gold-price.html</loc>
+  <url><loc>https://www.imprintdiamond.com/gold-price</loc>
     <lastmod>2026-08-05</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
-  <url><loc>https://www.imprintdiamond.com/faq.html</loc>
+  <url><loc>https://www.imprintdiamond.com/faq</loc>
     <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url>
     <loc>https://www.imprintdiamond.com/jewelry/</loc>
     <lastmod>2026-08-05</lastmod>
     <changefreq>monthly</changefreq><priority>0.8</priority>
     <image:image><image:loc>https://www.imprintdiamond.com/static/images/hero/imprint-diamond-family-portrait-jewelry.jpg</image:loc><image:title>時尚珠寶－戒指項鍊耳環手鍊 DNA紀念鑽石</image:title></image:image>
+  </url>
+  <url>
+    <loc>https://www.imprintdiamond.com/jewelry/engagement/</loc>
+    <lastmod>2026-08-07</lastmod>
+    <changefreq>monthly</changefreq><priority>0.78</priority>
+    <image:image><image:loc>https://www.imprintdiamond.com/static/images/hero/imprint-diamond-wedding-couple-ring.jpg</image:loc><image:title>求婚與結髮鑽石－培育鑽石婚戒</image:title></image:image>
   </url>
 
   <url>
@@ -150,20 +162,20 @@
   <url><loc>https://www.imprintdiamond.com/jewelry/bracelets/bangle/</loc>
     <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.65</priority></url>
 
-  <url><loc>https://www.imprintdiamond.com/about.html</loc>
+  <url><loc>https://www.imprintdiamond.com/about</loc>
     <lastmod>2026-08-07</lastmod><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://www.imprintdiamond.com/stories.html</loc>
+  <url><loc>https://www.imprintdiamond.com/stories</loc>
     <lastmod>2026-08-05</lastmod><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://www.imprintdiamond.com/contact.html</loc>
+  <url><loc>https://www.imprintdiamond.com/contact</loc>
     <lastmod>2026-08-07</lastmod><changefreq>monthly</changefreq><priority>0.75</priority></url>
 
   <url>
-    <loc>https://www.imprintdiamond.com/return-policy.html</loc>
+    <loc>https://www.imprintdiamond.com/return-policy</loc>
     <lastmod>2026-08-05</lastmod>
     <changefreq>monthly</changefreq><priority>0.5</priority>
   </url>
   <url>
-    <loc>https://www.imprintdiamond.com/journal.html</loc>
+    <loc>https://www.imprintdiamond.com/journal</loc>
     <lastmod>2026-08-05</lastmod>
     <changefreq>monthly</changefreq><priority>0.5</priority>
   </url>

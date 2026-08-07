@@ -40,7 +40,7 @@
             return;
           }
           View.setMsg('密碼已重設，請重新登入。', 'ok');
-          setTimeout(function () { global.location.href = 'login.html'; }, 1200);
+          setTimeout(function () { global.location.href = '/login'; }, 1200);
         });
       });
     },
