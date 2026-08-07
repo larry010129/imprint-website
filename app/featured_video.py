@@ -199,15 +199,113 @@ def read_featured_video_file(path: Path | None = None) -> dict[str, Any]:
     return data
 
 
+def _fetch_channel_candidates(
+    *,
+    limit: int = CHANNEL_CANDIDATE_LIMIT,
+) -> list[dict]:
+    """Newest channel uploads for gallery backfill / sync. Empty on failure."""
+    from app.youtube_channel import fetch_latest_channel_videos, resolve_channel_id
+
+    channel_id = resolve_channel_id(IMPRINT_CHANNEL_ID, IMPRINT_CHANNEL_HANDLE)
+    if not channel_id:
+        return []
+    try:
+        return fetch_latest_channel_videos(channel_id, limit=max(limit, MAX_VIDEOS))
+    except Exception as exc:  # noqa: BLE001 — never break page render
+        _logger.warning("featured video channel backfill fetch failed: %s", exc)
+        return []
+
+
+def backfill_embeddable_gallery(
+    kept: list[dict[str, str]],
+    *,
+    skip_ids: set[str],
+    limit: int = MAX_VIDEOS,
+    check_embeddable=None,
+    referer: str | None = None,
+    fetch_candidates: Callable[[], list[dict]] | None = None,
+) -> list[dict[str, str]]:
+    """Append channel candidates until ``limit`` embeddable videos or exhausted."""
+    if len(kept) >= limit:
+        return kept
+
+    from app.youtube_channel import filter_embeddable_videos
+
+    try:
+        raw = fetch_candidates() if fetch_candidates else _fetch_channel_candidates()
+    except Exception as exc:  # noqa: BLE001 — keep partial gallery
+        _logger.warning("featured video backfill candidates failed: %s", exc)
+        return kept
+
+    extras: list[dict[str, str]] = []
+    seen = set(skip_ids)
+    for i, item in enumerate(raw or []):
+        normalized = normalize_video_item(item, index=i)
+        if not normalized:
+            continue
+        vid = normalized["youtubeId"]
+        if vid in seen:
+            continue
+        seen.add(vid)
+        extras.append(normalized)
+
+    need = limit - len(kept)
+    filled = filter_embeddable_videos(
+        extras,
+        limit=need,
+        check_embeddable=check_embeddable,
+        referer=referer,
+    )
+    return kept + filled
+
+
+def _gallery_ids(videos: list[dict[str, str]]) -> list[str]:
+    return [v["youtubeId"] for v in videos]
+
+
+def _persist_repaired_gallery(
+    data: dict[str, Any],
+    videos: list[dict[str, str]],
+    path: Path | None,
+) -> None:
+    """Write repaired embeddable gallery; preserve about meta + enabled."""
+    saved: dict[str, Any] = {
+        "enabled": bool(data.get("enabled", True)),
+        "videos": [
+            {k: v for k, v in row.items() if k != "youtube_id"} for row in videos
+        ],
+    }
+    if data.get("syncedAt") or data.get("synced_at"):
+        saved["syncedAt"] = data.get("syncedAt") or data.get("synced_at")
+    for key in _META_KEYS:
+        if key in data:
+            saved[key] = data[key]
+    if videos:
+        saved["youtube_id"] = videos[0]["youtubeId"]
+        saved["title"] = videos[0]["title"]
+    try:
+        save_featured_video_file(saved, path)
+    except OSError as exc:
+        _logger.warning("featured video repair persist failed: %s", exc)
+
+
 def load_featured_video(
     path: Path | None = None,
     *,
     check_embeddable=None,
+    embed_referer: str | None = None,
+    fetch_candidates: Callable[[], list[dict]] | None = None,
+    persist_repair: bool = True,
 ) -> dict[str, Any] | None:
     """Public loader used by web_controller for home / about Jinja context.
 
-    Drops non-embeddable IDs (oEmbed) so stale JSON cannot surface a blocked
-    primary or gallery thumb. Pass ``check_embeddable`` in tests to avoid network.
+    Drops non-embeddable IDs (embed-page check) so stale JSON cannot surface a
+    blocked primary or gallery thumb. When filtering leaves fewer than
+    ``MAX_VIDEOS``, backfills from channel candidates (same embed check +
+    referer) and optionally persists the repaired list. Pass
+    ``check_embeddable`` / ``fetch_candidates`` in tests to avoid network.
+    ``embed_referer`` should be the page origin (request base URL) so
+    domain-restricted clips are filtered for the viewer host.
     """
     data = read_featured_video_file(path)
     if not data.get("enabled"):
@@ -219,10 +317,25 @@ def load_featured_video(
     from app.youtube_channel import filter_embeddable_videos
 
     embeddable = filter_embeddable_videos(
-        videos, limit=MAX_VIDEOS, check_embeddable=check_embeddable
+        videos,
+        limit=MAX_VIDEOS,
+        check_embeddable=check_embeddable,
+        referer=embed_referer,
     )
+    if len(embeddable) < MAX_VIDEOS:
+        embeddable = backfill_embeddable_gallery(
+            embeddable,
+            skip_ids={v["youtubeId"] for v in videos},
+            limit=MAX_VIDEOS,
+            check_embeddable=check_embeddable,
+            referer=embed_referer,
+            fetch_candidates=fetch_candidates,
+        )
     if not embeddable:
         return None
+
+    if persist_repair and _gallery_ids(embeddable) != _gallery_ids(videos):
+        _persist_repaired_gallery(data, embeddable, path)
 
     filtered = dict(data)
     filtered["videos"] = embeddable
@@ -238,7 +351,7 @@ def validate_admin_body(
 ) -> tuple[dict[str, Any] | None, str | None]:
     """Validate PUT body; returns (normalized_file_dict, error).
 
-    Non-embeddable YouTube IDs are rejected (clear error) so admin cannot
+    Non-embeddable YouTube IDs are rejected (embed-page check) so admin cannot
     persist blocked videos. Pass ``check_embeddable`` in tests to avoid network.
     """
     if not isinstance(body, dict):
@@ -511,7 +624,7 @@ def run_featured_video_channel_sync(
     path: Path | None = None,
     candidate_limit: int = CHANNEL_CANDIDATE_LIMIT,
 ) -> tuple[dict[str, Any] | None, str | None, str | None]:
-    """Fetch channel RSS, oEmbed-filter to MAX_VIDEOS, write gallery.
+    """Fetch channel RSS, embed-filter to MAX_VIDEOS, write gallery.
 
     Returns ``(admin_payload, error_message, channel_id)``. On failure payload
     is None and error_message is set for a 502 response.
@@ -519,6 +632,7 @@ def run_featured_video_channel_sync(
     from app.youtube_channel import (
         fetch_latest_channel_videos,
         filter_embeddable_videos,
+        public_embed_referer,
         resolve_channel_id,
     )
 
@@ -542,7 +656,11 @@ def run_featured_video_channel_sync(
     if not candidates:
         return None, "頻道尚無公開影片", channel_id
 
-    embeddable = filter_embeddable_videos(candidates, limit=MAX_VIDEOS)
+    embeddable = filter_embeddable_videos(
+        candidates,
+        limit=MAX_VIDEOS,
+        referer=public_embed_referer(),
+    )
     if not embeddable:
         return None, "頻道尚無可嵌入的公開影片", channel_id
 

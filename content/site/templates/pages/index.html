@@ -6,8 +6,8 @@
 {% endblock %}
 {% block extra_css %}
 <style>{{ inline_css('home-ghibli-critical.css') | safe }}</style>
-<link rel="stylesheet" href="/static/css/home-ghibli.css?v=44" media="print" onload="this.media='all'">
-<noscript><link rel="stylesheet" href="/static/css/home-ghibli.css?v=44"></noscript>
+<link rel="stylesheet" href="/static/css/home-ghibli.css?v=46" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="/static/css/home-ghibli.css?v=46"></noscript>
 {% endblock %}
 {% block extra_head %}
 <style>
@@ -584,6 +584,24 @@
     '<span class="gh-yt-facade__play" aria-hidden="true">' +
     '<svg viewBox="0 0 68 48" width="44" height="32"><path d="M66.52 7.74c-.78-2.93-2.49-5.42-5.42-6.2C55.79.13 34 0 34 0S12.21.13 6.9 1.54c-2.93.78-4.64 3.27-5.42 6.2C.13 13.05 0 24 0 24s.13 10.95 1.48 16.26c.78 2.93 2.49 5.32 5.42 6.1C12.21 47.87 34 48 34 48s21.79-.13 27.1-1.54c2.93-.78 4.64-3.17 5.42-6.1C67.87 34.95 68 24 68 24s-.13-10.95-1.48-16.26z" fill="rgba(20,20,20,.75)"/><path d="M45 24 27 14v20" fill="#fff"/></svg>' +
     '</span>';
+  var SKIP_CODES = { 100: 1, 101: 1, 150: 1, 152: 1, 153: 1 };
+  /* Mobile Safari/Chrome often never attach YT.Player / onError — bridge + timeout. */
+  var READY_MS = 7000;
+  var skipped = Object.create(null);
+  var ytApiLoading = false;
+  var ytApiWaiters = [];
+  var activePlayer = null;
+  var autoplayStarted = false;
+  var lastEmbedMuted = false;
+  var embedGen = 0;
+  var pendingEmbedId = '';
+  var playWatchTimer = null;
+  var embedSawReady = false;
+  var embedHealthy = false;
+  var ytMsgBound = false;
+  var reduceMotion =
+    window.matchMedia &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   function paintPoster(btn) {
     if (!btn || btn.dataset.ytPosterPainted) return;
@@ -595,6 +613,114 @@
 
   function getStage() {
     return document.querySelector('[data-yt-gallery-stage]');
+  }
+
+  function clearPlayWatch() {
+    if (playWatchTimer) {
+      clearTimeout(playWatchTimer);
+      playWatchTimer = null;
+    }
+  }
+
+  function destroyActivePlayer() {
+    clearPlayWatch();
+    try {
+      if (activePlayer && activePlayer.destroy) activePlayer.destroy();
+    } catch (err) {}
+    activePlayer = null;
+  }
+
+  function parseYtMessage(data) {
+    if (typeof data === 'string') {
+      try {
+        data = JSON.parse(data);
+      } catch (err) {
+        return null;
+      }
+    }
+    return data && typeof data === 'object' ? data : null;
+  }
+
+  function isYtOrigin(origin) {
+    return /^https?:\/\/(www\.)?youtube(-nocookie)?\.com$/.test(origin || '');
+  }
+
+  function ytErrorCode(info) {
+    if (typeof info === 'number') return info;
+    if (info && typeof info === 'object' && info.code != null) return Number(info.code);
+    return Number(info);
+  }
+
+  function markEmbedHealthy(gen) {
+    if (gen !== embedGen) return;
+    embedSawReady = true;
+    embedHealthy = true;
+    clearPlayWatch();
+  }
+
+  function armPlayWatch(id, gen) {
+    clearPlayWatch();
+    embedSawReady = false;
+    embedHealthy = false;
+    pendingEmbedId = id;
+    playWatchTimer = setTimeout(function () {
+      playWatchTimer = null;
+      if (gen !== embedGen) return;
+      if (pendingEmbedId !== id || skipped[id]) return;
+      /* No playing/buffering after mount — skip (covers mobile missing onError). */
+      if (!embedHealthy) skipBrokenVideo(id);
+    }, READY_MS);
+  }
+
+  function handshakeIframe(iframe) {
+    var send = function () {
+      try {
+        if (!iframe.contentWindow) return;
+        iframe.contentWindow.postMessage(
+          JSON.stringify({ event: 'listening', id: iframe.id || 'gh-yt-player' }),
+          '*'
+        );
+      } catch (err) {}
+    };
+    iframe.addEventListener('load', function () {
+      send();
+      setTimeout(send, 250);
+      setTimeout(send, 900);
+    });
+    send();
+  }
+
+  function bindYtMessageBridge() {
+    if (ytMsgBound) return;
+    ytMsgBound = true;
+    window.addEventListener('message', function (e) {
+      if (!isYtOrigin(e.origin)) return;
+      var data = parseYtMessage(e.data);
+      if (!data) return;
+      var id = pendingEmbedId;
+      if (!id || skipped[id]) return;
+      var gen = embedGen;
+
+      if (data.event === 'onError') {
+        var code = ytErrorCode(data.info);
+        if (SKIP_CODES[code]) skipBrokenVideo(id);
+        return;
+      }
+      if (data.event === 'onReady' || data.event === 'initialDelivery') {
+        /* Booted; unplayable usually follows with onError. Keep watch armed. */
+        embedSawReady = true;
+        return;
+      }
+      if (data.event === 'onStateChange') {
+        var st = ytErrorCode(data.info);
+        if (st === 1 || st === 3) markEmbedHealthy(gen);
+        return;
+      }
+      if (data.event === 'infoDelivery' && data.info && data.info.playerState != null) {
+        var ps = Number(data.info.playerState);
+        if (ps === 1 || ps === 3) markEmbedHealthy(gen);
+      }
+    });
   }
 
   function buildFacade(id, title, poster) {
@@ -618,6 +744,7 @@
   function mountFacade(id, title, poster) {
     var stage = getStage();
     if (!stage) return null;
+    destroyActivePlayer();
     stage.innerHTML = '';
     var btn = buildFacade(id, title, poster);
     stage.appendChild(btn);
@@ -636,11 +763,56 @@
     if (label) label.textContent = title || '';
   }
 
-  function activateThumb(thumb) {
+  function hideSkippedThumb(id) {
+    document.querySelectorAll('[data-yt-thumb][data-yt-id="' + id + '"]').forEach(function (node) {
+      node.hidden = true;
+      node.classList.add('is-skipped');
+      node.setAttribute('aria-hidden', 'true');
+    });
+  }
+
+  function nextPlayableThumb(afterId) {
+    var thumbs = Array.prototype.slice.call(document.querySelectorAll('[data-yt-thumb]'));
+    if (!thumbs.length) return null;
+    var start = 0;
+    for (var i = 0; i < thumbs.length; i++) {
+      if (thumbs[i].getAttribute('data-yt-id') === afterId) {
+        start = i + 1;
+        break;
+      }
+    }
+    for (var n = 0; n < thumbs.length; n++) {
+      var thumb = thumbs[(start + n) % thumbs.length];
+      var tid = thumb.getAttribute('data-yt-id') || '';
+      if (tid && !skipped[tid] && !thumb.hidden) return thumb;
+    }
+    return null;
+  }
+
+  function skipBrokenVideo(badId) {
+    if (!badId || skipped[badId]) return;
+    skipped[badId] = 1;
+    pendingEmbedId = '';
+    clearPlayWatch();
+    hideSkippedThumb(badId);
+    destroyActivePlayer();
+    var next = nextPlayableThumb(badId);
+    if (next) {
+      activateThumb(next, { play: true, muted: lastEmbedMuted });
+      return;
+    }
+    var stage = getStage();
+    if (stage) {
+      stage.innerHTML = '<p class="gh-yt-unavailable">影片暫時無法播放</p>';
+    }
+  }
+
+  function activateThumb(thumb, opts) {
+    opts = opts || {};
     var id = thumb.getAttribute('data-yt-id') || '';
     var title = thumb.getAttribute('data-yt-title') || '';
     var poster = thumb.getAttribute('data-yt-poster') || '';
-    if (!id) return;
+    if (!id || skipped[id]) return;
 
     document.querySelectorAll('[data-yt-thumb]').forEach(function (node) {
       var on = node === thumb;
@@ -650,8 +822,12 @@
 
     var stage = getStage();
     if (!stage) return;
+    if (opts.play) {
+      embedVideo(id, title, { muted: !!opts.muted });
+      return;
+    }
     if (stage.querySelector('iframe')) {
-      mountFacade(id, title, poster);
+      embedVideo(id, title, { muted: !!opts.muted });
       return;
     }
     var facade = stage.querySelector('[data-yt-facade]');
@@ -676,44 +852,159 @@
     }
   }
 
-  function embedFacade(btn) {
-    var id = btn.getAttribute('data-yt-id') || '';
+  function flushYtWaiters() {
+    var waiters = ytApiWaiters.splice(0, ytApiWaiters.length);
+    waiters.forEach(function (fn) {
+      try {
+        fn();
+      } catch (err) {}
+    });
+  }
+
+  function whenYtApiReady(cb) {
+    if (window.YT && window.YT.Player) {
+      cb();
+      return;
+    }
+    ytApiWaiters.push(cb);
+    if (ytApiLoading) return;
+    ytApiLoading = true;
+    var prev = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = function () {
+      if (typeof prev === 'function') prev();
+      flushYtWaiters();
+    };
+    var s = document.createElement('script');
+    s.src = 'https://www.youtube.com/iframe_api';
+    s.async = true;
+    s.onerror = function () {
+      ytApiLoading = false;
+      flushYtWaiters();
+    };
+    document.head.appendChild(s);
+  }
+
+  function embedVideo(id, title, opts) {
+    opts = opts || {};
     if (!id) return;
-    paintPoster(btn);
+    if (skipped[id]) {
+      skipBrokenVideo(id);
+      return;
+    }
+    var stage = getStage();
+    if (!stage) return;
+    var muted = !!opts.muted;
+    lastEmbedMuted = muted;
+    autoplayStarted = true;
+    destroyActivePlayer();
+    var gen = ++embedGen;
+    bindYtMessageBridge();
+    armPlayWatch(id, gen);
+    var origin = encodeURIComponent(window.location.origin || '');
     var iframe = document.createElement('iframe');
-    iframe.src = 'https://www.youtube.com/embed/' + id + '?autoplay=1';
-    iframe.title = btn.getAttribute('data-yt-title') || '';
+    iframe.id = 'gh-yt-player';
+    iframe.src =
+      'https://www.youtube.com/embed/' +
+      id +
+      '?autoplay=1&mute=' +
+      (muted ? '1' : '0') +
+      '&playsinline=1&rel=0&enablejsapi=1&origin=' +
+      origin;
+    iframe.title = title || '';
     iframe.loading = 'eager';
     iframe.allow =
       'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
     iframe.referrerPolicy = 'strict-origin-when-cross-origin';
     iframe.allowFullscreen = true;
     iframe.style.border = '0';
-    var stage = btn.closest('[data-yt-gallery-stage]');
-    if (stage) {
-      stage.innerHTML = '';
-      stage.appendChild(iframe);
-    } else {
-      btn.replaceWith(iframe);
-    }
+    stage.innerHTML = '';
+    stage.appendChild(iframe);
+    handshakeIframe(iframe);
+    whenYtApiReady(function () {
+      if (gen !== embedGen) return;
+      if (!(window.YT && window.YT.Player)) return;
+      try {
+        activePlayer = new YT.Player(iframe, {
+          events: {
+            onReady: function () {
+              embedSawReady = true;
+            },
+            onStateChange: function (e) {
+              var st = e && e.data;
+              if (st === 1 || st === 3) markEmbedHealthy(gen);
+            },
+            onError: function (e) {
+              var code = e && e.data;
+              if (SKIP_CODES[code]) skipBrokenVideo(id);
+            }
+          }
+        });
+      } catch (err) {
+        /* Bridge + READY_MS timeout still skip dead embeds */
+      }
+    });
+  }
+
+  function embedFacade(btn, opts) {
+    opts = opts || {};
+    var id = btn.getAttribute('data-yt-id') || '';
+    if (!id) return;
+    paintPoster(btn);
+    embedVideo(id, btn.getAttribute('data-yt-title') || '', opts);
+  }
+
+  function bindGalleryAutoplay() {
+    if (reduceMotion || !('IntersectionObserver' in window)) return;
+    var stage = getStage();
+    if (!stage) return;
+
+    var io = new IntersectionObserver(
+      function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            if (!autoplayStarted) {
+              var facade = stage.querySelector('[data-yt-facade]');
+              if (facade) embedFacade(facade, { muted: true });
+              else autoplayStarted = true;
+              return;
+            }
+            try {
+              if (activePlayer && activePlayer.playVideo) activePlayer.playVideo();
+            } catch (err) {}
+            return;
+          }
+          try {
+            if (activePlayer && activePlayer.pauseVideo) activePlayer.pauseVideo();
+          } catch (err) {}
+        });
+      },
+      { threshold: 0.45 }
+    );
+    io.observe(stage);
   }
 
   document.addEventListener('click', function (e) {
     var thumb = e.target.closest('[data-yt-thumb]');
     if (thumb) {
       e.preventDefault();
-      activateThumb(thumb);
+      if (thumb.hidden || skipped[thumb.getAttribute('data-yt-id') || '']) return;
+      activateThumb(thumb, { play: true, muted: false });
       return;
     }
     var btn = e.target.closest('[data-yt-facade]');
     if (!btn) return;
-    embedFacade(btn);
+    embedFacade(btn, { muted: false });
   });
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', bindFacades, { once: true });
-  } else {
+  function boot() {
     bindFacades();
+    bindGalleryAutoplay();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot, { once: true });
+  } else {
+    boot();
   }
 })();
 </script>

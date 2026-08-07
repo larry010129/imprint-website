@@ -1378,8 +1378,10 @@ let chinToGrams = 3.75;
 let taxRate = 0.05;
 let ringSizeMin = 5;
 let ringSizeMax = 18;
+// Soft UX defaults when product/category config omitted — not a hard ceiling.
 const RING_SIZE_DEFAULT_MIN = 5;
 const RING_SIZE_DEFAULT_MAX = 18;
+const RING_SIZE_FLOOR = 1;
 let ringSizeReference = {};
 
 // ── Live price data (from /api/prices) ────────────────────────────────────
@@ -1415,7 +1417,7 @@ let state = {
   gold: null,       // 9k / 14k / 18k / pt950 / s925
   color: null,      // white / yellow / rose / null
   carat: null,      // diamond carat or chain thickness (1.0mm–3.0mm)
-  ringSize: null,   // integer 5–18
+  ringSize: null,   // positive integer (>= 1); picker bounds from product config
   engravingBand: '',
   engravingRemark: '',
   engravingGirdle: '',
@@ -4930,7 +4932,7 @@ function setRingSizeActive(size) {
 function productRingBoundInt(raw) {
   if (raw == null || raw === '') return null;
   const n = Math.round(Number(raw));
-  if (!Number.isFinite(n) || n < RING_SIZE_DEFAULT_MIN || n > RING_SIZE_DEFAULT_MAX) return null;
+  if (!Number.isFinite(n) || n < RING_SIZE_FLOOR) return null;
   return n;
 }
 
@@ -4958,9 +4960,10 @@ function applyProductRingSizeBounds(product, options) {
   const max = productRingMaxSize(product);
   ringSizeMin = start != null ? start : RING_SIZE_DEFAULT_MIN;
   ringSizeMax = max != null ? max : RING_SIZE_DEFAULT_MAX;
-  if (ringSizeMax > RING_SIZE_DEFAULT_MAX) ringSizeMax = RING_SIZE_DEFAULT_MAX;
-  if (ringSizeMin < RING_SIZE_DEFAULT_MIN) ringSizeMin = RING_SIZE_DEFAULT_MIN;
-  if (ringSizeMin > ringSizeMax) ringSizeMin = RING_SIZE_DEFAULT_MIN;
+  if (ringSizeMin > ringSizeMax) {
+    ringSizeMin = RING_SIZE_DEFAULT_MIN;
+    ringSizeMax = RING_SIZE_DEFAULT_MAX;
+  }
   populateRingSizeSelect();
   if (selectDefault && start != null) {
     setRingSizeActive(start);

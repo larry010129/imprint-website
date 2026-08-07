@@ -13,8 +13,11 @@
   ];
   var CHAIN_CARATS = ['1.0mm', '1.5mm', '2.0mm', '2.5mm', '3.0mm'];
   var CHAIN_LENGTHS_CM = [36, 41, 46, 51, 61, 76, 80];
-  var RING_SIZE_MIN = 5;
-  var RING_SIZE_MAX = 18;
+  // Positive integer floor only — no hard upper ceiling.
+  var RING_SIZE_MIN = 1;
+  // Soft UX placeholders / omitted-max default (not a hard reject ceiling).
+  var RING_SIZE_SOFT_MIN = 5;
+  var RING_SIZE_SOFT_MAX = 18;
   var COLORS = ['white', 'yellow', 'rose'];
   var GOLD_LABELS = { '9k': '9K', '14k': '14K', '18k': '18K', 'pt950': 'PT950', 's925': 'S925' };
   // 蠟重(錢) × factor → 成品金重(錢)；試算頁下單時以後端 app/pricing.py 的同一份係數為準，這裡僅供上架時預覽估算。
@@ -307,26 +310,35 @@
     var cfg = categoryRingSizeConfig(cat);
     var minSize = ringSizeFieldValue(cfg, 'minSize', 'min_size', 'startSize', 'start_size');
     var maxSize = ringSizeFieldValue(cfg, 'maxSize', 'max_size');
-    if (maxSize === '' && cfg) maxSize = RING_SIZE_MAX;
+    if (maxSize === '' && cfg) maxSize = RING_SIZE_SOFT_MAX;
+    var chargeAfter = ringSizeFieldValue(
+      cfg, 'chargeAfter', 'charge_after', 'priceFromSize', 'price_from_size'
+    );
+    if (chargeAfter === '' && minSize !== '') chargeAfter = minSize;
     var pricePer = ringSizeFieldValue(cfg, 'pricePerSizeTwd', 'price_per_size_twd');
     return (
       '<div id="apRingSizeSection" class="ap-category-ring-block" data-slug="' + esc(cat) + '">' +
         '<h4 class="ap-category-addon-label">戒圍設定</h4>' +
         '<p class="ap-category-addon-hint ap-category-ring-hint">' +
-          '最小圍為底價（加價 0）；選 N 圍則加價 (N − 最小) × 每圍加價。範圍 5–18。與品項加價分開疊加。' +
+          'N ≤ 從多少之後開始加價 → 加價 0；否則 (N − 閾值) × 加多少。須為 ≥ 1 的整數，且最小 ≤ 最大、加價閾值在區間內。與品項加價分開疊加。' +
         '</p>' +
         '<div class="ap-category-ring-row">' +
-          '<label><span>最小戒圍</span>' +
+          '<label><span>最小</span>' +
             '<input type="number" id="apCategoryRingMin" name="ringMinSize" min="' + RING_SIZE_MIN +
-              '" max="' + RING_SIZE_MAX + '" step="1" placeholder="' + RING_SIZE_MIN +
+              '" step="1" placeholder="' + RING_SIZE_SOFT_MIN +
               '" value="' + esc(minSize) + '">' +
           '</label>' +
-          '<label><span>最大戒圍</span>' +
+          '<label><span>最大</span>' +
             '<input type="number" id="apCategoryRingMax" name="ringMaxSize" min="' + RING_SIZE_MIN +
-              '" max="' + RING_SIZE_MAX + '" step="1" placeholder="' + RING_SIZE_MAX +
+              '" step="1" placeholder="' + RING_SIZE_SOFT_MAX +
               '" value="' + esc(maxSize) + '">' +
           '</label>' +
-          '<label><span>每圍加價 (NT$)</span>' +
+          '<label><span>從多少之後開始加價</span>' +
+            '<input type="number" id="apCategoryRingChargeAfter" name="ringChargeAfter" min="' +
+              RING_SIZE_MIN + '" step="1" placeholder="' +
+              esc(minSize || RING_SIZE_SOFT_MIN) + '" value="' + esc(chargeAfter) + '">' +
+          '</label>' +
+          '<label><span>加多少 (NT$)</span>' +
             '<input type="number" id="apCategoryRingPricePer" name="ringPricePerSize" min="0" step="1" ' +
               'placeholder="0" value="' + esc(pricePer) + '">' +
           '</label>' +
@@ -920,18 +932,22 @@
   function collectCategoryRingSizeConfig() {
     var minEl = document.getElementById('apCategoryRingMin');
     var maxEl = document.getElementById('apCategoryRingMax');
+    var chargeEl = document.getElementById('apCategoryRingChargeAfter');
     var priceEl = document.getElementById('apCategoryRingPricePer');
     if (!minEl) return null;
     var minRaw = String(minEl.value || '').trim();
     var maxRaw = maxEl ? String(maxEl.value || '').trim() : '';
+    var chargeRaw = chargeEl ? String(chargeEl.value || '').trim() : '';
     var priceRaw = priceEl ? String(priceEl.value || '').trim() : '';
-    if (minRaw === '' && maxRaw === '' && priceRaw === '') return null;
+    if (minRaw === '' && maxRaw === '' && chargeRaw === '' && priceRaw === '') return null;
     var minSize = minRaw === '' ? null : parseInt(minRaw, 10);
     var maxSize = maxRaw === '' ? null : parseInt(maxRaw, 10);
+    var chargeAfter = chargeRaw === '' ? minSize : parseInt(chargeRaw, 10);
     var pricePerSizeTwd = priceRaw === '' ? 0 : parseFloat(priceRaw);
     return {
       minSize: Number.isFinite(minSize) ? minSize : null,
       maxSize: Number.isFinite(maxSize) ? maxSize : null,
+      chargeAfter: Number.isFinite(chargeAfter) ? chargeAfter : null,
       pricePerSizeTwd: Number.isFinite(pricePerSizeTwd) ? pricePerSizeTwd : 0,
     };
   }
@@ -940,21 +956,31 @@
     if (!rc) return null;
     var minS = rc.minSize;
     var maxS = rc.maxSize;
+    var charge = rc.chargeAfter;
     var step = rc.pricePerSizeTwd;
-    if (minS == null && (maxS != null || step != null)) {
-      return '請填寫最小戒圍（底價圍）';
+    if (minS == null && (maxS != null || step != null || charge != null)) {
+      return '請填寫最小';
     }
-    if (minS != null && (!Number.isFinite(minS) || minS < RING_SIZE_MIN || minS > RING_SIZE_MAX)) {
-      return '最小戒圍須為 5–18';
+    if (minS != null && (!Number.isFinite(minS) || minS < RING_SIZE_MIN)) {
+      return '最小須為 ≥ 1 的整數';
     }
-    if (maxS != null && (!Number.isFinite(maxS) || maxS < RING_SIZE_MIN || maxS > RING_SIZE_MAX)) {
-      return '最大戒圍須為 5–18';
+    if (maxS != null && (!Number.isFinite(maxS) || maxS < RING_SIZE_MIN)) {
+      return '最大須為 ≥ 1 的整數';
     }
     if (minS != null && maxS != null && minS > maxS) {
-      return '最小戒圍不可大於最大戒圍';
+      return '最小不可大於最大';
+    }
+    if (charge != null && (!Number.isFinite(charge) || charge < RING_SIZE_MIN)) {
+      return '從多少之後開始加價須為 ≥ 1 的整數';
+    }
+    if (
+      charge != null && minS != null && maxS != null &&
+      (charge < minS || charge > maxS)
+    ) {
+      return '從多少之後開始加價須在最小與最大之間';
     }
     if (step != null && (!Number.isFinite(Number(step)) || Number(step) < 0)) {
-      return '每圍加價不可為負';
+      return '加多少不可為負';
     }
     return null;
   }

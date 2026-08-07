@@ -342,11 +342,16 @@ button.gh-btn--primary{ border:none; }
 @media (max-width:900px){
   .gh-hero__fade-bottom{ height:4.5rem; }
   .page-home .hc-media::after{ height:5.5rem; }
+  /* Side arrows sit at mid-slide over full-width copy — hide; swipe + dots remain */
+  .page-home .hc-arrow,
+  .gh-hc-arrow{
+    display:none;
+  }
   /* Match base selector weight (.page-home .hc-copy) or mobile padding loses */
   .page-home .hc-copy,
   .gh-hc-copy{
     /* 112px = topbar offset (36) + nav-inner (76); sync with .page-home .nav top */
-    padding:calc(112px + var(--safe-area-top, 0px)) var(--page-padding-x, 16px)
+    padding:calc(112px + var(--safe-area-top, 0px)) var(--page-padding-x, 20px)
       calc(100px + var(--safe-area-bottom, 0px));
     align-items:center !important;
     text-align:center !important;
@@ -387,7 +392,7 @@ button.gh-btn--primary{ border:none; }
   .hc-media img{ object-position:center 28%; }
   .page-home .hc-copy,
   .gh-hc-copy{
-    padding:calc(112px + var(--safe-area-top, 0px)) var(--page-padding-x, 16px)
+    padding:calc(112px + var(--safe-area-top, 0px)) var(--page-padding-x, 20px)
       calc(112px + var(--safe-area-bottom, 0px));
     align-items:center !important;
     text-align:center !important;
@@ -425,10 +430,6 @@ button.gh-btn--primary{ border:none; }
     line-height:1.45;
     letter-spacing:.06em;
     margin-bottom:16px;
-  }
-  .gh-hc-arrow{
-    width:var(--tap-target-min, 44px);
-    height:var(--tap-target-min, 44px);
   }
   .gh-hc-dots{ bottom:calc(16px + var(--safe-area-bottom, 0px)); }
 }

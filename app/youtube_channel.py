@@ -18,11 +18,23 @@ _ATOM = "http://www.w3.org/2005/Atom"
 _YT = "http://www.youtube.com/xml/schemas/2015"
 _DEFAULT_TTL = 6 * 60 * 60
 _EMBED_TTL = 6 * 60 * 60
+_EMBED_CACHE_VERSION = 2
+_DEFAULT_EMBED_REFERER = "https://www.imprintdiamond.com/"
+# Memory: cache_key -> (checked_at, embeddable)
 _embed_memory: dict[str, tuple[float, bool]] = {}
 _logger = logging.getLogger(__name__)
 _YT_INITIAL_DATA_RE = re.compile(
     r"ytInitialData\s*=\s*(\{.+?\});</script>",
     re.DOTALL,
+)
+_PREVIEW_STATUS_RE = re.compile(
+    r'"previewPlayabilityStatus"\s*:\s*\{([^}]{0,500})\}',
+)
+_STATUS_IN_BLOCK_RE = re.compile(r'"status"\s*:\s*"([^"]+)"')
+_BLOCKED_EMBED_SNIPPETS = (
+    "Playback on other websites has been disabled",
+    "embedding has been disabled",
+    "WATCH_ON_YOUTUBE_CTA",
 )
 
 
@@ -238,14 +250,35 @@ def fetch_latest_channel_videos(
     raise RuntimeError("; ".join(errors))
 
 
-def _read_embed_disk_cache(video_id: str) -> bool | None:
+def public_embed_referer() -> str:
+    """Canonical site origin used for sync / admin embed probes."""
+    import os
+
+    for key in ("PUBLIC_SITE_URL", "SITE_URL"):
+        raw = (os.environ.get(key) or "").strip()
+        if raw:
+            return raw if raw.endswith("/") else f"{raw}/"
+    return _DEFAULT_EMBED_REFERER
+
+
+def _embed_cache_key(video_id: str, referer: str) -> str:
+    """Key by video + referer host — domain-restricted embeds differ by origin."""
+    from urllib.parse import urlparse
+
+    host = (urlparse(referer).netloc or "none").lower()
+    return f"{video_id}@{host}"
+
+
+def _read_embed_disk_cache(cache_key: str) -> bool | None:
     if not _EMBED_CACHE_PATH.is_file():
         return None
     try:
         payload = json.loads(_EMBED_CACHE_PATH.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
         return None
-    entry = (payload.get("videos") or {}).get(video_id)
+    if int(payload.get("version") or 0) != _EMBED_CACHE_VERSION:
+        return None
+    entry = (payload.get("videos") or {}).get(cache_key)
     if not isinstance(entry, dict):
         return None
     if time.time() - float(entry.get("checked_at", 0)) > _EMBED_TTL:
@@ -253,22 +286,26 @@ def _read_embed_disk_cache(video_id: str) -> bool | None:
     return bool(entry.get("embeddable"))
 
 
-def _write_embed_disk_cache(video_id: str, embeddable: bool) -> None:
-    payload: dict = {"videos": {}}
+def _write_embed_disk_cache(cache_key: str, embeddable: bool) -> None:
+    payload: dict = {"version": _EMBED_CACHE_VERSION, "videos": {}}
     if _EMBED_CACHE_PATH.is_file():
         try:
             loaded = json.loads(_EMBED_CACHE_PATH.read_text(encoding="utf-8"))
-            if isinstance(loaded, dict) and isinstance(loaded.get("videos"), dict):
+            if (
+                isinstance(loaded, dict)
+                and int(loaded.get("version") or 0) == _EMBED_CACHE_VERSION
+                and isinstance(loaded.get("videos"), dict)
+            ):
                 payload = loaded
+                payload["version"] = _EMBED_CACHE_VERSION
         except (json.JSONDecodeError, OSError):
             pass
     videos = payload.setdefault("videos", {})
-    videos[video_id] = {"embeddable": embeddable, "checked_at": time.time()}
-    # Drop stale entries so the file stays small
+    videos[cache_key] = {"embeddable": embeddable, "checked_at": time.time()}
     now = time.time()
     payload["videos"] = {
-        vid: row
-        for vid, row in videos.items()
+        key: row
+        for key, row in videos.items()
         if isinstance(row, dict) and now - float(row.get("checked_at", 0)) <= _EMBED_TTL
     }
     _EMBED_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -278,43 +315,107 @@ def _write_embed_disk_cache(video_id: str, embeddable: bool) -> None:
     )
 
 
-def is_youtube_embeddable(video_id: str, *, timeout: float = 10) -> bool:
-    """True when YouTube oEmbed accepts the watch URL (skips non-embeddable IDs)."""
+def _oembed_available(video_id: str, *, timeout: float) -> bool | None:
+    """oEmbed fast path. False = reject; True = metadata ok (not proof); None = network fail."""
     from urllib.error import HTTPError, URLError
-
-    vid = (video_id or "").strip()
-    if not vid:
-        return False
-
-    cached = _embed_memory.get(vid)
-    if cached and time.time() - cached[0] <= _EMBED_TTL:
-        return cached[1]
-
-    disk = _read_embed_disk_cache(vid)
-    if disk is not None:
-        _embed_memory[vid] = (time.time(), disk)
-        return disk
 
     oembed = (
         "https://www.youtube.com/oembed"
-        f"?url=https://www.youtube.com/watch?v={vid}&format=json"
+        f"?url=https://www.youtube.com/watch?v={video_id}&format=json"
     )
     try:
         with urlopen(oembed, timeout=timeout) as resp:
-            ok = 200 <= getattr(resp, "status", 200) < 300
+            return 200 <= getattr(resp, "status", 200) < 300
     except HTTPError:
-        # 4xx from oEmbed = owner/region embed block — cache the miss
-        ok = False
-    except (URLError, TimeoutError, OSError):
-        # Transient network — fail closed for this call, do not poison cache
         return False
+    except (URLError, TimeoutError, OSError):
+        return None
 
-    _embed_memory[vid] = (time.time(), ok)
+
+def embed_page_indicates_playable(html: str) -> bool:
+    """Parse youtube.com/embed HTML for iframe playability (not oEmbed)."""
+    if not html:
+        return False
+    text = html.replace('\\"', '"')
+    for snippet in _BLOCKED_EMBED_SNIPPETS:
+        if snippet in text:
+            return False
+    match = _PREVIEW_STATUS_RE.search(text)
+    if not match:
+        return False
+    block = match.group(1)
+    status_match = _STATUS_IN_BLOCK_RE.search(block)
+    if not status_match or status_match.group(1) != "OK":
+        return False
+    compact = re.sub(r"\s+", "", block)
+    return '"playableInEmbed":false' not in compact
+
+
+def _fetch_embed_page_html(
+    video_id: str,
+    referer: str,
+    *,
+    timeout: float,
+) -> str | None:
+    url = f"https://www.youtube.com/embed/{video_id}"
     try:
-        _write_embed_disk_cache(vid, ok)
+        resp = requests.get(
+            url,
+            impersonate="chrome",
+            timeout=timeout,
+            headers={"Referer": referer},
+        )
+    except Exception:  # noqa: BLE001 — treat transport errors as unknown
+        return None
+    if resp.status_code >= 400:
+        return None
+    return resp.text or ""
+
+
+def _remember_embed(cache_key: str, embeddable: bool) -> bool:
+    _embed_memory[cache_key] = (time.time(), embeddable)
+    try:
+        _write_embed_disk_cache(cache_key, embeddable)
     except OSError:
         pass
-    return ok
+    return embeddable
+
+
+def is_youtube_embeddable(
+    video_id: str,
+    *,
+    timeout: float = 10,
+    referer: str | None = None,
+) -> bool:
+    """True when the video can play inside an iframe for ``referer``.
+
+    oEmbed 4xx is a fast reject, but oEmbed 200 is not enough — many clips
+    still return metadata while ``/embed`` is UNPLAYABLE for the site origin.
+    """
+    vid = (video_id or "").strip()
+    if not vid:
+        return False
+    ref = (referer or public_embed_referer()).strip() or _DEFAULT_EMBED_REFERER
+    cache_key = _embed_cache_key(vid, ref)
+
+    cached = _embed_memory.get(cache_key)
+    if cached and time.time() - cached[0] <= _EMBED_TTL:
+        return cached[1]
+
+    disk = _read_embed_disk_cache(cache_key)
+    if disk is not None:
+        _embed_memory[cache_key] = (time.time(), disk)
+        return disk
+
+    oembed = _oembed_available(vid, timeout=timeout)
+    if oembed is False:
+        return _remember_embed(cache_key, False)
+
+    html = _fetch_embed_page_html(vid, ref, timeout=timeout)
+    if html is None:
+        # Transient network — fail closed for this call, do not poison cache
+        return False
+    return _remember_embed(cache_key, embed_page_indicates_playable(html))
 
 
 def filter_embeddable_videos(
@@ -322,11 +423,17 @@ def filter_embeddable_videos(
     *,
     limit: int = 6,
     check_embeddable=None,
+    referer: str | None = None,
 ) -> list[dict]:
-    """Keep newest-first videos that pass oEmbed until `limit` filled."""
+    """Keep newest-first videos that pass embed check until `limit` filled."""
     if limit < 1:
         return []
-    checker = check_embeddable or is_youtube_embeddable
+    if check_embeddable is not None:
+        checker = check_embeddable
+    elif referer is not None:
+        checker = lambda vid, _r=referer: is_youtube_embeddable(vid, referer=_r)
+    else:
+        checker = is_youtube_embeddable
     out: list[dict] = []
     for video in videos:
         vid = (video.get("youtubeId") or video.get("youtube_id") or "").strip()

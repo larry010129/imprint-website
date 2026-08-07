@@ -206,8 +206,8 @@ def test_admin_js_wires_patch_and_surfaces_errors():
     assert "/api/admin/product-category/" in api
     assert "method: 'PATCH'" in api
     html = ADMIN_HTML.read_text(encoding="utf-8")
-    assert "api-client.js?v=18" in html
-    assert "admin-products.js?v=56" in html
+    assert "api-client.js?v=19" in html
+    assert "admin-products.js?v=58" in html
 
 
 def test_default_categories_memorial_diamond_first():
@@ -234,4 +234,4 @@ def test_admin_js_category_order_diamond_first():
     )
     assert "activeTab: 'cat-diamond'" in src
     html = ADMIN_HTML.read_text(encoding="utf-8")
-    assert "admin-products.js?v=56" in html
+    assert "admin-products.js?v=58" in html

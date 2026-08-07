@@ -272,7 +272,7 @@ button:not(.btn-sm):not(.ap-tab-btn):not(.nav-toggle):not(.side-backdrop):not([d
   min-width:220px;text-align:left;
   margin-top:18px;margin-bottom:8px;padding-top:4px;
 }
-.ap-category-ring-hint{max-width:480px;text-align:left;}
+.ap-category-ring-hint{max-width:640px;text-align:left;}
 .ap-category-ring-row{
   display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:flex-start;gap:8px;
 }
@@ -283,6 +283,8 @@ button:not(.btn-sm):not(.ap-tab-btn):not(.nav-toggle):not(.side-backdrop):not([d
   width:88px;font-family:inherit;font-size:13.5px;padding:7px 10px;
   border:1px solid #DDD5CC;border-radius:6px;color:var(--ink);background:#fff;box-sizing:border-box;
 }
+.ap-category-ring-row label:has(#apCategoryRingChargeAfter){min-width:120px;}
+.ap-category-ring-row label:has(#apCategoryRingChargeAfter) input{width:100%;}
 .ap-category-addon-label{font-size:12px;font-weight:700;color:var(--ink-soft);margin:0;}
 .ap-category-addon-row{display:flex;align-items:center;gap:8px;}
 .ap-category-addon-input{

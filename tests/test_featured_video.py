@@ -67,7 +67,11 @@ def test_public_payload_gallery_and_primary(tmp_path: Path):
         ),
         encoding="utf-8",
     )
-    payload = load_featured_video(path, check_embeddable=lambda _vid: True)
+    payload = load_featured_video(
+        path,
+        check_embeddable=lambda _vid: True,
+        fetch_candidates=lambda: [],
+    )
     assert payload is not None
     assert payload["youtube_id"] == "eBLOrvHosR4"
     assert payload["primary"]["youtubeId"] == "eBLOrvHosR4"
@@ -171,7 +175,9 @@ def test_load_featured_video_skips_non_embeddable_primary(tmp_path: Path):
     )
     bad = {"blockedVid0", "alsoBlocked"}
     payload = load_featured_video(
-        path, check_embeddable=lambda vid: vid not in bad
+        path,
+        check_embeddable=lambda vid: vid not in bad,
+        fetch_candidates=lambda: [],
     )
     assert payload is not None
     assert payload["youtube_id"] == "eBLOrvHosR4"
@@ -194,7 +200,64 @@ def test_load_featured_video_all_blocked_returns_none(tmp_path: Path):
         ),
         encoding="utf-8",
     )
-    assert load_featured_video(path, check_embeddable=lambda _vid: False) is None
+    assert (
+        load_featured_video(
+            path,
+            check_embeddable=lambda _vid: False,
+            fetch_candidates=lambda: [],
+        )
+        is None
+    )
+
+
+def test_load_featured_video_backfills_to_six(tmp_path: Path):
+    """JSON has 6; 1 blocked → channel candidates fill gallery back to 6."""
+    path = tmp_path / "featured-video.json"
+    stored = [
+        {"youtubeId": "goodVideo00", "title": "G0", "label": "G0"},
+        {"youtubeId": "blockedVid0", "title": "Bad", "label": "Bad"},
+        {"youtubeId": "goodVideo01", "title": "G1", "label": "G1"},
+        {"youtubeId": "goodVideo02", "title": "G2", "label": "G2"},
+        {"youtubeId": "goodVideo03", "title": "G3", "label": "G3"},
+        {"youtubeId": "goodVideo04", "title": "G4", "label": "G4"},
+    ]
+    path.write_text(
+        json.dumps({"enabled": True, "eyebrow": "VIDEO", "videos": stored}, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    # Extra channel uploads beyond the stored list (newest-first).
+    channel = [
+        {"youtubeId": "blockedVid0", "title": "Bad again"},
+        {"youtubeId": "goodVideo00", "title": "already kept"},
+        {"youtubeId": "fillVideo05", "title": "F5"},
+        {"youtubeId": "alsoBlock01", "title": "skip"},
+        {"youtubeId": "fillVideo06", "title": "F6"},
+        {"youtubeId": "fillVideo07", "title": "F7"},
+    ]
+    bad = {"blockedVid0", "alsoBlock01"}
+
+    payload = load_featured_video(
+        path,
+        check_embeddable=lambda vid: vid not in bad,
+        fetch_candidates=lambda: channel,
+    )
+    assert payload is not None
+    ids = [v["youtubeId"] for v in payload["videos"]]
+    assert len(ids) == MAX_VIDEOS
+    assert "blockedVid0" not in ids
+    assert "alsoBlock01" not in ids
+    assert ids == [
+        "goodVideo00",
+        "goodVideo01",
+        "goodVideo02",
+        "goodVideo03",
+        "goodVideo04",
+        "fillVideo05",
+    ]
+    # Persisted so later loads stay at 6 without re-filtering blocked primary.
+    reloaded = json.loads(path.read_text(encoding="utf-8"))
+    assert [v["youtubeId"] for v in reloaded["videos"]] == ids
+    assert reloaded.get("eyebrow") == "VIDEO"
 
 
 def test_save_and_admin_payload_roundtrip(tmp_path: Path):
@@ -222,8 +285,14 @@ def test_seed_file_has_six_videos():
     videos = videos_from_payload(data)
     assert data.get("enabled") is True
     assert len(videos) == 6
-    assert videos[0]["youtubeId"] == "IFa_5chXdJ4"
-    assert [v["youtubeId"] for v in videos] == ['IFa_5chXdJ4', 'EdYQTJfD2hE', '4NgOHK064Jc', 'TKFsNU4Au9w', 'RwvlWZeFgTA', 'ZGSmmOGH7Ec']
+    assert [v["youtubeId"] for v in videos] == [
+        "IFa_5chXdJ4",
+        "EdYQTJfD2hE",
+        "4NgOHK064Jc",
+        "ZGSmmOGH7Ec",
+        "S0dcVT_v2kQ",
+        "K6jhW-F52hs",
+    ]
 
 
 def test_fifo_keeps_newest_six():
@@ -359,7 +428,11 @@ def test_ensure_fresh_error_keeps_existing_file(tmp_path: Path):
 
     assert ensure_featured_video_fresh(path, sync_fn=fail_sync) is False
     assert path.read_text(encoding="utf-8") == before
-    payload = load_featured_video(path, check_embeddable=lambda _vid: True)
+    payload = load_featured_video(
+        path,
+        check_embeddable=lambda _vid: True,
+        fetch_candidates=lambda: [],
+    )
     assert payload is not None
     assert payload["youtube_id"] == "eBLOrvHosR4"
 
@@ -384,6 +457,7 @@ def test_filter_embeddable_fills_six_from_longer_list():
 
 
 def test_run_sync_helper_skips_non_embeddable(tmp_path: Path, monkeypatch):
+    """Sync fetches ~15 candidates and fills MAX_VIDEOS after embed skips."""
     from app import featured_video as fv
     from app import youtube_channel as yt
 
@@ -412,11 +486,14 @@ def test_run_sync_helper_skips_non_embeddable(tmp_path: Path, monkeypatch):
         {"youtubeId": "extraGood01", "title": "G"},
     ]
     bad = {"badVideo000", "alsoBad0001"}
+    fetch_limits: list[int] = []
+
+    def fake_fetch(_cid: str, *, limit: int = 6, **_k):
+        fetch_limits.append(limit)
+        return candidates[:limit]
 
     monkeypatch.setattr(yt, "resolve_channel_id", lambda *_a, **_k: "UC_test_channel")
-    monkeypatch.setattr(
-        yt, "fetch_latest_channel_videos", lambda *_a, **_k: candidates
-    )
+    monkeypatch.setattr(yt, "fetch_latest_channel_videos", fake_fetch)
     monkeypatch.setattr(
         yt, "is_youtube_embeddable", lambda vid, **_k: vid not in bad
     )
@@ -426,11 +503,14 @@ def test_run_sync_helper_skips_non_embeddable(tmp_path: Path, monkeypatch):
     assert channel_id == "UC_test_channel"
     assert payload is not None
     ids = [v["youtubeId"] for v in payload["videos"]]
-    assert len(ids) == 6
+    assert len(ids) == MAX_VIDEOS
+    assert fetch_limits and fetch_limits[0] >= MAX_VIDEOS
     assert "badVideo000" not in ids
     assert "alsoBad0001" not in ids
     assert ids[0] == "IFa_5chXdJ4"
+    assert ids[-1] == "ZGSmmOGH7Ec"
     reloaded = fv.read_featured_video_file(seed)
+    assert len(reloaded["videos"]) == MAX_VIDEOS
     assert all(v["youtubeId"] not in bad for v in reloaded["videos"])
 
 

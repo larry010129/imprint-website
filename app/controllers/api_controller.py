@@ -635,7 +635,7 @@ async def featured_video_sync(request: Request) -> JSONResponse:
     """Optional force sync for ``featured-video.json`` (Bearer secret).
 
     Primary refresh is lazy TTL on home/about load. Same core as admin sync
-    (RSS + oEmbed filter → max 6). Requires
+    (RSS + embed-page filter → max 6). Requires
     ``Authorization: Bearer $FEATURED_VIDEO_SYNC_SECRET``.
     """
     if not _featured_video_sync_authorized(request):

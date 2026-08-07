@@ -40,8 +40,11 @@ from app.storage import (
 
 VALID_CATEGORIES = {"diamond", "pendant", "ring", "earring", "bracelet", "chain"}
 
-RING_SIZE_MIN = 5
-RING_SIZE_MAX = 18
+# Positive integer floor only — no hard upper ceiling on ring sizes.
+RING_SIZE_MIN = 1
+# Soft UX default when maxSize omitted (not a validation ceiling).
+RING_SIZE_DEFAULT_MAX = 18
+RING_SIZE_MAX = RING_SIZE_DEFAULT_MAX  # alias: omitted-max default only
 
 VALID_CARATS = {
     "0.1", "0.2", "0.3", "0.5", "0.6", "0.7", "0.8", "0.9", "1.0",
@@ -150,20 +153,20 @@ def as_jsonb(value: Any) -> Jsonb | None:
 
 
 def _parse_ring_size_int(raw: Any) -> int | None:
-    """Parse integer ring size in shop range; None if empty/invalid."""
+    """Parse positive integer ring size (>= 1); None if empty/invalid."""
     if raw in (None, ""):
         return None
     try:
         size = int(round(float(raw)))
     except (TypeError, ValueError):
         return None
-    if size < RING_SIZE_MIN or size > RING_SIZE_MAX:
+    if size < RING_SIZE_MIN:
         return None
     return size
 
 
 def _parse_ring_size_config(raw: Any, *, errors: list[str]) -> dict[str, Any] | None:
-    """Normalize ringSizeConfig: minSize, maxSize, pricePerSizeTwd (startSize alias)."""
+    """Normalize ringSizeConfig: minSize, maxSize, chargeAfter, pricePerSizeTwd."""
     if raw in (None, "", {}):
         return None
     if not isinstance(raw, dict):
@@ -186,7 +189,21 @@ def _parse_ring_size_config(raw: Any, *, errors: list[str]) -> dict[str, Any] | 
     if price_raw is None:
         price_raw = raw.get("price_per_size_twd")
 
-    has_any = any(v not in (None, "") for v in (min_raw, max_raw, price_raw))
+    charge_raw = raw.get("chargeAfter")
+    if charge_raw is None:
+        charge_raw = raw.get("charge_after")
+    if charge_raw is None:
+        charge_raw = raw.get("priceFromSize")
+    if charge_raw is None:
+        charge_raw = raw.get("price_from_size")
+    if charge_raw is None:
+        charge_raw = raw.get("baseSize")
+    if charge_raw is None:
+        charge_raw = raw.get("base_size")
+
+    has_any = any(
+        v not in (None, "") for v in (min_raw, max_raw, price_raw, charge_raw)
+    )
     if not has_any:
         return None
 
@@ -195,7 +212,10 @@ def _parse_ring_size_config(raw: Any, *, errors: list[str]) -> dict[str, Any] | 
         min_size = _parse_ring_size_int(min_raw)
         if min_size is None:
             errors.append("invalid ring min size")
-    elif max_raw not in (None, "") or price_raw not in (None, ""):
+    elif max_raw not in (None, "") or price_raw not in (None, "") or charge_raw not in (
+        None,
+        "",
+    ):
         errors.append("invalid ring min size")
 
     max_size: int | None = None
@@ -204,10 +224,21 @@ def _parse_ring_size_config(raw: Any, *, errors: list[str]) -> dict[str, Any] | 
         if max_size is None:
             errors.append("invalid ring max size")
     elif min_size is not None:
-        max_size = RING_SIZE_MAX
+        max_size = RING_SIZE_DEFAULT_MAX
 
     if min_size is not None and max_size is not None and min_size > max_size:
         errors.append("ring min size exceeds max size")
+
+    charge_after: int | None = None
+    if charge_raw not in (None, ""):
+        charge_after = _parse_ring_size_int(charge_raw)
+        if charge_after is None:
+            errors.append("invalid ring charge after")
+        elif min_size is not None and max_size is not None:
+            if charge_after < min_size or charge_after > max_size:
+                errors.append("ring charge after out of range")
+    elif min_size is not None:
+        charge_after = min_size
 
     price = 0.0
     if price_raw not in (None, ""):
@@ -222,9 +253,12 @@ def _parse_ring_size_config(raw: Any, *, errors: list[str]) -> dict[str, Any] | 
 
     if min_size is None:
         return None
+    resolved_max = max_size if max_size is not None else RING_SIZE_DEFAULT_MAX
+    resolved_charge = charge_after if charge_after is not None else min_size
     return {
         "minSize": min_size,
-        "maxSize": max_size if max_size is not None else RING_SIZE_MAX,
+        "maxSize": resolved_max,
+        "chargeAfter": resolved_charge,
         "pricePerSizeTwd": price,
         "startSize": min_size,
     }
@@ -760,19 +794,25 @@ def _format_product_errors(errors: list[str]) -> str:
             parts.append("戒圍設定無效")
             continue
         if err == "invalid ring min size" or err == "invalid ring start size":
-            parts.append("最小戒圍無效（須為 5–18）")
+            parts.append("最小戒圍無效（須為 ≥ 1 的整數）")
             continue
         if err == "invalid ring max size":
-            parts.append("最大戒圍無效（須為 5–18）")
+            parts.append("最大戒圍無效（須為 ≥ 1 的整數）")
             continue
         if err == "ring min size exceeds max size":
             parts.append("最小戒圍不可大於最大戒圍")
             continue
+        if err == "invalid ring charge after":
+            parts.append("從多少之後開始加價無效（須為 ≥ 1 的整數）")
+            continue
+        if err == "ring charge after out of range":
+            parts.append("從多少之後開始加價須在最小與最大之間")
+            continue
         if err == "invalid ring price per size":
-            parts.append("每圍加價無效（須 ≥ 0）")
+            parts.append("加多少無效（須 ≥ 0）")
             continue
         if err == "invalid ring size" or err == "invalid ring size row":
-            parts.append("戒圍尺寸無效（須為 5–18）")
+            parts.append("戒圍尺寸無效（須為 ≥ 1 的整數）")
             continue
         if err.startswith("duplicate ring size"):
             parts.append("戒圍尺寸重複：" + err.split(": ", 1)[-1])

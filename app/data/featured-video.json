@@ -1,12 +1,6 @@
 {
   "enabled": true,
-  "syncedAt": "2026-08-07T04:58:05Z",
   "videos": [
-    {
-      "youtubeId": "IFa_5chXdJ4",
-      "title": "回家-DNA鑽石-銘印鑽石",
-      "label": "回家-DNA鑽石-銘印鑽石"
-    },
     {
       "youtubeId": "EdYQTJfD2hE",
       "title": "有些愛不會消失-DNA鑽石-銘印鑽石",
@@ -31,12 +25,18 @@
       "youtubeId": "K6jhW-F52hs",
       "title": "思念不是停留在原地",
       "label": "思念不是停留在原地"
+    },
+    {
+      "youtubeId": "Ot4B_gGGuvk",
+      "title": "用孩子的髮絲，留住一生的思念｜DNA鑽石見證｜銘印鑽石",
+      "label": "用孩子的髮絲，留住一生的思念｜DNA鑽石見證｜銘印鑽石"
     }
   ],
+  "syncedAt": "2026-08-07T04:58:05Z",
   "source": "fixed",
   "eyebrow": "VIDEO",
   "heading": "親眼見證，思念如何被慎重對待",
   "lead": "從樣本到鑽石，我們如何把每一份託付留在您觸手可及的距離裡。",
-  "youtube_id": "IFa_5chXdJ4",
-  "title": "回家-DNA鑽石-銘印鑽石"
+  "youtube_id": "EdYQTJfD2hE",
+  "title": "有些愛不會消失-DNA鑽石-銘印鑽石"
 }

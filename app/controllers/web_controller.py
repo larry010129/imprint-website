@@ -70,11 +70,13 @@ def _strip_public_phone_metadata(block: str) -> str:
     return json.dumps(clean(payload), ensure_ascii=False, indent=2)
 
 
-def load_featured_video() -> dict | None:
+def load_featured_video(request: Request | None = None) -> dict | None:
     """Home gallery + About primary video from featured-video.json.
 
     Lazy TTL: if ``syncedAt`` missing/older than ~24h, refresh from channel
-    (RSS + oEmbed). Sync failure falls back to existing JSON.
+    (RSS + embed-page filter). Sync failure falls back to existing JSON.
+    Passes the request origin so domain-restricted embeds are skipped for
+    the viewer host (e.g. 127.0.0.1 vs production).
     """
     from app.featured_video import (
         ensure_featured_video_fresh,
@@ -82,7 +84,8 @@ def load_featured_video() -> dict | None:
     )
 
     ensure_featured_video_fresh()
-    return _load()
+    referer = str(request.base_url) if request is not None else None
+    return _load(embed_referer=referer)
 
 
 def load_youtube_latest_video() -> dict | None:
@@ -411,7 +414,7 @@ def _context(request: Request, meta: PageMeta) -> dict:
     if meta.route == "/stories.html":
         context["stories_ssr"] = _load_stories_ssr()
     if meta.route in {"/", "/about.html"}:
-        context["featured_video"] = load_featured_video()
+        context["featured_video"] = load_featured_video(request)
     if meta.route == "/about.html":
         context["youtube_latest_video"] = load_youtube_latest_video()
     if meta.route == "/gold-price.html":

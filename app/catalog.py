@@ -427,6 +427,8 @@ def _normalize_ring_config_dict(raw: dict) -> dict | None:
             "min_size",
             "maxSize",
             "max_size",
+            "chargeAfter",
+            "charge_after",
         )
     )
     if has_step:
@@ -443,6 +445,17 @@ def _normalize_ring_config_dict(raw: dict) -> dict | None:
         price_raw = raw.get("pricePerSizeTwd")
         if price_raw is None:
             price_raw = raw.get("price_per_size_twd")
+        charge_raw = raw.get("chargeAfter")
+        if charge_raw is None:
+            charge_raw = raw.get("charge_after")
+        if charge_raw is None:
+            charge_raw = raw.get("priceFromSize")
+        if charge_raw is None:
+            charge_raw = raw.get("price_from_size")
+        if charge_raw is None:
+            charge_raw = raw.get("baseSize")
+        if charge_raw is None:
+            charge_raw = raw.get("base_size")
         try:
             min_out = int(round(float(min_raw))) if min_raw not in (None, "") else None
         except (TypeError, ValueError):
@@ -455,11 +468,18 @@ def _normalize_ring_config_dict(raw: dict) -> dict | None:
             price_out = float(price_raw) if price_raw not in (None, "") else 0.0
         except (TypeError, ValueError):
             price_out = 0.0
+        try:
+            charge_out = (
+                int(round(float(charge_raw))) if charge_raw not in (None, "") else min_out
+            )
+        except (TypeError, ValueError):
+            charge_out = min_out
         if min_out is None and max_out is None and price_raw in (None, ""):
             return None
         return {
             "minSize": min_out,
             "maxSize": max_out,
+            "chargeAfter": charge_out,
             "pricePerSizeTwd": price_out,
             "startSize": min_out,
         }

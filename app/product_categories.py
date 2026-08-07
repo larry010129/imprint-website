@@ -28,8 +28,10 @@ _CATEGORY_SELECT = (
 )
 _SLUG_RE = re.compile(r"^[a-z][a-z0-9_-]{1,31}$")
 _ADDON_MAX_TWD = 10_000_000
-_RING_SIZE_MIN = 5
-_RING_SIZE_MAX = 18
+# Positive integer floor only — no hard upper ceiling on ring sizes.
+_RING_SIZE_MIN = 1
+# Soft UX default when maxSize omitted (not a validation ceiling).
+_RING_SIZE_DEFAULT_MAX = 18
 
 
 def ensure_product_categories_schema(cur) -> None:
@@ -101,6 +103,20 @@ def _as_jsonb(value: Any) -> Jsonb | None:
     return None
 
 
+def _ring_charge_after_raw(raw: dict) -> Any:
+    for key in (
+        "chargeAfter",
+        "charge_after",
+        "priceFromSize",
+        "price_from_size",
+        "baseSize",
+        "base_size",
+    ):
+        if raw.get(key) not in (None, ""):
+            return raw.get(key)
+    return None
+
+
 def _normalize_ring_size_config(raw: Any) -> dict | None:
     """Return camelCase ringSizeConfig or None (empty/invalid → None)."""
     if raw in (None, "", {}):
@@ -125,8 +141,9 @@ def _normalize_ring_size_config(raw: Any) -> dict | None:
     price_raw = raw.get("pricePerSizeTwd")
     if price_raw is None:
         price_raw = raw.get("price_per_size_twd")
+    charge_raw = _ring_charge_after_raw(raw)
     # Legacy sizes[] passthrough for catalog/quote fallback.
-    if all(v in (None, "") for v in (min_raw, max_raw, price_raw)):
+    if all(v in (None, "") for v in (min_raw, max_raw, price_raw, charge_raw)):
         if raw.get("sizes") or raw.get("startSize") is not None or raw.get("start_size") is not None:
             return dict(raw)
         return None
@@ -142,13 +159,24 @@ def _normalize_ring_size_config(raw: Any) -> dict | None:
         price = float(price_raw) if price_raw not in (None, "") else 0.0
     except (TypeError, ValueError):
         price = 0.0
-    if min_size is None:
+    if min_size is None or min_size < _RING_SIZE_MIN:
         return None
     if max_size is None:
-        max_size = _RING_SIZE_MAX
+        max_size = _RING_SIZE_DEFAULT_MAX
+    elif max_size < _RING_SIZE_MIN:
+        return None
+    try:
+        charge_after = (
+            int(round(float(charge_raw))) if charge_raw not in (None, "") else min_size
+        )
+    except (TypeError, ValueError):
+        charge_after = min_size
+    if charge_after < _RING_SIZE_MIN:
+        charge_after = min_size
     return {
         "minSize": min_size,
         "maxSize": max_size,
+        "chargeAfter": charge_after,
         "pricePerSizeTwd": price,
         "startSize": min_size,
     }
@@ -380,39 +408,52 @@ def parse_ring_size_config(value: Any) -> tuple[dict | None, str | None]:
     price_raw = value.get("pricePerSizeTwd")
     if price_raw is None:
         price_raw = value.get("price_per_size_twd")
-    if all(v in (None, "") for v in (min_raw, max_raw, price_raw)):
+    charge_raw = _ring_charge_after_raw(value)
+    if all(v in (None, "") for v in (min_raw, max_raw, price_raw, charge_raw)):
         return None, None
     if min_raw in (None, ""):
-        return None, "請填寫最小戒圍（底價圍）"
+        return None, "請填寫最小戒圍"
     try:
         min_size = int(round(float(min_raw)))
     except (TypeError, ValueError):
-        return None, "最小戒圍無效（須為 5–18）"
-    if min_size < _RING_SIZE_MIN or min_size > _RING_SIZE_MAX:
-        return None, "最小戒圍無效（須為 5–18）"
+        return None, "最小戒圍無效（須為 ≥ 1 的整數）"
+    if min_size < _RING_SIZE_MIN:
+        return None, "最小戒圍無效（須為 ≥ 1 的整數）"
     if max_raw in (None, ""):
-        max_size = _RING_SIZE_MAX
+        max_size = _RING_SIZE_DEFAULT_MAX
     else:
         try:
             max_size = int(round(float(max_raw)))
         except (TypeError, ValueError):
-            return None, "最大戒圍無效（須為 5–18）"
-        if max_size < _RING_SIZE_MIN or max_size > _RING_SIZE_MAX:
-            return None, "最大戒圍無效（須為 5–18）"
+            return None, "最大戒圍無效（須為 ≥ 1 的整數）"
+        if max_size < _RING_SIZE_MIN:
+            return None, "最大戒圍無效（須為 ≥ 1 的整數）"
     if min_size > max_size:
         return None, "最小戒圍不可大於最大戒圍"
+    if charge_raw in (None, ""):
+        charge_after = min_size
+    else:
+        try:
+            charge_after = int(round(float(charge_raw)))
+        except (TypeError, ValueError):
+            return None, "從多少之後開始加價無效（須為 ≥ 1 的整數）"
+        if charge_after < _RING_SIZE_MIN:
+            return None, "從多少之後開始加價無效（須為 ≥ 1 的整數）"
+        if charge_after < min_size or charge_after > max_size:
+            return None, "從多少之後開始加價須在最小與最大之間"
     if price_raw in (None, ""):
         price = 0.0
     else:
         try:
             price = float(price_raw)
         except (TypeError, ValueError):
-            return None, "每圍加價無效"
+            return None, "加多少無效"
         if price < 0:
-            return None, "每圍加價不可為負"
+            return None, "加多少不可為負"
     return {
         "minSize": min_size,
         "maxSize": max_size,
+        "chargeAfter": charge_after,
         "pricePerSizeTwd": price,
         "startSize": min_size,
     }, None

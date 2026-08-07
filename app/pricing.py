@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.admin_products import RING_SIZE_MAX, RING_SIZE_MIN
+from app.admin_products import RING_SIZE_MIN
 from app.catalog import resolve_product_id
 from app.chain_catalog import DEFAULT_NECKLACE_TYPE, necklace_type_length_weights
 from app.pricing_overrides import (
@@ -409,9 +409,34 @@ def _normalize_ring_size(ring_size: Any) -> int | None:
         size = int(round(float(ring_size)))
     except (TypeError, ValueError):
         return None
-    if size < RING_SIZE_MIN or size > RING_SIZE_MAX:
+    if size < RING_SIZE_MIN:
         return None
     return size
+
+
+def _ring_charge_after_from_config(config: dict) -> int | None:
+    """Threshold size: N <= chargeAfter → +0. Defaults to minSize when omitted."""
+    charge_raw = config.get("chargeAfter")
+    if charge_raw is None:
+        charge_raw = config.get("charge_after")
+    if charge_raw is None:
+        charge_raw = config.get("priceFromSize")
+    if charge_raw is None:
+        charge_raw = config.get("price_from_size")
+    if charge_raw is None:
+        charge_raw = config.get("baseSize")
+    if charge_raw is None:
+        charge_raw = config.get("base_size")
+    if charge_raw in (None, ""):
+        min_raw = config.get("minSize")
+        if min_raw is None:
+            min_raw = config.get("min_size")
+        if min_raw is None:
+            min_raw = config.get("startSize")
+        if min_raw is None:
+            min_raw = config.get("start_size")
+        charge_raw = min_raw
+    return _normalize_ring_size(charge_raw)
 
 
 def ring_size_addon_from_config(config: dict | None, ring_size: Any) -> int:
@@ -424,15 +449,8 @@ def ring_size_addon_from_config(config: dict | None, ring_size: Any) -> int:
     if step_raw is None:
         step_raw = config.get("price_per_size_twd")
     if step_raw not in (None, ""):
-        min_raw = config.get("minSize")
-        if min_raw is None:
-            min_raw = config.get("min_size")
-        if min_raw is None:
-            min_raw = config.get("startSize")
-        if min_raw is None:
-            min_raw = config.get("start_size")
-        min_size = _normalize_ring_size(min_raw)
-        if min_size is None:
+        charge_after = _ring_charge_after_from_config(config)
+        if charge_after is None:
             return 0
         try:
             step = float(step_raw)
@@ -440,7 +458,9 @@ def ring_size_addon_from_config(config: dict | None, ring_size: Any) -> int:
             return 0
         if step < 0:
             return 0
-        return max(0, int(round((size - min_size) * step)))
+        if size <= charge_after:
+            return 0
+        return max(0, int(round((size - charge_after) * step)))
 
     for row in config.get("sizes") or []:
         if not isinstance(row, dict):

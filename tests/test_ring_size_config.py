@@ -62,6 +62,7 @@ def test_validate_keeps_ring_size_config():
     cfg = cleaned["ringSizeConfig"]
     assert cfg["minSize"] == 7
     assert cfg["maxSize"] == 14
+    assert cfg["chargeAfter"] == 7
     assert cfg["pricePerSizeTwd"] == 100.0
     assert cfg["startSize"] == 7
 
@@ -73,12 +74,29 @@ def test_validate_clears_ring_size_for_non_ring():
     assert cleaned["ringSizeConfig"] is None
 
 
-def test_validate_rejects_bad_min_size():
+def test_validate_accepts_min_below_soft_default():
     cleaned, err = validate_product_fields(
         _ring_body(ringSizeConfig={"minSize": 3, "maxSize": 14, "pricePerSizeTwd": 100})
     )
+    assert err is None
+    assert cleaned["ringSizeConfig"]["minSize"] == 3
+    assert cleaned["ringSizeConfig"]["maxSize"] == 14
+
+
+def test_validate_rejects_non_positive_min_size():
+    cleaned, err = validate_product_fields(
+        _ring_body(ringSizeConfig={"minSize": 0, "maxSize": 14, "pricePerSizeTwd": 100})
+    )
     assert cleaned is None
     assert "最小戒圍" in (err or "")
+
+
+def test_validate_accepts_max_above_soft_default():
+    cleaned, err = validate_product_fields(
+        _ring_body(ringSizeConfig={"minSize": 7, "maxSize": 24, "pricePerSizeTwd": 100})
+    )
+    assert err is None
+    assert cleaned["ringSizeConfig"]["maxSize"] == 24
 
 
 def test_validate_rejects_min_greater_than_max():
@@ -94,7 +112,37 @@ def test_validate_rejects_negative_price_per_size():
         _ring_body(ringSizeConfig={"minSize": 7, "maxSize": 14, "pricePerSizeTwd": -1})
     )
     assert cleaned is None
-    assert "每圍加價" in (err or "")
+    assert "加多少" in (err or "")
+
+
+def test_validate_keeps_charge_after():
+    cleaned, err = validate_product_fields(
+        _ring_body(
+            ringSizeConfig={
+                "minSize": 10,
+                "maxSize": 18,
+                "chargeAfter": 12,
+                "pricePerSizeTwd": 500,
+            }
+        )
+    )
+    assert err is None
+    assert cleaned["ringSizeConfig"]["chargeAfter"] == 12
+
+
+def test_validate_rejects_charge_after_out_of_range():
+    cleaned, err = validate_product_fields(
+        _ring_body(
+            ringSizeConfig={
+                "minSize": 10,
+                "maxSize": 18,
+                "chargeAfter": 9,
+                "pricePerSizeTwd": 500,
+            }
+        )
+    )
+    assert cleaned is None
+    assert "從多少之後開始加價" in (err or "")
 
 
 def test_validate_accepts_start_size_alias():
@@ -122,6 +170,19 @@ def test_ring_size_addon_step_formula():
     assert ring_size_addon_from_config(cfg, 7) == 0
     assert ring_size_addon_from_config(cfg, 6) == 0
     assert ring_size_addon_from_config(None, 12) == 0
+
+
+def test_ring_size_addon_charge_after_threshold():
+    cfg = {
+        "minSize": 10,
+        "maxSize": 18,
+        "chargeAfter": 12,
+        "pricePerSizeTwd": 500,
+    }
+    assert ring_size_addon_from_config(cfg, 10) == 0
+    assert ring_size_addon_from_config(cfg, 12) == 0
+    assert ring_size_addon_from_config(cfg, 13) == 500
+    assert ring_size_addon_from_config(cfg, 15) == 1500
 
 
 def test_ring_size_addon_legacy_sizes_lookup():
@@ -183,6 +244,7 @@ def test_catalog_exposes_ring_size_config():
     out = build_catalog_product(_ring_product(), _ring_variants(), [])
     assert out["ringSizeConfig"]["minSize"] == 8
     assert out["ringSizeConfig"]["maxSize"] == 15
+    assert out["ringSizeConfig"]["chargeAfter"] == 8
     assert out["ringSizeConfig"]["pricePerSizeTwd"] == 200.0
     assert out["ringSizeConfig"]["startSize"] == 8
 
@@ -239,10 +301,26 @@ def test_parse_category_ring_size_config():
     )
     assert err is None
     assert ok["minSize"] == 7
+    assert ok["chargeAfter"] == 7
     assert ok["startSize"] == 7
+    with_charge, err_c = pc.parse_ring_size_config(
+        {"minSize": 10, "maxSize": 18, "chargeAfter": 12, "pricePerSizeTwd": 500}
+    )
+    assert err_c is None
+    assert with_charge["chargeAfter"] == 12
+    wide, err_w = pc.parse_ring_size_config(
+        {"minSize": 3, "maxSize": 24, "chargeAfter": 12, "pricePerSizeTwd": 100}
+    )
+    assert err_w is None
+    assert wide["minSize"] == 3
+    assert wide["maxSize"] == 24
+    assert wide["chargeAfter"] == 12
     bad, err2 = pc.parse_ring_size_config({"minSize": 12, "maxSize": 8, "pricePerSizeTwd": 1})
     assert bad is None
     assert "最小戒圍不可大於最大戒圍" in (err2 or "")
+    bad0, err0 = pc.parse_ring_size_config({"minSize": 0, "maxSize": 14, "pricePerSizeTwd": 1})
+    assert bad0 is None
+    assert "≥ 1" in (err0 or "")
 
 
 def test_update_category_ring_size_writes_json():
@@ -317,6 +395,9 @@ def test_admin_list_hosts_ring_size_not_editor():
     src = ADMIN_PRODUCTS_JS.read_text(encoding="utf-8")
     assert "categoryRingSizeSectionHtml" in src
     assert "apCategoryRingSizeSave" in src
+    assert "apCategoryRingChargeAfter" in src
+    assert "從多少之後開始加價" in src
+    assert "加多少" in src
     assert "function ringSizeSectionHtml" not in src
     assert "ringSizeConfig: collectRingSizeConfig" not in src
     # List page hosts section below product table; product form does not.
@@ -414,6 +495,54 @@ def test_quote_stacks_ring_size_addon_on_labor(monkeypatch):
     # Variant labor 3500 + ring size (10-7)*100 = 300.
     assert quote["laborPrice"] == 3800
     assert quote["ringSizePrice"] == 300
+
+
+def test_quote_charge_after_differs_from_min(monkeypatch):
+    variant = {
+        "weight_chin": 0.01,
+        "manual_price_twd": None,
+        "side_stone_price_twd": None,
+        "side_stone_carat": None,
+        "side_stone_total_twd": None,
+        "addon_price_twd": 3500,
+    }
+    monkeypatch.setattr(
+        "app.pricing._lookup_weight",
+        lambda *a, **k: (variant, 0.01),
+    )
+    monkeypatch.setattr(
+        "app.pricing.get_metal_prices",
+        lambda cur: {"XAU": 1.0, "XPT": 1.0, "XAG": 1.0},
+    )
+    monkeypatch.setattr("app.pricing.load_overrides", lambda cur: {})
+    monkeypatch.setattr("app.pricing.category_addon_price", lambda cur, cat: 2000)
+    monkeypatch.setattr(
+        "app.pricing.compute_diamond_list_price",
+        lambda *a, **k: 10000,
+    )
+    monkeypatch.setattr(
+        "app.pricing._product_ring_size_config",
+        lambda *a, **k: {
+            "minSize": 10,
+            "maxSize": 18,
+            "chargeAfter": 12,
+            "pricePerSizeTwd": 500,
+        },
+    )
+    quote = compute_order_pricing(
+        MagicMock(),
+        {
+            "category": "ring",
+            "type": "r1",
+            "gold": "18k",
+            "carat": "0.3",
+            "ringSize": 15,
+        },
+    )
+    assert quote["ready"] is True
+    # (15 - 12) * 500 = 1500
+    assert quote["laborPrice"] == 5000
+    assert quote["ringSizePrice"] == 1500
 
 
 def test_quote_ring_size_at_min_is_zero(monkeypatch):

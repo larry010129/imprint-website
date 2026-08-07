@@ -317,13 +317,20 @@
 
     var stepRaw = cfg.pricePerSizeTwd != null ? cfg.pricePerSizeTwd : cfg.price_per_size_twd;
     if (stepRaw != null && stepRaw !== '') {
-      var minRaw = cfg.minSize != null ? cfg.minSize
-        : (cfg.min_size != null ? cfg.min_size
-          : (cfg.startSize != null ? cfg.startSize : cfg.start_size));
-      var minSize = Math.round(Number(minRaw));
+      var chargeRaw = cfg.chargeAfter != null ? cfg.chargeAfter
+        : (cfg.charge_after != null ? cfg.charge_after
+          : (cfg.priceFromSize != null ? cfg.priceFromSize
+            : (cfg.price_from_size != null ? cfg.price_from_size
+              : (cfg.baseSize != null ? cfg.baseSize
+                : (cfg.base_size != null ? cfg.base_size
+                  : (cfg.minSize != null ? cfg.minSize
+                    : (cfg.min_size != null ? cfg.min_size
+                      : (cfg.startSize != null ? cfg.startSize : cfg.start_size))))))));
+      var chargeAfter = Math.round(Number(chargeRaw));
       var step = Number(stepRaw);
-      if (!Number.isFinite(minSize) || !Number.isFinite(step) || step < 0) return 0;
-      var addon = Math.max(0, (size - minSize) * step);
+      if (!Number.isFinite(chargeAfter) || !Number.isFinite(step) || step < 0) return 0;
+      if (size <= chargeAfter) return 0;
+      var addon = Math.max(0, (size - chargeAfter) * step);
       return Math.round(addon);
     }
 

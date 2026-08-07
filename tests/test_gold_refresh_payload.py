@@ -78,10 +78,10 @@ def test_shop_js_live_gold_poll_get_and_cache_bust() -> None:
     assert "setLiveGoldRates" in shop
     assert "initLiveGoldPoll" in shop
     assert "visibilityState" in shop
-    assert "shop.js?v=146" in (
+    assert "shop.js?v=147" in (
         _ROOT / "content" / "site" / "templates" / "pages" / "shop" / "calculator.html"
     ).read_text(encoding="utf-8")
-    assert "shop.js?v=146" in (
+    assert "shop.js?v=147" in (
         _ROOT / "content" / "site" / "page-registry.json"
     ).read_text(encoding="utf-8")
 
