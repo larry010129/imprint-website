@@ -2,10 +2,10 @@
 <html lang="zh-Hant-TW">
 <head>
 {% set is_home = extra_body_class and 'page-home' in extra_body_class %}
-<!-- Google tag (gtag.js) — idle / after load; home waits longer for PSI lab window -->
+<!-- Google tag (gtag.js) — hard delay on home (rIC can fire during PSI idle) -->
 <script>
 (function () {
-  var gtagIdleTimeout = {{ 14000 if is_home else 4000 }};
+  var gtagMinDelayMs = {{ 14000 if is_home else 4000 }};
   function injectGtag() {
     if (window.__gtagInjected) return;
     window.__gtagInjected = true;
@@ -20,11 +20,7 @@
     document.head.appendChild(s);
   }
   function scheduleGtag() {
-    if ('requestIdleCallback' in window) {
-      requestIdleCallback(injectGtag, { timeout: gtagIdleTimeout });
-    } else {
-      setTimeout(injectGtag, gtagIdleTimeout);
-    }
+    setTimeout(injectGtag, gtagMinDelayMs);
   }
   if (document.readyState === 'complete') {
     scheduleGtag();
@@ -48,6 +44,8 @@
 {% if lcp_image %}
 <link rel="preload" as="image" href="{{ lcp_image }}"{% if lcp_image_type %} type="{{ lcp_image_type }}"{% endif %} fetchpriority="high">
 {% endif %}
+{# Early discoverability for critical path (LCP / critical CSS). Keep before blocking styles. #}
+{% block resource_hints %}{% endblock %}
 
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="銘印鑽石 IMPRINT DIAMOND">
@@ -62,15 +60,22 @@
 {% endblock %}
 
 <style>{{ inline_css('base.css') | safe }}</style>
-<link rel="stylesheet" href="/static/css/nav.css?v=4.12">
+{% if is_home %}
+{# Closed-bar shell inlined; full nav (drawer/dropdowns/animations) deferred #}
+<style>{{ inline_css('nav-critical.css') | safe }}</style>
+<link rel="stylesheet" href="/static/css/nav.css?v=4.15" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="/static/css/nav.css?v=4.15"></noscript>
+{% else %}
+<link rel="stylesheet" href="/static/css/nav.css?v=4.15">
+{% endif %}
 {% if not is_home %}
-<link rel="stylesheet" href="/static/css/home.css?v=5.6">
+<link rel="stylesheet" href="/static/css/home.css?v=5.7">
 {% endif %}
 {% if is_home %}
-<link rel="stylesheet" href="/static/css/footer.css?v=3" media="print" onload="this.media='all'">
-<noscript><link rel="stylesheet" href="/static/css/footer.css?v=3"></noscript>
+<link rel="stylesheet" href="/static/css/footer.css?v=4" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="/static/css/footer.css?v=4"></noscript>
 {% else %}
-<link rel="stylesheet" href="/static/css/footer.css?v=3">
+<link rel="stylesheet" href="/static/css/footer.css?v=4">
 {% endif %}
 {% if not is_home %}
 <link rel="stylesheet" href="/static/css/pages.css?v=5.29">
@@ -79,10 +84,10 @@
 <link rel="stylesheet" href="/static/css/skeleton.css?v=3">
 {% endif %}
 {% if is_home %}
-<link rel="stylesheet" href="/static/css/responsive.css?v=3.21" media="print" onload="this.media='all'">
-<noscript><link rel="stylesheet" href="/static/css/responsive.css?v=3.21"></noscript>
+<link rel="stylesheet" href="/static/css/responsive.css?v=3.22" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="/static/css/responsive.css?v=3.22"></noscript>
 {% else %}
-<link rel="stylesheet" href="/static/css/responsive.css?v=3.21">
+<link rel="stylesheet" href="/static/css/responsive.css?v=3.22">
 {% endif %}
 {% if is_home %}
 <link rel="stylesheet" href="/static/css/social-fab.css?v=10" media="print" onload="this.media='all'">
@@ -128,9 +133,15 @@
 {% if is_home %}
 <script>
 (function () {
+  /* Home: nav hx-* only needs htmx after first paint. Avoid PSI unused-JS (~50KB).
+     Load on first interaction, else hard delay (rIC alone fires during lab idle). */
+  var HTMX_FALLBACK_MS = 12000;
   function injectHtmx() {
     if (window.__htmxInjected) return;
     window.__htmxInjected = true;
+    ['pointerdown', 'keydown', 'touchstart', 'scroll'].forEach(function (evt) {
+      window.removeEventListener(evt, injectHtmx, true);
+    });
     var s = document.createElement('script');
     s.src = '/static/js/htmx.min.js';
     s.onload = function () {
@@ -138,13 +149,10 @@
     };
     document.body.appendChild(s);
   }
-  function scheduleHtmx() {
-    if ('requestIdleCallback' in window) {
-      requestIdleCallback(injectHtmx, { timeout: 3500 });
-    } else {
-      setTimeout(injectHtmx, 1);
-    }
-  }
+  ['pointerdown', 'keydown', 'touchstart', 'scroll'].forEach(function (evt) {
+    window.addEventListener(evt, injectHtmx, { once: true, passive: true, capture: true });
+  });
+  function scheduleHtmx() { setTimeout(injectHtmx, HTMX_FALLBACK_MS); }
   if (document.readyState === 'complete') scheduleHtmx();
   else window.addEventListener('load', scheduleHtmx);
 })();
@@ -162,31 +170,26 @@
 {% if is_home %}
 <script>
 (function () {
+  var CMS_FALLBACK_MS = 12000;
   function injectCms() {
     if (window.__cmsSectionsInjected) return;
     window.__cmsSectionsInjected = true;
     var s = document.createElement('script');
-    s.src = '/js/cms-sections.js?v=2';
+    s.src = '/js/cms-sections.js?v=3';
     s.defer = true;
     document.body.appendChild(s);
   }
-  function scheduleCms() {
-    if ('requestIdleCallback' in window) {
-      requestIdleCallback(injectCms, { timeout: 5000 });
-    } else {
-      setTimeout(injectCms, 1);
-    }
-  }
+  function scheduleCms() { setTimeout(injectCms, CMS_FALLBACK_MS); }
   if (document.readyState === 'complete') scheduleCms();
   else window.addEventListener('load', scheduleCms);
 })();
 </script>
 {% else %}
-<script src="/js/cms-sections.js?v=2" defer></script>
+<script src="/js/cms-sections.js?v=3" defer></script>
 {% endif %}
 {% endif %}
 <script src="/static/js/site-layout.js?v=3" defer></script>
-<script src="/static/js/main.js?v=2.7" defer></script>
+<script src="/static/js/main.js?v=2.9" defer></script>
 {% block social_fab %}{% include "partials/social-fab.html" %}{% endblock %}
 {% block botpress_webchat %}{% include "partials/botpress-webchat.html" %}{% endblock %}
 </body>

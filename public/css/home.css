@@ -74,9 +74,31 @@
 .hc-arrow svg{ display:block; flex:none; }
 .hc-arrow:hover{ background:rgba(156,239,239,.6); }
 .hc-prev{ left:20px; } .hc-next{ right:20px; }
-.hc-dots{ position:absolute; left:50%; bottom:26px; transform:translateX(-50%); display:flex; gap:10px; z-index:5; }
-.hc-dot{ width:8px; height:8px; border-radius:50%; background:rgba(255,255,255,.42); transition:all .3s; }
-.hc-dot.is-active{ width:26px; border-radius:5px; background:#fff; }
+.hc-dots{ position:absolute; left:50%; bottom:26px; transform:translateX(-50%); display:flex; gap:0; z-index:5; }
+/* Hit area ≥44px; visual pip stays 8×8 via ::after (WCAG 2.5.8 target-size). */
+.hc-dot{
+  position:relative;
+  width:var(--tap-target-min, 44px);
+  height:var(--tap-target-min, 44px);
+  min-width:var(--tap-target-min, 44px);
+  min-height:var(--tap-target-min, 44px);
+  margin:0; padding:0; border:0;
+  background:transparent;
+  border-radius:0;
+  cursor:pointer;
+  flex:none;
+  appearance:none;
+  -webkit-appearance:none;
+}
+.hc-dot::after{
+  content:"";
+  position:absolute; left:50%; top:50%;
+  transform:translate(-50%,-50%);
+  width:8px; height:8px; border-radius:50%;
+  background:rgba(255,255,255,.42);
+  transition:width .3s, border-radius .3s, background .3s, box-shadow .3s;
+}
+.hc-dot.is-active::after{ width:26px; border-radius:5px; background:#fff; }
 
 /* ---------- 鑽戒滾動翻轉(整合版,兩幕) ---------- */
 .ringflip{ background:var(--mint-soft); border-bottom:1px solid var(--mint-line); }

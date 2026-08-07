@@ -1,21 +1,38 @@
 # 銘印鑽石 IMPRINT DIAMOND
 
-> 全台唯一擁有在地 DNA 鑽石培育實驗室的紀念鑽石品牌。萃取毛髮、骨灰中的元素，於台灣在地培育成專屬紀念鑽石，附鑑定保障與專屬影音紀念盒，預約制一對一顧問服務。
+> 台灣 DNA 紀念鑽石品牌（Imprint Diamond）。萃取毛髮、骨灰中的元素，於台灣在地實驗室培育成專屬紀念鑽石；附鑑定保障與專屬影音紀念盒。網站語言：繁體中文（zh-TW）。預約制一對一顧問服務。
 
-- 官網：https://www.imprintdiamond.com/
-- 品牌故事：https://www.imprintdiamond.com/about.html
-- DNA 鑽石知識：https://www.imprintdiamond.com/what-is-dna-diamond.html
-- 價格總覽：https://www.imprintdiamond.com/price.html
-- 黃金牌價：https://www.imprintdiamond.com/gold-price.html
-- 常見問題：https://www.imprintdiamond.com/faq.html
-- 客戶見證：https://www.imprintdiamond.com/stories.html
-- 聯絡我們：https://www.imprintdiamond.com/contact.html
-- 系列總覽：https://www.imprintdiamond.com/series.html
-- 時尚珠寶：https://www.imprintdiamond.com/jewelry/
+正式網域為 https://www.imprintdiamond.com/（https://imprintdiamond.com 導向同一站）。門市：新北市三重區福德南路 43 號 1 樓（預約制）。電話：+886-2-2977-0268。
+
+## 主要頁面
+
+- [首頁](https://www.imprintdiamond.com/): 品牌總覽與五大系列入口
+- [線上客製試算](https://www.imprintdiamond.com/shop/calculator/): 選品項、款式、金屬與鑽石規格並即時試算
+- [價格總覽](https://www.imprintdiamond.com/price.html): DNA 鑽石價格與試算入口
+- [系列總覽](https://www.imprintdiamond.com/series.html): 五大 DNA 紀念鑽石系列
+- [關於我們](https://www.imprintdiamond.com/about.html): 品牌故事與在地實驗室
+- [常見問題](https://www.imprintdiamond.com/faq.html): 訂製流程、價格、時程與保障
+- [DNA 鑽石知識](https://www.imprintdiamond.com/what-is-dna-diamond.html): DNA 紀念鑽石製程與說明
+- [聯絡我們](https://www.imprintdiamond.com/contact.html): 表單與門市資訊
+
+## 系列
+
+- [滿月鑽石](https://www.imprintdiamond.com/series/first-love/): 寶寶胎髮紀念
+- [寵物鑽石](https://www.imprintdiamond.com/series/pet/): 毛孩毛髮紀念
+- [結髮鑽石](https://www.imprintdiamond.com/series/love/): 夫妻髮絲紀念
+- [全家福鑽石](https://www.imprintdiamond.com/series/family/): 全家人髮絲紀念
+- [生命鑽石](https://www.imprintdiamond.com/series/heirloom/): 親人毛髮／骨灰紀念
 
 ## 聯絡
 
-- 地址：新北市三重區福德南路 43 號 1 樓（預約制）
-- 電話：+886-2-2977-0268
-- 官方 LINE：https://lin.ee/ktVBtmx
-- Facebook：https://www.facebook.com/Imprintdiamond/
+- [官方 LINE](https://lin.ee/ktVBtmx): 預約顧問與專屬報價
+- [聯絡頁](https://www.imprintdiamond.com/contact.html): 線上留言與門市地址
+
+## Optional
+
+- [黃金牌價](https://www.imprintdiamond.com/gold-price.html): 每日金工參考牌價
+- [時尚珠寶](https://www.imprintdiamond.com/jewelry/): 戒指、項鍊、耳環、手鍊分類
+- [客戶見證](https://www.imprintdiamond.com/stories.html): 真實客戶故事
+- [品牌日誌](https://www.imprintdiamond.com/journal.html): 文章與最新消息
+- [退換貨政策](https://www.imprintdiamond.com/return-policy.html): 退換貨說明
+- [Facebook](https://www.facebook.com/Imprintdiamond/): 社群粉專

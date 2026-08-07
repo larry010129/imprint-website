@@ -186,10 +186,23 @@
   window.ImprintHeroCarousel = (function () {
     var abortCtrl = null;
     var hcTimer = null;
+    /* Bump to cancel pending double-rAF animation restarts (no sync offsetWidth flush). */
+    var hcAnimGen = 0;
 
     function destroy() {
       if (hcTimer) { clearInterval(hcTimer); hcTimer = null; }
       if (abortCtrl) { abortCtrl.abort(); abortCtrl = null; }
+      hcAnimGen += 1;
+    }
+
+    function scheduleAfterLayout(fn) {
+      var gen = (hcAnimGen += 1);
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          if (gen !== hcAnimGen) return;
+          fn();
+        });
+      });
     }
 
     function init() {
@@ -236,39 +249,55 @@
       }
 
       function hcRender(withTransition) {
+        var restartSlide = null;
+        var restartImg = null;
+        var clearNoAnim = withTransition === false;
+
         hcSlides.forEach(function (s, i) {
           var wasActive = s.classList.contains('is-active');
           var willBeActive = i === hcIndex;
           var img = s.querySelector('.hc-media img');
           if (willBeActive) loadSlideImage(s);
-          if (withTransition === false) { s.classList.add('no-anim'); }
+          if (clearNoAnim) { s.classList.add('no-anim'); }
           s.classList.toggle('is-active', willBeActive);
 
-          var isFirstRender = withTransition === false;
+          var isFirstRender = clearNoAnim;
           var reveals = s.querySelectorAll('.reveal');
           if (willBeActive && (!wasActive || isFirstRender)) {
             reveals.forEach(function (el) { el.classList.remove('is-in'); });
-            void s.offsetWidth;
-            reveals.forEach(function (el) { el.classList.add('is-in'); });
+            restartSlide = s;
             if (img) {
               img.classList.add('kb-reset');
               img.style.transform = 'scale(1)';
-              void img.offsetWidth;
-              img.classList.remove('kb-reset');
-              img.style.transform = 'scale(1.09)';
+              restartImg = img;
             }
           } else if (!willBeActive && wasActive) {
             reveals.forEach(function (el) { el.classList.remove('is-in'); });
           }
         });
-        if (withTransition === false) {
-          void hcTrack.offsetWidth;
-          hcSlides.forEach(function (s) { s.classList.remove('no-anim'); });
-        }
         hcDots.forEach(function (d, i) {
           d.classList.toggle('is-active', i === hcIndex);
           d.setAttribute('aria-selected', i === hcIndex ? 'true' : 'false');
         });
+
+        /* Batch writes above; restart CSS transitions after paint (double-rAF)
+           instead of void offsetWidth forced reflow / layout thrash. */
+        if (restartSlide || clearNoAnim) {
+          scheduleAfterLayout(function () {
+            if (restartSlide) {
+              restartSlide.querySelectorAll('.reveal').forEach(function (el) {
+                el.classList.add('is-in');
+              });
+            }
+            if (restartImg) {
+              restartImg.classList.remove('kb-reset');
+              restartImg.style.transform = 'scale(1.09)';
+            }
+            if (clearNoAnim) {
+              hcSlides.forEach(function (s) { s.classList.remove('no-anim'); });
+            }
+          });
+        }
       }
 
       function hcGoTo(i) {
@@ -335,60 +364,7 @@
   })();
 
   window.ImprintHeroCarousel.init();
-
-  /* ---------- 鑽戒滾動翻轉(兩幕精簡版) ---------- */
-  var track = document.getElementById('rfTrack');
-  if (track && !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) {
-    var ring = document.getElementById('rfRing');
-    var shine = document.getElementById('rfShine');
-    var caps = track.querySelectorAll('.ringflip-caption');
-    var current = 0, target = 0, ticking = false;
-
-    var clamp = function (v, a, b) { return v < a ? a : v > b ? b : v; };
-    var ease = function (t) { return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t; };
-
-    var progress = function () {
-      var r = track.getBoundingClientRect();
-      var total = r.height - window.innerHeight;
-      return total > 0 ? clamp(-r.top / total, 0, 1) : 0;
-    };
-
-    var render = function () {
-      current += (target - current) * 0.09;
-      if (Math.abs(target - current) < 0.0005) current = target;
-      var p = current, rx = 0, ry = 0, scale = 1, t;
-
-      if (p < 0.5) {          /* 第一幕:左右翻轉一圈 */
-        t = ease(p / 0.5);
-        ry = 360 * t;
-        scale = 1 + 0.08 * Math.sin(Math.PI * t);
-      } else {                 /* 第二幕:上下翻轉一圈 */
-        t = ease((p - 0.5) / 0.5);
-        rx = 360 * t;
-        scale = 1 + 0.08 * Math.sin(Math.PI * t);
-      }
-      ring.style.transform = 'rotateX(' + rx.toFixed(2) + 'deg) rotateY(' + ry.toFixed(2) + 'deg) scale(' + scale.toFixed(3) + ')';
-
-      var seg = (p * 2) % 1;
-      shine.style.transform = 'translateX(' + (-120 + 240 * ease(seg)) + '%)';
-      shine.style.opacity = Math.sin(Math.PI * seg).toFixed(2);
-
-      var step = p < 0.5 ? 0 : 1;
-      caps.forEach(function (c, i) {
-        c.classList.toggle('is-on', i === step && p > 0.02);
-      });
-
-      if (current !== target) { requestAnimationFrame(render); } else { ticking = false; }
-    };
-
-    var onScroll = function () {
-      target = progress();
-      if (!ticking) { ticking = true; requestAnimationFrame(render); }
-    };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onScroll);
-    onScroll();
-  }
+  /* Ringflip lives in /static/js/ringflip.js — jewelry page only (not home). */
 
   }); /* whenSiteReady */
 })();

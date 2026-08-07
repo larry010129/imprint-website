@@ -320,30 +320,33 @@ def create_app() -> FastAPI:
 
     @application.middleware("http")
     async def dev_static_fresh(request, call_next):
-        """Local dev: skip conditional-cache 304s so static assets always revalidate as 200."""
-        if not settings.is_render:
-            path = request.url.path
-            if path.startswith(("/static/", "/js/", "/css/")):
-                request.scope["headers"] = [
-                    (name, value)
-                    for name, value in request.scope["headers"]
-                    if name.lower() not in (b"if-none-match", b"if-modified-since")
-                ]
+        """Cache policy for static subresources (+ local-dev 304 bypass).
+
+        Lighthouse "Use efficient cache lifetimes" wants max-age ≥ 2592000 (30d)
+        on cacheable CSS/JS/images/fonts/media. Versioned URLs (?v=) and CMS
+        uploads get 1y + immutable; unversioned brand assets get 30d.
+        HTML/API stay untouched here (no-store / short cache elsewhere).
+        """
+        path = request.url.path
+        is_static = path.startswith(("/static/", "/js/", "/css/")) or path == "/favicon.svg"
+        if not settings.is_render and is_static:
+            request.scope["headers"] = [
+                (name, value)
+                for name, value in request.scope["headers"]
+                if name.lower() not in (b"if-none-match", b"if-modified-since")
+            ]
         response = await call_next(request)
-        if request.url.path.startswith(("/static/", "/js/", "/css/")):
+        if is_static:
             if settings.is_render and response.status_code == 200:
-                if request.url.query or request.url.path.startswith("/static/uploads/"):
+                if request.url.query or path.startswith("/static/uploads/"):
+                    # Fingerprinted / query-busted assets — safe for 1 year.
                     cache_control = "public, max-age=31536000, immutable"
                 else:
-                    # Unversioned assets (mostly brand images under /static/images/,
-                    # referenced without a ?v= cache-busting query string). 1 day was
-                    # below Lighthouse's efficient-cache-lifetime threshold, flagging
-                    # ~323 KiB of "should use efficient cache lifetimes" savings on
-                    # PageSpeed Insights. These change rarely (git-deploy only); bump
-                    # to 30 days. Any asset that needs immediate busting on edit should
-                    # get a ?v= query string like the CSS/JS files already do.
+                    # Unversioned (brand images, favicon, htmx.min.js). Rarely
+                    # change (git-deploy). 30d meets Lighthouse threshold; use
+                    # ?v= when an edit must bust immediately.
                     cache_control = "public, max-age=2592000, stale-while-revalidate=2592000"
-                response.headers.setdefault("Cache-Control", cache_control)
+                response.headers["Cache-Control"] = cache_control
             elif not settings.is_render:
                 response.headers["Cache-Control"] = "no-store"
         return response

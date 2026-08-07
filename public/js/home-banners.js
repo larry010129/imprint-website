@@ -24,6 +24,15 @@
     return String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
   }
 
+  /** Known local hero stems → full-width descriptor (for srcset). */
+  var LOCAL_HERO_MAX_W = {
+    'imprint-diamond-newborn-baby-necklace': 2400,
+    'imprint-diamond-pet-memorial-cat': 2400,
+    'imprint-diamond-wedding-couple-ring': 2400,
+    'imprint-diamond-family-portrait-jewelry': 2400,
+    'imprint-diamond-heirloom-memorial': 1500
+  };
+
   /** Stable image identity so local SSR memorial ≈ CMS memorial URL (keep LCP skip). */
   function assetKey(url) {
     var s = String(url || '').trim();
@@ -31,7 +40,24 @@
     if (/imprint-diamond-family-memorial/i.test(s)) return 'memorial';
     var m = s.match(/\/([^\/?#]+)(?:[?#]|$)/);
     if (!m) return s.toLowerCase();
-    return m[1].replace(/\.(jpe?g|png|webp)$/i, '').toLowerCase();
+    // Strip -800w/-960w responsive suffixes so SSR 800w ≈ CMS full basename.
+    return m[1]
+      .replace(/\.(jpe?g|png|webp)$/i, '')
+      .replace(/-\d+w$/i, '')
+      .toLowerCase();
+  }
+
+  function localHeroStem(url) {
+    var key = assetKey(url);
+    return LOCAL_HERO_MAX_W[key] ? key : '';
+  }
+
+  function localHeroMobileSrcset(stem) {
+    return (
+      '/static/images/hero/' + stem + '-800w.webp 800w, ' +
+      '/static/images/hero/' + stem + '-960w.webp 960w, ' +
+      '/static/images/hero/' + stem + '-1200w.webp 1200w'
+    );
   }
 
   function formatLead(lead) {
@@ -85,10 +111,39 @@
 
   function remotePicture(b, sourceAttr) {
     var mobileValue = String(b.image_url_mobile || '').trim();
+    var stem = localHeroStem(b.image_webp || b.image_url);
+    // Local hero assets: serve 800/960/1200 on phone (never full 2400w).
+    // Custom image_url_mobile (admin crop) still wins at ≤900px.
+    if (stem) {
+      var mobileSrcset = mobileValue || localHeroMobileSrcset(stem);
+      var mobileIsWebp = /\.webp(\s|\?|$)/i.test(mobileSrcset);
+      var desktop = '/static/images/hero/' + stem + '.webp';
+      var desktopSrcset =
+        '/static/images/hero/' + stem + '-1200w.webp 1200w, ' +
+        desktop + ' ' + LOCAL_HERO_MAX_W[stem] + 'w';
+      var mobile = '<source media="(max-width:900px)" ' + sourceAttr + '="' +
+        esc(mobileSrcset) + '"' + (mobileIsWebp ? ' type="image/webp"' : '') +
+        ' sizes="100vw">';
+      var webp = '<source ' + sourceAttr + '="' + esc(desktopSrcset) +
+        '" type="image/webp" sizes="100vw">';
+      var imgSrc = mobileValue
+        ? (b.image_url || desktop)
+        : '/static/images/hero/' + stem + '-800w.webp';
+      var imgExtra = '';
+      if (!mobileValue) {
+        imgExtra = ' width="800" height="388" sizes="100vw"';
+        if (sourceAttr === 'srcset') {
+          imgExtra += ' srcset="' +
+            esc(localHeroMobileSrcset(stem) + ', ' + desktopSrcset) + '"';
+        }
+      }
+      return { mobile: mobile, webp: webp, imgSrc: imgSrc, imgExtra: imgExtra };
+    }
     var mobileSrc = mobileValue || String(b.image_webp || b.image_url || '');
-    var mobileIsWebp = /\.webp(\s|\?|$)/i.test(mobileSrc);
+    var remoteMobileIsWebp = /\.webp(\s|\?|$)/i.test(mobileSrc);
     var mobile = '<source media="(max-width:900px)" ' + sourceAttr + '="' +
-      esc(mobileSrc) + '"' + (mobileIsWebp ? ' type="image/webp"' : '') + ' sizes="100vw">';
+      esc(mobileSrc) + '"' + (remoteMobileIsWebp ? ' type="image/webp"' : '') +
+      ' sizes="100vw">';
     var webp = b.image_webp
       ? '<source ' + sourceAttr + '="' + esc(b.image_webp) + '" type="image/webp" sizes="100vw">'
       : '';
@@ -100,7 +155,9 @@
   function slideHtml(b, index) {
     var tone = b.tone || 'warm';
     var align = b.align || (index === 3 ? 'right' : 'left');
-    var titleTag = index === 0 ? 'h1' : 'h2';
+    /* Slide 0 = sole page h1. Other slides stay styled titles, not headings
+       (all slides remain in DOM; extra h2s pollute heading-order outline). */
+    var titleTag = index === 0 ? 'h1' : 'p';
     var loading = index === 0
       ? 'loading="eager" fetchpriority="high"'
       : 'loading="lazy"';

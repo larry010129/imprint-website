@@ -1,12 +1,15 @@
 {% extends "layouts/base.html" %}
-{% block extra_css %}
-<link rel="stylesheet" href="/static/css/home-ghibli-critical.css?v=35">
-<link rel="stylesheet" href="/static/css/home-ghibli.css?v=36" media="print" onload="this.media='all'">
-<noscript><link rel="stylesheet" href="/static/css/home-ghibli.css?v=36"></noscript>
-{% endblock %}
-{% block extra_head %}
+{% block resource_hints %}
+{# LCP only — hero critical CSS is inlined below (no render-blocking stylesheet request). #}
 <link rel="preload" as="image" href="/static/images/hero/imprint-diamond-family-memorial-800w.webp" type="image/webp" media="(max-width:900px)" fetchpriority="high" imagesrcset="/static/images/hero/imprint-diamond-family-memorial-800w.webp 800w, /static/images/hero/imprint-diamond-family-memorial-960w.webp 960w" imagesizes="100vw">
 <link rel="preload" as="image" href="/static/images/hero/imprint-diamond-family-memorial.webp" type="image/webp" media="(min-width:901px)" fetchpriority="high">
+{% endblock %}
+{% block extra_css %}
+<style>{{ inline_css('home-ghibli-critical.css') | safe }}</style>
+<link rel="stylesheet" href="/static/css/home-ghibli.css?v=39" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="/static/css/home-ghibli.css?v=39"></noscript>
+{% endblock %}
+{% block extra_head %}
 <style>
 @media (max-width:900px){
   .page-home .gh-hc-viewport .hc-media img{
@@ -129,14 +132,15 @@
       <li class="hc-slide" data-align="left" data-tone="light">
         <div class="hc-media">
           <picture>
-            <source data-srcset="/static/images/hero/imprint-diamond-newborn-baby-necklace.webp" type="image/webp">
-            <img data-src="/static/images/hero/imprint-diamond-newborn-baby-necklace.jpg" alt="滿月鑽石－以寶寶胎髮培育的紀念鑽石項鍊" width="2400" height="1165" loading="lazy" decoding="async" onerror="imgFallback(this)">
+            <source media="(max-width:900px)" data-srcset="/static/images/hero/imprint-diamond-newborn-baby-necklace-800w.webp 800w, /static/images/hero/imprint-diamond-newborn-baby-necklace-960w.webp 960w, /static/images/hero/imprint-diamond-newborn-baby-necklace-1200w.webp 1200w" type="image/webp" sizes="100vw">
+            <source data-srcset="/static/images/hero/imprint-diamond-newborn-baby-necklace-1200w.webp 1200w, /static/images/hero/imprint-diamond-newborn-baby-necklace.webp 2400w" type="image/webp" sizes="100vw">
+            <img data-src="/static/images/hero/imprint-diamond-newborn-baby-necklace-800w.webp" alt="滿月鑽石－以寶寶胎髮培育的紀念鑽石項鍊" width="800" height="388" sizes="100vw" loading="lazy" decoding="async" onerror="imgFallback(this)">
           </picture>
         </div>
         <div class="hc-scrim gh-hc-scrim"></div>
         <div class="container hc-copy gh-hc-copy">
           <p class="gh-script reveal">First Love</p>
-          <h2 class="gh-hero__title reveal reveal-d1">滿月鑽石</h2>
+          <p class="gh-hero__title reveal reveal-d1">滿月鑽石</p>
           <p class="gh-hero__lead reveal reveal-d2">以寶寶的胎髮，珍藏生命最初的印記，成為陪伴孩子一生的傳家珍藏。從滿月剃髮的那一刻，到孩子長大成人，這顆鑽石始終記得最初的模樣。</p>
           <div class="gh-hero__actions reveal reveal-d3">
             <a class="gh-btn gh-btn--primary" href="/series/first-love/">探索滿月鑽石</a>
@@ -148,14 +152,15 @@
       <li class="hc-slide" data-align="left" data-tone="warm">
         <div class="hc-media">
           <picture>
-            <source data-srcset="/static/images/hero/imprint-diamond-pet-memorial-cat.webp" type="image/webp">
-            <img data-src="/static/images/hero/imprint-diamond-pet-memorial-cat.jpg" alt="寵物鑽石－以毛孩毛髮培育的紀念鑽石" width="2400" height="1165" loading="lazy" decoding="async" onerror="imgFallback(this)">
+            <source media="(max-width:900px)" data-srcset="/static/images/hero/imprint-diamond-pet-memorial-cat-800w.webp 800w, /static/images/hero/imprint-diamond-pet-memorial-cat-960w.webp 960w, /static/images/hero/imprint-diamond-pet-memorial-cat-1200w.webp 1200w" type="image/webp" sizes="100vw">
+            <source data-srcset="/static/images/hero/imprint-diamond-pet-memorial-cat-1200w.webp 1200w, /static/images/hero/imprint-diamond-pet-memorial-cat.webp 2400w" type="image/webp" sizes="100vw">
+            <img data-src="/static/images/hero/imprint-diamond-pet-memorial-cat-800w.webp" alt="寵物鑽石－以毛孩毛髮培育的紀念鑽石" width="800" height="388" sizes="100vw" loading="lazy" decoding="async" onerror="imgFallback(this)">
           </picture>
         </div>
         <div class="hc-scrim gh-hc-scrim"></div>
         <div class="container hc-copy gh-hc-copy">
           <p class="gh-script reveal">Companion</p>
-          <h2 class="gh-hero__title reveal reveal-d1">寵物鑽石</h2>
+          <p class="gh-hero__title reveal reveal-d1">寵物鑽石</p>
           <p class="gh-hero__lead reveal reveal-d2">以毛孩的毛髮培育專屬鑽石，讓那份無條件的陪伴，以另一種形式延續。牠不在身邊了，但那份愛可以靜靜陪著您，天天出門。</p>
           <div class="gh-hero__actions reveal reveal-d3">
             <a class="gh-btn gh-btn--primary" href="/series/pet/">探索寵物鑽石</a>
@@ -167,14 +172,15 @@
       <li class="hc-slide" data-align="right" data-tone="light">
         <div class="hc-media">
           <picture>
-            <source data-srcset="/static/images/hero/imprint-diamond-wedding-couple-ring.webp" type="image/webp">
-            <img data-src="/static/images/hero/imprint-diamond-wedding-couple-ring.jpg" alt="結髮鑽石－以兩人髮絲共同培育的婚戒鑽石" width="2400" height="1165" loading="lazy" decoding="async" onerror="imgFallback(this)">
+            <source media="(max-width:900px)" data-srcset="/static/images/hero/imprint-diamond-wedding-couple-ring-800w.webp 800w, /static/images/hero/imprint-diamond-wedding-couple-ring-960w.webp 960w, /static/images/hero/imprint-diamond-wedding-couple-ring-1200w.webp 1200w" type="image/webp" sizes="100vw">
+            <source data-srcset="/static/images/hero/imprint-diamond-wedding-couple-ring-1200w.webp 1200w, /static/images/hero/imprint-diamond-wedding-couple-ring.webp 2400w" type="image/webp" sizes="100vw">
+            <img data-src="/static/images/hero/imprint-diamond-wedding-couple-ring-800w.webp" alt="結髮鑽石－以兩人髮絲共同培育的婚戒鑽石" width="800" height="388" sizes="100vw" loading="lazy" decoding="async" onerror="imgFallback(this)">
           </picture>
         </div>
         <div class="hc-scrim gh-hc-scrim"></div>
         <div class="container hc-copy gh-hc-copy">
           <p class="gh-script reveal">Love</p>
-          <h2 class="gh-hero__title reveal reveal-d1">結髮鑽石</h2>
+          <p class="gh-hero__title reveal reveal-d1">結髮鑽石</p>
           <p class="gh-hero__lead reveal reveal-d2">結髮為夫妻。以兩人的髮絲共同培育一顆鑽石，見證一生一次的誓約——這顆鑽石裡，有你也有我。</p>
           <div class="gh-hero__actions reveal reveal-d3">
             <a class="gh-btn gh-btn--primary" href="/series/love/">探索結髮鑽石</a>
@@ -186,14 +192,15 @@
       <li class="hc-slide" data-align="left" data-tone="warm">
         <div class="hc-media">
           <picture>
-            <source data-srcset="/static/images/hero/imprint-diamond-family-portrait-jewelry.webp" type="image/webp">
-            <img data-src="/static/images/hero/imprint-diamond-family-portrait-jewelry.jpg" alt="全家福鑽石－集合全家人髮絲培育的家族鑽石" width="2400" height="1165" loading="lazy" decoding="async" onerror="imgFallback(this)">
+            <source media="(max-width:900px)" data-srcset="/static/images/hero/imprint-diamond-family-portrait-jewelry-800w.webp 800w, /static/images/hero/imprint-diamond-family-portrait-jewelry-960w.webp 960w, /static/images/hero/imprint-diamond-family-portrait-jewelry-1200w.webp 1200w" type="image/webp" sizes="100vw">
+            <source data-srcset="/static/images/hero/imprint-diamond-family-portrait-jewelry-1200w.webp 1200w, /static/images/hero/imprint-diamond-family-portrait-jewelry.webp 2400w" type="image/webp" sizes="100vw">
+            <img data-src="/static/images/hero/imprint-diamond-family-portrait-jewelry-800w.webp" alt="全家福鑽石－集合全家人髮絲培育的家族鑽石" width="800" height="388" sizes="100vw" loading="lazy" decoding="async" onerror="imgFallback(this)">
           </picture>
         </div>
         <div class="hc-scrim gh-hc-scrim"></div>
         <div class="container hc-copy gh-hc-copy">
           <p class="gh-script reveal">Family</p>
-          <h2 class="gh-hero__title reveal reveal-d1">全家福鑽石</h2>
+          <p class="gh-hero__title reveal reveal-d1">全家福鑽石</p>
           <p class="gh-hero__lead reveal reveal-d2">集合全家人的髮絲，凝成一顆象徵家族連結的鑽石，讓家的記憶可以傳承——我們一直都在一起，有具體的形狀可以傳下去。</p>
           <div class="gh-hero__actions reveal reveal-d3">
             <a class="gh-btn gh-btn--primary" href="/series/family/">探索全家福鑽石</a>
@@ -205,14 +212,15 @@
       <li class="hc-slide" data-align="left" data-tone="soft">
         <div class="hc-media">
           <picture>
-            <source data-srcset="/static/images/hero/imprint-diamond-heirloom-memorial.webp" type="image/webp">
-            <img data-src="/static/images/hero/imprint-diamond-heirloom-memorial.jpg" alt="生命鑽石－以摯愛親人樣本培育的紀念鑽石" width="1500" height="728" loading="lazy" decoding="async" onerror="imgFallback(this)">
+            <source media="(max-width:900px)" data-srcset="/static/images/hero/imprint-diamond-heirloom-memorial-800w.webp 800w, /static/images/hero/imprint-diamond-heirloom-memorial-960w.webp 960w, /static/images/hero/imprint-diamond-heirloom-memorial-1200w.webp 1200w" type="image/webp" sizes="100vw">
+            <source data-srcset="/static/images/hero/imprint-diamond-heirloom-memorial-1200w.webp 1200w, /static/images/hero/imprint-diamond-heirloom-memorial.webp 1500w" type="image/webp" sizes="100vw">
+            <img data-src="/static/images/hero/imprint-diamond-heirloom-memorial-800w.webp" alt="生命鑽石－以摯愛親人樣本培育的紀念鑽石" width="800" height="388" sizes="100vw" loading="lazy" decoding="async" onerror="imgFallback(this)">
           </picture>
         </div>
         <div class="hc-scrim gh-hc-scrim"></div>
         <div class="container hc-copy gh-hc-copy">
           <p class="gh-script reveal">Heirloom</p>
-          <h2 class="gh-hero__title reveal reveal-d1">生命鑽石</h2>
+          <p class="gh-hero__title reveal reveal-d1">生命鑽石</p>
           <p class="gh-hero__lead reveal reveal-d2">以摯愛親人的毛髮或骨灰，讓思念有永恆的形狀，靜靜陪在您身邊。思念不需要隨時間淡去，它可以被好好安放。</p>
           <div class="gh-hero__actions reveal reveal-d3">
             <a class="gh-btn gh-btn--primary" href="/series/heirloom/">探索生命鑽石</a>
@@ -264,9 +272,9 @@
       </button>
       {% else %}
       <picture>
-        <source media="(max-width:900px)" type="image/webp" srcset="/static/images/hero/imprint-diamond-family-memorial-800w.webp 800w, /static/images/hero/imprint-diamond-family-memorial-960w.webp 960w" sizes="(max-width:640px) 92vw, 45vw">
-        <source type="image/webp" srcset="/static/images/hero/imprint-diamond-family-memorial.webp">
-        <img data-cms-slot="poem-visual" src="/static/images/hero/imprint-diamond-family-memorial-800w.webp" alt="家人手心捧著 DNA 紀念鑽石" width="800" height="388" loading="lazy" decoding="async" onerror="imgFallback(this)">
+        <source media="(max-width:900px)" type="image/webp" srcset="/static/images/hero/imprint-diamond-family-memorial-800w.webp 800w, /static/images/hero/imprint-diamond-family-memorial-960w.webp 960w, /static/images/hero/imprint-diamond-family-memorial-1200w.webp 1200w" sizes="(max-width:640px) 92vw, 45vw">
+        <source type="image/webp" srcset="/static/images/hero/imprint-diamond-family-memorial-800w.webp 800w, /static/images/hero/imprint-diamond-family-memorial-960w.webp 960w, /static/images/hero/imprint-diamond-family-memorial-1200w.webp 1200w, /static/images/hero/imprint-diamond-family-memorial.webp 2400w" sizes="(max-width:640px) 92vw, 45vw">
+        <img data-cms-slot="poem-visual" src="/static/images/hero/imprint-diamond-family-memorial-800w.webp" alt="家人手心捧著 DNA 紀念鑽石" width="800" height="388" sizes="(max-width:640px) 92vw, 45vw" loading="lazy" decoding="async" onerror="imgFallback(this)">
       </picture>
       {% endif %}
     </div>
@@ -289,8 +297,8 @@
 
 <div class="gh-scene">
   <picture>
-    <source type="image/webp" srcset="/static/images/series-cards/imprint-diamond-wedding-couple-ring-400.webp 400w, /static/images/series-cards/imprint-diamond-wedding-couple-ring-800.webp 800w" sizes="100vw">
-    <img data-cms-slot="scene-wedding" src="/static/images/series-cards/imprint-diamond-wedding-couple-ring-800.webp" alt="結髮鑽石－以兩人髮絲共同培育的婚戒鑽石" width="800" height="388" loading="lazy" decoding="async" onerror="imgFallback(this)">
+    <source type="image/webp" srcset="/static/images/hero/imprint-diamond-wedding-couple-ring-800w.webp 800w, /static/images/hero/imprint-diamond-wedding-couple-ring-960w.webp 960w, /static/images/hero/imprint-diamond-wedding-couple-ring-1200w.webp 1200w, /static/images/hero/imprint-diamond-wedding-couple-ring.webp 2400w" sizes="100vw">
+    <img data-cms-slot="scene-wedding" src="/static/images/hero/imprint-diamond-wedding-couple-ring-800w.webp" alt="結髮鑽石－以兩人髮絲共同培育的婚戒鑽石" width="800" height="388" sizes="100vw" loading="lazy" decoding="async" onerror="imgFallback(this)">
   </picture>
   <div class="gh-scene__fade-top"></div>
   <div class="gh-scene__fade-bottom"></div>
@@ -504,9 +512,9 @@
 <section class="gh-cta" id="contact">
   <div class="gh-cta__scene">
     <picture>
-      <source media="(max-width:900px)" type="image/webp" srcset="/static/images/hero/imprint-diamond-family-memorial-800w.webp 800w, /static/images/hero/imprint-diamond-family-memorial-960w.webp 960w" sizes="100vw">
-      <source type="image/webp" srcset="/static/images/hero/imprint-diamond-family-memorial.webp">
-      <img data-cms-slot="cta-scene" src="/static/images/hero/imprint-diamond-family-memorial-800w.webp" alt="銘印鑽石品牌意象" width="800" height="388" loading="lazy" decoding="async" onerror="imgFallback(this)">
+      <source media="(max-width:900px)" type="image/webp" srcset="/static/images/hero/imprint-diamond-family-memorial-800w.webp 800w, /static/images/hero/imprint-diamond-family-memorial-960w.webp 960w, /static/images/hero/imprint-diamond-family-memorial-1200w.webp 1200w" sizes="100vw">
+      <source type="image/webp" srcset="/static/images/hero/imprint-diamond-family-memorial-800w.webp 800w, /static/images/hero/imprint-diamond-family-memorial-960w.webp 960w, /static/images/hero/imprint-diamond-family-memorial-1200w.webp 1200w, /static/images/hero/imprint-diamond-family-memorial.webp 2400w" sizes="100vw">
+      <img data-cms-slot="cta-scene" src="/static/images/hero/imprint-diamond-family-memorial-800w.webp" alt="銘印鑽石品牌意象" width="800" height="388" sizes="100vw" loading="lazy" decoding="async" onerror="imgFallback(this)">
     </picture>
     <div class="gh-cta__scene-fade-top"></div>
     <div class="gh-cta__scene-fade-bottom"></div>
@@ -546,6 +554,8 @@
 </script>
 <script>
 (function () {
+  /* Below-fold wall/banners: hard delay past PSI (rIC fires during lab idle). */
+  var HOME_EXTRAS_MS = 10000;
   function inject(src) {
     var s = document.createElement('script');
     s.src = src;
@@ -553,16 +563,12 @@
     document.body.appendChild(s);
   }
   function loadHomeExtras() {
-    inject('/static/js/home-wall.js?v=3');
-    inject('/static/js/home-banners.js?v=7');
+    if (window.__homeExtrasInjected) return;
+    window.__homeExtrasInjected = true;
+    inject('/static/js/home-wall.js?v=4');
+    inject('/static/js/home-banners.js?v=8');
   }
-  function schedule() {
-    if ('requestIdleCallback' in window) {
-      requestIdleCallback(loadHomeExtras, { timeout: 5000 });
-    } else {
-      setTimeout(loadHomeExtras, 1);
-    }
-  }
+  function schedule() { setTimeout(loadHomeExtras, HOME_EXTRAS_MS); }
   if (document.readyState === 'complete') schedule();
   else window.addEventListener('load', schedule);
 })();

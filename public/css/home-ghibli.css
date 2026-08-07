@@ -1,9 +1,168 @@
 /* ============================================================
-   home-ghibli deferred — below-fold (poem/series/stories/faq/cta)
+   home-ghibli deferred — below-fold + nav interaction
    Loaded via media=print onload on homepage
 ============================================================ */
+
+/* Nav interaction (scroll hide, drawer ink, dropdowns, account panel) */
+.page-home .topbar,
+.page-home .nav{
+  transition:transform .28s var(--ease), opacity .28s var(--ease), visibility .28s;
+}
+.page-home.is-nav-scrolled .topbar{
+  transform:translateY(-100%);
+  opacity:0;
+  visibility:hidden;
+  pointer-events:none;
+}
+.page-home.is-nav-scrolled .nav{
+  transform:translateY(calc(-100% - 40px));
+  opacity:0;
+  visibility:hidden;
+  pointer-events:none;
+}
+.page-home .nav .site-nav-desktop .nav-item > a:hover,
+.page-home [data-site-nav-root].is-nav-hero .site-nav-desktop .nav-item > a:hover{ color:#EAFCFC; }
+.page-home .nav.is-mobile-menu-open .nav-burger span,
+.page-home [data-site-nav-root].is-nav-hero .nav.is-mobile-menu-open .nav-burger span{
+  background:var(--ink,#2b2320);
+}
+.page-home .nav.is-mobile-menu-open .nav-cart-link,
+.page-home [data-site-nav-root].is-nav-hero .nav.is-mobile-menu-open .nav-cart-link{
+  color:var(--ink,#2b2320);
+}
+.page-home .nav .btn-line:hover,
+.page-home [data-site-nav-root].is-nav-hero .nav-cta .btn-line:hover{
+  background:rgba(12,12,12,.58) !important; color:#fff !important;
+}
+.page-home [data-site-nav-root].is-nav-hero .nav-cta .btn-dark:hover{
+  background:rgba(12,12,12,.62) !important;
+}
+.page-home .nav .account-menu-trigger:hover,
+.page-home [data-site-nav-root].is-nav-hero .account-menu-trigger:hover{
+  background:rgba(12,12,12,.68);
+  border-color:rgba(255,255,255,.72);
+}
+.page-home .nav .account-menu-email,
+.page-home [data-site-nav-root].is-nav-hero .account-menu-email{ color:rgba(255,255,255,.88); }
+.page-home .nav .account-menu-panel,
+.page-home [data-site-nav-root].is-nav-hero .account-menu-panel{
+  background:rgba(12,12,12,.9);
+  border-color:rgba(255,255,255,.28);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+  box-shadow:0 14px 36px rgba(0,0,0,.36);
+}
+.page-home .nav .account-menu-item,
+.page-home [data-site-nav-root].is-nav-hero .account-menu-item{ color:#fff; }
+.page-home .nav .account-menu-item:hover,
+.page-home [data-site-nav-root].is-nav-hero .account-menu-item:hover{
+  background:rgba(255,255,255,.14);
+}
+.page-home .nav .account-menu-logout,
+.page-home [data-site-nav-root].is-nav-hero .account-menu-logout{ color:#ffc9c2; }
+.page-home .nav .account-menu-logout:hover,
+.page-home [data-site-nav-root].is-nav-hero .account-menu-logout:hover{
+  background:rgba(255,120,110,.22);
+}
+.page-home .nav .dropdown,
+.page-home [data-site-nav-root].is-nav-hero .dropdown{
+  background:rgba(12,12,12,.9);
+  border:1px solid rgba(255,255,255,.35);
+  border-radius:18px;
+  overflow:hidden;
+  backdrop-filter:blur(14px) saturate(1.15);
+  -webkit-backdrop-filter:blur(14px) saturate(1.15);
+  box-shadow:0 14px 36px rgba(0,0,0,.32);
+}
+.page-home .nav .dropdown a,
+.page-home [data-site-nav-root].is-nav-hero .dropdown a{
+  color:#fff;
+  border-radius:12px;
+}
+.page-home .nav .dropdown a:hover,
+.page-home [data-site-nav-root].is-nav-hero .dropdown a:hover{
+  background:rgba(255,255,255,.14);
+  color:#fff;
+}
+.page-home .nav .dropdown .dd-label,
+.page-home [data-site-nav-root].is-nav-hero .dropdown .dd-label{
+  color:rgba(255,255,255,.78);
+}
+.page-home .nav .btn-mint:hover{ filter:brightness(1.05); }
+.page-home .hc-arrow:hover{ background:rgba(156,239,239,.6); }
+.gh-hc-arrow:hover{ background:rgba(255,255,255,.35); }
+.gh-btn--primary:hover{
+  transform:translateY(-2px); box-shadow:0 12px 36px rgba(var(--gh-accent-rgb),.55); filter:brightness(1.05);
+}
+.gh-btn--ghost:hover{ background:rgba(12,12,12,.58); }
+
+/* Secondary carousel tones / right align (not first slide) — keep AA scrim strength */
+.hc-slide[data-tone="light"] .gh-hc-scrim{
+  background:linear-gradient(
+    90deg,
+    rgba(10,10,10,.84) 0%,
+    rgba(10,10,10,.46) 50%,
+    rgba(10,10,10,.2) 100%
+  ) !important;
+}
+.hc-slide[data-tone="soft"] .gh-hc-scrim{
+  background:linear-gradient(
+    90deg,
+    rgba(10,10,10,.8) 0%,
+    rgba(10,10,10,.38) 50%,
+    rgba(10,10,10,.16) 100%
+  ) !important;
+}
+.hc-slide[data-align="right"] .gh-hc-scrim{ transform:scaleX(-1); }
+.hc-slide[data-align="right"] .gh-hc-copy{ align-items:flex-end; text-align:right; }
+.hc-slide[data-align="right"] .gh-hc-copy .gh-hero__lead{ margin-right:0; }
+.hc-slide[data-align="right"] .gh-hc-copy .gh-hero__actions{ justify-content:flex-end; }
+.hc-slide[data-align="center"] .hc-copy{ align-items:center; text-align:center; }
+.hc-slide[data-align="center"] .hc-actions{ justify-content:center; }
+@media (max-width:900px){
+  .hc-slide[data-align="left"] .gh-hc-scrim,
+  .hc-slide[data-align="right"] .gh-hc-scrim{ transform:none; }
+}
+
+/* Below-fold script / DNA — solid AA ink (no transparent clip) */
+.gh-poem .gh-script,
+.gh-section .gh-script{
+  color:var(--gh-ink-mint, #1F6F72);
+  background:none;
+  -webkit-text-fill-color:currentColor;
+}
+.gh-cta .gh-script{
+  color:#EAFCFC;
+  background:none;
+  -webkit-text-fill-color:currentColor;
+}
+.page-home .gh-poem__copy .gh-dna,
+.page-home .gh-section__title .gh-dna{
+  color:var(--gh-ink-mint, #1F6F72);
+  background:none;
+  -webkit-text-fill-color:currentColor;
+}
+
+/* Unused hero chips (kept for CMS/experiments) */
+.gh-chips{ display:flex; flex-wrap:wrap; gap:14px; justify-content:center; }
+.gh-chip{
+  display:flex; flex-direction:column; align-items:center; gap:8px;
+  width:88px; text-decoration:none; color:#fff;
+}
+.gh-chip__icon{
+  width:56px; height:56px; border-radius:18px;
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--serif); font-size:18px; font-weight:600;
+  box-shadow:0 8px 24px rgba(0,0,0,.2);
+}
+.gh-chip__icon--1,.gh-chip__icon--4{ background:var(--gh-grad-deep); color:var(--gh-twilight); }
+.gh-chip__icon--2{ background:var(--gh-grad); color:var(--gh-twilight); }
+.gh-chip__icon--3{ background:var(--gh-grad-soft); color:var(--gh-twilight); }
+.gh-chip span:last-child{ font-size:11px; letter-spacing:.08em; opacity:.92; line-height:1.4; }
+@media (max-width:640px){ .gh-chips{ display:none; } }
+
 .page-home .gh-faq-wrap .faq-q:hover{
-  color:var(--gh-dna-deep);
+  color:var(--gh-ink-mint, #1F6F72);
 }
 
 .page-home #home-poem{
@@ -16,7 +175,7 @@
   background:linear-gradient(180deg, rgba(142,237,240,.14) 0%, var(--gh-cream) 220px);
   padding:72px 16px 64px; text-align:center;
 }
-.gh-poem .gh-script{ color:transparent; }
+.gh-poem .gh-script{ color:var(--gh-ink-mint, #1F6F72); }
 .gh-poem__title{
   font-family:var(--serif); font-size:clamp(24px, 3.6vw, 40px);
   font-weight:600; letter-spacing:.08em; line-height:1.65;
@@ -78,7 +237,7 @@
 }
 .gh-poem__link--secondary{
   padding:12px 0; border:0; background:transparent; box-shadow:none;
-  color:var(--gh-dna-deep); font-size:13px;
+  color:var(--gh-ink-mint, #1F6F72); font-size:13px;
 }
 .gh-poem__link--secondary:hover{ box-shadow:none; text-decoration:underline; }
 
@@ -124,8 +283,9 @@
 .gh-about-step__no{
   font-family:var(--serif); font-size:28px; font-weight:600;
   line-height:1; flex:none; width:44px;
-  background:var(--gh-grad-script-light);
-  -webkit-background-clip:text; background-clip:text; color:transparent;
+  color:var(--gh-ink-mint, #1F6F72);
+  background:none;
+  -webkit-text-fill-color:currentColor;
 }
 .gh-about-step h3{
   font-family:var(--serif); font-size:17px; font-weight:600;
@@ -322,7 +482,7 @@
   background:linear-gradient(180deg, rgba(142,237,240,.1) 0%, var(--gh-cream) 180px);
   padding:64px 16px 72px; text-align:center;
 }
-.gh-section .gh-script{ color:transparent; margin-bottom:12px; }
+.gh-section .gh-script{ color:var(--gh-ink-mint, #1F6F72); margin-bottom:12px; }
 .gh-section__title{
   font-family:var(--serif); font-size:clamp(24px, 3.4vw, 38px);
   font-weight:600; letter-spacing:.08em; line-height:1.55;
@@ -337,6 +497,17 @@
 }
 .page-home .faq--teaser [data-faq-root]{ width:100%; }
 .page-home .faq--teaser .faq-more{ text-align:center; }
+/* home.css skipped on homepage — keep FAQ summaries ≥ tap target */
+.page-home .faq--teaser .faq-item{ border-bottom:1px solid rgba(42,36,56,.08); }
+.page-home .faq--teaser .faq-q{
+  display:flex; align-items:center; justify-content:space-between;
+  width:100%; min-height:var(--tap-target-min, 44px);
+  padding:18px 6px; cursor:pointer;
+  font-size:16px; font-weight:500; letter-spacing:.06em;
+  color:var(--gh-ink); list-style:none;
+}
+.page-home .faq--teaser .faq-q::-webkit-details-marker{ display:none; }
+.page-home .faq--teaser .faq-q::marker{ content:""; }
 
 /* ---------- Series grid (Captain-style) ---------- */
 .gh-series-grid{
@@ -363,7 +534,7 @@
 .gh-series-item__icon--4{ background:linear-gradient(160deg, #8eedf0 0%, #e8fcfc 100%); }
 .gh-series-item__icon--5{ background:linear-gradient(160deg, #8eedf0 0%, #daf8f9 100%); }
 .gh-series-item__en{
-  font-size:10px; letter-spacing:.28em; color:#9FB8B8; text-transform:uppercase;
+  font-size:10px; letter-spacing:.28em; color:var(--gh-label, #2F6B6B); text-transform:uppercase;
 }
 .gh-series-item__name{
   font-family:var(--serif); font-size:15px; font-weight:600; letter-spacing:.1em;
@@ -394,7 +565,7 @@
 .gh-series-card:hover .gh-series-card__media img{ transform:scale(1.04); }
 .gh-series-card__body{ padding:18px 18px 20px; flex:1; display:flex; flex-direction:column; }
 .gh-series-card__en{
-  font-size:10px; letter-spacing:.28em; color:#9FB8B8; text-transform:uppercase; margin-bottom:6px;
+  font-size:10px; letter-spacing:.28em; color:var(--gh-label, #2F6B6B); text-transform:uppercase; margin-bottom:6px;
 }
 .gh-series-card__body h3{
   font-family:var(--serif); font-size:17px; font-weight:600; letter-spacing:.08em; margin-bottom:8px;
@@ -404,8 +575,9 @@
 }
 .gh-series-card__more{
   font-size:11px; letter-spacing:.14em; font-weight:500;
-  background:var(--gh-grad-script-light);
-  -webkit-background-clip:text; background-clip:text; color:transparent;
+  color:var(--gh-ink-mint, #1F6F72);
+  background:none;
+  -webkit-text-fill-color:currentColor;
 }
 
 /* ---------- Explore cards (Teamwork-style) ---------- */
@@ -444,8 +616,9 @@
 .gh-card__link{
   font-size:12px; letter-spacing:.14em; font-weight:500;
   margin:0 20px 20px;
-  background:var(--gh-grad-script-light);
-  -webkit-background-clip:text; background-clip:text; color:transparent;
+  color:var(--gh-ink-mint, #1F6F72);
+  background:none;
+  -webkit-text-fill-color:currentColor;
 }
 
 /* ---------- FAQ card (Own-data style) ---------- */
@@ -460,7 +633,7 @@
 .gh-faq-wrap .faq-q{ letter-spacing:.06em; }
 .gh-faq-more{ margin-top:28px; text-align:center; }
 .gh-faq-more .btn-line{
-  border-radius:999px; border-color:rgba(var(--gh-accent-rgb),.45); color:var(--gh-dna-deep);
+  border-radius:999px; border-color:rgba(var(--gh-accent-rgb),.45); color:var(--gh-ink-mint, #1F6F72);
 }
 .gh-faq-more .btn-line:hover{
   background:var(--gh-grad-deep); color:var(--gh-twilight); border-color:transparent;
@@ -504,17 +677,17 @@
   /* Extra soft bleed so scene→body never reads as two panels + a bar */
   box-shadow:0 -56px 64px 28px #0f0e14;
 }
-.gh-cta .gh-script{ color:transparent; }
+.gh-cta .gh-script{ color:#EAFCFC; }
 .gh-cta__title{
   font-family:var(--serif); font-size:clamp(24px, 3.4vw, 36px);
   font-weight:600; letter-spacing:.1em; line-height:1.65;
   margin-bottom:18px;
 }
 .gh-cta__lead{
-  font-size:14.5px; color:rgba(255,255,255,.72); line-height:2.1;
+  font-size:14.5px; color:rgba(255,255,255,.88); line-height:2.1;
   max-width:480px; margin:0 auto 32px;
 }
-.gh-cta .hint{ color:rgba(255,255,255,.45); }
+.gh-cta .hint{ color:rgba(255,255,255,.78); }
 
 /* CTA already black — drop hard footer hairline so band stays continuous */
 .page-home .footer,

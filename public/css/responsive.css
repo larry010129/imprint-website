@@ -79,7 +79,12 @@
   .hc-copy{ padding:0 4px; }
   .hc-copy h1, .hc-copy h2{ max-width:100%; }
   .hc-lead{ max-width:100%; }
-  .hc-arrow{ width:38px; height:38px; }
+  .hc-arrow{
+    width:var(--tap-target-min, 44px);
+    height:var(--tap-target-min, 44px);
+    min-width:var(--tap-target-min, 44px);
+    min-height:var(--tap-target-min, 44px);
+  }
   .hc-arrow svg{ width:15px; height:15px; }
   .hc-prev{ left:10px; } .hc-next{ right:10px; }
   .st-arrow{ width:38px; height:38px; }
