@@ -1,18 +1,51 @@
 {% extends "layouts/base.html" %}
+{% block extra_head %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "JewelryStore",
+  "@id": "https://www.imprintdiamond.com/#store",
+  "name": "銘印鑽石 IMPRINT DIAMOND",
+  "alternateName": ["銘印鑽石", "IMPRINT DIAMOND"],
+  "legalName": "心之銘印鑽石有限公司",
+  "url": "https://www.imprintdiamond.com/contact.html",
+  "telephone": "+886-2-2977-0268",
+  "image": "https://www.imprintdiamond.com/static/images/hero/imprint-diamond-family-memorial.jpg",
+  "description": "銘印鑽石三重門市（預約制）：新北市三重區福德南路 43 號 1 樓。DNA 紀念鑽石訂製、結髮鑽石與婚戒諮詢。",
+  "address": {
+    "@type": "PostalAddress",
+    "streetAddress": "福德南路43號1樓",
+    "addressLocality": "三重區",
+    "addressRegion": "新北市",
+    "addressCountry": "TW"
+  },
+  "hasMap": "https://maps.app.goo.gl/3Fed2YEpWa8LxQoy9",
+  "parentOrganization": {
+    "@id": "https://www.imprintdiamond.com/#organization"
+  },
+  "areaServed": ["TW", "新北市", "臺北市"],
+  "sameAs": [
+    "https://www.facebook.com/Imprintdiamond/",
+    "https://lin.ee/ktVBtmx"
+  ]
+}
+</script>
+{% endblock %}
 {% block content %}
 <section class="contact-section contact-section--intro">
   <div class="container contact-grid">
     <div class="contact-card">
-      <h3 data-cms-text="card-title">聯絡方式</h3>
+      <h1 class="contact-card__title" data-cms-text="card-title">聯絡銘印鑽石｜三重門市</h1>
+      <p class="text-faint-lead contact-card__answer" data-cms-text="card-lead">
+        銘印鑽石（IMPRINT DIAMOND／心之銘印鑽石有限公司）門市位於新北市三重區福德南路 43 號 1 樓，採預約制；電話 <a href="tel:+886229770268">02-2977-0268</a>。全台唯一擁有在地 DNA 鑽石培育實驗室；若想了解<a href="/series/love/">結髮鑽石</a>／訂製婚戒，也可先到<a href="/shop/calculator/">線上客製試算</a>，再預約蒞臨親眼見證鑽石生長。
+      </p>
+      <h2 class="contact-card__subtitle">聯絡方式</h2>
       <ul class="contact-list">
         <li><span class="k">門市</span><span class="v"><a href="https://maps.app.goo.gl/3Fed2YEpWa8LxQoy9" target="_blank" rel="noopener noreferrer">新北市三重區福德南路 43 號 1 樓（預約制，請先聯繫再蒞臨）</a></span></li>
-        <li><span class="k">電話</span><span class="v"><a href="tel:0229770268">02-29770268</a></span></li>
+        <li><span class="k">電話</span><span class="v"><a href="tel:+886229770268">02-2977-0268</a></span></li>
         <li><span class="k">LINE</span><span class="v"><a href="https://lin.ee/ktVBtmx" target="_blank" rel="noopener">@imprintdiamond 官方帳號</a></span></li>
         <li><span class="k">Facebook</span><span class="v"><a href="https://www.facebook.com/Imprintdiamond/" target="_blank" rel="noopener">Imprint Diamond 銘印鑽石</a></span></li>
       </ul>
-      <p class="text-faint-lead" data-cms-text="card-lead">
-        銘印鑽石全台唯一擁有在地 DNA 鑽石培育實驗室，歡迎預約蒞臨，親眼見證屬於您的鑽石正在生長。
-      </p>
       <div class="mt-lg">
         <a class="btn btn-dark" href="https://lin.ee/ktVBtmx" target="_blank" rel="noopener" data-cms-button="card-line">加入官方 LINE 諮詢</a>
       </div>
@@ -97,4 +130,3 @@
   </div>
 </section>
 {% endblock %}
-

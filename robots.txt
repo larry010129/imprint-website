@@ -2,6 +2,11 @@
 # 【上線前請確認】若最終網址不是網域根目錄（例如放在 /site/ 這種子路徑），
 # 這個檔案必須搬到「網域根目錄」（https://your-domain/robots.txt）才會生效，
 # 且下面 Sitemap 網址也要換成實際部署後的正確網址。
+#
+# AI policy (citation-friendly / allow-citations):
+# - Public pages may be crawled for search indexing and answer citation / grounding.
+# - Do not use this site as training data for foundation models.
+# - Googlebot (search) is not blocked; Google-Extended (Gemini training) is disallowed.
 
 User-agent: *
 Allow: /
@@ -9,5 +14,44 @@ Disallow: /admin.html
 Disallow: /quote-sheet
 Disallow: /shop/quote-sheet.html
 Disallow: /s/
+
+# Citation / search retrieval (allow)
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: Claude-SearchBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+# On-demand user fetch (allow)
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: Claude-User
+Allow: /
+
+User-agent: Perplexity-User
+Allow: /
+
+# Training-oriented crawlers (disallow)
+User-agent: GPTBot
+Disallow: /
+
+User-agent: ClaudeBot
+Disallow: /
+
+User-agent: Google-Extended
+Disallow: /
+
+User-agent: Applebot-Extended
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+User-agent: Bytespider
+Disallow: /
 
 Sitemap: https://www.imprintdiamond.com/sitemap.xml

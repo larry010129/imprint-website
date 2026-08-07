@@ -20,7 +20,7 @@ from app.pricing_overrides import (
     canonical_carat,
     load_overrides,
 )
-from app.product_categories import category_addon_price
+from app.product_categories import category_addon_price, category_ring_size_config
 
 DIAMOND_PRICE = {
     "0.1": 24000, "0.2": 48000, "0.3": 79000, "0.5": 98000,
@@ -415,10 +415,33 @@ def _normalize_ring_size(ring_size: Any) -> int | None:
 
 
 def ring_size_addon_from_config(config: dict | None, ring_size: Any) -> int:
-    """Per-size 戒圍品項加價; 0 when size has no row. Does not replace labor addon."""
+    """戒圍加價: step formula, else legacy sizes[] lookup. Does not replace labor addon."""
     size = _normalize_ring_size(ring_size)
     if size is None or not isinstance(config, dict):
         return 0
+
+    step_raw = config.get("pricePerSizeTwd")
+    if step_raw is None:
+        step_raw = config.get("price_per_size_twd")
+    if step_raw not in (None, ""):
+        min_raw = config.get("minSize")
+        if min_raw is None:
+            min_raw = config.get("min_size")
+        if min_raw is None:
+            min_raw = config.get("startSize")
+        if min_raw is None:
+            min_raw = config.get("start_size")
+        min_size = _normalize_ring_size(min_raw)
+        if min_size is None:
+            return 0
+        try:
+            step = float(step_raw)
+        except (TypeError, ValueError):
+            return 0
+        if step < 0:
+            return 0
+        return max(0, int(round((size - min_size) * step)))
+
     for row in config.get("sizes") or []:
         if not isinstance(row, dict):
             continue
@@ -449,6 +472,11 @@ def ring_size_addon_from_config(config: dict | None, ring_size: Any) -> int:
 
 
 def _product_ring_size_config(cur, *, category: str, product_id: str, require_published: bool) -> dict | None:
+    """Effective ring config: category first, then product legacy ring_size_config."""
+    if category == "ring":
+        cat_cfg = category_ring_size_config(cur, category)
+        if isinstance(cat_cfg, dict):
+            return cat_cfg
     resolved = resolve_product_id(
         cur, category=category, type_ref=product_id, require_published=require_published,
     )

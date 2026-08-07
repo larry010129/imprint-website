@@ -78,6 +78,13 @@ def seed_page_copy_slots(cur) -> int:
             on conflict (page_key, slot_key) do update set
               kind = excluded.kind,
               label = excluded.label,
+              -- Keep custom CMS edits; refresh text_value only when still on prior default.
+              text_value = case
+                when page_copy_slots.text_value = page_copy_slots.default_text
+                  or page_copy_slots.text_value = ''
+                then excluded.default_text
+                else page_copy_slots.text_value
+              end,
               default_text = excluded.default_text,
               default_href = excluded.default_href,
               sort_order = excluded.sort_order

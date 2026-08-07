@@ -1,4 +1,4 @@
-# Single Render service: FastAPI + Jinja SSR (HTML + JSON + static)
+# Single Render web service (featured video refreshes lazily on home/about load).
 # Dashboard → Blueprints → Sync after push
 # https://render.com/docs/blueprint-spec
 services:
@@ -14,3 +14,6 @@ services:
         value: "3.12.8"
       - key: NO_OPEN
         value: "1"
+      # Optional: Bearer for POST /api/featured-video-sync (not required; home load auto-refreshes).
+      - key: FEATURED_VIDEO_SYNC_SECRET
+        sync: false

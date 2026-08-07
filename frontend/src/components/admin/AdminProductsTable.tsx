@@ -155,8 +155,8 @@ const columns: ColumnDef<ProductTableRow>[] = [
 export default function AdminProductsTable({
   rows,
   emptyLabel = "此品項尚無商品。",
-  pageSizeOptions = [10, 20, 50, 100],
-  defaultPageSize = 20,
+  pageSizeOptions = [5, 10, 25, 50],
+  defaultPageSize = 10,
   onRendered,
 }: AdminProductsTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -164,6 +164,12 @@ export default function AdminProductsTable({
     pageIndex: 0,
     pageSize: defaultPageSize,
   });
+
+  const rowsKey = rows.map((r) => r.id).join(",");
+
+  useEffect(() => {
+    setPagination((prev) => (prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 }));
+  }, [rowsKey]);
 
   const table = useReactTable({
     data: rows,
@@ -174,11 +180,19 @@ export default function AdminProductsTable({
     getPaginationRowModel: getPaginationRowModel(),
     onPaginationChange: setPagination,
     state: { sorting, pagination },
+    getRowId: (row) => row.id,
   });
 
+  const pageIndex = table.getState().pagination.pageIndex;
+  const pageSize = table.getState().pagination.pageSize;
+  const pageCount = Math.max(table.getPageCount(), 1);
+  const recordCount = rows.length;
+  const from = recordCount === 0 ? 0 : pageIndex * pageSize + 1;
+  const to = Math.min((pageIndex + 1) * pageSize, recordCount);
+
   const { pages, showLeftEllipsis, showRightEllipsis } = usePagination({
-    currentPage: table.getState().pagination.pageIndex + 1,
-    totalPages: Math.max(table.getPageCount(), 1),
+    currentPage: pageIndex + 1,
+    totalPages: pageCount,
     paginationItemsToDisplay: 5,
   });
 
@@ -187,7 +201,6 @@ export default function AdminProductsTable({
   }, [onRendered, rows]);
 
   const visibleRows = table.getRowModel().rows;
-  const showPager = table.getPageCount() > 1;
 
   return (
     <div className="space-y-2">
@@ -240,15 +253,31 @@ export default function AdminProductsTable({
         </TableBody>
       </Table>
 
-      {showPager && (
-        <div className="flex items-center justify-between gap-3 max-sm:flex-col">
-          <p className="flex-1 whitespace-nowrap text-sm text-muted-foreground">
-            第 <span className="text-foreground">{table.getState().pagination.pageIndex + 1}</span> 頁 / 共{" "}
-            <span className="text-foreground">{Math.max(table.getPageCount(), 1)}</span> 頁 · 共 {rows.length} 筆
-            <span className="ap-hint"> · 拖曳排序僅能調整本頁項目</span>
-          </p>
+      <div
+        data-slot="products-table-pagination"
+        className="flex items-center justify-between gap-3 max-sm:flex-col"
+      >
+        <div className="flex flex-1 flex-wrap items-center gap-2">
+          <label className="whitespace-nowrap text-sm text-muted-foreground" htmlFor="ap-page-size">
+            每頁顯示
+          </label>
+          <select
+            id="ap-page-size"
+            className="orders-bulk-select"
+            value={pageSize}
+            aria-label="每頁顯示筆數"
+            onChange={(e) => table.setPageSize(Number(e.target.value))}
+          >
+            {pageSizeOptions.map((size) => (
+              <option key={size} value={size}>
+                {size}
+              </option>
+            ))}
+          </select>
+        </div>
 
-          <div className="grow">
+        <div className="grow">
+          {pageCount > 1 ? (
             <Pagination>
               <PaginationContent>
                 <PaginationItem>
@@ -270,7 +299,7 @@ export default function AdminProductsTable({
                 )}
 
                 {pages.map((page) => {
-                  const isActive = page === table.getState().pagination.pageIndex + 1;
+                  const isActive = page === pageIndex + 1;
                   return (
                     <PaginationItem key={page}>
                       <button
@@ -304,24 +333,20 @@ export default function AdminProductsTable({
                 </PaginationItem>
               </PaginationContent>
             </Pagination>
-          </div>
-
-          <div className="flex flex-1 justify-end">
-            <select
-              className="orders-bulk-select"
-              value={table.getState().pagination.pageSize}
-              aria-label="每頁筆數"
-              onChange={(e) => table.setPageSize(Number(e.target.value))}
-            >
-              {pageSizeOptions.map((size) => (
-                <option key={size} value={size}>
-                  {size} / 頁
-                </option>
-              ))}
-            </select>
-          </div>
+          ) : null}
         </div>
-      )}
+
+        <p className="flex flex-1 justify-end whitespace-nowrap text-sm text-muted-foreground max-sm:justify-center">
+          第{" "}
+          <span className="text-foreground">
+            {from}–{to}
+          </span>{" "}
+          筆，共 <span className="text-foreground">{recordCount}</span> 筆
+          {recordCount > 0 ? (
+            <span className="ap-hint"> · 拖曳排序僅能調整本頁項目</span>
+          ) : null}
+        </p>
+      </div>
     </div>
   );
 }

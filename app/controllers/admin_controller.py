@@ -66,7 +66,7 @@ from app.product_categories import (
     delete_category,
     fetch_categories,
     force_overwrite_category_addon,
-    update_category_addon,
+    update_category_fields,
     update_category_thumb,
     valid_category_slugs,
 )
@@ -705,7 +705,7 @@ async def product_category_delete(request: Request, slug: str) -> JSONResponse:
 
 @router.patch("/product-category/{slug}")
 async def product_category_patch(request: Request, slug: str) -> JSONResponse:
-    """Update category fields (currently 品項加價 addonPrice)."""
+    """Update category fields (品項加價 addonPrice and/or 戒圍 ringSizeConfig)."""
     _require_admin(request)
     body = await request.json()
     if not isinstance(body, dict):
@@ -713,16 +713,26 @@ async def product_category_patch(request: Request, slug: str) -> JSONResponse:
     addon_raw = body.get("addonPrice")
     if addon_raw is None:
         addon_raw = body.get("addon_price_twd")
-    if addon_raw is None:
-        return JSONResponse(status_code=400, content={"error": "缺少品項加價"})
+    has_addon = addon_raw is not None
+    has_ring = "ringSizeConfig" in body or "ring_size_config" in body
+    if not has_addon and not has_ring:
+        return JSONResponse(status_code=400, content={"error": "缺少品項加價或戒圍設定"})
+    ring_raw = body.get("ringSizeConfig")
+    if "ringSizeConfig" not in body:
+        ring_raw = body.get("ring_size_config")
     try:
         with get_transaction() as conn, conn.cursor() as cur:
-            category, error = update_category_addon(cur, slug, addon_raw)
+            category, error = update_category_fields(
+                cur,
+                slug,
+                addon_price_twd=addon_raw if has_addon else ...,
+                ring_size_config=ring_raw if has_ring else ...,
+            )
     except Exception as exc:
         msg = str(exc).strip().split("\n", 1)[0][:200]
         return JSONResponse(
             status_code=500,
-            content={"error": f"更新品項加價失敗：{msg}" if msg else "更新品項加價失敗"},
+            content={"error": f"更新品項失敗：{msg}" if msg else "更新品項失敗"},
         )
     if error:
         return JSONResponse(status_code=400, content={"error": error})
@@ -959,7 +969,8 @@ async def product_update(request: Request) -> JSONResponse:
         ensure_product_style_key_column(cur)
         ensure_product_ring_size_config_column(cur)
         cur.execute(
-            "select id, is_published, first_published_at from products where id = %s",
+            "select id, is_published, first_published_at, ring_size_config "
+            "from products where id = %s",
             (product_id,),
         )
         existing = cur.fetchone()
@@ -968,6 +979,13 @@ async def product_update(request: Request) -> JSONResponse:
 
         if body.get("autosave"):
             cleaned["isPublished"] = bool(existing["is_published"])
+
+        # Category UI owns ringSizeConfig; omit from product form → keep legacy row.
+        if cleaned.get("category") == "ring" and not cleaned.get("ringSizeConfigProvided"):
+            existing_rsc = existing.get("ring_size_config")
+            cleaned["ringSizeConfig"] = (
+                existing_rsc if isinstance(existing_rsc, dict) else None
+            )
 
         first_published = first_published_at_value(existing, cleaned["isPublished"])
         cur.execute(
@@ -2871,3 +2889,72 @@ async def admin_page_image_action(request: Request) -> JSONResponse:
         {"page_key": page_key, "slot_key": slot_key},
     )
     return JSONResponse(content={"ok": True, "pageImage": payload})
+
+
+@router.get("/featured-video")
+def admin_get_featured_video(request: Request) -> JSONResponse:
+    """Read home brand-video gallery (up to 6 YouTube entries)."""
+    _require_admin(request)
+    from app.featured_video import admin_featured_payload, read_featured_video_file
+
+    return JSONResponse(content=admin_featured_payload(read_featured_video_file()))
+
+
+
+@router.post("/featured-video/sync")
+def admin_sync_featured_video(request: Request) -> JSONResponse:
+    """Pull latest embeddable public videos from Imprint Diamond YouTube (FIFO replace)."""
+    user_id = _require_admin(request)
+    from app.featured_video import IMPRINT_CHANNEL_URL, run_featured_video_channel_sync
+
+    payload, error, channel_id = run_featured_video_channel_sync()
+    if error or payload is None:
+        return JSONResponse(status_code=502, content={"error": error or "同步失敗"})
+
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute("select email from users where id = %s", (user_id,))
+        actor = cur.fetchone()
+    log_admin_action(
+        actor["email"] if actor else None,
+        "featured_video_synced",
+        {
+            "count": len(payload.get("videos") or []),
+            "channel_id": channel_id,
+            "primary": (payload.get("videos") or [{}])[0].get("youtubeId"),
+        },
+    )
+    return JSONResponse(
+        content={
+            "ok": True,
+            "channel_url": IMPRINT_CHANNEL_URL,
+            **payload,
+        }
+    )
+
+
+@router.put("/featured-video")
+async def admin_put_featured_video(request: Request) -> JSONResponse:
+    """Replace home brand-video gallery list; validates YouTube IDs/URLs."""
+    user_id = _require_admin(request)
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse(status_code=400, content={"error": "invalid JSON"})
+    if not isinstance(body, dict):
+        return JSONResponse(status_code=400, content={"error": "invalid body"})
+
+    from app.featured_video import save_featured_video_file, validate_admin_body
+
+    saved, err = validate_admin_body(body)
+    if err or saved is None:
+        return JSONResponse(status_code=400, content={"error": err or "invalid body"})
+    payload = save_featured_video_file(saved)
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute("select email from users where id = %s", (user_id,))
+        actor = cur.fetchone()
+    log_admin_action(
+        actor["email"] if actor else None,
+        "featured_video_updated",
+        {"count": len(payload.get("videos") or []), "enabled": payload.get("enabled")},
+    )
+    return JSONResponse(content={"ok": True, **payload})

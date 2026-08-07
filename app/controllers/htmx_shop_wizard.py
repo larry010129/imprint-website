@@ -168,10 +168,17 @@ def _load_full_product(product_id: str, *, include_drafts: bool = False) -> dict
         if not product:
             return None
         variants, images = load_product_children(cur, [product["id"]])
+        from app.product_categories import build_category_meta
+
+        ring_meta = (build_category_meta(cur).get("ring") or {})
+        ring_cat_cfg = ring_meta.get("ringSizeConfig")
+        if not isinstance(ring_cat_cfg, dict):
+            ring_cat_cfg = None
         return build_catalog_product(
             product,
             variants.get(product["id"], []),
             images.get(product["id"], []),
+            category_ring_size_config=ring_cat_cfg,
         )
 
 

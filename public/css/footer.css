@@ -76,7 +76,8 @@
   margin:0;
   line-height:1.7;
   font-size:14px;
-  color:rgba(247,244,241,.8);
+  /* solid cream — avoids sub-AA alpha on dark footer */
+  color:#e8e2db;
 }
 
 .site-footer__heading{
@@ -186,16 +187,38 @@
 .site-footer__legal-note{
   margin:0;
   font-size:12px;
-  color:rgba(247,244,241,.45);
+  /* was rgba(...,.45) ≈4.0:1 vs footer bg — AA needs ≥4.5:1 */
+  color:#d4cdc6;
+}
+
+.site-footer__legal-note a{
+  color:#9cefef;
+  text-decoration:underline;
+  text-underline-offset:2px;
+  transition:color .2s;
+}
+
+.site-footer__legal-note a:hover,
+.site-footer__legal-note a:focus-visible{
+  color:#c5f7f7;
 }
 
 .site-footer__copy{
   margin:0;
   font-size:14px;
+  color:#d4cdc6;
 }
 
 /* Tablet/phone: single-column stacked layout ≤900 */
 @media (max-width:900px){
+  /* Clear fixed contact FAB so last footer links stay tappable/readable */
+  .site-footer__inner{
+    padding-bottom:var(
+      --fab-page-clearance,
+      calc(88px + env(safe-area-inset-bottom,0px))
+    );
+  }
+
   .site-footer__grid{
     grid-template-columns:1fr;
     gap:0;

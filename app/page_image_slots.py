@@ -40,6 +40,27 @@ _SERIES = {
     "family": ("全家福鑽石", "imprint-diamond-family-portrait-jewelry"),
     "heirloom": ("生命鑽石", "imprint-diamond-heirloom-memorial"),
 }
+_HERO_STEM_MAX_W = {
+    "imprint-diamond-newborn-baby-necklace": 2400,
+    "imprint-diamond-pet-memorial-cat": 2400,
+    "imprint-diamond-wedding-couple-ring": 2400,
+    "imprint-diamond-family-portrait-jewelry": 2400,
+    "imprint-diamond-heirloom-memorial": 1500,
+    "imprint-diamond-family-memorial": 2400,
+}
+_LOCAL_HERO_SKY = (
+    "/static/images/ghibli/hero-sky.jpg",
+    "/static/images/ghibli/hero-sky.webp",
+)
+_LOCAL_DNA_BLUE = "/static/images/diamonds/colors/blue.webp"
+_HOME_RESPONSIVE_SLOTS = frozenset(
+    {
+        "poem-visual",
+        "scene-wedding",
+        "cta-scene",
+        *(f"series-{key}" for key in _SERIES),
+    }
+)
 def _slot(
     route: str,
     page: str,
@@ -86,7 +107,8 @@ def _home_specs() -> list[SlotSpec]:
             template,
             (),
             (800, 800),
-            default_url="/static/images/diamonds/colors/blue.png",
+            default_url=_LOCAL_DNA_BLUE,
+            default_webp=_LOCAL_DNA_BLUE,
             image_alt="DNA 鑽石意象",
         )
     )
@@ -313,6 +335,66 @@ def _effective_url(row: dict, key: str, default_key: str) -> str:
     return str(row.get(key) or row.get(default_key) or "").strip()
 
 
+def _is_remote_asset(url: str) -> bool:
+    value = str(url or "").strip().lower()
+    if not value:
+        return False
+    return value.startswith(("http://", "https://", "//")) or "supabase" in value
+
+
+def _hero_stem(url: str) -> str:
+    match = re.search(r"/([^/?#]+?)(?:\.(?:jpe?g|png|webp))?(?:[?#]|$)", str(url or ""), re.I)
+    if not match:
+        return ""
+    return re.sub(r"-\d+w$", "", match.group(1), flags=re.I).lower()
+
+
+def _hero_responsive_srcset(stem: str) -> str:
+    max_w = _HERO_STEM_MAX_W.get(stem, 2400)
+    return (
+        f"/static/images/hero/{stem}-800w.webp 800w, "
+        f"/static/images/hero/{stem}-960w.webp 960w, "
+        f"/static/images/hero/{stem}-1200w.webp 1200w, "
+        f"/static/images/hero/{stem}.webp {max_w}w"
+    )
+
+
+def _prefer_local_home_asset(slot_key: str, url: str, webp: str) -> tuple[str, str]:
+    """Keep homepage LCP/delivery on local static when CMS points at fat remotes."""
+    key = str(slot_key or "")
+    combined = f"{url} {webp}"
+    if key == "hero-sky":
+        # Decorative sky: never ship heavy remote as first-viewport paint.
+        if (
+            not url
+            or _is_remote_asset(url)
+            or _is_remote_asset(webp)
+            or "hero-sky" in combined
+            or "ghibli" in combined
+        ):
+            return _LOCAL_HERO_SKY
+        return url, webp or url
+    if key == "dna-cta-diamond":
+        if (
+            not url
+            or _is_remote_asset(url)
+            or _is_remote_asset(webp)
+            or "colors/blue" in combined.replace("\\", "/")
+        ):
+            return _LOCAL_DNA_BLUE, _LOCAL_DNA_BLUE
+        return url, webp or url
+    if key in _HOME_RESPONSIVE_SLOTS:
+        stem = _hero_stem(webp or url)
+        if stem in _HERO_STEM_MAX_W:
+            return f"/static/images/hero/{stem}-800w.webp", _hero_responsive_srcset(stem)
+    return url, webp
+
+
+def _looks_like_srcset(value: str) -> bool:
+    text = str(value or "").strip()
+    return bool(re.search(r"\s+\d+w\b", text)) or "," in text
+
+
 def _replace_values(html: str, old: str, new: str) -> str:
     if not old or not new or old == new:
         return html
@@ -320,18 +402,38 @@ def _replace_values(html: str, old: str, new: str) -> str:
     return pattern.sub(lambda match: f"{match.group(1)}{new}{match.group(2)}", html)
 
 
+def _replace_attr(tag: str, name: str, value: str) -> str:
+    if _attribute(tag, name):
+        return re.sub(
+            _ATTR_RE.format(name=re.escape(name)),
+            lambda match: f"{name}={match.group(1)}{value}{match.group(1)}",
+            tag,
+            count=1,
+            flags=re.IGNORECASE,
+        )
+    if tag.endswith("/>"):
+        return f'{tag[:-2]} {name}="{value}"/>'
+    if tag.endswith(">"):
+        return f'{tag[:-1]} {name}="{value}">'
+    return tag
+
+
 def _replace_tag_url(tag: str, url: str, webp: str = "") -> str:
-    name = "srcset" if tag.lower().startswith("<source") else "src"
-    if not _attribute(tag, name):
-        name = f"data-{name}"
-    value = webp if tag.lower().startswith("<source") and webp else url
-    return re.sub(
-        _ATTR_RE.format(name=re.escape(name)),
-        lambda match: f'{name}={match.group(1)}{value}{match.group(1)}',
-        tag,
-        count=1,
-        flags=re.IGNORECASE,
-    )
+    if tag.lower().startswith("<source"):
+        name = "srcset" if _attribute(tag, "srcset") else (
+            "data-srcset" if _attribute(tag, "data-srcset") else "srcset"
+        )
+        return _replace_attr(tag, name, webp if webp else url)
+    tag = _replace_attr(tag, "src" if _attribute(tag, "src") else (
+        "data-src" if _attribute(tag, "data-src") else "src"
+    ), url)
+    # Mirror responsive webp onto img srcset so CMS cannot leave full-bleed remotes.
+    if webp and _looks_like_srcset(webp):
+        name = "srcset" if _attribute(tag, "srcset") else (
+            "data-srcset" if _attribute(tag, "data-srcset") else "srcset"
+        )
+        tag = _replace_attr(tag, name, webp)
+    return tag
 
 
 def _replace_indexed(html: str, indexes: tuple[int, ...], url: str, webp: str) -> str:
@@ -385,6 +487,8 @@ def apply_page_image_slots(html: str, route: str, rows: list[dict]) -> str:
             if "display_webp" in row
             else _effective_url(row, "image_webp", "default_image_webp")
         )
+        if route == "/":
+            url, webp = _prefer_local_home_asset(spec.slot_key, url, webp)
         marked = _replace_marked(html, spec.slot_key, url, webp)
         if marked is not None:
             html = marked
@@ -395,4 +499,7 @@ def apply_page_image_slots(html: str, route: str, rows: list[dict]) -> str:
         html = _replace_values(html, str(row.get("default_image_url") or ""), url)
         default_webp = str(row.get("default_image_webp") or "")
         html = _replace_values(html, default_webp, webp or url)
+        # dna-cta default may still be legacy .png in older DB rows.
+        if spec.slot_key == "dna-cta-diamond":
+            html = _replace_values(html, "/static/images/diamonds/colors/blue.png", url)
     return html

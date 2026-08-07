@@ -163,67 +163,71 @@ def _parse_ring_size_int(raw: Any) -> int | None:
 
 
 def _parse_ring_size_config(raw: Any, *, errors: list[str]) -> dict[str, Any] | None:
-    """Normalize ringSizeConfig: startSize + sizes[{size, addonPriceTwd}]."""
+    """Normalize ringSizeConfig: minSize, maxSize, pricePerSizeTwd (startSize alias)."""
     if raw in (None, "", {}):
         return None
     if not isinstance(raw, dict):
         errors.append("invalid ring size config")
         return None
-    start_raw = raw.get("startSize")
-    if start_raw is None:
-        start_raw = raw.get("start_size")
-    start_size = None
-    if start_raw not in (None, ""):
-        start_size = _parse_ring_size_int(start_raw)
-        if start_size is None:
-            errors.append("invalid ring start size")
 
-    sizes_raw = raw.get("sizes")
-    if sizes_raw is None:
-        sizes_raw = raw.get("addons")
-    sizes: list[dict[str, Any]] = []
-    seen: set[int] = set()
-    if sizes_raw in (None, ""):
-        sizes_raw = []
-    if isinstance(sizes_raw, dict):
-        # Support { "9": 500 } map form from older clients.
-        sizes_raw = [
-            {"size": k, "addonPriceTwd": v} for k, v in sizes_raw.items()
-        ]
-    if not isinstance(sizes_raw, list):
-        errors.append("invalid ring size config")
+    min_raw = raw.get("minSize")
+    if min_raw is None:
+        min_raw = raw.get("min_size")
+    if min_raw is None:
+        min_raw = raw.get("startSize")
+    if min_raw is None:
+        min_raw = raw.get("start_size")
+
+    max_raw = raw.get("maxSize")
+    if max_raw is None:
+        max_raw = raw.get("max_size")
+
+    price_raw = raw.get("pricePerSizeTwd")
+    if price_raw is None:
+        price_raw = raw.get("price_per_size_twd")
+
+    has_any = any(v not in (None, "") for v in (min_raw, max_raw, price_raw))
+    if not has_any:
         return None
-    for row in sizes_raw:
-        if not isinstance(row, dict):
-            errors.append("invalid ring size row")
-            continue
-        size = _parse_ring_size_int(row.get("size"))
-        if size is None:
-            errors.append("invalid ring size")
-            continue
-        if size in seen:
-            errors.append(f"duplicate ring size: {size}")
-            continue
-        raw_addon = row.get("addonPriceTwd")
-        if raw_addon in (None, ""):
-            raw_addon = row.get("addon_price_twd")
-        if raw_addon in (None, ""):
-            addon = 0.0
+
+    min_size: int | None = None
+    if min_raw not in (None, ""):
+        min_size = _parse_ring_size_int(min_raw)
+        if min_size is None:
+            errors.append("invalid ring min size")
+    elif max_raw not in (None, "") or price_raw not in (None, ""):
+        errors.append("invalid ring min size")
+
+    max_size: int | None = None
+    if max_raw not in (None, ""):
+        max_size = _parse_ring_size_int(max_raw)
+        if max_size is None:
+            errors.append("invalid ring max size")
+    elif min_size is not None:
+        max_size = RING_SIZE_MAX
+
+    if min_size is not None and max_size is not None and min_size > max_size:
+        errors.append("ring min size exceeds max size")
+
+    price = 0.0
+    if price_raw not in (None, ""):
+        try:
+            price = float(price_raw)
+        except (TypeError, ValueError):
+            errors.append("invalid ring price per size")
+            price = 0.0
         else:
-            try:
-                addon = float(raw_addon)
-            except (TypeError, ValueError):
-                errors.append(f"invalid ring size addon for {size}")
-                continue
-            if addon < 0:
-                errors.append(f"invalid ring size addon for {size}")
-                continue
-        seen.add(size)
-        sizes.append({"size": size, "addonPriceTwd": addon})
-    sizes.sort(key=lambda r: r["size"])
-    if start_size is None and not sizes:
+            if price < 0:
+                errors.append("invalid ring price per size")
+
+    if min_size is None:
         return None
-    return {"startSize": start_size, "sizes": sizes}
+    return {
+        "minSize": min_size,
+        "maxSize": max_size if max_size is not None else RING_SIZE_MAX,
+        "pricePerSizeTwd": price,
+        "startSize": min_size,
+    }
 
 
 def _parse_length_weights(raw: Any, *, errors: list[str]) -> dict[str, dict[str, float]] | None:
@@ -654,12 +658,16 @@ def validate_product_fields(body: dict | None, *, valid_categories: set[str] | N
     cleaned["lengthWeights"] = length_weights
 
     ring_size_config = None
+    ring_size_provided = False
     if category == "ring":
-        raw_rsc = body.get("ringSizeConfig")
-        if raw_rsc is None:
-            raw_rsc = body.get("ring_size_config")
-        ring_size_config = _parse_ring_size_config(raw_rsc, errors=errors)
+        if "ringSizeConfig" in body or "ring_size_config" in body:
+            ring_size_provided = True
+            raw_rsc = body.get("ringSizeConfig")
+            if raw_rsc is None:
+                raw_rsc = body.get("ring_size_config")
+            ring_size_config = _parse_ring_size_config(raw_rsc, errors=errors)
     cleaned["ringSizeConfig"] = ring_size_config
+    cleaned["ringSizeConfigProvided"] = ring_size_provided
 
     images: list[dict] = []
     for img in body.get("images") or []:
@@ -751,8 +759,17 @@ def _format_product_errors(errors: list[str]) -> str:
         if err == "invalid ring size config":
             parts.append("戒圍設定無效")
             continue
-        if err == "invalid ring start size":
-            parts.append("起始戒圍無效（須為 5–18）")
+        if err == "invalid ring min size" or err == "invalid ring start size":
+            parts.append("最小戒圍無效（須為 5–18）")
+            continue
+        if err == "invalid ring max size":
+            parts.append("最大戒圍無效（須為 5–18）")
+            continue
+        if err == "ring min size exceeds max size":
+            parts.append("最小戒圍不可大於最大戒圍")
+            continue
+        if err == "invalid ring price per size":
+            parts.append("每圍加價無效（須 ≥ 0）")
             continue
         if err == "invalid ring size" or err == "invalid ring size row":
             parts.append("戒圍尺寸無效（須為 5–18）")

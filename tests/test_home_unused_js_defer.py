@@ -36,7 +36,7 @@ def test_home_defers_htmx_gtag_and_extras(client):
 
     assert "HOME_EXTRAS_MS = 10000" in html
     assert "home-wall.js?v=4" in html
-    assert "home-banners.js?v=8" in html
+    assert "home-banners.js?v=9" in html
 
     assert "main.js?v=2.9" in html
     assert "ringflip.js" not in html

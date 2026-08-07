@@ -306,7 +306,13 @@ def build_catalog_product_lite(product: dict, variants: list[dict], images: list
     return entry
 
 
-def build_catalog_product(product: dict, variants: list[dict], images: list[dict]) -> dict:
+def build_catalog_product(
+    product: dict,
+    variants: list[dict],
+    images: list[dict],
+    *,
+    category_ring_size_config: dict | None = None,
+) -> dict:
     golds = _sort_golds({_canonical_gold_key(v["gold"]) for v in variants})
     carats = _sort_carats({_variant_carat_key(v["carat"]) for v in variants})
     if product.get("category") == "diamond":
@@ -378,20 +384,86 @@ def build_catalog_product(product: dict, variants: list[dict], images: list[dict
         "chainType": product.get("chain_type") or (
             DEFAULT_NECKLACE_TYPE if product.get("category") == "chain" else None
         ),
-        "ringSizeConfig": _ring_size_config_for_catalog(product),
+        "ringSizeConfig": _ring_size_config_for_catalog(
+            product, category_ring_size_config=category_ring_size_config
+        ),
         "draft": not product["is_published"],
     }
 
 
-def _ring_size_config_for_catalog(product: dict) -> dict | None:
-    """Expose ring start size + size addons to shop; other categories omit."""
+def _ring_size_config_for_catalog(
+    product: dict,
+    *,
+    category_ring_size_config: dict | None = None,
+) -> dict | None:
+    """Expose ring min/max/step (or legacy sizes[]) to shop; other categories omit.
+
+    Prefer category-level config; fall back to product ring_size_config (legacy).
+    """
     if product.get("category") != "ring":
         return None
-    raw = product.get("ring_size_config")
-    if raw is None:
-        raw = product.get("ringSizeConfig")
-    if not isinstance(raw, dict):
-        return None
+    sources: list[dict] = []
+    if isinstance(category_ring_size_config, dict):
+        sources.append(category_ring_size_config)
+    product_raw = product.get("ring_size_config")
+    if product_raw is None:
+        product_raw = product.get("ringSizeConfig")
+    if isinstance(product_raw, dict):
+        sources.append(product_raw)
+    for raw in sources:
+        normalized = _normalize_ring_config_dict(raw)
+        if normalized is not None:
+            return normalized
+    return None
+
+
+def _normalize_ring_config_dict(raw: dict) -> dict | None:
+    has_step = any(
+        key in raw
+        for key in (
+            "pricePerSizeTwd",
+            "price_per_size_twd",
+            "minSize",
+            "min_size",
+            "maxSize",
+            "max_size",
+        )
+    )
+    if has_step:
+        min_raw = raw.get("minSize")
+        if min_raw is None:
+            min_raw = raw.get("min_size")
+        if min_raw is None:
+            min_raw = raw.get("startSize")
+        if min_raw is None:
+            min_raw = raw.get("start_size")
+        max_raw = raw.get("maxSize")
+        if max_raw is None:
+            max_raw = raw.get("max_size")
+        price_raw = raw.get("pricePerSizeTwd")
+        if price_raw is None:
+            price_raw = raw.get("price_per_size_twd")
+        try:
+            min_out = int(round(float(min_raw))) if min_raw not in (None, "") else None
+        except (TypeError, ValueError):
+            min_out = None
+        try:
+            max_out = int(round(float(max_raw))) if max_raw not in (None, "") else None
+        except (TypeError, ValueError):
+            max_out = None
+        try:
+            price_out = float(price_raw) if price_raw not in (None, "") else 0.0
+        except (TypeError, ValueError):
+            price_out = 0.0
+        if min_out is None and max_out is None and price_raw in (None, ""):
+            return None
+        return {
+            "minSize": min_out,
+            "maxSize": max_out,
+            "pricePerSizeTwd": price_out,
+            "startSize": min_out,
+        }
+
     start = raw.get("startSize")
     if start is None:
         start = raw.get("start_size")
@@ -468,13 +540,27 @@ def build_catalog_response(
         else build_catalog_product_lite
     )
     categories: dict[str, list[dict]] = {}
+    ring_cat_cfg = None
+    if category_meta:
+        ring_meta = category_meta.get("ring") or {}
+        ring_cat_cfg = ring_meta.get("ringSizeConfig") or ring_meta.get("ring_size_config")
+        if not isinstance(ring_cat_cfg, dict):
+            ring_cat_cfg = None
     for product in products:
         product_id = product["id"]
-        entry = builder(
-            product,
-            variants_by_product.get(product_id, []),
-            images_by_product.get(product_id, []),
-        )
+        if normalize_catalog_detail(detail) == "full":
+            entry = builder(
+                product,
+                variants_by_product.get(product_id, []),
+                images_by_product.get(product_id, []),
+                category_ring_size_config=ring_cat_cfg,
+            )
+        else:
+            entry = builder(
+                product,
+                variants_by_product.get(product_id, []),
+                images_by_product.get(product_id, []),
+            )
         categories.setdefault(product["category"], []).append(entry)
 
     present = list(categories.keys())

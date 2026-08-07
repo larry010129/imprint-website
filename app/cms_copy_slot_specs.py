@@ -62,12 +62,12 @@ def copy_slot_specs() -> tuple[dict[str, Any], ...]:
 def _home_slots() -> list[dict[str, Any]]:
     p = "/"
     return [
-        _t(p, "hero-title", "首頁・主視覺標題", "把最深的情感，銘印成永恆", 1),
+        _t(p, "hero-title", "首頁・主視覺標題", "銘印鑽石｜把最深的情感，銘印成永恆", 1),
         _t(
             p,
             "hero-lead",
             "首頁・主視覺引言",
-            "全台唯一擁有在地 DNA 鑽石培育實驗室的紀念鑽石品牌。萃取毛髮、骨灰中的元素，於台灣在地培育成專屬於您的紀念鑽石，附鑑定保障與專屬影音紀念盒。",
+            "銘印鑽石是全台唯一擁有在地 DNA 鑽石培育實驗室的紀念鑽石品牌。萃取毛髮、骨灰中的元素，於台灣在地（新北三重門市預約制）培育成專屬於您的紀念鑽石，附鑑定保障與專屬影音紀念盒。",
             2,
         ),
         _btn(p, "hero-cta", "首頁・主視覺主按鈕", "開始訂製", "/shop/calculator/", 3),
@@ -190,13 +190,13 @@ def _home_slots() -> list[dict[str, Any]]:
 def _about_slots() -> list[dict[str, Any]]:
     p = "/about.html"
     return [
-        _t(p, "hero-overline", "品牌故事・眉標", "IMPRINT DIAMOND · TAIWAN", 1),
-        _t(p, "hero-title", "品牌故事・主標", "在您準備好的時候，我們都在。", 2),
+        _t(p, "hero-overline", "品牌故事・眉標", "銘印鑽石 IMPRINT DIAMOND · TAIWAN", 1),
+        _t(p, "hero-title", "品牌故事・主標", "銘印鑽石｜在您準備好的時候，我們都在。", 2),
         _t(
             p,
             "hero-lead",
             "品牌故事・引言",
-            "銘印鑽石陪伴您走過一段無法催促的決定。我們存在，是為了讓思念可以被好好安放——成為您能觸碰、能珍藏的形式，而不帶任何壓力。",
+            "銘印鑽石（心之銘印鑽石有限公司）陪伴您走過一段無法催促的決定。我們存在，是為了讓思念可以被好好安放——成為您能觸碰、能珍藏的形式，而不帶任何壓力。門市位於新北市三重區，採預約制。",
             3,
         ),
         _btn(p, "hero-scroll", "品牌故事・閱讀承諾", "閱讀我們的承諾", "#story-begins", 4),
@@ -282,12 +282,12 @@ def _series_slots() -> list[dict[str, Any]]:
 def _contact_slots() -> list[dict[str, Any]]:
     p = "/contact.html"
     return [
-        _t(p, "card-title", "聯絡・卡片標題", "聯絡方式", 1),
+        _t(p, "card-title", "聯絡・卡片標題", "聯絡銘印鑽石｜三重門市", 1),
         _t(
             p,
             "card-lead",
             "聯絡・卡片說明",
-            "銘印鑽石全台唯一擁有在地 DNA 鑽石培育實驗室，歡迎預約蒞臨，親眼見證屬於您的鑽石正在生長。",
+            "銘印鑽石（IMPRINT DIAMOND／心之銘印鑽石有限公司）門市位於新北市三重區福德南路 43 號 1 樓，採預約制；電話 02-2977-0268。全台唯一擁有在地 DNA 鑽石培育實驗室；若想了解結髮鑽石／訂製婚戒，也可先到線上客製試算，再預約蒞臨親眼見證鑽石生長。",
             2,
         ),
         _btn(p, "card-line", "聯絡・LINE按鈕", "加入官方 LINE 諮詢", "https://lin.ee/ktVBtmx", 3),

@@ -3,20 +3,16 @@
     "route": "/",
     "template": "pages/index.html",
     "title": "銘印鑽石 IMPRINT DIAMOND｜台灣在地 DNA 紀念鑽石訂製",
-    "description": "銘印鑽石｜全台唯一擁有在地DNA鑽石培育實驗室的紀念鑽石品牌。萃取毛髮、骨灰中的元素，於台灣在地培育成專屬於您的紀念鑽石(骨灰鑽石,毛髮鑽石,生命鑽石,寵物鑽石,寶寶鑽石)，附鑑定保障與專屬影音紀念盒，預約制一對一顧問服務。",
+    "description": "銘印鑽石｜全台唯一在地 DNA 鑽石培育實驗室。毛髮、骨灰可製成專屬紀念鑽石（骨灰、毛髮、生命、寵物、初生）；採 CVD 製程，附鑑定保障與影音紀念盒，三重預約制顧問。",
     "canonical_path": "",
     "og_title": "銘印鑽石 IMPRINT DIAMOND｜台灣在地 DNA 紀念鑽石訂製",
-    "og_description": "全台唯一擁有在地DNA鑽石培育實驗室的紀念鑽石品牌。萃取毛髮、骨灰中的元素，於台灣在地培育成專屬於您的紀念鑽石，附鑑定保障與專屬影音紀念盒，預約制一對一顧問服務。",
+    "og_description": "全台唯一在地 DNA 鑽石培育實驗室。毛髮、骨灰可製成專屬紀念鑽石；CVD 製程、鑑定保障，三重預約制顧問。",
     "og_image": "static/images/hero/imprint-diamond-family-memorial.jpg",
     "breadcrumbs": [],
     "mvc_page": null,
     "extra_body_class": "page-home",
     "content_fragment": null,
-    "extra_head_blocks": [
-      "{\n  \"@context\": \"https://schema.org\",\n  \"@type\": \"JewelryStore\",\n  \"name\": \"銘印鑽石 IMPRINT DIAMOND\",\n  \"alternateName\": \"心之銘印鑽石有限公司\",\n  \"url\": \"https://www.imprintdiamond.com/\",\n  \"image\": \"https://www.imprintdiamond.com/static/images/hero/imprint-diamond-family-memorial.jpg\",\n  \"telephone\": \"+886-2-2977-0268\",\n  \"priceRange\": \"NT$24,000–NT$250,000+\",\n  \"description\": \"全台唯一擁有在地DNA鑽石培育實驗室的紀念鑽石品牌，萃取毛髮、骨灰中的元素，於台灣在地培育成專屬紀念DNA鑽石(毛髮鑽石,骨灰鑽石,寵物鑽石,生命鑽石)。\",\n  \"address\": {\n    \"@type\": \"PostalAddress\",\n    \"streetAddress\": \"福德南路43號1樓\",\n    \"addressLocality\": \"三重區\",\n    \"addressRegion\": \"新北市\",\n    \"addressCountry\": \"TW\"\n  },\n  \"hasMap\": \"https://www.google.com/maps/search/?api=1&query=%E6%96%B0%E5%8C%97%E5%B8%82%E4%B8%89%E9%87%8D%E5%8D%80%E7%A6%8F%E5%BE%B7%E5%8D%97%E8%B7%AF43%E8%99%9F1%E6%A8%93\",\n  \"sameAs\": [\n    \"https://www.facebook.com/Imprintdiamond/\"\n  ]\n}",
-      "{\n  \"@context\": \"https://schema.org\",\n  \"@type\": \"WebSite\",\n  \"name\": \"銘印鑽石 IMPRINT DIAMOND\",\n  \"url\": \"https://www.imprintdiamond.com/\",\n  \"inLanguage\": \"zh-Hant-TW\"\n}",
-      "{\n  \"@context\": \"https://schema.org\",\n  \"@type\": \"FAQPage\",\n  \"mainEntity\": [\n    {\n      \"@type\": \"Question\",\n      \"name\": \"需要準備多少毛髮或骨灰？\",\n      \"acceptedAnswer\": {\n        \"@type\": \"Answer\",\n        \"text\": \"毛髮約需一顆雞蛋的大小；骨灰約需 3 至 5 公克。若不確定份量是否足夠，請先透過官方 LINE 與顧問確認——不需要先寄送樣本。每一份樣本都以單一客戶、單一培育流程處理。\"\n      }\n    },\n    {\n      \"@type\": \"Question\",\n      \"name\": \"製作一顆紀念鑽石需要多久？\",\n      \"acceptedAnswer\": {\n        \"@type\": \"Answer\",\n        \"text\": \"約 3 個月（70–90 天）。培育鑽石需要時間讓晶體自然生長，每一顆的培育過程都獨立進行。完工後，會連同銘印保證卡與專屬影音紀念盒一併交付。\"\n      }\n    },\n    {\n      \"@type\": \"Question\",\n      \"name\": \"樣本會送到國外處理嗎？\",\n      \"acceptedAnswer\": {\n        \"@type\": \"Answer\",\n        \"text\": \"全程在台灣完成。銘印鑽石是全台唯一擁有在地 DNA 鑽石培育實驗室的紀念鑽石品牌，從萃取、培育到成品，您珍視的毛髮與骨灰無需經歷國際運送。\"\n      }\n    },\n    {\n      \"@type\": \"Question\",\n      \"name\": \"完成的鑽石有鑑定證書嗎？\",\n      \"acceptedAnswer\": {\n        \"@type\": \"Answer\",\n        \"text\": \"每顆鑽石皆附銘印保證卡；0.20 克拉以上的鑽石，可代送 GIA 或 IGI 國際鑑定機構出具證書（費用另計），讓這顆鑽石在未來傳承時，有正式的身分證明。\"\n      }\n    },\n    {\n      \"@type\": \"Question\",\n      \"name\": \"鑽石可以鑲嵌成戒指或項鍊嗎？\",\n      \"acceptedAnswer\": {\n        \"@type\": \"Answer\",\n        \"text\": \"可以。鑽石完成後，可鑲嵌為戒指、項鍊、耳環或手鍊，材質可選 18K 金、14K 金、9K 金或 PT950 鉑金，由專屬顧問與您討論設計與預算。\"\n      }\n    },\n    {\n      \"@type\": \"Question\",\n      \"name\": \"如何開始訂製？\",\n      \"acceptedAnswer\": {\n        \"@type\": \"Answer\",\n        \"text\": \"銘印鑽石採預約制。請透過官方 LINE 預約，由專屬顧問一對一討論需求、確認樣本份量與報價，再進行採樣與培育。門市：新北市三重區福德南路 43 號 1 樓。\"\n      }\n    }\n  ]\n}"
-    ],
+    "extra_head_blocks": [],
     "body_key": "home",
     "layout": "site",
     "main_class": "",
@@ -74,11 +70,11 @@
   {
     "route": "/about.html",
     "template": "pages/about.html",
-    "title": "品牌故事｜銘印鑽石 — 紀念鑽石的陪伴與託付",
-    "description": "銘印鑽石品牌故事：我們相信思念可以有具體的形狀，也理解每一段考慮期都值得被尊重。全程在地託付、不催促成交，陪伴您在自己的步調裡做出決定。DNA 鑽石製程詳見鑽石知識頁。",
+    "title": "銘印鑽石品牌故事｜紀念鑽石的陪伴與託付",
+    "description": "銘印鑽石（IMPRINT DIAMOND／心之銘印鑽石有限公司）品牌故事：我們相信思念可以有具體的形狀，也理解每一段考慮期都值得被尊重。新北三重預約制門市、全程在地託付、不催促成交。DNA 鑽石製程詳見鑽石知識頁。",
     "canonical_path": "about.html",
-    "og_title": "品牌故事－銘印鑽石 IMPRINT DIAMOND",
-    "og_description": "在您準備好的時候，我們都在。紀念鑽石的陪伴、託付與服務承諾。",
+    "og_title": "銘印鑽石品牌故事｜IMPRINT DIAMOND",
+    "og_description": "銘印鑽石｜在您準備好的時候，我們都在。新北三重預約制門市；紀念鑽石的陪伴、託付與服務承諾。",
     "og_image": "static/images/legacy-live/styles/taiwan-local-lab.jpg",
     "breadcrumbs": [
       [
@@ -203,11 +199,11 @@
   {
     "route": "/contact.html",
     "template": "pages/contact.html",
-    "title": "聯絡我們｜門市地址與預約方式－銘印鑽石 IMPRINT DIAMOND",
-    "description": "銘印鑽石聯絡資訊：新北市三重區福德南路43號1樓（預約制），官方 LINE 一對一顧問諮詢。全台唯一在地 DNA 鑽石培育實驗室，歡迎預約蒞臨。",
+    "title": "銘印鑽石聯絡我們｜三重門市・02-2977-0268",
+    "description": "銘印鑽石（IMPRINT DIAMOND）聯絡資訊：新北市三重區福德南路 43 號 1 樓（預約制），電話 02-2977-0268。訂製婚戒、結髮鑽石或專屬試算，歡迎官方 LINE 一對一預約，或於本頁留言。",
     "canonical_path": "contact.html",
-    "og_title": "聯絡我們－銘印鑽石 IMPRINT DIAMOND",
-    "og_description": "新北市三重區福德南路43號1樓（預約制），可透過官方 LINE 預約。",
+    "og_title": "銘印鑽石聯絡我們｜三重門市預約制",
+    "og_description": "銘印鑽石｜新北市三重區福德南路 43 號 1 樓（預約制），電話 02-2977-0268。訂製婚戒與結髮鑽石歡迎 LINE 預約。",
     "og_image": "static/images/hero/imprint-diamond-family-memorial.jpg",
     "breadcrumbs": [
       [
@@ -835,20 +831,16 @@
   {
     "route": "/what-is-dna-diamond.html",
     "template": "pages/what-is-dna-diamond.html",
-    "title": "什麼是 DNA 鑽石｜製作流程與鑑定保障－銘印鑽石 IMPRINT DIAMOND",
-    "description": "DNA 鑽石是萃取毛髮或骨灰中的元素，於台灣在地實驗室培育而成的專屬鑽石。完整說明製作流程、所需樣本份量、70–90 天培育週期與 GIA／IGI 鑑定保障。",
+    "title": "什麼是 DNA 鑽石｜CVD 製程與鑑定保障－銘印鑽石",
+    "description": "DNA 鑽石是萃取毛髮或骨灰中的元素，於台灣以 CVD 等製程培育的專屬鑽石。本頁說明樣本份量、70–90 天培育週期，以及 0.20 克拉以上可代送 GIA／IGI 鑑定。",
     "canonical_path": "what-is-dna-diamond.html",
-    "og_title": "DNA 鑽石的誕生｜製作流程與鑑定保障－銘印鑽石",
-    "og_description": "從一縷髮絲，到一顆會發光的鑽石——完整的製作過程與品質保障說明。",
+    "og_title": "什麼是 DNA 鑽石｜CVD 製程與鑑定保障－銘印鑽石",
+    "og_description": "台灣 DNA 鑽石怎麼做？說明 CVD 培育、樣本份量、時程與可代送 GIA／IGI 鑑定。",
     "og_image": "static/images/hero/imprint-diamond-family-memorial.jpg",
     "breadcrumbs": [
       [
         "首頁",
         "/"
-      ],
-      [
-        "DNA 鑽石",
-        "/price.html"
       ],
       [
         "什麼是 DNA 鑽石",
@@ -990,7 +982,7 @@
         "src": "/static/js/shop-catalog-data.js?v=7"
       },
       {
-        "src": "/static/js/shop-pricing-local.js?v=19"
+        "src": "/static/js/shop-pricing-local.js?v=20"
       },
       {
         "src": "/static/js/shop-i18n.js?v=16"
@@ -1002,7 +994,7 @@
         "src": "/static/js/shop-terms.js?v=4"
       },
       {
-        "src": "/static/js/shop.js?v=145"
+        "src": "/static/js/shop.js?v=146"
       }
     ],
     "head_extras": []
@@ -1118,11 +1110,11 @@
   {
     "route": "/jewelry/rings/",
     "template": "pages/jewelry_category.html",
-    "title": "戒指系列｜DNA紀念鑽石戒指訂製－銘印鑽石 IMPRINT DIAMOND",
-    "description": "銘印鑽石戒指系列：以胎髮、髮絲、寵物毛髮或紀念物培育專屬 DNA 鑽石，打造獨一無二的戒指。線上選擇克拉數、顏色、形狀與材質，立即試算參考價格，全程台灣在地實驗室培育。",
+    "title": "客製化鑽石戒指｜DNA 紀念戒－銘印鑽石 IMPRINT DIAMOND",
+    "description": "客製化鑽石戒指｜以胎髮、髮絲或毛髮培育 DNA 鑽石，線上選克拉、顏色、形狀與戒台材質並試算。適合結髮婚戒與紀念戒；亦可搭配線上客製試算，全程台灣在地培育。",
     "canonical_path": "jewelry/rings/",
-    "og_title": "戒指系列｜DNA紀念鑽石戒指訂製－銘印鑽石 IMPRINT DIAMOND",
-    "og_description": "銘印鑽石戒指系列：以胎髮、髮絲、寵物毛髮或紀念物培育專屬 DNA 鑽石，打造獨一無二的戒指。線上選擇克拉數、顏色、形狀與材質，立即試算參考價格，全程台灣在地實驗室培育。",
+    "og_title": "客製化鑽石戒指｜DNA 紀念戒－銘印鑽石",
+    "og_description": "客製化鑽石戒指：DNA 紀念鑽搭配戒台，線上試算，適合結髮婚戒與紀念戒。",
     "og_image": "static/images/products/category-ring.jpg",
     "breadcrumbs": [
       [
@@ -1794,11 +1786,11 @@
   {
     "route": "/series/family/",
     "template": "pages/series_detail.html",
-    "title": "全家福鑽石｜全家人髮絲紀念鑽石訂製－銘印鑽石 IMPRINT DIAMOND",
-    "description": "全家福鑽石｜集合全家人的髮絲，培育成一顆象徵家族連結的鑽石。全程台灣在地培育，讓家的記憶成為可以傳承的珍藏。線上選擇克拉數、形狀與飾品款式，立即試算。",
+    "title": "全家福鑽石｜全家人髮絲紀念鑽石－銘印鑽石 IMPRINT DIAMOND",
+    "description": "全家福鑽石｜集合全家人髮絲，培育成一顆象徵家族連結的紀念鑽石。全程台灣在地培育；線上試算克拉與款式，讓「我們一直都在一起」成為可以傳承的珍藏。",
     "canonical_path": "series/family/",
-    "og_title": "全家福鑽石｜全家人髮絲紀念鑽石訂製－銘印鑽石",
-    "og_description": "集合全家人的髮絲，凝成一顆象徵家族連結的鑽石，讓家的記憶可以傳承。",
+    "og_title": "全家福鑽石｜全家人髮絲紀念鑽石－銘印鑽石",
+    "og_description": "集合全家人髮絲凝成一顆鑽石，讓家的記憶成為可以傳承的珍藏。",
     "og_image": "static/images/hero/imprint-diamond-family-portrait-jewelry.jpg",
     "breadcrumbs": [
       [
@@ -1806,18 +1798,20 @@
         "/"
       ],
       [
-        "DNA 鑽石",
-        "/price.html"
+        "五大系列",
+        "/series.html"
       ],
       [
-        "寵物鑽石",
-        "/series/family/"
+        "全家福鑽石",
+        null
       ]
     ],
     "mvc_page": null,
     "extra_body_class": null,
     "content_fragment": "series/family.html",
-    "extra_head_blocks": [],
+    "extra_head_blocks": [
+      "{\n  \"@context\": \"https://schema.org\",\n  \"@type\": \"FAQPage\",\n  \"mainEntity\": [\n    {\n      \"@type\": \"Question\",\n      \"name\": \"全家福鑽石要收集哪些人的頭髮？\",\n      \"acceptedAnswer\": {\n        \"@type\": \"Answer\",\n        \"text\": \"可集合每一位家人的髮絲共同培育；合計約一顆雞蛋大小即可。人數較多時，請先 LINE 與顧問討論比例與份量。\"\n      }\n    },\n    {\n      \"@type\": \"Question\",\n      \"name\": \"適合什麼時候訂製？\",\n      \"acceptedAnswer\": {\n        \"@type\": \"Answer\",\n        \"text\": \"常見於長輩生日、結婚紀念或家族團聚時訂製，把「一家人」留成可傳承的紀念鑽石。\"\n      }\n    },\n    {\n      \"@type\": \"Question\",\n      \"name\": \"可以只做一顆給全家族嗎？\",\n      \"acceptedAnswer\": {\n        \"@type\": \"Answer\",\n        \"text\": \"可以。全家福鑽石通常做成一顆共享的家族信物，也可依需求討論顆數與鑲嵌方式。\"\n      }\n    },\n    {\n      \"@type\": \"Question\",\n      \"name\": \"製作需要多久？\",\n      \"acceptedAnswer\": {\n        \"@type\": \"Answer\",\n        \"text\": \"全程台灣在地實驗室，約 70–90 天交付，附銘印保證卡與專屬影音紀念盒。\"\n      }\n    }\n  ]\n}"
+    ],
     "body_key": "series__family",
     "layout": "site",
     "main_class": "",
@@ -1828,11 +1822,11 @@
   {
     "route": "/series/first-love/",
     "template": "pages/series_detail.html",
-    "title": "滿月鑽石｜寶寶胎髮紀念鑽石訂製－銘印鑽石 IMPRINT DIAMOND",
-    "description": "滿月鑽石｜以寶寶的胎髮培育專屬紀念鑽石，珍藏生命最初的印記。全程台灣在地培育，可鑲嵌為項鍊、戒指，成為陪伴孩子一生的傳家珍藏。線上選擇克拉數、形狀與飾品款式，立即試算。",
+    "title": "滿月鑽石｜初生胎髮紀念鑽石－銘印鑽石 IMPRINT DIAMOND",
+    "description": "滿月鑽石｜以寶寶胎髮培育初生紀念鑽石，珍藏生命最初印記。全程台灣在地培育，可鑲嵌項鍊或戒指；線上試算克拉與款式，附銘印保證卡與影音紀念盒。",
     "canonical_path": "series/first-love/",
-    "og_title": "滿月鑽石｜寶寶胎髮紀念鑽石訂製－銘印鑽石",
-    "og_description": "以寶寶的胎髮培育專屬紀念鑽石，珍藏生命最初的印記，成為陪伴孩子一生的傳家珍藏。",
+    "og_title": "滿月鑽石｜初生胎髮紀念鑽石－銘印鑽石",
+    "og_description": "滿月／初生胎髮紀念鑽石：珍藏生命最初印記，台灣在地培育。",
     "og_image": "static/images/hero/imprint-diamond-newborn-baby-necklace.jpg",
     "breadcrumbs": [
       [
@@ -1840,18 +1834,20 @@
         "/"
       ],
       [
-        "DNA 鑽石",
-        "/price.html"
+        "五大系列",
+        "/series.html"
       ],
       [
         "滿月鑽石",
-        "/series/first-love/"
+        null
       ]
     ],
     "mvc_page": null,
     "extra_body_class": null,
     "content_fragment": "series/first-love.html",
-    "extra_head_blocks": [],
+    "extra_head_blocks": [
+      "{\n  \"@context\": \"https://schema.org\",\n  \"@type\": \"FAQPage\",\n  \"mainEntity\": [\n    {\n      \"@type\": \"Question\",\n      \"name\": \"滿月鑽石和初生鑽石是同一系列嗎？\",\n      \"acceptedAnswer\": {\n        \"@type\": \"Answer\",\n        \"text\": \"滿月鑽石系列即以寶寶胎髮培育的初生紀念鑽石，珍藏生命最初印記；名稱因紀念時機（滿月剃髮）而常用「滿月鑽石」。\"\n      }\n    },\n    {\n      \"@type\": \"Question\",\n      \"name\": \"胎髮要準備多少？\",\n      \"acceptedAnswer\": {\n        \"@type\": \"Answer\",\n        \"text\": \"約一顆雞蛋大小即可。若剃髮量不足，請先透過官方 LINE 與顧問確認，不必先寄送樣本。\"\n      }\n    },\n    {\n      \"@type\": \"Question\",\n      \"name\": \"可以做成項鍊嗎？\",\n      \"acceptedAnswer\": {\n        \"@type\": \"Answer\",\n        \"text\": \"可以。完成後可鑲嵌為項鍊、戒指等，成為陪伴孩子成長的傳家珍藏。\"\n      }\n    },\n    {\n      \"@type\": \"Question\",\n      \"name\": \"製作需要多久？\",\n      \"acceptedAnswer\": {\n        \"@type\": \"Answer\",\n        \"text\": \"全程台灣在地實驗室，約 70–90 天交付，附銘印保證卡與專屬影音紀念盒。\"\n      }\n    }\n  ]\n}"
+    ],
     "body_key": "series__first-love",
     "layout": "site",
     "main_class": "",
@@ -1862,11 +1858,11 @@
   {
     "route": "/series/heirloom/",
     "template": "pages/series_detail.html",
-    "title": "生命鑽石｜親人毛髮骨灰紀念鑽石訂製－銘印鑽石 IMPRINT DIAMOND",
-    "description": "生命鑽石｜以摯愛親人的毛髮或骨灰（3至5公克）培育紀念鑽石，讓思念有永恆的形狀。全台唯一在地實驗室，樣本不送海外。線上選擇克拉數、形狀與飾品款式，立即試算。",
+    "title": "骨灰鑽石｜生命鑽石紀念訂製－銘印鑽石 IMPRINT DIAMOND",
+    "description": "骨灰鑽石與生命鑽石｜以親人毛髮或骨灰（約 3 至 5 公克）在台灣培育紀念鑽石，樣本不送海外。線上試算克拉與款式；附銘印保證卡，0.20 克拉以上可代送 GIA／IGI 鑑定。",
     "canonical_path": "series/heirloom/",
-    "og_title": "生命鑽石｜親人毛髮骨灰紀念鑽石訂製－銘印鑽石",
-    "og_description": "以摯愛親人的毛髮或骨灰，讓思念有永恆的形狀，靜靜陪在您身邊。",
+    "og_title": "骨灰鑽石｜生命鑽石紀念訂製－銘印鑽石",
+    "og_description": "骨灰鑽石／生命鑽石：親人毛髮或骨灰在台灣培育，樣本不送海外，可代送鑑定。",
     "og_image": "static/images/hero/imprint-diamond-heirloom-memorial.jpg",
     "breadcrumbs": [
       [
@@ -1874,18 +1870,20 @@
         "/"
       ],
       [
-        "DNA 鑽石",
-        "/price.html"
+        "五大系列",
+        "/series.html"
       ],
       [
-        "寵物鑽石",
-        "/series/heirloom/"
+        "生命鑽石",
+        null
       ]
     ],
     "mvc_page": null,
     "extra_body_class": null,
     "content_fragment": "series/heirloom.html",
-    "extra_head_blocks": [],
+    "extra_head_blocks": [
+      "{\n  \"@context\": \"https://schema.org\",\n  \"@type\": \"FAQPage\",\n  \"mainEntity\": [\n    {\n      \"@type\": \"Question\",\n      \"name\": \"什麼是骨灰鑽石／生命鑽石？\",\n      \"acceptedAnswer\": {\n        \"@type\": \"Answer\",\n        \"text\": \"生命鑽石以親人毛髮或骨灰培育而成；骨灰約需 3 至 5 公克、毛髮約一顆雞蛋大小。樣本在台灣在地實驗室處理，不送海外。\"\n      }\n    },\n    {\n      \"@type\": \"Question\",\n      \"name\": \"骨灰份量不夠怎麼辦？\",\n      \"acceptedAnswer\": {\n        \"@type\": \"Answer\",\n        \"text\": \"若不確定份量是否足夠，請先透過官方 LINE 與顧問確認，不需要先寄送樣本。顧問會依實際狀況給建議。\"\n      }\n    },\n    {\n      \"@type\": \"Question\",\n      \"name\": \"有國際鑑定嗎？\",\n      \"acceptedAnswer\": {\n        \"@type\": \"Answer\",\n        \"text\": \"每顆附銘印保證卡；0.20 克拉以上可代送 GIA 或 IGI 國際鑑定（費用另計），讓珍藏在傳承時有正式身分證明。\"\n      }\n    },\n    {\n      \"@type\": \"Question\",\n      \"name\": \"寵物骨灰也能做嗎？\",\n      \"acceptedAnswer\": {\n        \"@type\": \"Answer\",\n        \"text\": \"可以。寵物骨灰同樣可走生命鑽石流程；若以毛髮紀念毛孩，也可參考寵物鑽石系列。\"\n      }\n    }\n  ]\n}"
+    ],
     "body_key": "series__heirloom",
     "layout": "site",
     "main_class": "",
@@ -1896,11 +1894,11 @@
   {
     "route": "/series/love/",
     "template": "pages/series_detail.html",
-    "title": "結髮鑽石｜夫妻髮絲紀念鑽石訂製－銘印鑽石 IMPRINT DIAMOND",
-    "description": "結髮鑽石｜結髮為夫妻，以兩人的髮絲共同培育一顆鑽石，見證愛情的誓約。全程台灣在地製作，可鑲嵌為求婚戒、結婚對戒。線上選擇克拉數、形狀與飾品款式，立即試算。",
+    "title": "結髮鑽石｜培育鑽石婚戒訂製－銘印鑽石 IMPRINT DIAMOND",
+    "description": "結髮鑽石｜以夫妻髮絲共同培育鑽石，可鑲嵌為培育鑽石婚戒或對戒。全程台灣在地製作；可先線上試算，或預約三重門市與顧問討論克拉、戒台與預算。",
     "canonical_path": "series/love/",
-    "og_title": "結髮鑽石｜夫妻髮絲紀念鑽石訂製－銘印鑽石",
-    "og_description": "結髮為夫妻，以兩人的髮絲共同培育一顆鑽石，見證一輩子只有一次的誓約。",
+    "og_title": "結髮鑽石｜培育鑽石婚戒訂製－銘印鑽石",
+    "og_description": "結髮鑽石與培育鑽石婚戒：兩人髮絲共同培育，可線上試算或三重預約。",
     "og_image": "static/images/hero/imprint-diamond-wedding-couple-ring.jpg",
     "breadcrumbs": [
       [
@@ -1908,18 +1906,20 @@
         "/"
       ],
       [
-        "DNA 鑽石",
-        "/price.html"
+        "五大系列",
+        "/series.html"
       ],
       [
-        "寵物鑽石",
-        "/series/love/"
+        "結髮鑽石",
+        null
       ]
     ],
     "mvc_page": null,
     "extra_body_class": null,
     "content_fragment": "series/love.html",
-    "extra_head_blocks": [],
+    "extra_head_blocks": [
+      "{\n  \"@context\": \"https://schema.org\",\n  \"@type\": \"FAQPage\",\n  \"mainEntity\": [\n    {\n      \"@type\": \"Question\",\n      \"name\": \"結髮鑽石適合做婚戒嗎？\",\n      \"acceptedAnswer\": {\n        \"@type\": \"Answer\",\n        \"text\": \"很適合作為培育鑽石婚戒或對戒主石。兩人髮絲共同培育一顆鑽石後，可至戒指系列選戒台，或先到線上試算規格。\"\n      }\n    },\n    {\n      \"@type\": \"Question\",\n      \"name\": \"兩人需要準備多少頭髮？\",\n      \"acceptedAnswer\": {\n        \"@type\": \"Answer\",\n        \"text\": \"兩人合計約一顆雞蛋大小即可。若不確定份量，請先透過官方 LINE 與顧問確認。\"\n      }\n    },\n    {\n      \"@type\": \"Question\",\n      \"name\": \"可以只訂鑽石再鑲戒嗎？\",\n      \"acceptedAnswer\": {\n        \"@type\": \"Answer\",\n        \"text\": \"可以。鑽石完成後可鑲嵌為戒指、項鍊等；戒台材質可選 18K／14K／9K 金或 PT950 鉑金。\"\n      }\n    },\n    {\n      \"@type\": \"Question\",\n      \"name\": \"三重可以預約看款嗎？\",\n      \"acceptedAnswer\": {\n        \"@type\": \"Answer\",\n        \"text\": \"可以。門市在新北市三重區福德南路 43 號 1 樓（預約制），也可先 LINE 預約討論結髮鑽石與婚戒需求。\"\n      }\n    }\n  ]\n}"
+    ],
     "body_key": "series__love",
     "layout": "site",
     "main_class": "",
@@ -1930,11 +1930,11 @@
   {
     "route": "/series/pet/",
     "template": "pages/series_detail.html",
-    "title": "寵物鑽石｜毛孩毛髮紀念鑽石訂製－銘印鑽石 IMPRINT DIAMOND",
-    "description": "寵物鑽石｜以毛孩的毛髮培育專屬紀念鑽石，讓陪伴以另一種形式延續。全程台灣在地製作，毛髮約一顆雞蛋大小即可訂製。線上選擇克拉數、形狀與飾品款式，立即試算。",
+    "title": "寵物鑽石｜毛髮紀念與寵物紀念品－銘印鑽石 IMPRINT DIAMOND",
+    "description": "寵物鑽石｜以毛孩毛髮在台灣培育專屬紀念鑽石，也可作為可傳承的寵物紀念品。毛髮約一顆雞蛋大小即可訂製；線上試算克拉與款式，全程在地實驗室，約 70–90 天交付。",
     "canonical_path": "series/pet/",
-    "og_title": "寵物鑽石｜毛孩毛髮紀念鑽石訂製－銘印鑽石",
-    "og_description": "以毛孩的毛髮培育專屬紀念鑽石，讓那份無條件的陪伴，以另一種形式延續。",
+    "og_title": "寵物鑽石｜毛髮紀念與寵物紀念品－銘印鑽石",
+    "og_description": "以毛孩毛髮培育專屬寵物鑽石，亦可作為可傳承的寵物紀念品；台灣在地實驗室。",
     "og_image": "static/images/hero/imprint-diamond-pet-memorial-cat.jpg",
     "breadcrumbs": [
       [
@@ -1942,18 +1942,20 @@
         "/"
       ],
       [
-        "DNA 鑽石",
-        "/price.html"
+        "五大系列",
+        "/series.html"
       ],
       [
         "寵物鑽石",
-        "/series/pet/"
+        null
       ]
     ],
     "mvc_page": null,
     "extra_body_class": null,
     "content_fragment": "series/pet.html",
-    "extra_head_blocks": [],
+    "extra_head_blocks": [
+      "{\n  \"@context\": \"https://schema.org\",\n  \"@type\": \"FAQPage\",\n  \"mainEntity\": [\n    {\n      \"@type\": \"Question\",\n      \"name\": \"寵物鑽石需要準備多少毛髮？\",\n      \"acceptedAnswer\": {\n        \"@type\": \"Answer\",\n        \"text\": \"毛髮約需一顆雞蛋大小（或養樂多瓶約 8 分滿）即可訂製寵物鑽石。若毛量不足，請先透過官方 LINE 與顧問確認，不必先寄送樣本。\"\n      }\n    },\n    {\n      \"@type\": \"Question\",\n      \"name\": \"寵物毛髮鑽石和寵物紀念品有何不同？\",\n      \"acceptedAnswer\": {\n        \"@type\": \"Answer\",\n        \"text\": \"寵物鑽石是以毛孩毛髮在台灣培育成真實鑽石，可鑲嵌為飾品；也常作為可傳承的寵物紀念品。成品附銘印保證卡與專屬影音紀念盒。\"\n      }\n    },\n    {\n      \"@type\": \"Question\",\n      \"name\": \"寵物骨灰可以做成鑽石嗎？\",\n      \"acceptedAnswer\": {\n        \"@type\": \"Answer\",\n        \"text\": \"可以。若您手邊是寵物骨灰，請改看生命鑽石（骨灰鑽石）系列；寵物系列頁也提供連到生命鑽石的說明，顧問會依樣本類型協助評估。\"\n      }\n    },\n    {\n      \"@type\": \"Question\",\n      \"name\": \"製作需要多久？\",\n      \"acceptedAnswer\": {\n        \"@type\": \"Answer\",\n        \"text\": \"全程於台灣在地實驗室完成，約 70–90 天交付，單一客戶、單一培育流程。\"\n      }\n    }\n  ]\n}"
+    ],
     "body_key": "series__pet",
     "layout": "site",
     "main_class": "",

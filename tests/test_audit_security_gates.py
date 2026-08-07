@@ -42,7 +42,7 @@ def test_gold_refresh_requires_bearer_secret(client):
         )
         assert bad.status_code == 401
 
-        with patch("app.controllers.api_controller._persist_gold_price_cache") as persist:
+        with patch("app.controllers.api_controller.persist_gold_price_cache") as persist:
             ok = client.post(
                 "/api/gold-refresh",
                 json={
@@ -69,6 +69,56 @@ def test_gold_refresh_rejects_invalid_payload(client):
         assert bad_body.status_code == 400
     finally:
         os.environ.pop("GOLD_REFRESH_SECRET", None)
+
+
+def test_featured_video_sync_requires_bearer_secret(client):
+    os.environ["FEATURED_VIDEO_SYNC_SECRET"] = "test-featured-video-sync-secret"
+    try:
+        no_auth = client.post("/api/featured-video-sync")
+        assert no_auth.status_code == 401
+
+        bad = client.post(
+            "/api/featured-video-sync",
+            headers={"Authorization": "Bearer wrong"},
+        )
+        assert bad.status_code == 401
+
+        mock_payload = {
+            "enabled": True,
+            "videos": [{"youtubeId": "eBLOrvHosR4", "title": "T", "label": "T"}],
+            "youtube_id": "eBLOrvHosR4",
+            "title": "T",
+        }
+        with (
+            patch(
+                "app.featured_video.run_featured_video_channel_sync",
+                return_value=(mock_payload, None, "UCiI_Xayu0OrUT2swTeV6zTw"),
+            ),
+            patch("app.controllers.api_controller.log_admin_action") as audit,
+        ):
+            ok = client.post(
+                "/api/featured-video-sync",
+                headers={"Authorization": "Bearer test-featured-video-sync-secret"},
+            )
+            assert ok.status_code == 200
+            body = ok.json()
+            assert body.get("ok") is True
+            assert body.get("videos")
+            audit.assert_called_once()
+            assert audit.call_args.args[0] == "cron"
+            assert audit.call_args.args[1] == "featured_video_synced"
+            assert audit.call_args.args[2].get("via") == "featured_video_sync_secret"
+    finally:
+        os.environ.pop("FEATURED_VIDEO_SYNC_SECRET", None)
+
+
+def test_featured_video_sync_missing_env_unauthorized(client):
+    os.environ.pop("FEATURED_VIDEO_SYNC_SECRET", None)
+    resp = client.post(
+        "/api/featured-video-sync",
+        headers={"Authorization": "Bearer anything"},
+    )
+    assert resp.status_code == 401
 
 
 def test_track_order_json_omits_pii(client):

@@ -1,5 +1,7 @@
 # Runtime caches
 app/data/.featured-video-cache.json
+app/data/.youtube-embed-cache.json
+app/data/.featured-video.sync.lock
 venv/
 __pycache__/
 *.py[cod]

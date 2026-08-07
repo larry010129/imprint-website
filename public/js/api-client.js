@@ -521,6 +521,21 @@
         }
         return request('/api/admin/plugins', { method: 'PATCH', body: body });
       },
+      getFeaturedVideo: function () {
+        return request('/api/admin/featured-video');
+      },
+      saveFeaturedVideo: function (body) {
+        return request('/api/admin/featured-video', {
+          method: 'PUT',
+          body: body || {},
+        });
+      },
+      syncFeaturedVideo: function () {
+        return request('/api/admin/featured-video/sync', {
+          method: 'POST',
+          body: {},
+        });
+      },
     },
   };
 })(window);

@@ -30,23 +30,29 @@
     }
 
     var isHome = document.body.classList.contains('page-home');
+    /* scrollY is a geometry read — sync call during deferred-script init flushes
+       pending layout (PageSpeed forced-reflow). Batch read+class write in rAF. */
+    var bindScrollFlag = function (el, className, threshold) {
+      var ticking = false;
+      var apply = function () {
+        ticking = false;
+        el.classList.toggle(className, window.scrollY > threshold);
+      };
+      var onScroll = function () {
+        if (ticking) return;
+        ticking = true;
+        window.requestAnimationFrame(apply);
+      };
+      window.addEventListener('scroll', onScroll, { passive: true });
+      window.requestAnimationFrame(apply);
+    };
     if (isHome) {
       /* Prefer [data-site-nav-root] (site-chrome); fallback parent for older markup */
       var heroRoot = root.closest('[data-site-nav-root]') || root.parentElement;
-      var onScroll = function () {
-        document.body.classList.toggle('is-nav-scrolled', window.scrollY > 16);
-      };
-      window.addEventListener('scroll', onScroll, { passive: true });
-      /* Read scrollY (onScroll) before the classList.add write below — reading
-         layout geometry right after a DOM write forces a synchronous reflow. */
-      onScroll();
       if (heroRoot) heroRoot.classList.add('is-nav-hero');
+      bindScrollFlag(document.body, 'is-nav-scrolled', 16);
     } else {
-      var onScroll2 = function () {
-        root.classList.toggle('is-scrolled', window.scrollY > 10);
-      };
-      window.addEventListener('scroll', onScroll2, { passive: true });
-      onScroll2();
+      bindScrollFlag(root, 'is-scrolled', 10);
     }
   }
 

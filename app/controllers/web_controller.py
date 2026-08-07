@@ -44,7 +44,6 @@ templates.env.globals["inline_css"] = _load_inline_css
 
 # Fragments live under content/site/fragments (not templates/).
 _FRAGMENTS_DIR = settings.site_content_dir / "fragments"
-_FEATURED_VIDEO_PATH = Path(__file__).resolve().parent.parent / "data" / "featured-video.json"
 _FEATURED_YOUTUBE_LATEST_PATH = (
     Path(__file__).resolve().parent.parent / "data" / "featured-youtube-latest.json"
 )
@@ -72,16 +71,18 @@ def _strip_public_phone_metadata(block: str) -> str:
 
 
 def load_featured_video() -> dict | None:
-    """Pinned About-page video (fixed ID from JSON)."""
-    if not _FEATURED_VIDEO_PATH.is_file():
-        return None
-    try:
-        data = json.loads(_FEATURED_VIDEO_PATH.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError):
-        return None
-    if not data.get("enabled") or not data.get("youtube_id"):
-        return None
-    return data
+    """Home gallery + About primary video from featured-video.json.
+
+    Lazy TTL: if ``syncedAt`` missing/older than ~24h, refresh from channel
+    (RSS + oEmbed). Sync failure falls back to existing JSON.
+    """
+    from app.featured_video import (
+        ensure_featured_video_fresh,
+        load_featured_video as _load,
+    )
+
+    ensure_featured_video_fresh()
+    return _load()
 
 
 def load_youtube_latest_video() -> dict | None:

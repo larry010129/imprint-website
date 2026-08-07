@@ -25,6 +25,9 @@ import ProductImageCropModal, {
 import CmsPagesPanel, {
   type CmsPagesPanelProps,
 } from "@/components/admin/CmsPagesPanel";
+import AdminFeaturedVideoEditor, {
+  type AdminFeaturedVideoEditorProps,
+} from "@/components/admin/AdminFeaturedVideoEditor";
 import {
   ImageUploadField,
   type ImageUploadFieldProps,
@@ -90,6 +93,13 @@ function renderCmsPagesPanel(container: Element, props: CmsPagesPanelProps) {
   getRoot(container).render(<CmsPagesPanel {...props} />);
 }
 
+function renderFeaturedVideoEditor(
+  container: Element,
+  props: AdminFeaturedVideoEditorProps,
+) {
+  getRoot(container).render(<AdminFeaturedVideoEditor {...props} />);
+}
+
 function unmount(container: Element) {
   const root = roots.get(container);
   if (root) {
@@ -112,6 +122,7 @@ declare global {
       renderProductImageCropModal: typeof renderProductImageCropModal;
       renderBannerImageUploadCards: typeof renderBannerImageUploadCards;
       renderCmsPagesPanel: typeof renderCmsPagesPanel;
+      renderFeaturedVideoEditor: typeof renderFeaturedVideoEditor;
       unmount: typeof unmount;
     };
   }
@@ -129,5 +140,6 @@ window.AdminTables = {
   renderProductImageCropModal,
   renderBannerImageUploadCards,
   renderCmsPagesPanel,
+  renderFeaturedVideoEditor,
   unmount,
 };

@@ -31,6 +31,58 @@ def test_home_slot_rewrite_does_not_touch_carousel_duplicate():
     assert out.count("/static/images/hero/imprint-diamond-family-memorial.jpg") == 1
 
 
+def test_home_prefers_local_sky_over_supabase():
+    html = (
+        '<picture><source srcset="/static/images/ghibli/hero-sky.webp" type="image/webp">'
+        '<img data-cms-slot="hero-sky" src="/static/images/ghibli/hero-sky.jpg" '
+        'loading="lazy" fetchpriority="low"></picture>'
+    )
+    row = {
+        "slot_key": "hero-sky",
+        "display_url": "https://xxx.supabase.co/storage/v1/object/public/cms/hero-sky.png",
+        "display_webp": "https://xxx.supabase.co/storage/v1/object/public/cms/hero-sky.webp",
+        "is_published": True,
+    }
+    out = apply_page_image_slots(html, "/", [row])
+    assert "/static/images/ghibli/hero-sky.webp" in out
+    assert "/static/images/ghibli/hero-sky.jpg" in out
+    assert "supabase.co" not in out
+    assert 'fetchpriority="low"' in out
+    assert 'loading="lazy"' in out
+
+
+def test_home_series_slot_remaps_supabase_to_local_srcset():
+    html = (
+        '<picture><source type="image/webp" '
+        'srcset="/static/images/hero/imprint-diamond-family-portrait-jewelry-800w.webp 800w">'
+        '<img data-cms-slot="series-family" '
+        'src="/static/images/hero/imprint-diamond-family-portrait-jewelry-800w.webp"></picture>'
+    )
+    row = {
+        "slot_key": "series-family",
+        "display_url": "https://xxx.supabase.co/storage/v1/object/public/cms/imprint-diamond-family-portrait-jewelry.jpg",
+        "display_webp": "https://xxx.supabase.co/storage/v1/object/public/cms/imprint-diamond-family-portrait-jewelry.webp",
+        "is_published": True,
+    }
+    out = apply_page_image_slots(html, "/", [row])
+    assert "supabase.co" not in out
+    assert "/static/images/hero/imprint-diamond-family-portrait-jewelry-800w.webp 800w" in out
+    assert "/static/images/hero/imprint-diamond-family-portrait-jewelry-1200w.webp 1200w" in out
+
+
+def test_home_dna_cta_prefers_local_webp():
+    html = '<img data-cms-slot="dna-cta-diamond" src="/static/images/diamonds/colors/blue.webp">'
+    row = {
+        "slot_key": "dna-cta-diamond",
+        "display_url": "https://xxx.supabase.co/storage/v1/object/public/cms/colors/blue.png",
+        "display_webp": "",
+        "is_published": True,
+    }
+    out = apply_page_image_slots(html, "/", [row])
+    assert 'src="/static/images/diamonds/colors/blue.webp"' in out
+    assert "supabase.co" not in out
+
+
 def test_inventory_excludes_empty_calculator_and_jewelry_slots():
     rows = build_page_image_seed()
     counts = Counter(row["page_key"] for row in rows)

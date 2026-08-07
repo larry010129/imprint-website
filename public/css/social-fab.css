@@ -1,7 +1,18 @@
 /* Unified contact FAB — chat + social links; Botpress FAB hidden, opened from menu. */
-.imprint-contact-fab {
+:root {
   --fab-size: 60px;
   --fab-gap: 12px;
+  --fab-edge: 24px;
+  /* Page/footer reserve: FAB hit target + edge offset + breathing room + safe-area */
+  --fab-page-clearance: calc(
+    max(var(--fab-size), var(--tap-target-min, 44px))
+    + var(--fab-edge)
+    + var(--fab-gap)
+    + env(safe-area-inset-bottom, 0px)
+  );
+}
+
+.imprint-contact-fab {
   --fab-mint: var(--mint, #8eedf0);
   --fab-mint-deep: var(--mint-deep, #52c4c8);
   --fab-mint-glow: rgba(142, 237, 240, 0.55);
@@ -9,8 +20,8 @@
   --fab-line: #06c755;
   --fab-shadow: 0 6px 18px rgba(43, 35, 32, 0.18);
   position: fixed;
-  right: max(24px, env(safe-area-inset-right, 0px));
-  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  right: max(var(--fab-edge), env(safe-area-inset-right, 0px));
+  bottom: calc(var(--fab-edge) + env(safe-area-inset-bottom, 0px));
   z-index: 9999;
   display: flex;
   flex-direction: column;
@@ -239,14 +250,49 @@
   }
 }
 
+/* Tablet/phone ≤900: raise FAB above home-indicator; expose clearance for footer */
 @media (max-width: 900px) {
+  :root {
+    --fab-edge: 16px;
+    --fab-page-clearance: calc(
+      var(--shop-mobile-buy-bar-height, 0px)
+      + max(var(--fab-size), var(--tap-target-min, 44px))
+      + var(--fab-edge)
+      + var(--fab-gap)
+      + env(safe-area-inset-bottom, 0px)
+    );
+  }
+
   .imprint-contact-fab {
     bottom: calc(
       var(--shop-mobile-buy-bar-height, 0px)
-      + 16px
+      + var(--fab-edge)
       + env(safe-area-inset-bottom, 0px)
     );
-    right: max(16px, env(safe-area-inset-right, 0px));
+    right: max(var(--fab-edge), env(safe-area-inset-right, 0px));
+  }
+}
+
+/* Narrow phones ≤640: keep safe-area bottom; same clearance contract */
+@media (max-width: 640px) {
+  :root {
+    --fab-edge: 16px;
+    --fab-page-clearance: calc(
+      var(--shop-mobile-buy-bar-height, 0px)
+      + max(var(--fab-size), var(--tap-target-min, 44px))
+      + var(--fab-edge)
+      + var(--fab-gap)
+      + env(safe-area-inset-bottom, 0px)
+    );
+  }
+
+  .imprint-contact-fab {
+    bottom: calc(
+      var(--shop-mobile-buy-bar-height, 0px)
+      + var(--fab-edge)
+      + env(safe-area-inset-bottom, 0px)
+    );
+    right: max(var(--fab-edge), env(safe-area-inset-right, 0px));
   }
 }
 

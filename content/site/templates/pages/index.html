@@ -6,8 +6,8 @@
 {% endblock %}
 {% block extra_css %}
 <style>{{ inline_css('home-ghibli-critical.css') | safe }}</style>
-<link rel="stylesheet" href="/static/css/home-ghibli.css?v=39" media="print" onload="this.media='all'">
-<noscript><link rel="stylesheet" href="/static/css/home-ghibli.css?v=39"></noscript>
+<link rel="stylesheet" href="/static/css/home-ghibli.css?v=44" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="/static/css/home-ghibli.css?v=44"></noscript>
 {% endblock %}
 {% block extra_head %}
 <style>
@@ -22,12 +22,15 @@
 {
   "@context": "https://schema.org",
   "@type": "JewelryStore",
+  "@id": "https://www.imprintdiamond.com/#store",
   "name": "銘印鑽石 IMPRINT DIAMOND",
-  "alternateName": "心之銘印鑽石有限公司",
+  "alternateName": ["銘印鑽石", "IMPRINT DIAMOND", "心之銘印鑽石有限公司"],
+  "legalName": "心之銘印鑽石有限公司",
   "url": "https://www.imprintdiamond.com/",
+  "telephone": "+886-2-2977-0268",
   "image": "https://www.imprintdiamond.com/static/images/hero/imprint-diamond-family-memorial.jpg",
   "priceRange": "NT$24,000–NT$250,000+",
-  "description": "全台唯一擁有在地DNA鑽石培育實驗室的紀念鑽石品牌，萃取毛髮、骨灰中的元素，於台灣在地培育成專屬紀念DNA鑽石(毛髮鑽石,骨灰鑽石,寵物鑽石,生命鑽石)。",
+  "description": "銘印鑽石（IMPRINT DIAMOND）是全台唯一擁有在地 DNA 鑽石培育實驗室的紀念鑽石品牌；門市位於新北市三重區，採預約制。萃取毛髮、骨灰中的元素，於台灣在地培育成專屬紀念 DNA 鑽石（毛髮鑽石、骨灰鑽石、寵物鑽石、生命鑽石）。",
   "address": {
     "@type": "PostalAddress",
     "streetAddress": "福德南路43號1樓",
@@ -36,8 +39,14 @@
     "addressCountry": "TW"
   },
   "hasMap": "https://www.google.com/maps/search/?api=1&query=%E6%96%B0%E5%8C%97%E5%B8%82%E4%B8%89%E9%87%8D%E5%8D%80%E7%A6%8F%E5%BE%B7%E5%8D%97%E8%B7%AF43%E8%99%9F1%E6%A8%93",
+  "parentOrganization": {
+    "@id": "https://www.imprintdiamond.com/#organization"
+  },
+  "areaServed": ["TW", "新北市", "臺北市"],
+  "currenciesAccepted": "TWD",
   "sameAs": [
-    "https://www.facebook.com/Imprintdiamond/"
+    "https://www.facebook.com/Imprintdiamond/",
+    "https://lin.ee/ktVBtmx"
   ]
 }
 </script>
@@ -45,9 +54,14 @@
 {
   "@context": "https://schema.org",
   "@type": "WebSite",
+  "@id": "https://www.imprintdiamond.com/#website",
   "name": "銘印鑽石 IMPRINT DIAMOND",
+  "alternateName": ["銘印鑽石", "IMPRINT DIAMOND"],
   "url": "https://www.imprintdiamond.com/",
-  "inLanguage": "zh-Hant-TW"
+  "inLanguage": "zh-Hant-TW",
+  "publisher": {
+    "@id": "https://www.imprintdiamond.com/#organization"
+  }
 }
 </script>
 <script type="application/ld+json">
@@ -60,7 +74,7 @@
       "name": "需要準備多少毛髮或骨灰，才能製作 DNA 鑽石？",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "毛髮約需一顆雞蛋的大小（或養樂多瓶約 8 分滿）；骨灰約需 3 至 5 公克。若您手邊的份量不確定是否足夠，請先透過官方 LINE 與顧問確認——我們會依您的狀況評估，不需要先寄送樣本。每一份樣本我們都以單一客戶、單一培育流程處理，確保專屬與純粹。"
+        "text": "骨灰約需 3 至 5 公克；毛髮約需養樂多瓶 8 分滿或一顆雞蛋的大小。若份量不足，可加入您自己或家人的頭髮補充。若不確定是否足夠，請先透過官方 LINE 與顧問確認——不需要先寄送樣本。每一份樣本都以單一客戶、單一培育流程處理。"
       }
     },
     {
@@ -68,7 +82,7 @@
       "name": "DNA 紀念鑽石的價格怎麼計算？",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "價格依克拉數計算：0.10 克拉 NT$24,000 起、0.50 克拉 NT$98,000、1.00 克拉 NT$250,000（圓形明亮式切工／白鑽）。非圓形切工（公主方、橢圓、梨形等）加價 10%，且需 0.30 克拉以上才能製作；彩鑽最低製作規格為 0.30 克拉，報價依顏色稀有度而定；3.00 克拉以上請洽官方 LINE 專屬報價。完整價目請見價格試算・價格總覽。"
+        "text": "價格依克拉數計算：0.10 克拉 NT$24,000 起、0.50 克拉 NT$98,000、1.00 克拉 NT$250,000（圓形明亮式切工／白鑽）。非圓形切工加價 10%，且需 0.30 克拉以上；彩鑽最低 0.30 克拉，報價依顏色稀有度而定；3.00 克拉以上請洽官方 LINE 專屬報價。完整價目請見價格試算・價格總覽。"
       }
     },
     {
@@ -84,7 +98,7 @@
       "name": "如何開始訂製？",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "您可以選擇以下任一方式開始訂製：線上客製試算 — 前往客製試算頁（/shop/calculator/），依步驟選擇品項、款式、金屬與鑽石規格，系統即時試算價格；確認後可加入購物車並送出訂單，我們會與您聯繫確認樣本與細節。預約顧問 — 也可透過官方 LINE 預約，由專屬顧問一對一討論需求、確認樣本份量與報價，再進行採樣與培育。官方 LINE：點此加入；門市：新北市三重區福德南路 43 號 1 樓（預約制）。"
+        "text": "線上客製試算 — 前往客製試算頁，依步驟選擇品項、款式、金屬與鑽石規格，系統即時試算價格；確認後可加入購物車並送出訂單。預約顧問 — 也可透過官方 LINE 預約。門市：新北市三重區福德南路 43 號 1 樓（預約制）。"
       }
     }
   ]
@@ -101,7 +115,8 @@
   <div class="gh-hero__sky" aria-hidden="true">
     <picture>
       <source srcset="/static/images/ghibli/hero-sky.webp" type="image/webp">
-      <img data-cms-slot="hero-sky" src="/static/images/ghibli/hero-sky.jpg" alt="" width="640" height="640" loading="lazy" fetchpriority="low" decoding="async">
+      {# Decorative only — keep lazy/low so memorial carousel stays LCP. #}
+      <img data-cms-slot="hero-sky" src="/static/images/ghibli/hero-sky.jpg" alt="" width="320" height="320" loading="lazy" fetchpriority="low" decoding="async">
     </picture>
   </div>
   <div class="gh-hero__fade-bottom" aria-hidden="true"></div>
@@ -119,9 +134,9 @@
         </div>
         <div class="hc-scrim gh-hc-scrim"></div>
         <div class="container hc-copy gh-hc-copy">
-          <p class="gh-script">Imprint Diamond</p>
-          <h1 class="gh-hero__title" data-cms-text="hero-title">把最深的情感，<em>銘印成永恆</em></h1>
-          <p class="gh-hero__lead" data-cms-text="hero-lead">全台唯一擁有在地 <span class="gh-dna">DNA</span> 鑽石培育實驗室的紀念鑽石品牌。萃取毛髮、骨灰中的元素，於台灣在地培育成專屬於您的紀念鑽石，附鑑定保障與專屬影音紀念盒。</p>
+          <p class="gh-script">銘印鑽石 IMPRINT DIAMOND</p>
+          <h1 class="gh-hero__title" data-cms-text="hero-title">銘印鑽石｜把最深的情感，<em>銘印成永恆</em></h1>
+          <p class="gh-hero__lead" data-cms-text="hero-lead">銘印鑽石是全台唯一擁有在地 <span class="gh-dna">DNA</span> 鑽石培育實驗室的紀念鑽石品牌。萃取毛髮、骨灰中的元素，於台灣在地（新北三重門市預約制）培育成專屬於您的紀念鑽石，附鑑定保障與專屬影音紀念盒。</p>
           <div class="gh-hero__actions">
             <a class="gh-btn gh-btn--primary" href="/shop/calculator/" data-cms-button="hero-cta">開始訂製</a>
             <button type="button" class="gh-btn gh-btn--ghost" data-scroll-to="home-poem">了解更多</button>
@@ -250,48 +265,74 @@
 </section>
 
 <section class="gh-poem gh-poem--split" id="home-poem">
-  <div class="container gh-poem-grid">
-    <div class="gh-poem__visual reveal">
-      {% if featured_video %}
-      <button
-        type="button"
-        class="gh-yt-facade"
-        data-yt-facade
-        data-yt-id="{{ featured_video.youtube_id }}"
-        data-yt-title="{{ featured_video.title }}"
-        aria-label="播放影片：{{ featured_video.title }}"
-        style="background-image:url('https://i.ytimg.com/vi/{{ featured_video.youtube_id }}/hqdefault.jpg')"
-      >
-        {# No <img> tag here on purpose: app/page_image_slots.py assigns CMS
-           image slots by counting <img> tags positionally in the rendered
-           HTML (e.g. poem-visual = index 7). Adding one would shift every
-           slot index after it. Thumbnail is a CSS background-image instead. #}
-        <span class="gh-yt-facade__play" aria-hidden="true">
-          <svg viewBox="0 0 68 48" width="44" height="32"><path d="M66.52 7.74c-.78-2.93-2.49-5.42-5.42-6.2C55.79.13 34 0 34 0S12.21.13 6.9 1.54c-2.93.78-4.64 3.27-5.42 6.2C.13 13.05 0 24 0 24s.13 10.95 1.48 16.26c.78 2.93 2.49 5.32 5.42 6.1C12.21 47.87 34 48 34 48s21.79-.13 27.1-1.54c2.93-.78 4.64-3.17 5.42-6.1C67.87 34.95 68 24 68 24s-.13-10.95-1.48-16.26z" fill="rgba(20,20,20,.75)"/><path d="M45 24 27 14v20" fill="#fff"/></svg>
-        </span>
-      </button>
-      {% else %}
-      <picture>
-        <source media="(max-width:900px)" type="image/webp" srcset="/static/images/hero/imprint-diamond-family-memorial-800w.webp 800w, /static/images/hero/imprint-diamond-family-memorial-960w.webp 960w, /static/images/hero/imprint-diamond-family-memorial-1200w.webp 1200w" sizes="(max-width:640px) 92vw, 45vw">
-        <source type="image/webp" srcset="/static/images/hero/imprint-diamond-family-memorial-800w.webp 800w, /static/images/hero/imprint-diamond-family-memorial-960w.webp 960w, /static/images/hero/imprint-diamond-family-memorial-1200w.webp 1200w, /static/images/hero/imprint-diamond-family-memorial.webp 2400w" sizes="(max-width:640px) 92vw, 45vw">
-        <img data-cms-slot="poem-visual" src="/static/images/hero/imprint-diamond-family-memorial-800w.webp" alt="家人手心捧著 DNA 紀念鑽石" width="800" height="388" sizes="(max-width:640px) 92vw, 45vw" loading="lazy" decoding="async" onerror="imgFallback(this)">
-      </picture>
-      {% endif %}
-    </div>
-    <div class="gh-poem__copy">
-      <p class="gh-poem__brand reveal" data-cms-text="poem-brand">銘印鑽石</p>
-      <h2 class="gh-poem__title reveal reveal-d1" data-cms-text="poem-title">不只是鑽石，<br>是把羈絆留成可以觸碰的光。</h2>
-      <p class="gh-poem__text reveal reveal-d2" data-cms-text="poem-text">從您珍視的樣本中，真實培育而成的專屬鑽石——讓羈絆留成可以觸碰的光。</p>
-      <div class="gh-poem__links reveal reveal-d3">
-        <a class="gh-poem__link" href="/what-is-dna-diamond.html">
-          <span class="gh-poem__play" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-          </span>
-          <span data-cms-text="poem-link-dna">了解 DNA 鑽石的誕生</span>
-        </a>
-        <a class="gh-poem__link gh-poem__link--secondary" href="/about.html" data-cms-button="poem-link-about">認識銘印鑽石 →</a>
+  <div class="container gh-yt-gallery">
+    <div class="gh-poem-grid">
+      <div class="gh-poem__visual reveal">
+        {% if featured_video %}
+        <div class="gh-yt-gallery__stage" data-yt-gallery-stage>
+          <button
+            type="button"
+            class="gh-yt-facade"
+            data-yt-facade
+            data-yt-id="{{ featured_video.youtube_id }}"
+            data-yt-title="{{ featured_video.title }}"
+            data-yt-poster="/static/images/video/featured-{{ featured_video.youtube_id }}.webp"
+            aria-label="播放影片：{{ featured_video.title }}"
+          >
+            {# No image element here on purpose: app/page_image_slots.py assigns CMS
+               image slots by counting image tags positionally in the rendered
+               HTML (e.g. poem-visual = index 7). Adding one would shift every
+               slot index after it. Poster loads via JS (IO / click) from /static. #}
+            <span class="gh-yt-facade__play" aria-hidden="true">
+              <svg viewBox="0 0 68 48" width="44" height="32"><path d="M66.52 7.74c-.78-2.93-2.49-5.42-5.42-6.2C55.79.13 34 0 34 0S12.21.13 6.9 1.54c-2.93.78-4.64 3.27-5.42 6.2C.13 13.05 0 24 0 24s.13 10.95 1.48 16.26c.78 2.93 2.49 5.32 5.42 6.1C12.21 47.87 34 48 34 48s21.79-.13 27.1-1.54c2.93-.78 4.64-3.17 5.42-6.1C67.87 34.95 68 24 68 24s-.13-10.95-1.48-16.26z" fill="rgba(20,20,20,.75)"/><path d="M45 24 27 14v20" fill="#fff"/></svg>
+            </span>
+            <span class="gh-yt-facade__title" data-yt-title-label>{{ featured_video.title }}</span>
+          </button>
+        </div>
+        {% else %}
+        <picture>
+          <source media="(max-width:900px)" type="image/webp" srcset="/static/images/hero/imprint-diamond-family-memorial-800w.webp 800w, /static/images/hero/imprint-diamond-family-memorial-960w.webp 960w, /static/images/hero/imprint-diamond-family-memorial-1200w.webp 1200w" sizes="(max-width:640px) 92vw, 45vw">
+          <source type="image/webp" srcset="/static/images/hero/imprint-diamond-family-memorial-800w.webp 800w, /static/images/hero/imprint-diamond-family-memorial-960w.webp 960w, /static/images/hero/imprint-diamond-family-memorial-1200w.webp 1200w, /static/images/hero/imprint-diamond-family-memorial.webp 2400w" sizes="(max-width:640px) 92vw, 45vw">
+          <img data-cms-slot="poem-visual" src="/static/images/hero/imprint-diamond-family-memorial-800w.webp" alt="家人手心捧著 DNA 紀念鑽石" width="800" height="388" sizes="(max-width:640px) 92vw, 45vw" loading="lazy" decoding="async" onerror="imgFallback(this)">
+        </picture>
+        {% endif %}
+      </div>
+      <div class="gh-poem__copy">
+        <p class="gh-poem__brand reveal" data-cms-text="poem-brand">銘印鑽石</p>
+        <h2 class="gh-poem__title reveal reveal-d1" data-cms-text="poem-title">不只是鑽石，<br>是把羈絆留成可以觸碰的光。</h2>
+        <p class="gh-poem__text reveal reveal-d2" data-cms-text="poem-text">從您珍視的樣本中，真實培育而成的專屬鑽石——讓羈絆留成可以觸碰的光。</p>
+        <div class="gh-poem__links reveal reveal-d3">
+          <a class="gh-poem__link gh-poem__link--primary" href="/what-is-dna-diamond.html">
+            <span class="gh-poem__play" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            </span>
+            <span data-cms-text="poem-link-dna">了解 DNA 鑽石的誕生</span>
+          </a>
+          <a class="gh-poem__link gh-poem__link--secondary" href="/about.html" data-cms-button="poem-link-about">認識銘印鑽石 →</a>
+        </div>
       </div>
     </div>
+    {% if featured_video and featured_video.videos %}
+    {# Thumbs sit outside poem-visual; posters via background-image (no <img>) so CMS page_image slot indices stay aligned. #}
+    <div class="gh-yt-thumbs" role="list" aria-label="品牌影片清單">
+      {% for video in featured_video.videos[:6] %}
+      <button
+        type="button"
+        role="listitem"
+        class="gh-yt-thumb{% if loop.first %} is-active{% endif %}"
+        data-yt-thumb
+        data-yt-id="{{ video.youtubeId }}"
+        data-yt-title="{{ video.title }}"
+        data-yt-poster="https://i.ytimg.com/vi/{{ video.youtubeId }}/hqdefault.jpg"
+        style="background-image:url('https://i.ytimg.com/vi/{{ video.youtubeId }}/hqdefault.jpg')"
+        aria-label="選擇影片：{{ video.label }}"
+        aria-pressed="{{ 'true' if loop.first else 'false' }}"
+      >
+        <span class="gh-yt-thumb__label">{{ video.label }}</span>
+      </button>
+      {% endfor %}
+    </div>
+    {% endif %}
   </div>
 </section>
 
@@ -314,11 +355,13 @@
       <div class="gh-about-diamond" aria-hidden="true">
         <img
           data-cms-slot="dna-cta-diamond"
-          src="/static/images/diamonds/colors/blue.png"
+          src="/static/images/diamonds/colors/blue.webp"
           alt=""
+          width="320"
+          height="320"
           loading="lazy"
           decoding="async"
-          onerror="this.onerror=function(){this.remove()};this.src='/static/images/diamonds/matrix/round-blue.png'"
+          onerror="this.onerror=function(){this.onerror=function(){this.remove()};this.src='/static/images/diamonds/matrix/round-blue.png'};this.src='/static/images/diamonds/colors/blue.png'"
         >
       </div>
       <div class="gh-about-actions">
@@ -344,8 +387,8 @@
     <a class="gh-series-card reveal" href="/series/first-love/">
       <div class="gh-series-card__media">
         <picture>
-          <source type="image/webp" srcset="/static/images/series-cards/imprint-diamond-newborn-baby-necklace-400.webp 400w, /static/images/series-cards/imprint-diamond-newborn-baby-necklace-800.webp 800w" sizes="(max-width:640px) 92vw, (max-width:900px) 45vw, 320px">
-          <img data-cms-slot="series-first-love" src="/static/images/hero/imprint-diamond-newborn-baby-necklace.jpg" alt="滿月鑽石" width="800" height="388" loading="lazy" decoding="async" onerror="imgFallback(this)">
+          <source type="image/webp" srcset="/static/images/hero/imprint-diamond-newborn-baby-necklace-800w.webp 800w, /static/images/hero/imprint-diamond-newborn-baby-necklace-960w.webp 960w, /static/images/hero/imprint-diamond-newborn-baby-necklace-1200w.webp 1200w" sizes="(max-width:640px) 92vw, (max-width:900px) 45vw, 320px">
+          <img data-cms-slot="series-first-love" src="/static/images/hero/imprint-diamond-newborn-baby-necklace-800w.webp" srcset="/static/images/hero/imprint-diamond-newborn-baby-necklace-800w.webp 800w, /static/images/hero/imprint-diamond-newborn-baby-necklace-960w.webp 960w, /static/images/hero/imprint-diamond-newborn-baby-necklace-1200w.webp 1200w" sizes="(max-width:640px) 92vw, (max-width:900px) 45vw, 320px" alt="滿月鑽石" width="800" height="388" loading="lazy" decoding="async" onerror="imgFallback(this)">
         </picture>
       </div>
       <div class="gh-series-card__body">
@@ -359,8 +402,8 @@
     <a class="gh-series-card reveal reveal-d1" href="/series/pet/">
       <div class="gh-series-card__media">
         <picture>
-          <source type="image/webp" srcset="/static/images/series-cards/imprint-diamond-pet-memorial-cat-400.webp 400w, /static/images/series-cards/imprint-diamond-pet-memorial-cat-800.webp 800w" sizes="(max-width:640px) 92vw, (max-width:900px) 45vw, 320px">
-          <img data-cms-slot="series-pet" src="/static/images/hero/imprint-diamond-pet-memorial-cat.jpg" alt="寵物鑽石" width="800" height="388" loading="lazy" decoding="async" onerror="imgFallback(this)">
+          <source type="image/webp" srcset="/static/images/hero/imprint-diamond-pet-memorial-cat-800w.webp 800w, /static/images/hero/imprint-diamond-pet-memorial-cat-960w.webp 960w, /static/images/hero/imprint-diamond-pet-memorial-cat-1200w.webp 1200w" sizes="(max-width:640px) 92vw, (max-width:900px) 45vw, 320px">
+          <img data-cms-slot="series-pet" src="/static/images/hero/imprint-diamond-pet-memorial-cat-800w.webp" srcset="/static/images/hero/imprint-diamond-pet-memorial-cat-800w.webp 800w, /static/images/hero/imprint-diamond-pet-memorial-cat-960w.webp 960w, /static/images/hero/imprint-diamond-pet-memorial-cat-1200w.webp 1200w" sizes="(max-width:640px) 92vw, (max-width:900px) 45vw, 320px" alt="寵物鑽石" width="800" height="388" loading="lazy" decoding="async" onerror="imgFallback(this)">
         </picture>
       </div>
       <div class="gh-series-card__body">
@@ -374,8 +417,8 @@
     <a class="gh-series-card reveal reveal-d2" href="/series/love/">
       <div class="gh-series-card__media">
         <picture>
-          <source type="image/webp" srcset="/static/images/series-cards/imprint-diamond-wedding-couple-ring-400.webp 400w, /static/images/series-cards/imprint-diamond-wedding-couple-ring-800.webp 800w" sizes="(max-width:640px) 92vw, (max-width:900px) 45vw, 320px">
-          <img data-cms-slot="series-love" src="/static/images/hero/imprint-diamond-wedding-couple-ring.jpg" alt="結髮鑽石" width="800" height="388" loading="lazy" decoding="async" onerror="imgFallback(this)">
+          <source type="image/webp" srcset="/static/images/hero/imprint-diamond-wedding-couple-ring-800w.webp 800w, /static/images/hero/imprint-diamond-wedding-couple-ring-960w.webp 960w, /static/images/hero/imprint-diamond-wedding-couple-ring-1200w.webp 1200w" sizes="(max-width:640px) 92vw, (max-width:900px) 45vw, 320px">
+          <img data-cms-slot="series-love" src="/static/images/hero/imprint-diamond-wedding-couple-ring-800w.webp" srcset="/static/images/hero/imprint-diamond-wedding-couple-ring-800w.webp 800w, /static/images/hero/imprint-diamond-wedding-couple-ring-960w.webp 960w, /static/images/hero/imprint-diamond-wedding-couple-ring-1200w.webp 1200w" sizes="(max-width:640px) 92vw, (max-width:900px) 45vw, 320px" alt="結髮鑽石" width="800" height="388" loading="lazy" decoding="async" onerror="imgFallback(this)">
         </picture>
       </div>
       <div class="gh-series-card__body">
@@ -389,8 +432,8 @@
     <a class="gh-series-card reveal reveal-d3" href="/series/family/">
       <div class="gh-series-card__media">
         <picture>
-          <source type="image/webp" srcset="/static/images/series-cards/imprint-diamond-family-portrait-jewelry-400.webp 400w, /static/images/series-cards/imprint-diamond-family-portrait-jewelry-800.webp 800w" sizes="(max-width:640px) 92vw, (max-width:900px) 45vw, 320px">
-          <img data-cms-slot="series-family" src="/static/images/hero/imprint-diamond-family-portrait-jewelry.jpg" alt="全家福鑽石" width="800" height="388" loading="lazy" decoding="async" onerror="imgFallback(this)">
+          <source type="image/webp" srcset="/static/images/hero/imprint-diamond-family-portrait-jewelry-800w.webp 800w, /static/images/hero/imprint-diamond-family-portrait-jewelry-960w.webp 960w, /static/images/hero/imprint-diamond-family-portrait-jewelry-1200w.webp 1200w" sizes="(max-width:640px) 92vw, (max-width:900px) 45vw, 320px">
+          <img data-cms-slot="series-family" src="/static/images/hero/imprint-diamond-family-portrait-jewelry-800w.webp" srcset="/static/images/hero/imprint-diamond-family-portrait-jewelry-800w.webp 800w, /static/images/hero/imprint-diamond-family-portrait-jewelry-960w.webp 960w, /static/images/hero/imprint-diamond-family-portrait-jewelry-1200w.webp 1200w" sizes="(max-width:640px) 92vw, (max-width:900px) 45vw, 320px" alt="全家福鑽石" width="800" height="388" loading="lazy" decoding="async" onerror="imgFallback(this)">
         </picture>
       </div>
       <div class="gh-series-card__body">
@@ -404,8 +447,8 @@
     <a class="gh-series-card reveal reveal-d4" href="/series/heirloom/">
       <div class="gh-series-card__media">
         <picture>
-          <source type="image/webp" srcset="/static/images/series-cards/imprint-diamond-heirloom-memorial-400.webp 400w, /static/images/series-cards/imprint-diamond-heirloom-memorial-800.webp 800w" sizes="(max-width:640px) 92vw, (max-width:900px) 45vw, 320px">
-          <img data-cms-slot="series-heirloom" src="/static/images/hero/imprint-diamond-heirloom-memorial.jpg" alt="生命鑽石" width="800" height="388" loading="lazy" decoding="async" onerror="imgFallback(this)">
+          <source type="image/webp" srcset="/static/images/hero/imprint-diamond-heirloom-memorial-800w.webp 800w, /static/images/hero/imprint-diamond-heirloom-memorial-960w.webp 960w, /static/images/hero/imprint-diamond-heirloom-memorial-1200w.webp 1200w" sizes="(max-width:640px) 92vw, (max-width:900px) 45vw, 320px">
+          <img data-cms-slot="series-heirloom" src="/static/images/hero/imprint-diamond-heirloom-memorial-800w.webp" srcset="/static/images/hero/imprint-diamond-heirloom-memorial-800w.webp 800w, /static/images/hero/imprint-diamond-heirloom-memorial-960w.webp 960w, /static/images/hero/imprint-diamond-heirloom-memorial-1200w.webp 1200w" sizes="(max-width:640px) 92vw, (max-width:900px) 45vw, 320px" alt="生命鑽石" width="800" height="388" loading="lazy" decoding="async" onerror="imgFallback(this)">
         </picture>
       </div>
       <div class="gh-series-card__body">
@@ -537,19 +580,141 @@
 {% block extra_scripts %}
 <script>
 (function () {
-  document.addEventListener('click', function (e) {
-    var btn = e.target.closest('[data-yt-facade]');
-    if (!btn) return;
+  var PLAY_SVG =
+    '<span class="gh-yt-facade__play" aria-hidden="true">' +
+    '<svg viewBox="0 0 68 48" width="44" height="32"><path d="M66.52 7.74c-.78-2.93-2.49-5.42-5.42-6.2C55.79.13 34 0 34 0S12.21.13 6.9 1.54c-2.93.78-4.64 3.27-5.42 6.2C.13 13.05 0 24 0 24s.13 10.95 1.48 16.26c.78 2.93 2.49 5.32 5.42 6.1C12.21 47.87 34 48 34 48s21.79-.13 27.1-1.54c2.93-.78 4.64-3.17 5.42-6.1C67.87 34.95 68 24 68 24s-.13-10.95-1.48-16.26z" fill="rgba(20,20,20,.75)"/><path d="M45 24 27 14v20" fill="#fff"/></svg>' +
+    '</span>';
+
+  function paintPoster(btn) {
+    if (!btn || btn.dataset.ytPosterPainted) return;
+    var poster = btn.getAttribute('data-yt-poster') || '';
+    if (!poster) return;
+    btn.style.backgroundImage = 'url("' + poster + '")';
+    btn.dataset.ytPosterPainted = '1';
+  }
+
+  function getStage() {
+    return document.querySelector('[data-yt-gallery-stage]');
+  }
+
+  function buildFacade(id, title, poster) {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'gh-yt-facade';
+    btn.setAttribute('data-yt-facade', '');
+    btn.setAttribute('data-yt-id', id);
+    btn.setAttribute('data-yt-title', title || '');
+    btn.setAttribute('data-yt-poster', poster || '');
+    btn.setAttribute('aria-label', '播放影片：' + (title || ''));
+    btn.innerHTML =
+      PLAY_SVG +
+      '<span class="gh-yt-facade__title" data-yt-title-label></span>';
+    var label = btn.querySelector('[data-yt-title-label]');
+    if (label) label.textContent = title || '';
+    paintPoster(btn);
+    return btn;
+  }
+
+  function mountFacade(id, title, poster) {
+    var stage = getStage();
+    if (!stage) return null;
+    stage.innerHTML = '';
+    var btn = buildFacade(id, title, poster);
+    stage.appendChild(btn);
+    return btn;
+  }
+
+  function updateFacade(btn, id, title, poster) {
+    btn.setAttribute('data-yt-id', id);
+    btn.setAttribute('data-yt-title', title || '');
+    btn.setAttribute('data-yt-poster', poster || '');
+    btn.setAttribute('aria-label', '播放影片：' + (title || ''));
+    delete btn.dataset.ytPosterPainted;
+    btn.style.backgroundImage = '';
+    paintPoster(btn);
+    var label = btn.querySelector('[data-yt-title-label]');
+    if (label) label.textContent = title || '';
+  }
+
+  function activateThumb(thumb) {
+    var id = thumb.getAttribute('data-yt-id') || '';
+    var title = thumb.getAttribute('data-yt-title') || '';
+    var poster = thumb.getAttribute('data-yt-poster') || '';
+    if (!id) return;
+
+    document.querySelectorAll('[data-yt-thumb]').forEach(function (node) {
+      var on = node === thumb;
+      node.classList.toggle('is-active', on);
+      node.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+
+    var stage = getStage();
+    if (!stage) return;
+    if (stage.querySelector('iframe')) {
+      mountFacade(id, title, poster);
+      return;
+    }
+    var facade = stage.querySelector('[data-yt-facade]');
+    if (facade) updateFacade(facade, id, title, poster);
+    else mountFacade(id, title, poster);
+  }
+
+  function bindFacades() {
+    var nodes = document.querySelectorAll('[data-yt-facade][data-yt-poster]');
+    if (!nodes.length) return;
+    if ('IntersectionObserver' in window) {
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (!entry.isIntersecting) return;
+          paintPoster(entry.target);
+          io.unobserve(entry.target);
+        });
+      }, { rootMargin: '200px 0px' });
+      nodes.forEach(function (node) { io.observe(node); });
+    } else {
+      nodes.forEach(paintPoster);
+    }
+  }
+
+  function embedFacade(btn) {
+    var id = btn.getAttribute('data-yt-id') || '';
+    if (!id) return;
+    paintPoster(btn);
     var iframe = document.createElement('iframe');
-    iframe.src = 'https://www.youtube-nocookie.com/embed/' + btn.dataset.ytId + '?autoplay=1';
-    iframe.title = btn.dataset.ytTitle || '';
+    iframe.src = 'https://www.youtube.com/embed/' + id + '?autoplay=1';
+    iframe.title = btn.getAttribute('data-yt-title') || '';
     iframe.loading = 'eager';
-    iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+    iframe.allow =
+      'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
     iframe.referrerPolicy = 'strict-origin-when-cross-origin';
     iframe.allowFullscreen = true;
     iframe.style.border = '0';
-    btn.replaceWith(iframe);
+    var stage = btn.closest('[data-yt-gallery-stage]');
+    if (stage) {
+      stage.innerHTML = '';
+      stage.appendChild(iframe);
+    } else {
+      btn.replaceWith(iframe);
+    }
+  }
+
+  document.addEventListener('click', function (e) {
+    var thumb = e.target.closest('[data-yt-thumb]');
+    if (thumb) {
+      e.preventDefault();
+      activateThumb(thumb);
+      return;
+    }
+    var btn = e.target.closest('[data-yt-facade]');
+    if (!btn) return;
+    embedFacade(btn);
   });
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bindFacades, { once: true });
+  } else {
+    bindFacades();
+  }
 })();
 </script>
 <script>
@@ -566,7 +731,7 @@
     if (window.__homeExtrasInjected) return;
     window.__homeExtrasInjected = true;
     inject('/static/js/home-wall.js?v=4');
-    inject('/static/js/home-banners.js?v=8');
+    inject('/static/js/home-banners.js?v=9');
   }
   function schedule() { setTimeout(loadHomeExtras, HOME_EXTRAS_MS); }
   if (document.readyState === 'complete') schedule();

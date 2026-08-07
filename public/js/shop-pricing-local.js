@@ -307,21 +307,34 @@
     return Number.isFinite(cat) && cat >= 0 ? Math.round(cat) : 0;
   }
 
-  /** Ring-size 品項加價 from product.ringSizeConfig; 0 when size has no row. */
+  /** Ring-size 品項加價: step formula, else legacy sizes[] lookup. */
   function resolveRingSizeAddon(product, ringSize) {
     if (ringSize == null || ringSize === '') return 0;
     var size = Math.round(Number(ringSize));
     if (!Number.isFinite(size)) return 0;
     var cfg = product && (product.ringSizeConfig || product.ring_size_config);
     if (!cfg || typeof cfg !== 'object') return 0;
+
+    var stepRaw = cfg.pricePerSizeTwd != null ? cfg.pricePerSizeTwd : cfg.price_per_size_twd;
+    if (stepRaw != null && stepRaw !== '') {
+      var minRaw = cfg.minSize != null ? cfg.minSize
+        : (cfg.min_size != null ? cfg.min_size
+          : (cfg.startSize != null ? cfg.startSize : cfg.start_size));
+      var minSize = Math.round(Number(minRaw));
+      var step = Number(stepRaw);
+      if (!Number.isFinite(minSize) || !Number.isFinite(step) || step < 0) return 0;
+      var addon = Math.max(0, (size - minSize) * step);
+      return Math.round(addon);
+    }
+
     var rows = cfg.sizes;
     if (Array.isArray(rows)) {
       for (var i = 0; i < rows.length; i += 1) {
         var r = rows[i];
         if (!r) continue;
         if (Math.round(Number(r.size)) !== size) continue;
-        var addon = r.addonPriceTwd != null ? r.addonPriceTwd : r.addon_price_twd;
-        var n = Number(addon);
+        var rowAddon = r.addonPriceTwd != null ? r.addonPriceTwd : r.addon_price_twd;
+        var n = Number(rowAddon);
         return Number.isFinite(n) && n > 0 ? Math.round(n) : 0;
       }
     }

@@ -1,9 +1,42 @@
 {
   "enabled": true,
+  "syncedAt": "2026-08-07T04:58:05Z",
+  "videos": [
+    {
+      "youtubeId": "IFa_5chXdJ4",
+      "title": "回家-DNA鑽石-銘印鑽石",
+      "label": "回家-DNA鑽石-銘印鑽石"
+    },
+    {
+      "youtubeId": "EdYQTJfD2hE",
+      "title": "有些愛不會消失-DNA鑽石-銘印鑽石",
+      "label": "有些愛不會消失-DNA鑽石-銘印鑽石"
+    },
+    {
+      "youtubeId": "4NgOHK064Jc",
+      "title": "寫給未來的你-DNA鑽石-銘印鑽石",
+      "label": "寫給未來的你-DNA鑽石-銘印鑽石"
+    },
+    {
+      "youtubeId": "ZGSmmOGH7Ec",
+      "title": "回家的光-DNA寵物鑽石 | 銘印鑽石",
+      "label": "回家的光-DNA寵物鑽石 | 銘印鑽石"
+    },
+    {
+      "youtubeId": "S0dcVT_v2kQ",
+      "title": "陪伴只是換一種方式留下-DNA鑽石-銘印鑽石",
+      "label": "陪伴只是換一種方式留下-DNA鑽石-銘印鑽石"
+    },
+    {
+      "youtubeId": "K6jhW-F52hs",
+      "title": "思念不是停留在原地",
+      "label": "思念不是停留在原地"
+    }
+  ],
   "source": "fixed",
-  "youtube_id": "eBLOrvHosR4",
-  "title": "DNA 鑽石製作流程影片",
   "eyebrow": "VIDEO",
   "heading": "親眼見證，思念如何被慎重對待",
-  "lead": "從樣本到鑽石，我們如何把每一份託付留在您觸手可及的距離裡。"
+  "lead": "從樣本到鑽石，我們如何把每一份託付留在您觸手可及的距離裡。",
+  "youtube_id": "IFa_5chXdJ4",
+  "title": "回家-DNA鑽石-銘印鑽石"
 }

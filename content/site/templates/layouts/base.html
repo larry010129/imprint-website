@@ -2,7 +2,7 @@
 <html lang="zh-Hant-TW">
 <head>
 {% set is_home = extra_body_class and 'page-home' in extra_body_class %}
-<!-- Google tag (gtag.js) — hard delay on home (rIC can fire during PSI idle) -->
+<!-- Google tag (gtag.js) ??hard delay on home (rIC can fire during PSI idle) -->
 <script>
 (function () {
   var gtagMinDelayMs = {{ 14000 if is_home else 4000 }};
@@ -63,22 +63,22 @@
 {% if is_home %}
 {# Closed-bar shell inlined; full nav (drawer/dropdowns/animations) deferred #}
 <style>{{ inline_css('nav-critical.css') | safe }}</style>
-<link rel="stylesheet" href="/static/css/nav.css?v=4.15" media="print" onload="this.media='all'">
-<noscript><link rel="stylesheet" href="/static/css/nav.css?v=4.15"></noscript>
+<link rel="stylesheet" href="/static/css/nav.css?v=4.18" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="/static/css/nav.css?v=4.18"></noscript>
 {% else %}
-<link rel="stylesheet" href="/static/css/nav.css?v=4.15">
+<link rel="stylesheet" href="/static/css/nav.css?v=4.18">
 {% endif %}
 {% if not is_home %}
 <link rel="stylesheet" href="/static/css/home.css?v=5.7">
 {% endif %}
 {% if is_home %}
-<link rel="stylesheet" href="/static/css/footer.css?v=4" media="print" onload="this.media='all'">
-<noscript><link rel="stylesheet" href="/static/css/footer.css?v=4"></noscript>
+<link rel="stylesheet" href="/static/css/footer.css?v=5" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="/static/css/footer.css?v=5"></noscript>
 {% else %}
-<link rel="stylesheet" href="/static/css/footer.css?v=4">
+<link rel="stylesheet" href="/static/css/footer.css?v=5">
 {% endif %}
 {% if not is_home %}
-<link rel="stylesheet" href="/static/css/pages.css?v=5.29">
+<link rel="stylesheet" href="/static/css/pages.css?v=5.30">
 {% endif %}
 {% if load_skeleton_css or load_skeleton_ui %}
 <link rel="stylesheet" href="/static/css/skeleton.css?v=3">
@@ -90,10 +90,10 @@
 <link rel="stylesheet" href="/static/css/responsive.css?v=3.22">
 {% endif %}
 {% if is_home %}
-<link rel="stylesheet" href="/static/css/social-fab.css?v=10" media="print" onload="this.media='all'">
-<noscript><link rel="stylesheet" href="/static/css/social-fab.css?v=10"></noscript>
+<link rel="stylesheet" href="/static/css/social-fab.css?v=11" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="/static/css/social-fab.css?v=11"></noscript>
 {% else %}
-<link rel="stylesheet" href="/static/css/social-fab.css?v=10">
+<link rel="stylesheet" href="/static/css/social-fab.css?v=11">
 {% endif %}
 {% block extra_css %}{% endblock %}
 {% if site_cms_sections or site_cms_edit %}
@@ -106,7 +106,7 @@
 {% endif %}
 
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"Organization","@id":"https://www.imprintdiamond.com/#organization","name":"銘印鑽石 IMPRINT DIAMOND","legalName":"心之銘印鑽石有限公司","url":"https://www.imprintdiamond.com/","logo":"https://www.imprintdiamond.com/favicon.svg","telephone":"+886-2-2977-0268","address":{"@type":"PostalAddress","streetAddress":"福德南路43號1樓","addressLocality":"三重區","addressRegion":"新北市","addressCountry":"TW"},"contactPoint":[{"@type":"ContactPoint","telephone":"+886-2-2977-0268","contactType":"customer service","areaServed":"TW","availableLanguage":["zh-Hant"]}],"sameAs":["https://www.facebook.com/Imprintdiamond/","https://lin.ee/ktVBtmx"]}
+{"@context":"https://schema.org","@type":"Organization","@id":"https://www.imprintdiamond.com/#organization","name":"銘印鑽石 IMPRINT DIAMOND","alternateName":["銘印鑽石","IMPRINT DIAMOND","Imprint Diamond"],"legalName":"心之銘印鑽石有限公司","url":"https://www.imprintdiamond.com/","logo":"https://www.imprintdiamond.com/favicon.svg","telephone":"+886-2-2977-0268","address":{"@type":"PostalAddress","streetAddress":"福德南路43號1樓","addressLocality":"三重區","addressRegion":"新北市","addressCountry":"TW"},"contactPoint":[{"@type":"ContactPoint","telephone":"+886-2-2977-0268","contactType":"customer service","areaServed":"TW","availableLanguage":["zh-Hant","zh-TW"]}],"sameAs":["https://www.facebook.com/Imprintdiamond/","https://lin.ee/ktVBtmx"],"areaServed":"TW"}
 </script>
 
 {% if breadcrumbs %}
@@ -161,7 +161,7 @@
 <script src="/static/js/htmx.min.js" defer></script>
 {% endif %}
 <script src="/static/js/nav-dropdown.js?v=1" defer></script>
-<script src="/static/js/nav-chrome.js?v=4" defer></script>
+<script src="/static/js/nav-chrome.js?v=5" defer></script>
 {% if load_skeleton_ui %}
 <script src="/static/js/skeleton-ui.js?v=1" defer></script>
 {% endif %}

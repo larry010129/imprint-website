@@ -131,7 +131,8 @@ a.account-menu-trigger{ text-decoration:none; color:inherit; }
   [data-site-nav-root] .nav-brand .brand-mark{ width:48px; height:24px; }
   [data-site-nav-root] .nav-brand .brand-name{ min-width:0; overflow:hidden; }
   [data-site-nav-root] .nav-brand .brand-name > span{
-    overflow:hidden; text-overflow:clip; white-space:nowrap;
+    display:block; max-width:100%;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   }
   [data-site-nav-root] .nav-cta{ flex:0 0 auto; min-width:0; gap:4px; }
   [data-site-nav-root] .site-nav-account-desktop{ display:flex; align-items:center; }

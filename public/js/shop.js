@@ -4927,23 +4927,39 @@ function setRingSizeActive(size) {
   selectRingSize(size);
 }
 
-function productRingStartSize(product) {
-  const cfg = product && (product.ringSizeConfig || product.ring_size_config);
-  if (!cfg) return null;
-  const raw = cfg.startSize != null ? cfg.startSize : cfg.start_size;
+function productRingBoundInt(raw) {
   if (raw == null || raw === '') return null;
   const n = Math.round(Number(raw));
   if (!Number.isFinite(n) || n < RING_SIZE_DEFAULT_MIN || n > RING_SIZE_DEFAULT_MAX) return null;
   return n;
 }
 
-/** Apply product starting size as picker min; optionally select as default. */
+function productRingStartSize(product) {
+  const cfg = product && (product.ringSizeConfig || product.ring_size_config);
+  if (!cfg) return null;
+  const raw = cfg.minSize != null ? cfg.minSize
+    : (cfg.min_size != null ? cfg.min_size
+      : (cfg.startSize != null ? cfg.startSize : cfg.start_size));
+  return productRingBoundInt(raw);
+}
+
+function productRingMaxSize(product) {
+  const cfg = product && (product.ringSizeConfig || product.ring_size_config);
+  if (!cfg) return null;
+  const raw = cfg.maxSize != null ? cfg.maxSize : cfg.max_size;
+  return productRingBoundInt(raw);
+}
+
+/** Apply product min/max as picker bounds; optionally select min as default. */
 function applyProductRingSizeBounds(product, options) {
   const opts = options || {};
   const selectDefault = opts.selectDefault !== false;
   const start = productRingStartSize(product);
+  const max = productRingMaxSize(product);
   ringSizeMin = start != null ? start : RING_SIZE_DEFAULT_MIN;
-  ringSizeMax = RING_SIZE_DEFAULT_MAX;
+  ringSizeMax = max != null ? max : RING_SIZE_DEFAULT_MAX;
+  if (ringSizeMax > RING_SIZE_DEFAULT_MAX) ringSizeMax = RING_SIZE_DEFAULT_MAX;
+  if (ringSizeMin < RING_SIZE_DEFAULT_MIN) ringSizeMin = RING_SIZE_DEFAULT_MIN;
   if (ringSizeMin > ringSizeMax) ringSizeMin = RING_SIZE_DEFAULT_MIN;
   populateRingSizeSelect();
   if (selectDefault && start != null) {

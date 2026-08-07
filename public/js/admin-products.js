@@ -296,6 +296,47 @@
     return Number.isFinite(n) && n >= 0 ? Math.round(n) : 0;
   }
 
+  function categoryRingSizeConfig(slug) {
+    var info = categoryInfo(slug);
+    if (!info) return null;
+    return info.ringSizeConfig || info.ring_size_config || null;
+  }
+
+  function categoryRingSizeSectionHtml(cat) {
+    if (cat !== 'ring') return '';
+    var cfg = categoryRingSizeConfig(cat);
+    var minSize = ringSizeFieldValue(cfg, 'minSize', 'min_size', 'startSize', 'start_size');
+    var maxSize = ringSizeFieldValue(cfg, 'maxSize', 'max_size');
+    if (maxSize === '' && cfg) maxSize = RING_SIZE_MAX;
+    var pricePer = ringSizeFieldValue(cfg, 'pricePerSizeTwd', 'price_per_size_twd');
+    return (
+      '<div id="apRingSizeSection" class="ap-category-ring-block" data-slug="' + esc(cat) + '">' +
+        '<h4 class="ap-category-addon-label">戒圍設定</h4>' +
+        '<p class="ap-category-addon-hint ap-category-ring-hint">' +
+          '最小圍為底價（加價 0）；選 N 圍則加價 (N − 最小) × 每圍加價。範圍 5–18。與品項加價分開疊加。' +
+        '</p>' +
+        '<div class="ap-category-ring-row">' +
+          '<label><span>最小戒圍</span>' +
+            '<input type="number" id="apCategoryRingMin" name="ringMinSize" min="' + RING_SIZE_MIN +
+              '" max="' + RING_SIZE_MAX + '" step="1" placeholder="' + RING_SIZE_MIN +
+              '" value="' + esc(minSize) + '">' +
+          '</label>' +
+          '<label><span>最大戒圍</span>' +
+            '<input type="number" id="apCategoryRingMax" name="ringMaxSize" min="' + RING_SIZE_MIN +
+              '" max="' + RING_SIZE_MAX + '" step="1" placeholder="' + RING_SIZE_MAX +
+              '" value="' + esc(maxSize) + '">' +
+          '</label>' +
+          '<label><span>每圍加價 (NT$)</span>' +
+            '<input type="number" id="apCategoryRingPricePer" name="ringPricePerSize" min="0" step="1" ' +
+              'placeholder="0" value="' + esc(pricePer) + '">' +
+          '</label>' +
+          '<button type="button" class="btn-sm btn-primary" id="apCategoryRingSizeSave">儲存</button>' +
+        '</div>' +
+        '<p class="ap-category-addon-hint" id="apCategoryRingSizeStatus" hidden></p>' +
+      '</div>'
+    );
+  }
+
   function categoryPanelHtml() {
     var cat = state.activeTab.replace('cat-', '');
     var label = state.categoryLabels[cat] || cat;
@@ -329,15 +370,17 @@
             '</div>' +
           '</div>' +
         '</div>' +
-        '<div class="ap-category-addon-block" data-slug="' + esc(cat) + '">' +
-          '<label class="ap-category-addon-label" for="apCategoryAddonInput">品項加價 (NT$)</label>' +
-          '<div class="ap-category-addon-row">' +
-            '<input type="number" id="apCategoryAddonInput" class="ap-category-addon-input" ' +
-              'min="0" step="1" inputmode="numeric" value="' + addon + '" data-slug="' + esc(cat) + '">' +
-            '<button type="button" class="btn-sm btn-primary" id="apCategoryAddonSave">儲存</button>' +
-            '<button type="button" class="btn-sm" id="apCategoryAddonForce">強制覆蓋</button>' +
+        '<div class="ap-category-pricing-row">' +
+          '<div class="ap-category-addon-block" data-slug="' + esc(cat) + '">' +
+            '<label class="ap-category-addon-label" for="apCategoryAddonInput">品項加價 (NT$)</label>' +
+            '<div class="ap-category-addon-row">' +
+              '<input type="number" id="apCategoryAddonInput" class="ap-category-addon-input" ' +
+                'min="0" step="1" inputmode="numeric" value="' + addon + '" data-slug="' + esc(cat) + '">' +
+              '<button type="button" class="btn-sm btn-primary" id="apCategoryAddonSave">儲存</button>' +
+              '<button type="button" class="btn-sm" id="apCategoryAddonForce">強制覆蓋</button>' +
+            '</div>' +
+            '<p class="ap-category-addon-hint" id="apCategoryAddonStatus" hidden></p>' +
           '</div>' +
-          '<p class="ap-category-addon-hint" id="apCategoryAddonStatus" hidden></p>' +
         '</div>' +
       '</div>'
     );
@@ -479,6 +522,7 @@
       '<div class="ap-category-tabs" role="tablist">' + tabs + '</div>' +
       categoryPanelHtml() +
       '<div class="ap-table-root" id="apProductsTableRoot">' + tableAreaSkeletonHtml() + '</div>' +
+      categoryRingSizeSectionHtml(state.activeTab.replace('cat-', '')) +
       '<dialog id="apDeleteDialog" class="ap-delete-dialog"><form method="dialog" id="apDeleteForm">' +
         '<h3>刪除商品</h3><p id="apDeleteTarget"></p>' +
         '<p class="ap-hint">刪除後無法復原，若已有訂單引用建議改為下架。</p>' +
@@ -573,6 +617,7 @@
         });
         renderActiveCategoryTable();
         refreshCategoryPanel();
+        refreshRingSizeSection();
       });
     });
 
@@ -581,6 +626,7 @@
 
     bindCategoryThumbUpload();
     bindCategoryAddonSave();
+    bindCategoryRingSizeSave();
     bindCategoryDeleteButton();
     bindAddCategoryDialog();
     bindDeleteCategoryDialog();
@@ -669,6 +715,25 @@
       bindCategoryAddonSave();
       bindCategoryDeleteButton();
     }
+  }
+
+  function refreshRingSizeSection() {
+    var table = document.getElementById('apProductsTableRoot');
+    if (!table) return;
+    var cat = state.activeTab.replace('cat-', '');
+    var html = categoryRingSizeSectionHtml(cat);
+    var existing = document.getElementById('apRingSizeSection');
+    if (!html) {
+      if (existing) existing.remove();
+      return;
+    }
+    var wrap = document.createElement('div');
+    wrap.innerHTML = html;
+    var next = wrap.firstElementChild;
+    if (!next) return;
+    if (existing) existing.replaceWith(next);
+    else table.insertAdjacentElement('afterend', next);
+    bindCategoryRingSizeSave();
   }
 
   function setCategoryAddonStatus(msg, isError) {
@@ -835,6 +900,129 @@
       forceBtn.dataset.bound = '1';
       forceBtn.addEventListener('click', function () { forceOverwriteCategoryAddon(); });
     }
+  }
+
+  function setCategoryRingSizeStatus(msg, isError) {
+    var el = document.getElementById('apCategoryRingSizeStatus');
+    if (!el) return;
+    if (!msg) {
+      el.hidden = true;
+      el.textContent = '';
+      el.classList.remove('is-error', 'is-ok');
+      return;
+    }
+    el.hidden = false;
+    el.textContent = msg;
+    el.classList.toggle('is-error', !!isError);
+    el.classList.toggle('is-ok', !isError);
+  }
+
+  function collectCategoryRingSizeConfig() {
+    var minEl = document.getElementById('apCategoryRingMin');
+    var maxEl = document.getElementById('apCategoryRingMax');
+    var priceEl = document.getElementById('apCategoryRingPricePer');
+    if (!minEl) return null;
+    var minRaw = String(minEl.value || '').trim();
+    var maxRaw = maxEl ? String(maxEl.value || '').trim() : '';
+    var priceRaw = priceEl ? String(priceEl.value || '').trim() : '';
+    if (minRaw === '' && maxRaw === '' && priceRaw === '') return null;
+    var minSize = minRaw === '' ? null : parseInt(minRaw, 10);
+    var maxSize = maxRaw === '' ? null : parseInt(maxRaw, 10);
+    var pricePerSizeTwd = priceRaw === '' ? 0 : parseFloat(priceRaw);
+    return {
+      minSize: Number.isFinite(minSize) ? minSize : null,
+      maxSize: Number.isFinite(maxSize) ? maxSize : null,
+      pricePerSizeTwd: Number.isFinite(pricePerSizeTwd) ? pricePerSizeTwd : 0,
+    };
+  }
+
+  function validateCategoryRingSizeConfig(rc) {
+    if (!rc) return null;
+    var minS = rc.minSize;
+    var maxS = rc.maxSize;
+    var step = rc.pricePerSizeTwd;
+    if (minS == null && (maxS != null || step != null)) {
+      return '請填寫最小戒圍（底價圍）';
+    }
+    if (minS != null && (!Number.isFinite(minS) || minS < RING_SIZE_MIN || minS > RING_SIZE_MAX)) {
+      return '最小戒圍須為 5–18';
+    }
+    if (maxS != null && (!Number.isFinite(maxS) || maxS < RING_SIZE_MIN || maxS > RING_SIZE_MAX)) {
+      return '最大戒圍須為 5–18';
+    }
+    if (minS != null && maxS != null && minS > maxS) {
+      return '最小戒圍不可大於最大戒圍';
+    }
+    if (step != null && (!Number.isFinite(Number(step)) || Number(step) < 0)) {
+      return '每圍加價不可為負';
+    }
+    return null;
+  }
+
+  function saveCategoryRingSize() {
+    var btn = document.getElementById('apCategoryRingSizeSave');
+    var section = document.getElementById('apRingSizeSection');
+    if (!section) return Promise.resolve();
+    var slug = section.dataset.slug || 'ring';
+    var rc = collectCategoryRingSizeConfig();
+    var err = validateCategoryRingSizeConfig(rc);
+    if (err) {
+      setCategoryRingSizeStatus(err, true);
+      return Promise.resolve();
+    }
+    if (!api.admin.updateProductCategory) {
+      setCategoryRingSizeStatus('請強制重新整理頁面（Ctrl+F5）後再儲存', true);
+      return Promise.resolve();
+    }
+    setCategoryRingSizeStatus('儲存中…', false);
+    if (btn) btn.disabled = true;
+    return api.admin.updateProductCategory(slug, { ringSizeConfig: rc }).then(function (res) {
+      if (btn) btn.disabled = false;
+      if (res.error) {
+        setCategoryRingSizeStatus(apiError(res), true);
+        if (window.Toast) {
+          window.Toast.create({ type: 'error', title: '戒圍設定儲存失敗', description: apiError(res) });
+        }
+        return;
+      }
+      if (!res.category) {
+        setCategoryRingSizeStatus('儲存回應異常，請重新整理後確認', true);
+        return;
+      }
+      var idx = (state.categories || []).findIndex(function (c) { return c.slug === slug; });
+      if (idx >= 0) state.categories[idx] = res.category;
+      else if (state.categories) state.categories.push(res.category);
+      setCategoryRingSizeStatus('已儲存', false);
+      if (window.Toast) {
+        window.Toast.create({ type: 'success', title: '戒圍設定已儲存' });
+      }
+    }).catch(function (e) {
+      if (btn) btn.disabled = false;
+      var msg = (e && e.message) ? String(e.message) : '儲存失敗，請稍後再試';
+      setCategoryRingSizeStatus(msg, true);
+      if (window.Toast) {
+        window.Toast.create({ type: 'error', title: '戒圍設定儲存失敗', description: msg });
+      }
+    });
+  }
+
+  function bindCategoryRingSizeSave() {
+    var btn = document.getElementById('apCategoryRingSizeSave');
+    if (btn && !btn.dataset.bound) {
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', function () { saveCategoryRingSize(); });
+    }
+    ['apCategoryRingMin', 'apCategoryRingMax', 'apCategoryRingPricePer'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (!el || el.dataset.bound) return;
+      el.dataset.bound = '1';
+      el.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          saveCategoryRingSize();
+        }
+      });
+    });
   }
 
   var deleteCategorySlug = null;
@@ -1174,92 +1362,13 @@
     section.hidden = category !== 'chain';
   }
 
-  function toggleRingSizeSection(form, category) {
-    var section = form.querySelector('#apRingSizeSection');
-    if (!section) return;
-    section.hidden = category !== 'ring';
-  }
-
-  function ringSizeConfigOf(product) {
-    if (!product) return null;
-    return product.ringSizeConfig || product.ring_size_config || null;
-  }
-
-  function ringSizeRowHtml(row) {
-    var size = row && row.size != null ? row.size : '';
-    var addon = '';
-    if (row) {
-      if (row.addonPriceTwd != null && row.addonPriceTwd !== '') addon = row.addonPriceTwd;
-      else if (row.addon_price_twd != null && row.addon_price_twd !== '') addon = row.addon_price_twd;
-    }
-    return (
-      '<div class="ap-variant-row ap-ring-size-row">' +
-        '<input type="number" name="ringSize" min="' + RING_SIZE_MIN + '" max="' + RING_SIZE_MAX +
-          '" step="1" placeholder="戒圍" value="' + esc(size) + '">' +
-        '<input type="number" name="ringSizeAddon" min="0" step="1" placeholder="戒圍品項加價 (NT$)" value="' +
-          esc(addon) + '" title="僅戒圍加價；與款式列／品項通用加價分開疊加">' +
-        '<button type="button" class="ap-remove-row" aria-label="移除">×</button>' +
-      '</div>'
-    );
-  }
-
-  function ringSizeSectionHtml(product, category) {
-    var cfg = ringSizeConfigOf(product);
-    var start = cfg && cfg.startSize != null ? cfg.startSize
-      : (cfg && cfg.start_size != null ? cfg.start_size : '');
-    var sizes = (cfg && Array.isArray(cfg.sizes) && cfg.sizes.length)
-      ? cfg.sizes
-      : [null];
-    var rows = sizes.map(function (r) { return ringSizeRowHtml(r); }).join('');
-    return (
-      '<div id="apRingSizeSection"' + (category === 'ring' ? '' : ' hidden') + '>' +
-        '<h4 class="ap-section-title">戒圍設定</h4>' +
-        '<p class="ap-section-hint">設定試算起始戒圍，以及各戒圍的「戒圍品項加價」。此加價與上方款式列品項加價、品項通用加價分開，會額外疊加在金工價格上；未列的戒圍加價為 0。</p>' +
-        '<div class="ap-ring-start-row">' +
-          '<label><span>起始戒圍（試算預設／下限）</span>' +
-            '<input type="number" name="ringStartSize" min="' + RING_SIZE_MIN + '" max="' + RING_SIZE_MAX +
-              '" step="1" placeholder="' + RING_SIZE_MIN + '" value="' + esc(start) + '">' +
-          '</label>' +
-        '</div>' +
-        '<div class="ap-variant-block ap-variant-block--ring-size">' +
-          '<div class="ap-variant-head"><span>戒圍</span><span>戒圍品項加價 (NT$)</span><span></span></div>' +
-          '<div id="apRingSizeGrid">' + rows + '</div>' +
-        '</div>' +
-        '<div class="ap-variant-actions">' +
-          '<button type="button" class="btn-sm" id="apAddRingSize">+ 新增戒圍</button>' +
-        '</div>' +
-      '</div>'
-    );
-  }
-
-  function collectRingSizeConfig(form, category) {
-    if (category !== 'ring') return null;
-    var startEl = form.querySelector('[name="ringStartSize"]');
-    var startRaw = startEl ? String(startEl.value || '').trim() : '';
-    var startSize = startRaw === '' ? null : parseInt(startRaw, 10);
-    var sizes = [];
-    form.querySelectorAll('#apRingSizeGrid .ap-ring-size-row').forEach(function (row) {
-      var sizeRaw = row.querySelector('[name="ringSize"]')?.value;
-      var addonRaw = row.querySelector('[name="ringSizeAddon"]')?.value;
-      if (sizeRaw === '' || sizeRaw == null) return;
-      var size = parseInt(sizeRaw, 10);
-      if (!Number.isFinite(size)) return;
-      var addon = addonRaw === '' || addonRaw == null ? 0 : parseFloat(addonRaw);
-      sizes.push({
-        size: size,
-        addonPriceTwd: Number.isFinite(addon) ? addon : 0,
-      });
-    });
-    if (startSize == null && !sizes.length) return null;
-    return { startSize: Number.isFinite(startSize) ? startSize : null, sizes: sizes };
-  }
-
-  function bindRingSizeRows(form) {
-    var grid = document.getElementById('apRingSizeGrid');
-    if (!grid) return;
-    grid.querySelectorAll('.ap-remove-row').forEach(function (btn) {
-      btn.onclick = function () { btn.closest('.ap-ring-size-row')?.remove(); };
-    });
+  function ringSizeFieldValue(cfg, camel, snake, legacyCamel, legacySnake) {
+    if (!cfg) return '';
+    if (cfg[camel] != null && cfg[camel] !== '') return cfg[camel];
+    if (snake && cfg[snake] != null && cfg[snake] !== '') return cfg[snake];
+    if (legacyCamel && cfg[legacyCamel] != null && cfg[legacyCamel] !== '') return cfg[legacyCamel];
+    if (legacySnake && cfg[legacySnake] != null && cfg[legacySnake] !== '') return cfg[legacySnake];
+    return '';
   }
 
   function variantHeadHtml(category) {
@@ -1399,7 +1508,7 @@
       '<select name="carat">' + caratOpts + '</select>' +
       '<input type="number" name="weight" step="0.0001" min="0.0001" placeholder="蠟重（錢）" value="' + esc(weight) + '">' +
       '<output class="ap-metal-weight-out" name="metalWeight">' + metalWeightLabel(weight, gold) + '</output>' +
-      '<input type="number" name="sideStoneCarat" step="0.01" min="0" placeholder="配鑽 cts" value="' + esc(sideStoneCts) + '">' +
+      '<input type="number" name="sideStoneCarat" step="any" min="0" placeholder="配鑽 cts" value="' + esc(sideStoneCts) + '">' +
       '<input type="number" name="sideStonePrice" step="1" min="0" placeholder="一克拉價格" value="' + esc(sideStone) + '">' +
       '<input type="number" name="sideStoneTotal" step="1" min="0" placeholder="配鑽價錢" value="' +
         esc(sideStoneTotalDisplay) + '"' + sideStoneFixedAttr + ' title="自動 = 配鑽 cts × 一克拉價格；手動改寫後為固定總價">' +
@@ -2256,7 +2365,6 @@
                   '>一鍵產生全部款式</button>' +
               '</div>' +
             '</div>' +
-            ringSizeSectionHtml(product, category) +
             '<div id="apChainLengthSection"' + (category === 'chain' ? '' : ' hidden') + '>' +
               chainTypeSelectorHtml(product, category) +
               chainLengthWeightsBlockHtml(product && product.lengthWeights, category, chainType) +
@@ -2310,13 +2418,6 @@
       bindRemoveRows();
     });
 
-    document.getElementById('apAddRingSize')?.addEventListener('click', function () {
-      var ringGrid = document.getElementById('apRingSizeGrid');
-      if (!ringGrid) return;
-      ringGrid.insertAdjacentHTML('beforeend', ringSizeRowHtml(null));
-      bindRingSizeRows(form);
-    });
-
     document.getElementById('apGenerateAllChainVariants')?.addEventListener('click', function () {
       if (catSel.value !== 'chain') return;
       var added = generateAllChainVariantRows(grid, form);
@@ -2329,7 +2430,6 @@
     });
 
     rebindChainLengthGrid(form);
-    bindRingSizeRows(form);
 
     document.getElementById('apChainType')?.addEventListener('change', function () {
       refreshChainLengthGrid(form, catSel.value, getFormChainType(form));
@@ -2337,7 +2437,6 @@
 
     catSel?.addEventListener('change', function () {
       toggleChainLengthSection(form, catSel.value);
-      toggleRingSizeSection(form, catSel.value);
       syncChainVariantActions(catSel.value);
       if (catSel.value === 'chain') {
         refreshChainLengthGrid(form, 'chain', getFormChainType(form));
@@ -2601,7 +2700,6 @@
       variants: variants,
       lengthWeights: category === 'chain' ? collectChainLengthWeights(form) : null,
       chainType: category === 'chain' ? getFormChainType(form) : null,
-      ringSizeConfig: collectRingSizeConfig(form, category),
       images: images,
     };
     if (category === 'diamond') {

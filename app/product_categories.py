@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import json
 import re
 import uuid
 from datetime import datetime, timezone
+from typing import Any
 
 from psycopg import errors as pg_errors
+from psycopg.types.json import Jsonb
 
 from app.image_urls import resolve_product_image_url
 
@@ -20,10 +23,13 @@ DEFAULT_CATEGORIES: list[dict] = [
 ]
 
 _CATEGORY_SELECT = (
-    "slug, label_zh, label_en, thumb_path, sort_order, addon_price_twd, created_at, updated_at"
+    "slug, label_zh, label_en, thumb_path, sort_order, addon_price_twd, "
+    "ring_size_config, created_at, updated_at"
 )
 _SLUG_RE = re.compile(r"^[a-z][a-z0-9_-]{1,31}$")
 _ADDON_MAX_TWD = 10_000_000
+_RING_SIZE_MIN = 5
+_RING_SIZE_MAX = 18
 
 
 def ensure_product_categories_schema(cur) -> None:
@@ -37,6 +43,7 @@ def ensure_product_categories_schema(cur) -> None:
           thumb_path text,
           sort_order int not null default 0,
           addon_price_twd int not null default 0,
+          ring_size_config jsonb,
           created_at timestamptz not null default now(),
           updated_at timestamptz not null default now()
         )
@@ -45,6 +52,10 @@ def ensure_product_categories_schema(cur) -> None:
     cur.execute(
         "alter table product_categories "
         "add column if not exists addon_price_twd int not null default 0"
+    )
+    cur.execute(
+        "alter table product_categories "
+        "add column if not exists ring_size_config jsonb"
     )
     cur.execute(
         """
@@ -80,6 +91,69 @@ def ensure_product_categories_schema(cur) -> None:
         )
 
 
+def _as_jsonb(value: Any) -> Jsonb | None:
+    if value is None:
+        return None
+    if isinstance(value, Jsonb):
+        return value
+    if isinstance(value, (dict, list)):
+        return Jsonb(value)
+    return None
+
+
+def _normalize_ring_size_config(raw: Any) -> dict | None:
+    """Return camelCase ringSizeConfig or None (empty/invalid → None)."""
+    if raw in (None, "", {}):
+        return None
+    if isinstance(raw, str):
+        try:
+            raw = json.loads(raw)
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return None
+    if not isinstance(raw, dict):
+        return None
+    min_raw = raw.get("minSize")
+    if min_raw is None:
+        min_raw = raw.get("min_size")
+    if min_raw is None:
+        min_raw = raw.get("startSize")
+    if min_raw is None:
+        min_raw = raw.get("start_size")
+    max_raw = raw.get("maxSize")
+    if max_raw is None:
+        max_raw = raw.get("max_size")
+    price_raw = raw.get("pricePerSizeTwd")
+    if price_raw is None:
+        price_raw = raw.get("price_per_size_twd")
+    # Legacy sizes[] passthrough for catalog/quote fallback.
+    if all(v in (None, "") for v in (min_raw, max_raw, price_raw)):
+        if raw.get("sizes") or raw.get("startSize") is not None or raw.get("start_size") is not None:
+            return dict(raw)
+        return None
+    try:
+        min_size = int(round(float(min_raw))) if min_raw not in (None, "") else None
+    except (TypeError, ValueError):
+        min_size = None
+    try:
+        max_size = int(round(float(max_raw))) if max_raw not in (None, "") else None
+    except (TypeError, ValueError):
+        max_size = None
+    try:
+        price = float(price_raw) if price_raw not in (None, "") else 0.0
+    except (TypeError, ValueError):
+        price = 0.0
+    if min_size is None:
+        return None
+    if max_size is None:
+        max_size = _RING_SIZE_MAX
+    return {
+        "minSize": min_size,
+        "maxSize": max_size,
+        "pricePerSizeTwd": price,
+        "startSize": min_size,
+    }
+
+
 def _serialize_row(row: dict) -> dict:
     out = dict(row)
     for key, value in out.items():
@@ -94,6 +168,9 @@ def _serialize_row(row: dict) -> dict:
         addon_int = 0
     out["addon_price_twd"] = max(0, addon_int)
     out["addonPrice"] = out["addon_price_twd"]
+    rsc = _normalize_ring_size_config(out.pop("ring_size_config", None))
+    out["ring_size_config"] = rsc
+    out["ringSizeConfig"] = rsc
     return out
 
 
@@ -123,13 +200,32 @@ def category_order(cur) -> list[str]:
 def build_category_meta(cur) -> dict[str, dict]:
     meta: dict[str, dict] = {}
     for row in fetch_categories(cur):
-        meta[row["slug"]] = {
+        entry = {
             "labelZh": row["label_zh"],
             "labelEn": row.get("label_en"),
             "thumbUrl": row.get("thumbUrl"),
             "addonPrice": int(row.get("addonPrice") or 0),
         }
+        if row.get("slug") == "ring" and row.get("ringSizeConfig"):
+            entry["ringSizeConfig"] = row["ringSizeConfig"]
+        meta[row["slug"]] = entry
     return meta
+
+
+def category_ring_size_config(cur, slug: str) -> dict | None:
+    """Category-level ringSizeConfig for ring slug; None if unset/non-ring."""
+    slug = (slug or "").strip()
+    if slug != "ring":
+        return None
+    ensure_product_categories_schema(cur)
+    cur.execute(
+        "select ring_size_config from product_categories where slug = %s",
+        (slug,),
+    )
+    row = cur.fetchone()
+    if not row:
+        return None
+    return _normalize_ring_size_config(row.get("ring_size_config"))
 
 
 def category_addon_price(cur, slug: str) -> int:
@@ -209,11 +305,10 @@ def create_category(cur, *, label_zh: str, label_en: str | None = None) -> tuple
         cur.execute("select coalesce(max(sort_order), -1) + 1 as next from product_categories")
         sort_order = int(cur.fetchone()["next"])
         cur.execute(
-            """
+            f"""
             insert into product_categories (slug, label_zh, label_en, sort_order, addon_price_twd)
             values (%s, %s, %s, %s, 0)
-            returning slug, label_zh, label_en, thumb_path, sort_order, addon_price_twd,
-                      created_at, updated_at
+            returning {_CATEGORY_SELECT}
             """,
             (slug, label_zh, label_en, sort_order),
         )
@@ -266,6 +361,63 @@ def update_category_thumb(cur, slug: str, thumb_path: str) -> tuple[dict | None,
     return _serialize_row(dict(row)), None
 
 
+def parse_ring_size_config(value: Any) -> tuple[dict | None, str | None]:
+    """Validate category ringSizeConfig. None clears. Errors in Chinese."""
+    if value in (None, "", {}):
+        return None, None
+    if not isinstance(value, dict):
+        return None, "戒圍設定無效"
+    min_raw = value.get("minSize")
+    if min_raw is None:
+        min_raw = value.get("min_size")
+    if min_raw is None:
+        min_raw = value.get("startSize")
+    if min_raw is None:
+        min_raw = value.get("start_size")
+    max_raw = value.get("maxSize")
+    if max_raw is None:
+        max_raw = value.get("max_size")
+    price_raw = value.get("pricePerSizeTwd")
+    if price_raw is None:
+        price_raw = value.get("price_per_size_twd")
+    if all(v in (None, "") for v in (min_raw, max_raw, price_raw)):
+        return None, None
+    if min_raw in (None, ""):
+        return None, "請填寫最小戒圍（底價圍）"
+    try:
+        min_size = int(round(float(min_raw)))
+    except (TypeError, ValueError):
+        return None, "最小戒圍無效（須為 5–18）"
+    if min_size < _RING_SIZE_MIN or min_size > _RING_SIZE_MAX:
+        return None, "最小戒圍無效（須為 5–18）"
+    if max_raw in (None, ""):
+        max_size = _RING_SIZE_MAX
+    else:
+        try:
+            max_size = int(round(float(max_raw)))
+        except (TypeError, ValueError):
+            return None, "最大戒圍無效（須為 5–18）"
+        if max_size < _RING_SIZE_MIN or max_size > _RING_SIZE_MAX:
+            return None, "最大戒圍無效（須為 5–18）"
+    if min_size > max_size:
+        return None, "最小戒圍不可大於最大戒圍"
+    if price_raw in (None, ""):
+        price = 0.0
+    else:
+        try:
+            price = float(price_raw)
+        except (TypeError, ValueError):
+            return None, "每圍加價無效"
+        if price < 0:
+            return None, "每圍加價不可為負"
+    return {
+        "minSize": min_size,
+        "maxSize": max_size,
+        "pricePerSizeTwd": price,
+        "startSize": min_size,
+    }, None
+
+
 def update_category_addon(cur, slug: str, addon_price_twd: int) -> tuple[dict | None, str | None]:
     slug = (slug or "").strip()
     amount, err = parse_addon_price(addon_price_twd)
@@ -291,6 +443,61 @@ def update_category_addon(cur, slug: str, addon_price_twd: int) -> tuple[dict | 
     if not row:
         return None, "品項不存在"
     return _serialize_row(dict(row)), None
+
+
+def update_category_ring_size(
+    cur, slug: str, ring_size_config: Any
+) -> tuple[dict | None, str | None]:
+    """Save ringSizeConfig on category (ring only). None clears."""
+    slug = (slug or "").strip()
+    if slug != "ring":
+        return None, "僅戒指品項可設定戒圍"
+    parsed, err = parse_ring_size_config(ring_size_config)
+    if err:
+        return None, err
+    try:
+        ensure_product_categories_schema(cur)
+        if slug not in valid_category_slugs(cur):
+            return None, "品項不存在"
+        cur.execute(
+            f"""
+            update product_categories
+            set ring_size_config = %s, updated_at = %s
+            where slug = %s
+            returning {_CATEGORY_SELECT}
+            """,
+            (_as_jsonb(parsed), datetime.now(timezone.utc), slug),
+        )
+        row = cur.fetchone()
+    except Exception as exc:
+        msg = str(exc).strip().split("\n", 1)[0][:200]
+        return None, f"更新戒圍設定失敗：{msg}" if msg else "更新戒圍設定失敗"
+    if not row:
+        return None, "品項不存在"
+    return _serialize_row(dict(row)), None
+
+
+def update_category_fields(
+    cur,
+    slug: str,
+    *,
+    addon_price_twd: Any = ...,
+    ring_size_config: Any = ...,
+) -> tuple[dict | None, str | None]:
+    """Patch addon and/or ringSizeConfig. Ellipsis means leave unchanged."""
+    slug = (slug or "").strip()
+    category: dict | None = None
+    if addon_price_twd is not ...:
+        category, err = update_category_addon(cur, slug, addon_price_twd)
+        if err:
+            return None, err
+    if ring_size_config is not ...:
+        category, err = update_category_ring_size(cur, slug, ring_size_config)
+        if err:
+            return None, err
+    if category is None:
+        return None, "缺少更新欄位"
+    return category, None
 
 
 def overwrite_variant_addons(cur, slug: str, amount: int) -> tuple[int, str | None]:

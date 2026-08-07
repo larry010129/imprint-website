@@ -10,7 +10,13 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 
-from app.auth import enforce_rate_limit, get_user_id, is_admin, require_admin
+from app.auth import (
+    enforce_rate_limit,
+    get_user_id,
+    is_admin,
+    log_admin_action,
+    require_admin,
+)
 from app.auth_totp_service import step_up_from_body
 from app.bot_gold import build_payload_from_cache
 from app.gold_scrape_job import (
@@ -74,6 +80,19 @@ def _err(status: int, message: str) -> JSONResponse:
 
 def _gold_refresh_authorized(request: Request) -> bool:
     expected = (os.environ.get("GOLD_REFRESH_SECRET") or "").strip()
+    if not expected:
+        return False
+    auth = request.headers.get("Authorization") or ""
+    if not auth.startswith("Bearer "):
+        return False
+    token = auth[7:].strip()
+    if not token:
+        return False
+    return secrets.compare_digest(token, expected)
+
+
+def _featured_video_sync_authorized(request: Request) -> bool:
+    expected = (os.environ.get("FEATURED_VIDEO_SYNC_SECRET") or "").strip()
     if not expected:
         return False
     auth = request.headers.get("Authorization") or ""
@@ -362,12 +381,18 @@ def catalog_product(
         if not product:
             raise HTTPException(status_code=404, detail="product not found")
         variants_by_product, images_by_product = load_product_children(cur, [product["id"]])
+        cat_meta = build_category_meta(cur)
+        ring_meta = cat_meta.get("ring") or {}
+        ring_cat_cfg = ring_meta.get("ringSizeConfig")
+        if not isinstance(ring_cat_cfg, dict):
+            ring_cat_cfg = None
 
     return {
         "product": build_catalog_product(
             product,
             variants_by_product.get(product["id"], []),
             images_by_product.get(product["id"], []),
+            category_ring_size_config=ring_cat_cfg,
         )
     }
 
@@ -603,6 +628,46 @@ def gold_price() -> dict:
 # Compat aliases for tests / callers that imported private helpers.
 _quote_fields_from_payload = quote_fields_from_payload
 _persist_gold_price_cache = persist_gold_price_cache
+
+
+@router.post("/featured-video-sync")
+async def featured_video_sync(request: Request) -> JSONResponse:
+    """Optional force sync for ``featured-video.json`` (Bearer secret).
+
+    Primary refresh is lazy TTL on home/about load. Same core as admin sync
+    (RSS + oEmbed filter → max 6). Requires
+    ``Authorization: Bearer $FEATURED_VIDEO_SYNC_SECRET``.
+    """
+    if not _featured_video_sync_authorized(request):
+        raise HTTPException(status_code=401, detail="unauthorized")
+    if not enforce_rate_limit(
+        request, action="featured-video-sync", limit=30, window_seconds=3600
+    ):
+        raise HTTPException(status_code=429, detail="請求過於頻繁，請稍後再試")
+
+    from app.featured_video import IMPRINT_CHANNEL_URL, run_featured_video_channel_sync
+
+    payload, error, channel_id = run_featured_video_channel_sync()
+    if error or payload is None:
+        raise HTTPException(status_code=502, detail=error or "同步失敗")
+
+    log_admin_action(
+        "cron",
+        "featured_video_synced",
+        {
+            "count": len(payload.get("videos") or []),
+            "channel_id": channel_id,
+            "primary": (payload.get("videos") or [{}])[0].get("youtubeId"),
+            "via": "featured_video_sync_secret",
+        },
+    )
+    return JSONResponse(
+        content={
+            "ok": True,
+            "channel_url": IMPRINT_CHANNEL_URL,
+            **payload,
+        }
+    )
 
 
 @router.post("/gold-refresh")
