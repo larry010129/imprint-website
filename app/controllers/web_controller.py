@@ -73,10 +73,10 @@ def _strip_public_phone_metadata(block: str) -> str:
 def load_featured_video(request: Request | None = None) -> dict | None:
     """Home gallery + About primary video from featured-video.json.
 
-    Lazy TTL: if ``syncedAt`` missing/older than ~24h, refresh from channel
-    (RSS + embed-page filter). Sync failure falls back to existing JSON.
-    Passes the request origin so domain-restricted embeds are skipped for
-    the viewer host (e.g. 127.0.0.1 vs production).
+    Lazy refresh: daily TTL, or sooner when channel head id moved since last
+    sync (peek cached ~20m). Always full-replaces with newest embeddable 6;
+    ``source: fixed`` does not stick the list. Sync failure falls back to
+    existing JSON. Passes request origin for domain-restricted embed checks.
     """
     from app.featured_video import (
         ensure_featured_video_fresh,

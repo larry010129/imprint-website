@@ -323,10 +323,20 @@
   display:grid;
   grid-template-columns:repeat(6, minmax(0, 1fr));
   gap:12px;
-  margin-top:28px;
+  margin:28px 0 0;
+  padding:0;
+  list-style:none;
 }
+.gh-yt-thumbs > li{
+  margin:0;
+  padding:0;
+  min-width:0;
+}
+.gh-yt-thumbs > li[hidden]{ display:none !important; }
 .gh-yt-thumb{
   position:relative;
+  display:block;
+  width:100%;
   aspect-ratio:16/9;
   border-radius:12px;
   border:2px solid transparent;
@@ -843,7 +853,7 @@
     padding-bottom:6px;
     margin-top:22px;
   }
-  .gh-yt-thumb{
+  .gh-yt-thumbs > li{
     flex:0 0 min(42vw, 168px);
     scroll-snap-align:start;
   }
@@ -886,8 +896,10 @@
     scroll-snap-type:none;
     gap:10px;
   }
-  .gh-yt-thumb{
+  .gh-yt-thumbs > li{
     flex:none;
+  }
+  .gh-yt-thumb{
     min-height:var(--tap-target-min, 44px);
   }
 }

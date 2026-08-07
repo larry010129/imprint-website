@@ -30,16 +30,22 @@
   background:var(--gh-cream);
 }
 
-/* Landing nav: hero overlay (closed bar only) — light frosted brand chrome */
+/* Landing nav: hero overlay (closed bar only) — light frosted brand chrome.
+   Keep a stacking context above .gh-hc-viewport (z:4) so hero never steals nav hits.
+   position:relative + z-index (not static/auto): fixed kids stay viewport-fixed,
+   but paint/hit order stays inside this elevated context. */
 .page-home .site-chrome{
-  position:static;
-  z-index:auto;
+  position:relative;
+  z-index:200;
 }
 .page-home .topbar{
   position:fixed; left:0; right:0; top:0; z-index:102;
   background:linear-gradient(180deg, rgba(42,24,69,.55) 0%, transparent 100%);
   border:none; color:rgba(255,255,255,.82);
+  /* Topbar can overlap nav by a few px (body line-height 1.9 vs top:36px) — don't eat link hits */
+  pointer-events:none;
 }
+.page-home .topbar a{ pointer-events:auto; }
 .page-home .topbar b{ color:var(--gh-mint-soft); }
 
 .page-home .nav{
@@ -47,6 +53,7 @@
   background:linear-gradient(180deg, rgba(42,24,69,.38) 0%, rgba(42,24,69,.08) 72%, transparent 100%);
   border:none; backdrop-filter:none;
   box-shadow:none !important;
+  pointer-events:auto;
 }
 .page-home .nav .brand-name .zh,
 .page-home .nav .brand-name .en,
@@ -168,7 +175,7 @@
   transition:transform 8s cubic-bezier(.25,.1,.25,1);
 }
 .page-home .hc-media img.kb-reset{ transition:none; }
-.page-home .hc-scrim{ position:absolute; inset:0; z-index:1; }
+.page-home .hc-scrim{ position:absolute; inset:0; z-index:1; pointer-events:none; }
 .page-home .hc-arrow{
   position:absolute; top:50%; transform:translateY(-50%); z-index:5;
   width:46px; height:46px; padding:0; border-radius:50%;

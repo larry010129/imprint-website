@@ -21,7 +21,7 @@ const gradientButtonVariants = cva(
       },
       size: {
         default: "rounded-[11px] [&_.gradient-button-inner]:min-w-[132px] [&_.gradient-button-inner]:rounded-[9px] [&_.gradient-button-inner]:px-9 [&_.gradient-button-inner]:py-4 [&_.gradient-button-inner]:text-base [&_.gradient-button-inner]:leading-[19px]",
-        nav: "rounded-[9px] [&_.gradient-button-inner]:min-w-0 [&_.gradient-button-inner]:rounded-[7px] [&_.gradient-button-inner]:px-4 [&_.gradient-button-inner]:py-2.5 [&_.gradient-button-inner]:text-[12.5px] [&_.gradient-button-inner]:leading-none [&_.gradient-button-inner]:whitespace-nowrap",
+        nav: "nav-gradient-cta rounded-[9px] max-[900px]:rounded-[8px] max-[900px]:max-w-[min(7.5rem,34vw)] [&_.gradient-button-inner]:min-w-0 [&_.gradient-button-inner]:rounded-[7px] [&_.gradient-button-inner]:px-4 [&_.gradient-button-inner]:py-2.5 [&_.gradient-button-inner]:text-[12.5px] [&_.gradient-button-inner]:leading-none [&_.gradient-button-inner]:whitespace-nowrap [&_.gradient-button-inner]:tracking-[0.05em] max-[900px]:[&_.gradient-button-inner]:rounded-[6px] max-[900px]:[&_.gradient-button-inner]:px-[clamp(8px,2.2vw,12px)] max-[900px]:[&_.gradient-button-inner]:py-[clamp(6px,1.5vw,9px)] max-[900px]:[&_.gradient-button-inner]:text-[clamp(10.5px,2.85vw,12px)] max-[900px]:[&_.gradient-button-inner]:tracking-[0.02em] max-[900px]:[&_.gradient-button-inner]:overflow-hidden max-[900px]:[&_.gradient-button-inner]:text-ellipsis max-[900px]:[&_.gradient-button-inner]:max-w-full",
       },
     },
     defaultVariants: {

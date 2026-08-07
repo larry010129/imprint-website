@@ -57,12 +57,14 @@ a.account-menu-trigger{ text-decoration:none; color:inherit; }
   line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%;
 }
 
-/* Contain conic flare — without overflow:hidden it paints over the hero */
+/* Contain conic flare — without overflow:hidden it paints over the hero.
+   Full nav.css adds ::before spin; keep hits off the flare even if clip fails. */
 .gradient-button,
 .nav-gradient-cta{
   position:relative; isolation:isolate; display:inline-flex; padding:2px;
   overflow:hidden; border-radius:9px; flex-shrink:0;
 }
+.gradient-button::before{ pointer-events:none; }
 .nav-gradient-cta .gradient-button-inner{
   min-width:0; border-radius:7px; padding:10px 16px; font-size:12.5px;
   line-height:1; letter-spacing:.05em; white-space:nowrap; font-weight:500;
@@ -135,6 +137,24 @@ a.account-menu-trigger{ text-decoration:none; color:inherit; }
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   }
   [data-site-nav-root] .nav-cta{ flex:0 0 auto; min-width:0; gap:4px; }
+  [data-site-nav-root] .nav-cta .gradient-button,
+  [data-site-nav-root] .nav-cta .nav-gradient-cta{
+    border-radius:8px;
+    max-width:min(7.5rem,34vw);
+  }
+  [data-site-nav-root] .nav-cta .nav-gradient-cta .gradient-button-inner,
+  [data-site-nav-root] .nav-cta .gradient-button-inner{
+    padding:clamp(6px,1.5vw,9px) clamp(8px,2.2vw,12px);
+    font-size:clamp(10.5px,2.85vw,12px);
+    letter-spacing:.02em;
+    border-radius:6px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    max-width:100%;
+    box-sizing:border-box;
+  }
+  [data-site-nav-root] .nav-brand .brand-name .en{ display:none; }
   [data-site-nav-root] .site-nav-account-desktop{ display:flex; align-items:center; }
   [data-site-nav-root] .site-nav-account-desktop .account-menu-text{ display:none; }
   [data-site-nav-root] .site-nav-account-desktop .account-menu-trigger{

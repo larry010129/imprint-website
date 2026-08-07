@@ -903,6 +903,7 @@ a.account-menu-trigger {
   position: absolute;
   z-index: 0;
   inset: -160%;
+  pointer-events: none;
   background: conic-gradient(
     from 0deg,
     #5ecfcf,

@@ -279,20 +279,16 @@ def test_save_and_admin_payload_roundtrip(tmp_path: Path):
 
 
 def test_seed_file_has_six_videos():
+    """Seed gallery is enabled with exactly MAX_VIDEOS unique ids (channel-sync may refresh ids)."""
     from app.featured_video import read_featured_video_file
 
     data = read_featured_video_file()
     videos = videos_from_payload(data)
     assert data.get("enabled") is True
-    assert len(videos) == 6
-    assert [v["youtubeId"] for v in videos] == [
-        "IFa_5chXdJ4",
-        "EdYQTJfD2hE",
-        "4NgOHK064Jc",
-        "ZGSmmOGH7Ec",
-        "S0dcVT_v2kQ",
-        "K6jhW-F52hs",
-    ]
+    assert len(videos) == MAX_VIDEOS
+    ids = [v["youtubeId"] for v in videos]
+    assert len(set(ids)) == MAX_VIDEOS
+    assert all(len(vid) == 11 for vid in ids)
 
 
 def test_fifo_keeps_newest_six():
@@ -347,6 +343,7 @@ def test_sync_from_channel_replace(tmp_path: Path):
     assert reloaded["heading"] == "H"
     assert len(reloaded["videos"]) == 2
     assert reloaded.get("syncedAt")
+    assert reloaded.get("channelHeadId") == "IFa_5chXdJ4"
 
 
 def _write_gallery(path: Path, *, synced_at: str | None, youtube_id: str = "eBLOrvHosR4"):
@@ -370,10 +367,137 @@ def test_ensure_fresh_skips_when_synced_at_recent(tmp_path: Path):
         calls.append(1)
         return None, "should not run", None
 
-    assert ensure_featured_video_fresh(path, sync_fn=boom) is False
+    assert (
+        ensure_featured_video_fresh(
+            path, sync_fn=boom, head_diverged_fn=lambda: False
+        )
+        is False
+    )
     assert calls == []
     data = json.loads(path.read_text(encoding="utf-8"))
     assert data["videos"][0]["youtubeId"] == "eBLOrvHosR4"
+
+
+def test_ensure_fresh_forces_when_channel_head_differs(tmp_path: Path):
+    """Inside daily TTL, new channel head still triggers full replace sync."""
+    from app.featured_video import ensure_featured_video_fresh
+
+    path = tmp_path / "featured-video.json"
+    _write_gallery(path, synced_at="2099-01-01T00:00:00Z", youtube_id="oldPrimary01")
+    calls: list[str] = []
+
+    def fake_sync(*, path: Path, **_kwargs):
+        calls.append("sync")
+        data = json.loads(path.read_text(encoding="utf-8"))
+        data["syncedAt"] = "2099-01-01T00:00:00Z"
+        data["videos"] = [
+            {"youtubeId": "IFa_5chXdJ4", "title": "new head", "label": "new head"},
+            {"youtubeId": "EdYQTJfD2hE", "title": "B", "label": "B"},
+        ]
+        path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+        return {"videos": data["videos"]}, None, "UC_test"
+
+    assert (
+        ensure_featured_video_fresh(
+            path,
+            sync_fn=fake_sync,
+            head_diverged_fn=lambda: True,
+        )
+        is True
+    )
+    assert calls == ["sync"]
+    assert json.loads(path.read_text(encoding="utf-8"))["videos"][0]["youtubeId"] == (
+        "IFa_5chXdJ4"
+    )
+
+
+def test_gallery_needs_channel_refresh_primary_and_membership(tmp_path: Path):
+    from app.featured_video import gallery_needs_channel_refresh
+
+    path = tmp_path / "featured-video.json"
+    path.write_text(
+        json.dumps(
+            {
+                "enabled": True,
+                "videos": [
+                    {"youtubeId": "primaryVid0", "title": "P"},
+                    {"youtubeId": "secondVid01", "title": "S"},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    # Legacy (no channelHeadId): primary / membership heuristic
+    assert gallery_needs_channel_refresh(path, head_id="primaryVid0") is False
+    assert gallery_needs_channel_refresh(path, head_id="brandNewVid") is True
+    assert gallery_needs_channel_refresh(path, head_id="secondVid01") is True
+    assert gallery_needs_channel_refresh(path, head_id="") is False
+
+    # After sync: unplayable raw head stored — same peek must not force again
+    path.write_text(
+        json.dumps(
+            {
+                "enabled": True,
+                "channelHeadId": "blockedHead0",
+                "videos": [
+                    {"youtubeId": "primaryVid0", "title": "P"},
+                    {"youtubeId": "secondVid01", "title": "S"},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    assert gallery_needs_channel_refresh(path, head_id="blockedHead0") is False
+    assert gallery_needs_channel_refresh(path, head_id="brandNewVid") is True
+
+
+def test_sync_replace_newest_first_drops_sticky_old(tmp_path: Path):
+    """replace=True full replace — no merge that keeps stale tops / source:fixed."""
+    from app.featured_video import sync_featured_videos_from_channel, read_featured_video_file
+
+    seed = tmp_path / "featured-video.json"
+    sticky = [
+        {"youtubeId": f"oldSticky00{i}", "title": f"old{i}", "label": f"old{i}"}
+        for i in range(6)
+    ]
+    seed.write_text(
+        json.dumps(
+            {
+                "enabled": True,
+                "source": "fixed",
+                "eyebrow": "VIDEO",
+                "videos": sticky,
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    channel = [
+        {"youtubeId": "IFa_5chXdJ4", "title": "newest"},
+        {"youtubeId": "EdYQTJfD2hE", "title": "2"},
+        {"youtubeId": "4NgOHK064Jc", "title": "3"},
+        {"youtubeId": "ZGSmmOGH7Ec", "title": "4"},
+        {"youtubeId": "S0dcVT_v2kQ", "title": "5"},
+        {"youtubeId": "K6jhW-F52hs", "title": "6"},
+        {"youtubeId": "extraShould0", "title": "7 ignored by max"},
+    ]
+    payload = sync_featured_videos_from_channel(
+        channel, path=seed, channel_head_id="IFa_5chXdJ4"
+    )
+    ids = [v["youtubeId"] for v in payload["videos"]]
+    assert ids == [
+        "IFa_5chXdJ4",
+        "EdYQTJfD2hE",
+        "4NgOHK064Jc",
+        "ZGSmmOGH7Ec",
+        "S0dcVT_v2kQ",
+        "K6jhW-F52hs",
+    ]
+    assert all(not vid.startswith("oldSticky") for vid in ids)
+    reloaded = read_featured_video_file(seed)
+    assert reloaded.get("source") == "fixed"  # meta preserved, does not block
+    assert reloaded.get("channelHeadId") == "IFa_5chXdJ4"
+    assert [v["youtubeId"] for v in reloaded["videos"]] == ids
 
 
 def test_featured_video_ttl_is_one_day():
@@ -399,7 +523,12 @@ def test_ensure_fresh_triggers_when_missing_or_stale(tmp_path: Path):
         path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
         return {"videos": data["videos"]}, None, "UC_test"
 
-    assert ensure_featured_video_fresh(path, sync_fn=fake_sync) is True
+    assert (
+        ensure_featured_video_fresh(
+            path, sync_fn=fake_sync, head_diverged_fn=lambda: False
+        )
+        is True
+    )
     assert calls == ["sync"]
     assert json.loads(path.read_text(encoding="utf-8"))["videos"][0]["youtubeId"] == (
         "IFa_5chXdJ4"
@@ -409,7 +538,10 @@ def test_ensure_fresh_triggers_when_missing_or_stale(tmp_path: Path):
     _write_gallery(path, synced_at="2000-01-01T00:00:00Z")
     assert (
         ensure_featured_video_fresh(
-            path, ttl_seconds=FEATURED_VIDEO_TTL_SECONDS, sync_fn=fake_sync
+            path,
+            ttl_seconds=FEATURED_VIDEO_TTL_SECONDS,
+            sync_fn=fake_sync,
+            head_diverged_fn=lambda: False,
         )
         is True
     )
@@ -426,7 +558,12 @@ def test_ensure_fresh_error_keeps_existing_file(tmp_path: Path):
     def fail_sync(**_kwargs):
         return None, "network down", "UC_test"
 
-    assert ensure_featured_video_fresh(path, sync_fn=fail_sync) is False
+    assert (
+        ensure_featured_video_fresh(
+            path, sync_fn=fail_sync, head_diverged_fn=lambda: False
+        )
+        is False
+    )
     assert path.read_text(encoding="utf-8") == before
     payload = load_featured_video(
         path,
@@ -512,6 +649,8 @@ def test_run_sync_helper_skips_non_embeddable(tmp_path: Path, monkeypatch):
     reloaded = fv.read_featured_video_file(seed)
     assert len(reloaded["videos"]) == MAX_VIDEOS
     assert all(v["youtubeId"] not in bad for v in reloaded["videos"])
+    # Raw channel head (even if unplayable) recorded for stale-vs-head checks
+    assert reloaded.get("channelHeadId") == "badVideo000"
 
 
 def test_channel_feed_url_includes_channel_id():

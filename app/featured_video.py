@@ -15,12 +15,15 @@ from urllib.parse import parse_qs, urlparse
 MAX_VIDEOS = 6
 CHANNEL_CANDIDATE_LIMIT = 15
 FEATURED_VIDEO_TTL_SECONDS = 24 * 60 * 60
+# Cheap RSS/page peek so home load can detect a new upload inside the daily TTL.
+CHANNEL_HEAD_CHECK_TTL_SECONDS = 20 * 60
 _STAMPEDE_LOCK_SECONDS = 120
 IMPRINT_CHANNEL_ID = "UCiI_Xayu0OrUT2swTeV6zTw"
 IMPRINT_CHANNEL_HANDLE = "@imprintdiamond"
 IMPRINT_CHANNEL_URL = "https://www.youtube.com/@imprintdiamond"
 _YOUTUBE_ID_RE = re.compile(r"^[A-Za-z0-9_-]{11}$")
 _DEFAULT_PATH = Path(__file__).resolve().parent / "data" / "featured-video.json"
+# About copy only — never gates channel sync / gallery replace.
 _META_KEYS = ("source", "eyebrow", "heading", "lead")
 _logger = logging.getLogger(__name__)
 
@@ -225,7 +228,13 @@ def backfill_embeddable_gallery(
     referer: str | None = None,
     fetch_candidates: Callable[[], list[dict]] | None = None,
 ) -> list[dict[str, str]]:
-    """Append channel candidates until ``limit`` embeddable videos or exhausted."""
+    """Fill gaps from newest-first channel candidates (skip unplayable / known ids).
+
+    Does not reshuffle ``kept`` — callers that need a full newest-6 replace should
+    run ``run_featured_video_channel_sync`` / ``ensure_featured_video_fresh`` first.
+    Candidates are walked in channel order; only the next embeddable ids after
+    ``skip_ids`` are appended (never random older picks).
+    """
     if len(kept) >= limit:
         return kept
 
@@ -522,6 +531,66 @@ def featured_video_is_stale(
     return age >= ttl_seconds
 
 
+def peek_channel_head_id(
+    *,
+    ttl_seconds: int = CHANNEL_HEAD_CHECK_TTL_SECONDS,
+    fetch_head: Callable[..., dict | None] | None = None,
+) -> str | None:
+    """Newest channel upload id (RSS/page head). Cached briefly via fetch_head TTL."""
+    try:
+        if fetch_head is not None:
+            head = fetch_head(ttl_seconds=ttl_seconds)
+        else:
+            from app.youtube_channel import (
+                fetch_latest_channel_video,
+                resolve_channel_id,
+            )
+
+            channel_id = resolve_channel_id(IMPRINT_CHANNEL_ID, IMPRINT_CHANNEL_HANDLE)
+            if not channel_id:
+                return None
+            head = fetch_latest_channel_video(channel_id, ttl_seconds=ttl_seconds)
+    except Exception as exc:  # noqa: BLE001 — head peek must not break render
+        _logger.warning("featured video channel head peek failed: %s", exc)
+        return None
+    if not isinstance(head, dict):
+        return None
+    return (head.get("youtube_id") or head.get("youtubeId") or "").strip() or None
+
+
+def gallery_needs_channel_refresh(
+    path: Path | None = None,
+    *,
+    head_id: str | None = None,
+    fetch_head: Callable[..., dict | None] | None = None,
+    head_ttl_seconds: int = CHANNEL_HEAD_CHECK_TTL_SECONDS,
+) -> bool:
+    """True when channel head moved since last sync (or gallery empty).
+
+    Compares peek head to stored ``channelHeadId`` (raw RSS/page head at last
+    sync). Falls back to gallery primary / membership when ``channelHeadId``
+    missing (legacy JSON). ``source: fixed`` never suppresses this. Returns
+    False when head cannot be resolved (rely on daily TTL).
+    """
+    data = read_featured_video_file(path)
+    videos = videos_from_payload(data)
+    if not videos:
+        return True
+    primary = videos[0]["youtubeId"]
+    gallery_ids = {v["youtubeId"] for v in videos}
+    resolved = head_id if head_id is not None else peek_channel_head_id(
+        ttl_seconds=head_ttl_seconds,
+        fetch_head=fetch_head,
+    )
+    if not resolved:
+        return False
+    last_head = str(data.get("channelHeadId") or data.get("channel_head_id") or "").strip()
+    if last_head:
+        return resolved != last_head
+    # Legacy files without channelHeadId: primary / membership heuristic.
+    return resolved != primary or resolved not in gallery_ids
+
+
 def _refresh_in_progress(path: Path, *, now: float | None = None) -> bool:
     lock = _sync_lock_path(path)
     if not lock.is_file():
@@ -560,16 +629,39 @@ def ensure_featured_video_fresh(
     force: bool = False,
     sync_fn: Callable[..., tuple[dict[str, Any] | None, str | None, str | None]]
     | None = None,
+    fetch_head: Callable[..., dict | None] | None = None,
+    head_ttl_seconds: int = CHANNEL_HEAD_CHECK_TTL_SECONDS,
+    head_diverged_fn: Callable[[], bool] | None = None,
 ) -> bool:
-    """Lazy TTL sync for homepage load. Returns True if a sync ran successfully.
+    """Lazy sync for homepage load. Returns True if a sync ran successfully.
 
-    Stale/missing timestamp triggers ``run_featured_video_channel_sync``. Sync
-    errors leave the existing JSON untouched. Concurrent callers skip when a
-    refresh lock is recent (``_STAMPEDE_LOCK_SECONDS``). Success clears the lock;
-    failure keeps it briefly as backoff.
+    Triggers ``run_featured_video_channel_sync`` when:
+    - ``force`` is True, or
+    - ``syncedAt`` missing / older than ``ttl_seconds``, or
+    - channel head id differs from gallery primary / is absent from gallery
+      (peek cached ``head_ttl_seconds`` so pageviews do not hit RSS every time).
+
+    ``source: fixed`` never blocks refresh. Sync errors leave existing JSON
+    untouched. Concurrent callers skip when a refresh lock is recent
+    (``_STAMPEDE_LOCK_SECONDS``). Success clears the lock; failure keeps it
+    briefly as backoff.
     """
     target = path or _DEFAULT_PATH
-    if not force and not featured_video_is_stale(target, ttl_seconds=ttl_seconds):
+    needs_sync = force or featured_video_is_stale(target, ttl_seconds=ttl_seconds)
+    if not needs_sync:
+        if head_diverged_fn is not None:
+            try:
+                needs_sync = bool(head_diverged_fn())
+            except Exception as exc:  # noqa: BLE001 — fall back to TTL-only
+                _logger.warning("featured video head check failed: %s", exc)
+                needs_sync = False
+        else:
+            needs_sync = gallery_needs_channel_refresh(
+                target,
+                fetch_head=fetch_head,
+                head_ttl_seconds=head_ttl_seconds,
+            )
+    if not needs_sync:
         return False
     if not force and not _begin_refresh_lock(target):
         return False
@@ -592,15 +684,32 @@ def sync_featured_videos_from_channel(
     channel_videos: list[dict],
     *,
     path: Path | None = None,
+    channel_head_id: str | None = None,
 ) -> dict:
-    """Replace gallery with channel latest (newest-first, max 6); keep about meta."""
+    """Full-replace gallery with channel latest (newest-first, max 6).
+
+    Always ``replace=True`` — never merge/unshift sticky older JSON tops.
+    Preserves about meta (eyebrow/heading/lead/source) but ``source`` does not
+    gate replacement; videos always become the newest embeddable pull.
+    ``channel_head_id`` records the raw channel feed head (may be unplayable)
+    so lazy refresh can detect a new upload without re-syncing every pageview.
+    """
     existing = read_featured_video_file(path)
     videos: list[dict[str, str]] = []
     for i, item in enumerate(channel_videos[:MAX_VIDEOS]):
         normalized = normalize_video_item(item, index=i)
         if normalized:
             videos.append(normalized)
+    # Empty existing + replace — drop any prior sticky ids.
     videos = apply_fifo_videos([], videos, replace=True)
+
+    head = (channel_head_id or "").strip()
+    if not head and channel_videos:
+        first = normalize_video_item(channel_videos[0], index=0)
+        if first:
+            head = first["youtubeId"]
+    if not head and videos:
+        head = videos[0]["youtubeId"]
 
     saved: dict = {
         "enabled": bool(existing.get("enabled", True)),
@@ -610,6 +719,8 @@ def sync_featured_videos_from_channel(
             for row in videos
         ],
     }
+    if head:
+        saved["channelHeadId"] = head
     for key in _META_KEYS:
         if key in existing:
             saved[key] = existing[key]
@@ -656,6 +767,11 @@ def run_featured_video_channel_sync(
     if not candidates:
         return None, "頻道尚無公開影片", channel_id
 
+    raw_head = ""
+    first = normalize_video_item(candidates[0], index=0)
+    if first:
+        raw_head = first["youtubeId"]
+
     embeddable = filter_embeddable_videos(
         candidates,
         limit=MAX_VIDEOS,
@@ -664,6 +780,10 @@ def run_featured_video_channel_sync(
     if not embeddable:
         return None, "頻道尚無可嵌入的公開影片", channel_id
 
-    payload = sync_featured_videos_from_channel(embeddable, path=path)
+    payload = sync_featured_videos_from_channel(
+        embeddable,
+        path=path,
+        channel_head_id=raw_head or None,
+    )
     return payload, None, channel_id
 

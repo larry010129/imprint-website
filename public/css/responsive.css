@@ -73,6 +73,20 @@
   .nav-cta .nav-gradient-cta{
     display:inline-flex !important;
     flex-shrink:0;
+    border-radius:8px;
+    max-width:min(7.5rem,34vw);
+  }
+  .nav-cta .nav-gradient-cta .gradient-button-inner,
+  .nav-cta .gradient-button-inner{
+    padding:clamp(6px,1.5vw,9px) clamp(8px,2.2vw,12px) !important;
+    font-size:clamp(10.5px,2.85vw,12px) !important;
+    letter-spacing:.02em !important;
+    border-radius:6px;
+    white-space:nowrap !important;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    max-width:100%;
+    box-sizing:border-box;
   }
   .nav-cta .btn-dark{ display:none !important; }
   .hc-viewport{ height:78vh; min-height:520px; }

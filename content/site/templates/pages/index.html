@@ -6,8 +6,8 @@
 {% endblock %}
 {% block extra_css %}
 <style>{{ inline_css('home-ghibli-critical.css') | safe }}</style>
-<link rel="stylesheet" href="/static/css/home-ghibli.css?v=46" media="print" onload="this.media='all'">
-<noscript><link rel="stylesheet" href="/static/css/home-ghibli.css?v=46"></noscript>
+<link rel="stylesheet" href="/static/css/home-ghibli.css?v=48" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="/static/css/home-ghibli.css?v=48"></noscript>
 {% endblock %}
 {% block extra_head %}
 <style>
@@ -314,24 +314,25 @@
     </div>
     {% if featured_video and featured_video.videos %}
     {# Thumbs sit outside poem-visual; posters via background-image (no <img>) so CMS page_image slot indices stay aligned. #}
-    <div class="gh-yt-thumbs" role="list" aria-label="品牌影片清單">
+    <ul class="gh-yt-thumbs" aria-label="品牌影片清單">
       {% for video in featured_video.videos[:6] %}
-      <button
-        type="button"
-        role="listitem"
-        class="gh-yt-thumb{% if loop.first %} is-active{% endif %}"
-        data-yt-thumb
-        data-yt-id="{{ video.youtubeId }}"
-        data-yt-title="{{ video.title }}"
-        data-yt-poster="https://i.ytimg.com/vi/{{ video.youtubeId }}/hqdefault.jpg"
-        style="background-image:url('https://i.ytimg.com/vi/{{ video.youtubeId }}/hqdefault.jpg')"
-        aria-label="選擇影片：{{ video.label }}"
-        aria-pressed="{{ 'true' if loop.first else 'false' }}"
-      >
-        <span class="gh-yt-thumb__label">{{ video.label }}</span>
-      </button>
+      <li>
+        <button
+          type="button"
+          class="gh-yt-thumb{% if loop.first %} is-active{% endif %}"
+          data-yt-thumb
+          data-yt-id="{{ video.youtubeId }}"
+          data-yt-title="{{ video.title }}"
+          data-yt-poster="https://i.ytimg.com/vi/{{ video.youtubeId }}/hqdefault.jpg"
+          style="background-image:url('https://i.ytimg.com/vi/{{ video.youtubeId }}/hqdefault.jpg')"
+          aria-label="選擇影片：{{ video.label }}"
+          aria-pressed="{{ 'true' if loop.first else 'false' }}"
+        >
+          <span class="gh-yt-thumb__label">{{ video.label }}</span>
+        </button>
+      </li>
       {% endfor %}
-    </div>
+    </ul>
     {% endif %}
   </div>
 </section>
@@ -768,6 +769,8 @@
       node.hidden = true;
       node.classList.add('is-skipped');
       node.setAttribute('aria-hidden', 'true');
+      var item = node.closest('li');
+      if (item) item.hidden = true;
     });
   }
 
