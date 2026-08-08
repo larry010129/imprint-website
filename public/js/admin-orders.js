@@ -57,6 +57,9 @@
   var statusLabel = window.ImprintOrderStatus
     ? window.ImprintOrderStatus.label
     : function (s) { return s; };
+  var statusOptionLabel = window.ImprintOrderStatus && window.ImprintOrderStatus.optionLabel
+    ? window.ImprintOrderStatus.optionLabel
+    : statusLabel;
 
   var cancelContext = { mode: 'single', ids: [] };
   var _loaded = false;
@@ -179,6 +182,7 @@
     if (isCancelled({ status: status })) {
       return '<div class="order-detail-status"><p class="order-detail-cancelled">此訂單已取消</p></div>';
     }
+    var fulfillment = typeof order === 'object' && order ? order.fulfillment_method : null;
     var stamps = typeof order === 'object' && order ? statusTimestamps(order) : {};
     var serverSteps = typeof order === 'object' && order && Array.isArray(order.status_steps)
       ? order.status_steps
@@ -189,7 +193,7 @@
       var date = state === 'incomplete' ? '' : formatStatusDate(stamps[s]);
       return {
         code: s,
-        label: statusLabel(s),
+        label: statusLabel(s, fulfillment),
         state: state,
         color: STATUS_COLORS[s] || '#9cefef',
         date: date,
@@ -202,7 +206,9 @@
       var dateHtml = date
         ? '<span class="order-steps-date">' + esc(date) + '</span>'
         : '';
-      var label = step.label || statusLabel(step.code);
+      var label = step.code === 'shipped'
+        ? statusLabel('shipped', fulfillment)
+        : (step.label || statusLabel(step.code, fulfillment));
       return (
         '<div class="order-steps-item">' +
           '<div class="order-steps-bar order-steps-bar--' + state + '" data-step="' + esc(step.code) + '"' + barStyle + '></div>' +
@@ -246,6 +252,40 @@
       var shipping = [o.shipping_city, o.shipping_postal, o.shipping_address]
         .filter(Boolean).join(' ');
       if (shipping) rows += specItem('收件地址', shipping);
+    }
+    var bottle = [o.collection_bottle_city, o.collection_bottle_postal, o.collection_bottle_address]
+      .filter(Boolean).join(' ');
+    if (bottle) rows += specItem('收集瓶寄送地址', bottle);
+    if (method === 'pickup' && o.pickup_preferred_at) {
+      var when = o.pickup_preferred_at;
+      try {
+        var d = new Date(when);
+        if (!isNaN(d.getTime())) {
+          var startParts = new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'Asia/Taipei',
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit', hour12: false
+          }).formatToParts(d);
+          var get = function (type) {
+            var p = startParts.find(function (x) { return x.type === type; });
+            return p ? p.value : '';
+          };
+          var end = new Date(d.getTime() + 60 * 60 * 1000);
+          var endParts = new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'Asia/Taipei',
+            hour: '2-digit', minute: '2-digit', hour12: false
+          }).formatToParts(end);
+          var endGet = function (type) {
+            var p = endParts.find(function (x) { return x.type === type; });
+            return p ? p.value : '';
+          };
+          when =
+            get('year') + '/' + get('month') + '/' + get('day') + ' ' +
+            get('hour') + ':' + get('minute') + '–' +
+            endGet('hour') + ':' + endGet('minute');
+        }
+      } catch (e) { /* keep raw */ }
+      rows += specItem('希望取貨時間', when);
     }
     return rows;
   }
@@ -326,7 +366,7 @@
   function fillBulkStatusSelect() {
     if (!bulkStatus) return;
     bulkStatus.innerHTML = BULK_STATUS_OPTIONS.map(function (s) {
-      return '<option value="' + s + '">' + statusLabel(s) + '</option>';
+      return '<option value="' + s + '">' + statusOptionLabel(s) + '</option>';
     }).join('');
   }
 
@@ -409,7 +449,7 @@
       openCancelDialog(ids);
       return;
     }
-    if (!confirm('確定將 ' + ids.length + ' 筆訂單狀態改為「' + statusLabel(status) + '」？')) return;
+    if (!confirm('確定將 ' + ids.length + ' 筆訂單狀態改為「' + statusOptionLabel(status) + '」？')) return;
     bulkApply.disabled = true;
     api.admin.bulkUpdateOrders(ids, status).then(function (res) {
       bulkApply.disabled = false;
@@ -436,9 +476,9 @@
       totalLabel: formatMoney(o.total_price),
       totalSort: o.total_price != null ? Number(o.total_price) : -Infinity,
       status: o.status,
-      statusLabel: statusLabel(o.status),
+      statusLabel: statusLabel(o.status, o.fulfillment_method),
       isCancelled: isCancelled(o),
-      statusOptions: STATUS_OPTIONS.map(function (s) { return { value: s, label: statusLabel(s) }; }),
+      statusOptions: STATUS_OPTIONS.map(function (s) { return { value: s, label: statusOptionLabel(s) }; }),
       detailId: 'admin-detail-' + o.id,
       detailHtml: detailPanel(o),
     };

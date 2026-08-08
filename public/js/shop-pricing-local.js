@@ -121,6 +121,64 @@
     return Math.max(EARRING_QUANTITY_MIN, Math.min(EARRING_QUANTITY_MAX, n));
   }
 
+  var CART_LINE_QUANTITY_MAX = 99;
+
+  function asLineQuantity(value, category) {
+    if (category === 'earring') return asEarringQuantity(value);
+    var n = parseInt(value, 10);
+    if (Number.isNaN(n)) return 1;
+    return Math.max(1, Math.min(CART_LINE_QUANTITY_MAX, n));
+  }
+
+  /** Match app.pricing.memorial_diamond_line_totals — pack qty into 4→3→2 packages. */
+  function memorialDiamondLineTotals(carat, opts) {
+    opts = opts || {};
+    var lineQty = asLineQuantity(opts.quantity != null ? opts.quantity : 1, 'diamond');
+    var multi = asStoneCount(opts.stoneCount);
+    var baseOpts = {
+      diamondKind: opts.diamondKind,
+      fancyColor: opts.fancyColor,
+      diamondShape: opts.diamondShape,
+      category: 'diamond',
+    };
+    if (multi) {
+      var packSale = computeDiamondListPrice(carat, Object.assign({}, baseOpts, { stoneCount: multi }));
+      if (packSale == null) return { sale: null, compareAt: null };
+      var packCompare = null;
+      var unitList = computeDiamondListPrice(carat, Object.assign({}, baseOpts, { stoneCount: null }));
+      if (unitList != null) {
+        var raw = Math.round(unitList * multi);
+        if (raw > Math.round(packSale)) packCompare = raw;
+      }
+      return {
+        sale: Math.round(packSale) * lineQty,
+        compareAt: packCompare != null ? packCompare * lineQty : null,
+      };
+    }
+    var unit = computeDiamondListPrice(carat, Object.assign({}, baseOpts, { stoneCount: null }));
+    if (unit == null) return { sale: null, compareAt: null };
+    var unitI = Math.round(unit);
+    var remaining = lineQty;
+    var sale = 0;
+    var compare = 0;
+    [4, 3, 2].forEach(function (pack) {
+      var packs = Math.floor(remaining / pack);
+      if (!packs) return;
+      var packPrice = computeDiamondListPrice(carat, Object.assign({}, baseOpts, { stoneCount: pack }));
+      sale += (packPrice != null ? Math.round(packPrice) : unitI * pack) * packs;
+      compare += unitI * pack * packs;
+      remaining -= pack * packs;
+    });
+    if (remaining) {
+      sale += unitI * remaining;
+      compare += unitI * remaining;
+    }
+    return {
+      sale: sale,
+      compareAt: compare > sale ? compare : null,
+    };
+  }
+
   /** Match app.pricing_overrides.canonical_carat ('0.10'→'0.1', '1'→'1.0'). */
   function canonicalCarat(key) {
     var n = parseFloat(key);
@@ -421,26 +479,31 @@
     var product = findProduct(catalog, category, productId);
     if (!product) return { ready: false, error: 'product not available' };
 
-    // Diamonds-only memorial series: list price only (no metal / labor)
+    // Diamonds-only memorial series: list price only (no metal / labor).
+    // Qty packs into multi-stone tables when stoneCount is not already a package.
     if (category === 'diamond') {
-      var looseDiamond = computeDiamondListPrice(carat, {
+      var lineQty = asLineQuantity(data.quantity, 'diamond');
+      var memorial = memorialDiamondLineTotals(carat, {
         diamondKind: diamondKind,
         fancyColor: fancyColor,
         stoneCount: stoneCount,
         diamondShape: diamondShape,
-        category: category,
+        quantity: lineQty,
       });
-      if (looseDiamond == null) return { ready: false };
-      return {
+      if (memorial.sale == null) return { ready: false };
+      var out = {
         ready: true,
         manualOverride: false,
-        diamondPrice: looseDiamond,
+        diamondPrice: memorial.sale,
         taijinPrice: 0,
         laborPrice: 0,
         metalworkPrice: 0,
         chainPrice: null,
-        total: Math.round(looseDiamond),
+        total: Math.round(memorial.sale),
+        quantity: lineQty,
       };
+      if (memorial.compareAt != null) out.compareAtTotal = memorial.compareAt;
+      return out;
     }
 
     var manual = product.manualPrices && product.manualPrices[gold] && product.manualPrices[gold][carat];

@@ -19,7 +19,9 @@
           View.renderError(res.error);
           return;
         }
-        var statusLabel = global.ImprintOrderStatus ? global.ImprintOrderStatus.label : function (st) { return st; };
+        var statusLabel = global.ImprintOrderStatus
+          ? global.ImprintOrderStatus.label
+          : function (st) { return st; };
         View.render(res.orders || [], statusLabel);
       });
     },

@@ -1,0 +1,137 @@
+{% for order in orders %}
+{% set detail_id = detail_prefix ~ (order.id or order.order_number or loop.index) %}
+{% set schedule_id = 'pickup-schedule-' ~ detail_prefix ~ (order.id or loop.index) %}
+<tr class="order-row-main member-order-row" tabindex="0" role="button"
+  aria-label="查看訂單 {{ order.order_number }} 詳情"
+  {% if order.ready_for_pickup %}data-pickup-ready="1"{% endif %}>
+  <td>{{ order.order_number or '—' }}</td>
+  <td>{{ order.created_at_display or '—' }}</td>
+  <td class="member-order-item">{{ order.display_name or order.summary_zh or '訂製品項' }}</td>
+  <td>{{ format_twd(order.total_price or order.total) }}</td>
+  <td><span class="member-order-status">{% if order.fulfillment_method == 'pickup' and order.status == 'shipped' %}可取貨{% else %}{{ order.status_label or order.status or '—' }}{% endif %}</span></td>
+  <td class="member-order-expand">
+    <span class="member-order-chevron" aria-hidden="true">›</span>
+    <button type="button" class="order-detail-btn visually-hidden"
+      data-target="{{ detail_id }}" aria-expanded="false">查看詳情</button>
+  </td>
+</tr>
+<tr class="order-detail-row" id="{{ detail_id }}" hidden>
+  <td colspan="6">
+    <div class="order-detail-panel">
+      <div class="order-detail-layout">
+        <div class="order-detail-gallery">
+          <div class="order-detail-preview">
+            {% if order.image_url %}
+            <img class="order-style-thumb" src="{{ order.image_url }}"
+              alt="{{ order.display_name or '訂製品項' }}" loading="lazy">
+            {% else %}
+            <span class="order-style-thumb order-style-thumb--empty">—</span>
+            {% endif %}
+          </div>
+          <p class="order-detail-product-name">{{ order.display_name or '訂製品項' }}</p>
+          {% if order.details_zh %}
+          <p class="order-detail-product-meta">{{ order.details_zh }}</p>
+          {% endif %}
+          {% if order.status_cancelled and order.cancel_reason %}
+          <p class="order-detail-cancel-reason">取消原因：{{ order.cancel_reason }}</p>
+          {% endif %}
+        </div>
+        <div class="order-detail-specs">
+          <div class="order-detail-grid">
+            <div class="order-detail-item">
+              <span class="order-detail-label" data-i18n="history_col_order">訂單編號</span>
+              <span class="order-detail-value">{{ order.order_number or '—' }}</span>
+            </div>
+            <div class="order-detail-item">
+              <span class="order-detail-label" data-i18n="history_col_date">下單日期</span>
+              <span class="order-detail-value">{{ order.created_at_display or '—' }}</span>
+            </div>
+            <div class="order-detail-item">
+              <span class="order-detail-label" data-i18n="history_col_status">目前狀態</span>
+              <span class="order-detail-value">{% if order.fulfillment_method == 'pickup' and order.status == 'shipped' %}可取貨{% else %}{{ order.status_label or order.status or '—' }}{% endif %}</span>
+            </div>
+            <div class="order-detail-item">
+              <span class="order-detail-label" data-i18n="history_col_total">總計</span>
+              <span class="order-detail-value">{{ format_twd(order.total_price or order.total) }}</span>
+            </div>
+            {% if order.diamond_price_twd %}
+            <div class="order-detail-item">
+              <span class="order-detail-label">鑽石價格</span>
+              <span class="order-detail-value">{{ format_twd(order.diamond_price_twd) }}</span>
+            </div>
+            {% endif %}
+            {% if order.fulfillment_label and order.fulfillment_label != '—' %}
+            <div class="order-detail-item">
+              <span class="order-detail-label" data-i18n="history_col_fulfillment">取貨方式</span>
+              <span class="order-detail-value">{{ order.fulfillment_label }}</span>
+            </div>
+            {% endif %}
+            {% if order.shipping_line %}
+            <div class="order-detail-item">
+              <span class="order-detail-label">收件地址</span>
+              <span class="order-detail-value">{{ order.shipping_line }}</span>
+            </div>
+            {% endif %}
+            {% if order.collection_bottle_line %}
+            <div class="order-detail-item">
+              <span class="order-detail-label" data-i18n="history_col_bottle_address">收集瓶寄送地址</span>
+              <span class="order-detail-value">{{ order.collection_bottle_line }}</span>
+            </div>
+            {% endif %}
+            {% if order.order_note %}
+            <div class="order-detail-item">
+              <span class="order-detail-label">備註</span>
+              <span class="order-detail-value">{{ order.order_note }}</span>
+            </div>
+            {% endif %}
+            {% if order.status_note %}
+            <div class="order-detail-item">
+              <span class="order-detail-label">狀態說明</span>
+              <span class="order-detail-value">{{ order.status_note }}</span>
+            </div>
+            {% endif %}
+          </div>
+
+          <div class="order-detail-status">
+            {% if order.status_cancelled %}
+            <p class="order-detail-cancelled">此訂單已取消</p>
+            {% else %}
+            <div class="order-steps" role="list" aria-label="訂單進度">
+              {% for step in order.status_steps %}
+              <div class="order-steps-item" role="listitem">
+                <div class="order-steps-bar order-steps-bar--{{ step.state }}"
+                  data-step="{{ step.code }}"
+                  {% if step.state != 'incomplete' %}style="--step-color: {{ step.color }}"{% endif %}></div>
+                <div class="order-steps-label order-steps-label--{{ step.state }}">
+                  {% if step.state == 'complete' %}✓ {% endif %}{% if step.code == 'shipped' and order.fulfillment_method == 'pickup' %}可取貨{% else %}{{ step.label }}{% endif %}
+                  {% if step.date %}<span class="order-steps-date">{{ step.date }}</span>{% endif %}
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+            {% endif %}
+          </div>
+
+          {% if order.status == 'shipped' and order.fulfillment_method == 'delivery' and order.id %}
+          <form class="order-confirm-receipt"
+            hx-post="/htmx/history/confirm-receipt"
+            hx-target="#htmx-history"
+            hx-swap="innerHTML">
+            <input type="hidden" name="order_id" value="{{ order.id }}">
+            <button type="submit" class="btn btn-mint" data-i18n="history_confirm_receipt">收到商品</button>
+          </form>
+          {% endif %}
+
+          {% if order.ready_for_pickup %}
+          <div class="order-pickup-schedule" id="{{ schedule_id }}">
+            {% with schedule_target = schedule_id %}
+            {% include "partials/htmx/pickup_schedule.html" %}
+            {% endwith %}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </td>
+</tr>
+{% endfor %}

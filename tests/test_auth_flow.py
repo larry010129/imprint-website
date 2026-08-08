@@ -506,7 +506,7 @@ def test_login_incomplete_profile_soft_onboarding_prompt(_mock_dns, client):
                 "phone": "0912345678",
                 "shippingPostal": "106",
                 "shippingCity": "台北市大安區",
-                "shippingAddress": "忠孝東路四段",
+                "shippingAddress": "忠孝東路四段123號",
                 "onboarding": "1",
             },
         )

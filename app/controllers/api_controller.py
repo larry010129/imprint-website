@@ -37,6 +37,7 @@ from app.product_categories import build_category_meta, fetch_categories
 from app.orders import (
     attach_order_display,
     attach_order_relations,
+    enrich_member_order,
     hydrate_order,
     track_order_public_row,
 )
@@ -63,6 +64,10 @@ _TRACK_ORDER_PII_KEYS = frozenset(
         "shipping_postal",
         "shipping_address",
         "shipping_line",
+        "collection_bottle_address",
+        "collection_bottle_city",
+        "collection_bottle_postal",
+        "collection_bottle_line",
         "config_json",
         "pricing_json",
         "email",
@@ -307,6 +312,8 @@ def my_orders(request: Request) -> dict:
         )
         orders = cur.fetchall()
         attach_order_display(cur, orders)
+        for order in orders:
+            enrich_member_order(order)
     return {"orders": orders}
 
 

@@ -184,6 +184,8 @@
         var specs = row.specs || item.specs || {};
         var id = item.id;
         var price = item.total_price != null ? item.total_price : item.totalPrice;
+        var compareAt = item.compare_at_total != null ? item.compare_at_total : item.compareAtTotal;
+        var showCompare = Number(compareAt) > Number(price || 0);
         var img = row.image_url || item.image_url || '';
         var summary = titleFor(item) || ('#' + id);
         var meta = itemMeta(item) || [
@@ -192,27 +194,45 @@
           specs.gold,
           specs.color,
         ].filter(Boolean).join(' · ');
+        var cfg = configFor(item);
+        var cat = cfg.category || item.category || '';
+        var qtyMax = cat === 'earring' ? 2 : 99;
+        var qty = Math.max(1, Math.min(qtyMax, Number(cfg.quantity != null ? cfg.quantity : 1) || 1));
+        var compareAttr = showCompare ? Number(compareAt) : Number(price || 0);
         return (
-          '<li class="member-cart-item" id="cart-item-' + id + '" data-id="' + id + '" data-price="' + (price || 0) + '">' +
+          '<li class="member-cart-item" id="cart-item-' + id + '" data-id="' + id + '" data-price="' + (price || 0) +
+            '" data-compare-price="' + compareAttr + '" data-qty-max="' + qtyMax + '">' +
             '<label class="member-cart-item__check"><input type="checkbox" class="cart-item-checkbox" value="' +
               escapeAttr(id) + '" aria-label="選取 ' + escapeAttr(summary) + '" checked></label>' +
             (img ? '<img class="member-cart-item__thumb" src="' + escapeAttr(img) + '" alt="" loading="lazy">' :
-              '<span class="member-cart-item__thumb member-cart-item__thumb--empty">💎</span>') +
+              '<span class="member-cart-item__thumb member-cart-item__thumb--empty" aria-hidden="true"></span>') +
             '<div class="member-cart-item__body">' +
-              '<div class="member-cart-item__copy"><div class="member-cart-item__title">' +
-                M.escapeHtml(summary) + '</div>' +
-                (meta ? '<div class="member-cart-item__meta">' + M.escapeHtml(meta) + '</div>' : '') +
-              '</div>' +
+              '<a class="member-cart-item__title" href="/shop/calculator/?cart_edit=' + encodeURIComponent(id) + '">' +
+                M.escapeHtml(summary) + '</a>' +
+              '<span class="member-cart-item__price-wrap">' +
+                '<strong class="member-cart-item__price">' + M.formatPrice(price) + '</strong>' +
+                (showCompare
+                  ? '<s class="member-cart-item__price-compare">' + M.formatPrice(compareAt) + '</s>'
+                  : '') +
+              '</span>' +
+              (meta ? '<p class="member-cart-item__meta"><span class="member-cart-item__tag">' +
+                M.escapeHtml(meta).replace(/ · /g, '</span><span class="member-cart-item__tag">') +
+                '</span></p>' : '') +
             '</div>' +
-            '<div class="member-cart-item__footer">' +
-              '<div class="member-cart-item__price">' + M.formatPrice(price) + '</div>' +
-              '<div class="member-cart-item__actions">' +
-                '<button type="button" class="btn-text cart-detail-btn" data-id="' + escapeAttr(id) +
-                  '" aria-label="查看' + escapeAttr(summary) + '明細">明細</button>' +
-                '<a href="/shop/calculator/?cart_edit=' + encodeURIComponent(id) +
-                  '" class="btn-text" aria-label="編輯' + escapeAttr(summary) + '">編輯</a>' +
-                '<button type="button" class="btn-text cart-item-remove" data-id="' + escapeAttr(id) +
-                  '" aria-label="移除' + escapeAttr(summary) + '">移除</button>' +
+            '<div class="member-cart-item__side">' +
+              '<div class="member-cart-qty" role="group" aria-label="數量">' +
+                '<button type="button" class="member-cart-qty__btn member-cart-qty__btn--dec cart-qty-dec" data-id="' +
+                  escapeAttr(id) + '" aria-label="減少數量">−</button>' +
+                '<input type="number" class="member-cart-qty__input cart-qty-input" data-id="' + escapeAttr(id) +
+                  '" value="' + qty + '" min="1" max="' + qtyMax + '" step="1" inputmode="numeric" aria-label="數量">' +
+                '<button type="button" class="member-cart-qty__btn member-cart-qty__btn--inc cart-qty-inc" data-id="' +
+                  escapeAttr(id) + '" aria-label="增加數量"' + (qty >= qtyMax ? ' disabled' : '') + '>+</button>' +
+              '</div>' +
+              '<div class="member-cart-item__utils">' +
+                '<a class="member-cart-item__util" href="/shop/calculator/?cart_edit=' + encodeURIComponent(id) +
+                  '" aria-label="編輯' + escapeAttr(summary) + '">追蹤</a>' +
+                '<button type="button" class="member-cart-item__util member-cart-item__util--danger cart-item-remove" data-id="' +
+                  escapeAttr(id) + '" aria-label="刪除' + escapeAttr(summary) + '">刪除</button>' +
               '</div>' +
             '</div>' +
           '</li>'
@@ -225,12 +245,26 @@
       var boxes = [].slice.call(e.list.querySelectorAll('.cart-item-checkbox'));
       var selected = boxes.filter(function (cb) { return cb.checked; });
       var total = 0;
+      var compare = 0;
       selected.forEach(function (cb) {
         var row = cb.closest('.member-cart-item');
-        total += Number(row && row.dataset.price || 0);
+        var p = Number(row && row.dataset.price || 0);
+        var c = Number(row && row.dataset.comparePrice);
+        total += p;
+        compare += (Number.isFinite(c) && c > p) ? c : p;
       });
       if (e.selectedLabel) e.selectedLabel.textContent = '已選 ' + selected.length + ' 件';
-      if (e.selectedTotal) e.selectedTotal.textContent = M.formatPrice(total);
+      if (e.selectedTotal) {
+        e.selectedTotal.textContent = M.formatPrice(total);
+        e.selectedTotal.classList.toggle('member-cart-summary__sale', compare > total);
+      }
+      var sub = document.getElementById('cart-selected-subtotal');
+      if (sub) {
+        sub.textContent = M.formatPrice(compare);
+        sub.classList.toggle('member-cart-summary__compare', compare > total);
+      }
+      var countEl = document.getElementById('cart-checkout-count');
+      if (countEl) countEl.textContent = String(selected.length);
       if (e.checkoutBtn) e.checkoutBtn.disabled = selected.length === 0;
       if (e.selectAll) {
         e.selectAll.checked = boxes.length > 0 && selected.length === boxes.length;

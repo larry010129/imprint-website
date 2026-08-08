@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -132,13 +132,14 @@ def cart_details_from_config(config: dict | None) -> str:
         stones = 0
     if stones > 1:
         parts.append(f"{stones}顆")
-    if str(cfg.get("category") or "") == "earring":
-        try:
-            qty = int(cfg.get("quantity") or 1)
-        except (TypeError, ValueError):
-            qty = 1
-        if qty >= 1:
-            parts.append(f"×{qty}")
+    try:
+        qty = int(cfg.get("quantity") or 1)
+    except (TypeError, ValueError):
+        qty = 1
+    if str(cfg.get("category") or "") == "earring" and qty >= 1:
+        parts.append(f"×{qty}")
+    elif qty > 1:
+        parts.append(f"×{qty}")
     parts.extend(_size_chain_parts(cfg))
     parts.extend(_engraving_parts(cfg))
     return " · ".join(parts)
@@ -167,6 +168,19 @@ ORDER_STATUS_LABELS_ZH = {
     "completed": "已完成",
     "cancelled": "已取消",
 }
+
+
+def order_status_label(
+    status: str | None, fulfillment_method: str | None = None
+) -> str:
+    """Member/admin display label; shipped is fulfillment-aware."""
+    code = (status or "").strip().lower()
+    if code == "shipped":
+        method = (fulfillment_method or "").strip().lower()
+        if method == "pickup":
+            return "可取貨"
+        return "已出貨"
+    return ORDER_STATUS_LABELS_ZH.get(code, status or "—")
 
 ORDER_STATUS_COLORS = {
     "received": "#e0a458",
@@ -249,6 +263,7 @@ def merge_status_timestamps(
 def order_status_steps(
     status: str | None,
     timestamps: Any = None,
+    fulfillment_method: str | None = None,
 ) -> list[dict[str, str]]:
     """Progress steps for member/admin pipeline; empty when cancelled."""
     code = (status or "").strip().lower()
@@ -270,7 +285,7 @@ def order_status_steps(
         steps.append(
             {
                 "code": step,
-                "label": ORDER_STATUS_LABELS_ZH[step],
+                "label": order_status_label(step, fulfillment_method),
                 "state": state,
                 "color": ORDER_STATUS_COLORS[step],
                 "date": date,
@@ -308,33 +323,239 @@ def ensure_order_status_timestamps_column(cur) -> None:
     )
 
 
+def ensure_pickup_preferred_at_column(cur) -> None:
+    """Idempotent: member preferred store-pickup datetime on order_fulfillment."""
+    cur.execute(
+        """
+        alter table order_fulfillment
+          add column if not exists pickup_preferred_at timestamptz
+        """
+    )
+
+
+def ensure_collection_bottle_columns(cur) -> None:
+    """Idempotent: DNA/collection bottle ship-to address on order_fulfillment."""
+    cur.execute(
+        """
+        alter table order_fulfillment
+          add column if not exists collection_bottle_address text,
+          add column if not exists collection_bottle_city text,
+          add column if not exists collection_bottle_postal text
+        """
+    )
+
+
+# Ready for in-person pickup: store pickup + admin set status to shipped (已出貨).
+READY_FOR_PICKUP_STATUS = "shipped"
+_PICKUP_MAX_DAYS_AHEAD = 60
+_PICKUP_SLOT_HOURS = 1
+_PICKUP_OPEN = time(9, 0)
+_PICKUP_CLOSE = time(20, 0)
+_PICKUP_LUNCH_START = time(12, 0)
+_PICKUP_LUNCH_END = time(13, 0)
+
+
+def _slot_overlaps_lunch(start_dt: datetime, end_dt: datetime) -> bool:
+    """True when [start, end) overlaps lunch [12:00, 13:00)."""
+    lunch_start = datetime(2000, 1, 1, _PICKUP_LUNCH_START.hour, _PICKUP_LUNCH_START.minute)
+    lunch_end = datetime(2000, 1, 1, _PICKUP_LUNCH_END.hour, _PICKUP_LUNCH_END.minute)
+    return start_dt < lunch_end and end_dt > lunch_start
+
+
+def _build_pickup_slot_starts() -> tuple[time, ...]:
+    """Hourly 1h slots from 09:00 while end ≤ 20:00; skip lunch 12:00–13:00."""
+    starts: list[time] = []
+    cursor = datetime(2000, 1, 1, _PICKUP_OPEN.hour, _PICKUP_OPEN.minute)
+    close = datetime(2000, 1, 1, _PICKUP_CLOSE.hour, _PICKUP_CLOSE.minute)
+    while cursor + timedelta(hours=_PICKUP_SLOT_HOURS) <= close:
+        slot_end = cursor + timedelta(hours=_PICKUP_SLOT_HOURS)
+        if not _slot_overlaps_lunch(cursor, slot_end):
+            starts.append(cursor.time().replace(second=0, microsecond=0))
+        cursor += timedelta(hours=1)
+    return tuple(starts)
+
+
+PICKUP_SLOT_STARTS: tuple[time, ...] = _build_pickup_slot_starts()
+PICKUP_SLOT_START_VALUES: frozenset[str] = frozenset(
+    f"{t.hour:02d}:{t.minute:02d}" for t in PICKUP_SLOT_STARTS
+)
+
+
+def is_ready_for_pickup(order: dict | None) -> bool:
+    if not order:
+        return False
+    method = (order.get("fulfillment_method") or "").strip().lower()
+    status = (order.get("status") or "").strip().lower()
+    return method == "pickup" and status == READY_FOR_PICKUP_STATUS
+
+
+def _as_taipei_datetime(value: Any, *, naive_as_taipei: bool = False) -> datetime | None:
+    """Parse datetime-ish value to aware Asia/Taipei; None if empty/invalid."""
+    if value is None or value == "":
+        return None
+    if isinstance(value, datetime):
+        dt = value
+    else:
+        raw = str(value).strip()
+        if not raw:
+            return None
+        if raw.endswith("Z"):
+            raw = raw[:-1] + "+00:00"
+        try:
+            dt = datetime.fromisoformat(raw)
+        except ValueError:
+            return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=_TAIPEI if naive_as_taipei else timezone.utc)
+    return dt.astimezone(_TAIPEI).replace(second=0, microsecond=0)
+
+
+def pickup_slot_label(start: time) -> str:
+    """Label like 09:00–10:00 for a slot start (always +1 hour)."""
+    end_dt = datetime.combine(date(2000, 1, 1), start) + timedelta(hours=_PICKUP_SLOT_HOURS)
+    end = end_dt.time()
+    return f"{start.hour:02d}:{start.minute:02d}–{end.hour:02d}:{end.minute:02d}"
+
+
+def pickup_slot_options() -> list[dict[str, str]]:
+    """Static slot choices for the pickup schedule <select>."""
+    return [
+        {
+            "value": f"{start.hour:02d}:{start.minute:02d}",
+            "label": pickup_slot_label(start),
+        }
+        for start in PICKUP_SLOT_STARTS
+    ]
+
+
+def is_valid_pickup_slot_datetime(value: Any) -> bool:
+    """True when value lands on a bookable pickup slot start in Asia/Taipei."""
+    local = _as_taipei_datetime(value, naive_as_taipei=True)
+    if local is None:
+        return False
+    slot_key = f"{local.hour:02d}:{local.minute:02d}"
+    return slot_key in PICKUP_SLOT_START_VALUES
+
+
+def format_pickup_preferred_display(value: Any) -> str:
+    """Format preferred pickup as YYYY/MM/DD HH:MM–HH:MM; empty if not a valid slot."""
+    local = _as_taipei_datetime(value, naive_as_taipei=True)
+    if local is None:
+        return ""
+    slot_key = f"{local.hour:02d}:{local.minute:02d}"
+    if slot_key not in PICKUP_SLOT_START_VALUES:
+        return ""
+    end = local + timedelta(hours=_PICKUP_SLOT_HOURS)
+    return (
+        f"{local.year:04d}/{local.month:02d}/{local.day:02d} "
+        f"{local.hour:02d}:{local.minute:02d}–{end.hour:02d}:{end.minute:02d}"
+    )
+
+
+def pickup_preferred_date_value(value: Any) -> str:
+    """YYYY-MM-DD for <input type=date> in Asia/Taipei (keeps date even if slot invalid)."""
+    local = _as_taipei_datetime(value, naive_as_taipei=True)
+    if local is None:
+        return ""
+    return f"{local.year:04d}-{local.month:02d}-{local.day:02d}"
+
+
+def pickup_preferred_slot_value(value: Any) -> str:
+    """HH:MM slot start for <select>; empty when not a bookable slot."""
+    local = _as_taipei_datetime(value, naive_as_taipei=True)
+    if local is None:
+        return ""
+    slot_key = f"{local.hour:02d}:{local.minute:02d}"
+    if slot_key not in PICKUP_SLOT_START_VALUES:
+        return ""
+    return slot_key
+
+
+def pickup_preferred_input_value(value: Any) -> str:
+    """Legacy datetime-local string; empty when slot invalid."""
+    local = _as_taipei_datetime(value, naive_as_taipei=True)
+    if local is None:
+        return ""
+    slot_key = f"{local.hour:02d}:{local.minute:02d}"
+    if slot_key not in PICKUP_SLOT_START_VALUES:
+        return ""
+    return f"{local.year:04d}-{local.month:02d}-{local.day:02d}T{slot_key}"
+
+
+def parse_pickup_preferred_at(raw: str | None, *, now: datetime | None = None) -> datetime:
+    """Parse slot start as Asia/Taipei; must match bookable 1h pickup slots."""
+    text = (raw or "").strip()
+    if not text:
+        raise ValueError("請選擇希望取貨時間")
+    normalized = text.replace(" ", "T")
+    if normalized.endswith("Z"):
+        normalized = normalized[:-1] + "+00:00"
+    try:
+        dt = datetime.fromisoformat(normalized)
+    except ValueError as exc:
+        raise ValueError("取貨時間格式不正確") from exc
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=_TAIPEI)
+    else:
+        dt = dt.astimezone(_TAIPEI)
+    dt = dt.replace(second=0, microsecond=0)
+    slot_key = f"{dt.hour:02d}:{dt.minute:02d}"
+    if slot_key not in PICKUP_SLOT_START_VALUES:
+        raise ValueError("請選擇門市可預約時段（每小時一段）")
+    ref = now or datetime.now(tz=_TAIPEI)
+    if ref.tzinfo is None:
+        ref = ref.replace(tzinfo=_TAIPEI)
+    else:
+        ref = ref.astimezone(_TAIPEI)
+    if dt <= ref:
+        raise ValueError("希望取貨時間不可早於現在")
+    if dt > ref + timedelta(days=_PICKUP_MAX_DAYS_AHEAD):
+        raise ValueError(f"希望取貨時間請在 {_PICKUP_MAX_DAYS_AHEAD} 天內")
+    return dt
+
+
 def enrich_member_order(order: dict) -> dict:
     """Attach member-facing labels, details_zh, and status progress steps."""
     if not order:
         return order
     status = (order.get("status") or "").strip().lower()
     order["status"] = status
-    order["status_label"] = ORDER_STATUS_LABELS_ZH.get(status, status or "—")
+    raw_method = order.get("fulfillment_method")
+    method = (raw_method or "").strip().lower()
+    if raw_method is not None:
+        order["fulfillment_method"] = method
+    order["status_label"] = order_status_label(status, method)
+    # Defensive: never leave pickup+shipped labeled as delivery shipped.
+    if status == "shipped" and method == "pickup":
+        order["status_label"] = "可取貨"
     order["status_cancelled"] = status in {"cancelled", "canceled"}
     stamps = _as_dict(order.get("status_timestamps"))
     order["status_timestamps"] = stamps
-    order["status_steps"] = order_status_steps(status, stamps)
+    order["status_steps"] = order_status_steps(status, stamps, method)
     config = _as_dict(order.get("config_json"))
     order["details_zh"] = cart_details_from_config(config)
-    method = order.get("fulfillment_method")
     order["fulfillment_label"] = _FULFILLMENT_ZH.get(method or "", method or "—")
     if method == "delivery":
         order["shipping_line"] = " ".join(
             part
             for part in (
                 order.get("shipping_city"),
-                order.get("shipping_postal"),
+                order.get("shipping_postal") or order.get("shipping_district"),
                 order.get("shipping_address"),
             )
             if part
         )
     else:
         order["shipping_line"] = ""
+    order["collection_bottle_line"] = " ".join(
+        part
+        for part in (
+            order.get("collection_bottle_city"),
+            order.get("collection_bottle_postal"),
+            order.get("collection_bottle_address"),
+        )
+        if part
+    )
     name = (
         order.get("product_name")
         or order.get("summary_zh")
@@ -342,6 +563,29 @@ def enrich_member_order(order: dict) -> dict:
         or "訂製品項"
     )
     order["display_name"] = name
+    ready = is_ready_for_pickup(order)
+    order["ready_for_pickup"] = ready
+    preferred = order.get("pickup_preferred_at")
+    slot_valid = (
+        is_valid_pickup_slot_datetime(preferred) if preferred not in (None, "") else False
+    )
+    order["pickup_preferred_invalid"] = bool(
+        preferred not in (None, "") and not slot_valid
+    )
+    order["pickup_preferred_display"] = (
+        format_pickup_preferred_display(preferred) if slot_valid else ""
+    )
+    order["pickup_preferred_input"] = (
+        pickup_preferred_input_value(preferred) if slot_valid else ""
+    )
+    order["pickup_preferred_date"] = pickup_preferred_date_value(preferred)
+    order["pickup_preferred_slot"] = (
+        pickup_preferred_slot_value(preferred) if slot_valid else ""
+    )
+    order["pickup_slot_options"] = pickup_slot_options()
+    today = datetime.now(tz=_TAIPEI).date()
+    order["pickup_date_min"] = today.isoformat()
+    order["pickup_date_max"] = (today + timedelta(days=_PICKUP_MAX_DAYS_AHEAD)).isoformat()
     return order
 
 
@@ -500,7 +744,8 @@ def attach_order_fulfillment(cur, orders: list[dict]) -> None:
     cur.execute(
         """
         select order_id, fulfillment_method, shipping_address, shipping_city,
-               shipping_postal, order_note
+               shipping_postal, order_note, pickup_preferred_at,
+               collection_bottle_address, collection_bottle_city, collection_bottle_postal
         from order_fulfillment where order_id = any(%s)
         """,
         (ids,),
@@ -515,6 +760,10 @@ def attach_order_fulfillment(cur, orders: list[dict]) -> None:
         order["shipping_city"] = row.get("shipping_city")
         order["shipping_postal"] = row.get("shipping_postal")
         order["order_note"] = row.get("order_note")
+        order["pickup_preferred_at"] = row.get("pickup_preferred_at")
+        order["collection_bottle_address"] = row.get("collection_bottle_address")
+        order["collection_bottle_city"] = row.get("collection_bottle_city")
+        order["collection_bottle_postal"] = row.get("collection_bottle_postal")
 
 
 def attach_order_relations(cur, orders: list[dict]) -> None:

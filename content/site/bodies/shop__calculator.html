@@ -331,9 +331,10 @@
 <aside aria-live="polite" class="shop-price-panel shop-price-panel--wizard is-loading-prices" id="shop-price-panel">
 <div class="shop-price-panel-head">
 <span class="shop-price-panel-label">試算總價</span>
-<div class="hero-price">
+<div class="hero-price" id="hero-price">
 <span class="hero-price-currency">NT$</span>
 <span class="hero-price-amount" id="sum-total">—</span>
+<s class="hero-price-compare" id="sum-total-compare" hidden></s>
 </div>
 </div>
 <p class="hero-price-hint" data-i18n="shop_complete_options" id="price-hint">請完成選項以查看價格</p>
@@ -693,7 +694,7 @@
 <div class="mobile-buy-bar hidden" id="mobile-buy-bar">
 <button aria-controls="shop-price-panel" aria-expanded="false" class="mobile-buy-price" id="mobile-price-toggle" type="button">
 <span class="mobile-buy-label" data-i18n="sum_total">總價</span>
-<span class="mobile-buy-amount">NT$ <span id="sum-total-mobile">—</span></span>
+<span class="mobile-buy-amount">NT$ <span id="sum-total-mobile">—</span> <s class="mobile-buy-compare" id="sum-total-mobile-compare" hidden></s></span>
 <span class="mobile-buy-detail-hint" data-i18n="shop_price_breakdown">明細</span>
 </button>
 <div class="mobile-buy-actions">

@@ -9,6 +9,7 @@ from app.orders import (
     enrich_member_order,
     format_status_date,
     merge_status_timestamps,
+    order_status_label,
     order_status_steps,
 )
 
@@ -146,3 +147,45 @@ def test_enrich_member_order_passes_timestamps_to_steps():
     )
     assert order["status_steps"][0]["date"] == "6/25"
     assert order["status_steps"][1]["date"] == ""
+
+
+def test_order_status_label_shipped_fulfillment_aware():
+    assert order_status_label("shipped", "pickup") == "可取貨"
+    assert order_status_label("shipped", "delivery") == "已出貨"
+    assert order_status_label("shipped", None) == "已出貨"
+    assert order_status_label("completed", "pickup") == "已完成"
+    assert order_status_label("completed") == "已完成"
+
+
+def test_completed_step_is_current():
+    steps = order_status_steps("completed")
+    assert steps[-1]["code"] == "completed"
+    assert steps[-1]["label"] == "已完成"
+    assert steps[-1]["state"] == "current"
+    assert all(s["state"] == "complete" for s in steps[:-1])
+
+
+def test_enrich_shipped_labels_by_fulfillment():
+    pickup = enrich_member_order(
+        {
+            "status": "shipped",
+            "fulfillment_method": "pickup",
+            "summary_zh": "測試",
+            "config_json": {},
+        }
+    )
+    assert pickup["status_label"] == "可取貨"
+    shipped_step = next(s for s in pickup["status_steps"] if s["code"] == "shipped")
+    assert shipped_step["label"] == "可取貨"
+
+    delivery = enrich_member_order(
+        {
+            "status": "shipped",
+            "fulfillment_method": "delivery",
+            "summary_zh": "測試",
+            "config_json": {},
+        }
+    )
+    assert delivery["status_label"] == "已出貨"
+    shipped_step = next(s for s in delivery["status_steps"] if s["code"] == "shipped")
+    assert shipped_step["label"] == "已出貨"

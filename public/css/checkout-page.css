@@ -203,6 +203,13 @@ a.checkout-stepper-label:hover {
   letter-spacing: 0.06em;
 }
 
+[data-checkout-root] .checkout-block-hint {
+  margin: 0 0 14px;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--ink-soft, #5c564e);
+}
+
 [data-checkout-root] .checkout-block-note {
   margin-left: 0.45em;
   font-family: inherit;
@@ -226,10 +233,69 @@ a.checkout-stepper-label:hover {
   min-height: var(--tap-target-min, 44px);
 }
 
+[data-checkout-root] .form-field select {
+  width: 100%;
+  font-family: inherit;
+  font-size: 16px;
+  padding: 11px 36px 11px 14px;
+  border: 1px solid #E3DCD3;
+  border-radius: 8px;
+  background-color: #FBFAF8;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%238A847C' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 12px 8px;
+  color: var(--ink);
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  transition: border-color 0.2s, background-color 0.2s, box-shadow 0.2s;
+}
+
+[data-checkout-root] .form-field select:focus {
+  outline: none;
+  border-color: var(--mint-deep);
+  background-color: #fff;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--mint-deep) 22%, transparent);
+}
+
+[data-checkout-root] .form-field select:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
 [data-checkout-root] .checkout-field-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 14px;
+}
+
+[data-checkout-root] .checkout-same-bottle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 2px 0 0;
+  padding: 10px 12px;
+  border: 1px solid #E3DCD3;
+  border-radius: 8px;
+  background: #FBFAF8;
+  font-size: 14px;
+  color: var(--ink);
+  cursor: pointer;
+  user-select: none;
+}
+
+[data-checkout-root] .checkout-same-bottle[hidden] {
+  display: none !important;
+}
+
+[data-checkout-root] .checkout-same-bottle input {
+  width: 18px;
+  height: 18px;
+  min-height: 0;
+  margin: 0;
+  accent-color: var(--mint-deep);
+  flex-shrink: 0;
 }
 
 [data-checkout-root] .checkout-option {
@@ -273,11 +339,15 @@ a.checkout-stepper-label:hover {
 [data-checkout-root] .checkout-delivery-fields {
   display: none;
   flex-direction: column;
-  gap: 0;
+  gap: 14px;
 }
 
 [data-checkout-root] .checkout-fields:has(input[name="fulfillmentMethod"][value="delivery"]:checked) .checkout-delivery-fields {
   display: flex;
+}
+
+[data-checkout-root] .checkout-fields:has(input[name="fulfillmentMethod"][value="delivery"]:checked) .checkout-delivery-fields.is-same-as-bottle {
+  display: none;
 }
 
 [data-checkout-root] .checkout-fields .form-field {

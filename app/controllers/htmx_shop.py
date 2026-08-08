@@ -12,13 +12,27 @@ from app.auth import get_user_id
 from app.controllers.htmx_common import html, hx_redirect, json_error_message, templates
 from app.controllers.shop_controller import (
     _cart_checkout_impl,
+    cart_needs_collection_bottle,
     fetch_cart_items,
+    set_cart_item_quantity,
     validate_coupon_body,
 )
 from app.database import get_connection
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["htmx-shop"])
+
+
+def _cart_list_with_badge(request: Request, user_id: str, *, status: int = 200) -> HTMLResponse:
+    items = fetch_cart_items(user_id)
+    resp = html(request, "cart_list.html", {"items": items, "guest": False}, status)
+    badge = templates.get_template("partials/htmx/cart_badge.html").render(
+        {"request": request, "count": len(items), "oob": True}
+    )
+    body = resp.body.decode(resp.charset) + badge
+    resp.body = body.encode(resp.charset)
+    resp.headers["content-length"] = str(len(resp.body))
+    return resp
 
 
 @router.get("/cart", response_class=HTMLResponse)
@@ -41,15 +55,22 @@ async def cart_delete(request: Request) -> HTMLResponse:
             cur.execute(
                 "delete from cart_items where id = %s and user_id = %s", (item_id, user_id)
             )
-    items = fetch_cart_items(user_id)
-    resp = html(request, "cart_list.html", {"items": items, "guest": False})
-    badge = templates.get_template("partials/htmx/cart_badge.html").render(
-        {"request": request, "count": len(items), "oob": True}
-    )
-    body = resp.body.decode(resp.charset) + badge
-    resp.body = body.encode(resp.charset)
-    resp.headers["content-length"] = str(len(resp.body))
-    return resp
+    return _cart_list_with_badge(request, user_id)
+
+
+@router.post("/cart/qty", response_class=HTMLResponse)
+async def cart_qty(request: Request) -> HTMLResponse:
+    user_id = get_user_id(request)
+    if not user_id:
+        return html(request, "cart_list.html", {"items": [], "guest": True}, 401)
+    form = await request.form()
+    item_id = str(form.get("id") or "").strip()
+    result = set_cart_item_quantity(user_id, item_id, form.get("quantity"))
+    if result.get("error") and result.get("status") == 404:
+        return _cart_list_with_badge(request, user_id)
+    if result.get("error"):
+        return _cart_list_with_badge(request, user_id, status=400)
+    return _cart_list_with_badge(request, user_id)
 
 
 @router.get("/checkout", response_class=HTMLResponse)
@@ -104,6 +125,13 @@ async def checkout_partial(request: Request) -> Response:
             "form_error": None,
             "fulfillment": "pickup",
             "order_note": "",
+            "needs_collection_bottle": cart_needs_collection_bottle(items),
+            "same_as_bottle": False,
+            "collection_bottle": {
+                "address": profile.get("shipping_address") or "",
+                "city": profile.get("shipping_city") or "",
+                "postal": profile.get("shipping_postal") or "",
+            },
         },
     )
 
@@ -163,6 +191,9 @@ async def checkout_submit(request: Request) -> Response:
         "shippingAddress": str(form.get("shippingAddress") or "").strip(),
         "shippingCity": str(form.get("shippingCity") or "").strip(),
         "shippingPostal": str(form.get("shippingPostal") or "").strip(),
+        "collectionBottleAddress": str(form.get("collectionBottleAddress") or "").strip(),
+        "collectionBottleCity": str(form.get("collectionBottleCity") or "").strip(),
+        "collectionBottlePostal": str(form.get("collectionBottlePostal") or "").strip(),
         "orderNote": str(form.get("orderNote") or "").strip(),
         "couponCode": str(form.get("couponCode") or "").strip(),
     }
@@ -189,6 +220,13 @@ async def checkout_submit(request: Request) -> Response:
                 "form_error": json_error_message(result, "訂單建立失敗"),
                 "fulfillment": body["fulfillmentMethod"],
                 "order_note": body["orderNote"],
+                "needs_collection_bottle": cart_needs_collection_bottle(items),
+                "same_as_bottle": str(form.get("sameAsBottleAddress") or "") == "1",
+                "collection_bottle": {
+                    "address": body["collectionBottleAddress"],
+                    "city": body["collectionBottleCity"],
+                    "postal": body["collectionBottlePostal"],
+                },
             },
             400,
         )

@@ -9,7 +9,9 @@ from app.pricing import (
     COLORED_SINGLE_DIAMOND_PRICE,
     DIAMOND_PRICE,
     WHITE_MULTI_DIAMOND_PRICE,
+    compute_diamond_compare_at_price,
     compute_diamond_list_price,
+    memorial_diamond_line_totals,
 )
 
 
@@ -26,6 +28,19 @@ def test_memorial_white_single_and_multi_use_price_html_packages():
             "0.3", category="diamond", stone_count=qty,
         ) == expected
         assert expected > unit
+        assert compute_diamond_compare_at_price(
+            "0.3", category="diamond", stone_count=qty,
+        ) == unit * qty
+
+
+def test_compare_at_none_for_single_stone():
+    assert compute_diamond_compare_at_price("0.3", category="diamond") is None
+    assert compute_diamond_compare_at_price(
+        "0.3", category="diamond", stone_count=1,
+    ) is None
+    assert compute_diamond_compare_at_price(
+        "0.3", category="earring", stone_count=2,
+    ) is None
 
 
 def test_memorial_multi_above_03_uses_that_carats_unit_not_03_package():
@@ -54,6 +69,42 @@ def test_earring_list_price_is_single_unit():
     assert compute_diamond_list_price(
         "0.3", category="earring", stone_count=2,
     ) == unit
+
+
+def test_memorial_line_qty_unlocks_package_discount():
+    """Cart qty 2/3/4 on single-stone memorial lines uses multi-stone packages."""
+    unit = DIAMOND_PRICE["0.3"]
+    sale2, compare2 = memorial_diamond_line_totals("0.3", line_qty=2)
+    assert sale2 == WHITE_MULTI_DIAMOND_PRICE["0.3"][2]
+    assert compare2 == unit * 2
+    assert compare2 > sale2
+
+    sale3, compare3 = memorial_diamond_line_totals("0.3", line_qty=3)
+    assert sale3 == WHITE_MULTI_DIAMOND_PRICE["0.3"][3]
+    assert compare3 == unit * 3
+
+    sale1, compare1 = memorial_diamond_line_totals("0.3", line_qty=1)
+    assert sale1 == unit
+    assert compare1 is None
+
+
+def test_memorial_line_qty_packs_greedy_above_four():
+    """qty=5 → one 4-pack + one unit (same high→low package tables)."""
+    unit = DIAMOND_PRICE["0.3"]
+    pack4 = WHITE_MULTI_DIAMOND_PRICE["0.3"][4]
+    sale, compare = memorial_diamond_line_totals("0.3", line_qty=5)
+    assert sale == pack4 + unit
+    assert compare == unit * 5
+    assert compare > sale
+
+
+def test_memorial_configured_stone_count_still_multiplies_by_qty():
+    """stoneCount=2 package × qty=2 (does not re-pack into a 4)."""
+    pack2 = WHITE_MULTI_DIAMOND_PRICE["0.3"][2]
+    unit = DIAMOND_PRICE["0.3"]
+    sale, compare = memorial_diamond_line_totals("0.3", stone_count=2, line_qty=2)
+    assert sale == pack2 * 2
+    assert compare == unit * 2 * 2
 
 
 def test_fancy_below_table_falls_back_on_jewelry_not_memorial():
@@ -181,6 +232,7 @@ const tot = (cfg) => {
 console.log(JSON.stringify({
   b1: tot(base),
   b2: tot({...base, stoneCount: 2}),
+  bQty2: tot({...base, quantity: 2}),
   b07: tot({...base, carat: '0.7', stoneCount: 2}),
   bFancy01: tot({
     ...base, carat: '0.1', diamondKind: 'fancy', fancyColor: 'yellow',
@@ -199,8 +251,10 @@ console.log(JSON.stringify({
             cwd=ROOT, check=True, capture_output=True, text=True,
         ).stdout
     )
+    qty2_sale, _ = memorial_diamond_line_totals("0.3", line_qty=2)
     assert browser["b1"] == expected["py1"] == 79000
     assert browser["b2"] == expected["py2"] == 142200
+    assert browser["bQty2"] == qty2_sale == 142200
     assert browser["b07"] == expected["py07"]
     assert browser["bFancy01"] == expected["pyFancy01"] is None
     assert browser["bFancy03"] == expected["pyFancy03"] == 102000

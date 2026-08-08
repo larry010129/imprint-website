@@ -245,12 +245,15 @@ def test_shop_js_fancy_carat_dropdown_intersects_admin_min():
     assert "stockFancyDiamondColors" in (
         ROOT / "public" / "js" / "shop-assets.js"
     ).read_text(encoding="utf-8")
-    assert "shop.js?v=147" in (
+    assert "shop.js?v=152" in (
         ROOT / "content" / "site" / "templates" / "pages" / "shop" / "calculator.html"
     ).read_text(encoding="utf-8")
-    assert "shop.js?v=147" in (
+    assert "shop.js?v=152" in (
         ROOT / "content" / "site" / "page-registry.json"
     ).read_text(encoding="utf-8")
+    assert "function setShopOptionDisabled" in src
+    assert "function allDiamondColorDefs" in src
+    assert "shop-option--disabled" in src
     # Step 2 style grid: admin slot order, then thumb/stock; onerror walks full chain.
     assert "function styleGridImageUrl" in src
     assert "function styleGridImageCandidates" in src
@@ -288,6 +291,86 @@ def test_shop_js_fancy_carat_dropdown_intersects_admin_min():
     # API /api/prices omits diamondOptions — must seed UI tables + fallback defs.
     assert "function ensureDiamondOptionTables" in src
     assert "FALLBACK_DIAMOND_COLOR_DEFS" in src
+
+
+def test_shop_js_non_round_shape_requires_min_carat():
+    """All products: non-round /「其它形狀」need ≥ nonRoundShapeMinCarat (0.3)."""
+    import json
+    import subprocess
+
+    src = (ROOT / "public" / "js" / "shop.js").read_text(encoding="utf-8")
+    assert "function nonRoundShapeMinCaratValue" in src
+    assert "function caratAllowsNonRoundShape" in src
+    assert "function enforceNonRoundShapeMinCarat" in src
+    assert "nonRoundShapeMinCarat" in src
+    assert "diamond_shape_min_carat_blocked" in src
+    assert "lockNonRound" in src
+    # Carat gate is category-agnostic (not diamond-only).
+    assert "isDiamondOnlyCategory() && isNonRoundShape(nextId)" not in src
+    assert "isNonRoundShape(nextId) && !caratAllowsNonRoundShape()" in src
+    assert "if (!isDiamondOnlyCategory()) return;" not in src
+    assert "const lockNonRound = !caratAllowsNonRoundShape();" in src
+    i18n = (ROOT / "public" / "js" / "shop-i18n.js").read_text(encoding="utf-8")
+    assert "diamond_shape_min_carat_blocked" in i18n
+    css = (ROOT / "public" / "css" / "shop.css").read_text(encoding="utf-8")
+    assert ".shop-page .shop-option--disabled" in css
+    assert ".diamond-carousel-item.is-disabled" in css
+    assert "shop.css?v=6.34" in (
+        ROOT / "content" / "site" / "templates" / "pages" / "shop" / "calculator.html"
+    ).read_text(encoding="utf-8")
+    assert "shop-i18n.js?v=22" in (
+        ROOT / "content" / "site" / "templates" / "pages" / "shop" / "calculator.html"
+    ).read_text(encoding="utf-8")
+    assert "diamond_shape_round_only" in i18n
+
+    browser_script = r"""
+const diamondOptions = { nonRoundShapeMinCarat: 0.3 };
+function nonRoundShapeMinCaratValue() {
+  const n = Number(diamondOptions.nonRoundShapeMinCarat || 0.3);
+  return Number.isNaN(n) ? 0.3 : n;
+}
+function caratAllowsNonRoundShape(carat) {
+  if (carat == null || carat === '') return false;
+  const n = parseFloat(carat);
+  return !Number.isNaN(n) && n >= nonRoundShapeMinCaratValue();
+}
+function isNonRoundShape(shapeId) {
+  return !!shapeId && shapeId !== 'round';
+}
+function enforce(shape, carat) {
+  if (isNonRoundShape(shape) && !caratAllowsNonRoundShape(carat)) return 'round';
+  return shape;
+}
+console.log(JSON.stringify({
+  allow03: caratAllowsNonRoundShape('0.3'),
+  deny01: !caratAllowsNonRoundShape('0.1'),
+  denyEmpty: !caratAllowsNonRoundShape(null),
+  unlock05: caratAllowsNonRoundShape('0.5'),
+  resetOval: enforce('oval', '0.1') === 'round',
+  keepOval: enforce('oval', '0.3') === 'oval',
+  jewelryReset: enforce('oval', '0.1') === 'round',
+  keepRound: enforce('round', '0.1') === 'round',
+}));
+"""
+    out = json.loads(
+        subprocess.run(
+            ["node", "-e", browser_script],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout
+    )
+    assert out == {
+        "allow03": True,
+        "deny01": True,
+        "denyEmpty": True,
+        "unlock05": True,
+        "resetOval": True,
+        "keepOval": True,
+        "jewelryReset": True,
+        "keepRound": True,
+    }
 
 
 def test_shop_js_fancy_min_notice_when_product_offers_fancy():

@@ -131,6 +131,48 @@ def test_htmx_cart_partial_guest(client):
     assert "登入" in resp.text or "guest" in resp.text.lower() or "購物車" in resp.text
 
 
+def test_htmx_cart_partial_decimal_compare_sums(client, monkeypatch):
+    """Regression: Decimal totals + compare_at_total|float must not TypeError."""
+    from decimal import Decimal
+
+    monkeypatch.setattr(
+        "app.controllers.htmx_shop.get_user_id", lambda _request: "user-test-id"
+    )
+    monkeypatch.setattr(
+        "app.controllers.htmx_shop.fetch_cart_items",
+        lambda _user_id: [
+            {
+                "id": "11111111-1111-1111-1111-111111111111",
+                "available": True,
+                "category": "ring",
+                "summary_zh": "測試戒指",
+                "details_zh": "",
+                "image_url": None,
+                "total_price": Decimal("10000"),
+                "compare_at_total": Decimal("12000"),
+                "config_json": {"category": "ring", "quantity": 1},
+            },
+            {
+                "id": "22222222-2222-2222-2222-222222222222",
+                "available": True,
+                "category": "pendant",
+                "summary_zh": "測試墜飾",
+                "details_zh": "",
+                "image_url": None,
+                "total_price": Decimal("5000"),
+                "compare_at_total": None,
+                "config_json": {"category": "pendant", "quantity": 1},
+            },
+        ],
+    )
+    resp = client.get("/htmx/cart", headers={"HX-Request": "true"})
+    assert resp.status_code == 200
+    assert "member-cart" in resp.text
+    assert "測試戒指" in resp.text
+    assert "NT$15,000" in resp.text  # sale total
+    assert "NT$17,000" in resp.text  # compare total (12000 + 5000)
+
+
 def test_login_page_has_htmx_form(client):
     resp = client.get("/login")
     assert resp.status_code == 200

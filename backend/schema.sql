@@ -195,7 +195,11 @@ create table if not exists order_fulfillment (
   shipping_address text,
   shipping_city text,
   shipping_postal text,
-  order_note text
+  order_note text,
+  pickup_preferred_at timestamptz,
+  collection_bottle_address text,
+  collection_bottle_city text,
+  collection_bottle_postal text
 );
 
 -- ── order_items (1:N — product spec + pricing snapshot) ──

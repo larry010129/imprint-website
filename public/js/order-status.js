@@ -16,7 +16,18 @@
     labels: labels,
     /* 刻意不用 this.labels：這個函式常被單獨取出當 callback 傳遞(例如 statusLabel = window.ImprintOrderStatus.label)，
        若依賴 this 綁定，脫離原物件呼叫時 this 會是 undefined 而噴錯。 */
-    label: function (status) {
+    label: function (status, fulfillmentMethod) {
+      var code = status || '';
+      if (code === 'shipped') {
+        var method = (fulfillmentMethod || '').toString().toLowerCase();
+        if (method === 'pickup') return '可取貨';
+        return '已出貨';
+      }
+      return labels[code] || code || '-';
+    },
+    /* Admin <select> option text — one control covers both fulfillment labels. */
+    optionLabel: function (status) {
+      if (status === 'shipped') return '已出貨/可取貨';
       return labels[status] || status || '-';
     }
   };

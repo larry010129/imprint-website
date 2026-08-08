@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import re
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
@@ -12,7 +11,6 @@ from psycopg.types.json import Jsonb
 
 from app.auth import get_user_id
 from app.catalog import resolve_product_id
-from app.content import TAIWAN_CITIES
 from app.coupons import apply_discount_split, record_redemptions, validate_coupon
 from app.database import get_connection, get_transaction
 from app.image_urls import config_image_url
@@ -22,33 +20,26 @@ from app.orders import (
     cart_details_from_config,
     pack_order_config,
 )
-from app.pricing import compute_order_pricing, get_product_variant, normalize_gold
+from app.pricing import (
+    _as_line_quantity,
+    cart_line_quantity_max,
+    compute_order_pricing,
+    get_product_variant,
+    normalize_gold,
+)
+from app.tw_address import validate_tw_shipping_parts as _validate_tw_shipping_parts
 
 router = APIRouter(tags=["shop"])
 
-_POSTAL_RE = re.compile(r"^\d{3}(\d{2})?$")
-_STREET_TOKEN_RE = re.compile(r"[路街巷弄段號樓]")
-_CJK_RE = re.compile(r"[\u4e00-\u9fff]")
-_SHIPPING_CITIES = frozenset(c for c in TAIWAN_CITIES if c != "其他")
 
-
-def _normalize_tw_city(city: str) -> str:
-    return (city or "").strip().replace("臺", "台")
-
-
-def _valid_tw_postal(postal: str) -> bool:
-    return bool(_POSTAL_RE.fullmatch(postal or ""))
-
-
-def _valid_tw_city(city: str) -> bool:
-    return _normalize_tw_city(city) in _SHIPPING_CITIES
-
-
-def _valid_tw_street(address: str) -> bool:
-    text = (address or "").strip()
-    if len(text) < 6:
-        return False
-    return bool(_CJK_RE.search(text) or _STREET_TOKEN_RE.search(text))
+def cart_needs_collection_bottle(items: list[dict[str, Any]]) -> bool:
+    """True when any line needs a DNA/collection bottle (all non-chain custom orders)."""
+    for item in items:
+        config = _cart_item_config(item)
+        cat = str(config.get("category") or item.get("category") or "").strip().lower()
+        if cat and cat != "chain":
+            return True
+    return False
 
 
 def _err(status: int, message: str) -> JSONResponse:
@@ -139,12 +130,17 @@ def annotate_cart_item(cur, item: dict[str, Any]) -> dict[str, Any]:
         return _mark_cart_available(item, False, cfg_err)
     # Diamond memorial: required fields only — no product-row / publish gate.
     if category == "diamond":
+        pricing = compute_order_pricing(cur, config, require_published=False)
+        if pricing.get("ready") and pricing.get("compareAtTotal"):
+            item["compare_at_total"] = pricing["compareAtTotal"]
         return _mark_cart_available(item, True)
     if _validate_product_variant(cur, config, require_published=True):
         return _mark_cart_available(item, False, CART_UNAVAILABLE_REASON)
     pricing = compute_order_pricing(cur, config, require_published=True)
     if not pricing.get("ready"):
         return _mark_cart_available(item, False, CART_UNAVAILABLE_REASON)
+    if pricing.get("compareAtTotal"):
+        item["compare_at_total"] = pricing["compareAtTotal"]
     return _mark_cart_available(item, True)
 
 
@@ -238,7 +234,12 @@ def _profile(cur, user_id: str) -> dict[str, Any] | None:
     return cur.fetchone()
 
 
-def _validate_customer(body: dict[str, Any], profile: dict[str, Any] | None) -> tuple[dict[str, Any], str | None]:
+def _validate_customer(
+    body: dict[str, Any],
+    profile: dict[str, Any] | None,
+    *,
+    require_collection_bottle: bool = False,
+) -> tuple[dict[str, Any], str | None]:
     name = str(body.get("customerName") or (profile or {}).get("full_name") or "").strip()
     phone = str(body.get("customerPhone") or (profile or {}).get("phone") or "").strip()
     email = str(body.get("customerEmail") or (profile or {}).get("email") or "").strip() or None
@@ -248,6 +249,9 @@ def _validate_customer(body: dict[str, Any], profile: dict[str, Any] | None) -> 
     address = str(body.get("shippingAddress") or "").strip() or None
     city = str(body.get("shippingCity") or "").strip() or None
     postal = str(body.get("shippingPostal") or "").strip() or None
+    bottle_address = str(body.get("collectionBottleAddress") or "").strip() or None
+    bottle_city = str(body.get("collectionBottleCity") or "").strip() or None
+    bottle_postal = str(body.get("collectionBottlePostal") or "").strip() or None
     note = str(body.get("orderNote") or "").strip() or None
     if note and len(note) > 100:
         return {}, "備註最多 100 字"
@@ -257,15 +261,23 @@ def _validate_customer(body: dict[str, Any], profile: dict[str, Any] | None) -> 
     if not phone:
         return {}, "請填寫聯絡電話"
     if method == "delivery":
-        if not (address and city and postal):
-            return {}, "請填寫完整的收件地址"
-        city = _normalize_tw_city(city)
-        if not _valid_tw_postal(postal):
-            return {}, "請填寫有效郵遞區號"
-        if not _valid_tw_city(city):
-            return {}, "請選擇有效縣市"
-        if not _valid_tw_street(address):
-            return {}, "請填寫有效中文地址（含路街巷弄號）"
+        city, postal, address, addr_err = _validate_tw_shipping_parts(
+            address, city, postal, empty_msg="請填寫完整的收件地址"
+        )
+        if addr_err:
+            return {}, addr_err
+
+    if require_collection_bottle:
+        bottle_city, bottle_postal, bottle_address, bottle_err = _validate_tw_shipping_parts(
+            bottle_address,
+            bottle_city,
+            bottle_postal,
+            empty_msg="請填寫完整的收集瓶寄送地址",
+        )
+        if bottle_err:
+            return {}, bottle_err
+    else:
+        bottle_address = bottle_city = bottle_postal = None
 
     return {
         "name": name,
@@ -275,6 +287,9 @@ def _validate_customer(body: dict[str, Any], profile: dict[str, Any] | None) -> 
         "shippingAddress": address,
         "shippingCity": city,
         "shippingPostal": postal,
+        "collectionBottleAddress": bottle_address,
+        "collectionBottleCity": bottle_city,
+        "collectionBottlePostal": bottle_postal,
         "orderNote": note,
     }, None
 
@@ -331,8 +346,9 @@ def _insert_order(
     cur.execute(
         """
         insert into order_fulfillment (
-          order_id, fulfillment_method, shipping_address, shipping_city, shipping_postal, order_note
-        ) values (%s, %s, %s, %s, %s, %s)
+          order_id, fulfillment_method, shipping_address, shipping_city, shipping_postal,
+          order_note, collection_bottle_address, collection_bottle_city, collection_bottle_postal
+        ) values (%s, %s, %s, %s, %s, %s, %s, %s, %s)
         """,
         (
             oid,
@@ -341,6 +357,9 @@ def _insert_order(
             customer["shippingCity"],
             customer["shippingPostal"],
             customer["orderNote"],
+            customer.get("collectionBottleAddress"),
+            customer.get("collectionBottleCity"),
+            customer.get("collectionBottlePostal"),
         ),
     )
     cur.execute(
@@ -506,10 +525,123 @@ def fetch_cart_items(user_id: str, item_ids: list[str] | None = None) -> list[di
     return items
 
 
+def set_cart_item_quantity(user_id: str, item_id: str, quantity: Any) -> dict[str, Any]:
+    """Set cart line quantity; quantity <= 0 deletes the line. Recalculates total_price."""
+    item_id = str(item_id or "").strip()
+    if not item_id:
+        return {"error": "missing id", "status": 400}
+    try:
+        raw = int(quantity)
+    except (TypeError, ValueError):
+        return {"error": "invalid quantity", "status": 400}
+
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute(
+            "select * from cart_items where id = %s and user_id = %s",
+            (item_id, user_id),
+        )
+        item = cur.fetchone()
+        if not item:
+            return {"error": "not found", "status": 404}
+
+        if raw <= 0:
+            cur.execute(
+                "delete from cart_items where id = %s and user_id = %s",
+                (item_id, user_id),
+            )
+            cur.execute(
+                "select count(*) as count from cart_items where user_id = %s",
+                (user_id,),
+            )
+            count_row = cur.fetchone()
+            return {
+                "ok": True,
+                "deleted": True,
+                "id": item_id,
+                "count": count_row["count"] if count_row else 0,
+            }
+
+        config = _cart_item_config(item)
+        category = str(config.get("category") or item.get("category") or "")
+        qty = _as_line_quantity(raw, category=category)
+        config["quantity"] = qty
+        error = _validate_config(config)
+        if error:
+            return {"error": error, "status": 400}
+        variant_err = _validate_product_variant(cur, config)
+        if variant_err:
+            return {"error": variant_err, "status": 400}
+        chain_err = _clamp_pendant_chain_sell_mode(cur, config)
+        if chain_err:
+            return {"error": chain_err, "status": 400}
+        _strip_disallowed_engraving(cur, config)
+        _strip_disallowed_fancy_shape(cur, config)
+        pricing = compute_order_pricing(cur, config)
+        if not pricing.get("ready"):
+            return {"error": "無法計算價格，請重新整理後再試", "status": 400}
+        config["clientPricing"] = pricing
+        config_json = json.loads(json.dumps(config, default=str))
+        summary = _summary(config)
+        cur.execute(
+            """
+            update cart_items set
+              category = %s,
+              style_type = %s,
+              config_json = %s,
+              summary_zh = %s,
+              total_price = %s
+            where id = %s and user_id = %s
+            returning *
+            """,
+            (
+                config["category"],
+                config["type"],
+                Jsonb(config_json),
+                summary,
+                pricing.get("total"),
+                item_id,
+                user_id,
+            ),
+        )
+        updated = cur.fetchone()
+        cur.execute(
+            "select count(*) as count from cart_items where user_id = %s",
+            (user_id,),
+        )
+        count_row = cur.fetchone()
+        return {
+            "ok": True,
+            "deleted": False,
+            "item": updated,
+            "quantity": qty,
+            "max": cart_line_quantity_max(category),
+            "count": count_row["count"] if count_row else None,
+        }
+
+
+def _err_from_qty_result(result: dict[str, Any]) -> JSONResponse | None:
+    if "error" in result:
+        return _err(int(result.get("status") or 400), str(result["error"]))
+    return None
+
+
 @router.get("/cart")
 async def get_cart(request: Request) -> dict:
     user_id = _user_id(request)
     return {"items": fetch_cart_items(user_id)}
+
+
+@router.post("/cart/quantity")
+async def cart_quantity(request: Request) -> dict:
+    user_id = _user_id(request)
+    body = await request.json()
+    if not isinstance(body, dict):
+        return _err(400, "invalid body")
+    result = set_cart_item_quantity(user_id, body.get("id"), body.get("quantity"))
+    err = _err_from_qty_result(result)
+    if err:
+        return err
+    return result
 
 
 @router.post("/cart")
@@ -760,7 +892,10 @@ async def _cart_checkout_impl(request: Request, body: dict[str, Any] | None = No
                 return _err(400, CART_UNAVAILABLE_CHECKOUT_MSG)
 
         profile = _profile(cur, user_id)
-        customer, customer_err = _validate_customer(body, profile)
+        need_bottle = cart_needs_collection_bottle(items)
+        customer, customer_err = _validate_customer(
+            body, profile, require_collection_bottle=need_bottle
+        )
         if customer_err:
             return _err(400, customer_err)
 

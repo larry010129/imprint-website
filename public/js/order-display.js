@@ -189,6 +189,7 @@
     if (isCancelled({ status: status })) {
       return '<div class="order-detail-status"><p class="order-detail-cancelled">此訂單已取消</p></div>';
     }
+    var fulfillment = typeof order === 'object' && order ? order.fulfillment_method : null;
     var stamps = typeof order === 'object' && order ? statusTimestamps(order) : {};
     var serverSteps = typeof order === 'object' && order && Array.isArray(order.status_steps)
       ? order.status_steps
@@ -199,7 +200,7 @@
       var date = state === 'incomplete' ? '' : formatStatusDate(stamps[s]);
       return {
         code: s,
-        label: statusLabel(s),
+        label: statusLabel(s, fulfillment),
         state: state,
         color: STATUS_COLORS[s] || '#9cefef',
         date: date,
@@ -212,7 +213,9 @@
       var dateHtml = date
         ? '<span class="order-steps-date">' + esc(date) + '</span>'
         : '';
-      var label = step.label || statusLabel(step.code);
+      var label = step.code === 'shipped'
+        ? statusLabel('shipped', fulfillment)
+        : (step.label || statusLabel(step.code, fulfillment));
       return (
         '<div class="order-steps-item">' +
           '<div class="order-steps-bar order-steps-bar--' + state + '" data-step="' + esc(step.code) + '"' + barStyle + '></div>' +
@@ -259,6 +262,9 @@
     var shipping = o.fulfillment_method === 'delivery'
       ? [o.shipping_city, o.shipping_postal, o.shipping_address].filter(Boolean).join(' ')
       : '';
+    var bottleLine = o.collection_bottle_line
+      || [o.collection_bottle_city, o.collection_bottle_postal, o.collection_bottle_address]
+        .filter(Boolean).join(' ');
     var cancelNote = isCancelled(o) && o.cancel_reason
       ? '<p class="order-detail-cancel-reason">取消原因：' + esc(o.cancel_reason) + '</p>'
       : '';
@@ -300,6 +306,7 @@
               (o.engraving_girdle ? specItem('腰圍刻字', girdleDisplayHtml(o.engraving_girdle), { html: true }) : '') +
               specItem('取貨方式', fulfillment) +
               (shipping ? specItem('收件地址', shipping) : '') +
+              (bottleLine ? specItem('收集瓶寄送地址', bottleLine) : '') +
               priceBreakdownLines(o) +
               noteBlock +
               statusNote +
@@ -327,7 +334,9 @@
         '<td>' + escapeHtml(o.created_at_display || o.created_at || '—') + '</td>' +
         '<td class="member-order-item">' + escapeHtml(label) + '</td>' +
         '<td>' + (price != null ? formatMoney(price) : '—') + '</td>' +
-        '<td><span class="member-order-status">' + escapeHtml(statusLabel(o.status) || '—') + '</span></td>' +
+        '<td><span class="member-order-status">' + escapeHtml(
+          o.status_label || statusLabel(o.status, o.fulfillment_method) || '—'
+        ) + '</span></td>' +
         '<td class="member-order-expand">' +
           '<span class="member-order-chevron" aria-hidden="true">›</span>' +
           '<button type="button" class="order-detail-btn visually-hidden" data-target="' + esc(target) + '" aria-expanded="false">查看詳情</button>' +

@@ -32,6 +32,21 @@ def format_twd(n: Any) -> str:
 templates.env.globals["format_twd"] = format_twd
 templates.env.globals["taiwan_cities"] = SHIPPING_CITIES
 
+try:
+    from app.pricing import cart_line_quantity_max as _cart_line_quantity_max
+
+    templates.env.globals["cart_line_quantity_max"] = _cart_line_quantity_max
+except Exception:  # pragma: no cover
+    templates.env.globals["cart_line_quantity_max"] = lambda _category=None: 99
+
+try:
+    from app.orders import pickup_slot_options as _pickup_slot_options
+
+    templates.env.globals["pickup_slot_options_default"] = _pickup_slot_options()
+except Exception:  # pragma: no cover - import/cycle guard for partial boot
+    templates.env.globals["pickup_slot_options_default"] = []
+
+
 
 def html(request: Request, name: str, ctx: dict[str, Any], status: int = 200) -> HTMLResponse:
     return templates.TemplateResponse(

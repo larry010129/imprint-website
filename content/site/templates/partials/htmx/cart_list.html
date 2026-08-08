@@ -11,88 +11,204 @@
 {% else %}
 {% set available_items = items|selectattr('available')|list %}
 {% set unavailable_items = items|rejectattr('available')|list %}
-{% if available_items %}
-<div class="member-cart-toolbar">
-  <label><input type="checkbox" id="cart-select-all" checked data-cart-select-all> 全選</label>
-</div>
-<ul class="member-cart-list" id="cart-list">
-  {% for item in available_items %}
-  <li class="member-cart-item" data-cart-id="{{ item.id }}">
-    <label class="member-cart-item__check">
-      <input type="checkbox" name="itemIds" value="{{ item.id }}" checked data-cart-check data-price="{{ item.total_price or 0 }}">
-    </label>
-    {% if item.image_url %}
-    <img class="member-cart-item__thumb" src="{{ item.image_url }}" alt="" loading="lazy" width="72" height="72">
-    {% endif %}
-    <div class="member-cart-item__body">
-      <p class="member-cart-item__summary">{{ item.summary_zh or '訂製品項' }}</p>
-      {% if item.details_zh %}
-      <p class="member-cart-item__meta">{{ item.details_zh }}</p>
+{% set ns = namespace(total=0.0, compare=0.0) %}
+{% for item in available_items %}
+  {% set ns.total = ns.total + ((item.total_price or 0)|float) %}
+  {% if item.compare_at_total and (item.compare_at_total|float) > ((item.total_price or 0)|float) %}
+    {% set ns.compare = ns.compare + (item.compare_at_total|float) %}
+  {% else %}
+    {% set ns.compare = ns.compare + ((item.total_price or 0)|float) %}
+  {% endif %}
+{% endfor %}
+<div class="member-cart" id="member-cart" data-cart-root>
+  <div class="member-cart__layout">
+    <div class="member-cart__main">
+      {% if available_items %}
+      <section class="member-cart-card" aria-label="購物車品項">
+        <header class="member-cart-card__head">
+          <label class="member-cart-select-all">
+            <input type="checkbox" id="cart-select-all" checked data-cart-select-all>
+            <span data-i18n="cart_select_all">全選</span>
+          </label>
+        </header>
+        <ul class="member-cart-list" id="cart-list">
+          {% for item in available_items %}
+          {% set cfg = item.config_json if item.config_json is mapping else {} %}
+          {% set cat = cfg.category|default(item.category)|default('') %}
+          {% set qty_max = cart_line_quantity_max(cat) %}
+          {% set qty = (cfg.quantity|default(1))|int %}
+          {% if qty < 1 %}{% set qty = 1 %}{% endif %}
+          {% if qty > qty_max %}{% set qty = qty_max %}{% endif %}
+          {% set line_compare = item.compare_at_total if item.compare_at_total and (item.compare_at_total|float) > (item.total_price or 0)|float else (item.total_price or 0) %}
+          <li class="member-cart-item" data-cart-id="{{ item.id }}">
+            <label class="member-cart-item__check">
+              <input type="checkbox" name="itemIds" value="{{ item.id }}" checked
+                data-cart-check data-price="{{ item.total_price or 0 }}"
+                data-compare-price="{{ line_compare }}"
+                aria-label="選取 {{ item.summary_zh or '訂製品項' }}">
+            </label>
+            {% if item.image_url %}
+            <img class="member-cart-item__thumb" src="{{ item.image_url }}" alt="" loading="lazy" width="72" height="72">
+            {% else %}
+            <span class="member-cart-item__thumb member-cart-item__thumb--empty" aria-hidden="true"></span>
+            {% endif %}
+            <div class="member-cart-item__body">
+              <a class="member-cart-item__title" href="/shop/calculator/?cart_edit={{ item.id }}">{{ item.summary_zh or '訂製品項' }}</a>
+              <span class="member-cart-item__price-wrap">
+                <strong class="member-cart-item__price">{{ format_twd(item.total_price) }}</strong>
+                {% if item.compare_at_total and (item.compare_at_total|float) > (item.total_price or 0)|float %}
+                <s class="member-cart-item__price-compare">{{ format_twd(item.compare_at_total) }}</s>
+                {% endif %}
+              </span>
+              {% if item.details_zh %}
+              <p class="member-cart-item__meta">
+                {% for part in item.details_zh.split(' · ') %}
+                <span class="member-cart-item__tag">{{ part }}</span>
+                {% endfor %}
+              </p>
+              {% endif %}
+            </div>
+            <div class="member-cart-item__side">
+              <div class="member-cart-qty" role="group" aria-label="數量">
+                {# CSP blocks hx-vals js: — hidden id + hx-include for direct edit #}
+                <input type="hidden" name="id" value="{{ item.id }}">
+                <button type="button"
+                  class="member-cart-qty__btn member-cart-qty__btn--dec"
+                  aria-label="減少數量"
+                  hx-post="/htmx/cart/qty"
+                  hx-vals='{"id":"{{ item.id }}","quantity":{{ qty - 1 }}}'
+                  hx-target="#htmx-cart"
+                  hx-swap="innerHTML"
+                  {% if qty <= 1 %}hx-confirm="數量為 0 將移除此品項，確定嗎？"{% endif %}>−</button>
+                <input type="number" class="member-cart-qty__input" name="quantity"
+                  value="{{ qty }}" min="1" max="{{ qty_max }}" step="1"
+                  inputmode="numeric" aria-label="數量"
+                  hx-post="/htmx/cart/qty"
+                  hx-include="closest .member-cart-qty"
+                  hx-target="#htmx-cart"
+                  hx-swap="innerHTML"
+                  hx-trigger="change">
+                <button type="button"
+                  class="member-cart-qty__btn member-cart-qty__btn--inc"
+                  aria-label="增加數量"
+                  hx-post="/htmx/cart/qty"
+                  hx-vals='{"id":"{{ item.id }}","quantity":{{ qty + 1 }}}'
+                  hx-target="#htmx-cart"
+                  hx-swap="innerHTML"
+                  {% if qty >= qty_max %}disabled{% endif %}>+</button>
+              </div>
+              <div class="member-cart-item__utils">
+                <a class="member-cart-item__util" href="/shop/calculator/?cart_edit={{ item.id }}" data-i18n="cart_track" aria-label="編輯規格">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 21s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.6-7 10-7 10z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+                  追蹤
+                </a>
+                <button type="button" class="member-cart-item__util member-cart-item__util--danger"
+                  hx-post="/htmx/cart/delete"
+                  hx-vals='{"id":"{{ item.id }}"}'
+                  hx-target="#htmx-cart"
+                  hx-confirm="移除此品項？"
+                  data-i18n="cart_delete">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7h16M9 7V5h6v2M10 11v6M14 11v6M6 7l1 12h10l1-12" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  刪除
+                </button>
+              </div>
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+      </section>
       {% endif %}
-      <strong class="member-cart-item__price">{{ format_twd(item.total_price) }}</strong>
-    </div>
-    <div class="member-cart-item__actions">
-      <a class="btn btn-line" href="/shop/calculator/?cart_edit={{ item.id }}">編輯</a>
-      <button type="button" class="btn btn-line"
-        hx-post="/htmx/cart/delete"
-        hx-vals='{"id":"{{ item.id }}"}'
-        hx-target="#htmx-cart"
-        hx-confirm="移除此品項？">移除</button>
-    </div>
-  </li>
-  {% endfor %}
-</ul>
-{% endif %}
-{% if unavailable_items %}
-<section class="member-cart-unavailable" aria-labelledby="cart-unavailable-heading">
-  <h2 class="member-cart-unavailable__title" id="cart-unavailable-heading">無法購買</h2>
-  <p class="member-cart-unavailable__hint">以下品項無法結帳，不會計入金額；請移除。</p>
-  <ul class="member-cart-list member-cart-list--unavailable">
-    {% for item in unavailable_items %}
-    <li class="member-cart-item member-cart-item--unavailable" data-cart-id="{{ item.id }}">
-      {% if item.image_url %}
-      <img class="member-cart-item__thumb" src="{{ item.image_url }}" alt="" loading="lazy" width="72" height="72">
-      {% else %}
-      <span class="member-cart-item__thumb member-cart-item__thumb--empty" aria-hidden="true"></span>
+
+      {% if unavailable_items %}
+      <section class="member-cart-card member-cart-unavailable" aria-labelledby="cart-unavailable-heading">
+        <h2 class="member-cart-unavailable__title" id="cart-unavailable-heading">無法購買</h2>
+        <p class="member-cart-unavailable__hint">以下品項無法結帳，不會計入金額；請移除。</p>
+        <ul class="member-cart-list member-cart-list--unavailable">
+          {% for item in unavailable_items %}
+          <li class="member-cart-item member-cart-item--unavailable" data-cart-id="{{ item.id }}">
+            {% if item.image_url %}
+            <img class="member-cart-item__thumb" src="{{ item.image_url }}" alt="" loading="lazy" width="72" height="72">
+            {% else %}
+            <span class="member-cart-item__thumb member-cart-item__thumb--empty" aria-hidden="true"></span>
+            {% endif %}
+            <div class="member-cart-item__body">
+              <p class="member-cart-item__title">{{ item.summary_zh or '訂製品項' }}</p>
+              <p class="member-cart-item__unavailable-reason">{{ item.unavailableReason or '商品已下架或規格已變更' }}</p>
+            </div>
+            <div class="member-cart-item__side">
+              <div class="member-cart-item__utils">
+                <button type="button" class="member-cart-item__util member-cart-item__util--danger"
+                  hx-post="/htmx/cart/delete"
+                  hx-vals='{"id":"{{ item.id }}"}'
+                  hx-target="#htmx-cart"
+                  hx-confirm="移除此品項？"
+                  data-i18n="cart_delete">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7h16M9 7V5h6v2M10 11v6M14 11v6M6 7l1 12h10l1-12" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  刪除
+                </button>
+              </div>
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+      </section>
       {% endif %}
-      <div class="member-cart-item__body">
-        <p class="member-cart-item__summary">{{ item.summary_zh or '訂製品項' }}</p>
-        <p class="member-cart-item__unavailable-reason">{{ item.unavailableReason or '商品已下架或規格已變更' }}</p>
-      </div>
-      <div class="member-cart-item__actions">
-        <button type="button" class="btn btn-line"
-          hx-post="/htmx/cart/delete"
-          hx-vals='{"id":"{{ item.id }}"}'
-          hx-target="#htmx-cart"
-          hx-confirm="移除此品項？">移除</button>
-      </div>
-    </li>
-    {% endfor %}
-  </ul>
-</section>
-{% endif %}
-<div class="member-cart-summary">
-  <div class="member-cart-summary__row">
-    <span id="cart-selected-label">已選 {{ available_items|length }} 件</span>
-    {% set ns = namespace(total=0) %}{% for item in available_items %}{% set ns.total = ns.total + (item.total_price or 0) %}{% endfor %}
-    <strong id="cart-selected-total">{{ format_twd(ns.total) }}</strong>
+    </div>
+
+    <aside class="member-cart__aside" aria-label="結帳明細">
+      <section class="member-cart-card member-cart-summary">
+        <h2 class="member-cart-summary__title" data-i18n="cart_checkout_detail">結帳明細</h2>
+        <div class="member-cart-summary__rows">
+          <div class="member-cart-summary__row">
+            <span data-i18n="cart_original_total">商品原價總金額</span>
+            <span id="cart-selected-subtotal"{% if ns.compare > ns.total %} class="member-cart-summary__compare"{% endif %}>{{ format_twd(ns.compare) }}</span>
+          </div>
+          <div class="member-cart-summary__row member-cart-summary__row--pay">
+            <span data-i18n="cart_pay_total">結帳金額</span>
+            <strong id="cart-selected-total"{% if ns.compare > ns.total %} class="member-cart-summary__sale"{% endif %}>{{ format_twd(ns.total) }}</strong>
+          </div>
+        </div>
+        <p class="member-cart-summary__count" id="cart-selected-label">已選 {{ available_items|length }} 件</p>
+        <button type="button" class="btn member-cart-summary__cta" id="cart-checkout-btn" data-cart-checkout{% if not available_items %} disabled{% endif %}>
+          <span data-i18n="cart_checkout_btn">結帳</span> (<span id="cart-checkout-count">{{ available_items|length }}</span>)
+        </button>
+        <a href="/shop/calculator/" class="member-cart-continue" data-i18n="cart_continue">繼續選購</a>
+      </section>
+    </aside>
   </div>
-  <button type="button" class="btn btn-dark" id="cart-checkout-btn" data-cart-checkout{% if not available_items %} disabled{% endif %}>訂購已選品項</button>
-  <a href="/shop/calculator/" class="member-cart-continue">繼續選購</a>
 </div>
 <script>
 (function(){
   var root=document.getElementById('htmx-cart'); if(!root) return;
+  function fmt(n){ return 'NT$'+Math.round(n).toLocaleString('zh-Hant-TW'); }
   function sync(){
     var boxes=[].slice.call(root.querySelectorAll('[data-cart-check]'));
     var selected=boxes.filter(function(b){return b.checked;});
     var total=selected.reduce(function(s,b){return s+(parseFloat(b.dataset.price)||0);},0);
+    var compare=selected.reduce(function(s,b){
+      var c=parseFloat(b.dataset.comparePrice);
+      var p=parseFloat(b.dataset.price)||0;
+      return s+((Number.isFinite(c)&&c>p)?c:p);
+    },0);
     var lab=root.querySelector('#cart-selected-label');
     var tot=root.querySelector('#cart-selected-total');
+    var sub=root.querySelector('#cart-selected-subtotal');
+    var countEl=root.querySelector('#cart-checkout-count');
     if(lab) lab.textContent='已選 '+selected.length+' 件';
-    if(tot) tot.textContent='NT$'+Math.round(total).toLocaleString('zh-Hant-TW');
+    if(tot){
+      tot.textContent=fmt(total);
+      tot.classList.toggle('member-cart-summary__sale', compare>total);
+    }
+    if(sub){
+      sub.textContent=fmt(compare);
+      sub.classList.toggle('member-cart-summary__compare', compare>total);
+    }
+    if(countEl) countEl.textContent=String(selected.length);
     var all=root.querySelector('[data-cart-select-all]');
-    if(all) all.checked=selected.length===boxes.length && boxes.length>0;
+    if(all){
+      all.checked=selected.length===boxes.length && boxes.length>0;
+      all.indeterminate=selected.length>0 && selected.length<boxes.length;
+    }
     var btn=root.querySelector('[data-cart-checkout]');
     if(btn) btn.disabled=selected.length===0;
   }

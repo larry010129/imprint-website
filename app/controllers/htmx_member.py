@@ -30,6 +30,7 @@ from app.onboarding import (
     should_show_onboarding_prompt,
 )
 from app.profile_schema import fetch_profile
+from app.tw_address import STREET_ERROR, valid_tw_street
 
 router = APIRouter(tags=["htmx-member"])
 
@@ -131,11 +132,45 @@ async def favorites_partial(request: Request) -> HTMLResponse:
     return html(request, "favorites_list.html", {"items": items, "guest": False})
 
 
-@router.get("/history", response_class=HTMLResponse)
-async def history_partial(request: Request) -> HTMLResponse:
-    user_id = get_user_id(request)
-    if not user_id:
-        return html(request, "history_list.html", {"orders": [], "guest": True})
+# Shopee-like history tabs → order.status codes (Imprint pipeline).
+# No return/refund tab — custom DNA orders rarely allow returns.
+HISTORY_TAB_STATUSES: dict[str, frozenset[str]] = {
+    "unpaid": frozenset({"received", "order_confirming"}),
+    "to_ship": frozenset(
+        {"deposit_confirmed", "dna_lab", "in_production", "quality_check"}
+    ),
+    "to_receive": frozenset({"shipped"}),
+    "completed": frozenset({"completed"}),
+    "cancelled": frozenset({"cancelled", "canceled"}),
+}
+
+
+def _order_status_code(order: dict) -> str:
+    return (order.get("status") or "").strip().lower()
+
+
+def _orders_for_tab(orders: list, tab: str) -> list:
+    statuses = HISTORY_TAB_STATUSES.get(tab)
+    if statuses is None:
+        return list(orders)
+    if not statuses:
+        return []
+    return [o for o in orders if _order_status_code(o) in statuses]
+
+
+def _empty_history_context(*, guest: bool) -> dict:
+    return {
+        "orders": [],
+        "unpaid_orders": [],
+        "to_ship_orders": [],
+        "to_receive_orders": [],
+        "completed_orders": [],
+        "cancelled_orders": [],
+        "guest": guest,
+    }
+
+
+def _history_list_context(user_id: str) -> dict:
     from app.orders import attach_order_display, enrich_member_order
 
     with get_connection() as conn, conn.cursor() as cur:
@@ -148,7 +183,232 @@ async def history_partial(request: Request) -> HTMLResponse:
             attach_order_display(cur, orders)
             for order in orders:
                 enrich_member_order(order)
-    return html(request, "history_list.html", {"orders": orders, "guest": False})
+    return {
+        "orders": orders,
+        "unpaid_orders": _orders_for_tab(orders, "unpaid"),
+        "to_ship_orders": _orders_for_tab(orders, "to_ship"),
+        "to_receive_orders": _orders_for_tab(orders, "to_receive"),
+        "completed_orders": _orders_for_tab(orders, "completed"),
+        "cancelled_orders": _orders_for_tab(orders, "cancelled"),
+        "guest": False,
+    }
+
+
+@router.get("/history", response_class=HTMLResponse)
+async def history_partial(request: Request) -> HTMLResponse:
+    user_id = get_user_id(request)
+    if not user_id:
+        return html(
+            request,
+            "history_list.html",
+            _empty_history_context(guest=True),
+        )
+    return html(request, "history_list.html", _history_list_context(user_id))
+
+
+@router.post("/history/confirm-receipt", response_class=HTMLResponse)
+async def history_confirm_receipt(request: Request) -> HTMLResponse:
+    """Member marks shipped delivery order as received → completed."""
+    user_id = get_user_id(request)
+    if not user_id:
+        return html(
+            request,
+            "history_list.html",
+            _empty_history_context(guest=True),
+            401,
+        )
+    if not enforce_rate_limit(request, action="confirm-receipt", limit=20, window_seconds=600):
+        ctx = _history_list_context(user_id)
+        ctx["flash_ok"] = False
+        ctx["flash_message"] = "操作過於頻繁，請稍後再試"
+        return html(request, "history_list.html", ctx, 429)
+
+    from datetime import datetime, timezone
+
+    from psycopg.types.json import Jsonb
+
+    from app.orders import merge_status_timestamps
+
+    form = await request.form()
+    order_id = str(form.get("order_id") or "").strip()
+    if not order_id:
+        ctx = _history_list_context(user_id)
+        ctx["flash_ok"] = False
+        ctx["flash_message"] = "缺少訂單編號"
+        return html(request, "history_list.html", ctx, 400)
+
+    flash_ok = False
+    flash_message = ""
+    status_code = 200
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            select o.id, o.status, o.status_timestamps, f.fulfillment_method
+            from orders o
+            left join order_fulfillment f on f.order_id = o.id
+            where o.id = %s and o.user_id = %s
+            """,
+            (order_id, user_id),
+        )
+        order = cur.fetchone()
+        if not order:
+            flash_ok = False
+            flash_message = "找不到訂單"
+            status_code = 404
+        else:
+            status = (order.get("status") or "").strip().lower()
+            method = (order.get("fulfillment_method") or "").strip().lower()
+            # Delivery only: pickup uses 可取貨 + schedule, not confirm-receipt.
+            if status != "shipped" or method != "delivery":
+                flash_ok = False
+                flash_message = "此訂單目前無法確認收到商品"
+                status_code = 400
+            else:
+                now = datetime.now(timezone.utc)
+                stamps = merge_status_timestamps(
+                    order.get("status_timestamps"),
+                    status,
+                    "completed",
+                    now,
+                )
+                cur.execute(
+                    """
+                    update orders
+                    set status = 'completed',
+                        status_timestamps = %s,
+                        updated_at = now()
+                    where id = %s and user_id = %s and status = 'shipped'
+                    """,
+                    (Jsonb(stamps), order_id, user_id),
+                )
+                if cur.rowcount == 0:
+                    flash_ok = False
+                    flash_message = "此訂單目前無法確認收到商品"
+                    status_code = 400
+                else:
+                    flash_ok = True
+                    flash_message = "已確認收到商品，訂單已完成（可於已完成查看）"
+                    status_code = 200
+
+    ctx = _history_list_context(user_id)
+    ctx["flash_ok"] = flash_ok
+    ctx["flash_message"] = flash_message
+    if flash_ok:
+        # Land on 已完成 after confirm-receipt.
+        ctx["active_tab"] = "completed"
+    return html(request, "history_list.html", ctx, status_code)
+
+
+@router.post("/history/pickup-schedule", response_class=HTMLResponse)
+async def history_pickup_schedule(request: Request) -> HTMLResponse:
+    """Persist preferred store-pickup datetime for a ready-for-pickup order."""
+    user_id = get_user_id(request)
+    if not user_id:
+        return html(
+            request,
+            "pickup_schedule.html",
+            {"ok": False, "message": "請先登入", "order": None},
+            401,
+        )
+    if not enforce_rate_limit(request, action="pickup-schedule", limit=20, window_seconds=600):
+        return html(
+            request,
+            "pickup_schedule.html",
+            {"ok": False, "message": "操作過於頻繁，請稍後再試", "order": None},
+            429,
+        )
+
+    from app.orders import (
+        attach_order_display,
+        enrich_member_order,
+        is_ready_for_pickup,
+        parse_pickup_preferred_at,
+    )
+
+    form = await request.form()
+    order_id = str(form.get("order_id") or "").strip()
+    raw_preferred = str(form.get("pickup_preferred_at") or "").strip()
+    pickup_date = str(form.get("pickup_date") or "").strip()
+    pickup_slot = str(form.get("pickup_slot") or "").strip()
+    if not raw_preferred and pickup_date and pickup_slot:
+        raw_preferred = f"{pickup_date}T{pickup_slot}"
+    schedule_target = str(form.get("schedule_target") or "").strip()
+    if schedule_target and (
+        not schedule_target.startswith("pickup-schedule-")
+        or any(ch in schedule_target for ch in ('"', "'", "<", ">", " ", "\n", "\r"))
+    ):
+        schedule_target = ""
+
+    def _pickup_ctx(ok: bool, message: str, order_row=None) -> dict:
+        return {
+            "ok": ok,
+            "message": message,
+            "order": order_row,
+            "schedule_target": schedule_target,
+        }
+
+    if not order_id:
+        return html(request, "pickup_schedule.html", _pickup_ctx(False, "缺少訂單編號"), 400)
+
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute(
+            "select * from orders where id = %s and user_id = %s",
+            (order_id, user_id),
+        )
+        order = cur.fetchone()
+        if not order:
+            return html(request, "pickup_schedule.html", _pickup_ctx(False, "找不到訂單"), 404)
+        order = dict(order)
+        attach_order_display(cur, [order])
+        enrich_member_order(order)
+        if not is_ready_for_pickup(order):
+            return html(
+                request,
+                "pickup_schedule.html",
+                _pickup_ctx(
+                    False,
+                    "此訂單目前不可預約取貨（需為門市自取且狀態為已出貨）",
+                    order,
+                ),
+                400,
+            )
+
+        try:
+            preferred_at = parse_pickup_preferred_at(raw_preferred)
+        except ValueError as exc:
+            return html(
+                request,
+                "pickup_schedule.html",
+                _pickup_ctx(False, str(exc), order),
+                400,
+            )
+
+        cur.execute(
+            """
+            update order_fulfillment
+            set pickup_preferred_at = %s
+            where order_id = %s
+            """,
+            (preferred_at, order_id),
+        )
+        if cur.rowcount == 0:
+            cur.execute(
+                """
+                insert into order_fulfillment (order_id, fulfillment_method, pickup_preferred_at)
+                values (%s, 'pickup', %s)
+                on conflict (order_id) do update
+                set pickup_preferred_at = excluded.pickup_preferred_at
+                """,
+                (order_id, preferred_at),
+            )
+        order["pickup_preferred_at"] = preferred_at
+        enrich_member_order(order)
+
+    return html(
+        request,
+        "pickup_schedule.html",
+        _pickup_ctx(True, "已儲存希望取貨時間", order),
+    )
 
 
 @router.get("/notifications", response_class=HTMLResponse)
@@ -272,7 +532,8 @@ async def profile_save(request: Request) -> Response:
         "shipping_city": shipping_city,
         "shipping_address": shipping_address,
     }
-    if onboarding and not profile_fields_complete(draft):
+
+    def _profile_error(message: str, *, status: int = 400):
         with get_connection() as conn, conn.cursor() as cur:
             cur.execute("select id, email from users where id = %s", (user_id,))
             user = cur.fetchone()
@@ -286,11 +547,16 @@ async def profile_save(request: Request) -> Response:
                 "user": user,
                 "profile": merged,
                 "saved": False,
-                "error": "請完整填寫姓名、電話與寄送地址。",
-                "onboarding": True,
+                "error": message,
+                "onboarding": onboarding,
             },
-            400,
+            status,
         )
+
+    if onboarding and not profile_fields_complete(draft):
+        return _profile_error("請完整填寫姓名、電話與寄送地址。")
+    if shipping_address and not valid_tw_street(shipping_address):
+        return _profile_error(STREET_ERROR)
 
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute("insert into profiles (id) values (%s) on conflict (id) do nothing", (user_id,))

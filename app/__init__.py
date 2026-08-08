@@ -132,7 +132,11 @@ async def lifespan(_app: FastAPI):
     )
     from app.admin_plugins import ensure_admin_plugins_schema
     from app.membership_config import ensure_membership_schema
-    from app.orders import ensure_order_status_timestamps_column
+    from app.orders import (
+        ensure_collection_bottle_columns,
+        ensure_order_status_timestamps_column,
+        ensure_pickup_preferred_at_column,
+    )
     from app.product_categories import ensure_product_categories_schema
     from app.profile_schema import ensure_profile_address_columns
     from app.seed_catalog import seed_catalog_if_empty
@@ -145,6 +149,8 @@ async def lifespan(_app: FastAPI):
     try:
         with get_connection() as conn, conn.cursor() as cur:
             ensure_order_status_timestamps_column(cur)
+            ensure_pickup_preferred_at_column(cur)
+            ensure_collection_bottle_columns(cur)
     except Exception:
         log.exception("ensure_order_status_timestamps_column failed")
     try:

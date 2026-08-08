@@ -1,0 +1,67 @@
+{# Expects: order (enriched), schedule_target (DOM id). Optional: ok, message after POST. #}
+{% if order and order.id and schedule_target %}
+{% set slot_opts = order.pickup_slot_options or pickup_slot_options_default or [] %}
+<div class="order-pickup-card">
+  <h3 class="order-pickup-title" data-i18n="history_pickup_schedule_title">預約取貨時間</h3>
+  <p class="order-pickup-hint" data-i18n="history_pickup_schedule_hint">商品已可門市自取。請選擇希望到店日期與時段（09:00–20:00，每小時一段，午休 12:00–13:00 除外，預約制）。</p>
+  {% if order.pickup_preferred_invalid %}
+  <p class="order-pickup-saved order-pickup-saved--warn" role="alert">
+    <span data-i18n="history_pickup_preferred_invalid">先前儲存的希望取貨時間無效（需為門市可預約時段），請重新選擇。</span>
+  </p>
+  {% elif order.pickup_preferred_display %}
+  <p class="order-pickup-saved">
+    <span data-i18n="history_pickup_preferred">希望取貨時間</span>：
+    <strong>{{ order.pickup_preferred_display }}</strong>
+  </p>
+  {% endif %}
+  <form class="order-pickup-form"
+    hx-post="/htmx/history/pickup-schedule"
+    hx-target="#{{ schedule_target }}"
+    hx-swap="innerHTML"
+    data-pickup-schedule-form
+    novalidate>
+    <input type="hidden" name="order_id" value="{{ order.id }}">
+    <input type="hidden" name="schedule_target" value="{{ schedule_target }}">
+    <input type="hidden" name="pickup_preferred_at" value="" data-pickup-preferred-at>
+    <label class="order-pickup-label" for="pickup-date-{{ schedule_target }}">
+      <span data-i18n="history_pickup_date_label">希望取貨日期</span>
+      <input type="date"
+        id="pickup-date-{{ schedule_target }}"
+        name="pickup_date"
+        class="order-pickup-input"
+        required
+        min="{{ order.pickup_date_min or '' }}"
+        max="{{ order.pickup_date_max or '' }}"
+        value="{{ order.pickup_preferred_date or '' }}"
+        data-pickup-date>
+    </label>
+    <label class="order-pickup-label" for="pickup-slot-{{ schedule_target }}">
+      <span data-i18n="history_pickup_slot_label">希望取貨時段</span>
+      <select id="pickup-slot-{{ schedule_target }}"
+        name="pickup_slot"
+        class="order-pickup-input order-pickup-select"
+        required
+        data-pickup-slot
+        data-pickup-slot-options='{{ slot_opts|tojson }}'>
+        <option value="" data-i18n="history_pickup_slot_placeholder">請選擇時段</option>
+        {% for slot in slot_opts %}
+        <option value="{{ slot.value }}"
+          {% if order.pickup_preferred_slot == slot.value %}selected{% endif %}>{{ slot.label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    {# Reliable catalog for JS (attribute JSON can be mangled by proxies/parsers). #}
+    <template data-pickup-slot-catalog>{{ slot_opts|tojson }}</template>
+    <button type="submit" class="btn btn-mint order-pickup-submit" data-i18n="history_pickup_save">儲存取貨時間</button>
+  </form>
+  {% if message is defined and message %}
+  <p class="form-msg {% if ok %}is-ok{% else %}is-error{% endif %}"
+    role="{% if ok %}status{% else %}alert{% endif %}"
+    aria-live="polite">{{ message }}</p>
+  {% endif %}
+</div>
+{% elif message is defined and message %}
+<p class="form-msg {% if ok %}is-ok{% else %}is-error{% endif %}"
+  role="{% if ok %}status{% else %}alert{% endif %}"
+  aria-live="polite">{{ message }}</p>
+{% endif %}

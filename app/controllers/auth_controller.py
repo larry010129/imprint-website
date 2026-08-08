@@ -86,6 +86,7 @@ from app.membership_referral import (
     rolling_two_year_start,
 )
 from app.profile_schema import fetch_profile
+from app.tw_address import STREET_ERROR, valid_tw_street
 from config.settings import settings
 
 RESET_TOKEN_TTL_HOURS = 1
@@ -737,6 +738,8 @@ async def update_profile(request: Request) -> JSONResponse:
         return _err(400, "請填寫姓名")
     if not phone:
         return _err(400, "請填寫聯絡電話")
+    if shipping_address and not valid_tw_street(shipping_address):
+        return _err(400, STREET_ERROR)
 
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute(

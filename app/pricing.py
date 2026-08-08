@@ -56,6 +56,8 @@ DEFAULT_STONE_COUNT_BY_CATEGORY = {"ring": 2, "pendant": 2}
 STONE_COUNT_CATEGORIES: set[str] = set()
 EARRING_QUANTITY_MIN = 1
 EARRING_QUANTITY_MAX = 2
+# Non-earring cart/order line units (made-to-order; no stock cap).
+CART_LINE_QUANTITY_MAX = 99
 
 # 蠟重(錢) × factor → 成品金屬重(錢)
 WAX_TO_METAL_CHIN = {
@@ -118,6 +120,23 @@ def _as_earring_quantity(value: Any) -> int:
     return max(EARRING_QUANTITY_MIN, min(EARRING_QUANTITY_MAX, n))
 
 
+def _as_line_quantity(value: Any, *, category: str | None = None) -> int:
+    """Cart/order line units. Earrings capped at pair; others up to CART_LINE_QUANTITY_MAX."""
+    if category == "earring":
+        return _as_earring_quantity(value)
+    try:
+        n = int(value)
+    except (TypeError, ValueError):
+        return 1
+    return max(1, min(CART_LINE_QUANTITY_MAX, n))
+
+
+def cart_line_quantity_max(category: str | None = None) -> int:
+    if category == "earring":
+        return EARRING_QUANTITY_MAX
+    return CART_LINE_QUANTITY_MAX
+
+
 def _shape_carat_allowed(carat_num: float, diamond_shape: str | None) -> bool:
     return (diamond_shape or "round") == "round" or carat_num >= FANCY_MIN_CARAT
 
@@ -161,6 +180,117 @@ def _shape_surcharge_fraction(
 
 def _apply_shape_surcharge(amount: float, surcharge: float) -> float:
     return round(amount * (1 + surcharge)) if surcharge else amount
+
+
+def compute_diamond_compare_at_price(
+    carat_key: str | None,
+    *,
+    diamond_kind: str = "white",
+    fancy_color: str | None = None,
+    stone_count: Any = None,
+    diamond_shape: str = "round",
+    category: str | None = None,
+    overrides: dict[str, Any] | None = None,
+) -> float | None:
+    """Pre-discount total (unit × stoneCount) when multi-stone package beats list×qty.
+
+    Memorial diamonds only (`category == \"diamond\"`). Returns None when no discount.
+    """
+    multi_count = _as_stone_count(stone_count) if category == "diamond" else None
+    if not multi_count:
+        return None
+    unit = compute_diamond_list_price(
+        carat_key,
+        diamond_kind=diamond_kind,
+        fancy_color=fancy_color,
+        stone_count=None,
+        diamond_shape=diamond_shape,
+        category=category,
+        overrides=overrides,
+    )
+    discounted = compute_diamond_list_price(
+        carat_key,
+        diamond_kind=diamond_kind,
+        fancy_color=fancy_color,
+        stone_count=stone_count,
+        diamond_shape=diamond_shape,
+        category=category,
+        overrides=overrides,
+    )
+    if unit is None or discounted is None:
+        return None
+    compare_at = round(float(unit) * multi_count)
+    if compare_at > round(float(discounted)):
+        return float(compare_at)
+    return None
+
+
+def memorial_diamond_line_totals(
+    carat_key: str | None,
+    *,
+    diamond_kind: str = "white",
+    fancy_color: str | None = None,
+    stone_count: Any = None,
+    diamond_shape: str = "round",
+    line_qty: int = 1,
+    overrides: dict[str, Any] | None = None,
+) -> tuple[float | None, float | None]:
+    """Memorial diamond line sale + optional compare-at (unit×stones).
+
+    - Configured multi stoneCount (2/3/4): package price × line_qty.
+    - Single-stone lines: pack line_qty into 4→3→2 packages (same tables),
+      remainder at unit list — so cart qty 2/3/4 unlocks the same discount as
+      the stone-count picker.
+    """
+    qty = max(1, int(line_qty or 1))
+    common = dict(
+        diamond_kind=diamond_kind,
+        fancy_color=fancy_color,
+        diamond_shape=diamond_shape,
+        category="diamond",
+        overrides=overrides,
+    )
+    multi = _as_stone_count(stone_count)
+    if multi:
+        sale_unit = compute_diamond_list_price(
+            carat_key, stone_count=multi, **common
+        )
+        if sale_unit is None:
+            return None, None
+        compare_unit = compute_diamond_compare_at_price(
+            carat_key, stone_count=multi, **common
+        )
+        sale = round(float(sale_unit)) * qty
+        if compare_unit is None:
+            return float(sale), None
+        return float(sale), float(round(float(compare_unit)) * qty)
+
+    unit = compute_diamond_list_price(carat_key, stone_count=None, **common)
+    if unit is None:
+        return None, None
+    unit_i = round(float(unit))
+    remaining = qty
+    sale = 0
+    compare = 0
+    for pack in (4, 3, 2):
+        packs = remaining // pack
+        if not packs:
+            continue
+        pack_price = compute_diamond_list_price(
+            carat_key, stone_count=pack, **common
+        )
+        if pack_price is None:
+            sale += unit_i * pack * packs
+        else:
+            sale += round(float(pack_price)) * packs
+        compare += unit_i * pack * packs
+        remaining -= pack * packs
+    if remaining:
+        sale += unit_i * remaining
+        compare += unit_i * remaining
+    if compare > sale:
+        return float(sale), float(compare)
+    return float(sale), None
 
 
 def compute_diamond_list_price(
@@ -660,7 +790,7 @@ def compute_order_pricing(cur, data: dict[str, Any], *, require_published: bool 
     chain_length = data.get("chainLength")
     chain_thickness = data.get("chainThickness") or DEFAULT_ATTACHED_CHAIN_THICKNESS
     product_id = data.get("type")
-    earring_qty = _as_earring_quantity(data.get("quantity")) if category == "earring" else 1
+    line_qty = _as_line_quantity(data.get("quantity"), category=category)
 
     if not category or not carat or not product_id:
         return {"ready": False}
@@ -669,29 +799,34 @@ def compute_order_pricing(cur, data: dict[str, Any], *, require_published: bool 
 
     overrides = load_overrides(cur)
 
-    # Memorial loose diamonds: list price only (no metal / labor)
+    # Memorial loose diamonds: list price only (no metal / labor).
+    # Qty packs into multi-stone tables when stoneCount is not already a package.
     if category == "diamond":
-        loose_diamond = compute_diamond_list_price(
+        sale_total, compare_at = memorial_diamond_line_totals(
             carat,
             diamond_kind=diamond_kind,
             fancy_color=fancy_color,
             stone_count=stone_count,
             diamond_shape=diamond_shape,
-            category=category,
+            line_qty=line_qty,
             overrides=overrides,
         )
-        if loose_diamond is None:
+        if sale_total is None:
             return {"ready": False}
-        return {
+        out = {
             "ready": True,
-            "diamondPrice": loose_diamond,
+            "diamondPrice": sale_total,
             "taijinPrice": 0,
             "laborPrice": 0,
             "metalworkPrice": 0,
             "chainPrice": None,
-            "total": round(loose_diamond),
+            "total": round(sale_total),
+            "quantity": line_qty,
             "priceSource": "server",
         }
+        if compare_at is not None:
+            out["compareAtTotal"] = round(compare_at)
+        return out
 
     if not gold:
         return {"ready": False}
@@ -726,13 +861,13 @@ def compute_order_pricing(cur, data: dict[str, Any], *, require_published: bool 
         unit_total = float(variant["manual_price_twd"]) + ring_size_addon
         return {
             "ready": True,
-            "total": unit_total * earring_qty,
+            "total": unit_total * line_qty,
             "manualOverride": True,
             "ringSizePrice": ring_size_addon or None,
-            "weightGrams": weight_grams * earring_qty,
+            "weightGrams": weight_grams * line_qty,
             "goldRatePerGram": gold_prices[METAL_SYMBOL[gold]] * PURITY_MULTIPLIER[gold],
             "priceSource": "server",
-            "quantity": earring_qty if category == "earring" else None,
+            "quantity": line_qty,
         }
 
     gold_prices = get_metal_prices(cur)
@@ -772,14 +907,14 @@ def compute_order_pricing(cur, data: dict[str, Any], *, require_published: bool 
     elif side_stone_ppc is not None and side_stone_carat is not None:
         side_stone_price = round(side_stone_carat * side_stone_ppc)
 
-    if earring_qty > 1:
+    if line_qty > 1:
         if diamond_price is not None:
-            diamond_price = diamond_price * earring_qty
+            diamond_price = diamond_price * line_qty
         if side_stone_price is not None:
-            side_stone_price = side_stone_price * earring_qty
-        taijin_display = round(taijin_display * earring_qty)
-        labor_display = labor_display * earring_qty
-        weight_grams = weight_grams * earring_qty
+            side_stone_price = side_stone_price * line_qty
+        taijin_display = round(taijin_display * line_qty)
+        labor_display = labor_display * line_qty
+        weight_grams = weight_grams * line_qty
 
     total = (diamond_price or 0) + (side_stone_price or 0) + taijin_display + labor_display
     chain_display = None
@@ -792,7 +927,7 @@ def compute_order_pricing(cur, data: dict[str, Any], *, require_published: bool 
         )
         if not addon:
             return {"ready": False, "error": "invalid chain option"}
-        chain_display = round(addon["chainPrice"])
+        chain_display = round(addon["chainPrice"]) * line_qty
         total += chain_display
 
     return {
@@ -810,5 +945,5 @@ def compute_order_pricing(cur, data: dict[str, Any], *, require_published: bool 
         "goldRatePerGram": rate_used,
         "priceSource": "server",
         "manualOverride": False,
-        "quantity": earring_qty if category == "earring" else None,
+        "quantity": line_qty,
     }

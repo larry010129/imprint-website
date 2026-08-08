@@ -70,6 +70,45 @@
         </div>
       </section>
 
+      {% if needs_collection_bottle %}
+      {% set bottle = collection_bottle or {} %}
+      {% set bottle_city_raw = (bottle.city or '')|replace('臺', '台') %}
+      <section class="checkout-block" data-collection-bottle-section data-tw-address-block="bottle">
+        <h2 class="checkout-block-title" data-i18n="checkout_bottle_title">收集瓶寄送地址</h2>
+        <p class="checkout-block-hint" data-i18n="checkout_bottle_hint">我們會將 DNA 樣本收集瓶寄至此地址（與成品取貨／宅配地址可不同）。</p>
+        <div class="checkout-fields">
+          <div class="checkout-field-row">
+            <div class="form-field">
+              <label for="collectionBottleCity"><span data-i18n="checkout_bottle_city">縣市</span> <span class="req">*</span></label>
+              <select id="collectionBottleCity" name="collectionBottleCity" required
+                autocomplete="address-level1" data-tw-city
+                data-initial-city="{{ bottle_city_raw }}">
+                <option value="" data-i18n="checkout_bottle_city_placeholder">請選擇縣市</option>
+                {% for city in taiwan_cities %}
+                <option value="{{ city }}" {% if bottle_city_raw == city or bottle_city_raw.startswith(city) %}selected{% endif %}>{{ city }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="form-field">
+              <label for="collectionBottleDistrict"><span data-i18n="checkout_bottle_district">鄉鎮市區</span> <span class="req">*</span></label>
+              <select id="collectionBottleDistrict" required autocomplete="address-level2"
+                data-tw-district data-initial-postal="{{ bottle.postal or '' }}">
+                <option value="" data-i18n="checkout_bottle_district_placeholder">請先選縣市</option>
+              </select>
+              <input type="hidden" id="collectionBottlePostal" name="collectionBottlePostal"
+                value="{{ bottle.postal or '' }}" data-tw-postal>
+            </div>
+          </div>
+          <div class="form-field">
+            <label for="collectionBottleAddress"><span data-i18n="checkout_bottle_address">詳細地址</span> <span class="req">*</span></label>
+            <input id="collectionBottleAddress" name="collectionBottleAddress" autocomplete="street-address"
+              required minlength="6" value="{{ bottle.address or '' }}" data-tw-street
+              placeholder="例：福德南路43號">
+          </div>
+        </div>
+      </section>
+      {% endif %}
+
       <section class="checkout-block">
         <h2 class="checkout-block-title">取貨方式 <span class="checkout-block-note">製作期約三個月</span></h2>
         <div class="checkout-fields">
@@ -88,31 +127,43 @@
             </span>
           </label>
 
-          <div class="checkout-delivery-fields">
-            <div class="form-field">
-              <label for="shippingAddress">收件地址 <span class="req">*</span></label>
-              <input id="shippingAddress" name="shippingAddress" autocomplete="street-address"
-                minlength="6" value="{{ profile.shipping_address or '' }}"
-                placeholder="例：忠孝東路四段123號">
-            </div>
+          {% if needs_collection_bottle %}
+          <label class="checkout-same-bottle" data-same-bottle-wrap hidden>
+            <input type="checkbox" id="sameAsBottleAddress" name="sameAsBottleAddress" value="1"
+              data-same-as-bottle {% if same_as_bottle|default(false) %}checked{% endif %}>
+            <span data-i18n="checkout_same_as_bottle">同收集瓶寄送地址</span>
+          </label>
+          {% endif %}
+
+          {% set ship_city_raw = (profile.shipping_city or '')|replace('臺', '台') %}
+          <div class="checkout-delivery-fields" data-tw-address-block="shipping"
+            {% if needs_collection_bottle %}data-delivery-fields{% endif %}>
             <div class="checkout-field-row">
               <div class="form-field">
                 <label for="shippingCity">縣市 <span class="req">*</span></label>
-                {% set selected_city = (profile.shipping_city or '')|replace('臺', '台') %}
-                <select id="shippingCity" name="shippingCity" autocomplete="address-level1">
+                <select id="shippingCity" name="shippingCity" autocomplete="address-level1"
+                  data-tw-city data-initial-city="{{ ship_city_raw }}">
                   <option value="">請選擇縣市</option>
                   {% for city in taiwan_cities %}
-                  <option value="{{ city }}" {% if selected_city == city %}selected{% endif %}>{{ city }}</option>
+                  <option value="{{ city }}" {% if ship_city_raw == city or ship_city_raw.startswith(city) %}selected{% endif %}>{{ city }}</option>
                   {% endfor %}
                 </select>
               </div>
               <div class="form-field">
-                <label for="shippingPostal">郵遞區號 <span class="req">*</span></label>
-                <input id="shippingPostal" name="shippingPostal" autocomplete="postal-code"
-                  inputmode="numeric" pattern="\d{3}(\d{2})?" maxlength="5"
-                  title="請填寫 3 碼或 5 碼郵遞區號"
-                  value="{{ profile.shipping_postal or '' }}">
+                <label for="shippingDistrict">鄉鎮市區 <span class="req">*</span></label>
+                <select id="shippingDistrict" autocomplete="address-level2"
+                  data-tw-district data-initial-postal="{{ profile.shipping_postal or '' }}">
+                  <option value="">請先選縣市</option>
+                </select>
+                <input type="hidden" id="shippingPostal" name="shippingPostal"
+                  value="{{ profile.shipping_postal or '' }}" data-tw-postal>
               </div>
+            </div>
+            <div class="form-field">
+              <label for="shippingAddress">詳細地址 <span class="req">*</span></label>
+              <input id="shippingAddress" name="shippingAddress" autocomplete="street-address"
+                minlength="6" value="{{ profile.shipping_address or '' }}" data-tw-street
+                placeholder="例：忠孝東路四段123號">
             </div>
           </div>
         </div>

@@ -40,9 +40,14 @@
     </div>
     {% endif %}
   </dl>
-  <p class="shop-quote-total">
+  <p class="shop-quote-total{% if pricing.compareAtTotal and pricing.compareAtTotal > pricing.total %} shop-quote-total--sale{% endif %}">
     <span>預估總價</span>
-    <strong>{{ format_twd(pricing.total) }}</strong>
+    <span class="shop-quote-total__prices">
+      <strong class="shop-quote-total__sale">{{ format_twd(pricing.total) }}</strong>
+      {% if pricing.compareAtTotal and pricing.compareAtTotal > pricing.total %}
+      <s class="shop-quote-total__compare">{{ format_twd(pricing.compareAtTotal) }}</s>
+      {% endif %}
+    </span>
   </p>
   <p class="shop-quote-note">價格為預估價；實際金額可能因市場浮動有 ±10%。</p>
 </div>

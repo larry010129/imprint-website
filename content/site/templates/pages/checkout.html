@@ -7,7 +7,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="/static/css/member-app.css?v=8">
-<link rel="stylesheet" href="/static/css/checkout-page.css?v=15">
+<link rel="stylesheet" href="/static/css/checkout-page.css?v=17">
 {% endblock %}
 
 {% block content %}
@@ -82,6 +82,8 @@
 {% endblock %}
 
 {% block extra_scripts %}
+<script src="/static/js/taiwan-admin-divisions.js?v=2" defer></script>
+<script src="/static/js/checkout-address.js?v=1" defer></script>
 <script>
 (function () {
   var root = document.getElementById('htmx-checkout');

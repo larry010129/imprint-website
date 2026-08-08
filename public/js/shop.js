@@ -1,6 +1,36 @@
 function tr(k) { return window.t ? window.t(k) : k; }
 function shopLang() { return localStorage.getItem('appLang') || 'zh'; }
 
+/** Grey + aria-disable listed option; keep pointer events so click can toast. */
+function setShopOptionDisabled(el, locked, { title, reasonKey } = {}) {
+  if (!el) return;
+  const on = !!locked;
+  el.classList.toggle('is-disabled', on);
+  el.classList.toggle('shop-option--disabled', on);
+  if (on) {
+    el.setAttribute('aria-disabled', 'true');
+    if (title) el.title = title;
+    if (reasonKey) el.dataset.blockedReason = reasonKey;
+  } else {
+    el.removeAttribute('aria-disabled');
+    el.removeAttribute('title');
+    delete el.dataset.blockedReason;
+  }
+}
+
+function shopOptionIsDisabled(el) {
+  return !!el?.disabled
+    || el?.getAttribute?.('aria-disabled') === 'true'
+    || el?.classList?.contains('is-disabled')
+    || el?.classList?.contains('shop-option--disabled');
+}
+
+function toastShopBlocked(messageKey) {
+  const key = messageKey || 'diamond_shape_min_carat_blocked';
+  const toast = window.showToast || ((msg) => alert(msg));
+  toast(tr(key), 'info');
+}
+
 const shopMode = (window.shopConfig && window.shopConfig.mode) || 'order';
 const isGuestShop = shopMode === 'guest';
 
@@ -2964,6 +2994,18 @@ function fancyMinCaratValue() {
   return Number.isNaN(n) ? 0.3 : n;
 }
 
+/** Non-round cuts need ≥ this carat (default 0.3 / 30 points). Matches configurator.js. */
+function nonRoundShapeMinCaratValue() {
+  const n = Number(diamondOptions.nonRoundShapeMinCarat || 0.3);
+  return Number.isNaN(n) ? 0.3 : n;
+}
+
+function caratAllowsNonRoundShape(carat = state.carat) {
+  if (carat == null || carat === '') return false;
+  const n = parseFloat(carat);
+  return !Number.isNaN(n) && n >= nonRoundShapeMinCaratValue();
+}
+
 /** True when admin carats include at least one ≥ fancy min (0.3). */
 function productOffersFancyMinCaratOrAbove() {
   const minCarat = fancyMinCaratValue();
@@ -3118,16 +3160,29 @@ function updateCaratButtons() {
     placeholder.textContent = (ph && ph !== 'carat_placeholder') ? ph : '選擇克拉';
   }
   sel.appendChild(placeholder);
-  // White: full admin list. Fancy: admin ∩ ≥ fancyMinCarat (see listProductCaratOptions).
-  options.forEach((v) => {
+  // List admin carats; fancy below min stays visible but grey-disabled (selectable = options).
+  const adminOptions = isChain
+    ? options
+    : listAdminProductCaratOptions(product, state.gold);
+  const displayOptions = adminOptions.length ? adminOptions : options;
+  displayOptions.forEach((v) => {
     const n = parseFloat(v);
     const opt = document.createElement('option');
     opt.value = String(v);
     opt.textContent = isChain ? String(v) : (Number.isNaN(n) ? String(v) : `${n.toFixed(1)} ct`);
+    const blocked = !isChain
+      && state.diamondKind === 'fancy'
+      && !options.includes(String(v));
+    if (blocked) {
+      opt.disabled = true;
+      opt.title = tr('diamond_fancy_min_carat');
+      opt.dataset.blockedReason = 'diamond_fancy_min_carat';
+    }
     sel.appendChild(opt);
   });
   const selected = state.carat != null ? String(state.carat) : '';
   sel.value = selected && options.includes(selected) ? selected : '';
+  syncShopDropdown(sel);
   syncFancyMinCaratNotice();
   updateDiamondSteps();
 }
@@ -3327,7 +3382,8 @@ const FALLBACK_DIAMOND_COLOR_DEFS = [
   { id: 'pink', kind: 'fancy', labelZh: '粉鑽', labelEn: 'Pink', swatch: '#f4a6c8', image: 'diamonds/colors/pink.png' },
 ];
 
-function diamondColorOptions() {
+/** All diamond color defs (white + fancy), including currently unselectable. */
+function allDiamondColorDefs() {
   ensureDiamondOptionTables();
   let all = diamondOptions.diamondColors?.length
     ? diamondOptions.diamondColors
@@ -3341,8 +3397,12 @@ function diamondColorOptions() {
   FALLBACK_DIAMOND_COLOR_DEFS.forEach((def) => {
     if (!byId.has(def.id)) byId.set(def.id, def);
   });
-  all = FALLBACK_DIAMOND_COLOR_DEFS.map((def) => byId.get(def.id)).filter(Boolean);
-  return all.filter((color) => {
+  return FALLBACK_DIAMOND_COLOR_DEFS.map((def) => byId.get(def.id)).filter(Boolean);
+}
+
+/** Selectable diamond colors only (fancy gated by carat + designed image). */
+function diamondColorOptions() {
+  return allDiamondColorDefs().filter((color) => {
     if (!color || color.id === 'white' || color.kind === 'white') return true;
     return isFancyDiamondColorOffered(color.id);
   });
@@ -3382,12 +3442,20 @@ function renderDiamondColorCarousel() {
   ensureOfferedDiamondColorSelection();
   carousel.innerHTML = '';
   const activeId = selectedDiamondColorId();
-  diamondColorOptions().forEach(color => {
+  allDiamondColorDefs().forEach((color) => {
+    const locked = !!color
+      && color.id !== 'white'
+      && color.kind !== 'white'
+      && !isFancyDiamondColorOffered(color.id);
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'diamond-carousel-item fancy-color-item';
     btn.dataset.color = color.id;
-    btn.classList.toggle('active', activeId === color.id);
+    btn.classList.toggle('active', !locked && activeId === color.id);
+    setShopOptionDisabled(btn, locked, {
+      title: locked ? tr('diamond_fancy_min_carat') : undefined,
+      reasonKey: locked ? 'diamond_fancy_min_carat' : undefined,
+    });
     const icon = document.createElement('span');
     icon.className = 'gem-icon';
     const imagePath = color.image || DIAMOND_WHITE_PREVIEW_PATH;
@@ -3405,7 +3473,14 @@ function renderDiamondColorCarousel() {
     label.textContent = diamondMetaLabel(color);
     btn.appendChild(icon);
     btn.appendChild(label);
-    btn.addEventListener('click', () => selectDiamondColor(color.id));
+    btn.addEventListener('click', () => {
+      if (locked || shopOptionIsDisabled(btn)) {
+        toastShopBlocked('diamond_fancy_min_carat');
+        document.getElementById('diamond-fancy-min-carat-notice')?.classList.remove('hidden');
+        return;
+      }
+      selectDiamondColor(color.id);
+    });
     carousel.appendChild(btn);
   });
   scheduleDiamondCarouselNavUpdate();
@@ -3447,39 +3522,58 @@ function updateDiamondSteps() {
 function renderDiamondShapeButtons() {
   const row = document.getElementById('diamond-shape-row');
   if (!row) return;
-  const shapes = diamondShapeOptions();
+  const allowsFancy = productAllowsFancyShapes();
+  let shapes = diamondShapeOptions();
   const useMatrix = isDiamondOnlyCategory();
-  row.classList.toggle('variant-chips--matrix-shapes', useMatrix);
+  // Diamond-only: reuse diamond-shape-picker. Jewelry keeps chips + other picker.
+  row.classList.remove('variant-chips--matrix-shapes');
+  row.classList.toggle('diamond-shape-row--select', useMatrix);
   row.innerHTML = '';
+  row.hidden = useMatrix;
+
+  if (useMatrix) {
+    syncDiamondShapeOtherDropdown();
+    return;
+  }
+
+  // Round-only products: still list "other" greyed so policy is visible.
+  if (!allowsFancy && !shapes.some((s) => s.id === 'other')) {
+    shapes = [
+      ...shapes,
+      { id: 'other', labelZh: '其它形狀', labelEn: 'Other (+10%)' },
+    ];
+  }
+
   shapes.forEach((shape) => {
+    const isRound = shape.id === 'round';
+    const roundOnlyLocked = !isRound && !allowsFancy;
+    const caratLocked = !isRound && allowsFancy && !caratAllowsNonRoundShape();
+    const locked = roundOnlyLocked || caratLocked;
+    const reasonKey = roundOnlyLocked
+      ? 'diamond_shape_round_only'
+      : (caratLocked ? 'diamond_shape_min_carat_blocked' : undefined);
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.dataset.shape = shape.id;
-    const isActive = isDiamondShapeChipActive(shape.id);
-    if (useMatrix) {
-      btn.className = `diamond-carousel-item shape-item diamond-shape-btn${isActive ? ' active' : ''}`;
-      const icon = document.createElement('span');
-      icon.className = 'gem-icon';
-      const img = document.createElement('img');
-      img.src = memorialDiamondShapeImageUrl(shape.id, selectedDiamondColorId());
-      img.alt = diamondMetaLabel(shape);
-      img.loading = 'lazy';
-      icon.appendChild(img);
-      const label = document.createElement('span');
-      label.className = 'gem-label';
-      label.textContent = diamondMetaLabel(shape);
-      btn.appendChild(icon);
-      btn.appendChild(label);
-    } else {
-      btn.className = `variant-chip diamond-shape-btn${isActive ? ' active' : ''}`;
-      btn.textContent = diamondMetaLabel(shape);
-      if (shape.id === 'round') {
-        btn.textContent = shopLang() === 'en' ? 'Round Brilliant' : '圓形明亮式';
-      } else if (shape.id === 'other') {
-        btn.textContent = shopLang() === 'en' ? 'Other (+10%)' : '其它形狀 +10%';
-      }
+    const isActive = !locked && isDiamondShapeChipActive(shape.id);
+    btn.className = `variant-chip diamond-shape-btn${isActive ? ' active' : ''}`;
+    btn.textContent = diamondMetaLabel(shape);
+    if (shape.id === 'round') {
+      btn.textContent = shopLang() === 'en' ? 'Round Brilliant' : '圓形明亮式';
+    } else if (shape.id === 'other') {
+      btn.textContent = shopLang() === 'en' ? 'Other (+10%)' : '其它形狀 +10%';
     }
-    btn.addEventListener('click', () => selectDiamondShape(shape.id));
+    setShopOptionDisabled(btn, locked, {
+      title: reasonKey ? tr(reasonKey) : undefined,
+      reasonKey,
+    });
+    btn.addEventListener('click', () => {
+      if (locked || shopOptionIsDisabled(btn)) {
+        toastShopBlocked(reasonKey || 'diamond_shape_round_only');
+        return;
+      }
+      selectDiamondShape(shape.id);
+    });
     row.appendChild(btn);
   });
   syncDiamondShapeOtherDropdown();
@@ -3510,33 +3604,48 @@ function setDiamondShapePickerOpen(open, { focus = null, restoreFocus = false } 
   requestAnimationFrame(() => {
     const options = diamondShapePickerOptions();
     if (!options.length) return;
-    let target = options.find((option) => option.getAttribute('aria-selected') === 'true');
-    if (focus === 'first') target = options[0];
-    if (focus === 'last') target = options[options.length - 1];
+    const enabled = options.filter((option) => !diamondShapePickerOptionDisabled(option));
+    const pool = enabled.length ? enabled : options;
+    let target = pool.find((option) => option.getAttribute('aria-selected') === 'true');
+    if (focus === 'first') target = pool[0];
+    if (focus === 'last') target = pool[pool.length - 1];
+    if (focus === 'selected' && !target) target = pool[0];
     target?.scrollIntoView({ block: 'nearest' });
     if (focus) target?.focus();
   });
+}
+
+function diamondShapePickerOptionDisabled(option) {
+  return shopOptionIsDisabled(option);
 }
 
 function moveDiamondShapePickerFocus(direction) {
   const options = diamondShapePickerOptions();
   if (!options.length) return;
   const current = options.indexOf(document.activeElement);
-  const next = current < 0
-    ? (direction > 0 ? 0 : options.length - 1)
-    : (current + direction + options.length) % options.length;
-  options[next].focus();
-  options[next].scrollIntoView({ block: 'nearest' });
+  const len = options.length;
+  for (let step = 1; step <= len; step += 1) {
+    const idx = current < 0
+      ? (direction > 0 ? step - 1 : len - step)
+      : (current + direction * step + len * step) % len;
+    const target = options[idx];
+    if (diamondShapePickerOptionDisabled(target)) continue;
+    target.focus();
+    target.scrollIntoView({ block: 'nearest' });
+    return;
+  }
 }
 
 function diamondShapePickerMeta(shape) {
   const primary = diamondMetaLabel(shape);
   const alternate = shopLang() === 'en' ? shape.labelZh : shape.labelEn;
-  const rawSurcharge = Number(diamondOptions.nonRoundShapeSurcharge ?? 0.10);
-  const surcharge = Math.round((rawSurcharge <= 1 ? rawSurcharge * 100 : rawSurcharge) * 100) / 100;
-  return [alternate && alternate !== primary ? alternate : '', `+${surcharge}%`]
-    .filter(Boolean)
-    .join(' · ');
+  const parts = [alternate && alternate !== primary ? alternate : ''];
+  if (shape?.id && shape.id !== 'round') {
+    const rawSurcharge = Number(diamondOptions.nonRoundShapeSurcharge ?? 0.10);
+    const surcharge = Math.round((rawSurcharge <= 1 ? rawSurcharge * 100 : rawSurcharge) * 100) / 100;
+    parts.push(`+${surcharge}%`);
+  }
+  return parts.filter(Boolean).join(' · ');
 }
 
 function bindDiamondShapeOtherPicker() {
@@ -3572,6 +3681,11 @@ function bindDiamondShapeOtherPicker() {
   optionsRoot.addEventListener('click', (event) => {
     const option = event.target.closest('.diamond-shape-picker__option');
     if (!option || !optionsRoot.contains(option)) return;
+    if (diamondShapePickerOptionDisabled(option)) {
+      toastShopBlocked(option.dataset.blockedReason || 'diamond_shape_min_carat_blocked');
+      document.getElementById('diamond-shape-min-carat-notice')?.classList.remove('hidden');
+      return;
+    }
     const shapeId = option.dataset.shape;
     if (!shapeId) return;
     setDiamondShapePickerOpen(false);
@@ -3597,7 +3711,7 @@ function bindDiamondShapeOtherPicker() {
       options[options.length - 1]?.focus();
     } else if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
-      option.click();
+      if (!diamondShapePickerOptionDisabled(option)) option.click();
     } else if (event.key === 'Escape') {
       event.preventDefault();
       setDiamondShapePickerOpen(false, { restoreFocus: true });
@@ -3621,17 +3735,23 @@ function syncDiamondShapeOtherDropdown() {
   const optionsRoot = document.getElementById('diamond-shape-other-listbox');
   if (!wrap || !trigger || !image || !value || !meta || !optionsRoot) return;
 
-  const options = nonRoundMatrixShapes();
+  const useMatrix = isDiamondOnlyCategory();
+  const options = useMatrix ? diamondShapeOptions() : nonRoundMatrixShapes();
   const avatar = trigger.querySelector('.diamond-shape-picker__avatar');
   let selected = options.find((shape) => shape.id === state.diamondShape);
-  if (isNonRoundShape() && state.diamondShape !== 'other' && !selected) {
+  if (!useMatrix && isNonRoundShape() && state.diamondShape !== 'other' && !selected) {
     state.diamondShape = 'other';
     selected = null;
   }
-  const isPending = isDiamondShapeOtherPending();
+  if (useMatrix && !selected) {
+    selected = options.find((shape) => shape.id === 'round') || options[0] || null;
+    if (selected && state.diamondShape !== selected.id) state.diamondShape = selected.id;
+  }
+  const isPending = !useMatrix && isDiamondShapeOtherPending();
   if (isPending) selected = null;
-  const show = !isDiamondOnlyCategory() && (isPending || !!selected);
+  const show = useMatrix || isPending || !!selected;
   wrap.hidden = !show;
+  wrap.classList.toggle('diamond-shape-other-wrap--matrix', useMatrix);
   if (!show) {
     setDiamondShapePickerOpen(false);
     return;
@@ -3654,26 +3774,32 @@ function syncDiamondShapeOtherDropdown() {
   }
 
   optionsRoot.innerHTML = '';
+  const lockNonRound = !caratAllowsNonRoundShape();
   options.forEach((shape) => {
     const isSelected = !!selected && shape.id === selected.id;
+    const locked = lockNonRound && isNonRoundShape(shape.id);
     const option = document.createElement('button');
     option.type = 'button';
     option.id = `diamond-shape-option-${shape.id}`;
     option.className = 'diamond-shape-picker__option';
     option.dataset.shape = shape.id;
     option.setAttribute('role', 'option');
-    option.setAttribute('aria-selected', String(isSelected));
+    option.setAttribute('aria-selected', String(isSelected && !locked));
     option.tabIndex = -1;
+    setShopOptionDisabled(option, locked, {
+      title: locked ? tr('diamond_shape_min_carat_blocked') : undefined,
+      reasonKey: locked ? 'diamond_shape_min_carat_blocked' : undefined,
+    });
 
-    const avatar = document.createElement('span');
-    avatar.className = 'diamond-shape-picker__avatar';
-    avatar.setAttribute('aria-hidden', 'true');
+    const optionAvatar = document.createElement('span');
+    optionAvatar.className = 'diamond-shape-picker__avatar';
+    optionAvatar.setAttribute('aria-hidden', 'true');
     const avatarImage = document.createElement('img');
     avatarImage.src = memorialDiamondShapeImageUrl(shape.id, selectedDiamondColorId());
     avatarImage.alt = '';
     avatarImage.loading = 'lazy';
     avatarImage.decoding = 'async';
-    avatar.appendChild(avatarImage);
+    optionAvatar.appendChild(avatarImage);
 
     const text = document.createElement('span');
     text.className = 'diamond-shape-picker__text';
@@ -3682,7 +3808,9 @@ function syncDiamondShapeOtherDropdown() {
     name.textContent = diamondMetaLabel(shape);
     const detail = document.createElement('span');
     detail.className = 'diamond-shape-picker__meta';
-    detail.textContent = diamondShapePickerMeta(shape);
+    detail.textContent = locked
+      ? tr('diamond_shape_min_carat_blocked')
+      : diamondShapePickerMeta(shape);
     text.appendChild(name);
     text.appendChild(detail);
 
@@ -3701,7 +3829,7 @@ function syncDiamondShapeOtherDropdown() {
     checkPath.setAttribute('d', 'm20 6-11 11-5-5');
     check.appendChild(checkPath);
 
-    option.appendChild(avatar);
+    option.appendChild(optionAvatar);
     option.appendChild(text);
     option.appendChild(check);
     optionsRoot.appendChild(option);
@@ -3709,10 +3837,21 @@ function syncDiamondShapeOtherDropdown() {
 }
 
 function selectDiamondShape(shapeId) {
-  if (shapeId === 'other') {
+  const nextId = shapeId || 'round';
+  if (!productAllowsFancyShapes() && isNonRoundShape(nextId)) {
+    toastShopBlocked('diamond_shape_round_only');
+    return;
+  }
+  // Block non-round /「其它形狀」below nonRoundShapeMinCarat (0.3) for all products.
+  if (isNonRoundShape(nextId) && !caratAllowsNonRoundShape()) {
+    toastShopBlocked('diamond_shape_min_carat_blocked');
+    document.getElementById('diamond-shape-min-carat-notice')?.classList.remove('hidden');
+    return;
+  }
+  if (nextId === 'other') {
     if (state.diamondShape === 'round') state.diamondShape = 'other';
   } else {
-    state.diamondShape = shapeId || 'round';
+    state.diamondShape = nextId;
   }
   // Keep admin carats selectable; mins are notices only (see isCaratHiddenForShop).
   updateCaratButtons();
@@ -3971,6 +4110,37 @@ function parseDisplayedTotal(text) {
   return Number.isFinite(n) ? n : null;
 }
 
+/** Show mint sale + struck mint compare-at when multi-stone discount applies. */
+function updateCompareAtDisplay(saleTotal, compareAtTotal) {
+  const hero = document.getElementById('hero-price');
+  const compareEl = document.getElementById('sum-total-compare');
+  const mobileCompare = document.getElementById('sum-total-mobile-compare');
+  const mobileAmount = mobileCompare?.closest('.mobile-buy-amount');
+  const sale = saleTotal != null ? Math.round(Number(saleTotal)) : null;
+  const compare = compareAtTotal != null ? Math.round(Number(compareAtTotal)) : null;
+  const show = Number.isFinite(sale) && Number.isFinite(compare) && compare > sale;
+  hero?.classList.toggle('hero-price--sale', show);
+  mobileAmount?.classList.toggle('mobile-buy-amount--sale', show);
+  if (compareEl) {
+    if (show) {
+      compareEl.hidden = false;
+      compareEl.textContent = 'NT$ ' + compare.toLocaleString();
+    } else {
+      compareEl.hidden = true;
+      compareEl.textContent = '';
+    }
+  }
+  if (mobileCompare) {
+    if (show) {
+      mobileCompare.hidden = false;
+      mobileCompare.textContent = compare.toLocaleString();
+    } else {
+      mobileCompare.hidden = true;
+      mobileCompare.textContent = '';
+    }
+  }
+}
+
 /** Animate the large hero total (#sum-total) with count-up/down + color flash. */
 function animateShopTotal(el, targetValue) {
   if (!el) return;
@@ -4076,6 +4246,7 @@ async function refreshQuotePrices() {
     if (chainPriceEl) chainPriceEl.textContent = '-';
     if (totalEl) animateShopTotal(totalEl, NaN);
     if (mobileTotal) mobileTotal.textContent = '—';
+    updateCompareAtDisplay(null, null);
     lastQuoteTotal = null;
     updatePriceHint(null);
     updateCtaState(null);
@@ -4137,6 +4308,7 @@ async function refreshQuotePrices() {
   if (mobileTotal) {
     mobileTotal.textContent = roundedTotal != null ? roundedTotal.toLocaleString() : '—';
   }
+  updateCompareAtDisplay(roundedTotal, quote.compareAtTotal);
   updatePriceHint(total);
   updateCtaState(total);
 }
@@ -4172,6 +4344,15 @@ function productAllowsFancyShapes() {
 
 function enforceRoundOnlyShape() {
   if (!productAllowsFancyShapes() && isNonRoundShape()) {
+    state.diamondShape = 'round';
+  }
+  // Non-round needs ≥ nonRoundShapeMinCarat (0.3) on every product that offers fancy shapes.
+  enforceNonRoundShapeMinCarat();
+}
+
+/** Reset non-round → round when carat drops below min (all categories). */
+function enforceNonRoundShapeMinCarat() {
+  if (isNonRoundShape() && !caratAllowsNonRoundShape()) {
     state.diamondShape = 'round';
   }
 }
@@ -4263,6 +4444,10 @@ function ensureShopDropdown(select) {
   menu.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-value]');
     if (!btn) return;
+    if (shopOptionIsDisabled(btn)) {
+      toastShopBlocked(btn.dataset.blockedReason || 'diamond_fancy_min_carat');
+      return;
+    }
     const value = btn.getAttribute('data-value') || '';
     select.value = value;
     syncShopDropdown(select);
@@ -4295,6 +4480,12 @@ function syncShopDropdown(select) {
     btn.setAttribute('aria-selected', opt.value === select.value ? 'true' : 'false');
     btn.textContent = opt.textContent;
     if (opt.value === select.value) btn.classList.add('is-selected');
+    if (opt.disabled) {
+      setShopOptionDisabled(btn, true, {
+        title: opt.title || undefined,
+        reasonKey: opt.dataset.blockedReason || undefined,
+      });
+    }
     menu.appendChild(btn);
   });
 }
@@ -5177,6 +5368,18 @@ function selectColor(color) {
 }
 
 function selectCarat(carat) {
+  const product = getSelectedProduct();
+  const selectable = listProductCaratOptions(product, state.gold);
+  if (
+    carat
+    && state.category !== 'chain'
+    && state.diamondKind === 'fancy'
+    && !selectable.includes(String(carat))
+  ) {
+    toastShopBlocked('diamond_fancy_min_carat');
+    updateCaratButtons();
+    return;
+  }
   state.carat = carat;
 
   const sel = document.getElementById('carat-select');

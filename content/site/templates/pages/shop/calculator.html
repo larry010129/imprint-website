@@ -3,7 +3,7 @@
 {% block title %}{% if q_preview %}預覽模式｜不會送出真實訂單｜{% endif %}{{ title }}{% endblock %}
 {% block main_class %} class="main-content shop-calculator-page{% if q_preview %} is-shop-preview{% endif %}"{% endblock %}
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/shop.css?v=6.29">
+<link rel="stylesheet" href="/static/css/shop.css?v=6.34">
 <link rel="stylesheet" href="/static/css/shop-wizard.css?v=24">
 {% include "partials/shop-tour-react-css.html" %}
 {% if q_preview %}
@@ -395,9 +395,10 @@
     <aside class="shop-price-panel shop-price-panel--wizard is-loading-prices" id="shop-price-panel" aria-live="polite">
       <div class="shop-price-panel-head">
         <span class="shop-price-panel-label">試算總價</span>
-        <div class="hero-price">
+        <div class="hero-price" id="hero-price">
         <span class="hero-price-currency">NT$</span>
         <span class="hero-price-amount" id="sum-total">—</span>
+        <s class="hero-price-compare" id="sum-total-compare" hidden></s>
         </div>
       </div>
       <p class="hero-price-hint" id="price-hint" data-i18n="shop_complete_options">請完成選項以查看價格</p>
@@ -771,7 +772,7 @@
 <div class="mobile-buy-bar hidden" id="mobile-buy-bar">
   <button type="button" class="mobile-buy-price" id="mobile-price-toggle" aria-expanded="false" aria-controls="shop-price-panel">
     <span class="mobile-buy-label" data-i18n="sum_total">總價</span>
-    <span class="mobile-buy-amount">NT$ <span id="sum-total-mobile">—</span></span>
+    <span class="mobile-buy-amount">NT$ <span id="sum-total-mobile">—</span> <s class="mobile-buy-compare" id="sum-total-mobile-compare" hidden></s></span>
     <span class="mobile-buy-detail-hint" data-i18n="shop_price_breakdown">明細</span>
   </button>
   <div class="mobile-buy-actions">
@@ -827,10 +828,10 @@
 </script>
 <script src="/static/js/shop-assets.js?v=15" defer></script>
 <script src="/static/js/shop-catalog-data.js?v=7" defer></script>
-<script src="/static/js/shop-pricing-local.js?v=21" defer></script>
-<script src="/static/js/shop-i18n.js?v=16" defer></script>
+<script src="/static/js/shop-pricing-local.js?v=23" defer></script>
+<script src="/static/js/shop-i18n.js?v=22" defer></script>
 <script src="/static/js/girdle-engrave.js?v=24" defer></script>
 <script src="/static/js/shop-terms.js?v=4" defer></script>
 <script src="/static/js/catalog-multi-filter.js?v=1" defer></script>
-<script src="/static/js/shop.js?v=147" defer></script>
+<script src="/static/js/shop.js?v=152" defer></script>
 {% endblock %}

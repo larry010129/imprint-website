@@ -8,6 +8,8 @@
   M.createController({
     run: function () {
       if (!M.isPage('cart')) return;
+      // Live /cart is HTMX-owned (#htmx-cart); skip MVC list so steppers stay wired.
+      if (document.getElementById('htmx-cart')) return;
       View.setState('loading');
 
       M.requireSession('/cart').then(function (session) {
@@ -54,8 +56,29 @@
           });
           return;
         }
+        var dec = ev.target.closest('.cart-qty-dec');
+        if (dec) {
+          var rowDec = dec.closest('.member-cart-item');
+          var inputDec = rowDec && rowDec.querySelector('.cart-qty-input');
+          var curDec = Number(inputDec && inputDec.value || 1) || 1;
+          changeQty(dec.dataset.id, curDec - 1);
+          return;
+        }
+        var inc = ev.target.closest('.cart-qty-inc');
+        if (inc) {
+          var rowInc = inc.closest('.member-cart-item');
+          var inputInc = rowInc && rowInc.querySelector('.cart-qty-input');
+          var curInc = Number(inputInc && inputInc.value || 1) || 1;
+          changeQty(inc.dataset.id, curInc + 1);
+          return;
+        }
         var detail = ev.target.closest('.cart-detail-btn');
         if (detail) openDetail(detail.dataset.id);
+      });
+      e.list.addEventListener('change', function (ev) {
+        if (ev.target.classList.contains('cart-qty-input')) {
+          changeQty(ev.target.dataset.id, ev.target.value);
+        }
       });
     }
     if (e.checkoutBtn) {
@@ -66,6 +89,33 @@
       });
     }
     if (e.dialogClose && e.dialog) e.dialogClose.addEventListener('click', function () { e.dialog.close(); });
+  }
+
+  function reloadCart() {
+    return Model.load().then(function (res) {
+      if (!res || res.error) { View.setState('empty'); return; }
+      var rows = res.items || res.cart_rows || [];
+      if (!rows.length) { View.setState('empty'); return; }
+      View.renderRows(rows);
+      View.setState('list');
+      View.updateSelection();
+    });
+  }
+
+  function changeQty(id, quantity) {
+    var next = Number(quantity);
+    if (!id || Number.isNaN(next)) return;
+    if (next <= 0 && !confirm('數量為 0 將移除此品項，確定嗎？')) {
+      reloadCart();
+      return;
+    }
+    Model.setQuantity(id, next).then(function (data) {
+      if (data && data.error) {
+        reloadCart();
+        return;
+      }
+      return reloadCart();
+    }).catch(function () { reloadCart(); });
   }
 
   function openDetail(id) {

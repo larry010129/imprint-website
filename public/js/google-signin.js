@@ -12,6 +12,11 @@
     '';
   if (!clientId) return;
 
+  // origin_mismatch: this origin must be listed on the OAuth client (docs/GOOGLE-OAUTH.md).
+  if (typeof console !== 'undefined' && console.info) {
+    console.info('[imprint] Google Sign-In page origin:', window.location.origin);
+  }
+
   function setMsg(text, isError) {
     var el = document.getElementById('googleSignInMsg');
     if (!el) return;
