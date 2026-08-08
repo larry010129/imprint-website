@@ -79,6 +79,7 @@
       {# Cart only for logged-in users — /htmx/nav-cart returns empty for guests (outerHTML removes slot). #}
       <span id="site-nav-cart"
         hx-get="/htmx/nav-cart" hx-trigger="load" hx-swap="outerHTML"></span>
+      {# Desktop bar only — mobile hides via CSS; account lives in drawer below. #}
       <div class="site-nav-account-desktop"
         hx-get="/htmx/nav-account" hx-trigger="load" hx-swap="innerHTML">
         <div class="account-menu">
@@ -87,10 +88,11 @@
           </a>
         </div>
       </div>
-      <button type="button" class="nav-burger mobile-menu-toggle" aria-label="開啟選單" aria-expanded="false" data-nav-burger>
-        <span></span><span></span><span></span>
-      </button>
     </div>
+    {# Outside .nav-cta so brand/CTA/account crowding cannot clip the 3-line control. #}
+    <button type="button" class="nav-burger mobile-menu-toggle" aria-label="開啟選單" aria-expanded="false" data-nav-burger>
+      <span></span><span></span><span></span>
+    </button>
   </div>
 
   <nav class="mobile-animated-nav" aria-hidden="true" data-mobile-nav>
@@ -130,6 +132,10 @@
         </ul>
       </li>
       <li class="mobile-animated-nav__item"><a href="/track-order" class="mobile-animated-nav__link">查詢訂製進度</a></li>
+      <li class="mobile-animated-nav__item mobile-animated-nav__item--account"
+        hx-get="/htmx/nav-account?variant=drawer" hx-trigger="load" hx-swap="innerHTML">
+        <a href="/login" class="mobile-animated-nav__link">會員登入</a>
+      </li>
     </ul>
   </nav>
 </header>

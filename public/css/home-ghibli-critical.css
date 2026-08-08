@@ -141,6 +141,15 @@
   border-color:rgba(255,255,255,.75);
   box-shadow:0 4px 18px rgba(42,24,69,.28);
 }
+/* Phone / touch: hero CTA rest = mint hover (match nav.css .nav-ihb) */
+@media (max-width:900px),(hover:none),(pointer:coarse){
+  .page-home [data-site-nav-root].is-nav-hero .nav-ihb,
+  .page-home [data-site-nav-root].is-nav-hero .nav-ihb:hover,
+  .page-home [data-site-nav-root].is-nav-hero .nav-ihb:focus-visible{
+    border-color:var(--mint-deep,#52c4c8);
+    box-shadow:0 4px 16px color-mix(in srgb, var(--mint-deep,#52c4c8) 28%, transparent);
+  }
+}
 .page-home [data-site-nav-root].is-nav-hero .gradient-button-inner{
   color:var(--gh-twilight,#2b2320);
   background:rgba(156,239,239,.74);

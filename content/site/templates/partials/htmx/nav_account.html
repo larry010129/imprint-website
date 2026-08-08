@@ -1,4 +1,20 @@
+{% if variant == "drawer" %}
 {% if nav_user %}
+<p class="mobile-animated-nav__account-label">{{ nav_user.name[:10] }}</p>
+<ul class="mobile-animated-nav__sublist mobile-animated-nav__sublist--account">
+  <li><a class="mobile-animated-nav__sublink" href="/account">我的帳戶</a></li>
+  <li><a class="mobile-animated-nav__sublink" href="/history">訂購紀錄</a></li>
+  <li><a class="mobile-animated-nav__sublink" href="/cart">購物車</a></li>
+  {% if nav_user.is_admin %}<li><a class="mobile-animated-nav__sublink" href="/admin.html">管理後台</a></li>{% endif %}
+  <li>
+    <button type="button" class="mobile-animated-nav__sublink mobile-animated-nav__sublink--button account-menu-item"
+      hx-post="/htmx/logout" hx-swap="none">登出</button>
+  </li>
+</ul>
+{% else %}
+<a href="/login" class="mobile-animated-nav__link">會員登入</a>
+{% endif %}
+{% elif nav_user %}
 <div class="account-menu" data-account-menu>
   <button type="button" class="account-menu-trigger" aria-expanded="false" aria-haspopup="menu" aria-label="{{ nav_user.name }}" data-account-toggle>
     <span class="account-menu-text"><span class="account-menu-name">{{ nav_user.name[:10] }}</span></span>

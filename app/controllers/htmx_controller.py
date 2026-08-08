@@ -36,10 +36,15 @@ async def nav_cart(request: Request) -> HTMLResponse:
 @router.get("/nav-account", response_class=HTMLResponse)
 async def nav_account(request: Request) -> HTMLResponse:
     uid = get_user_id(request)
+    variant = (request.query_params.get("variant") or "desktop").strip().lower()
     return html(
         request,
         "nav_account.html",
-        {"nav_user": nav_user(request), "cart_count": cart_count(uid)},
+        {
+            "nav_user": nav_user(request),
+            "cart_count": cart_count(uid),
+            "variant": "drawer" if variant == "drawer" else "desktop",
+        },
     )
 
 

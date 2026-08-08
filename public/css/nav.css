@@ -115,6 +115,8 @@
   }
 
   .nav-inner > .site-nav-mobile{ display:none !important; }
+  .nav-inner > .nav-burger,
+  .nav-inner > .mobile-menu-toggle{ display:none !important; }
 
 
 
@@ -757,23 +759,64 @@ a.account-menu-trigger{
     background:color-mix(in srgb, var(--nav-ihb-fill) 55%, #fff);
   }
 }
-@media (hover:none),(pointer:coarse){
+/* Phone / touch: rest = desktop hover (mint fill + 「開始試算」→) */
+@media (max-width:900px),(hover:none),(pointer:coarse){
+  .nav-ihb{
+    border-color:var(--nav-ihb-fill-deep);
+    box-shadow:0 4px 16px color-mix(in srgb, var(--nav-ihb-fill-deep) 28%, transparent);
+  }
+  .nav-ihb__dot{
+    transform:scale(90);
+  }
+  .nav-ihb__idle .nav-ihb__label{
+    transform:translateX(2.5rem);
+    opacity:0;
+  }
+  .nav-ihb__hover{
+    opacity:1;
+    transform:translateX(-0.15rem);
+  }
+  [data-site-nav-root].is-nav-hero .nav-ihb{
+    border-color:var(--nav-ihb-fill-deep);
+    box-shadow:0 4px 16px color-mix(in srgb, var(--nav-ihb-fill-deep) 28%, transparent);
+  }
+  .nav-ihb:hover,
+  .nav-ihb:focus-visible{
+    border-color:color-mix(in srgb, var(--nav-ihb-fill-deep) 85%, #000);
+    box-shadow:0 4px 18px color-mix(in srgb, var(--nav-ihb-fill-deep) 36%, transparent);
+  }
+  .nav-ihb:active{
+    background:color-mix(in srgb, var(--nav-ihb-fill) 45%, #fff);
+    box-shadow:0 2px 10px color-mix(in srgb, var(--nav-ihb-fill-deep) 32%, transparent);
+  }
+}
+/* Reduced-motion + touch: keep mint rest (do not revert to paper/idle) */
+@media (prefers-reduced-motion:reduce) and (max-width:900px),
+       (prefers-reduced-motion:reduce) and (hover:none),
+       (prefers-reduced-motion:reduce) and (pointer:coarse){
+  .nav-ihb,
+  .nav-ihb:hover,
+  .nav-ihb:focus-visible{
+    background:color-mix(in srgb, var(--nav-ihb-fill) 55%, #fff);
+    border-color:var(--nav-ihb-fill-deep);
+    box-shadow:0 4px 16px color-mix(in srgb, var(--nav-ihb-fill-deep) 28%, transparent);
+  }
+  .nav-ihb__dot,
   .nav-ihb:hover .nav-ihb__dot,
   .nav-ihb:focus-visible .nav-ihb__dot{
     transform:none;
   }
+  .nav-ihb__idle .nav-ihb__label,
   .nav-ihb:hover .nav-ihb__idle .nav-ihb__label,
   .nav-ihb:focus-visible .nav-ihb__idle .nav-ihb__label{
-    transform:none;
-    opacity:1;
+    transform:translateX(2.5rem);
+    opacity:0;
   }
+  .nav-ihb__hover,
   .nav-ihb:hover .nav-ihb__hover,
   .nav-ihb:focus-visible .nav-ihb__hover{
-    opacity:0;
-    transform:none;
-  }
-  .nav-ihb:active{
-    background:color-mix(in srgb, var(--nav-ihb-fill) 45%, #fff);
+    opacity:1;
+    transform:translateX(-0.15rem);
   }
 }
 
@@ -788,26 +831,43 @@ a.account-menu-trigger{
     box-sizing:border-box;
     gap:4px;
   }
+  /* Brand mark +「銘印鑽石」must stay fully visible — never ellipsis. Shrink CTA first. */
   [data-site-nav-root] .nav-brand{
-    flex:1 1 auto;
-    min-width:0;
-    overflow:hidden;
+    flex:0 0 auto;
+    min-width:auto;
+    overflow:visible;
     gap:6px;
   }
-  [data-site-nav-root] .nav-brand .brand-mark{ width:48px; height:24px; }
-  [data-site-nav-root] .nav-brand .brand-name{ min-width:0; overflow:hidden; }
+  [data-site-nav-root] .nav-brand .brand-mark{ width:48px; height:24px; flex:none; }
+  [data-site-nav-root] .nav-brand .brand-name{
+    min-width:auto;
+    overflow:visible;
+    flex-shrink:0;
+  }
   [data-site-nav-root] .nav-brand .brand-name > span{
     display:block;
-    max-width:100%;
-    overflow:hidden;
-    text-overflow:ellipsis;
+    max-width:none;
+    overflow:visible;
+    text-overflow:clip;
     white-space:nowrap;
   }
-  [data-site-nav-root] .nav-cta{ flex:0 0 auto; min-width:0; gap:4px; }
+  [data-site-nav-root] .nav-brand .brand-name .zh{
+    font-size:clamp(14px,3.6vw,17px);
+    letter-spacing:clamp(.06em,1.2vw,.14em);
+  }
+  /* CTA may shrink; burger is a sibling outside .nav-cta and must never clip. */
+  [data-site-nav-root] .nav-cta{
+    flex:1 1 auto;
+    min-width:0;
+    gap:4px;
+    justify-content:flex-end;
+    overflow:visible;
+  }
   /* Phone CTA: keep pill tap-friendly; one-line label */
   [data-site-nav-root] .nav-cta .nav-ihb{
     min-width:0;
     max-width:min(8.5rem,38vw);
+    flex:0 1 auto;
     padding:clamp(6px,1.5vw,9px) clamp(10px,2.4vw,14px);
     font-size:clamp(10.5px,2.85vw,12px);
     letter-spacing:.02em;
@@ -834,32 +894,28 @@ a.account-menu-trigger{
     box-sizing:border-box;
   }
   [data-site-nav-root] .nav-brand .brand-name .en{ display:none; }
-  /* Cart + account stay in header bar only (not duplicated in drawer). */
-  [data-site-nav-root] .site-nav-account-desktop{ display:flex; align-items:center; }
-  [data-site-nav-root] .site-nav-account-desktop .account-menu-text{ display:none; }
-  [data-site-nav-root] .site-nav-account-desktop .account-menu-trigger{
-    padding:4px;
-    max-width:none;
-    gap:0;
-    min-width:var(--tap-target-min, 44px);
-    min-height:var(--tap-target-min, 44px);
-    justify-content:center;
-  }
+  /* Account lives in the mobile drawer — keep top bar clear for CTA + burger. */
+  [data-site-nav-root] .site-nav-account-desktop{ display:none !important; }
   [data-site-nav-root] .mobile-menu-toggle,
   .nav-burger.mobile-menu-toggle{
-    display:flex;
+    display:flex !important;
     align-items:center;
     justify-content:center;
     width:var(--tap-target-min,44px);
     height:var(--tap-target-min,44px);
     flex:0 0 var(--tap-target-min,44px);
+    flex-shrink:0;
+    margin-left:2px;
     border:0;
     background:transparent;
     color:var(--ink,#2b2320);
+    position:relative;
+    z-index:2;
+    visibility:visible;
+    opacity:1;
   }
   [data-site-nav-root].is-nav-hero .mobile-menu-toggle{ color:#fff; }
   [data-site-nav-root] .nav.is-mobile-menu-open .mobile-menu-toggle{
-    position:relative;
     z-index:112;
     color:var(--ink,#2b2320);
   }
@@ -872,12 +928,26 @@ a.account-menu-trigger{
     z-index:112;
     color:var(--ink,#2b2320);
   }
-  [data-site-nav-root] .nav.is-mobile-menu-open .site-nav-account-desktop{
-    position:relative;
-    z-index:112;
+  .mobile-animated-nav__item--account{ padding-bottom:4px; }
+  .mobile-animated-nav__account-label{
+    margin:0;
+    padding:18px 0 4px;
+    font-size:13px;
+    letter-spacing:.08em;
+    color:var(--ink-soft,#8a817b);
   }
-  [data-site-nav-root] .nav.is-mobile-menu-open .account-menu-name{
-    color:var(--ink,#2b2320);
+  .mobile-animated-nav__sublist--account{
+    padding-top:0;
+    padding-bottom:8px;
+  }
+  .mobile-animated-nav__sublink--button{
+    width:100%;
+    border:0;
+    background:transparent;
+    text-align:left;
+    cursor:pointer;
+    font-family:inherit;
+    color:inherit;
   }
   .mobile-animated-nav{
     display:block;
