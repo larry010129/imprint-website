@@ -506,7 +506,9 @@ _ADMIN_LEGACY_TO_CANONICAL: dict[str, str] = {
     "/admin1.html": "/admin",
     "/admin1-settings.html": "/admin/settings",
     "/admin1-plugins.html": "/admin/plugins",
+    "/admin1-release-notes.html": "/admin/release-notes",
 }
+
 
 _ADMIN_HTML_SHELLS = frozenset(
     {
@@ -654,6 +656,24 @@ def register_pages(app: FastAPI) -> None:
     @app.api_route("/admin/plugins", methods=["GET", "HEAD"], include_in_schema=False)
     async def admin_plugins_page(request: Request):
         return _admin_gated_html(request, "admin1-plugins.html", "/admin/plugins")
+
+    @app.api_route("/admin/release-notes", methods=["GET", "HEAD"], include_in_schema=False)
+    async def admin_release_notes_page(request: Request):
+        """Hidden editor — admin session + unlock cookie required."""
+        from app.auth import get_user_id, is_admin
+        from app.release_notes import require_unlock
+
+        next_path = "/admin/release-notes"
+        user_id = get_user_id(request)
+        if not is_admin(user_id):
+            return RedirectResponse(url=f"/login?next={next_path}", status_code=302)
+        if not user_id or not require_unlock(request, user_id):
+            return RedirectResponse(url="/admin", status_code=302)
+        path = settings.site_root / "admin1-release-notes.html"
+        if not path.is_file():
+            raise StarletteHTTPException(status_code=404, detail="Not Found")
+        return FileResponse(path, media_type="text/html; charset=utf-8")
+
 
     # Legacy *.html shells → canonical paths (query string preserved).
     for legacy, clean in _ADMIN_LEGACY_TO_CANONICAL.items():

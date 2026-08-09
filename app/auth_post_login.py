@@ -29,6 +29,7 @@ _ADMIN_NEXT_ALIASES: dict[str, str] = {
     "/admin1.html": "/admin",
     "/admin1-settings.html": "/admin/settings",
     "/admin1-plugins.html": "/admin/plugins",
+    "/admin1-release-notes.html": "/admin/release-notes",
     "/admin1-login.html": "/admin",
 }
 

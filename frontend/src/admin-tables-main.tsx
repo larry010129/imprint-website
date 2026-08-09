@@ -29,6 +29,12 @@ import CmsPagesPanel, {
 import AdminFeaturedVideoEditor, {
   type AdminFeaturedVideoEditorProps,
 } from "@/components/admin/AdminFeaturedVideoEditor";
+import ReleaseNotesEditor, {
+  type ReleaseNotesEditorProps,
+} from "@/components/admin/ReleaseNotesEditor";
+import ReleaseNotesGate, {
+  type ReleaseNotesGateProps,
+} from "@/components/admin/ReleaseNotesGate";
 import {
   ImageUploadField,
   type ImageUploadFieldProps,
@@ -120,6 +126,32 @@ function renderFeaturedVideoEditor(
   getRoot(container).render(<AdminFeaturedVideoEditor {...props} />);
 }
 
+function renderReleaseNotesEditor(
+  container: Element,
+  props: ReleaseNotesEditorProps = {},
+) {
+  getRoot(container).render(<ReleaseNotesEditor {...props} />);
+}
+
+function renderReleaseNotesGate(
+  container: Element,
+  props: ReleaseNotesGateProps = {},
+) {
+  getRoot(container).render(<ReleaseNotesGate {...props} />);
+}
+
+function bootReleaseNotesGate() {
+  const credit = document.getElementById("adminReleaseNotesCredit");
+  if (!credit) return;
+  let mount = document.getElementById("adminReleaseNotesMount");
+  if (!mount) {
+    mount = document.createElement("div");
+    mount.id = "adminReleaseNotesMount";
+    document.body.appendChild(mount);
+  }
+  renderReleaseNotesGate(mount, { creditId: "adminReleaseNotesCredit" });
+}
+
 function unmount(container: Element) {
   const root = roots.get(container);
   if (root) {
@@ -143,6 +175,8 @@ declare global {
       renderBannerImageUploadCards: typeof renderBannerImageUploadCards;
       renderCmsPagesPanel: typeof renderCmsPagesPanel;
       renderFeaturedVideoEditor: typeof renderFeaturedVideoEditor;
+      renderReleaseNotesEditor: typeof renderReleaseNotesEditor;
+      renderReleaseNotesGate: typeof renderReleaseNotesGate;
       unmount: typeof unmount;
     };
   }
@@ -161,5 +195,30 @@ window.AdminTables = {
   renderBannerImageUploadCards,
   renderCmsPagesPanel,
   renderFeaturedVideoEditor,
+  renderReleaseNotesEditor,
+  renderReleaseNotesGate,
   unmount,
 };
+
+/** Auto-mount editor page and /admin credit gate. */
+function bootReleaseNotesMounts() {
+  const editorRoot = document.getElementById("admin-release-notes-root");
+  if (editorRoot) {
+    renderReleaseNotesEditor(editorRoot);
+  }
+  // Prefer explicit mount; else attach when credit button exists.
+  const gateRoot =
+    document.getElementById("adminReleaseNotesMount") ||
+    document.getElementById("admin-release-notes-gate-root");
+  if (gateRoot) {
+    renderReleaseNotesGate(gateRoot);
+    return;
+  }
+  bootReleaseNotesGate();
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", bootReleaseNotesMounts);
+} else {
+  bootReleaseNotesMounts();
+}

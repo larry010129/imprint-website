@@ -19,9 +19,11 @@ from app.controllers import (
     cms_admin_controller,
     htmx_controller,
     notifications_controller,
+    release_notes_controller,
     shop_controller,
     web_controller,
 )
+
 
 log = logging.getLogger(__name__)
 
@@ -410,6 +412,7 @@ def create_app() -> FastAPI:
     application.include_router(shop_controller.router, prefix="/api")
     application.include_router(admin_controller.router, prefix="/api")
     application.include_router(cms_admin_controller.router, prefix="/api")
+    application.include_router(release_notes_controller.router, prefix="/api")
 
     from app.api.v1 import build_v1_router
 

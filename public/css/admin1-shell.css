@@ -302,12 +302,34 @@ body.admin1-body .side-foot-meta {
 }
 
 body.admin1-body .side-foot-credit {
+  display: block;
+  width: 100%;
   margin-top: 4px;
   padding: 0 4px;
+  border: 0;
+  background: transparent;
+  font: inherit;
   font-size: 10px;
+  text-align: left;
   color: var(--a1-muted-fg);
   opacity: 0.85;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: opacity 0.15s ease, color 0.15s ease;
 }
+
+body.admin1-body .side-foot-credit:hover,
+body.admin1-body .side-foot-credit:focus-visible {
+  opacity: 1;
+  outline: none;
+}
+
+body.admin1-body .side-foot-credit.is-holding {
+  opacity: 1;
+  color: var(--a1-fg);
+}
+
 
 /* ---- Main column (flex-1 flex-col) ---- */
 body.admin1-body .admin1-frame {

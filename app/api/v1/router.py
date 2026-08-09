@@ -21,4 +21,5 @@ def build_v1_router() -> APIRouter:
     router.include_router(shop_ep.router)
     router.include_router(admin_ep.admin_router)
     router.include_router(admin_ep.cms_admin_router)
+    router.include_router(admin_ep.release_notes_router)
     return router

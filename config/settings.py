@@ -68,5 +68,11 @@ class Settings:
     def supabase_storage_bucket(self) -> str:
         return os.environ.get("SUPABASE_STORAGE_BUCKET", "shop-media").strip() or "shop-media"
 
+    @property
+    def admin_release_notes_password(self) -> str:
+        """6-char unlock code for /admin/release-notes editor (default 010129)."""
+        return os.environ.get("ADMIN_RELEASE_NOTES_PASSWORD", "010129").strip() or "010129"
+
 
 settings = Settings()
+
