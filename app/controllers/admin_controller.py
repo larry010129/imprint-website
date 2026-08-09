@@ -62,7 +62,7 @@ from app.auth import (
     require_admin,
 )
 from app.auth_totp_service import step_up_from_body, verify_step_up_password
-from app.catalog import load_product_children
+from app.catalog import clear_public_catalog_cache, load_product_children
 from app.product_categories import (
     category_labels,
     create_category,
@@ -701,6 +701,8 @@ async def product_upload(
     payload: dict = {"url": url}
     if image_row:
         payload["image"] = image_row
+    if pid:
+        clear_public_catalog_cache()
     return JSONResponse(content=payload)
 
 
@@ -777,6 +779,7 @@ async def product_category_create(request: Request) -> JSONResponse:
         category, error = create_category(cur, label_zh=label_zh, label_en=label_en)
     if error:
         return JSONResponse(status_code=400, content={"error": error})
+    clear_public_catalog_cache()
     return JSONResponse(content={"category": category})
 
 
@@ -787,6 +790,7 @@ async def product_category_delete(request: Request, slug: str) -> JSONResponse:
         ok, error = delete_category(cur, slug)
     if error:
         return JSONResponse(status_code=400, content={"error": error})
+    clear_public_catalog_cache()
     return JSONResponse(content={"ok": ok})
 
 
@@ -823,6 +827,7 @@ async def product_category_patch(request: Request, slug: str) -> JSONResponse:
         )
     if error:
         return JSONResponse(status_code=400, content={"error": error})
+    clear_public_catalog_cache()
     return JSONResponse(content={"category": category})
 
 
@@ -850,6 +855,7 @@ async def product_category_force_addon(request: Request, slug: str) -> JSONRespo
         )
     if error:
         return JSONResponse(status_code=400, content={"error": error})
+    clear_public_catalog_cache()
     return JSONResponse(content={"category": category, "updatedVariants": updated})
 
 
@@ -890,6 +896,7 @@ async def product_category_upload(
         )
     if error:
         return JSONResponse(status_code=400, content={"error": error})
+    clear_public_catalog_cache()
     return JSONResponse(content={"url": url, "category": category})
 
 
@@ -1083,6 +1090,7 @@ async def products_create(request: Request) -> JSONResponse:
         clear_style_tombstone(cur, cleaned.get("styleKey"))
         product = _product_with_children(cur, product)
 
+    clear_public_catalog_cache()
     return JSONResponse(content={"product": product})
 
 
@@ -1166,6 +1174,7 @@ async def product_update(request: Request) -> JSONResponse:
         clear_style_tombstone(cur, cleaned.get("styleKey"))
         product = _product_with_children(cur, product)
 
+    clear_public_catalog_cache()
     return JSONResponse(content={"product": product})
 
 
@@ -1280,8 +1289,10 @@ async def product_action(request: Request) -> JSONResponse:
                 """,
                 (copy_id, product_id),
             )
+            clear_public_catalog_cache()
             return JSONResponse(content={"ok": True, "product": serialize_product_row(copy)})
 
+    clear_public_catalog_cache()
     return JSONResponse(content={"ok": True})
 
 
@@ -1299,6 +1310,7 @@ async def products_reorder(request: Request) -> JSONResponse:
                 "update products set sort_order = %s where id = %s",
                 (index, product_id),
             )
+    clear_public_catalog_cache()
     return JSONResponse(content={"ok": True})
 
 

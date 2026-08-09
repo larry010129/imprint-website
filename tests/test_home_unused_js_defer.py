@@ -56,3 +56,24 @@ def test_ringflip_split_out_of_main():
         ROOT / "content" / "site" / "templates" / "pages" / "jewelry" / "index.html"
     ).read_text(encoding="utf-8")
     assert "ringflip.js?v=1" in jewelry
+
+
+def test_shop_third_party_and_quote_work_is_deferred_and_deduplicated():
+    botpress = (
+        ROOT / "content" / "site" / "templates" / "partials" / "botpress-webchat.html"
+    ).read_text(encoding="utf-8")
+    tour = (
+        ROOT / "content" / "site" / "templates" / "partials" / "shop-tour-react-js.html"
+    ).read_text(encoding="utf-8")
+    shop = (ROOT / "public" / "js" / "shop.js").read_text(encoding="utf-8")
+
+    assert "scheduleIdlePrefetch" not in botpress
+    assert "/static/css/shop-tour.css" not in (
+        ROOT / "content" / "site" / "templates" / "partials" / "shop-tour-react-css.html"
+    ).read_text(encoding="utf-8")
+    assert "import(\"/static/react/shop-tour.js?v=17\")" in tour
+    assert "requestIdleCallback" not in tour
+    assert "shopRequestInflight" in shop
+    assert "quoteCache" in shop
+    assert "activeQuoteController?.abort()" in shop
+    assert "JSON.stringify(buildQuotePayload())" in shop

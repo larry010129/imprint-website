@@ -1,55 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  DndContext,
-  DragOverlay,
-  KeyboardSensor,
-  PointerSensor,
-  closestCenter,
-  pointerWithin,
-  useSensor,
-  useSensors,
-  type CollisionDetection,
-  type DragEndEvent,
-  type DragStartEvent,
-} from "@dnd-kit/core";
-import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
-import { Redo2, Undo2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 
+import PageLinkSelect from "@/components/admin/PageLinkSelect";
 import {
-  CMS_CANVAS_DROP_ID,
-  CMS_TRASH_DROP_ID,
-  CmsCanvasDropTarget,
-  CmsDragOverlayCard,
-} from "@/components/admin/CmsEditorDnd";
-import PageImageEditModal, {
-  type PageImageEditRow,
-} from "@/components/admin/PageImageEditModal";
-import type { CmsInsertTarget } from "@/components/admin/CmsAddSectionGallery";
-import SiteEditorTools from "@/components/admin/SiteEditorTools";
-import {
-  sectionAnchor,
-  sectionImagePropKey,
-  sectionLabel,
-  sectionPrimaryProp,
   type CmsPage,
   type CmsSection,
-  type CmsSectionTemplate,
   type CmsSectionType,
 } from "@/components/admin/cmsSectionMeta";
-import {
-  syncSectionPageImage,
-  type SyncSectionPageImageApi,
-} from "@/components/admin/syncSectionPageImage";
-import { createCmsPreviewBridge, softOrHard } from "@/components/admin/cmsPreviewBridge";
-import useCmsEditorCommands, {
-  copyCmsProps,
-  type SectionRef,
-} from "@/components/admin/useCmsEditorCommands";
-import useCmsEditorHistory from "@/components/admin/useCmsEditorHistory";
-import useCmsSectionSaves from "@/components/admin/useCmsSectionSaves";
-import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/toast-1";
-import type { ImageUploadResult } from "@/components/ui/image-upload";
 
 export type SitePage = {
   route: string;
@@ -86,98 +43,231 @@ export type ExistingSitePageEditorProps = {
       sections?: CmsSection[];
       error?: string;
     }>;
-    createSection: (
-      pageId: string,
-      body: { type: string; props?: Record<string, unknown> }
-    ) => Promise<{ section?: CmsSection; error?: string }>;
-    updateSection: (
-      fields: Record<string, unknown>
-    ) => Promise<{ section?: CmsSection; error?: string }>;
-    getSectionHtml?: (id: string) => Promise<{ html?: string; error?: string }>;
-    sectionAction: (
-      id: string,
-      action: string
-    ) => Promise<{ ok?: boolean; error?: string }>;
-    reorderSections: (
-      pageId: string,
-      sectionIds: string[]
-    ) => Promise<{ sections?: CmsSection[]; error?: string }>;
-    getFaqCategories?: () => Promise<{
-      categories?: { id: string; title: string }[];
+    updateSection: (fields: Record<string, unknown>) => Promise<{
+      section?: CmsSection;
       error?: string;
     }>;
-    getPageImages?: () => Promise<{
-      pageImages?: PageImageEditRow[];
-      error?: string;
-    }>;
-    uploadPageImage?: (
-      file: File,
-      pageKey?: string
-    ) => Promise<ImageUploadResult>;
-    updatePageImage?: (fields: {
-      pageKey: string;
-      slotKey: string;
-      imageUrl: string;
-      imageWebp: string;
-      imageAlt: string;
-      isPublished: boolean;
-    }) => Promise<{
-      pageImage?: PageImageEditRow;
-      error?: string | { message?: string };
-    }>;
-    pageImageAction?: (
-      pageKey: string,
-      slotKey: string,
-      action: "restore" | "reset" | "publish" | "unpublish",
-    ) => Promise<{
-      pageImage?: PageImageEditRow;
-      ok?: boolean;
-      error?: string | { message?: string };
-    }>;
-    uploadMedia?: (file: File) => Promise<ImageUploadResult>;
-  } & SyncSectionPageImageApi;
+  };
   onBack: () => void;
 };
 
-type SaveStatus = "idle" | "saving" | "saved" | "error";
+type SaveState = "idle" | "saving" | "saved" | "error";
+type SectionDrafts = Record<string, CmsSection>;
+type SlotDrafts = Record<string, CopySlot>;
 
-function copySlot(slot: CopySlot): CopySlot {
+const TEXT_FIELDS: Partial<Record<CmsSectionType, string[]>> = {
+  hero: ["eyebrow", "title", "lead"],
+  rich_text: ["title", "body"],
+  image_text: ["title", "body"],
+  cta_band: ["title", "lead"],
+};
+
+const SECTION_LABELS: Partial<Record<CmsSectionType, string>> = {
+  hero: "主視覺文字",
+  rich_text: "文字內容",
+  image_text: "圖文內容",
+  cta_band: "行動呼籲",
+  button_row: "按鈕列",
+  faq_embed: "FAQ 區塊",
+  testimonials_embed: "見證區塊",
+  spacer: "間距區塊",
+  freeform: "自由排版區塊",
+};
+
+const FIELD_LABELS: Record<string, string> = {
+  eyebrow: "眉標",
+  title: "標題",
+  lead: "說明文字",
+  body: "內文",
+  button_name: "按鈕名稱",
+  content: "內容",
+};
+
+const MAX_BUTTONS = 8;
+
+function cloneSection(section: CmsSection): CmsSection {
+  return {
+    ...section,
+    props: JSON.parse(JSON.stringify(section.props || {})) as Record<string, unknown>,
+  };
+}
+
+function cloneSlot(slot: CopySlot): CopySlot {
   return { ...slot };
 }
 
-function isEditableTarget(target: EventTarget | null) {
-  const element = target as HTMLElement | null;
-  return Boolean(
-    element?.closest("input, textarea, select, [contenteditable='true']")
+function routeMatches(left: string, right: string): boolean {
+  const normalize = (value: string) => {
+    const clean = String(value || "").trim().replace(/\/$/, "");
+    return clean.endsWith(".html") ? clean.slice(0, -5) : clean;
+  };
+  return normalize(left) === normalize(right);
+}
+
+function sectionLabel(section: CmsSection, index: number): string {
+  return `${SECTION_LABELS[section.type] || section.type} ${index + 1}`;
+}
+
+function sectionHasFields(section: CmsSection): boolean {
+  return Boolean(TEXT_FIELDS[section.type]?.length || section.type === "button_row" ||
+    section.type === "hero" || section.type === "image_text" || section.type === "cta_band");
+}
+
+function TextField({
+  name,
+  value,
+  multiline,
+  onChange,
+}: {
+  name: string;
+  value: string;
+  multiline?: boolean;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="cms-field">
+      <span>{FIELD_LABELS[name] || name}</span>
+      {multiline ? (
+        <textarea rows={name === "body" ? 6 : 3} value={value} onChange={(event) => onChange(event.target.value)} />
+      ) : (
+        <input type="text" value={value} onChange={(event) => onChange(event.target.value)} />
+      )}
+    </label>
   );
 }
 
-function changedPropKey(
-  before: Record<string, unknown>,
-  after: Record<string, unknown>
+function ButtonFields({
+  name,
+  label,
+  href,
+  onChange,
+  onRemove,
+}: {
+  name: string;
+  label: string;
+  href: string;
+  onChange: (field: "label" | "href", value: string) => void;
+  onRemove?: () => void;
+}) {
+  return (
+    <div className="cms-button-editor">
+      <div className="cms-button-editor__header">
+        <strong>{name}</strong>
+        {onRemove ? (
+          <button type="button" className="btn-sm" onClick={onRemove}>
+            移除按鈕
+          </button>
+        ) : null}
+      </div>
+      <TextField name="button_name" value={label} onChange={(value) => onChange("label", value)} />
+      <PageLinkSelect
+        name={`button-link-${name}`}
+        label="按鈕連結"
+        value={href}
+        onChange={(value) => onChange("href", value)}
+      />
+    </div>
+  );
+}
+
+function SectionForm({
+  section,
+  index,
+  onChange,
+}: {
+  section: CmsSection;
+  index: number;
+  onChange: (props: Record<string, unknown>) => void;
+}) {
+  const props = section.props || {};
+  const textFields = TEXT_FIELDS[section.type] || [];
+  const buttons = Array.isArray(props.buttons)
+    ? (props.buttons as { label?: string; href?: string }[])
+    : [];
+
+  const updateButton = (buttonIndex: number, field: "label" | "href", value: string) => {
+    onChange({
+      ...props,
+      buttons: buttons.map((button, index) =>
+        index === buttonIndex ? { ...button, [field]: value } : button,
+      ),
+    });
+  };
+
+  const updateCta = (field: string, value: string) => onChange({ ...props, [field]: value });
+
+  return (
+    <section className="cms-copy-card" data-cms-fixed-section={section.type}>
+      <div className="cms-copy-card__header">
+        <h3>{sectionLabel(section, index)}</h3>
+        <span className="cms-hint">固定版型</span>
+      </div>
+
+      {textFields.map((field) => (
+        <TextField
+          key={field}
+          name={field}
+          value={String(props[field] || "")}
+          multiline={field === "body" || field === "lead"}
+          onChange={(value) => onChange({ ...props, [field]: value })}
+        />
+      ))}
+
+      {section.type === "hero" || section.type === "cta_band" || section.type === "image_text" ? (
+        <div className="cms-button-list">
+          <ButtonFields
+            name="主要按鈕"
+            label={String(props.cta_label || "")}
+            href={String(props.cta_href || "")}
+            onChange={updateCtaField(updateCta, "cta")}
+          />
+          {section.type !== "image_text" ? (
+            <ButtonFields
+              name="次要按鈕（可選）"
+              label={String(props.cta_secondary_label || "")}
+              href={String(props.cta_secondary_href || "")}
+              onChange={updateCtaField(updateCta, "secondary")}
+            />
+          ) : null}
+        </div>
+      ) : null}
+
+      {section.type === "button_row" ? (
+        <div className="cms-button-list">
+          {buttons.map((button, buttonIndex) => (
+            <ButtonFields
+              key={`${section.id}-button-${buttonIndex}`}
+              name={`按鈕 ${buttonIndex + 1}`}
+              label={String(button.label || "")}
+              href={String(button.href || "")}
+              onChange={(field, value) => updateButton(buttonIndex, field, value)}
+              onRemove={() => onChange({ ...props, buttons: buttons.filter((_, i) => i !== buttonIndex) })}
+            />
+          ))}
+          <button
+            type="button"
+            className="btn-sm"
+            disabled={buttons.length >= MAX_BUTTONS}
+            onClick={() => onChange({ ...props, buttons: [...buttons, { label: "", href: "/" }] })}
+          >
+            新增按鈕
+          </button>
+          {!buttons.length ? <p className="cms-hint">目前沒有按鈕。</p> : null}
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function updateCtaField(
+  update: (field: string, value: string) => void,
+  kind: "cta" | "secondary",
 ) {
-  const keys = new Set([...Object.keys(before), ...Object.keys(after)]);
-  const changed = [...keys].filter(
-    (key) => JSON.stringify(before[key]) !== JSON.stringify(after[key])
-  );
-  return changed.length === 1 ? changed[0] : "all";
+  return (field: "label" | "href", value: string) => {
+    const prefix = kind === "secondary" ? "cta_secondary_" : "cta_";
+    update(`${prefix}${field === "label" ? "label" : "href"}`, value);
+  };
 }
-
-const siteCollisionDetection: CollisionDetection = (args) => {
-  const pointerHits = pointerWithin(args);
-  const trashHit = pointerHits.find((collision) => collision.id === CMS_TRASH_DROP_ID);
-  if (trashHit) return [trashHit];
-  const canvasHit = pointerHits.find((collision) => collision.id === CMS_CANVAS_DROP_ID);
-  if (canvasHit && args.active.data.current?.source === "palette") {
-    return [canvasHit];
-  }
-  return closestCenter(args).filter(
-    (collision) =>
-      collision.id !== CMS_TRASH_DROP_ID &&
-      (args.active.data.current?.source === "palette" ||
-        collision.id !== CMS_CANVAS_DROP_ID)
-  );
-};
 
 export default function ExistingSitePageEditor({
   page,
@@ -186,913 +276,195 @@ export default function ExistingSitePageEditor({
 }: ExistingSitePageEditorProps) {
   const { showToast } = useToast();
   const [slots, setSlots] = useState<CopySlot[]>([]);
-  const [hostPage, setHostPage] = useState<CmsPage | null>(null);
   const [sections, setSections] = useState<CmsSection[]>([]);
-  const [selectedSlotKey, setSelectedSlotKey] = useState<string | null>(null);
-  const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
-  const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
-  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
-  const [actionBusy, setActionBusy] = useState(false);
-  const [previewNonce, setPreviewNonce] = useState(0);
-  const [dragging, setDragging] = useState(false);
-  const [dragLabel, setDragLabel] = useState<string | null>(null);
-  const [dragType, setDragType] = useState<string | undefined>(undefined);
-  const [insertTarget, setInsertTarget] = useState<CmsInsertTarget | null>(null);
-  const [galleryOpen, setGalleryOpen] = useState(false);
-  const [focusedProp, setFocusedProp] = useState<string | null>(null);
-  const [faqCategories, setFaqCategories] = useState<{ id: string; title: string }[]>([]);
-  const [pageImageEdit, setPageImageEdit] = useState<PageImageEditRow | null>(null);
-  const previewRef = useRef<HTMLIFrameElement>(null);
-  const dropTargetRef = useRef<{ anchor: string; index: number } | null>(null);
-  const slotsRef = useRef<CopySlot[]>([]);
-  const lastSavedRef = useRef(new Map<string, CopySlot>());
-  const saveRevision = useRef(0);
-  const slotSaveRevisions = useRef(new Map<string, number>());
-  const slotSaveChains = useRef(new Map<string, Promise<void>>());
-  const sectionRefs = useRef(new Map<string, SectionRef>());
-  const deleteSectionRef = useRef<(section: CmsSection) => Promise<void>>(async () => undefined);
-  const duplicateSectionRef = useRef<(section: CmsSection) => Promise<unknown>>(
-    async () => undefined
+  const [slotDrafts, setSlotDrafts] = useState<SlotDrafts>({});
+  const [sectionDrafts, setSectionDrafts] = useState<SectionDrafts>({});
+  const [slotStates, setSlotStates] = useState<Record<string, SaveState>>({});
+  const [sectionStates, setSectionStates] = useState<Record<string, SaveState>>({});
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const pageSlots = useMemo(
+    () => slots.filter((slot) => routeMatches(slot.page_key, page.route)),
+    [page.route, slots],
   );
-  const moveSectionRef = useRef<
-    (section: CmsSection, direction: "up" | "down") => Promise<void>
-  >(async () => undefined);
-  const toggleSectionRef = useRef<(section: CmsSection) => Promise<void>>(
-    async () => undefined
+  const editableSections = useMemo(
+    () => sections.filter(sectionHasFields),
+    [sections],
   );
 
-  const history = useCmsEditorHistory((message) =>
-    showToast(message, "error", "top-right")
-  );
-  const busy = history.busy || saveStatus === "saving" || actionBusy;
-  const hardRefreshPreview = useCallback(() => {
-    const frame = previewRef.current;
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setLoadError(null);
+    void Promise.all([api.getCopySlots(), api.getCmsSitePage(page.route)])
+      .then(([slotResult, pageResult]) => {
+        if (cancelled) return;
+        const error = slotResult.error || pageResult.error;
+        if (error) {
+          setLoadError(String(error));
+          return;
+        }
+        const nextSlots = (slotResult.slots || []).filter((slot) => routeMatches(slot.page_key, page.route));
+        const nextSections = pageResult.sections || pageResult.page?.sections || [];
+        setSlots(nextSlots);
+        setSections(nextSections);
+        setSlotDrafts(Object.fromEntries(nextSlots.map((slot) => [slot.slot_key, cloneSlot(slot)])));
+        setSectionDrafts(Object.fromEntries(nextSections.map((section) => [section.id, cloneSection(section)])));
+        setSlotStates({});
+        setSectionStates({});
+      })
+      .catch((error) => {
+        if (!cancelled) setLoadError(String(error));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [api, page.route]);
+
+  const updateSlotDraft = (slot: CopySlot, field: "text_value" | "href", value: string) => {
+    setSlotDrafts((current) => ({
+      ...current,
+      [slot.slot_key]: { ...current[slot.slot_key], [field]: value, is_published: true },
+    }));
+    setSlotStates((current) => ({ ...current, [slot.slot_key]: "idle" }));
+  };
+
+  const saveSlot = async (slot: CopySlot) => {
+    const draft = slotDrafts[slot.slot_key] || slot;
+    setSlotStates((current) => ({ ...current, [slot.slot_key]: "saving" }));
     try {
-      if (frame?.contentWindow) {
-        frame.contentWindow.location.reload();
-        return;
-      }
-    } catch {
-      /* unloaded */
-    }
-    setPreviewNonce((tick) => tick + 1);
-  }, []);
-  const notify = useCallback(
-    (message: string, type: "success" | "error" | "warning" | "info" = "info") => {
-      showToast(message, type, "top-right");
-    },
-    [showToast]
-  );
-  const fetchSectionHtml = api.getSectionHtml;
-  const preview = useMemo(
-    () =>
-      createCmsPreviewBridge({
-        iframeRef: previewRef,
-        hardRefresh: hardRefreshPreview,
-        fetchSectionHtml: async (sectionId) => {
-          if (!fetchSectionHtml) return { error: "缺少區塊預覽 API" };
-          return fetchSectionHtml(sectionId);
-        },
-      }),
-    [fetchSectionHtml, hardRefreshPreview]
-  );
-
-  const { discardPending, flushPending, mergePending, pendingIds, queueSave } = useCmsSectionSaves({
-    updateSection: api.updateSection,
-    setSections,
-    setMessage: (value) => {
-      const text = typeof value === "function" ? value("") : value;
-      if (String(text).includes("失敗")) notify(String(text), "error");
-    },
-    onSectionSaved: (sectionId) => preview.syncSection(sectionId),
-    hardRefreshPreview,
-  });
-
-  const getSectionRef = useCallback((id: string) => {
-    const existing = sectionRefs.current.get(id);
-    if (existing) return existing;
-    const reference = { key: id, currentId: id };
-    sectionRefs.current.set(id, reference);
-    return reference;
-  }, []);
-
-  useEffect(() => {
-    slotsRef.current = slots;
-  }, [slots]);
-
-  const rememberSaved = useCallback((slot: CopySlot) => {
-    lastSavedRef.current.set(slot.slot_key, copySlot(slot));
-  }, []);
-
-  const loadSlots = useCallback(async () => {
-    const result = await api.getCopySlots();
-    if (result.error) {
-      notify(String(result.error), "error");
-      return;
-    }
-    const pageSlots = (result.slots || []).filter((slot) => slot.page_key === page.route);
-    lastSavedRef.current = new Map(pageSlots.map((slot) => [slot.slot_key, copySlot(slot)]));
-    setSlots(pageSlots);
-    setSelectedSlotKey((current) =>
-      current && pageSlots.some((slot) => slot.slot_key === current) ? current : null
-    );
-  }, [api, notify, page.route]);
-
-  const loadHost = useCallback(async () => {
-    setActionBusy(true);
-    const result = await api.getCmsSitePage(page.route);
-    setActionBusy(false);
-    if (result.error || !result.page) {
-      notify(String(result.error || "載入固定頁區塊失敗"), "error");
-      setHostPage(null);
-      setSections([]);
-      return;
-    }
-    setHostPage(result.page);
-    const incoming = mergePending(result.sections || result.page.sections || []);
-    incoming.forEach((section) => getSectionRef(section.id));
-    setSections(incoming);
-    setSelectedSectionId((current) =>
-      current && incoming.some((section) => section.id === current)
-        ? current
-        : null
-    );
-  }, [api, getSectionRef, mergePending, notify, page.route]);
-
-  useEffect(() => {
-    history.clear();
-    sectionRefs.current.clear();
-    void loadSlots();
-    void loadHost();
-  }, [page.route]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    void api.getFaqCategories?.().then((res) => {
-      if (res.categories) setFaqCategories(res.categories);
-    });
-  }, [api]);
-
-  const softApplySlot = useCallback(
-    (slot: CopySlot) => {
-      const ok = preview.applyCopySlot(
-        slot.slot_key,
-        slot.text_value,
-        slot.kind === "button" ? slot.href : ""
-      );
-      if (!ok) hardRefreshPreview();
-    },
-    [hardRefreshPreview, preview]
-  );
-
-  const persistSlot = useCallback(
-    (slot: CopySlot, syncPreview = false): Promise<void> => {
-      const revision = ++saveRevision.current;
-      const slotRevision = (slotSaveRevisions.current.get(slot.slot_key) || 0) + 1;
-      slotSaveRevisions.current.set(slot.slot_key, slotRevision);
-      setSaveStatus("saving");
-
-      const previous = slotSaveChains.current.get(slot.slot_key) || Promise.resolve();
-      const task = previous.catch(() => undefined).then(async () => {
-        const result = await api.updateCopySlot({
-          pageKey: slot.page_key,
-          slotKey: slot.slot_key,
-          textValue: slot.text_value,
-          href: slot.kind === "button" ? slot.href : "",
-          isPublished: slot.is_published,
-        });
-        if (result.error || !result.slot) {
-          if (revision === saveRevision.current) setSaveStatus("error");
-          throw new Error(String(result.error || "儲存失敗"));
-        }
-        if (slotSaveRevisions.current.get(slot.slot_key) === slotRevision) {
-          rememberSaved(result.slot);
-          slotsRef.current = slotsRef.current.map((item) =>
-            item.slot_key === result.slot!.slot_key ? result.slot! : item
-          );
-          setSlots(slotsRef.current);
-          if (syncPreview) softApplySlot(result.slot);
-        }
-        if (revision === saveRevision.current) setSaveStatus("saved");
+      const result = await api.updateCopySlot({
+        pageKey: draft.page_key,
+        slotKey: draft.slot_key,
+        textValue: draft.text_value,
+        href: draft.kind === "button" ? draft.href : "",
+        isPublished: true,
       });
-      slotSaveChains.current.set(slot.slot_key, task);
-      void task.finally(() => {
-        if (slotSaveChains.current.get(slot.slot_key) === task) {
-          slotSaveChains.current.delete(slot.slot_key);
-        }
-      });
-      return task;
-    },
-    [api, rememberSaved, softApplySlot]
-  );
-
-  const applySlot = useCallback(
-    async (next: CopySlot, syncPreview = true) => {
-      slotsRef.current = slotsRef.current.map((item) =>
-        item.slot_key === next.slot_key ? next : item
-      );
-      setSlots(slotsRef.current);
-      setSelectedSlotKey(next.slot_key);
-      setSelectedSectionId(null);
-      try {
-        await persistSlot(next, syncPreview);
-      } catch (error) {
-        notify(String(error), "error");
-        throw error;
-      }
-    },
-    [notify, persistSlot]
-  );
-
-  const commitSlot = useCallback(
-    (before: CopySlot, after: CopySlot, coalesceKey?: string, syncPreview = false) => {
-      if (
-        before.text_value === after.text_value &&
-        before.href === after.href &&
-        before.is_published === after.is_published
-      ) {
-        return;
-      }
-      history.record({
-        label: "編輯內容",
-        coalesceKey,
-        undo: () => applySlot(copySlot(before), true),
-        redo: () => applySlot(copySlot(after), true),
-      });
-      slotsRef.current = slotsRef.current.map((item) =>
-        item.slot_key === after.slot_key ? after : item
-      );
-      setSlots(slotsRef.current);
-      setSelectedSlotKey(after.slot_key);
-      setSelectedSectionId(null);
-      void persistSlot(after, syncPreview).catch((error) => {
-        notify(String(error), "error");
-      });
-    },
-    [applySlot, history, notify, persistSlot]
-  );
-
-  const resetSlot = useCallback(
-    async (slot: CopySlot) => {
-      if (busy) return;
-      const before = copySlot(slot);
-      const after: CopySlot = {
-        ...slot,
-        text_value: slot.default_text,
-        href: slot.default_href,
-        is_published: false,
-      };
-      try {
-        await applySlot(after, true);
-        history.record({
-          label: "還原預設",
-          undo: () => applySlot(before, true),
-          redo: () => applySlot(after, true),
-        });
-        notify("已還原預設內容", "success");
-      } catch {
-        /* toast already shown */
-      }
-    },
-    [applySlot, busy, history, notify]
-  );
-
-  const prepareSection = useCallback(
-    async (id: string) => {
-      const saved = await flushPending(id);
-      if (!saved) throw new Error("尚有內容未能儲存，已取消這次操作");
-      discardPending(id);
-    },
-    [discardPending, flushPending]
-  );
-
-  const applyProps = useCallback(
-    async (reference: SectionRef, props: Record<string, unknown>) => {
-      await prepareSection(reference.currentId);
-      const res = await api.updateSection({
-        id: reference.currentId,
-        props: copyCmsProps(props),
-      });
-      if (res.error || !res.section) throw new Error(String(res.error || "內容儲存失敗"));
-      setSections((current) =>
-        current.map((section) =>
-          section.id === reference.currentId ? res.section! : section
-        )
-      );
-      await softOrHard(
-        () => preview.syncSection(reference.currentId),
-        hardRefreshPreview
-      );
-    },
-    [api, hardRefreshPreview, prepareSection, preview]
-  );
-
-  const saveSectionProps = useCallback(
-    (
-      section: CmsSection,
-      props: Record<string, unknown>,
-      options?: { skipPreview?: boolean }
-    ) => {
-      if (busy) return;
-      const before = copyCmsProps(section.props);
-      const after = copyCmsProps(props);
-      if (JSON.stringify(before) === JSON.stringify(after)) return;
-      const reference = getSectionRef(section.id);
-      history.record({
-        label: "編輯區塊",
-        coalesceKey: `props:${reference.key}:${changedPropKey(before, after)}`,
-        undo: () => applyProps(reference, before),
-        redo: () => applyProps(reference, after),
-      });
-      queueSave(section.id, after, options);
-    },
-    [applyProps, busy, getSectionRef, history, queueSave]
-  );
-
-  const pageKey = page.route;
-  const {
-    addSection,
-    deleteSection,
-    duplicateSection,
-    moveSection,
-    reorder,
-    toggleVisibility,
-  } = useCmsEditorCommands({
-    page: hostPage,
-    pageKey,
-    sections,
-    selected: sections.find((section) => section.id === selectedSectionId) || null,
-    api,
-    setSections,
-    setSelectedId: setSelectedSectionId,
-    setBusy: setActionBusy,
-    getSectionRef,
-    registerSectionRef: (id, reference) => sectionRefs.current.set(id, reference),
-    prepareSection,
-    pendingSectionIds: pendingIds,
-    record: history.record,
-    notify,
-    preview,
-  });
-  deleteSectionRef.current = deleteSection;
-  duplicateSectionRef.current = duplicateSection;
-  moveSectionRef.current = moveSection;
-  toggleSectionRef.current = (section) => toggleVisibility(section);
-
-  const uploadSectionImage = useCallback(
-    async (file: File): Promise<ImageUploadResult> => {
-      if (api.uploadPageImage) return api.uploadPageImage(file, pageKey);
-      if (api.uploadMedia) return api.uploadMedia(file);
-      return { error: "圖片上傳 API 尚未就緒" };
-    },
-    [api, pageKey]
-  );
-
-  const handleSectionImageUploaded = useCallback(
-    async (section: CmsSection, url: string, alt: string) => {
-      const imageProp = sectionImagePropKey(section.type, section.props);
-      if (!imageProp) return;
-      const nextProps = { ...section.props, [imageProp]: url, image_alt: alt };
-      saveSectionProps(section, nextProps);
-      const sync = await syncSectionPageImage(api, {
-        pageKey,
-        sectionId: section.id,
-        sectionType: section.type,
-        imageUrl: url,
-        imageAlt: alt,
-      });
-      if (!sync.ok) {
-        notify(sync.error || "已更新區塊圖片，但尚未同步到頁面圖片", "warning");
-        return;
-      }
-      notify("圖片已更新，並同步到頁面圖片", "success");
-    },
-    [api, notify, pageKey, saveSectionProps]
-  );
-
-  const openFixedPageImage = useCallback(
-    async (slotKey: string) => {
-      if (!api.getPageImages || !api.uploadPageImage || !api.updatePageImage) {
-        notify("頁面圖片編輯 API 尚未就緒", "warning");
-        return;
-      }
-      const res = await api.getPageImages();
-      if (res.error) {
-        notify(String(res.error), "error");
-        return;
-      }
-      const row = (res.pageImages || []).find(
-        (item) => item.page_key === page.route && item.slot_key === slotKey
-      );
-      if (!row) {
-        notify("找不到此圖片槽位，請到「頁面圖片」分頁確認", "warning");
-        return;
-      }
-      setPageImageEdit(row);
-    },
-    [api, notify, page.route]
-  );
-
-  useEffect(() => {
-    function onMessage(event: MessageEvent) {
-      if (event.origin !== window.location.origin) return;
-      if (event.source !== previewRef.current?.contentWindow) return;
-      const data = event.data;
-      if (!data) return;
-
-      if (data.source === "cms-inline") {
-        if (data.type === "preview-ack") {
-          preview.handleAck(data);
-          return;
-        }
-        if (data.type === "open-add") {
-          const index =
-            typeof data.index === "number" && Number.isFinite(data.index)
-              ? Math.max(0, Math.floor(data.index))
-              : Infinity;
-          setInsertTarget({
-            anchor:
-              typeof data.anchor === "string" && data.anchor ? data.anchor : "end",
-            index,
-            beforeId:
-              typeof data.beforeId === "string" ? data.beforeId : undefined,
-          });
-          setGalleryOpen(true);
-          return;
-        }
-        if (data.type === "select-section" && data.sectionId) {
-          const nextId = String(data.sectionId);
-          if (selectedSectionId !== nextId) setFocusedProp(null);
-          setSelectedSectionId(nextId);
-          setSelectedSlotKey(null);
-        }
-        if (data.type === "focus-prop" && data.sectionId) {
-          setSelectedSectionId(String(data.sectionId));
-          setSelectedSlotKey(null);
-          setFocusedProp(typeof data.prop === "string" ? data.prop : "title");
-        }
-        if (data.type === "duplicate-section" && data.sectionId) {
-          const section = sections.find((item) => item.id === data.sectionId);
-          if (section && !busy) void duplicateSectionRef.current(section);
-        }
-        if (data.type === "move-section" && data.sectionId) {
-          const section = sections.find((item) => item.id === data.sectionId);
-          const direction =
-            data.direction === -1 || data.direction === "up"
-              ? "up"
-              : data.direction === 1 || data.direction === "down"
-                ? "down"
-                : null;
-          if (section && direction && !busy) {
-            void moveSectionRef.current(section, direction);
-          }
-        }
-        if (data.type === "toggle-section" && data.sectionId) {
-          const section = sections.find((item) => item.id === data.sectionId);
-          if (section && !busy) void toggleSectionRef.current(section);
-        }
-        if (data.type === "delete-section" && data.sectionId) {
-          if (busy) return;
-          const section = sections.find((item) => item.id === data.sectionId);
-          if (!section) return;
-          if (!confirm("刪除此區塊？")) return;
-          void deleteSectionRef.current(section);
-        }
-        if (data.type === "block-layout" && data.sectionId && Array.isArray(data.blocks)) {
-          if (busy) return;
-          const section = sections.find((item) => item.id === data.sectionId);
-          if (!section || section.type !== "freeform") return;
-          const device = data.device === "mobile" ? "mobile" : "desktop";
-          const key = device === "mobile" ? "blocks_mobile" : "blocks";
-          saveSectionProps(
-            section,
-            { ...section.props, [key]: data.blocks },
-            { skipPreview: true }
-          );
-        }
-        if (data.type === "block-edit" && data.sectionId && data.blockId && data.field) {
-          if (busy) return;
-          const section = sections.find((item) => item.id === data.sectionId);
-          if (!section || section.type !== "freeform") return;
-          const blocks = Array.isArray(section.props.blocks)
-            ? section.props.blocks.map((block) => ({
-                ...(block as Record<string, unknown>),
-              }))
-            : [];
-          const target = blocks.find((block) => block.id === data.blockId);
-          if (!target) return;
-          target[String(data.field)] = String(data.value || "");
-          if (data.href != null) target.href = String(data.href);
-          saveSectionProps(section, { ...section.props, blocks }, { skipPreview: true });
-        }
-        if (data.type === "inline-edit" && data.sectionId && data.prop) {
-          if (busy) return;
-          const section = sections.find((item) => item.id === data.sectionId);
-          if (!section) return;
-          const nextProps: Record<string, unknown> = { ...section.props };
-          if (data.prop === "buttons" && Number.isInteger(data.buttonIndex)) {
-            const buttons = Array.isArray(section.props.buttons)
-              ? section.props.buttons.map((button) => ({
-                  ...(button as Record<string, unknown>),
-                }))
-              : [];
-            const button = buttons[data.buttonIndex];
-            if (!button) return;
-            button.label = String(data.value || "");
-            if (data.href != null) button.href = String(data.href);
-            nextProps.buttons = buttons;
-          } else {
-            nextProps[String(data.prop)] = data.value;
-            if (data.hrefProp && data.href != null) {
-              nextProps[String(data.hrefProp)] = data.href;
-            }
-          }
-          saveSectionProps(section, nextProps, { skipPreview: true });
-        }
-        if (data.type === "edit-image" && data.sectionId) {
-          setSelectedSectionId(String(data.sectionId));
-          setSelectedSlotKey(null);
-        }
-        if (data.type === "drop-index") {
-          const indexOk =
-            typeof data.index === "number" && Number.isFinite(data.index);
-          const anchor =
-            typeof data.anchor === "string" ? data.anchor.trim().toLowerCase() : "";
-          dropTargetRef.current =
-            indexOk && anchor
-              ? { anchor, index: Math.max(0, Math.floor(data.index)) }
-              : null;
-        }
-        return;
-      }
-
-      if (data.source !== "cms-site-inline" || data.pageKey !== page.route) return;
-      if (busy) return;
-      const slotKey = typeof data.slotKey === "string" ? data.slotKey : "";
-      const slot = slotsRef.current.find((item) => item.slot_key === slotKey);
-      if (data.type === "select-slot" && slot) {
-        setSelectedSlotKey(slot.slot_key);
-        setSelectedSectionId(null);
-      }
-      if (data.type === "inline-edit" && slot && typeof data.value === "string") {
-        const before = copySlot(slot);
-        const after: CopySlot = {
-          ...slot,
-          text_value: data.value.slice(0, 12000),
-          href: slot.href,
-          is_published: true,
-        };
-        commitSlot(before, after, `text:${slot.slot_key}`);
-      }
-      if (data.type === "select-image" && slotKey) {
-        void openFixedPageImage(slotKey);
-      }
+      if (result.error || !result.slot) throw new Error(String(result.error || "儲存失敗"));
+      setSlots((current) => current.map((item) => item.slot_key === slot.slot_key ? result.slot! : item));
+      setSlotDrafts((current) => ({ ...current, [slot.slot_key]: cloneSlot(result.slot!) }));
+      setSlotStates((current) => ({ ...current, [slot.slot_key]: "saved" }));
+      showToast("內容已儲存", "success", "top-right");
+    } catch (error) {
+      setSlotStates((current) => ({ ...current, [slot.slot_key]: "error" }));
+      showToast(String(error), "error", "top-right");
     }
-    window.addEventListener("message", onMessage);
-    return () => window.removeEventListener("message", onMessage);
-  }, [
-    busy,
-    commitSlot,
-    openFixedPageImage,
-    page.route,
-    preview,
-    saveSectionProps,
-    selectedSectionId,
-    sections,
-  ]);
+  };
 
-  useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
-      if (busy || isEditableTarget(event.target)) return;
-      const selectedSection =
-        sections.find((section) => section.id === selectedSectionId) || null;
-      if (event.key === "Delete" && selectedSection) {
-        event.preventDefault();
-        if (confirm("刪除此區塊？")) void deleteSection(selectedSection);
-        return;
-      }
-      if (!(event.ctrlKey || event.metaKey)) return;
-      const key = event.key.toLowerCase();
-      const wantsUndo = key === "z" && !event.shiftKey;
-      const wantsRedo = (key === "z" && event.shiftKey) || key === "y";
-      if (!wantsUndo && !wantsRedo) return;
-      event.preventDefault();
-      void (wantsUndo ? history.undo() : history.redo());
+  const resetSlot = (slot: CopySlot) => {
+    setSlotDrafts((current) => ({ ...current, [slot.slot_key]: cloneSlot(slot) }));
+    setSlotStates((current) => ({ ...current, [slot.slot_key]: "idle" }));
+  };
+
+  const updateSectionDraft = (section: CmsSection, props: Record<string, unknown>) => {
+    setSectionDrafts((current) => ({
+      ...current,
+      [section.id]: { ...(current[section.id] || section), props },
+    }));
+    setSectionStates((current) => ({ ...current, [section.id]: "idle" }));
+  };
+
+  const saveSection = async (section: CmsSection) => {
+    const draft = sectionDrafts[section.id] || section;
+    setSectionStates((current) => ({ ...current, [section.id]: "saving" }));
+    try {
+      const result = await api.updateSection({ id: draft.id, props: draft.props });
+      if (result.error || !result.section) throw new Error(String(result.error || "儲存失敗"));
+      setSections((current) => current.map((item) => item.id === section.id ? result.section! : item));
+      setSectionDrafts((current) => ({ ...current, [section.id]: cloneSection(result.section!) }));
+      setSectionStates((current) => ({ ...current, [section.id]: "saved" }));
+      showToast("區塊已儲存", "success", "top-right");
+    } catch (error) {
+      setSectionStates((current) => ({ ...current, [section.id]: "error" }));
+      showToast(String(error), "error", "top-right");
     }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [busy, deleteSection, history, sections, selectedSectionId]);
+  };
 
-  useEffect(() => {
-    preview.selectSection(selectedSectionId);
-  }, [preview, selectedSectionId]);
+  const resetSection = (section: CmsSection) => {
+    setSectionDrafts((current) => ({ ...current, [section.id]: cloneSection(section) }));
+    setSectionStates((current) => ({ ...current, [section.id]: "idle" }));
+  };
 
-  useEffect(() => {
-    preview.post({ type: "set-device", device });
-  }, [device, preview]);
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-  );
-
-  function endPaletteDropUi() {
-    preview.hideDropGaps();
-    dropTargetRef.current = null;
-    setDragging(false);
-    setDragLabel(null);
-    setDragType(undefined);
-  }
-
-  function onDragStart(event: DragStartEvent) {
-    if (busy) return;
-    setDragging(true);
-    const data = event.active.data.current;
-    if (typeof data?.label === "string") setDragLabel(data.label);
-    else if (data?.source === "palette" && data.type) setDragLabel(sectionLabel(String(data.type)));
-    else setDragLabel("拖曳中");
-    setDragType(typeof data?.type === "string" ? data.type : undefined);
-    if (data?.source === "palette") {
-      dropTargetRef.current = { anchor: "end", index: sections.filter((s) => sectionAnchor(s) === "end").length };
-      preview.showDropGaps();
-    }
-  }
-
-  async function onDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
-    const source = active.data.current?.source;
-    const gapTarget = dropTargetRef.current;
-    endPaletteDropUi();
-    if (busy || !over) return;
-    if (over.id === CMS_TRASH_DROP_ID) {
-      if (source === "slot") {
-        const slot = active.data.current?.slot as CopySlot | undefined;
-        if (slot) await resetSlot(slot);
-      } else if (source === "section") {
-        const section = sections.find((item) => item.id === active.id);
-        if (section) await deleteSection(section);
-      }
-      return;
-    }
-    if (source === "palette") {
-      const type = active.data.current?.type as CmsSectionType | undefined;
-      if (!type) return;
-      const initialProps =
-        active.data.current?.initialProps &&
-        typeof active.data.current.initialProps === "object"
-          ? (active.data.current.initialProps as Record<string, unknown>)
-          : undefined;
-      if (!hostPage) {
-        notify("固定頁主機尚未就緒，請稍後再試", "warning");
-        return;
-      }
-      const overIndex = sections.findIndex((section) => section.id === over.id);
-      if (overIndex >= 0) {
-        const neighbor = sections[overIndex];
-        const anchor = sectionAnchor(neighbor);
-        const localIndex = sections
-          .filter((section) => sectionAnchor(section) === anchor)
-          .findIndex((section) => section.id === neighbor.id);
-        await addSection(type, {
-          anchor,
-          index: localIndex >= 0 ? localIndex : Infinity,
-        }, initialProps);
-        return;
-      }
-      if (over.id === CMS_CANVAS_DROP_ID) {
-        await addSection(type, {
-          anchor: gapTarget?.anchor || "end",
-          index: gapTarget?.index ?? Infinity,
-        }, initialProps);
-        return;
-      }
-      await addSection(type, { anchor: "end", index: Infinity }, initialProps);
-      return;
-    }
-    if (source === "section" && active.id !== over.id) {
-      const oldIndex = sections.findIndex((item) => item.id === active.id);
-      const newIndex = sections.findIndex((item) => item.id === over.id);
-      if (oldIndex >= 0 && newIndex >= 0) await reorder(oldIndex, newIndex);
-    }
-  }
-
-  useEffect(() => {
-    if (!dragging || dragType == null) return;
-    function onPointerMove(event: PointerEvent) {
-      const frame = previewRef.current;
-      if (!frame) return;
-      const rect = frame.getBoundingClientRect();
-      if (
-        event.clientX < rect.left ||
-        event.clientX > rect.right ||
-        event.clientY < rect.top ||
-        event.clientY > rect.bottom
-      ) {
-        return;
-      }
-      preview.hoverDrop(event.clientY - rect.top);
-    }
-    window.addEventListener("pointermove", onPointerMove);
-    return () => window.removeEventListener("pointermove", onPointerMove);
-  }, [dragType, dragging, preview]);
-
-  const selectedSlot = useMemo(
-    () => slots.find((slot) => slot.slot_key === selectedSlotKey) || null,
-    [selectedSlotKey, slots]
-  );
-  const selectedSection = useMemo(
-    () => sections.find((section) => section.id === selectedSectionId) || null,
-    [sections, selectedSectionId]
-  );
-
-  const previewUrl = `${page.route}${page.route.includes("?") ? "&" : "?"}cms_edit=1${
-    previewNonce ? `&t=${previewNonce}` : ""
-  }`;
-  const saveLabel = {
-    idle: "",
-    saving: "儲存中…",
-    saved: "已儲存",
-    error: "儲存失敗",
-  }[saveStatus];
-
-  async function chooseTemplate(template: CmsSectionTemplate) {
-    if (!hostPage) return;
-    const target =
-      insertTarget || {
-        anchor: "end",
-        index: sections.filter((section) => sectionAnchor(section) === "end").length,
-      };
-    const created = await addSection(template.type, target, template.props);
-    if (!created) return;
-    setGalleryOpen(false);
-    setInsertTarget(null);
-    setFocusedProp(sectionPrimaryProp(template.type));
-  }
-
-  function closeGallery() {
-    setGalleryOpen(false);
-    if (insertTarget) {
-      preview.focusAddTarget(
-        insertTarget.anchor,
-        Number.isFinite(insertTarget.index)
-          ? insertTarget.index
-          : sections.filter(
-              (section) => sectionAnchor(section) === insertTarget.anchor
-            ).length
-      );
-    }
-    setInsertTarget(null);
-  }
+  const stateLabel = (state: SaveState | undefined) =>
+    state === "saving" ? "儲存中…" : state === "saved" ? "已儲存" : state === "error" ? "儲存失敗" : "";
 
   return (
-    <div className={`cms-editor cms-site-editor${dragging ? " is-dragging" : ""}`}>
+    <div className="cms-editor cms-site-editor cms-fixed-content-editor">
       <div className="cms-editor__top">
-        <button type="button" className="btn-sm" onClick={onBack}>
-          ← 返回頁面列表
-        </button>
-        <div className="cms-history-actions">
-          <button
-            type="button"
-            className="btn-sm cms-icon-button"
-            disabled={!history.canUndo || busy}
-            onClick={() => void history.undo()}
-            title="復原（Ctrl/Cmd+Z）"
-            aria-label="復原"
-          >
-            <Undo2 size={16} aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            className="btn-sm cms-icon-button"
-            disabled={!history.canRedo || busy}
-            onClick={() => void history.redo()}
-            title="重做（Ctrl/Cmd+Shift+Z 或 Ctrl/Cmd+Y）"
-            aria-label="重做"
-          >
-            <Redo2 size={16} aria-hidden="true" />
-          </button>
-        </div>
+        <button type="button" className="btn-sm" onClick={onBack}>返回頁面列表</button>
         <strong>{page.title}</strong>
         <span className="cms-editor__site-route">{page.route}</span>
-        <span className={`cms-msg cms-msg--${saveStatus}`}>{saveLabel}</span>
-        <a className="btn-sm" href={page.route} target="_blank" rel="noreferrer">
-          開啟實際頁面
-        </a>
       </div>
-
       <p className="cms-inline-instruction">
-        直接點預覽中的文字編輯。從右側拖曳區塊到預覽插入線放置；圖片可在預覽或右側上傳更換。
+        這裡只編輯文字、按鈕名稱與頁面連結。頁面版型、圖片與區塊順序由系統固定。
       </p>
 
-      <DndContext
-        sensors={sensors}
-        collisionDetection={siteCollisionDetection}
-        onDragStart={onDragStart}
-        onDragCancel={() => endPaletteDropUi()}
-        onDragEnd={(event) => void onDragEnd(event)}
-      >
-        <div className="cms-editor__body cms-site-editor__body">
-          <CmsCanvasDropTarget
-            className={`cms-editor__canvas cms-editor__canvas--${device}${busy ? " is-busy" : ""}`}
-            active={dragging}
-          >
-            <div className="cms-device-toggle">
-              <Switch
-                name="site-preview-device"
-                size="small"
-                value={device}
-                onValueChange={(next) => {
-                  if (next === "mobile" || next === "desktop") setDevice(next);
-                }}
-              >
-                <Switch.Control label="手機" value="mobile" />
-                <Switch.Control label="電腦" value="desktop" defaultChecked />
-              </Switch>
-            </div>
-            <iframe
-              ref={previewRef}
-              title={`${page.title} preview`}
-              className="cms-preview-frame"
-              src={previewUrl}
-            />
-          </CmsCanvasDropTarget>
+      {loading ? <p className="cms-hint">載入內容中…</p> : null}
+      {loadError ? <p className="cms-msg cms-msg--error">{loadError}</p> : null}
 
-          <SiteEditorTools
-            selectedSlot={selectedSlot}
-            selectedSection={selectedSection}
-            faqCategories={faqCategories}
-            disabled={busy || !hostPage}
-            saving={saveStatus === "saving"}
-            focusedProp={focusedProp}
-            galleryOpen={galleryOpen}
-            insertTarget={insertTarget}
-            onCloseGallery={closeGallery}
-            onChooseTemplate={chooseTemplate}
-            onChangeSelectedSlot={(next) => {
-              slotsRef.current = slotsRef.current.map((slot) =>
-                slot.slot_key === next.slot_key ? next : slot
-              );
-              setSlots(slotsRef.current);
-            }}
-            onSaveSelectedSlot={() => {
-              if (!selectedSlot) return;
-              const after =
-                slotsRef.current.find((slot) => slot.slot_key === selectedSlot.slot_key) ||
-                selectedSlot;
-              const before =
-                lastSavedRef.current.get(after.slot_key) || copySlot(after);
-              commitSlot(before, after, `form:${after.slot_key}`, true);
-            }}
-            onResetSelectedSlot={() => selectedSlot && void resetSlot(selectedSlot)}
-            onChangeSectionProps={(props) =>
-              selectedSection && saveSectionProps(selectedSection, props)
-            }
-            onPickMedia={() => {
-              /* ImageUploadField is primary; media library optional later */
-            }}
-            onToggleSectionVisibility={() => void toggleVisibility()}
-            onDeleteSection={(section) => {
-              const target = section || selectedSection;
-              if (target) void deleteSection(target);
-            }}
-            uploadImage={uploadSectionImage}
-            onImageUploaded={(url, alt) =>
-              selectedSection
-                ? handleSectionImageUploaded(selectedSection, url, alt)
-                : undefined
-            }
-          />
+      {!loading && !loadError ? (
+        <div className="cms-fixed-content-list">
+          {pageSlots.length ? (
+            <section className="cms-copy-group">
+              <h3 className="cms-copy-group__title">既有頁面文字與按鈕</h3>
+              {pageSlots.map((slot) => {
+                const draft = slotDrafts[slot.slot_key] || slot;
+                const text = draft.text_value || (!draft.is_published ? draft.default_text : "") || draft.default_text;
+                const href = draft.href || (!draft.is_published ? draft.default_href : "") || draft.default_href;
+                return (
+                  <article className="cms-copy-card" key={slot.slot_key}>
+                    <h4>{slot.label || slot.slot_key}</h4>
+                    {slot.kind === "button" ? (
+                      <>
+                        <TextField name="button_name" value={text} onChange={(value) => updateSlotDraft(slot, "text_value", value)} />
+                        <PageLinkSelect
+                          name={`legacy-link-${slot.slot_key}`}
+                          label="按鈕連結"
+                          value={href}
+                          onChange={(value) => updateSlotDraft(slot, "href", value)}
+                        />
+                      </>
+                    ) : (
+                      <TextField name="content" value={text} multiline onChange={(value) => updateSlotDraft(slot, "text_value", value)} />
+                    )}
+                    <div className="cms-copy-card__actions">
+                      <button type="button" className="btn-sm" onClick={() => resetSlot(slot)}>還原</button>
+                      <button type="button" className="btn-sm btn-primary" onClick={() => void saveSlot(slot)} disabled={slotStates[slot.slot_key] === "saving"}>儲存</button>
+                      <span className={`cms-msg cms-msg--${slotStates[slot.slot_key] || "idle"}`}>{stateLabel(slotStates[slot.slot_key])}</span>
+                    </div>
+                  </article>
+                );
+              })}
+            </section>
+          ) : null}
+
+          {editableSections.length ? (
+            <section className="cms-copy-group">
+              <h3 className="cms-copy-group__title">固定 CMS 區塊</h3>
+              {editableSections.map((section, index) => {
+                const draft = sectionDrafts[section.id] || section;
+                return (
+                  <div key={section.id}>
+                    <SectionForm section={draft} index={index} onChange={(props) => updateSectionDraft(section, props)} />
+                    <div className="cms-copy-card__actions">
+                      <button type="button" className="btn-sm" onClick={() => resetSection(section)}>還原</button>
+                      <button type="button" className="btn-sm btn-primary" onClick={() => void saveSection(section)} disabled={sectionStates[section.id] === "saving"}>儲存</button>
+                      <span className={`cms-msg cms-msg--${sectionStates[section.id] || "idle"}`}>{stateLabel(sectionStates[section.id])}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </section>
+          ) : null}
+
+          {!pageSlots.length && !editableSections.length ? (
+            <p className="cms-hint">此頁面目前沒有可編輯的文字或按鈕。</p>
+          ) : null}
         </div>
-        <DragOverlay dropAnimation={null}>
-          {dragLabel ? <CmsDragOverlayCard label={dragLabel} type={dragType} /> : null}
-        </DragOverlay>
-      </DndContext>
-
-      {pageImageEdit && api.uploadPageImage && api.updatePageImage ? (
-        <PageImageEditModal
-          row={pageImageEdit}
-          onClose={() => setPageImageEdit(null)}
-          onSaved={(result) => {
-            setPageImageEdit(null);
-            notify("頁面圖片已更新", "success");
-            if (result?.slotKey && result.imageUrl) {
-              const ok = preview.applyImageSlot(
-                result.slotKey,
-                result.imageUrl,
-                result.imageAlt
-              );
-              if (!ok) hardRefreshPreview();
-            } else {
-              hardRefreshPreview();
-            }
-          }}
-          uploadImage={(file) =>
-            api.uploadPageImage
-              ? api.uploadPageImage(file, pageImageEdit.page_key || pageKey)
-              : Promise.resolve({ error: "圖片上傳 API 尚未就緒" })
-          }
-          updatePageImage={api.updatePageImage}
-          pageImageAction={api.pageImageAction}
-        />
       ) : null}
     </div>
   );

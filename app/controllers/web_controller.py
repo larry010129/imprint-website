@@ -83,21 +83,10 @@ def _strip_public_phone_metadata(block: str) -> str:
 
 
 def load_featured_video(request: Request | None = None) -> dict | None:
-    """Home gallery + About primary video from featured-video.json.
+    """Return the local featured-video snapshot without network work in SSR."""
+    from app.featured_video import public_featured_payload, read_featured_video_file
 
-    Lazy refresh: daily TTL, or sooner when channel head id moved since last
-    sync (peek cached ~20m). Always full-replaces with newest embeddable 6;
-    ``source: fixed`` does not stick the list. Sync failure falls back to
-    existing JSON. Passes request origin for domain-restricted embed checks.
-    """
-    from app.featured_video import (
-        ensure_featured_video_fresh,
-        load_featured_video as _load,
-    )
-
-    ensure_featured_video_fresh()
-    referer = str(request.base_url) if request is not None else None
-    return _load(embed_referer=referer)
+    return public_featured_payload(read_featured_video_file())
 
 
 def load_youtube_latest_video() -> dict | None:

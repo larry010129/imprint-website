@@ -1,4 +1,4 @@
-import { useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 
 import { Label } from "@/components/ui/label";
 import {
@@ -16,36 +16,28 @@ export type PageLinkOption = {
 
 export const PAGE_LINK_OPTIONS: PageLinkOption[] = [
   { value: "/", label: "首頁" },
-  { value: "/shop/calculator/", label: "客製試算" },
-  { value: "/price.html", label: "DNA 鑽石價格" },
-  { value: "/gold-price.html", label: "黃金牌價" },
+  { value: "/shop/calculator/", label: "Shop 計算器" },
+  { value: "/price.html", label: "DNA Diamond 價格" },
+  { value: "/gold-price.html", label: "黃金價格" },
   { value: "/series.html", label: "系列總覽" },
-  { value: "/series/first-love/", label: "滿月鑽石" },
-  { value: "/series/pet/", label: "寵物鑽石" },
-  { value: "/series/love/", label: "結髮鑽石" },
-  { value: "/series/family/", label: "全家福鑽石" },
-  { value: "/series/heirloom/", label: "生命鑽石" },
-  { value: "/what-is-dna-diamond.html", label: "DNA 鑽石的誕生" },
+  { value: "/series/first-love/", label: "初戀系列" },
+  { value: "/series/pet/", label: "寵物系列" },
+  { value: "/series/love/", label: "愛情系列" },
+  { value: "/series/family/", label: "家庭系列" },
+  { value: "/series/heirloom/", label: "傳家系列" },
+  { value: "/what-is-dna-diamond.html", label: "什麼是 DNA Diamond" },
   { value: "/faq.html", label: "常見問題" },
-  { value: "/about.html", label: "品牌故事" },
-  { value: "/stories.html", label: "客戶見證" },
+  { value: "/about.html", label: "關於我們" },
+  { value: "/stories.html", label: "客戶故事" },
   { value: "/contact.html", label: "聯絡我們" },
   { value: "/privacy.html", label: "隱私權政策" },
   { value: "/terms.html", label: "服務條款" },
   { value: "/return-policy.html", label: "退換貨政策" },
-  { value: "/track-order.html", label: "查詢訂製進度" },
-  { value: "/jewelry/", label: "飾品訂製" },
-  { value: "/p/home", label: "CMS・首頁" },
-  { value: "/p/about", label: "CMS・品牌故事" },
-  { value: "/p/series", label: "CMS・系列總覽" },
-  { value: "/p/contact", label: "CMS・聯絡我們" },
-  { value: "/p/faq", label: "CMS・常見問題" },
-  { value: "/p/stories", label: "CMS・客戶見證" },
-  { value: "/p/what-is-dna-diamond", label: "CMS・DNA 鑽石" },
-  { value: "/p/price-overview", label: "CMS・價格導覽" },
-  { value: "#home-poem", label: "首頁・詩文區塊" },
-  { value: "#series", label: "首頁・系列區塊" },
-  { value: "https://lin.ee/ktVBtmx", label: "官方 LINE" },
+  { value: "/track-order.html", label: "查詢訂單" },
+  { value: "/jewelry/", label: "珠寶商品" },
+  { value: "#home-poem", label: "首頁：品牌詩段" },
+  { value: "#series", label: "首頁：系列區塊" },
+  { value: "https://lin.ee/ktVBtmx", label: "LINE 官方帳號" },
 ];
 
 export type PageLinkSelectProps = {
@@ -63,7 +55,7 @@ export default function PageLinkSelect({
   name,
   label,
   value = "",
-  placeholder = "— 選擇頁面 —",
+  placeholder = "請選擇頁面",
   options = PAGE_LINK_OPTIONS,
   onChange,
 }: PageLinkSelectProps) {
@@ -71,13 +63,17 @@ export default function PageLinkSelect({
   const initial = String(value || "").trim();
   const [current, setCurrent] = useState(initial);
 
+  useEffect(() => {
+    setCurrent(initial);
+  }, [initial]);
+
   const items = useMemo(() => {
-    const known = new Set(options.map((o) => o.value));
+    const known = new Set(options.map((option) => option.value));
     if (current && !known.has(current) && current !== EMPTY) {
-      return [...options, { value: current, label: `目前連結：${current}` }];
+      return [...options, { value: current, label: `目前連結（${current}）` }];
     }
     return options;
-  }, [options, current]);
+  }, [current, options]);
 
   const selectValue = current || EMPTY;
 
@@ -98,9 +94,9 @@ export default function PageLinkSelect({
         </SelectTrigger>
         <SelectContent className="z-[210]">
           <SelectItem value={EMPTY}>{placeholder}</SelectItem>
-          {items.map((opt) => (
-            <SelectItem key={opt.value} value={opt.value}>
-              {opt.label}
+          {items.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
             </SelectItem>
           ))}
         </SelectContent>

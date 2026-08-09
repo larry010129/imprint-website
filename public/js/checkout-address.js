@@ -66,6 +66,17 @@
     if (zip) postalEl.value = zip;
   }
 
+  function syncJoinedCity(block) {
+    var joinedEl = block.querySelector('[data-tw-city-joined]');
+    var cityEl = block.querySelector('[data-tw-city]');
+    var districtEl = block.querySelector('[data-tw-district]');
+    if (!joinedEl || !cityEl) return;
+    var div = tw();
+    joinedEl.value = div
+      ? div.joinCityDistrict(cityEl.value, districtEl ? districtEl.value : '')
+      : (String(cityEl.value || '') + String((districtEl && districtEl.value) || ''));
+  }
+
   function bindAddressBlock(block) {
     if (!block || block.getAttribute('data-tw-bound') === '1') return;
     block.setAttribute('data-tw-bound', '1');
@@ -84,14 +95,17 @@
     }
     fillDistrictOptions(districtEl, cityEl.value, initial.district);
     syncPostal(block);
+    syncJoinedCity(block);
 
     cityEl.addEventListener('change', function () {
       fillDistrictOptions(districtEl, cityEl.value, '');
       if (postalEl) postalEl.value = '';
+      syncJoinedCity(block);
       block.dispatchEvent(new CustomEvent('tw-address-change', { bubbles: true }));
     });
     districtEl.addEventListener('change', function () {
       syncPostal(block);
+      syncJoinedCity(block);
       block.dispatchEvent(new CustomEvent('tw-address-change', { bubbles: true }));
     });
     var streetEl = block.querySelector('[data-tw-street]');
@@ -127,6 +141,7 @@
     if (postalEl) postalEl.value = data.postal || '';
     if (streetEl) streetEl.value = data.street || '';
     syncPostal(block);
+    syncJoinedCity(block);
   }
 
   function setShippingRequired(fields, required) {
@@ -234,25 +249,63 @@
     }
   }
 
+  function initAddressBlocks(scope) {
+    var root = scope && scope.querySelectorAll ? scope : document;
+    var blocks = root.querySelectorAll
+      ? root.querySelectorAll('[data-tw-address-block]')
+      : [];
+    var i;
+    for (i = 0; i < blocks.length; i++) {
+      blocks[i].removeAttribute('data-tw-bound');
+      bindAddressBlock(blocks[i]);
+    }
+  }
+
+  function bindProfileForms(scope) {
+    var root = scope && scope.querySelectorAll ? scope : document;
+    var forms = root.querySelectorAll
+      ? root.querySelectorAll('form.account-profile-form')
+      : [];
+    var i;
+    for (i = 0; i < forms.length; i++) {
+      var form = forms[i];
+      if (form.getAttribute('data-tw-profile-bound') === '1') continue;
+      form.setAttribute('data-tw-profile-bound', '1');
+      form.addEventListener('submit', function (ev) {
+        var f = ev.currentTarget;
+        var blocks = f.querySelectorAll('[data-tw-address-block]');
+        var j;
+        for (j = 0; j < blocks.length; j++) {
+          syncPostal(blocks[j]);
+          syncJoinedCity(blocks[j]);
+        }
+      }, true);
+    }
+  }
+
   function init(scope) {
-    var root = (scope || document).querySelector
-      ? (scope.querySelector
-        ? scope.querySelector('[data-checkout-root]') || scope
-        : null)
-      : null;
-    if (scope && scope.hasAttribute && scope.hasAttribute('data-checkout-root')) {
-      root = scope;
+    var base = scope && scope.querySelector ? scope : document;
+    var checkoutRoot = null;
+    if (base.hasAttribute && base.hasAttribute('data-checkout-root')) {
+      checkoutRoot = base;
+    } else if (base.querySelector) {
+      checkoutRoot = base.querySelector('[data-checkout-root]');
     }
-    if (!root || !root.querySelector) {
-      root = document.querySelector('[data-checkout-root]');
+    if (!checkoutRoot && base === document) {
+      checkoutRoot = document.querySelector('[data-checkout-root]');
     }
-    if (!root) return;
-    // HTMX re-swap replaces root — always rebind fresh node
-    root.removeAttribute('data-checkout-address-bound');
-    root.querySelectorAll('[data-tw-address-block]').forEach(function (b) {
-      b.removeAttribute('data-tw-bound');
-    });
-    bindCheckoutRoot(root);
+
+    if (checkoutRoot) {
+      // HTMX re-swap replaces root — always rebind fresh node
+      checkoutRoot.removeAttribute('data-checkout-address-bound');
+      checkoutRoot.querySelectorAll('[data-tw-address-block]').forEach(function (b) {
+        b.removeAttribute('data-tw-bound');
+      });
+      bindCheckoutRoot(checkoutRoot);
+    } else {
+      initAddressBlocks(base);
+    }
+    bindProfileForms(base);
   }
 
   function onReady() {
@@ -268,10 +321,16 @@
   document.body.addEventListener('htmx:afterSwap', function (e) {
     var target = e && e.detail && e.detail.target;
     if (!target) return;
-    if (target.id === 'htmx-checkout' || target.querySelector('[data-checkout-root]')) {
+    if (
+      target.id === 'htmx-checkout'
+      || target.id === 'htmx-profile'
+      || target.querySelector('[data-checkout-root]')
+      || target.querySelector('[data-tw-address-block]')
+      || target.querySelector('form.account-profile-form')
+    ) {
       init(target);
     }
   });
 
-  global.ImprintCheckoutAddress = { init: init };
+  global.ImprintCheckoutAddress = { init: init, initAddressBlocks: initAddressBlocks };
 })(window);

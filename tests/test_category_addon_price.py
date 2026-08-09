@@ -37,6 +37,41 @@ def test_parse_addon_price_accepts_non_negative_int():
     assert pc.parse_addon_price("12.5")[1]
 
 
+def test_fetch_categories_is_read_only_and_cached():
+    pc = _load_product_categories()
+    pc.clear_category_cache()
+
+    class _ReadOnlyCur:
+        def __init__(self):
+            self.calls = []
+
+        def execute(self, sql, params=None):
+            normalized = " ".join(sql.lower().split())
+            self.calls.append(normalized)
+            assert normalized.startswith("select ")
+            self.rows = [
+                {
+                    "slug": "ring",
+                    "label_zh": "ring",
+                    "label_en": "Ring",
+                    "thumb_path": None,
+                    "sort_order": 0,
+                    "addon_price_twd": 0,
+                    "ring_size_config": None,
+                    "created_at": None,
+                    "updated_at": None,
+                }
+            ]
+
+        def fetchall(self):
+            return self.rows
+
+    cur = _ReadOnlyCur()
+    assert pc.fetch_categories(cur)[0]["slug"] == "ring"
+    assert pc.fetch_categories(cur)[0]["slug"] == "ring"
+    assert len(cur.calls) == 1
+
+
 def test_labor_replace_formula_unchanged():
     from app.pricing import _labor_fee
 

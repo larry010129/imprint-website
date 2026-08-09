@@ -30,13 +30,15 @@ from app.catalog import (
     count_catalog_rows,
     fetch_catalog_rows,
     fetch_product_row,
+    get_public_catalog_cache,
     list_catalog_category_slugs,
     load_product_children,
     normalize_catalog_detail,
+    set_public_catalog_cache,
 )
 from app.memorial_diamonds import list_tombstoned_style_keys, merge_memorial_diamond_catalog
 from app.paging import page_meta, page_response, page_window_from_params, sql_count_total
-from app.product_categories import build_category_meta, fetch_categories
+from app.product_categories import build_category_meta, build_category_meta_from_rows, fetch_categories
 from app.orders import (
     attach_order_display,
     attach_order_relations,
@@ -357,6 +359,15 @@ def catalog(
     window = page_window_from_params(
         {"page": page, "page_size": page_size},
     )
+    cacheable = detail_mode == "lite" and not include_drafts
+    cache_key = (cat or "", window.page, window.page_size)
+    if cacheable:
+        cached_payload = get_public_catalog_cache(cache_key)
+        if cached_payload is not None:
+            return JSONResponse(
+                content=cached_payload,
+                headers={"Cache-Control": "public, max-age=60"},
+            )
 
     diamond_tombstones: set[str] = set()
     available_slugs: list[str] = []
@@ -376,7 +387,7 @@ def catalog(
         variants_by_product, images_by_product = load_product_children(cur, product_ids)
         category_rows = fetch_categories(cur)
         cat_order = [row["slug"] for row in category_rows]
-        cat_meta = build_category_meta(cur)
+        cat_meta = build_category_meta_from_rows(category_rows)
         if cat is None:
             available_slugs = list_catalog_category_slugs(
                 cur, include_drafts=include_drafts
@@ -427,7 +438,10 @@ def catalog(
     headers = {}
     if detail_mode == "lite" and not include_drafts:
         headers["Cache-Control"] = "public, max-age=60"
-    return JSONResponse(content=jsonable_encoder(payload), headers=headers)
+    encoded_payload = jsonable_encoder(payload)
+    if cacheable:
+        set_public_catalog_cache(cache_key, encoded_payload)
+    return JSONResponse(content=encoded_payload, headers=headers)
 
 
 @router.get("/catalog/product/{product_id}")

@@ -3,8 +3,6 @@
     "use strict";
 
     let loadPromise;
-    let scheduledIdle;
-
     const appendScript = (src) => new Promise((resolve, reject) => {
       const script = document.createElement("script");
       script.src = src;
@@ -32,16 +30,6 @@
       void window.loadImprintChat().catch(() => {});
     };
 
-    const scheduleIdlePrefetch = () => {
-      if (scheduledIdle) return;
-      scheduledIdle = true;
-      if ("requestIdleCallback" in window) {
-        requestIdleCallback(prepareChat, { timeout: 12000 });
-      } else {
-        setTimeout(prepareChat, 8000);
-      }
-    };
-
     document.addEventListener(
       "click",
       (event) => {
@@ -59,7 +47,5 @@
       true
     );
 
-    if (document.readyState === "complete") scheduleIdlePrefetch();
-    else window.addEventListener("load", scheduleIdlePrefetch, { once: true });
   })();
 </script>

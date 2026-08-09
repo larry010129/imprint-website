@@ -160,6 +160,20 @@
 .cms-copy-card { border: 1px solid #e7e5e4; padding: 12px; background: #fff; display: grid; gap: 8px; }
 .cms-copy-card h4 { margin: 0; font-size: 14px; }
 .cms-site-slot-form { display: grid; gap: 10px; }
+.cms-fixed-content-list { display: grid; gap: 18px; }
+.cms-copy-card__header,
+.cms-copy-card__actions,
+.cms-button-editor__header {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+}
+.cms-copy-card__actions { justify-content: flex-end; margin-top: 4px; }
+.cms-button-list { display: grid; gap: 10px; }
+.cms-button-editor {
+  display: grid; gap: 8px; padding: 10px;
+  border: 1px solid #e7e5e4; background: #fafaf9;
+}
+.cms-button-editor .cms-field { margin-bottom: 0; }
+.cms-fixed-content-editor .cms-inline-instruction { margin-bottom: 2px; }
 .cms-site-slot-form textarea,
 .cms-site-slot-form input[type="text"],
 .cms-site-slot-form input:not([type]) {

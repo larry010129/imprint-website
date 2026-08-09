@@ -222,12 +222,31 @@ async def lifespan(_app: FastAPI):
         )
 
     from app.gold_scrape_job import gold_scrape_loop
+    from app.featured_video import ensure_featured_video_fresh
 
     gold_task = asyncio.create_task(gold_scrape_loop(), name="imprint-gold-scrape")
+
+    async def featured_video_refresh_loop() -> None:
+        while True:
+            await asyncio.sleep(60)
+            try:
+                await asyncio.to_thread(ensure_featured_video_fresh)
+            except Exception:
+                log.exception("featured video refresh failed")
+            await asyncio.sleep(20 * 60)
+
+    featured_video_task = asyncio.create_task(
+        featured_video_refresh_loop(), name="imprint-featured-video-refresh"
+    )
 
     try:
         yield
     finally:
+        featured_video_task.cancel()
+        try:
+            await featured_video_task
+        except asyncio.CancelledError:
+            pass
         gold_task.cancel()
         try:
             await gold_task

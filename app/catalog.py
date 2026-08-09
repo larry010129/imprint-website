@@ -3,11 +3,40 @@
 from __future__ import annotations
 
 import re
+from copy import deepcopy
+from threading import Lock
+from time import monotonic
 
 CATEGORY_DISPLAY_ORDER = ["diamond", "pendant", "ring", "earring", "bracelet", "chain"]
 METAL_DISPLAY_ORDER = ["9k", "14k", "18k", "pt950", "s925"]
 
 _STYLE_FROM_PATH = re.compile(r"(?:^|/)([a-z]+)-([A-C])\.(?:svg|png|jpe?g)", re.I)
+
+_PUBLIC_CATALOG_CACHE_TTL_SECONDS = 60.0
+_public_catalog_cache_lock = Lock()
+_public_catalog_cache: dict[tuple, tuple[float, dict]] = {}
+
+
+def get_public_catalog_cache(key: tuple) -> dict | None:
+    now = monotonic()
+    with _public_catalog_cache_lock:
+        entry = _public_catalog_cache.get(key)
+        if not entry:
+            return None
+        if now - entry[0] >= _PUBLIC_CATALOG_CACHE_TTL_SECONDS:
+            _public_catalog_cache.pop(key, None)
+            return None
+        return deepcopy(entry[1])
+
+
+def set_public_catalog_cache(key: tuple, payload: dict) -> None:
+    with _public_catalog_cache_lock:
+        _public_catalog_cache[key] = (monotonic(), deepcopy(payload))
+
+
+def clear_public_catalog_cache() -> None:
+    with _public_catalog_cache_lock:
+        _public_catalog_cache.clear()
 
 
 def _canonical_gold_key(gold: object) -> str:

@@ -37,6 +37,38 @@ def test_image_text_defaults_to_stack_and_cta_has_image():
     assert fields["props"]["image_url"] == "/x.jpg"
 
 
+def test_button_row_supports_add_remove_and_keeps_empty_state():
+    fields, err = parse_section_payload(
+        {"type": "button_row", "props": {"buttons": []}}
+    )
+    assert err is None
+    assert fields["props"]["buttons"] == []
+
+    buttons = [{"label": f"Button {index}", "href": "/about"} for index in range(10)]
+    fields, err = parse_section_payload(
+        {"type": "button_row", "props": {"buttons": buttons}}
+    )
+    assert err is None
+    assert len(fields["props"]["buttons"]) == 8
+
+
+def test_button_row_rejects_invalid_button_values():
+    fields, err = parse_section_payload(
+        {
+            "type": "button_row",
+            "props": {"buttons": [{"label": "Go", "href": "javascript:alert(1)"}]},
+        }
+    )
+    assert fields is None
+    assert err
+
+    fields, err = parse_section_payload(
+        {"type": "button_row", "props": {"buttons": [{"label": "x" * 161, "href": "/"}]}}
+    )
+    assert fields is None
+    assert err
+
+
 def test_section_page_image_slot_key_fits_page_images_regex():
     section_id = str(uuid.uuid4())
     slot = section_page_image_slot_key(section_id)

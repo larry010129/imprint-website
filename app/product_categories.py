@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import json
 import re
+from copy import deepcopy
+from threading import Lock
+from time import monotonic
 import uuid
 from datetime import datetime, timezone
 from typing import Any
@@ -32,6 +35,16 @@ _ADDON_MAX_TWD = 10_000_000
 _RING_SIZE_MIN = 1
 # Soft UX default when maxSize omitted (not a validation ceiling).
 _RING_SIZE_DEFAULT_MAX = 18
+_CATEGORY_CACHE_TTL_SECONDS = 60.0
+_category_cache_lock = Lock()
+_category_cache: tuple[float, list[dict]] | None = None
+
+
+def clear_category_cache() -> None:
+    """Invalidate the short-lived public category snapshot after writes."""
+    global _category_cache
+    with _category_cache_lock:
+        _category_cache = None
 
 
 def ensure_product_categories_schema(cur) -> None:
@@ -91,6 +104,9 @@ def ensure_product_categories_schema(cur) -> None:
                 int(cat.get("addon_price_twd") or 0),
             ),
         )
+    # Schema initialization is also used by legacy write paths.  Invalidate
+    # any snapshot before those paths commit their changes.
+    clear_category_cache()
 
 
 def _as_jsonb(value: Any) -> Jsonb | None:
@@ -203,14 +219,24 @@ def _serialize_row(row: dict) -> dict:
 
 
 def fetch_categories(cur) -> list[dict]:
-    ensure_product_categories_schema(cur)
+    global _category_cache
+    now = monotonic()
+    with _category_cache_lock:
+        cached = _category_cache
+    if cached and now - cached[0] < _CATEGORY_CACHE_TTL_SECONDS:
+        return deepcopy(cached[1])
+
     cur.execute(
         f"select {_CATEGORY_SELECT} from product_categories order by sort_order, slug"
     )
     rows = cur.fetchall()
     if rows:
-        return [_serialize_row(dict(row)) for row in rows]
-    return [_serialize_row(dict(row)) for row in DEFAULT_CATEGORIES]
+        result = [_serialize_row(dict(row)) for row in rows]
+    else:
+        result = [_serialize_row(dict(row)) for row in DEFAULT_CATEGORIES]
+    with _category_cache_lock:
+        _category_cache = (now, result)
+    return deepcopy(result)
 
 
 def category_labels(cur) -> dict[str, str]:
@@ -226,8 +252,12 @@ def category_order(cur) -> list[str]:
 
 
 def build_category_meta(cur) -> dict[str, dict]:
+    return build_category_meta_from_rows(fetch_categories(cur))
+
+
+def build_category_meta_from_rows(rows: list[dict]) -> dict[str, dict]:
     meta: dict[str, dict] = {}
-    for row in fetch_categories(cur):
+    for row in rows:
         entry = {
             "labelZh": row["label_zh"],
             "labelEn": row.get("label_en"),
@@ -245,7 +275,6 @@ def category_ring_size_config(cur, slug: str) -> dict | None:
     slug = (slug or "").strip()
     if slug != "ring":
         return None
-    ensure_product_categories_schema(cur)
     cur.execute(
         "select ring_size_config from product_categories where slug = %s",
         (slug,),
@@ -265,7 +294,6 @@ def category_addon_price(cur, slug: str) -> int:
     slug = (slug or "").strip()
     if not slug:
         return 0
-    ensure_product_categories_schema(cur)
     cur.execute(
         "select addon_price_twd from product_categories where slug = %s",
         (slug,),

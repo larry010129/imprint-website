@@ -247,15 +247,22 @@ def _find_product(catalog: dict[str, Any], category: str, type_ref: str) -> dict
     return None
 
 
-def _load_full_product(product_id: str, *, include_drafts: bool = False) -> dict[str, Any] | None:
+def _load_full_product(
+    product_id: str,
+    *,
+    include_drafts: bool = False,
+    category_meta: dict[str, dict] | None = None,
+) -> dict[str, Any] | None:
     with get_connection() as conn, conn.cursor() as cur:
         product = fetch_product_row(cur, product_id, include_drafts=include_drafts)
         if not product:
             return None
         variants, images = load_product_children(cur, [product["id"]])
-        from app.product_categories import build_category_meta
+        ring_meta = (category_meta or {}).get("ring") or {}
+        if category_meta is None:
+            from app.product_categories import build_category_meta
 
-        ring_meta = (build_category_meta(cur).get("ring") or {})
+            ring_meta = build_category_meta(cur).get("ring") or {}
         ring_cat_cfg = ring_meta.get("ringSizeConfig")
         if not isinstance(ring_cat_cfg, dict):
             ring_cat_cfg = None
@@ -278,7 +285,11 @@ def _resolve_configure_product(
     if product:
         if category == "diamond" or product.get("weights") is not None:
             return product
-        full = _load_full_product(str(product["id"]), include_drafts=include_drafts)
+        full = _load_full_product(
+            str(product["id"]),
+            include_drafts=include_drafts,
+            category_meta=catalog.get("categoryMeta"),
+        )
         return full or product
     # Not in lite page — resolve UUID / style key directly (no category dump).
     if category == "diamond":
@@ -290,9 +301,22 @@ def _resolve_configure_product(
             type_ref=type_ref,
             require_published=not include_drafts,
         )
-    if not product_id:
-        return None
-    return _load_full_product(str(product_id), include_drafts=include_drafts)
+        if not product_id:
+            return None
+        product = fetch_product_row(cur, product_id, include_drafts=include_drafts)
+        if not product:
+            return None
+        variants, images = load_product_children(cur, [product["id"]])
+        ring_meta = (catalog.get("categoryMeta") or {}).get("ring") or {}
+        ring_cat_cfg = ring_meta.get("ringSizeConfig")
+        if not isinstance(ring_cat_cfg, dict):
+            ring_cat_cfg = None
+        return build_catalog_product(
+            product,
+            variants.get(product["id"], []),
+            images.get(product["id"], []),
+            category_ring_size_config=ring_cat_cfg,
+        )
 
 
 def _config_from_form(form: Any) -> dict[str, Any]:

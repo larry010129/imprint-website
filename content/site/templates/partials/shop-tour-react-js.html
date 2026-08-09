@@ -1,1 +1,12 @@
-<script type="module" src="/static/react/shop-tour.js?v=17"></script>
+<script>
+  (() => {
+    let loaded = false;
+    const loadTour = () => {
+      if (loaded) return;
+      loaded = true;
+      import("/static/react/shop-tour.js?v=17").catch(() => { loaded = false; });
+    };
+    window.addEventListener("pointerdown", loadTour, { once: true, passive: true });
+    window.addEventListener("keydown", loadTour, { once: true });
+  })();
+</script>

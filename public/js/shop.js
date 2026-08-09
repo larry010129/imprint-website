@@ -40,11 +40,23 @@ const isGuestShop = shopMode === 'guest';
    the session endpoint instead. shopIsLoggedIn stays null (unknown) until
    that resolves, so the UI doesn't flash a wrong state for logged-in users. */
 let shopIsLoggedIn = null;
+let shopLoginPromise = null;
 function refreshShopLoginState() {
-  shopApiFetch('/api/auth/session').then(({ data }) => {
+  if (shopLoginPromise) return shopLoginPromise;
+  shopLoginPromise = shopApiFetch('/api/auth/session').then(({ data }) => {
     shopIsLoggedIn = !!(data && data.user);
     updateSummary();
-  }).catch(() => { shopIsLoggedIn = true; }); // fail open — don't block checkout on a network hiccup
+    return shopIsLoggedIn;
+  }).catch(() => {
+    shopIsLoggedIn = true;
+    return true;
+  }); // fail open — don't block checkout on a network hiccup
+  return shopLoginPromise;
+}
+
+async function ensureShopLoginState() {
+  if (shopIsLoggedIn !== null) return shopIsLoggedIn;
+  return refreshShopLoginState();
 }
 
 if (new URLSearchParams(window.location.search).get('preview') === '1') {
@@ -186,17 +198,53 @@ function redirectGuestToLogin() {
   window.location.href = guestLoginUrl();
 }
 
+const SHOP_REQUEST_CACHE_TTL_MS = 60_000;
+const shopRequestCache = new Map();
+const shopRequestInflight = new Map();
+
+function shopRequestKey(path, method, body) {
+  return `${method} ${path}${body === undefined ? '' : ` ${JSON.stringify(body)}`}`;
+}
+
 async function shopApiFetch(path, options = {}) {
-  const res = await fetch(shopApiBase() + path, {
-    method: options.method || 'GET',
-    credentials: 'include',
-    headers: options.body ? { 'Content-Type': 'application/json' } : undefined,
-    body: options.body ? JSON.stringify(options.body) : undefined,
-  });
-  const text = await res.text();
-  let data = {};
-  try { data = text ? JSON.parse(text) : {}; } catch (_) { data = { error: text.slice(0, 200) }; }
-  return { res, data };
+  const method = String(options.method || 'GET').toUpperCase();
+  const cacheable = method === 'GET'
+    && options.cache !== false
+    && (path.startsWith('/api/catalog') || path === '/api/prices' || path === '/api/auth/session');
+  const key = shopRequestKey(path, method, options.body);
+  if (cacheable) {
+    const cached = shopRequestCache.get(key);
+    if (cached && cached.expiresAt > Date.now()) return cached.value;
+    if (cached) shopRequestCache.delete(key);
+    const inflight = shopRequestInflight.get(key);
+    if (inflight) return inflight;
+  }
+
+  const request = (async () => {
+    const headers = options.headers || (options.body ? { 'Content-Type': 'application/json' } : undefined);
+    const res = await fetch(shopApiBase() + path, {
+      method,
+      credentials: 'include',
+      headers,
+      body: options.body ? JSON.stringify(options.body) : undefined,
+      signal: options.signal,
+    });
+    const text = await res.text();
+    let data = {};
+    try { data = text ? JSON.parse(text) : {}; } catch (_) { data = { error: text.slice(0, 200) }; }
+    const value = { res, data };
+    if (cacheable && res.ok) {
+      shopRequestCache.set(key, { expiresAt: Date.now() + SHOP_REQUEST_CACHE_TTL_MS, value });
+    }
+    return value;
+  })();
+  if (!cacheable) return request;
+  shopRequestInflight.set(key, request);
+  try {
+    return await request;
+  } finally {
+    if (shopRequestInflight.get(key) === request) shopRequestInflight.delete(key);
+  }
 }
 
 function shopApiErrorMessage(data, res) {
@@ -1508,6 +1556,10 @@ let quoteTimer = null;
 let quoteRequestId = 0;
 let lastQuoteTotal = null;
 let quoteRefreshPending = false;
+let activeQuoteController = null;
+const quoteCache = new Map();
+let lastSummaryFingerprint = null;
+let lastSummaryLoginState = null;
 let productImageIndex = 0;
 
 // ── State ──────────────────────────────────────────────────────────────────
@@ -2555,6 +2607,7 @@ async function loadMetalPrices() {
 const GOLD_POLL_MS = 25 * 1000;
 let lastLiveGoldRatesKey = null;
 let goldPollTimer = null;
+let liveGoldPollInitialized = false;
 
 function alloyRatesKey(rates) {
   if (!rates || typeof rates !== 'object') return '';
@@ -2568,6 +2621,7 @@ function applyLiveGoldRates(alloyRates) {
   const key = alloyRatesKey(alloyRates);
   if (key === lastLiveGoldRatesKey) return false;
   lastLiveGoldRatesKey = key;
+  quoteCache.clear();
   window.ShopPricingLocal?.setLiveGoldRates?.(alloyRates);
   Object.assign(pricePerGram, alloyRates);
   return true;
@@ -2575,11 +2629,11 @@ function applyLiveGoldRates(alloyRates) {
 
 async function loadLiveGoldRates() {
   try {
-    const { res, data } = await shopApiFetch('/api/bot-gold');
+    const { res, data } = await shopApiFetch('/api/bot-gold', { cache: false });
     if (!res.ok || !data?.alloyRates) return;
     if (!applyLiveGoldRates(data.alloyRates)) return;
     // Re-quote when metal picked; local + API both read gold_price_cache via quote path.
-    if (state.gold) scheduleQuoteRefresh();
+    if (state.gold) scheduleQuoteRefresh({ force: true });
   } catch (err) {
     console.error('failed to load live gold rates', err);
   }
@@ -2611,6 +2665,12 @@ function initLiveGoldPoll() {
       stopLiveGoldPoll();
     }
   });
+}
+
+function ensureLiveGoldPolling() {
+  if (liveGoldPollInitialized) return;
+  liveGoldPollInitialized = true;
+  initLiveGoldPoll();
 }
 
 // ── Render helpers ────────────────────────────────────────────────────────
@@ -4150,22 +4210,38 @@ function buildQuotePayload() {
 }
 
 async function fetchQuote() {
+  const payload = buildQuotePayload();
+  const fingerprint = JSON.stringify(payload);
+  const id = ++quoteRequestId;
+  activeQuoteController?.abort();
+  activeQuoteController = null;
+  if (quoteCache.has(fingerprint)) return quoteCache.get(fingerprint);
+
   const compute = window.ShopPricingLocal?.computeOrderPricing;
   if (compute && (shopUsesLocalPricing() || !shopUsesApi())) {
-    return compute(buildQuotePayload(), catalog);
+    const localQuote = compute(payload, catalog);
+    quoteCache.set(fingerprint, localQuote);
+    return localQuote;
   }
-  const id = ++quoteRequestId;
+  const controller = new AbortController();
+  activeQuoteController = controller;
   try {
     const quotePath = window.shopConfig?.preview ? '/api/quote?preview=1' : '/api/quote';
     const { res, data } = await shopApiFetch(quotePath, {
       method: 'POST',
-      body: buildQuotePayload(),
+      body: payload,
+      signal: controller.signal,
     });
     if (!res.ok) return null;
-    return id === quoteRequestId ? data : null;
+    if (id !== quoteRequestId || controller.signal.aborted) return null;
+    quoteCache.set(fingerprint, data);
+    return data;
   } catch (err) {
+    if (err?.name === 'AbortError') return null;
     console.error('quote fetch failed', err);
     return null;
+  } finally {
+    if (activeQuoteController === controller) activeQuoteController = null;
   }
 }
 
@@ -4283,6 +4359,7 @@ window.animateCountUp = animateShopTotal;
 
 async function refreshQuotePrices() {
   const pricePanel = document.getElementById('shop-price-panel');
+  const requestFingerprint = JSON.stringify(buildQuotePayload());
   // Keep last known breakdown/total visible while recalculating.
   // Skeleton (is-loading-prices) is only for initial boot via HTML + loadMetalPrices.
   let quote;
@@ -4292,6 +4369,7 @@ async function refreshQuotePrices() {
     quoteRefreshPending = false;
     pricePanel?.classList.remove('is-loading-prices');
   }
+  if (requestFingerprint !== JSON.stringify(buildQuotePayload())) return;
   const diamondRow = document.getElementById('sum-diamond-row');
   const chainRow = document.getElementById('sum-chain-row');
   const totalEl = document.getElementById('sum-total');
@@ -5090,6 +5168,13 @@ function initProductImageLightbox() {
 // ── Summary update ────────────────────────────────────────────────────────
 
 function updateSummary() {
+  const summaryFingerprint = `${JSON.stringify(buildQuotePayload())}|prices:${pricesLoaded}`;
+  const stateChanged = summaryFingerprint !== lastSummaryFingerprint;
+  const loginChanged = shopIsLoggedIn !== lastSummaryLoginState;
+  if (!stateChanged && !loginChanged) return;
+  lastSummaryFingerprint = summaryFingerprint;
+  lastSummaryLoginState = shopIsLoggedIn;
+
   // Category
   document.getElementById("sum-cat").textContent =
     state.category ? tr('cat_' + state.category) : '-';
@@ -5158,7 +5243,7 @@ function updateSummary() {
       ? baseChin * (state.lengthCm / BRACELET_REFERENCE_LENGTH_CM)
       : baseChin;
 
-  scheduleQuoteRefresh();
+  if (stateChanged) scheduleQuoteRefresh();
 
   updateCtaState(lastQuoteTotal);
   updateBreadcrumb();
@@ -5379,6 +5464,7 @@ async function selectType(typeId, options) {
     c.classList.toggle("active", c.dataset.type === resolvedType));
 
   await ensureProductDetail(resolvedType, state.category);
+  ensureLiveGoldPolling();
   const product = getSelectedProduct();
   if (isDiamondOnlyCategory()) applyMemorialDiamondProductColor(product);
 
@@ -5855,7 +5941,7 @@ async function handleAddToCart() {
     return;
   }
   if (!validateBeforeSubmit(toast)) return;
-  if (isGuestShop || shopIsLoggedIn === false) {
+  if (isGuestShop || !(await ensureShopLoginState())) {
     redirectGuestToLogin();
     return;
   }
@@ -5990,7 +6076,7 @@ async function handleSubmit() {
     return;
   }
   if (!validateBeforeSubmit(toast)) return;
-  if (isGuestShop || shopIsLoggedIn === false) {
+  if (isGuestShop || !(await ensureShopLoginState())) {
     redirectGuestToLogin();
     return;
   }
@@ -6293,6 +6379,7 @@ async function restoreShopConfig(cfg) {
 
   await ensureCategoryCatalog(cfg.category);
   await ensureProductDetail(typeId, cfg.category);
+  ensureLiveGoldPolling();
   if (cfg.chainProductId) await ensureProductDetail(cfg.chainProductId, 'chain');
 
   renderTypeCards();
@@ -6366,7 +6453,7 @@ async function initCartEdit() {
     toast('此頁面需登入後才能編輯購物車品項');
     return;
   }
-  if (isGuestShop || shopIsLoggedIn === false) {
+  if (isGuestShop || !(await ensureShopLoginState())) {
     redirectGuestToLogin();
     return;
   }
@@ -6399,7 +6486,7 @@ async function initOrderEdit() {
     toast('此頁面需登入後才能修改訂單');
     return;
   }
-  if (isGuestShop || shopIsLoggedIn === false) {
+  if (isGuestShop || !(await ensureShopLoginState())) {
     redirectGuestToLogin();
     return;
   }
@@ -6448,8 +6535,6 @@ async function bootShopCore() {
 
   populateRingSizeSelect();
   loadMetalPrices();
-  initLiveGoldPoll();
-  refreshShopLoginState();
   updateDiamondWizardChrome();
 }
 

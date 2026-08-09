@@ -1,6 +1,13 @@
 {
   "enabled": true,
+  "syncedAt": "2026-08-09T12:25:32Z",
   "videos": [
+    {
+      "youtubeId": "IFa_5chXdJ4",
+      "title": "回家-DNA鑽石-銘印鑽石",
+      "label": "回家-DNA鑽石-銘印鑽石",
+      "publishedAt": "2026-07-24T05:20:49+00:00"
+    },
     {
       "youtubeId": "EdYQTJfD2hE",
       "title": "有些愛不會消失-DNA鑽石-銘印鑽石",
@@ -30,20 +37,13 @@
       "title": "回家的光-DNA寵物鑽石 | 銘印鑽石",
       "label": "回家的光-DNA寵物鑽石 | 銘印鑽石",
       "publishedAt": "2026-07-09T08:44:46+00:00"
-    },
-    {
-      "youtubeId": "HWiUKPfsR84",
-      "title": "結髮鑽石-DNA鑽石-銘印鑽石",
-      "label": "結髮鑽石-DNA鑽石-銘印鑽石",
-      "publishedAt": "2026-06-17T01:42:08+00:00"
     }
   ],
-  "syncedAt": "2026-08-08T14:45:43Z",
   "channelHeadId": "IFa_5chXdJ4",
   "source": "fixed",
   "eyebrow": "VIDEO",
   "heading": "親眼見證，思念如何被慎重對待",
   "lead": "從樣本到鑽石，我們如何把每一份託付留在您觸手可及的距離裡。",
-  "youtube_id": "EdYQTJfD2hE",
-  "title": "有些愛不會消失-DNA鑽石-銘印鑽石"
+  "youtube_id": "IFa_5chXdJ4",
+  "title": "回家-DNA鑽石-銘印鑽石"
 }

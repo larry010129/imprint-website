@@ -344,7 +344,7 @@ def _normalize_section_props(section_type: str, props: dict) -> dict[str, Any]:
     if section_type == "button_row":
         buttons = out.get("buttons")
         if not isinstance(buttons, list):
-            buttons = []
+            raise ValueError("buttons must be an array")
         cleaned_btns = []
         for item in buttons[:8]:
             if not isinstance(item, dict):
@@ -360,7 +360,7 @@ def _normalize_section_props(section_type: str, props: dict) -> dict[str, Any]:
             href = validate_public_url(item.get("href") or "", "button href")
             if label or href:
                 cleaned_btns.append({"label": label or "連結", "href": href or "/"})
-        out["buttons"] = cleaned_btns or default_props_for("button_row")["buttons"]
+        out["buttons"] = cleaned_btns
     if section_type == "faq_embed":
         mode = out.get("mode") or "teaser"
         if mode not in ("teaser", "all"):
