@@ -22,7 +22,11 @@ WAX_TO_METAL_CHIN = {
     "9k": 11.5, "14k": 14.0, "18k": 16.0, "s925": 11.0, "pt950": 24.0,
 }
 
-load_dotenv(Path(__file__).resolve().parents[1] / ".env")
+ROOT = Path(__file__).resolve().parents[1]
+load_dotenv(ROOT / ".env")
+import sys
+
+sys.path.insert(0, str(ROOT))
 
 
 def wax_from_rows(rows: list[dict]) -> float | None:
@@ -38,9 +42,12 @@ def wax_from_rows(rows: list[dict]) -> float | None:
 
 
 def main() -> None:
-    url = os.environ.get("DATABASE_URL")
-    if not url:
-        raise SystemExit("DATABASE_URL not set")
+    from app.database import require_database_url
+
+    try:
+        url = require_database_url()
+    except RuntimeError as exc:
+        raise SystemExit(str(exc)) from exc
 
     with psycopg.connect(url, row_factory=dict_row, autocommit=False) as conn, conn.cursor() as cur:
         cur.execute("select product_id, gold, carat, weight_chin from product_variants order by product_id, carat, gold")

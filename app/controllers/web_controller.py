@@ -246,8 +246,7 @@ def _load_stories_ssr(limit: int = STORIES_SSR_LIMIT) -> list[dict]:
 
     try:
         with get_connection() as conn, conn.cursor() as cur:
-            items = fetch_published_testimonials(cur)
-        return list(items[:limit])
+            return fetch_published_testimonials(cur, limit=limit, offset=0)
     except Exception:
         return []
 
@@ -259,8 +258,7 @@ def _load_journal_ssr(limit: int = JOURNAL_SSR_LIMIT) -> list[dict]:
 
     try:
         with get_connection() as conn, conn.cursor() as cur:
-            items = fetch_published_journal_posts(cur)
-        return list(items[:limit])
+            return fetch_published_journal_posts(cur, limit=limit, offset=0)
     except Exception:
         return []
 
@@ -332,7 +330,9 @@ def _fetch_site_cms_bundle(route: str, *, visible_only: bool) -> dict:
         if "testimonials_embed" in section_types:
             from app.content import fetch_published_testimonials
 
-            bundle["cms_testimonials"] = fetch_published_testimonials(cur)
+            bundle["cms_testimonials"] = fetch_published_testimonials(
+                cur, limit=24, offset=0
+            )
         return bundle
 
 

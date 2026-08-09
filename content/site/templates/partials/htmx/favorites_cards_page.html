@@ -1,0 +1,21 @@
+{% for item in items %}
+<article class="member-fav-card">
+  <div class="member-fav-card__body">
+    <p>{{ item.summary_zh or item.style_type or '收藏款式' }}</p>
+    <p class="text-faint">{{ item.category }}</p>
+    <a class="btn btn-line" href="/shop/calculator/?fav={{ item.id }}">載入試算</a>
+  </div>
+</article>
+{% endfor %}
+{% set cur_page = page if page is defined else 1 %}
+{% set cur_size = page_size if page_size is defined else 20 %}
+{% set more = has_more if has_more is defined else false %}
+<div id="favorites-load-more" class="member-paging" hx-swap-oob="true">
+  {% if more %}
+  <button type="button" class="btn btn-line"
+    hx-get="/htmx/favorites?page={{ cur_page + 1 }}&page_size={{ cur_size }}&partial=cards"
+    hx-target="#favorites-grid"
+    hx-swap="beforeend"
+    hx-select="article">載入更多</button>
+  {% endif %}
+</div>

@@ -39,7 +39,8 @@ PRODUCT_CATEGORY_KEYS = frozenset(
 _PENDING_PREFIX = "products/_pending/"
 _PENDING_FOLDER = "_pending"
 PRODUCT_FOLDER_MAX_LEN = 80
-_UNSAFE_SEGMENT = re.compile(r"[^a-zA-Z0-9._-]")
+# Filenames: Unicode word chars OK (e.g. 玫瑰金主圖.webp); no path separators.
+_UNSAFE_SEGMENT = re.compile(r"[^\w.\-]", re.UNICODE)
 _UNSAFE_FOLDER_CHAR = re.compile(r"[^\w.\-]", re.UNICODE)
 _MULTI_DASH = re.compile(r"[-_]{2,}")
 _HEX_ONLY = re.compile(r"[^a-fA-F0-9]")
@@ -527,6 +528,57 @@ def product_upload_relative_path(
     if metal:
         return f"{_PENDING_FOLDER}/{metal}/{name}"
     return f"{_PENDING_FOLDER}/{name}"
+
+
+def page_image_upload_relative_path(
+    filename: str,
+    *,
+    page_key: str | None = None,
+    folder: str | None = None,
+) -> str:
+    """Relative key under kind ``page-images``: ``{english-folder}/{file}``.
+
+    Folder from ``page_key`` via PAGE_IMAGE_STORAGE_FOLDERS (admin 頁面圖片 tabs),
+    or explicit ``folder``. Missing key → ``_pending/{file}``.
+    """
+    from app.page_image_slots import PAGE_IMAGE_PENDING_FOLDER, page_image_storage_folder
+
+    name = _safe_path_segment(filename, label="filename")
+    folder_seg = (folder or "").strip() or page_image_storage_folder(page_key)
+    if folder_seg == PAGE_IMAGE_PENDING_FOLDER or folder_seg == _PENDING_FOLDER:
+        return f"{_PENDING_FOLDER}/{name}"
+    return f"{_safe_folder_segment(folder_seg)}/{name}"
+
+
+def page_image_object_key(folder: str, filename: str) -> str:
+    """Full object key ``page-images/{folder}/{filename}``."""
+    from app.page_image_slots import PAGE_IMAGE_PENDING_FOLDER
+
+    name = _safe_path_segment(filename, label="filename")
+    folder_seg = (folder or "").strip()
+    if folder_seg in {PAGE_IMAGE_PENDING_FOLDER, _PENDING_FOLDER}:
+        return f"page-images/{_PENDING_FOLDER}/{name}"
+    return f"page-images/{_safe_folder_segment(folder_seg)}/{name}"
+
+
+def is_flat_page_image_object_key(object_path: str | None) -> bool:
+    """True for legacy ``page-images/{file}`` (one segment after kind)."""
+    parts = [p for p in (object_path or "").strip().strip("/").split("/") if p]
+    return len(parts) == 2 and parts[0] == "page-images" and parts[1] != _PENDING_FOLDER
+
+
+def is_nested_page_image_object_key(object_path: str | None) -> bool:
+    """True for ``page-images/{folder}/{file}``."""
+    parts = [p for p in (object_path or "").strip().strip("/").split("/") if p]
+    return len(parts) == 3 and parts[0] == "page-images"
+
+
+def page_image_folder_from_object_key(object_path: str | None) -> str | None:
+    """Return english folder for nested page-image keys; None if flat/invalid."""
+    parts = [p for p in (object_path or "").strip().strip("/").split("/") if p]
+    if len(parts) != 3 or parts[0] != "page-images":
+        return None
+    return parts[1]
 
 
 def move_object(source_path: str, dest_path: str) -> str:

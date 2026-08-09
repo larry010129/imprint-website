@@ -495,8 +495,26 @@ def validate_public_url(value: Any, field: str, *, image: bool = False) -> str:
     return value
 
 
-def fetch_all_pages(cur) -> list[dict]:
-    cur.execute("select * from cms_pages order by updated_at desc, created_at desc")
+def count_all_pages(cur) -> int:
+    cur.execute("select count(*)::int as n from cms_pages")
+    row = cur.fetchone() or {}
+    return int(row.get("n") or 0)
+
+
+def fetch_all_pages(
+    cur,
+    *,
+    limit: int | None = None,
+    offset: int = 0,
+) -> list[dict]:
+    sql = "select * from cms_pages order by updated_at desc, created_at desc"
+    if limit is not None:
+        cur.execute(
+            sql + " limit %s offset %s",
+            (max(0, int(limit)), max(0, int(offset))),
+        )
+    else:
+        cur.execute(sql)
     return [serialize_page(r) for r in cur.fetchall()]
 
 
@@ -567,7 +585,7 @@ def fetch_public_cms_bundle(
     if "testimonials_embed" in section_types:
         from app.content import fetch_published_testimonials
 
-        testimonials = fetch_published_testimonials(cur)
+        testimonials = fetch_published_testimonials(cur, limit=24, offset=0)
     first = sections[0] if sections else None
     first_props = first.get("props") if isinstance(first, dict) else {}
     lcp_section_id = None

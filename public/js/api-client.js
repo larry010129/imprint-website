@@ -41,6 +41,59 @@
       });
   }
 
+  function pagingQuery(opts) {
+    opts = opts || {};
+    var parts = [];
+    if (opts.page != null && opts.page !== '') {
+      parts.push('page=' + encodeURIComponent(opts.page));
+    }
+    var size = opts.pageSize != null ? opts.pageSize : opts.page_size;
+    if (size != null && size !== '') {
+      parts.push('page_size=' + encodeURIComponent(size));
+    }
+    if (opts.q) parts.push('q=' + encodeURIComponent(opts.q));
+    if (opts.category) parts.push('category=' + encodeURIComponent(opts.category));
+    if (opts.page_key || opts.pageKey) {
+      parts.push('page_key=' + encodeURIComponent(opts.page_key || opts.pageKey));
+    }
+    return parts.length ? ('?' + parts.join('&')) : '';
+  }
+
+  /**
+   * One page when opts.page set; otherwise walk pages (page_size 100) until total covered.
+   * Keeps legacy admin panels working after server-side LIMIT.
+   */
+  function requestPagedList(path, itemsKey, opts) {
+    opts = opts || {};
+    if (opts.page != null && opts.page !== '') {
+      return request(path + pagingQuery(opts));
+    }
+    var pageSize = opts.pageSize || opts.page_size || 100;
+    var page = 1;
+    var all = [];
+    var meta = {};
+    function step() {
+      return request(
+        path + pagingQuery(Object.assign({}, opts, { page: page, page_size: pageSize }))
+      ).then(function (res) {
+        if (res && res.error) return res;
+        meta = res || {};
+        var chunk = (res && res[itemsKey]) || [];
+        all = all.concat(chunk);
+        var total = typeof res.total === 'number' ? res.total : all.length;
+        if (all.length < total && chunk.length > 0) {
+          page += 1;
+          return step();
+        }
+        var out = Object.assign({}, meta);
+        out[itemsKey] = all;
+        out.total = total;
+        return out;
+      });
+    }
+    return step();
+  }
+
   function apiErrorMessage(data) {
     if (!data) return '未知錯誤';
     if (typeof data.error === 'string' && data.error) return data.error;
@@ -224,7 +277,9 @@
       },
       getLeads: function () { return request('/api/admin/leads'); },
       markLeadDone: function (type, id) { return request('/api/admin/leads', { method: 'POST', body: { type: type, id: id } }); },
-      getOrders: function () { return request('/api/admin/orders'); },
+      getOrders: function (opts) {
+        return request('/api/admin/orders' + pagingQuery(opts));
+      },
       createOrder: function (fields) { return request('/api/admin/orders', { method: 'POST', body: fields }); },
       updateOrderStatus: function (id, status, statusNote) { return request('/api/admin/order-update', { method: 'POST', body: { id: id, status: status, statusNote: statusNote } }); },
       cancelOrder: function (id, reason) {
@@ -244,7 +299,9 @@
       deleteOrder: function (id, reason) {
         return this.cancelOrder(id, reason || '管理員取消');
       },
-      getProducts: function () { return request('/api/admin/products'); },
+      getProducts: function (opts) {
+        return request('/api/admin/products' + pagingQuery(opts));
+      },
       createProductCategory: function (fields) { return request('/api/admin/product-category', { method: 'POST', body: fields }); },
       deleteProductCategory: function (slug) { return request('/api/admin/product-category/' + encodeURIComponent(slug), { method: 'DELETE' }); },
       updateProductCategory: function (slug, fields) {
@@ -281,8 +338,16 @@
       saveProduct: function (fields) { return request('/api/admin/products', { method: 'POST', body: fields }); },
       updateProduct: function (fields) { return request('/api/admin/product-update', { method: 'POST', body: fields }); },
       productAction: function (id, action) { return request('/api/admin/product-action', { method: 'POST', body: { id: id, action: action } }); },
+      productImageAction: function (imageId, action) {
+        return request('/api/admin/product-image-action', {
+          method: 'POST',
+          body: { image_id: imageId, action: action },
+        });
+      },
       reorderProducts: function (order) { return request('/api/admin/products-reorder', { method: 'POST', body: { order: order } }); },
-      getInvites: function () { return request('/api/admin/invites'); },
+      getInvites: function (opts) {
+        return requestPagedList('/api/admin/invites', 'invites', opts);
+      },
       createInvite: function (fields) {
         var body = Object.assign({}, fields || {});
         if (!body.password && !body.adminPassword) {
@@ -294,7 +359,9 @@
         return request('/api/admin/invites', { method: 'POST', body: body });
       },
       inviteAction: function (id, action) { return request('/api/admin/invite-action', { method: 'POST', body: { id: id, action: action } }); },
-      getCoupons: function () { return request('/api/admin/coupons'); },
+      getCoupons: function (opts) {
+        return requestPagedList('/api/admin/coupons', 'coupons', opts);
+      },
       createCoupon: function (fields) {
         var body = withStepUp('建立優惠碼', fields || {});
         if (body.error) return Promise.resolve(body);
@@ -310,14 +377,18 @@
         if (body.error) return Promise.resolve(body);
         return request('/api/admin/coupon-action', { method: 'POST', body: body });
       },
-      getTestimonials: function () { return request('/api/admin/testimonials'); },
+      getTestimonials: function (opts) {
+        return requestPagedList('/api/admin/testimonials', 'testimonials', opts);
+      },
       createTestimonial: function (fields) { return request('/api/admin/testimonials', { method: 'POST', body: fields }); },
       updateTestimonial: function (fields) { return request('/api/admin/testimonial-update', { method: 'POST', body: fields }); },
       reorderTestimonial: function (id, direction) {
         return request('/api/admin/testimonial-reorder', { method: 'POST', body: { id: id, direction: direction } });
       },
       testimonialAction: function (id, action) { return request('/api/admin/testimonial-action', { method: 'POST', body: { id: id, action: action } }); },
-      getJournalPosts: function () { return request('/api/admin/journal-posts'); },
+      getJournalPosts: function (opts) {
+        return requestPagedList('/api/admin/journal-posts', 'posts', opts);
+      },
       createJournalPost: function (fields) { return request('/api/admin/journal-posts', { method: 'POST', body: fields }); },
       updateJournalPost: function (fields) { return request('/api/admin/journal-post-update', { method: 'POST', body: fields }); },
       journalPostAction: function (id, action) {
@@ -343,7 +414,9 @@
           return { error: '系統連線異常，請稍後再試。' };
         });
       },
-      getFaqItems: function () { return request('/api/admin/faq-items'); },
+      getFaqItems: function (opts) {
+        return requestPagedList('/api/admin/faq-items', 'items', opts);
+      },
       getFaqCategories: function () { return request('/api/admin/faq-categories'); },
       createFaqItem: function (fields) { return request('/api/admin/faq-items', { method: 'POST', body: fields }); },
       updateFaqItem: function (fields) { return request('/api/admin/faq-update', { method: 'POST', body: fields }); },
@@ -359,7 +432,9 @@
         if (body.error) return Promise.resolve(body);
         return request('/api/admin/faq-category-action', { method: 'POST', body: body });
       },
-      listCmsPages: function () { return request('/api/admin/cms-pages'); },
+      listCmsPages: function (opts) {
+        return requestPagedList('/api/admin/cms-pages', 'pages', opts);
+      },
       getCmsPage: function (id) { return request('/api/admin/cms-pages/' + encodeURIComponent(id)); },
       getCmsSitePage: function (route) {
         return request('/api/admin/cms-site-page?route=' + encodeURIComponent(route || ''));
@@ -412,7 +487,9 @@
       updatePageCopySlot: function (fields) {
         return request('/api/admin/page-copy-slot-update', { method: 'POST', body: fields });
       },
-      getCmsMedia: function () { return request('/api/admin/cms-media'); },
+      getCmsMedia: function (opts) {
+        return requestPagedList('/api/admin/cms-media', 'media', opts);
+      },
       uploadCmsMedia: function (file) {
         var fd = new FormData();
         fd.append('file', file);
@@ -436,7 +513,9 @@
       cmsMediaAction: function (id, action) {
         return request('/api/admin/cms-media-action', { method: 'POST', body: { id: id, action: action } });
       },
-      getBanners: function () { return request('/api/admin/banners'); },
+      getBanners: function (opts) {
+        return requestPagedList('/api/admin/banners', 'banners', opts);
+      },
       createBanner: function (fields) { return request('/api/admin/banners', { method: 'POST', body: fields }); },
       updateBanner: function (fields) { return request('/api/admin/banner-update', { method: 'POST', body: fields }); },
       bannerAction: function (id, action) { return request('/api/admin/banner-action', { method: 'POST', body: { id: id, action: action } }); },
@@ -460,7 +539,9 @@
           return { error: '系統連線異常，請稍後再試。' };
         });
       },
-      getPageImages: function () { return request('/api/admin/page-images'); },
+      getPageImages: function (opts) {
+        return requestPagedList('/api/admin/page-images', 'pageImages', opts);
+      },
       getPageImageCreateOptions: function () { return request('/api/admin/page-image-create-options'); },
       createPageImage: function (pageKey, slotKey) {
         return request('/api/admin/page-image-create', {
@@ -475,9 +556,10 @@
           body: { pageKey: pageKey, slotKey: slotKey, action: action },
         });
       },
-      uploadPageImage: function (file) {
+      uploadPageImage: function (file, pageKey) {
         var fd = new FormData();
         fd.append('file', file);
+        if (pageKey) fd.append('page_key', String(pageKey));
         return fetch(API_BASE + '/api/admin/page-image-upload', {
           method: 'POST',
           credentials: 'include',
@@ -495,10 +577,15 @@
           return { error: '系統連線異常，請稍後再試。' };
         });
       },
-      getAccounts: function (q) {
-        var path = '/api/admin/accounts';
-        if (q) path += '?q=' + encodeURIComponent(q);
-        return request(path);
+      getAccounts: function (qOrOpts, maybeOpts) {
+        var opts = {};
+        if (qOrOpts && typeof qOrOpts === 'object') {
+          opts = qOrOpts;
+        } else {
+          opts = Object.assign({}, maybeOpts || {});
+          if (qOrOpts) opts.q = qOrOpts;
+        }
+        return requestPagedList('/api/admin/accounts', 'accounts', opts);
       },
       getAccount: function (id) {
         return request('/api/admin/accounts/' + encodeURIComponent(id));

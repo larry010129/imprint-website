@@ -300,8 +300,9 @@ def test_calculator_preview_banner_and_flag(client):
 
 
 def test_htmx_styles_grid_has_size_class(client):
+    # Memorial diamond skips styles → configure; jewelry categories render the grid.
     resp = client.get(
-        "/htmx/shop/step/styles?category=diamond&preview=1",
+        "/htmx/shop/step/styles?category=pendant&preview=1",
         headers={"HX-Request": "true"},
     )
     assert resp.status_code == 200

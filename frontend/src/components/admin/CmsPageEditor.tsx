@@ -67,14 +67,26 @@ export type CmsPageEditorProps = {
       pageId: string,
       sectionIds: string[]
     ) => Promise<{ sections?: CmsSection[]; error?: string }>;
-    getMedia: () => Promise<{ media?: { id: string; url: string; alt?: string }[]; error?: string }>;
+    getMedia: (opts?: {
+      page?: number;
+      pageSize?: number;
+    }) => Promise<{
+      media?: { id: string; url: string; alt?: string }[];
+      total?: number;
+      page?: number;
+      page_size?: number;
+      error?: string;
+    }>;
     getFaqCategories: () => Promise<{
       categories?: { id: string; title: string }[];
       error?: string;
     }>;
     uploadMedia: (file: File) => Promise<{ media?: { id: string; url: string }; url?: string; error?: string }>;
     deleteMedia: (id: string) => Promise<{ ok?: boolean; error?: string }>;
-    uploadPageImage?: (file: File) => Promise<ImageUploadResult>;
+    uploadPageImage?: (
+      file: File,
+      pageKey?: string
+    ) => Promise<ImageUploadResult>;
   } & SyncSectionPageImageApi;
   onBack: () => void;
   onDeleted?: () => void;
@@ -118,6 +130,9 @@ export default function CmsPageEditor({ pageId, api, onBack, onDeleted }: CmsPag
   const [actionBusy, setActionBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [media, setMedia] = useState<{ id: string; url: string; alt?: string }[]>([]);
+  const [mediaTotal, setMediaTotal] = useState(0);
+  const [mediaPage, setMediaPage] = useState(1);
+  const mediaPageSize = 20;
   const [faqCategories, setFaqCategories] = useState<{ id: string; title: string }[]>([]);
   const [mediaOpen, setMediaOpen] = useState(false);
   const [mediaProp, setMediaProp] = useState("image_url");
@@ -233,14 +248,24 @@ export default function CmsPageEditor({ pageId, api, onBack, onDeleted }: CmsPag
     void load();
   }, [pageId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const loadMediaPage = useCallback(
+    async (page: number) => {
+      const res = await api.getMedia({ page, pageSize: mediaPageSize });
+      if (res.media) {
+        setMedia(res.media);
+        setMediaTotal(Number(res.total || res.media.length));
+        setMediaPage(Number(res.page || page));
+      }
+    },
+    [api]
+  );
+
   useEffect(() => {
-    void api.getMedia().then((res) => {
-      if (res.media) setMedia(res.media);
-    });
+    void loadMediaPage(1);
     void api.getFaqCategories().then((res) => {
       if (res.categories) setFaqCategories(res.categories);
     });
-  }, [api]);
+  }, [api, loadMediaPage]);
 
   const prepareSection = useCallback(
     async (id: string) => {
@@ -469,12 +494,12 @@ export default function CmsPageEditor({ pageId, api, onBack, onDeleted }: CmsPag
 
   const uploadSectionImage = useCallback(
     async (file: File): Promise<ImageUploadResult> => {
-      if (api.uploadPageImage) return api.uploadPageImage(file);
+      if (api.uploadPageImage) return api.uploadPageImage(file, pageKey);
       const res = await api.uploadMedia(file);
       if (res.error) return { error: res.error };
       return { url: res.url || res.media?.url };
     },
-    [api]
+    [api, pageKey]
   );
 
   const handleSectionImageUploaded = useCallback(
@@ -762,13 +787,19 @@ export default function CmsPageEditor({ pageId, api, onBack, onDeleted }: CmsPag
       {mediaOpen ? (
         <CmsMediaModal
           media={media}
+          total={mediaTotal}
+          page={mediaPage}
+          pageSize={mediaPageSize}
+          onPageChange={(nextPage) => {
+            void loadMediaPage(nextPage);
+          }}
           onClose={() => setMediaOpen(false)}
           onInvalid={(message) => notify(message, "error")}
           onUpload={(file) => {
             void api.uploadMedia(file).then((res) => {
               if (res.media) {
-                setMedia((prev) => [res.media!, ...prev]);
                 notify("媒體已上傳", "success");
+                void loadMediaPage(1);
               } else if (res.error) {
                 notify(String(res.error), "error");
               }
@@ -816,8 +847,8 @@ export default function CmsPageEditor({ pageId, api, onBack, onDeleted }: CmsPag
             void api.deleteMedia(item.id).then((res) => {
               if (res.error) notify(String(res.error), "error");
               else {
-                setMedia((prev) => prev.filter((mediaItem) => mediaItem.id !== item.id));
                 notify("媒體已刪除", "success");
+                void loadMediaPage(mediaPage);
               }
             });
           }}

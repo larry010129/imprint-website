@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import json
-import os
+import sys
 from pathlib import Path
 
 import psycopg
@@ -15,12 +15,16 @@ ROOT = Path(__file__).resolve().parent.parent
 SEED = ROOT / "app" / "data" / "content-seed.json"
 
 load_dotenv(ROOT / ".env")
+sys.path.insert(0, str(ROOT))
 
 
 def main() -> None:
-    dsn = os.environ.get("DATABASE_URL")
-    if not dsn:
-        raise SystemExit("DATABASE_URL is not set")
+    from app.database import require_database_url
+
+    try:
+        dsn = require_database_url()
+    except RuntimeError as exc:
+        raise SystemExit(str(exc)) from exc
     data = json.loads(SEED.read_text(encoding="utf-8"))
     sample_q = data["faq_items"][0]["question"]
     if "ç" in sample_q or "為什麼" not in sample_q:

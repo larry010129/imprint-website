@@ -118,18 +118,61 @@ async def track_order_partial(request: Request) -> HTMLResponse:
     return html(request, "track_result.html", {"error": None, "rows": rows})
 
 
+HISTORY_DEFAULT_PAGE_SIZE = 20
+FAVORITES_DEFAULT_PAGE_SIZE = 20
+ACCOUNT_ORDERS_PAGE_SIZE = 12
+HISTORY_TABS = ("all", "unpaid", "to_ship", "to_receive", "completed", "cancelled")
+
+
 @router.get("/favorites", response_class=HTMLResponse)
 async def favorites_partial(request: Request) -> HTMLResponse:
+    from app.paging import parse_paging_from_mapping, sql_count_total
+
     user_id = get_user_id(request)
+    page, page_size, limit, offset = parse_paging_from_mapping(
+        request.query_params, default_page_size=FAVORITES_DEFAULT_PAGE_SIZE
+    )
     if not user_id:
-        return html(request, "favorites_list.html", {"items": [], "guest": True})
+        return html(
+            request,
+            "favorites_list.html",
+            {
+                "items": [],
+                "guest": True,
+                "page": page,
+                "page_size": page_size,
+                "total": 0,
+                "has_more": False,
+            },
+        )
     with get_connection() as conn, conn.cursor() as cur:
-        cur.execute(
-            "select * from favorite_items where user_id = %s order by created_at desc",
+        total = sql_count_total(
+            cur,
+            "select count(*) as n from favorite_items where user_id = %s",
             (user_id,),
         )
+        cur.execute(
+            """
+            select * from favorite_items
+            where user_id = %s
+            order by created_at desc
+            limit %s offset %s
+            """,
+            (user_id, limit, offset),
+        )
         items = cur.fetchall()
-    return html(request, "favorites_list.html", {"items": items, "guest": False})
+    return html(
+        request,
+        "favorites_list.html",
+        {
+            "items": items,
+            "guest": False,
+            "page": page,
+            "page_size": page_size,
+            "total": total,
+            "has_more": offset + len(items) < total,
+        },
+    )
 
 
 # Shopee-like history tabs → order.status codes (Imprint pipeline).
@@ -145,53 +188,139 @@ HISTORY_TAB_STATUSES: dict[str, frozenset[str]] = {
 }
 
 
-def _order_status_code(order: dict) -> str:
-    return (order.get("status") or "").strip().lower()
+def _normalize_history_tab(raw) -> str:
+    tab = str(raw or "all").strip().lower()
+    return tab if tab in HISTORY_TAB_STATUSES or tab == "all" else "all"
 
 
-def _orders_for_tab(orders: list, tab: str) -> list:
-    statuses = HISTORY_TAB_STATUSES.get(tab)
-    if statuses is None:
-        return list(orders)
-    if not statuses:
-        return []
-    return [o for o in orders if _order_status_code(o) in statuses]
-
-
-def _empty_history_context(*, guest: bool) -> dict:
+def _empty_history_context(*, guest: bool, tab: str = "all") -> dict:
+    active = _normalize_history_tab(tab)
     return {
         "orders": [],
-        "unpaid_orders": [],
-        "to_ship_orders": [],
-        "to_receive_orders": [],
-        "completed_orders": [],
-        "cancelled_orders": [],
+        "active_tab": active,
+        "all_count": 0,
+        "unpaid_count": 0,
+        "to_ship_count": 0,
+        "to_receive_count": 0,
+        "completed_count": 0,
+        "cancelled_count": 0,
+        "page": 1,
+        "page_size": HISTORY_DEFAULT_PAGE_SIZE,
+        "total": 0,
+        "has_more": False,
         "guest": guest,
     }
 
 
-def _history_list_context(user_id: str) -> dict:
+def _history_tab_counts(cur, user_id: str) -> dict[str, int]:
+    cur.execute(
+        """
+        select lower(status) as status, count(*)::int as n
+        from orders
+        where user_id = %s
+        group by lower(status)
+        """,
+        (user_id,),
+    )
+    by_status = {
+        str(row["status"] or "").strip().lower(): int(row["n"] or 0)
+        for row in cur.fetchall()
+    }
+    counts = {tab: 0 for tab in HISTORY_TABS}
+    counts["all"] = sum(by_status.values())
+    for tab, statuses in HISTORY_TAB_STATUSES.items():
+        counts[tab] = sum(by_status.get(s, 0) for s in statuses)
+    return counts
+
+
+def _history_list_context(
+    user_id: str,
+    *,
+    tab: str = "all",
+    page=None,
+    page_size=None,
+) -> dict:
     from app.orders import attach_order_display, enrich_member_order
+    from app.paging import parse_paging, sql_count_total
+
+    active_tab = _normalize_history_tab(tab)
+    page_i, size_i, limit, offset = parse_paging(
+        page, page_size, default_page_size=HISTORY_DEFAULT_PAGE_SIZE
+    )
+    statuses = HISTORY_TAB_STATUSES.get(active_tab)
 
     with get_connection() as conn, conn.cursor() as cur:
-        cur.execute(
-            "select * from orders where user_id = %s order by created_at desc",
-            (user_id,),
-        )
+        counts = _history_tab_counts(cur, user_id)
+        if statuses is None:
+            total = sql_count_total(
+                cur,
+                "select count(*) as n from orders where user_id = %s",
+                (user_id,),
+            )
+            cur.execute(
+                """
+                select * from orders
+                where user_id = %s
+                order by created_at desc
+                limit %s offset %s
+                """,
+                (user_id, limit, offset),
+            )
+        else:
+            status_list = list(statuses)
+            total = sql_count_total(
+                cur,
+                """
+                select count(*) as n from orders
+                where user_id = %s and lower(status) = any(%s)
+                """,
+                (user_id, status_list),
+            )
+            cur.execute(
+                """
+                select * from orders
+                where user_id = %s and lower(status) = any(%s)
+                order by created_at desc
+                limit %s offset %s
+                """,
+                (user_id, status_list, limit, offset),
+            )
         orders = cur.fetchall()
         if orders:
             attach_order_display(cur, orders)
             for order in orders:
                 enrich_member_order(order)
+
     return {
         "orders": orders,
-        "unpaid_orders": _orders_for_tab(orders, "unpaid"),
-        "to_ship_orders": _orders_for_tab(orders, "to_ship"),
-        "to_receive_orders": _orders_for_tab(orders, "to_receive"),
-        "completed_orders": _orders_for_tab(orders, "completed"),
-        "cancelled_orders": _orders_for_tab(orders, "cancelled"),
+        "active_tab": active_tab,
+        "all_count": counts["all"],
+        "unpaid_count": counts["unpaid"],
+        "to_ship_count": counts["to_ship"],
+        "to_receive_count": counts["to_receive"],
+        "completed_count": counts["completed"],
+        "cancelled_count": counts["cancelled"],
+        "page": page_i,
+        "page_size": size_i,
+        "total": total,
+        "has_more": offset + len(orders) < total,
         "guest": False,
     }
+
+
+def _history_context_from_request(
+    request: Request, user_id: str, *, tab: str | None = None
+) -> dict:
+    from app.paging import parse_paging_from_mapping
+
+    qp = request.query_params
+    active = _normalize_history_tab(tab if tab is not None else qp.get("tab"))
+    page, page_size, _, _ = parse_paging_from_mapping(
+        qp, default_page_size=HISTORY_DEFAULT_PAGE_SIZE
+    )
+    return _history_list_context(
+        user_id, tab=active, page=page, page_size=page_size
+    )
 
 
 @router.get("/history", response_class=HTMLResponse)
@@ -201,9 +330,23 @@ async def history_partial(request: Request) -> HTMLResponse:
         return html(
             request,
             "history_list.html",
-            _empty_history_context(guest=True),
+            _empty_history_context(
+                guest=True, tab=request.query_params.get("tab")
+            ),
         )
-    return html(request, "history_list.html", _history_list_context(user_id))
+    ctx = _history_context_from_request(request, user_id)
+    if str(request.query_params.get("partial") or "").strip().lower() == "rows":
+        prefixes = {
+            "all": "history-detail-",
+            "unpaid": "history-unpaid-detail-",
+            "to_ship": "history-toship-detail-",
+            "to_receive": "history-toreceive-detail-",
+            "completed": "history-completed-detail-",
+            "cancelled": "history-cancelled-detail-",
+        }
+        ctx["detail_prefix"] = prefixes.get(ctx["active_tab"], "history-detail-")
+        return html(request, "history_rows_page.html", ctx)
+    return html(request, "history_list.html", ctx)
 
 
 @router.post("/history/confirm-receipt", response_class=HTMLResponse)
@@ -218,7 +361,7 @@ async def history_confirm_receipt(request: Request) -> HTMLResponse:
             401,
         )
     if not enforce_rate_limit(request, action="confirm-receipt", limit=20, window_seconds=600):
-        ctx = _history_list_context(user_id)
+        ctx = _history_context_from_request(request, user_id)
         ctx["flash_ok"] = False
         ctx["flash_message"] = "操作過於頻繁，請稍後再試"
         return html(request, "history_list.html", ctx, 429)
@@ -232,7 +375,7 @@ async def history_confirm_receipt(request: Request) -> HTMLResponse:
     form = await request.form()
     order_id = str(form.get("order_id") or "").strip()
     if not order_id:
-        ctx = _history_list_context(user_id)
+        ctx = _history_context_from_request(request, user_id)
         ctx["flash_ok"] = False
         ctx["flash_message"] = "缺少訂單編號"
         return html(request, "history_list.html", ctx, 400)
@@ -290,12 +433,10 @@ async def history_confirm_receipt(request: Request) -> HTMLResponse:
                     flash_message = "已確認收到商品，訂單已完成（可於已完成查看）"
                     status_code = 200
 
-    ctx = _history_list_context(user_id)
+    land_tab = "completed" if flash_ok else request.query_params.get("tab")
+    ctx = _history_context_from_request(request, user_id, tab=land_tab)
     ctx["flash_ok"] = flash_ok
     ctx["flash_message"] = flash_message
-    if flash_ok:
-        # Land on 已完成 after confirm-receipt.
-        ctx["active_tab"] = "completed"
     return html(request, "history_list.html", ctx, status_code)
 
 
@@ -442,10 +583,15 @@ async def account_partial(request: Request) -> Response:
         invite_count = 0
         membership = None
         if user:
+            # Lightweight columns for membership stats (not a full order dump).
+            # Soft safety cap — tier windows need more than a UI page of 12.
             cur.execute(
                 """
                 select status, total_price, created_at
-                from orders where user_id = %s
+                from orders
+                where user_id = %s
+                order by created_at desc
+                limit 2000
                 """,
                 (user_id,),
             )
@@ -664,8 +810,31 @@ async def account_security_partial(request: Request) -> HTMLResponse:
 
 @router.get("/stories", response_class=HTMLResponse)
 async def stories_partial(request: Request) -> HTMLResponse:
-    from app.content import fetch_published_testimonials
+    from app.content import (
+        count_published_testimonials,
+        fetch_published_testimonials,
+    )
+    from app.paging import page_window_from_params
 
+    win = page_window_from_params(
+        request.query_params,
+        default_page_size=12,
+        max_page_size=48,
+    )
     with get_connection() as conn, conn.cursor() as cur:
-        items = fetch_published_testimonials(cur)
-    return html(request, "stories_list.html", {"testimonials": items})
+        items = fetch_published_testimonials(
+            cur, limit=win.limit, offset=win.offset
+        )
+        total = count_published_testimonials(cur)
+    return html(
+        request,
+        "stories_list.html",
+        {
+            "testimonials": items,
+            "page": win.page,
+            "page_size": win.page_size,
+            "total": total,
+            "has_more": (win.offset + len(items)) < total,
+            "append": win.page > 1,
+        },
+    )

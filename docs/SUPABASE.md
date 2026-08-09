@@ -110,19 +110,17 @@ supabase db push
 
 After migration, `orders` has ~12 columns; data lives in `order_contacts`, `order_fulfillment`, `order_items`.
 
-## 4. Migrate data from Neon (optional)
+## 4. Source of truth
 
-If you have existing Neon data:
+**Supabase Postgres + Storage** is the only database. Do not point `DATABASE_URL`
+at Neon (`*.neon.tech`) — `app/database.py` rejects those hosts at startup.
+Historical Neon dumps (if any) are archival only; apply schema with
+`python scripts/apply_schema.py` or `supabase db push`, then keep content in
+Supabase.
 
-```bash
-# Export from Neon
-pg_dump "$NEON_DATABASE_URL" --no-owner --no-acl -F c -f imprint.dump
-
-# Import to Supabase (use Direct connection URL)
-pg_restore -d "$SUPABASE_DATABASE_URL" --no-owner --no-acl imprint.dump
-```
-
-Or use Supabase Dashboard → **Database → Backups / import**.
+Page-image scripts (`ensure_page_image_storage_folders.py`,
+`reorganize_supabase_page_images.py`, `migrate_uploads_to_supabase_storage.py`)
+all use the same `DATABASE_URL` + `SUPABASE_*` Storage credentials.
 
 ## 5. Deploy (Render)
 

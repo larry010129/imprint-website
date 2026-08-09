@@ -15,17 +15,72 @@ os.environ.setdefault("STARTUP_SEED_MODE", "off")
 class _Cur:
     def __init__(self, *, fetchone_item=None, fetchall_rows=None, rowcount=1):
         self.item = fetchone_item
-        self.rows = fetchall_rows or []
+        self.rows = list(fetchall_rows or [])
         self.rowcount = rowcount
         self.executed: list[tuple] = []
+        self._last_sql = ""
+        self._last_params = None
+        self._fetchone_queue: list = []
 
     def execute(self, sql, params=None):
         self.executed.append((sql, params))
+        self._last_sql = sql or ""
+        self._last_params = params
+        sql_l = self._last_sql.lower()
+        # Paged history: GROUP BY counts + COUNT(*) + page select.
+        if "group by lower(status)" in sql_l and self.rows:
+            counts: dict[str, int] = {}
+            for row in self.rows:
+                key = str(row.get("status") or "").strip().lower()
+                counts[key] = counts.get(key, 0) + 1
+            self._pending_fetchall = [
+                {"status": status, "n": n} for status, n in counts.items()
+            ]
+            return
+        if "count(*)" in sql_l and "from orders" in sql_l:
+            statuses = None
+            if params and len(params) >= 2 and isinstance(params[1], (list, tuple, set)):
+                statuses = {str(s).lower() for s in params[1]}
+            n = len(self.rows)
+            if statuses is not None:
+                n = sum(
+                    1
+                    for row in self.rows
+                    if str(row.get("status") or "").strip().lower() in statuses
+                )
+            self._fetchone_queue.append({"n": n})
+            self.item = {"n": n}
+            return
+        if (
+            "from orders" in sql_l
+            and "select *" in sql_l
+            and "where user_id" in sql_l
+            and self.rows
+        ):
+            statuses = None
+            if params and len(params) >= 2 and isinstance(params[1], (list, tuple, set)):
+                statuses = {str(s).lower() for s in params[1]}
+            filtered = self.rows
+            if statuses is not None:
+                filtered = [
+                    row
+                    for row in self.rows
+                    if str(row.get("status") or "").strip().lower() in statuses
+                ]
+            self._pending_fetchall = filtered
+            return
+        self._pending_fetchall = self.rows
 
     def fetchone(self):
+        if self._fetchone_queue:
+            return self._fetchone_queue.pop(0)
         return self.item
 
     def fetchall(self):
+        if hasattr(self, "_pending_fetchall"):
+            rows = self._pending_fetchall
+            del self._pending_fetchall
+            return rows
         return self.rows
 
 
@@ -171,15 +226,31 @@ def test_history_list_context_filters_shopee_tabs(monkeypatch):
     monkeypatch.setattr(hm, "get_connection", lambda: _ConnOuter(cur))
     monkeypatch.setattr("app.orders.attach_order_display", lambda _cur, rows: None)
 
-    ctx = hm._history_list_context("user-1")
-    assert [o["id"] for o in ctx["unpaid_orders"]] == ["o4", "o5"]
-    assert [o["id"] for o in ctx["to_ship_orders"]] == ["o3", "o6"]
-    assert [o["id"] for o in ctx["to_receive_orders"]] == ["o1", "o9"]
-    assert [o["id"] for o in ctx["completed_orders"]] == ["o2"]
-    assert [o["id"] for o in ctx["cancelled_orders"]] == ["o7", "o8"]
-    assert "return_orders" not in ctx
-    assert ctx["guest"] is False
-    assert len(ctx["orders"]) == 9
+    ctx_all = hm._history_list_context("user-1", tab="all")
+    assert ctx_all["active_tab"] == "all"
+    assert ctx_all["all_count"] == 9
+    assert ctx_all["unpaid_count"] == 2
+    assert ctx_all["to_ship_count"] == 2
+    assert ctx_all["to_receive_count"] == 2
+    assert ctx_all["completed_count"] == 1
+    assert ctx_all["cancelled_count"] == 2
+    assert "return_orders" not in ctx_all
+    assert ctx_all["guest"] is False
+    assert [o["id"] for o in ctx_all["orders"]] == [o["id"] for o in orders]
+
+    ctx_unpaid = hm._history_list_context("user-1", tab="unpaid")
+    assert ctx_unpaid["active_tab"] == "unpaid"
+    assert [o["id"] for o in ctx_unpaid["orders"]] == ["o4", "o5"]
+    assert ctx_unpaid["total"] == 2
+
+    ctx_ship = hm._history_list_context("user-1", tab="to_ship")
+    assert [o["id"] for o in ctx_ship["orders"]] == ["o3", "o6"]
+    ctx_recv = hm._history_list_context("user-1", tab="to_receive")
+    assert [o["id"] for o in ctx_recv["orders"]] == ["o1", "o9"]
+    ctx_done = hm._history_list_context("user-1", tab="completed")
+    assert [o["id"] for o in ctx_done["orders"]] == ["o2"]
+    ctx_cancel = hm._history_list_context("user-1", tab="cancelled")
+    assert [o["id"] for o in ctx_cancel["orders"]] == ["o7", "o8"]
 
 
 def test_history_tab_labels_in_template():
@@ -241,21 +312,27 @@ def test_confirm_receipt_owner_shipped_delivery_completes(client, monkeypatch):
         "ready_for_pickup": False,
     }
 
-    def fake_history(_user_id):
+    def fake_history(_request, _user_id, *, tab=None):
         return {
             "orders": [completed_order],
-            "unpaid_orders": [],
-            "to_ship_orders": [],
-            "to_receive_orders": [],
-            "completed_orders": [completed_order],
-            "cancelled_orders": [],
+            "active_tab": "completed" if tab == "completed" or tab is None else tab,
+            "all_count": 1,
+            "unpaid_count": 0,
+            "to_ship_count": 0,
+            "to_receive_count": 0,
+            "completed_count": 1,
+            "cancelled_count": 0,
+            "page": 1,
+            "page_size": 20,
+            "total": 1,
+            "has_more": False,
             "guest": False,
         }
 
     monkeypatch.setattr(hm, "get_user_id", lambda _req: "user-owner")
     monkeypatch.setattr(hm, "enforce_rate_limit", lambda *a, **k: True)
     monkeypatch.setattr(hm, "get_connection", lambda: _ConnOuter(select_cur))
-    monkeypatch.setattr(hm, "_history_list_context", fake_history)
+    monkeypatch.setattr(hm, "_history_context_from_request", fake_history)
 
     resp = client.post(
         "/htmx/history/confirm-receipt",
@@ -310,8 +387,8 @@ def test_confirm_receipt_rejects_wrong_owner(client, monkeypatch):
     monkeypatch.setattr(hm, "get_connection", lambda: _ConnOuter(select_cur))
     monkeypatch.setattr(
         hm,
-        "_history_list_context",
-        lambda _uid: hm._empty_history_context(guest=False),
+        "_history_context_from_request",
+        lambda *_a, **_k: hm._empty_history_context(guest=False),
     )
 
     resp = client.post(
@@ -341,8 +418,8 @@ def test_confirm_receipt_rejects_non_shipped(client, monkeypatch):
     monkeypatch.setattr(hm, "get_connection", lambda: _ConnOuter(select_cur))
     monkeypatch.setattr(
         hm,
-        "_history_list_context",
-        lambda _uid: hm._empty_history_context(guest=False),
+        "_history_context_from_request",
+        lambda *_a, **_k: hm._empty_history_context(guest=False),
     )
 
     resp = client.post(
@@ -373,8 +450,8 @@ def test_confirm_receipt_rejects_pickup_shipped(client, monkeypatch):
     monkeypatch.setattr(hm, "get_connection", lambda: _ConnOuter(select_cur))
     monkeypatch.setattr(
         hm,
-        "_history_list_context",
-        lambda _uid: hm._empty_history_context(guest=False),
+        "_history_context_from_request",
+        lambda *_a, **_k: hm._empty_history_context(guest=False),
     )
 
     resp = client.post(

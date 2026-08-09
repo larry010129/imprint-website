@@ -33,6 +33,9 @@ window.ImprintMemberId = window.ImprintMemberId || (function () {
   var _query = '';
   var _searchTimer = null;
   var _membershipEnabled = true;
+  var _page = 1;
+  var _pageSize = 20;
+  var _total = 0;
 
   function membershipProgramOn() {
     return _membershipEnabled !== false;
@@ -99,8 +102,24 @@ window.ImprintMemberId = window.ImprintMemberId || (function () {
   }
 
   function filteredAccounts() {
-    if (!_query) return _allAccounts.slice();
-    return _allAccounts.filter(function (a) { return matchesAccount(a, _query); });
+    return _allAccounts.slice();
+  }
+
+  function pagerHtml() {
+    var pageCount = Math.max(1, Math.ceil(_total / Math.max(_pageSize, 1)));
+    if (pageCount <= 1 && !_query) {
+      return '<p class="adx-member-search-count" id="accountsSearchCount">共 ' + _total + ' 筆</p>';
+    }
+    return (
+      '<div class="adx-pager" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0;">' +
+        '<p class="adx-member-search-count" id="accountsSearchCount" style="margin:0;">' +
+          (_query ? ('搜尋結果 ' + _total + ' 筆') : ('共 ' + _total + ' 筆')) +
+          ' · 第 ' + _page + ' / ' + pageCount + ' 頁' +
+        '</p>' +
+        '<button type="button" class="btn-sm" id="accountsPrevPage"' + (_page <= 1 ? ' disabled' : '') + '>上一頁</button>' +
+        '<button type="button" class="btn-sm" id="accountsNextPage"' + (_page >= pageCount ? ' disabled' : '') + '>下一頁</button>' +
+      '</div>'
+    );
   }
 
   function roleSelect(account) {
@@ -167,11 +186,13 @@ window.ImprintMemberId = window.ImprintMemberId || (function () {
   }
 
   function renderList(accounts) {
-    if (!_allAccounts.length) {
+    if (!_total && !_query) {
       return '<p class="adx-table-empty">尚無註冊帳號。</p>';
     }
     if (!accounts.length) {
-      return '<p class="adx-table-empty">找不到符合「' + esc(_query) + '」的帳號。</p>';
+      return '<p class="adx-table-empty">' +
+        (_query ? ('找不到符合「' + esc(_query) + '」的帳號。') : '此頁沒有帳號。') +
+        '</p>';
     }
     var rows = accounts.map(renderRow).join('');
     return (
@@ -192,21 +213,6 @@ window.ImprintMemberId = window.ImprintMemberId || (function () {
     root.classList.remove('skel-panel');
   }
 
-  function updateListOnly() {
-    var list = root.querySelector('.adx-member-list');
-    var countEl = root.querySelector('#accountsSearchCount');
-    var accounts = filteredAccounts();
-    if (countEl) {
-      countEl.textContent = _query
-        ? ('顯示 ' + accounts.length + ' / ' + _allAccounts.length + ' 筆')
-        : ('共 ' + _allAccounts.length + ' 筆');
-    }
-    if (!list) return;
-    list.innerHTML = renderList(accounts);
-    bindEvents();
-    if (window.AdminTableSort) window.AdminTableSort.bindMemberList(list);
-  }
-
   function renderShell(accounts) {
     _allAccounts = accounts || [];
     clearPanelBusy();
@@ -217,14 +223,11 @@ window.ImprintMemberId = window.ImprintMemberId || (function () {
       '<div class="orders-search adx-accounts-search">' +
         '<input type="search" id="accountsSearchInput" placeholder="搜尋姓名、Email、電話、店家、編號…" aria-label="搜尋帳號" autocomplete="off" value="' + esc(_query) + '">' +
       '</div>' +
-      '<p class="adx-member-search-count" id="accountsSearchCount">' +
-        (_query
-          ? ('顯示 ' + shown.length + ' / ' + _allAccounts.length + ' 筆')
-          : ('共 ' + _allAccounts.length + ' 筆')) +
-      '</p>' +
+      pagerHtml() +
       '<div class="adx-member-list">' + renderList(shown) + '</div>';
     bindEvents();
     bindSearch();
+    bindPager();
     var list = root.querySelector('.adx-member-list');
     if (list && window.AdminTableSort) window.AdminTableSort.bindMemberList(list);
   }
@@ -236,9 +239,30 @@ window.ImprintMemberId = window.ImprintMemberId || (function () {
       clearTimeout(_searchTimer);
       _searchTimer = setTimeout(function () {
         _query = input.value.trim();
-        updateListOnly();
+        _page = 1;
+        load(true, true);
       }, 200);
     });
+  }
+
+  function bindPager() {
+    var prev = document.getElementById('accountsPrevPage');
+    var next = document.getElementById('accountsNextPage');
+    if (prev) {
+      prev.addEventListener('click', function () {
+        if (_page <= 1) return;
+        _page -= 1;
+        load(true, true);
+      });
+    }
+    if (next) {
+      next.addEventListener('click', function () {
+        var pageCount = Math.max(1, Math.ceil(_total / Math.max(_pageSize, 1)));
+        if (_page >= pageCount) return;
+        _page += 1;
+        load(true, true);
+      });
+    }
   }
 
   function bindEvents() {
@@ -378,7 +402,11 @@ window.ImprintMemberId = window.ImprintMemberId || (function () {
     if (!silent) {
       root.innerHTML = window.SkeletonUI ? window.SkeletonUI.accountsShell() : '<p class="adx-loading-inline">載入帳戶中…</p>';
     }
-    var accountsP = api.admin.getAccounts();
+    var accountsP = api.admin.getAccounts({
+      q: _query || undefined,
+      page: _page,
+      pageSize: _pageSize,
+    });
     var membershipP = api.getMembershipConfig
       ? api.getMembershipConfig()
       : Promise.resolve({ config: { enabled: true } });
@@ -392,6 +420,9 @@ window.ImprintMemberId = window.ImprintMemberId || (function () {
         root.innerHTML = '<p class="note warn">載入失敗：' + esc(res.error) + '</p>';
         return;
       }
+      _total = typeof res.total === 'number' ? res.total : (res.accounts || []).length;
+      if (typeof res.page === 'number' && res.page > 0) _page = res.page;
+      if (typeof res.page_size === 'number' && res.page_size > 0) _pageSize = res.page_size;
       _loaded = true;
       renderShell(res.accounts || []);
     });

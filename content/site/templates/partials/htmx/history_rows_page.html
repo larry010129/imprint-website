@@ -1,0 +1,17 @@
+{% with orders = orders, detail_prefix = detail_prefix %}
+{% include "partials/htmx/history_order_rows.html" %}
+{% endwith %}
+{% set tab = active_tab if active_tab is defined else 'all' %}
+{% set cur_page = page if page is defined else 1 %}
+{% set cur_size = page_size if page_size is defined else 20 %}
+{% set more = has_more if has_more is defined else false %}
+<div id="history-load-more" class="member-list-more" hx-swap-oob="true">
+  {% if more %}
+  <button type="button" class="btn btn-ghost"
+    data-i18n="history_load_more"
+    hx-get="/htmx/history?tab={{ tab }}&page={{ cur_page + 1 }}&page_size={{ cur_size }}&partial=rows"
+    hx-target="#history-orders-tbody"
+    hx-swap="beforeend"
+    hx-select="tr">載入更多</button>
+  {% endif %}
+</div>

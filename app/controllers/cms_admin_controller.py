@@ -12,6 +12,7 @@ from fastapi.responses import JSONResponse
 from app.auth import log_admin_action, require_admin
 from app.auth_totp_service import step_up_from_body
 from app.database import get_connection
+from app.paging import page_meta, parse_paging_from_mapping
 from config.settings import settings
 
 router = APIRouter(prefix="/admin", tags=["admin-cms"])
@@ -132,18 +133,22 @@ def _ensure_all(cur) -> None:
 async def cms_pages_list(request: Request) -> dict:
     _require_admin(request)
     from app.cms_copy_slot_specs import EDITABLE_SITE_PAGES
-    from app.cms_pages import fetch_all_pages
+    from app.cms_pages import count_all_pages, fetch_all_pages
 
+    page, page_size, limit, offset = parse_paging_from_mapping(request.query_params)
     with get_connection() as conn, conn.cursor() as cur:
         _ensure_all(cur)
-        pages = fetch_all_pages(cur)
-        for page in pages:
-            slug = str(page.get("slug") or "")
-            page["cms_path"] = f"/p/{slug}"
+        total = count_all_pages(cur)
+        pages = fetch_all_pages(cur, limit=limit, offset=offset)
+        for row in pages:
+            slug = str(row.get("slug") or "")
+            row["cms_path"] = f"/p/{slug}"
             # Keep DB site_route (host pages); modular pages stay null.
-            if not page.get("site_route"):
-                page["site_route"] = None
-        return {"pages": pages, "site_pages": list(EDITABLE_SITE_PAGES)}
+            if not row.get("site_route"):
+                row["site_route"] = None
+        out = {"pages": pages, "site_pages": list(EDITABLE_SITE_PAGES)}
+        out.update(page_meta(page=page, page_size=page_size, total=total))
+        return out
 
 
 @router.get("/cms-site-page")
@@ -555,11 +560,16 @@ async def page_copy_slot_update(request: Request) -> JSONResponse:
 @router.get("/cms-media")
 async def cms_media_list(request: Request) -> dict:
     _require_admin(request)
-    from app.cms_media import fetch_media
+    from app.cms_media import count_media, fetch_media
 
+    page, page_size, limit, offset = parse_paging_from_mapping(request.query_params)
     with get_connection() as conn, conn.cursor() as cur:
         _ensure_all(cur)
-        return {"media": fetch_media(cur)}
+        total = count_media(cur)
+        media = fetch_media(cur, limit=limit, offset=offset)
+        out = {"media": media}
+        out.update(page_meta(page=page, page_size=page_size, total=total))
+        return out
 
 
 @router.post("/cms-media-upload")

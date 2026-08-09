@@ -10,6 +10,9 @@
 
   var _loaded = false;
   var _coupons = [];
+  var _page = 1;
+  var _pageSize = 20;
+  var _total = 0;
 
   function esc(s) {
     return window.AdminPanel && window.AdminPanel.escapeHtml
@@ -132,13 +135,45 @@
     );
   }
 
+  function pagerHtml() {
+    var pageCount = Math.max(1, Math.ceil(_total / Math.max(_pageSize, 1)));
+    if (pageCount <= 1) {
+      return '<p class="adx-muted" style="margin:8px 0;">共 ' + _total + ' 筆</p>';
+    }
+    return (
+      '<div class="adx-pager" style="display:flex;gap:8px;align-items:center;margin:8px 0;">' +
+        '<span class="adx-muted">共 ' + _total + ' 筆 · 第 ' + _page + ' / ' + pageCount + ' 頁</span>' +
+        '<button type="button" class="btn-sm" id="couponsPrevPage"' + (_page <= 1 ? ' disabled' : '') + '>上一頁</button>' +
+        '<button type="button" class="btn-sm" id="couponsNextPage"' + (_page >= pageCount ? ' disabled' : '') + '>下一頁</button>' +
+      '</div>'
+    );
+  }
+
   function renderShell(coupons) {
     _coupons = coupons || [];
     root.innerHTML =
       '<p class="adx-panel-note">建立結帳優惠碼（百分比或固定金額）。可設定最低消費、使用次數、每人上限與有效期限。</p>' +
       '<div class="adx-panel-toolbar"><button type="button" class="btn-sm btn-primary" id="btnCreateCoupon">+ 建立優惠券</button></div>' +
+      pagerHtml() +
       renderTable(_coupons);
     bindEvents();
+    var prev = document.getElementById('couponsPrevPage');
+    var next = document.getElementById('couponsNextPage');
+    if (prev) {
+      prev.addEventListener('click', function () {
+        if (_page <= 1) return;
+        _page -= 1;
+        load(true, true);
+      });
+    }
+    if (next) {
+      next.addEventListener('click', function () {
+        var pageCount = Math.max(1, Math.ceil(_total / Math.max(_pageSize, 1)));
+        if (_page >= pageCount) return;
+        _page += 1;
+        load(true, true);
+      });
+    }
     var table = root.querySelector('.adx-table');
     if (table && window.AdminTableSort) window.AdminTableSort.bind(table);
   }
@@ -419,11 +454,14 @@
         ? window.SkeletonUI.invitesShell()
         : '<p class="adx-loading-inline">載入優惠券中…</p>';
     }
-    api.admin.getCoupons().then(function (res) {
+    api.admin.getCoupons({ page: _page, pageSize: _pageSize }).then(function (res) {
       if (res.error) {
         root.innerHTML = '<p class="note warn">載入失敗：' + esc(res.error) + '</p>';
         return;
       }
+      _total = typeof res.total === 'number' ? res.total : (res.coupons || []).length;
+      if (typeof res.page === 'number' && res.page > 0) _page = res.page;
+      if (typeof res.page_size === 'number' && res.page_size > 0) _pageSize = res.page_size;
       _loaded = true;
       root.removeAttribute('aria-busy');
       root.classList.remove('skel-panel');

@@ -3,11 +3,11 @@
   <p>請先登入以查看收藏。</p>
   <a href="/login?next=/favorites" class="btn btn-mint">會員登入</a>
 </div>
-{% elif not items %}
+{% elif not items and (page|default(1)) <= 1 %}
 <div class="member-state member-state--empty"><p>尚無收藏款式。</p>
   <a href="/shop/calculator/" class="btn btn-mint">前往品項訂製</a></div>
 {% else %}
-<div class="member-favorites-grid">
+<div class="member-favorites-grid" id="favorites-grid">
   {% for item in items %}
   <article class="member-fav-card">
     <div class="member-fav-card__body">
@@ -18,4 +18,16 @@
   </article>
   {% endfor %}
 </div>
+{% if has_more %}
+<div class="member-list-more" id="favorites-load-more">
+  <button
+    type="button"
+    class="btn btn-ghost"
+    hx-get="/htmx/favorites?page={{ (page|default(1)) + 1 }}&page_size={{ page_size|default(20) }}"
+    hx-target="#favorites-grid"
+    hx-swap="beforeend"
+    hx-select=".member-fav-card"
+  >載入更多</button>
+</div>
+{% endif %}
 {% endif %}

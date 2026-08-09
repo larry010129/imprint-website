@@ -3,7 +3,6 @@ import type { ColumnDef, PaginationState, SortingState } from "@tanstack/react-t
 import {
   flexRender,
   getCoreRowModel,
-  getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
@@ -46,9 +45,13 @@ export interface ProductTableRow {
 
 export interface AdminProductsTableProps {
   rows: ProductTableRow[];
+  total?: number;
+  pageIndex?: number;
+  pageSize?: number;
   emptyLabel?: string;
   pageSizeOptions?: number[];
   defaultPageSize?: number;
+  onPaginationChange?: (pagination: PaginationState) => void;
   onRendered?: () => void;
 }
 
@@ -154,22 +157,30 @@ const columns: ColumnDef<ProductTableRow>[] = [
 
 export default function AdminProductsTable({
   rows,
+  total,
+  pageIndex: pageIndexProp,
+  pageSize: pageSizeProp,
   emptyLabel = "此品項尚無商品。",
   pageSizeOptions = [5, 10, 25, 50],
   defaultPageSize = 10,
+  onPaginationChange,
   onRendered,
 }: AdminProductsTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [pagination, setPagination] = useState<PaginationState>({
-    pageIndex: 0,
-    pageSize: defaultPageSize,
+    pageIndex: pageIndexProp ?? 0,
+    pageSize: pageSizeProp ?? defaultPageSize,
   });
 
-  const rowsKey = rows.map((r) => r.id).join(",");
-
   useEffect(() => {
-    setPagination((prev) => (prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 }));
-  }, [rowsKey]);
+    setPagination((prev) => ({
+      pageIndex: pageIndexProp ?? prev.pageIndex,
+      pageSize: pageSizeProp ?? prev.pageSize,
+    }));
+  }, [pageIndexProp, pageSizeProp]);
+
+  const recordCount = total ?? rows.length;
+  const pageCount = Math.max(1, Math.ceil(recordCount / Math.max(pagination.pageSize, 1)));
 
   const table = useReactTable({
     data: rows,
@@ -177,18 +188,23 @@ export default function AdminProductsTable({
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     onSortingChange: setSorting,
-    getPaginationRowModel: getPaginationRowModel(),
-    onPaginationChange: setPagination,
+    manualPagination: true,
+    pageCount,
+    onPaginationChange: (updater) => {
+      setPagination((prev) => {
+        const next = typeof updater === "function" ? updater(prev) : updater;
+        onPaginationChange?.(next);
+        return next;
+      });
+    },
     state: { sorting, pagination },
     getRowId: (row) => row.id,
   });
 
   const pageIndex = table.getState().pagination.pageIndex;
   const pageSize = table.getState().pagination.pageSize;
-  const pageCount = Math.max(table.getPageCount(), 1);
-  const recordCount = rows.length;
   const from = recordCount === 0 ? 0 : pageIndex * pageSize + 1;
-  const to = Math.min((pageIndex + 1) * pageSize, recordCount);
+  const to = Math.min(pageIndex * pageSize + rows.length, recordCount);
 
   const { pages, showLeftEllipsis, showRightEllipsis } = usePagination({
     currentPage: pageIndex + 1,

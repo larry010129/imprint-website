@@ -218,7 +218,9 @@ export async function cropImageToFile(
   const mime = options?.mimeType || "image/webp";
   const ext =
     mime === "image/png" ? "png" : mime === "image/webp" ? "webp" : "jpg";
-  const baseName = sourceFile?.name?.replace(/\.[^.]+$/, "") || "cropped";
+  // Keep original upload basename (stem); only normalize extension to output mime.
+  const sourceName = sourceFile?.name || "";
+  const baseName = sourceName.replace(/\.[^.]+$/, "") || "image";
   const blob = await cropImageToBlob(
     src,
     crop,
@@ -227,5 +229,5 @@ export async function cropImageToFile(
     options?.maxWidth,
     options?.maxBytes,
   );
-  return new File([blob], `${baseName}-cropped.${ext}`, { type: mime });
+  return new File([blob], `${baseName}.${ext}`, { type: mime });
 }

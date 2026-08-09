@@ -3,7 +3,6 @@ import type { ColumnDef, PaginationState, SortingState } from "@tanstack/react-t
 import {
   flexRender,
   getCoreRowModel,
-  getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
@@ -54,8 +53,12 @@ export interface OrderTableRow {
 
 export interface AdminOrdersTableProps {
   rows: OrderTableRow[];
+  total?: number;
+  pageIndex?: number;
+  pageSize?: number;
   pageSizeOptions?: number[];
   defaultPageSize?: number;
+  onPaginationChange?: (pagination: PaginationState) => void;
   onRendered?: () => void;
 }
 
@@ -212,15 +215,29 @@ const columns: ColumnDef<OrderTableRow>[] = [
 
 export default function AdminOrdersTable({
   rows,
+  total,
+  pageIndex: pageIndexProp,
+  pageSize: pageSizeProp,
   pageSizeOptions = [10, 20, 50, 100],
   defaultPageSize = 20,
+  onPaginationChange,
   onRendered,
 }: AdminOrdersTableProps) {
   const [sorting, setSorting] = useState<SortingState>([{ id: "created", desc: true }]);
   const [pagination, setPagination] = useState<PaginationState>({
-    pageIndex: 0,
-    pageSize: defaultPageSize,
+    pageIndex: pageIndexProp ?? 0,
+    pageSize: pageSizeProp ?? defaultPageSize,
   });
+
+  useEffect(() => {
+    setPagination((prev) => ({
+      pageIndex: pageIndexProp ?? prev.pageIndex,
+      pageSize: pageSizeProp ?? prev.pageSize,
+    }));
+  }, [pageIndexProp, pageSizeProp]);
+
+  const recordCount = total ?? rows.length;
+  const pageCount = Math.max(1, Math.ceil(recordCount / Math.max(pagination.pageSize, 1)));
 
   const table = useReactTable({
     data: rows,
@@ -228,14 +245,21 @@ export default function AdminOrdersTable({
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     onSortingChange: setSorting,
-    getPaginationRowModel: getPaginationRowModel(),
-    onPaginationChange: setPagination,
+    manualPagination: true,
+    pageCount,
+    onPaginationChange: (updater) => {
+      setPagination((prev) => {
+        const next = typeof updater === "function" ? updater(prev) : updater;
+        onPaginationChange?.(next);
+        return next;
+      });
+    },
     state: { sorting, pagination },
   });
 
   const { pages, showLeftEllipsis, showRightEllipsis } = usePagination({
     currentPage: table.getState().pagination.pageIndex + 1,
-    totalPages: Math.max(table.getPageCount(), 1),
+    totalPages: pageCount,
     paginationItemsToDisplay: 5,
   });
 
@@ -309,8 +333,8 @@ export default function AdminOrdersTable({
       <div className="flex items-center justify-between gap-3 max-sm:flex-col">
         <p className="flex-1 whitespace-nowrap text-sm text-muted-foreground">
           第 <span className="text-foreground">{table.getState().pagination.pageIndex + 1}</span> 頁 / 共{" "}
-          <span className="text-foreground">{Math.max(table.getPageCount(), 1)}</span> 頁 · 共{" "}
-          {rows.length} 筆
+          <span className="text-foreground">{pageCount}</span> 頁 · 共{" "}
+          {recordCount} 筆
         </p>
 
         <div className="grow">

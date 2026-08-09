@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { ImagePlus, Trash2, Upload } from "lucide-react";
+import { ImagePlus, RotateCcw, Trash2, Upload } from "lucide-react";
 
 import { useImageUpload } from "@/components/hooks/use-image-upload";
 import { ImageCropEditor } from "@/components/ui/image-crop-editor";
@@ -36,6 +36,10 @@ export type PageImageEditRow = {
   image_alt?: string;
   display_url?: string;
   default_image_url?: string;
+  previous_image_url?: string | null;
+  previous_image_webp?: string | null;
+  previousImageUrl?: string | null;
+  previousImageWebp?: string | null;
 };
 
 export type PageImageEditModalProps = {
@@ -50,13 +54,35 @@ export type PageImageEditModalProps = {
     imageWebp: string;
     imageAlt: string;
     isPublished: boolean;
-  }) => Promise<{ error?: string | { message?: string } }>;
+  }) => Promise<{
+    pageImage?: PageImageEditRow;
+    error?: string | { message?: string };
+  }>;
+  pageImageAction?: (
+    pageKey: string,
+    slotKey: string,
+    action: "restore" | "reset" | "publish" | "unpublish",
+  ) => Promise<{
+    pageImage?: PageImageEditRow;
+    ok?: boolean;
+    error?: string | { message?: string };
+  }>;
 };
 
 function resolveError(error: string | { message?: string } | undefined) {
   if (!error) return "儲存失敗";
   if (typeof error === "string") return error;
   return error.message || "儲存失敗";
+}
+
+function previousUrlOf(row: PageImageEditRow): string {
+  return (
+    row.previous_image_url ||
+    row.previousImageUrl ||
+    row.previous_image_webp ||
+    row.previousImageWebp ||
+    ""
+  ).trim();
 }
 
 async function resolveUploadFile(
@@ -81,6 +107,7 @@ export default function PageImageEditModal({
   onSaved,
   uploadImage,
   updatePageImage,
+  pageImageAction,
 }: PageImageEditModalProps) {
   const initialPreview =
     row.display_url || row.image_url || row.default_image_url || "";
@@ -88,6 +115,7 @@ export default function PageImageEditModal({
 
   const [imageUrl, setImageUrl] = useState(row.image_url || "");
   const [imageWebp, setImageWebp] = useState(row.image_webp || "");
+  const [previousUrl, setPreviousUrl] = useState(() => previousUrlOf(row));
   const [saving, setSaving] = useState(false);
   const [validationError, setValidationError] = useState("");
   const [crop, setCrop] = useState<CropPercent>(() => defaultCropPercent(aspect));
@@ -124,6 +152,24 @@ export default function PageImageEditModal({
   const handleCropInit = useCallback((next: CropPercent) => {
     setCrop(next);
   }, []);
+
+  const applySavedRow = useCallback(
+    (saved: PageImageEditRow | undefined, fallbackUrl: string) => {
+      const nextUrl = saved?.image_url || fallbackUrl;
+      const nextWebp = saved?.image_webp || "";
+      const nextPrev = saved ? previousUrlOf(saved) : "";
+      setImageUrl(nextUrl);
+      setImageWebp(nextWebp);
+      setPreviousUrl(nextPrev);
+      if (nextUrl) resetPreview(nextUrl);
+      onSaved({
+        slotKey: row.slot_key,
+        imageUrl: nextUrl,
+        imageAlt: row.image_alt || "",
+      });
+    },
+    [onSaved, resetPreview, row.image_alt, row.slot_key],
+  );
 
   const handleSave = useCallback(async () => {
     setSaving(true);
@@ -171,24 +217,20 @@ export default function PageImageEditModal({
         return;
       }
 
-      onSaved({
-        slotKey: row.slot_key,
-        imageUrl: nextUrl,
-        imageAlt: row.image_alt || "",
-      });
+      applySavedRow(updateRes.pageImage, nextUrl);
     } catch (error) {
       setValidationError(error instanceof Error ? error.message : "裁切失敗");
     } finally {
       setSaving(false);
     }
   }, [
+    applySavedRow,
     crop,
     cropTouched,
     file,
     hasPreview,
     imageUrl,
     imageWebp,
-    onSaved,
     previewUrl,
     row.image_alt,
     row.is_published,
@@ -198,6 +240,24 @@ export default function PageImageEditModal({
     updatePageImage,
     uploadImage,
   ]);
+
+  const handleRestore = useCallback(async () => {
+    if (!pageImageAction || !previousUrl) return;
+    setSaving(true);
+    setValidationError("");
+    try {
+      const res = await pageImageAction(row.page_key, row.slot_key, "restore");
+      if (res.error) {
+        setValidationError(resolveError(res.error));
+        return;
+      }
+      applySavedRow(res.pageImage, previousUrl);
+    } catch (error) {
+      setValidationError(error instanceof Error ? error.message : "還原失敗");
+    } finally {
+      setSaving(false);
+    }
+  }, [applySavedRow, pageImageAction, previousUrl, row.page_key, row.slot_key]);
 
   const title = row.slot_label || row.label || "圖片";
 
@@ -302,6 +362,20 @@ export default function PageImageEditModal({
                 </div>
               </div>
             )}
+
+            {previousUrl && pageImageAction ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="border-[#ede7e0] bg-white text-[#2b2320] shadow-none hover:bg-[#f7f3ee]"
+                disabled={saving}
+                onClick={() => void handleRestore()}
+              >
+                <RotateCcw className="size-3.5" aria-hidden />
+                還原上一張
+              </Button>
+            ) : null}
 
             {file ? (
               <p className="text-xs text-[#8a817b]">已選擇新圖片，儲存後才會上傳。</p>

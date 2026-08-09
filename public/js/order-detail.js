@@ -102,10 +102,11 @@
 
   initDetailGalleries();
 
-  // History tabs (HTMX-loaded #htmx-history .member-tab)
+  // History tabs: prefer HTMX reload (SQL-paged active tab). Client toggle only when no hx-get.
   document.addEventListener('click', e => {
     const btn = e.target.closest('.member-tab');
     if (!btn) return;
+    if (btn.hasAttribute('hx-get') || btn.getAttribute('hx-get') != null) return;
     const root = btn.closest('#htmx-history') || btn.closest('.member-app');
     if (!root) return;
     const tab = btn.dataset.tab;

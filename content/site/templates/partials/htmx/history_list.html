@@ -8,22 +8,23 @@
   <p data-i18n="history_login_required">請先登入以查看訂購紀錄。</p>
   <a href="/login?next=/history" class="btn btn-mint" data-i18n="home_btn_login">會員登入</a>
 </div>
-{% elif not orders %}
-<div class="member-state member-state--empty"><p data-i18n="history_empty_all">尚無訂購紀錄。</p></div>
 {% else %}
-{% set unpaid_list = unpaid_orders if unpaid_orders is defined else [] %}
-{% set to_ship_list = to_ship_orders if to_ship_orders is defined else [] %}
-{% set to_receive_list = to_receive_orders if to_receive_orders is defined else [] %}
-{% set completed_list = completed_orders if completed_orders is defined else [] %}
-{% set cancelled_list = cancelled_orders if cancelled_orders is defined else [] %}
 {% set tab = active_tab if active_tab is defined and active_tab else 'all' %}
+{% set counts = {
+  'all': all_count|default(0),
+  'unpaid': unpaid_count|default(0),
+  'to_ship': to_ship_count|default(0),
+  'to_receive': to_receive_count|default(0),
+  'completed': completed_count|default(0),
+  'cancelled': cancelled_count|default(0),
+} %}
 {% set history_tabs = [
-  ('all', 'history_tab_all', '全部', orders),
-  ('unpaid', 'history_tab_unpaid', '待付款', unpaid_list),
-  ('to_ship', 'history_tab_to_ship', '待出貨', to_ship_list),
-  ('to_receive', 'history_tab_to_receive', '待收貨', to_receive_list),
-  ('completed', 'history_tab_completed', '已完成', completed_list),
-  ('cancelled', 'history_tab_cancelled', '不成立', cancelled_list),
+  ('all', 'history_tab_all', '全部'),
+  ('unpaid', 'history_tab_unpaid', '待付款'),
+  ('to_ship', 'history_tab_to_ship', '待出貨'),
+  ('to_receive', 'history_tab_to_receive', '待收貨'),
+  ('completed', 'history_tab_completed', '已完成'),
+  ('cancelled', 'history_tab_cancelled', '不成立'),
 ] %}
 {% set empty_copy = {
   'all': ('history_empty_all', '尚無訂購紀錄。'),
@@ -41,20 +42,24 @@
   'completed': 'history-completed-detail-',
   'cancelled': 'history-cancelled-detail-',
 } %}
+{% set empty_i18n, empty_zh = empty_copy[tab] %}
+{% set page_n = page|default(1) %}
+{% set size_n = page_size|default(20) %}
 <div class="member-tabs" role="tablist" aria-label="訂購紀錄分類">
-  {% for key, i18n_key, label_zh, tab_orders in history_tabs %}
+  {% for key, i18n_key, label_zh in history_tabs %}
   <button type="button" class="member-tab{% if tab == key %} is-active{% endif %}" role="tab"
     aria-selected="{{ 'true' if tab == key else 'false' }}"
-    data-tab="{{ key }}" id="history-tab-{{ key }}">
-    <span class="member-tab-label" data-i18n="{{ i18n_key }}">{{ label_zh }}</span>{% if tab_orders|length > 0 %}<span class="member-tab-count" id="history-tabcount-{{ key }}">({{ tab_orders|length }})</span>{% endif %}
+    data-tab="{{ key }}" id="history-tab-{{ key }}"
+    hx-get="/htmx/history?tab={{ key }}&page=1&page_size={{ size_n }}"
+    hx-target="#htmx-history"
+    hx-swap="innerHTML">
+    <span class="member-tab-label" data-i18n="{{ i18n_key }}">{{ label_zh }}</span>{% if counts[key] > 0 %}<span class="member-tab-count" id="history-tabcount-{{ key }}">({{ counts[key] }})</span>{% endif %}
   </button>
   {% endfor %}
 </div>
 
-{% for key, i18n_key, label_zh, tab_orders in history_tabs %}
-{% set empty_i18n, empty_zh = empty_copy[key] %}
-<div class="member-tab-panel" data-tab-panel="{{ key }}" role="tabpanel" aria-labelledby="history-tab-{{ key }}"{% if tab != key %} hidden{% endif %}>
-  {% if not tab_orders %}
+<div class="member-tab-panel" data-tab-panel="{{ tab }}" role="tabpanel" aria-labelledby="history-tab-{{ tab }}">
+  {% if not orders %}
   <div class="member-state member-state--empty">
     <p data-i18n="{{ empty_i18n }}">{{ empty_zh }}</p>
   </div>
@@ -71,14 +76,24 @@
           <th class="member-table-expand-col" aria-hidden="true"></th>
         </tr>
       </thead>
-      <tbody>
-        {% with orders = tab_orders, detail_prefix = detail_prefixes[key] %}
+      <tbody id="history-orders-tbody">
+        {% with detail_prefix = detail_prefixes[tab] %}
         {% include "partials/htmx/history_order_rows.html" %}
         {% endwith %}
       </tbody>
     </table>
   </div>
+  {% if has_more %}
+  <div class="member-list-more" id="history-load-more">
+    <button
+      type="button"
+      class="btn btn-ghost"
+      hx-get="/htmx/history?tab={{ tab }}&page={{ page_n + 1 }}&page_size={{ size_n }}&partial=rows"
+      hx-target="#history-orders-tbody"
+      hx-swap="beforeend"
+    >載入更多</button>
+  </div>
+  {% endif %}
   {% endif %}
 </div>
-{% endfor %}
 {% endif %}

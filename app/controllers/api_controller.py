@@ -27,12 +27,15 @@ from app.gold_scrape_job import (
 from app.catalog import (
     build_catalog_product,
     build_catalog_response,
+    count_catalog_rows,
     fetch_catalog_rows,
     fetch_product_row,
+    list_catalog_category_slugs,
     load_product_children,
     normalize_catalog_detail,
 )
 from app.memorial_diamonds import list_tombstoned_style_keys, merge_memorial_diamond_catalog
+from app.paging import page_meta, page_response, page_window_from_params, sql_count_total
 from app.product_categories import build_category_meta, fetch_categories
 from app.orders import (
     attach_order_display,
@@ -300,21 +303,37 @@ def my_orders(request: Request) -> dict:
     if not user_id:
         raise HTTPException(status_code=401, detail="not signed in")
 
+    window = page_window_from_params(
+        request.query_params, default_page_size=12, max_page_size=100
+    )
     with get_connection() as conn, conn.cursor() as cur:
+        total = sql_count_total(
+            cur,
+            "select count(*) as n from orders where user_id = %s",
+            (user_id,),
+        )
         cur.execute(
             """
             select *
             from orders
             where user_id = %s
             order by created_at desc
+            limit %s offset %s
             """,
-            (user_id,),
+            (user_id, window.limit, window.offset),
         )
         orders = cur.fetchall()
         attach_order_display(cur, orders)
         for order in orders:
             enrich_member_order(order)
-    return {"orders": orders}
+    out = page_response(
+        orders,
+        page=window.page,
+        page_size=window.page_size,
+        total=total,
+        items_key="orders",
+    )
+    return out
 
 
 @router.get("/catalog")
@@ -323,6 +342,8 @@ def catalog(
     category: str | None = Query(None),
     preview: int = Query(0),
     detail: str = Query("lite"),
+    page: int | None = Query(None),
+    page_size: int | None = Query(None),
 ) -> JSONResponse:
     include_drafts = False
     if preview:
@@ -331,16 +352,36 @@ def catalog(
             include_drafts = True
 
     detail_mode = normalize_catalog_detail(detail)
+    cat = (category or "").strip() or None
+    # Always page: category-scoped when set; unscoped still capped (no full dump).
+    window = page_window_from_params(
+        {"page": page, "page_size": page_size},
+    )
 
     diamond_tombstones: set[str] = set()
+    available_slugs: list[str] = []
+    # Memorial diamond merge needs every DB overlay; page after merge (small set).
+    page_sql = cat != "diamond"
     with get_connection() as conn, conn.cursor() as cur:
-        products = fetch_catalog_rows(cur, category=category, include_drafts=include_drafts)
+        total = count_catalog_rows(cur, category=cat, include_drafts=include_drafts)
+        products = fetch_catalog_rows(
+            cur,
+            category=cat,
+            include_drafts=include_drafts,
+            limit=window.limit if page_sql else None,
+            offset=window.offset if page_sql else None,
+        )
+        # Children only for fetched product IDs (page set, or full diamond set).
         product_ids = [row["id"] for row in products]
         variants_by_product, images_by_product = load_product_children(cur, product_ids)
         category_rows = fetch_categories(cur)
         cat_order = [row["slug"] for row in category_rows]
         cat_meta = build_category_meta(cur)
-        if category in (None, "", "diamond"):
+        if cat is None:
+            available_slugs = list_catalog_category_slugs(
+                cur, include_drafts=include_drafts
+            )
+        if cat in (None, "diamond"):
             diamond_tombstones = list_tombstoned_style_keys(cur)
     payload = build_catalog_response(
         products,
@@ -351,19 +392,38 @@ def catalog(
         detail=detail_mode,
     )
     categories = dict(payload.get("categories") or {})
+    # Seed empty lists for nonempty categories missing from this page (boot tiles).
+    if cat is None:
+        for slug in available_slugs:
+            categories.setdefault(slug, [])
+        preferred = cat_order or list(categories.keys())
+        order = [c for c in preferred if c in categories]
+        order.extend(c for c in categories if c not in order)
+        payload["categoryOrder"] = order
     # Always expose memorial diamond styles; DB overlays name/image/color.
-    if category in (None, "", "diamond"):
-        categories["diamond"] = merge_memorial_diamond_catalog(
+    if cat in (None, "diamond"):
+        merged_diamond = merge_memorial_diamond_catalog(
             categories.get("diamond") or [],
             excluded_style_keys=diamond_tombstones,
         )
+        if cat == "diamond":
+            total = len(merged_diamond)
+            start = window.offset
+            end = window.offset + window.limit
+            categories["diamond"] = merged_diamond[start:end]
+        else:
+            # Unscoped boot: include full memorial list (small); jewelry stays paged.
+            categories["diamond"] = merged_diamond
         order = list(payload.get("categoryOrder") or [])
         if "diamond" not in order:
             order = ["diamond"] + order
         else:
             order = ["diamond"] + [c for c in order if c != "diamond"]
-        payload["categories"] = categories
         payload["categoryOrder"] = order
+    payload["categories"] = categories
+    payload.update(
+        page_meta(page=window.page, page_size=window.page_size, total=total)
+    )
     headers = {}
     if detail_mode == "lite" and not include_drafts:
         headers["Cache-Control"] = "public, max-age=60"
@@ -404,20 +464,49 @@ def catalog_product(
     }
 
 
+TESTIMONIALS_PUBLIC_CAP = 24
+
+
 @router.get("/testimonials")
 def public_testimonials() -> dict:
-    from app.content import fetch_published_testimonials
+    """Home wall / public list — hard SQL cap (paging awkward for masonry wall)."""
+    from app.content import (
+        count_published_testimonials,
+        fetch_published_testimonials,
+    )
+    from app.paging import page_response
 
     with get_connection() as conn, conn.cursor() as cur:
-        return {"testimonials": fetch_published_testimonials(cur)}
+        items = fetch_published_testimonials(
+            cur, limit=TESTIMONIALS_PUBLIC_CAP, offset=0
+        )
+        total = count_published_testimonials(cur)
+    return page_response(
+        items,
+        page=1,
+        page_size=TESTIMONIALS_PUBLIC_CAP,
+        total=total,
+        items_key="testimonials",
+    )
 
 
 @router.get("/journal/posts")
-def public_journal_posts() -> dict:
-    from app.content import fetch_published_journal_posts
+def public_journal_posts(request: Request) -> dict:
+    from app.content import (
+        count_published_journal_posts,
+        fetch_published_journal_posts,
+    )
+    from app.paging import page_response_from_window, page_window_from_params
 
+    win = page_window_from_params(request.query_params, default_page_size=20)
     with get_connection() as conn, conn.cursor() as cur:
-        return {"posts": fetch_published_journal_posts(cur)}
+        posts = fetch_published_journal_posts(
+            cur, limit=win.limit, offset=win.offset
+        )
+        total = count_published_journal_posts(cur)
+    return page_response_from_window(
+        posts, win, total=total, items_key="posts"
+    )
 
 
 @router.get("/cms/pages/{slug}")
@@ -745,10 +834,23 @@ def get_favorites(request: Request) -> dict:
     user_id = get_user_id(request)
     if not user_id:
         raise HTTPException(status_code=401, detail="not signed in")
+    window = page_window_from_params(
+        request.query_params, default_page_size=20, max_page_size=100
+    )
     with get_connection() as conn, conn.cursor() as cur:
-        cur.execute(
-            "select * from favorite_items where user_id = %s order by created_at desc",
+        total = sql_count_total(
+            cur,
+            "select count(*) as n from favorite_items where user_id = %s",
             (user_id,),
+        )
+        cur.execute(
+            """
+            select * from favorite_items
+            where user_id = %s
+            order by created_at desc
+            limit %s offset %s
+            """,
+            (user_id, window.limit, window.offset),
         )
         rows = cur.fetchall()
     for row in rows:
@@ -757,7 +859,13 @@ def get_favorites(request: Request) -> dict:
         created = row.get("created_at")
         if hasattr(created, "isoformat"):
             row["created_at"] = created.isoformat()
-    return {"favorites": rows}
+    return page_response(
+        rows,
+        page=window.page,
+        page_size=window.page_size,
+        total=total,
+        items_key="favorites",
+    )
 
 
 @router.post("/favorites")

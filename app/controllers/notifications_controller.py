@@ -53,20 +53,31 @@ def _serialize_notification(row: dict) -> dict:
 
 @router.get("/recent")
 async def notifications_recent(request: Request) -> dict:
+    from app.paging import page_meta, parse_paging_from_mapping, sql_count_total
+
     user_id = get_user_id(request)
     if not user_id:
         raise HTTPException(status_code=401, detail="not signed in")
 
+    page, page_size, limit, offset = parse_paging_from_mapping(
+        request.query_params, default_page_size=50, max_page_size=50
+    )
+
     with get_connection() as conn, conn.cursor() as cur:
+        total = sql_count_total(
+            cur,
+            "select count(*) as n from user_notifications where user_id = %s",
+            (user_id,),
+        )
         cur.execute(
             """
             select id, kind, message, order_id, order_summary, is_read, created_at
             from user_notifications
             where user_id = %s
             order by created_at desc
-            limit 50
+            limit %s offset %s
             """,
-            (user_id,),
+            (user_id, limit, offset),
         )
         rows = cur.fetchall()
 
@@ -90,7 +101,13 @@ async def notifications_recent(request: Request) -> dict:
     for key in sorted(buckets.keys(), reverse=True):
         groups.append([key, buckets[key]])
 
-    return {"groups": groups, "unread_count": unread_count, "unreadCount": unread_count}
+    meta = page_meta(page=page, page_size=page_size, total=total)
+    return {
+        "groups": groups,
+        "unread_count": unread_count,
+        "unreadCount": unread_count,
+        **meta,
+    }
 
 
 @router.post("/mark-read")

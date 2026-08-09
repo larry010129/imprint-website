@@ -243,19 +243,61 @@ def serialize_faq_item(row: dict) -> dict:
     return out
 
 
-def fetch_published_testimonials(cur) -> list[dict]:
-    cur.execute(
-        """
+def _apply_limit_offset(
+    sql: str,
+    params: list[Any] | None,
+    *,
+    limit: int | None,
+    offset: int = 0,
+) -> tuple[str, list[Any] | None]:
+    """Append SQL LIMIT/OFFSET when limit is set; otherwise leave query unchanged."""
+    if limit is None:
+        return sql, params
+    bound = list(params or [])
+    bound.extend([max(0, int(limit)), max(0, int(offset))])
+    return sql + " limit %s offset %s", bound
+
+
+def count_published_testimonials(cur) -> int:
+    from app.paging import sql_count_total
+
+    return sql_count_total(
+        cur,
+        "select count(*)::int as n from testimonials where is_published = true",
+    )
+
+
+def fetch_published_testimonials(
+    cur,
+    *,
+    limit: int | None = None,
+    offset: int = 0,
+) -> list[dict]:
+    sql = """
         select * from testimonials
         where is_published = true
         order by sort_order asc, created_at asc
-        """
-    )
+    """
+    sql, params = _apply_limit_offset(sql, None, limit=limit, offset=offset)
+    cur.execute(sql, params)
     return [serialize_testimonial(r) for r in cur.fetchall()]
 
 
-def fetch_all_testimonials(cur) -> list[dict]:
-    cur.execute("select * from testimonials order by sort_order asc, created_at asc")
+def count_all_testimonials(cur) -> int:
+    cur.execute("select count(*)::int as n from testimonials")
+    row = cur.fetchone() or {}
+    return int(row.get("n") or 0)
+
+
+def fetch_all_testimonials(
+    cur,
+    *,
+    limit: int | None = None,
+    offset: int = 0,
+) -> list[dict]:
+    sql = "select * from testimonials order by sort_order asc, created_at asc"
+    sql, params = _apply_limit_offset(sql, None, limit=limit, offset=offset)
+    cur.execute(sql, params)
     return [serialize_testimonial(r) for r in cur.fetchall()]
 
 
@@ -342,24 +384,49 @@ def serialize_journal_post(row: dict) -> dict:
     return out
 
 
-def fetch_published_journal_posts(cur) -> list[dict]:
-    cur.execute(
-        """
+def count_published_journal_posts(cur) -> int:
+    from app.paging import sql_count_total
+
+    return sql_count_total(
+        cur,
+        "select count(*)::int as n from journal_posts where is_published = true",
+    )
+
+
+def fetch_published_journal_posts(
+    cur,
+    *,
+    limit: int | None = None,
+    offset: int = 0,
+) -> list[dict]:
+    sql = """
         select * from journal_posts
         where is_published = true
         order by posted_at desc, sort_order asc, created_at desc
-        """
-    )
+    """
+    sql, params = _apply_limit_offset(sql, None, limit=limit, offset=offset)
+    cur.execute(sql, params)
     return [serialize_journal_post(r) for r in cur.fetchall()]
 
 
-def fetch_all_journal_posts(cur) -> list[dict]:
-    cur.execute(
-        """
+def count_all_journal_posts(cur) -> int:
+    cur.execute("select count(*)::int as n from journal_posts")
+    row = cur.fetchone() or {}
+    return int(row.get("n") or 0)
+
+
+def fetch_all_journal_posts(
+    cur,
+    *,
+    limit: int | None = None,
+    offset: int = 0,
+) -> list[dict]:
+    sql = """
         select * from journal_posts
         order by posted_at desc, sort_order asc, created_at desc
-        """
-    )
+    """
+    sql, params = _apply_limit_offset(sql, None, limit=limit, offset=offset)
+    cur.execute(sql, params)
     return [serialize_journal_post(r) for r in cur.fetchall()]
 
 
@@ -436,6 +503,9 @@ def _faq_public_payload(categories: list[dict], items: list[dict]) -> dict[str, 
     return {"categories": nested, "teaser": teaser, "items": items}
 
 
+FAQ_PUBLIC_ITEM_LIMIT = 200
+
+
 def fetch_faq_public(cur) -> dict[str, Any]:
     cur.execute("select * from faq_categories order by sort_order asc, id asc")
     categories = [serialize_faq_category(r) for r in cur.fetchall()]
@@ -444,7 +514,9 @@ def fetch_faq_public(cur) -> dict[str, Any]:
         select * from faq_items
         where is_published = true
         order by sort_order asc, id asc
-        """
+        limit %s
+        """,
+        (FAQ_PUBLIC_ITEM_LIMIT,),
     )
     items = [serialize_faq_item(r) for r in cur.fetchall()]
     return _faq_public_payload(categories, items)
@@ -466,10 +538,23 @@ def faq_public_from_seed() -> dict[str, Any]:
     return _faq_public_payload(categories, items)
 
 
-def fetch_faq_admin(cur) -> dict[str, Any]:
+def count_faq_items(cur) -> int:
+    cur.execute("select count(*)::int as n from faq_items")
+    row = cur.fetchone() or {}
+    return int(row.get("n") or 0)
+
+
+def fetch_faq_admin(
+    cur,
+    *,
+    limit: int | None = None,
+    offset: int = 0,
+) -> dict[str, Any]:
     cur.execute("select * from faq_categories order by sort_order asc, id asc")
     categories = [serialize_faq_category(r) for r in cur.fetchall()]
-    cur.execute("select * from faq_items order by sort_order asc, id asc")
+    sql = "select * from faq_items order by sort_order asc, id asc"
+    sql, params = _apply_limit_offset(sql, None, limit=limit, offset=offset)
+    cur.execute(sql, params)
     items = [serialize_faq_item(r) for r in cur.fetchall()]
     return {"categories": categories, "items": items}
 
@@ -493,19 +578,42 @@ def serialize_banner(row: dict) -> dict:
     return out
 
 
-def fetch_published_banners(cur) -> list[dict]:
+BANNERS_PUBLIC_LIMIT = 20
+
+
+def fetch_published_banners(
+    cur,
+    *,
+    limit: int = BANNERS_PUBLIC_LIMIT,
+) -> list[dict]:
+    cap = max(1, int(limit))
     cur.execute(
         """
         select * from home_banners
         where is_published = true
         order by sort_order asc, created_at asc
-        """
+        limit %s
+        """,
+        (cap,),
     )
     return [serialize_banner(r) for r in cur.fetchall()]
 
 
-def fetch_all_banners(cur) -> list[dict]:
-    cur.execute("select * from home_banners order by sort_order asc, created_at asc")
+def count_all_banners(cur) -> int:
+    cur.execute("select count(*)::int as n from home_banners")
+    row = cur.fetchone() or {}
+    return int(row.get("n") or 0)
+
+
+def fetch_all_banners(
+    cur,
+    *,
+    limit: int | None = None,
+    offset: int = 0,
+) -> list[dict]:
+    sql = "select * from home_banners order by sort_order asc, created_at asc"
+    sql, params = _apply_limit_offset(sql, None, limit=limit, offset=offset)
+    cur.execute(sql, params)
     return [serialize_banner(r) for r in cur.fetchall()]
 
 
@@ -617,6 +725,267 @@ def ensure_page_images_schema(cur) -> None:
            or group_key = 'jewelry'
         """
     )
+    ensure_page_images_previous_columns(cur)
+
+
+def ensure_page_images_previous_columns(cur) -> None:
+    """Add page_images.previous_image_url / previous_image_webp if missing."""
+    cur.execute(
+        "alter table page_images "
+        "add column if not exists previous_image_url text"
+    )
+    cur.execute(
+        "alter table page_images "
+        "add column if not exists previous_image_webp text"
+    )
+
+
+def _is_page_images_storage_url(url: str | None) -> bool:
+    """True for Supabase Storage objects under page-images/ (not .keep)."""
+    from app.storage import is_supabase_storage_url, object_path_from_public_url
+
+    if not url or not is_supabase_storage_url(url):
+        return False
+    raw = str(url).strip()
+    if "/static/" in raw:
+        return False
+    obj = object_path_from_public_url(raw)
+    if not obj or not obj.startswith("page-images/"):
+        return False
+    name = obj.rsplit("/", 1)[-1]
+    return name != ".keep"
+
+
+def delete_page_image_urls_if_unreferenced(cur, urls) -> int:
+    """Delete page-images Storage objects when no page_images row references them.
+
+    Live refs: image_url, image_webp, default_image_url, default_image_webp,
+    previous_image_url, previous_image_webp. Only Supabase URLs under
+    page-images/ (skips .keep and /static/). Dedupes. Best-effort: Storage
+    failures do not raise. Returns how many delete_by_url calls reported success.
+    """
+    from app.storage import delete_by_url
+
+    candidates: list[str] = []
+    seen: set[str] = set()
+    for raw in urls or []:
+        url = str(raw or "").strip()
+        if not url or url in seen or not _is_page_images_storage_url(url):
+            continue
+        seen.add(url)
+        candidates.append(url)
+
+    if not candidates:
+        return 0
+
+    ensure_page_images_previous_columns(cur)
+    deleted = 0
+    for url in candidates:
+        cur.execute(
+            """
+            select 1 from page_images
+            where image_url = %s
+               or image_webp = %s
+               or default_image_url = %s
+               or default_image_webp = %s
+               or previous_image_url = %s
+               or previous_image_webp = %s
+            limit 1
+            """,
+            (url, url, url, url, url, url),
+        )
+        if cur.fetchone():
+            continue
+        try:
+            if delete_by_url(url):
+                deleted += 1
+        except Exception:
+            continue
+    return deleted
+
+
+def _page_img_str(val: Any) -> str:
+    return str(val or "").strip()
+
+
+def reset_page_image_row(cur, existing: dict) -> dict:
+    """Clear previous; set current to defaults; GC custom Storage URLs."""
+    ensure_page_images_previous_columns(cur)
+    page_key = existing["page_key"]
+    slot_key = existing["slot_key"]
+    default_url = _page_img_str(existing.get("default_image_url"))
+    default_webp = _page_img_str(existing.get("default_image_webp")) or None
+    gc = [
+        u
+        for u in (
+            _page_img_str(existing.get("image_url")),
+            _page_img_str(existing.get("image_webp")),
+            _page_img_str(existing.get("previous_image_url")),
+            _page_img_str(existing.get("previous_image_webp")),
+        )
+        if u and u != default_url and u != default_webp
+    ]
+    cur.execute(
+        """
+        update page_images
+        set image_url = default_image_url,
+            image_webp = default_image_webp,
+            previous_image_url = null,
+            previous_image_webp = null,
+            is_published = true,
+            updated_at = now()
+        where page_key = %s and slot_key = %s
+        returning *
+        """,
+        (page_key, slot_key),
+    )
+    row = cur.fetchone()
+    delete_page_image_urls_if_unreferenced(cur, gc)
+    return row
+
+
+def restore_page_image_row(cur, existing: dict) -> tuple[dict | None, str | None]:
+    """Swap previous_* back to current; GC discarded current when unreferenced."""
+    ensure_page_images_previous_columns(cur)
+    prev_url = _page_img_str(existing.get("previous_image_url"))
+    prev_webp = _page_img_str(existing.get("previous_image_webp")) or None
+    if not prev_url:
+        return None, "沒有可還原的圖片"
+    page_key = existing["page_key"]
+    slot_key = existing["slot_key"]
+    current_url = _page_img_str(existing.get("image_url"))
+    current_webp = _page_img_str(existing.get("image_webp")) or None
+    default_url = _page_img_str(existing.get("default_image_url"))
+    default_webp = _page_img_str(existing.get("default_image_webp")) or None
+    cur.execute(
+        """
+        update page_images
+        set image_url = %s,
+            image_webp = %s,
+            previous_image_url = null,
+            previous_image_webp = null,
+            updated_at = now()
+        where page_key = %s and slot_key = %s
+        returning *
+        """,
+        (prev_url, prev_webp, page_key, slot_key),
+    )
+    row = cur.fetchone()
+    gc = []
+    if current_url and current_url != prev_url and current_url != default_url:
+        gc.append(current_url)
+    if current_webp and current_webp != prev_webp and current_webp != default_webp:
+        gc.append(current_webp)
+    delete_page_image_urls_if_unreferenced(cur, gc)
+    return row, None
+
+
+def apply_page_image_replace_stack(
+    cur,
+    existing: dict,
+    *,
+    new_url: str,
+    new_webp: str | None,
+    image_alt: str,
+    is_published: bool,
+    webp_provided: bool,
+) -> dict:
+    """Update current image with one-deep previous stack; GC older previous."""
+    ensure_page_images_previous_columns(cur)
+    page_key = existing["page_key"]
+    slot_key = existing["slot_key"]
+    old_url = _page_img_str(existing.get("image_url"))
+    old_webp = _page_img_str(existing.get("image_webp")) or None
+    old_prev_url = _page_img_str(existing.get("previous_image_url")) or None
+    old_prev_webp = _page_img_str(existing.get("previous_image_webp")) or None
+    default_url = _page_img_str(existing.get("default_image_url"))
+    default_webp = _page_img_str(existing.get("default_image_webp")) or None
+
+    url = _page_img_str(new_url)
+    webp = (_page_img_str(new_webp) or None) if webp_provided else old_webp
+    url_changed = url != old_url
+    webp_changed = webp_provided and webp != old_webp
+
+    if not url_changed and not webp_changed:
+        cur.execute(
+            """
+            update page_images
+            set image_alt = %s, is_published = %s, updated_at = now()
+            where page_key = %s and slot_key = %s
+            returning *
+            """,
+            (image_alt, is_published, page_key, slot_key),
+        )
+        return cur.fetchone()
+
+    # New URL equals site default → reset path (never stack defaults).
+    if url == default_url and webp == default_webp:
+        return reset_page_image_row(cur, existing)
+
+    if not url_changed and webp_changed:
+        cur.execute(
+            """
+            update page_images
+            set image_webp = %s,
+                image_alt = %s,
+                is_published = %s,
+                updated_at = now()
+            where page_key = %s and slot_key = %s
+            returning *
+            """,
+            (webp, image_alt, is_published, page_key, slot_key),
+        )
+        row = cur.fetchone()
+        if old_webp and old_webp != webp and old_webp != default_webp:
+            delete_page_image_urls_if_unreferenced(cur, [old_webp])
+        return row
+
+    # A→B: previous=A; B→C: GC A, previous=B. Never stash defaults as previous.
+    if old_url and old_url != url and old_url != default_url:
+        next_prev_url = old_url
+        next_prev_webp = old_webp if old_webp and old_webp != default_webp else None
+    else:
+        next_prev_url = None
+        next_prev_webp = None
+
+    cur.execute(
+        """
+        update page_images
+        set image_url = %s,
+            image_webp = %s,
+            image_alt = %s,
+            is_published = %s,
+            previous_image_url = %s,
+            previous_image_webp = %s,
+            updated_at = now()
+        where page_key = %s and slot_key = %s
+        returning *
+        """,
+        (
+            url,
+            webp,
+            image_alt,
+            is_published,
+            next_prev_url,
+            next_prev_webp,
+            page_key,
+            slot_key,
+        ),
+    )
+    row = cur.fetchone()
+    gc = [
+        u
+        for u in (old_prev_url, old_prev_webp)
+        if u
+        and u != url
+        and u != webp
+        and u != next_prev_url
+        and u != next_prev_webp
+        and u != default_url
+        and u != default_webp
+    ]
+    delete_page_image_urls_if_unreferenced(cur, gc)
+    return row
 
 
 def serialize_page_image(row: dict) -> dict:
@@ -632,6 +1001,12 @@ def serialize_page_image(row: dict) -> dict:
             out[key] = int(out[key])
     out["display_url"] = effective_page_image_url(out)
     out["display_webp"] = effective_page_image_webp(out)
+    prev_url = _page_img_str(out.get("previous_image_url")) or None
+    prev_webp = _page_img_str(out.get("previous_image_webp")) or None
+    out["previous_image_url"] = prev_url
+    out["previous_image_webp"] = prev_webp
+    out["previousImageUrl"] = prev_url
+    out["previousImageWebp"] = prev_webp
     return out
 
 
@@ -661,21 +1036,48 @@ def effective_page_image_webp(row: dict | None) -> str:
     return str(row.get("default_image_webp") or "").strip()
 
 
-def fetch_all_page_images(cur) -> list[dict]:
+_PAGE_IMAGES_ADMIN_WHERE = """
+    page_key not like %s
+      and page_key not like %s
+      and page_key <> %s
+      and coalesce(group_key, '') <> %s
+"""
+_PAGE_IMAGES_ADMIN_PARAMS = ("/shop/%", "/jewelry/%", "/jewelry/", "jewelry")
+
+
+def count_all_page_images(cur, *, page_key: str | None = None) -> int:
+    sql = f"select count(*)::int as n from page_images where {_PAGE_IMAGES_ADMIN_WHERE}"
+    params: list[Any] = list(_PAGE_IMAGES_ADMIN_PARAMS)
+    if page_key:
+        sql += " and page_key = %s"
+        params.append(page_key)
+    cur.execute(sql, params)
+    row = cur.fetchone() or {}
+    return int(row.get("n") or 0)
+
+
+def fetch_all_page_images(
+    cur,
+    *,
+    limit: int | None = None,
+    offset: int = 0,
+    page_key: str | None = None,
+) -> list[dict]:
     """Admin list: content-page slots only (no shop/calculator or jewelry).
 
     Includes empty placeholder slots (e.g. DNA 實驗室照片) so they can be uploaded later.
     """
-    cur.execute(
-        """
+    sql = f"""
         select * from page_images
-        where page_key not like '/shop/%'
-          and page_key not like '/jewelry/%'
-          and page_key <> '/jewelry/'
-          and coalesce(group_key, '') <> 'jewelry'
-        order by group_key asc, sort_order asc, page_key asc, slot_key asc
-        """
-    )
+        where {_PAGE_IMAGES_ADMIN_WHERE}
+    """
+    params: list[Any] = list(_PAGE_IMAGES_ADMIN_PARAMS)
+    if page_key:
+        sql += " and page_key = %s"
+        params.append(page_key)
+    sql += " order by group_key asc, sort_order asc, page_key asc, slot_key asc"
+    sql, params = _apply_limit_offset(sql, params, limit=limit, offset=offset)
+    cur.execute(sql, params)
     return [serialize_page_image(r) for r in cur.fetchall()]
 
 

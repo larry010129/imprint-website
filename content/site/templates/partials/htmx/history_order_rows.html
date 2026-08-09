@@ -114,7 +114,7 @@
 
           {% if order.status == 'shipped' and order.fulfillment_method == 'delivery' and order.id %}
           <form class="order-confirm-receipt"
-            hx-post="/htmx/history/confirm-receipt"
+            hx-post="/htmx/history/confirm-receipt?tab=completed&page=1"
             hx-target="#htmx-history"
             hx-swap="innerHTML">
             <input type="hidden" name="order_id" value="{{ order.id }}">

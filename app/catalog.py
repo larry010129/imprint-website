@@ -519,23 +519,79 @@ def _effective_chain_length_weights(product: dict) -> dict:
     return necklace_type_length_weights(product.get("chain_type") or DEFAULT_NECKLACE_TYPE)
 
 
-def fetch_catalog_rows(cur, *, category: str | None = None, include_drafts: bool = False) -> list[dict]:
+def _catalog_filters(
+    *,
+    category: str | None = None,
+    include_drafts: bool = False,
+) -> tuple[str, list]:
+    """Shared WHERE clause + params for catalog list/count queries."""
+    clauses: list[str] = []
+    params: list = []
+    if not include_drafts:
+        clauses.append("is_published = true")
     if category:
-        if include_drafts:
-            cur.execute(
-                "select * from products where category = %s order by sort_order, created_at",
-                (category,),
-            )
-        else:
-            cur.execute(
-                "select * from products where is_published = true and category = %s order by sort_order, created_at",
-                (category,),
-            )
-    elif include_drafts:
-        cur.execute("select * from products order by sort_order, created_at")
-    else:
-        cur.execute("select * from products where is_published = true order by sort_order, created_at")
+        clauses.append("category = %s")
+        params.append(category)
+    where = f" where {' and '.join(clauses)}" if clauses else ""
+    return where, params
+
+
+def fetch_catalog_rows(
+    cur,
+    *,
+    category: str | None = None,
+    include_drafts: bool = False,
+    limit: int | None = None,
+    offset: int | None = None,
+) -> list[dict]:
+    """Load catalog product rows; optional LIMIT/OFFSET for paged lists."""
+    where, params = _catalog_filters(category=category, include_drafts=include_drafts)
+    sql = f"select * from products{where} order by sort_order, created_at"
+    if limit is not None:
+        sql += " limit %s"
+        params.append(max(0, int(limit)))
+        off = 0 if offset is None else max(0, int(offset))
+        if off:
+            sql += " offset %s"
+            params.append(off)
+    cur.execute(sql, params)
     return cur.fetchall()
+
+
+def count_catalog_rows(
+    cur,
+    *,
+    category: str | None = None,
+    include_drafts: bool = False,
+) -> int:
+    """Total product rows matching catalog filters (for paging envelopes)."""
+    where, params = _catalog_filters(category=category, include_drafts=include_drafts)
+    cur.execute(f"select count(*) as n from products{where}", params)
+    row = cur.fetchone()
+    if not row:
+        return 0
+    raw = row["n"] if isinstance(row, dict) else row[0]
+    return max(0, int(raw or 0))
+
+
+def list_catalog_category_slugs(
+    cur,
+    *,
+    include_drafts: bool = False,
+) -> list[str]:
+    """Distinct category slugs that have at least one catalog row."""
+    where, params = _catalog_filters(include_drafts=include_drafts)
+    cur.execute(
+        f"select distinct category from products{where} order by category",
+        params,
+    )
+    rows = cur.fetchall()
+    out: list[str] = []
+    for row in rows:
+        slug = row["category"] if isinstance(row, dict) else row[0]
+        if slug:
+            out.append(str(slug))
+    return out
 
 
 def normalize_catalog_detail(detail: str | None) -> str:

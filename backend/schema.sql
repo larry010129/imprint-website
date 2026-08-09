@@ -153,7 +153,8 @@ create table if not exists product_images (
   product_id uuid not null references products(id) on delete cascade,
   color text not null,
   file_path text not null,
-  sort_order int not null default 0
+  sort_order int not null default 0,
+  previous_file_path text -- one-deep replace/restore temp; null when none
 );
 
 -- ── orders (core header + workflow) ──
@@ -406,8 +407,38 @@ create table if not exists home_banners (
 create index if not exists home_banners_published_sort_idx
   on home_banners (is_published, sort_order, created_at);
 
+-- ── page images (CMS slots per public page) ──
+create table if not exists page_images (
+  page_key text not null,
+  slot_key text not null default 'hero',
+  label text not null,
+  slot_label text not null default '主視覺',
+  group_key text not null default 'brand',
+  image_url text not null default '',
+  image_webp text,
+  image_alt text not null default '',
+  default_image_url text not null default '',
+  default_image_webp text,
+  previous_image_url text, -- one-deep replace/restore temp; null when none
+  previous_image_webp text, -- one-deep replace/restore temp; null when none
+  target_w int not null,
+  target_h int not null,
+  sort_order int not null default 0,
+  is_published boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  primary key (page_key, slot_key)
+);
+
+alter table page_images add column if not exists previous_image_url text;
+alter table page_images add column if not exists previous_image_webp text;
+
+create index if not exists page_images_group_sort_idx
+  on page_images (group_key, sort_order, page_key, slot_key);
+
 -- ── indexes ────────────────────────────────────────────────────────────────
 create index if not exists orders_user_id_idx on orders(user_id);
+create index if not exists orders_user_id_created_at_desc_idx on orders (user_id, created_at desc);
 create index if not exists orders_order_number_phone_idx on orders(order_number);
 create index if not exists orders_summary_zh_idx on orders(summary_zh);
 create index if not exists orders_created_at_desc_idx on orders (created_at desc);
@@ -421,3 +452,14 @@ create index if not exists cart_items_user_id_idx on cart_items(user_id);
 create index if not exists favorite_items_user_id_idx on favorite_items(user_id);
 create index if not exists user_notifications_user_id_idx on user_notifications(user_id, is_read);
 create index if not exists products_category_published_idx on products(category, is_published);
+create index if not exists products_published_sort_created_idx
+  on products (is_published, sort_order, created_at);
+create index if not exists users_created_at_desc_idx on users (created_at desc);
+create index if not exists contact_messages_status_created_at_idx
+  on contact_messages (status, created_at desc);
+create index if not exists contact_messages_created_at_desc_idx
+  on contact_messages (created_at desc);
+create index if not exists quote_requests_status_created_at_idx
+  on quote_requests (status, created_at desc);
+create index if not exists quote_requests_created_at_desc_idx
+  on quote_requests (created_at desc);

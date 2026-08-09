@@ -18,6 +18,16 @@
   var _faqCategoryId = '';
   var _banners = [];
   var _pageImages = [];
+  var _pageImagePageOptions = [];
+  var _pageIndex = 0;
+  var _pageSize = 10;
+  var _totals = {
+    banners: 0,
+    testimonials: 0,
+    faq: 0,
+    'page-images': 0,
+    journal: 0,
+  };
 
   var PAGE_LINKS = [
     { value: '/', label: '首頁' },
@@ -452,6 +462,7 @@
   }
 
   function pageImagePages() {
+    if (_pageImagePageOptions.length) return _pageImagePageOptions.slice();
     var seen = {};
     return _pageImages.reduce(function (pages, row) {
       if (!seen[row.page_key]) {
@@ -460,6 +471,19 @@
       }
       return pages;
     }, []);
+  }
+
+  function rememberPageImagePages(rows) {
+    var seen = {};
+    _pageImagePageOptions.forEach(function (p) { seen[p.value] = true; });
+    (rows || []).forEach(function (row) {
+      if (!row || !row.page_key || seen[row.page_key]) return;
+      seen[row.page_key] = true;
+      _pageImagePageOptions.push({
+        value: row.page_key,
+        label: row.label || row.page_key,
+      });
+    });
   }
 
   function renderShell() {
@@ -513,6 +537,11 @@
         var nextTab = btn.dataset.tab;
         if (!nextTab || nextTab === _tab) return;
         _tab = nextTab;
+        if (_pageIndex !== 0) {
+          _pageIndex = 0;
+          load(true, true);
+          return;
+        }
         renderShell();
       });
     });
@@ -522,7 +551,8 @@
         var pageKey = btn.dataset.pageTab;
         if (!pageKey || pageKey === _pageImagePage) return;
         _pageImagePage = pageKey;
-        renderShell();
+        _pageIndex = 0;
+        load(true, true);
       });
     });
 
@@ -553,11 +583,13 @@
       getSectionHtml: function (id) { return api.admin.getCmsSectionHtml(id); },
       sectionAction: function (id, action) { return api.admin.cmsSectionAction(id, action); },
       reorderSections: function (pageId, sectionIds) { return api.admin.reorderCmsSections(pageId, sectionIds); },
-      getMedia: function () { return api.admin.getCmsMedia(); },
+      getMedia: function (opts) { return api.admin.getCmsMedia(opts); },
       getFaqCategories: function () { return api.admin.getFaqCategories(); },
       uploadMedia: function (file) { return api.admin.uploadCmsMedia(file); },
       deleteMedia: function (id) { return api.admin.cmsMediaAction(id, 'delete'); },
-      uploadPageImage: function (file) { return api.admin.uploadPageImage(file); },
+      uploadPageImage: function (file, pageKey) {
+        return api.admin.uploadPageImage(file, pageKey || undefined);
+      },
       getPageImages: function () { return api.admin.getPageImages(); },
       updatePageImage: function (fields) { return api.admin.updatePageImage(fields); },
       syncSectionPageImage: function (fields) {
@@ -756,7 +788,7 @@
 
     var pageImageRows = _pageImages
       .filter(function (p) {
-        return p.page_key === _pageImagePage;
+        return !_pageImagePage || p.page_key === _pageImagePage;
       })
       .map(function (p) {
         return {
@@ -781,6 +813,17 @@
       faqItems: faqRows,
       pageImages: pageImageRows,
       pageImagePage: _pageImagePage,
+      total: _totals[_tab] || 0,
+      pageIndex: _pageIndex,
+      pageSize: _pageSize,
+      onPaginationChange: function (pagination) {
+        var nextIndex = pagination.pageIndex || 0;
+        var nextSize = pagination.pageSize || _pageSize;
+        if (nextIndex === _pageIndex && nextSize === _pageSize) return;
+        _pageIndex = nextIndex;
+        _pageSize = nextSize;
+        load(true, true);
+      },
       onAdd: function () {
         if (_tab === 'banners') openBannerModal(null);
         else if (_tab === 'testimonials') openTestimonialModal(null);
@@ -869,6 +912,10 @@
         image_alt: row.image_alt || '',
         display_url: row.display_url || '',
         default_image_url: row.default_image_url || '',
+        previous_image_url: row.previous_image_url || row.previousImageUrl || '',
+        previous_image_webp: row.previous_image_webp || row.previousImageWebp || '',
+        previousImageUrl: row.previousImageUrl || row.previous_image_url || '',
+        previousImageWebp: row.previousImageWebp || row.previous_image_webp || '',
       },
       onClose: close,
       onSaved: function () {
@@ -876,10 +923,13 @@
         load(true, true);
       },
       uploadImage: function (file) {
-        return api.admin.uploadPageImage(file);
+        return api.admin.uploadPageImage(file, row.page_key);
       },
       updatePageImage: function (fields) {
         return api.admin.updatePageImage(fields);
+      },
+      pageImageAction: function (pageKey, slotKey, action) {
+        return api.admin.pageImageAction(pageKey, slotKey, action);
       },
     });
   }
@@ -1125,7 +1175,7 @@
     var published = !!p.is_published;
     var archived = !!p.is_archived;
     var thumb = p.image_url
-      ? '<img src="' + esc(p.image_url) + '" alt="" width="40" height="40" style="object-fit:cover;border-radius:4px">'
+      ? '<img src="' + esc(p.image_url) + '" alt="" width="40" height="40" loading="lazy" decoding="async" style="object-fit:cover;border-radius:4px">'
       : '—';
     return (
       '<tr data-id="' + esc(String(p.id)) + '">' +
@@ -1510,6 +1560,10 @@
     });
   }
 
+  function listPageOpts() {
+    return { page: _pageIndex + 1, pageSize: _pageSize };
+  }
+
   function load(silent, force) {
     if (_loaded && !force) return;
     if (!silent) {
@@ -1519,18 +1573,28 @@
         ? window.SkeletonUI.contentShell()
         : '<p class="adx-loading-inline">載入內容中…</p>';
     }
+    var opts = listPageOpts();
+    var pageImageOpts = Object.assign({}, opts);
+    if (_tab === 'page-images' && _pageImagePage) {
+      pageImageOpts.page_key = _pageImagePage;
+    }
+    var pageImageKeysP = _pageImagePageOptions.length
+      ? Promise.resolve(null)
+      : api.admin.getPageImages({ page: 1, pageSize: 100 });
     Promise.all([
-      api.admin.getTestimonials(),
-      api.admin.getFaqItems(),
-      api.admin.getBanners(),
-      api.admin.getPageImages(),
-      api.admin.getJournalPosts(),
+      api.admin.getTestimonials(opts),
+      api.admin.getFaqItems(opts),
+      api.admin.getBanners(opts),
+      api.admin.getPageImages(pageImageOpts),
+      api.admin.getJournalPosts(opts),
+      pageImageKeysP,
     ]).then(function (results) {
       var tRes = results[0];
       var fRes = results[1];
       var bRes = results[2];
       var pRes = results[3];
       var jRes = results[4];
+      var keysRes = results[5];
       if (tRes.error || fRes.error || bRes.error || pRes.error) {
         root.innerHTML =
           '<p class="note warn">載入失敗：' +
@@ -1545,14 +1609,14 @@
       _banners = bRes.banners || [];
       // Soft-fail journal until backend routes land (parallel Phase 1).
       _journalPosts = (!jRes.error && (jRes.posts || jRes.journal_posts)) || [];
-      _pageImages = (pRes.pageImages || []).filter(function (row) {
-        var key = String(row.page_key || '');
-        var group = String(row.group_key || '');
-        if (key.indexOf('/shop/') === 0) return false;
-        if (key === '/jewelry/' || key.indexOf('/jewelry/') === 0) return false;
-        if (group === 'jewelry') return false;
-        return true;
-      });
+      _pageImages = pRes.pageImages || [];
+      if (keysRes && !keysRes.error) rememberPageImagePages(keysRes.pageImages || []);
+      rememberPageImagePages(_pageImages);
+      _totals.testimonials = typeof tRes.total === 'number' ? tRes.total : _testimonials.length;
+      _totals.faq = typeof fRes.total === 'number' ? fRes.total : _faqItems.length;
+      _totals.banners = typeof bRes.total === 'number' ? bRes.total : _banners.length;
+      _totals['page-images'] = typeof pRes.total === 'number' ? pRes.total : _pageImages.length;
+      _totals.journal = typeof jRes.total === 'number' ? jRes.total : _journalPosts.length;
       _loaded = true;
       root.removeAttribute('aria-busy');
       root.classList.remove('skel-panel');

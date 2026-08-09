@@ -110,7 +110,10 @@ export type ExistingSitePageEditorProps = {
       pageImages?: PageImageEditRow[];
       error?: string;
     }>;
-    uploadPageImage?: (file: File) => Promise<ImageUploadResult>;
+    uploadPageImage?: (
+      file: File,
+      pageKey?: string
+    ) => Promise<ImageUploadResult>;
     updatePageImage?: (fields: {
       pageKey: string;
       slotKey: string;
@@ -118,7 +121,19 @@ export type ExistingSitePageEditorProps = {
       imageWebp: string;
       imageAlt: string;
       isPublished: boolean;
-    }) => Promise<{ error?: string | { message?: string } }>;
+    }) => Promise<{
+      pageImage?: PageImageEditRow;
+      error?: string | { message?: string };
+    }>;
+    pageImageAction?: (
+      pageKey: string,
+      slotKey: string,
+      action: "restore" | "reset" | "publish" | "unpublish",
+    ) => Promise<{
+      pageImage?: PageImageEditRow;
+      ok?: boolean;
+      error?: string | { message?: string };
+    }>;
     uploadMedia?: (file: File) => Promise<ImageUploadResult>;
   } & SyncSectionPageImageApi;
   onBack: () => void;
@@ -525,11 +540,11 @@ export default function ExistingSitePageEditor({
 
   const uploadSectionImage = useCallback(
     async (file: File): Promise<ImageUploadResult> => {
-      if (api.uploadPageImage) return api.uploadPageImage(file);
+      if (api.uploadPageImage) return api.uploadPageImage(file, pageKey);
       if (api.uploadMedia) return api.uploadMedia(file);
       return { error: "圖片上傳 API 尚未就緒" };
     },
-    [api]
+    [api, pageKey]
   );
 
   const handleSectionImageUploaded = useCallback(
@@ -1070,8 +1085,13 @@ export default function ExistingSitePageEditor({
               hardRefreshPreview();
             }
           }}
-          uploadImage={api.uploadPageImage}
+          uploadImage={(file) =>
+            api.uploadPageImage
+              ? api.uploadPageImage(file, pageImageEdit.page_key || pageKey)
+              : Promise.resolve({ error: "圖片上傳 API 尚未就緒" })
+          }
           updatePageImage={api.updatePageImage}
+          pageImageAction={api.pageImageAction}
         />
       ) : null}
     </div>

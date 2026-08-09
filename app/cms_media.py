@@ -33,11 +33,23 @@ def serialize_media(row: dict) -> dict:
     return out
 
 
-def fetch_media(cur, *, limit: int = 100) -> list[dict]:
-    limit = max(1, min(200, int(limit)))
+def count_media(cur) -> int:
+    cur.execute("select count(*)::int as n from cms_media")
+    row = cur.fetchone() or {}
+    return int(row.get("n") or 0)
+
+
+def fetch_media(
+    cur,
+    *,
+    limit: int = 20,
+    offset: int = 0,
+) -> list[dict]:
+    limit = max(1, min(100, int(limit)))
+    offset = max(0, int(offset))
     cur.execute(
-        "select * from cms_media order by created_at desc limit %s",
-        (limit,),
+        "select * from cms_media order by created_at desc limit %s offset %s",
+        (limit, offset),
     )
     return [serialize_media(r) for r in cur.fetchall()]
 

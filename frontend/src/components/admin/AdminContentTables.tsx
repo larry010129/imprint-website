@@ -1,10 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ColumnDef, PaginationState } from "@tanstack/react-table";
-import {
-  getCoreRowModel,
-  getPaginationRowModel,
-  useReactTable,
-} from "@tanstack/react-table";
+import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
 
 import {
   DataGrid,
@@ -68,6 +64,10 @@ export type AdminContentTablesProps = {
   faqItems: ContentFaqRow[];
   pageImages?: ContentPageImageRow[];
   pageImagePage?: string;
+  total?: number;
+  pageIndex?: number;
+  pageSize?: number;
+  onPaginationChange?: (pagination: PaginationState) => void;
   onAdd: () => void;
   onEdit: (id: string) => void;
   onAction: (id: string, action: "publish" | "unpublish" | "delete" | "reset") => void;
@@ -159,27 +159,52 @@ function ContentDataGrid<T extends { id: string }>({
   data,
   columns,
   emptyMessage,
+  total,
+  pageIndex: pageIndexProp,
+  pageSize: pageSizeProp = 10,
+  onPaginationChange,
   onRendered,
 }: {
   data: T[];
   columns: ColumnDef<T>[];
   emptyMessage: string;
+  total?: number;
+  pageIndex?: number;
+  pageSize?: number;
+  onPaginationChange?: (pagination: PaginationState) => void;
   onRendered?: () => void;
 }) {
   const [pagination, setPagination] = useState<PaginationState>({
-    pageIndex: 0,
-    pageSize: 10,
+    pageIndex: pageIndexProp ?? 0,
+    pageSize: pageSizeProp,
   });
+
+  useEffect(() => {
+    setPagination((prev) => ({
+      pageIndex: pageIndexProp ?? prev.pageIndex,
+      pageSize: pageSizeProp ?? prev.pageSize,
+    }));
+  }, [pageIndexProp, pageSizeProp]);
+
+  const recordCount = total ?? data.length;
+  const pageCount = Math.max(1, Math.ceil(recordCount / Math.max(pagination.pageSize, 1)));
 
   const table = useReactTable({
     data,
     columns,
     state: { pagination },
-    onPaginationChange: setPagination,
+    onPaginationChange: (updater) => {
+      setPagination((prev) => {
+        const next = typeof updater === "function" ? updater(prev) : updater;
+        onPaginationChange?.(next);
+        return next;
+      });
+    },
     enableSorting: false,
     getRowId: (row) => row.id,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
+    manualPagination: true,
+    pageCount,
   });
 
   useEffect(() => {
@@ -189,7 +214,7 @@ function ContentDataGrid<T extends { id: string }>({
   return (
     <DataGrid
       table={table}
-      recordCount={data.length}
+      recordCount={recordCount}
       emptyMessage={emptyMessage}
       tableLayout={{ dense: true, headerBackground: true, rowBorder: true, width: "fixed" }}
       tableClassNames={{ bodyRow: "hover:bg-transparent" }}
@@ -214,6 +239,10 @@ export default function AdminContentTables({
   faqItems,
   pageImages = [],
   pageImagePage = "",
+  total,
+  pageIndex,
+  pageSize = 10,
+  onPaginationChange,
   onAdd,
   onEdit,
   onAction,
@@ -631,6 +660,10 @@ export default function AdminContentTables({
           data={banners}
           columns={bannerColumns}
           emptyMessage="尚無首頁圖片"
+          total={total}
+          pageIndex={pageIndex}
+          pageSize={pageSize}
+          onPaginationChange={onPaginationChange}
           onRendered={onRendered}
         />
       ) : tab === "testimonials" ? (
@@ -638,6 +671,10 @@ export default function AdminContentTables({
           data={testimonials}
           columns={testimonialColumns}
           emptyMessage="尚無見證"
+          total={total}
+          pageIndex={pageIndex}
+          pageSize={pageSize}
+          onPaginationChange={onPaginationChange}
           onRendered={onRendered}
         />
       ) : tab === "page-images" ? (
@@ -645,6 +682,10 @@ export default function AdminContentTables({
           data={pageImages}
           columns={pageImageColumns}
           emptyMessage="尚無頁面圖片設定"
+          total={total}
+          pageIndex={pageIndex}
+          pageSize={pageSize}
+          onPaginationChange={onPaginationChange}
           onRendered={onRendered}
         />
       ) : (
@@ -652,6 +693,10 @@ export default function AdminContentTables({
           data={faqItems}
           columns={faqColumns}
           emptyMessage="尚無 FAQ"
+          total={total}
+          pageIndex={pageIndex}
+          pageSize={pageSize}
+          onPaginationChange={onPaginationChange}
           onRendered={onRendered}
         />
       )}

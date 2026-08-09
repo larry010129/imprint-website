@@ -42,13 +42,34 @@ function apiBase(): string {
 }
 
 async function apiFetchOrders(): Promise<OrderRow[]> {
+  // Walk pages for membership tier stats; soft-cap so a huge history stays bounded.
+  const pageSize = 100
+  const maxPages = 20
+  const all: OrderRow[] = []
   try {
-    const res = await fetch(`${apiBase()}/api/orders`, { credentials: "include" })
-    if (!res.ok) return []
-    const data = (await res.json()) as { orders?: OrderRow[] }
-    return Array.isArray(data.orders) ? data.orders : []
+    for (let page = 1; page <= maxPages; page += 1) {
+      const res = await fetch(
+        `${apiBase()}/api/orders?page=${page}&page_size=${pageSize}`,
+        { credentials: "include" },
+      )
+      if (!res.ok) break
+      const data = (await res.json()) as {
+        orders?: OrderRow[]
+        items?: OrderRow[]
+        total?: number
+      }
+      const chunk = Array.isArray(data.orders)
+        ? data.orders
+        : Array.isArray(data.items)
+          ? data.items
+          : []
+      all.push(...chunk)
+      const total = typeof data.total === "number" ? data.total : all.length
+      if (all.length >= total || chunk.length === 0) break
+    }
+    return all
   } catch {
-    return []
+    return all
   }
 }
 

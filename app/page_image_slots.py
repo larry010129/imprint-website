@@ -13,6 +13,22 @@ _IMG_RE = re.compile(r"<img\b[^>]*>", re.IGNORECASE)
 _ATTR_RE = r"\b{name}\s*=\s*([\"'])(.*?)\1"
 _URL_ATTRS = r"(?:src|srcset|data-src|data-srcset|data-jpg)"
 
+# Admin「頁面圖片」sub-tab label (page_label) → Storage folder under page-images/.
+# Keys are page_key values from SlotSpec; folder slugs are short English kebab-case.
+PAGE_IMAGE_STORAGE_FOLDERS: dict[str, str] = {
+    "/": "home",  # 首頁
+    "/about": "brand-story",  # 品牌故事
+    "/series": "series-overview",  # 五大系列總覽
+    "/series/first-love/": "moon-diamond",  # 滿月鑽石
+    "/series/pet/": "pet-diamond",  # 寵物鑽石
+    "/series/love/": "wedding-diamond",  # 結髮鑽石
+    "/series/family/": "family-diamond",  # 全家福鑽石
+    "/series/heirloom/": "life-diamond",  # 生命鑽石
+    "/what-is-dna-diamond": "dna-diamond",  # DNA 鑽石的誕生
+}
+PAGE_IMAGE_PENDING_FOLDER = "_pending"
+_FOLDER_ASCII = re.compile(r"^[a-z0-9][a-z0-9._-]{0,78}$")
+
 
 @dataclass(frozen=True)
 class SlotSpec:
@@ -248,6 +264,47 @@ def page_image_slot_specs() -> tuple[SlotSpec, ...]:
         + _dna_specs()
     )
     return tuple(specs)
+
+
+def _page_key_folder_candidates(page_key: str) -> list[str]:
+    key = str(page_key or "").strip()
+    if not key:
+        return []
+    out = [key]
+    if key != "/" and key.endswith("/"):
+        out.append(key.rstrip("/") or "/")
+    elif key != "/":
+        out.append(f"{key}/")
+    return out
+
+
+def _fallback_folder_from_page_key(page_key: str) -> str:
+    """ASCII kebab slug from route path when page_key is not in the registry."""
+    raw = str(page_key or "").strip().strip("/").lower().replace("/", "-")
+    if not raw:
+        return PAGE_IMAGE_PENDING_FOLDER
+    slug = re.sub(r"[^a-z0-9._-]+", "-", raw)
+    slug = re.sub(r"[-_]{2,}", "-", slug).strip("-_")
+    if len(slug) > 80:
+        slug = slug[:80].rstrip("-_")
+    if slug and _FOLDER_ASCII.fullmatch(slug) and slug != "pending":
+        return slug
+    return PAGE_IMAGE_PENDING_FOLDER
+
+
+def page_image_storage_folder(page_key: str | None) -> str:
+    """English Storage folder for a page_key (admin 頁面圖片 tab).
+
+    Known content tabs use PAGE_IMAGE_STORAGE_FOLDERS. Missing page_key →
+    ``_pending``. Unknown CMS routes fall back to a sanitized path slug.
+    """
+    if page_key is None or not str(page_key).strip():
+        return PAGE_IMAGE_PENDING_FOLDER
+    for candidate in _page_key_folder_candidates(str(page_key)):
+        folder = PAGE_IMAGE_STORAGE_FOLDERS.get(candidate)
+        if folder:
+            return folder
+    return _fallback_folder_from_page_key(str(page_key))
 
 
 def _route_body_key(page_key: str) -> str:

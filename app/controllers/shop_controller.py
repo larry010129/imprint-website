@@ -490,6 +490,9 @@ async def update_my_order(request: Request) -> dict:
     return {"ok": True, "orderNumber": order["order_number"]}
 
 
+CART_SOFT_CAP = 100
+
+
 def fetch_cart_items(user_id: str, item_ids: list[str] | None = None) -> list[dict]:
     """Shared cart loader for JSON API + HTMX partials."""
     from app.image_urls import is_uuid
@@ -503,13 +506,23 @@ def fetch_cart_items(user_id: str, item_ids: list[str] | None = None) -> list[di
     with get_connection() as conn, conn.cursor() as cur:
         if item_ids:
             cur.execute(
-                "select * from cart_items where user_id = %s and id = any(%s) order by created_at asc",
-                (user_id, item_ids),
+                """
+                select * from cart_items
+                where user_id = %s and id = any(%s)
+                order by created_at asc
+                limit %s
+                """,
+                (user_id, item_ids, CART_SOFT_CAP),
             )
         else:
             cur.execute(
-                "select * from cart_items where user_id = %s order by created_at asc",
-                (user_id,),
+                """
+                select * from cart_items
+                where user_id = %s
+                order by created_at asc
+                limit %s
+                """,
+                (user_id, CART_SOFT_CAP),
             )
         items = cur.fetchall()
         for item in items:
@@ -795,13 +808,23 @@ async def validate_coupon_body(user_id: str, body: dict[str, Any]) -> dict:
     with get_connection() as conn, conn.cursor() as cur:
         if item_ids:
             cur.execute(
-                "select * from cart_items where user_id = %s and id = any(%s) order by created_at asc",
-                (user_id, item_ids),
+                """
+                select * from cart_items
+                where user_id = %s and id = any(%s)
+                order by created_at asc
+                limit %s
+                """,
+                (user_id, item_ids, CART_SOFT_CAP),
             )
         else:
             cur.execute(
-                "select * from cart_items where user_id = %s order by created_at asc",
-                (user_id,),
+                """
+                select * from cart_items
+                where user_id = %s
+                order by created_at asc
+                limit %s
+                """,
+                (user_id, CART_SOFT_CAP),
             )
         items = cur.fetchall()
         if not items:
@@ -871,13 +894,23 @@ async def _cart_checkout_impl(request: Request, body: dict[str, Any] | None = No
     with get_connection() as conn, conn.cursor() as cur:
         if item_ids:
             cur.execute(
-                "select * from cart_items where user_id = %s and id = any(%s) order by created_at asc",
-                (user_id, item_ids),
+                """
+                select * from cart_items
+                where user_id = %s and id = any(%s)
+                order by created_at asc
+                limit %s
+                """,
+                (user_id, item_ids, CART_SOFT_CAP),
             )
         else:
             cur.execute(
-                "select * from cart_items where user_id = %s order by created_at asc",
-                (user_id,),
+                """
+                select * from cart_items
+                where user_id = %s
+                order by created_at asc
+                limit %s
+                """,
+                (user_id, CART_SOFT_CAP),
             )
         items = cur.fetchall()
 

@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""Apply backend/schema.sql to DATABASE_URL (Supabase or any Postgres)."""
+"""Apply backend/schema.sql to DATABASE_URL (Supabase Postgres only)."""
 
 from __future__ import annotations
 
-import os
 import re
 import sys
 from pathlib import Path
@@ -16,6 +15,9 @@ SCHEMA = ROOT / "backend" / "schema.sql"
 
 load_dotenv(ROOT / ".env")
 
+sys.path.insert(0, str(ROOT))
+from app.database import database_target_label, require_database_url  # noqa: E402
+
 
 def parse_statements(text: str) -> list[str]:
     # Strip `--` comments (including trailing inline ones) before splitting on
@@ -26,12 +28,16 @@ def parse_statements(text: str) -> list[str]:
 
 
 def main() -> None:
-    dsn = os.environ.get("DATABASE_URL")
-    if not dsn:
-        sys.exit("DATABASE_URL is not set")
+    try:
+        dsn = require_database_url()
+    except RuntimeError as exc:
+        sys.exit(str(exc))
 
     statements = parse_statements(SCHEMA.read_text(encoding="utf-8"))
-    print(f"Applying {len(statements)} SQL statement(s) to Supabase/Postgres…")
+    print(
+        f"Applying {len(statements)} SQL statement(s) to "
+        f"{database_target_label(dsn)}…"
+    )
 
     with psycopg.connect(dsn, autocommit=True) as conn:
         with conn.cursor() as cur:

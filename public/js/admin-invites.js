@@ -9,6 +9,9 @@
   if (!root) return;
 
   var _loaded = false;
+  var _page = 1;
+  var _pageSize = 20;
+  var _total = 0;
 
   function esc(s) {
     return window.AdminPanel && window.AdminPanel.escapeHtml
@@ -104,13 +107,45 @@
     root.classList.remove('skel-panel');
   }
 
+  function pagerHtml() {
+    var pageCount = Math.max(1, Math.ceil(_total / Math.max(_pageSize, 1)));
+    if (pageCount <= 1) {
+      return '<p class="adx-muted" style="margin:8px 0;">共 ' + _total + ' 筆</p>';
+    }
+    return (
+      '<div class="adx-pager" style="display:flex;gap:8px;align-items:center;margin:8px 0;">' +
+        '<span class="adx-muted">共 ' + _total + ' 筆 · 第 ' + _page + ' / ' + pageCount + ' 頁</span>' +
+        '<button type="button" class="btn-sm" id="invitesPrevPage"' + (_page <= 1 ? ' disabled' : '') + '>上一頁</button>' +
+        '<button type="button" class="btn-sm" id="invitesNextPage"' + (_page >= pageCount ? ' disabled' : '') + '>下一頁</button>' +
+      '</div>'
+    );
+  }
+
   function renderShell(invites) {
     clearPanelBusy();
     root.innerHTML =
       '<p class="adx-panel-note">建立邀請碼供合作廠商註冊帳號。可設定名稱、使用次數與有效期限；刪除邀請碼不影響已註冊帳戶。</p>' +
       '<div class="adx-panel-toolbar"><button type="button" class="btn-sm btn-primary" id="btnCreateInvite">+ 建立邀請碼</button></div>' +
+      pagerHtml() +
       renderTable(invites);
     bindEvents();
+    var prev = document.getElementById('invitesPrevPage');
+    var next = document.getElementById('invitesNextPage');
+    if (prev) {
+      prev.addEventListener('click', function () {
+        if (_page <= 1) return;
+        _page -= 1;
+        load(true, true);
+      });
+    }
+    if (next) {
+      next.addEventListener('click', function () {
+        var pageCount = Math.max(1, Math.ceil(_total / Math.max(_pageSize, 1)));
+        if (_page >= pageCount) return;
+        _page += 1;
+        load(true, true);
+      });
+    }
     var table = root.querySelector('.adx-table');
     if (table && window.AdminTableSort) window.AdminTableSort.bind(table);
   }
@@ -297,12 +332,15 @@
     if (!silent) {
       root.innerHTML = window.SkeletonUI ? window.SkeletonUI.invitesShell() : '<p class="adx-loading-inline">載入邀請碼中…</p>';
     }
-    api.admin.getInvites().then(function (res) {
+    api.admin.getInvites({ page: _page, pageSize: _pageSize }).then(function (res) {
       if (res.error) {
         clearPanelBusy();
         root.innerHTML = '<p class="note warn">載入失敗：' + esc(res.error) + '</p>';
         return;
       }
+      _total = typeof res.total === 'number' ? res.total : (res.invites || []).length;
+      if (typeof res.page === 'number' && res.page > 0) _page = res.page;
+      if (typeof res.page_size === 'number' && res.page_size > 0) _pageSize = res.page_size;
       _loaded = true;
       renderShell(res.invites || []);
     });

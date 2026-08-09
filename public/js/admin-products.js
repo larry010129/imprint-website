@@ -140,11 +140,15 @@
     categoryLabels: {},
     categories: [],
     categoryOrder: [],
+    categoryCounts: {},
+    listTotal: 0,
     chainCatalog: null,
     activeTab: 'cat-diamond',
     editingId: null,
     view: 'list',
   };
+  var _pageIndex = 0;
+  var _pageSize = 10;
   var _loaded = false;
   var _loading = false;
   var _slotCounter = 0;
@@ -370,7 +374,7 @@
               '<div class="ap-category-thumb-block">' +
                 '<div class="ap-category-thumb-preview">' +
                   (thumb
-                    ? '<img src="' + esc(thumb) + '" alt="">'
+                    ? '<img src="' + esc(thumb) + '" alt="" loading="lazy" decoding="async">'
                     : '<span class="ap-category-thumb-empty">預設圖</span>') +
                 '</div>' +
                 '<label class="btn-sm ap-category-thumb-upload">' +
@@ -482,6 +486,13 @@
     return state.products.filter(function (p) { return p.category === cat; });
   }
 
+  function categoryCount(cat) {
+    if (state.categoryCounts && state.categoryCounts[cat] != null) {
+      return Number(state.categoryCounts[cat]) || 0;
+    }
+    return productsInCategory(cat).length;
+  }
+
   function setRoot(html) {
     root.innerHTML = html;
     root.removeAttribute('aria-busy');
@@ -517,7 +528,7 @@
     state.view = 'list';
     var tabs = categoryOrderList().map(function (cat) {
       var label = state.categoryLabels[cat] || cat;
-      var count = productsInCategory(cat).length;
+      var count = categoryCount(cat);
       var active = state.activeTab === 'cat-' + cat;
       return '<button type="button" class="ap-tab-btn' + (active ? ' is-active' : '') + '" data-tab="cat-' + cat + '" role="tab" aria-selected="' + (active ? 'true' : 'false') + '">' +
         esc(label) + '<span class="ap-tab-count">' + count + '</span></button>';
@@ -612,7 +623,18 @@
       var cat = state.activeTab.replace('cat-', '');
       window.AdminTables.renderProductsTable(container, {
         rows: productsInCategory(cat).map(toProductTableRow),
+        total: state.listTotal,
+        pageIndex: _pageIndex,
+        pageSize: _pageSize,
         emptyLabel: '此品項尚無商品。',
+        onPaginationChange: function (pagination) {
+          var nextIndex = pagination.pageIndex || 0;
+          var nextSize = pagination.pageSize || _pageSize;
+          if (nextIndex === _pageIndex && nextSize === _pageSize) return;
+          _pageIndex = nextIndex;
+          _pageSize = nextSize;
+          load(true, true);
+        },
         onRendered: bindProductRowEvents,
       });
     });
@@ -622,12 +644,13 @@
     root.querySelectorAll('.ap-tab-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {
         state.activeTab = btn.dataset.tab;
+        _pageIndex = 0;
         root.querySelectorAll('.ap-tab-btn').forEach(function (b) {
           var active = b.dataset.tab === state.activeTab;
           b.classList.toggle('is-active', active);
           b.setAttribute('aria-selected', active ? 'true' : 'false');
         });
-        renderActiveCategoryTable();
+        load(true, true);
         refreshCategoryPanel();
         refreshRingSizeSection();
       });
@@ -1544,18 +1567,33 @@
       '<button type="button" class="ap-remove-row" aria-label="移除">✕</button></div>';
   }
 
-  function imageSlideHtml(url, color) {
+  function imageSlideHtml(urlOrSlide, color) {
+    var slide = (urlOrSlide && typeof urlOrSlide === 'object')
+      ? urlOrSlide
+      : { url: urlOrSlide, id: '', previousFilePath: '' };
+    var url = slide.url || '';
     // Bundled shop-product PNGs are never shown — uploads only.
     if (isAutoStockProductImage(url)) return '';
     var persistUrl = persistableImageUrl(url, color);
     if (!persistUrl) return '';
+    var imageId = slide.id || '';
+    var previousUrl = persistableImageUrl(slide.previousFilePath || slide.previous_file_path || '', color) || '';
+    var restoreHidden = previousUrl ? '' : ' hidden';
+    var replaceDisabled = imageId ? '' : ' disabled title="請先儲存商品後再取代"';
     return (
-      '<div class="ap-carousel-item" data-url="' + esc(persistUrl) + '" data-color="' + esc(color || '') + '">' +
+      '<div class="ap-carousel-item" data-url="' + esc(persistUrl) + '" data-color="' + esc(color || '') + '"' +
+        (imageId ? ' data-image-id="' + esc(imageId) + '"' : '') +
+        (previousUrl ? ' data-previous-url="' + esc(previousUrl) + '"' : '') +
+        '>' +
         '<div class="ap-carousel-card">' +
           '<div class="ap-carousel-card-media">' +
             '<img class="ap-carousel-img" src="' + esc(persistUrl) + '" alt="" data-fallback="' + esc(persistUrl) +
-              '" loading="eager" decoding="async" width="180" height="180">' +
+              '" loading="lazy" decoding="async" width="180" height="180">' +
             '<button type="button" class="ap-remove-image" aria-label="移除">X</button>' +
+            '<div class="ap-carousel-actions">' +
+              '<button type="button" class="ap-replace-image"' + replaceDisabled + '>取代</button>' +
+              '<button type="button" class="ap-restore-image"' + restoreHidden + '>還原</button>' +
+            '</div>' +
           '</div>' +
         '</div>' +
       '</div>'
@@ -1637,7 +1675,15 @@
       var url = persistableImageUrl(raw, color);
       if (!url) return;
       if (!groups[color]) groups[color] = [];
-      if (groups[color].indexOf(url) < 0) groups[color].push(url);
+      if (groups[color].some(function (s) { return s.url === url; })) return;
+      groups[color].push({
+        url: url,
+        id: img.id ? String(img.id) : '',
+        previousFilePath: persistableImageUrl(
+          img.previous_file_path || img.previousFilePath || '',
+          color
+        ) || '',
+      });
     });
     return groups;
   }
@@ -1648,16 +1694,28 @@
     var groups = groupImagesForSlots(images);
     form.querySelectorAll('.ap-image-slot').forEach(function (slot) {
       var color = slotColorKey(slot);
-      var urls = groups[color] || [];
+      var slides = groups[color] || [];
       var items = slot.querySelectorAll('.ap-carousel-item[data-url]');
       items.forEach(function (item, index) {
-        var url = urls[index];
-        if (!url) return;
-        item.dataset.url = url;
+        var slide = slides[index];
+        if (!slide || !slide.url) return;
+        item.dataset.url = slide.url;
+        if (slide.id) item.dataset.imageId = slide.id;
+        else delete item.dataset.imageId;
+        if (slide.previousFilePath) item.dataset.previousUrl = slide.previousFilePath;
+        else delete item.dataset.previousUrl;
         var img = item.querySelector('.ap-carousel-img');
         if (img) {
-          img.src = url;
-          if (img.dataset) img.dataset.fallback = url;
+          img.src = slide.url;
+          if (img.dataset) img.dataset.fallback = slide.url;
+        }
+        var restoreBtn = item.querySelector('.ap-restore-image');
+        if (restoreBtn) restoreBtn.hidden = !slide.previousFilePath;
+        var replaceBtn = item.querySelector('.ap-replace-image');
+        if (replaceBtn) {
+          replaceBtn.disabled = !slide.id;
+          if (slide.id) replaceBtn.removeAttribute('title');
+          else replaceBtn.title = '請先儲存商品後再取代';
         }
       });
     });
@@ -1693,10 +1751,13 @@
       slots.push({ color: key, urls: urls });
     }
 
-    function mergeInto(targetKey, urls) {
+    function mergeInto(targetKey, slides) {
       if (!groups[targetKey]) groups[targetKey] = [];
-      (urls || []).forEach(function (url) {
-        if (groups[targetKey].indexOf(url) < 0) groups[targetKey].push(url);
+      (slides || []).forEach(function (slide) {
+        var url = typeof slide === 'string' ? slide : (slide && slide.url);
+        if (!url) return;
+        if (groups[targetKey].some(function (s) { return s.url === url; })) return;
+        groups[targetKey].push(typeof slide === 'string' ? { url: slide, id: '', previousFilePath: '' } : slide);
       });
     }
 
@@ -1741,8 +1802,8 @@
   function imageSlotHtml(slot, category) {
     var slotId = 'slot-' + (++_slotCounter);
     var color = slot.color || (category === 'diamond' ? 'round' : 'white-white');
-    var slides = (slot.urls || []).map(function (url) {
-      return imageSlideHtml(url, color);
+    var slides = (slot.urls || []).map(function (slide) {
+      return imageSlideHtml(slide, color);
     }).join('');
 
     return (
@@ -1986,18 +2047,19 @@
         var hadError = false;
         results.forEach(function (res) {
           if (res.error || !res.url || isBrowserLocalImageUrl(res.url)) { hadError = true; return; }
+          var imageMeta = res.image || {};
           var wrap = document.createElement('div');
-          wrap.innerHTML = imageSlideHtml(res.url, color);
+          wrap.innerHTML = imageSlideHtml({
+            url: res.url,
+            id: imageMeta.id || '',
+            previousFilePath: imageMeta.previous_file_path || imageMeta.previousFilePath || '',
+          }, color);
           var item = wrap.firstElementChild;
           if (!item) { hadError = true; return; }
           item.dataset.url = res.url;
           item.dataset.color = color;
           track.insertBefore(item, uploadItem);
-          item.querySelector('.ap-remove-image')?.addEventListener('click', function () {
-            item.remove();
-            var carousel = slot.querySelector('[data-carousel]');
-            if (carousel && carousel._refreshCarousel) carousel._refreshCarousel();
-          });
+          bindCarouselItemActions(item, slot, form);
         });
         refreshAllCarousels(form);
         if (hadError && uploading) {
@@ -2010,6 +2072,124 @@
       });
     }, function () {
       endImageBusy();
+    });
+  }
+
+  function applyImageRowToSlide(item, imageRow, fallbackUrl) {
+    if (!item || !imageRow) return;
+    var url = imageRow.file_path || imageRow.url || fallbackUrl || '';
+    var previous = imageRow.previous_file_path || imageRow.previousFilePath || '';
+    if (url) {
+      item.dataset.url = url;
+      var img = item.querySelector('.ap-carousel-img');
+      if (img) {
+        img.src = url;
+        if (img.dataset) img.dataset.fallback = url;
+      }
+    }
+    if (imageRow.id) item.dataset.imageId = String(imageRow.id);
+    if (previous) item.dataset.previousUrl = previous;
+    else delete item.dataset.previousUrl;
+    var restoreBtn = item.querySelector('.ap-restore-image');
+    if (restoreBtn) restoreBtn.hidden = !previous;
+    var replaceBtn = item.querySelector('.ap-replace-image');
+    if (replaceBtn) {
+      replaceBtn.disabled = !item.dataset.imageId;
+      if (item.dataset.imageId) replaceBtn.removeAttribute('title');
+    }
+  }
+
+  function replaceSlideImage(item, slot, form) {
+    var imageId = item && item.dataset ? item.dataset.imageId : '';
+    if (!imageId) {
+      alert('請先儲存商品後再取代圖片');
+      return;
+    }
+    if (!state.editingId) {
+      alert('請先儲存商品後再取代圖片');
+      return;
+    }
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/png,image/jpeg,image/webp';
+    input.addEventListener('change', function () {
+      var files = Array.from(input.files || []);
+      var bad = validateImageFiles(files);
+      if (bad) {
+        alert(bad);
+        return;
+      }
+      var file = files[0];
+      if (!file) return;
+      var color = slotColorKey(slot) || item.dataset.color || 'white';
+      beginImageBusy();
+      openProductImageCrop(file).then(function (cropped) {
+        if (!cropped) {
+          endImageBusy();
+          return;
+        }
+        var fd = new FormData();
+        fd.append('file', cropped);
+        fd.append('product_id', state.editingId);
+        fd.append('color', color);
+        fd.append('replace_image_id', imageId);
+        return fetch('/api/admin/product-upload', {
+          method: 'POST',
+          credentials: 'include',
+          body: fd,
+        }).then(function (res) {
+          return res.json().catch(function () { return {}; }).then(function (data) {
+            if (!res.ok || data.error || !data.url) {
+              alert((data && data.error) || '取代失敗');
+              return;
+            }
+            applyImageRowToSlide(item, data.image || { file_path: data.url, id: imageId }, data.url);
+            refreshAllCarousels(form);
+          });
+        }).catch(function () {
+          alert('取代失敗');
+        }).then(function () {
+          endImageBusy();
+        });
+      }, function () {
+        endImageBusy();
+      });
+    });
+    input.click();
+  }
+
+  function restoreSlideImage(item, form) {
+    var imageId = item && item.dataset ? item.dataset.imageId : '';
+    var previousUrl = item && item.dataset ? item.dataset.previousUrl : '';
+    if (!imageId || !previousUrl) return;
+    beginImageBusy();
+    api.admin.productImageAction(imageId, 'restore').then(function (res) {
+      if (res.error || !res.image) {
+        alert(res.error || '還原失敗');
+        endImageBusy();
+        return;
+      }
+      applyImageRowToSlide(item, res.image, previousUrl);
+      refreshAllCarousels(form);
+      endImageBusy();
+    }, function () {
+      alert('還原失敗');
+      endImageBusy();
+    });
+  }
+
+  function bindCarouselItemActions(item, slot, form) {
+    if (!item || item.classList.contains('ap-carousel-item--upload')) return;
+    item.querySelector('.ap-remove-image')?.addEventListener('click', function () {
+      item.remove();
+      var carousel = slot.querySelector('[data-carousel]');
+      if (carousel && carousel._refreshCarousel) carousel._refreshCarousel();
+    });
+    item.querySelector('.ap-replace-image')?.addEventListener('click', function () {
+      replaceSlideImage(item, slot, form);
+    });
+    item.querySelector('.ap-restore-image')?.addEventListener('click', function () {
+      restoreSlideImage(item, form);
     });
   }
 
@@ -2085,13 +2265,8 @@
         refreshAllCarousels(form);
       });
 
-      slot.querySelectorAll('.ap-remove-image').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-          var item = btn.closest('.ap-carousel-item');
-          if (item && !item.classList.contains('ap-carousel-item--upload')) item.remove();
-          var carousel = slot.querySelector('[data-carousel]');
-          if (carousel && carousel._refreshCarousel) carousel._refreshCarousel();
-        });
+      slot.querySelectorAll('.ap-carousel-item[data-url]').forEach(function (item) {
+        bindCarouselItemActions(item, slot, form);
       });
 
       var input = slot.querySelector('.ap-image-input');
@@ -2583,7 +2758,13 @@
           var color = slotColorKey(slot);
           slot.querySelectorAll('.ap-carousel-item[data-url]').forEach(function (item) {
             var url = persistableImageUrl(item.dataset.url, color);
-            if (url) currentImages.push({ color: color, file_path: url });
+            if (!url) return;
+            currentImages.push({
+              color: color,
+              file_path: url,
+              id: item.dataset.imageId || '',
+              previous_file_path: item.dataset.previousUrl || '',
+            });
           });
         });
         _slotCounter = 0;
@@ -2699,7 +2880,12 @@
       if (!color) return;
       slot.querySelectorAll('.ap-carousel-item[data-url]').forEach(function (item) {
         var url = persistableImageUrl(item.dataset.url, color);
-        if (url) images.push({ color: color, url: url });
+        if (!url) return;
+        var entry = { color: color, url: url };
+        if (item.dataset.previousUrl) {
+          entry.previousFilePath = item.dataset.previousUrl;
+        }
+        images.push(entry);
       });
     });
     var allowsEngravingInput = form.querySelector('[name="allowsEngraving"]');
@@ -2867,6 +3053,7 @@
   }
 
   function fetchProducts() {
+    var cat = state.activeTab.replace('cat-', '');
     return new Promise(function (resolve) {
       var done = false;
       var timer = setTimeout(function () {
@@ -2874,7 +3061,11 @@
         done = true;
         resolve({ error: '載入逾時，請檢查網路後重試。', timeout: true });
       }, LOAD_TIMEOUT_MS);
-      api.admin.getProducts().then(function (res) {
+      api.admin.getProducts({
+        page: _pageIndex + 1,
+        pageSize: _pageSize,
+        category: cat || undefined,
+      }).then(function (res) {
         if (done) return;
         done = true;
         clearTimeout(timer);
@@ -2913,9 +3104,17 @@
       state.categoryLabels = res.categoryLabels || {};
       state.categories = res.categories || [];
       state.categoryOrder = res.categoryOrder || categoryOrderList();
+      state.categoryCounts = res.categoryCounts || {};
+      state.listTotal = typeof res.total === 'number' ? res.total : state.products.length;
+      if (typeof res.page === 'number' && res.page > 0) _pageIndex = res.page - 1;
+      if (typeof res.page_size === 'number' && res.page_size > 0) _pageSize = res.page_size;
       state.chainCatalog = res.chainCatalog || state.chainCatalog;
       if (state.categoryOrder.indexOf(state.activeTab.replace('cat-', '')) < 0 && state.categoryOrder.length) {
         state.activeTab = 'cat-' + state.categoryOrder[0];
+        _pageIndex = 0;
+        _loading = false;
+        load(true, true);
+        return;
       }
       _loaded = true;
       if (state.view === 'editor') return;

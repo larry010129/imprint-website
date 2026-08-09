@@ -92,7 +92,7 @@
   function loadCache(force) {
     if (_cache && !force) return Promise.resolve(_cache);
     if (_cachePromise && !force) return _cachePromise;
-    _cachePromise = api.admin.getAccounts().then(function (res) {
+    _cachePromise = api.admin.getAccounts({ page: 1, pageSize: 100 }).then(function (res) {
       _cachePromise = null;
       if (res.error) throw new Error(res.error.message || res.error);
       _cache = res.accounts || [];
@@ -349,7 +349,7 @@
     }
     list.innerHTML = '<p class="adx-loading-inline">搜尋中…</p>';
 
-    api.admin.getAccounts(query).then(function (res) {
+    api.admin.getAccounts({ q: query, page: 1, pageSize: 100 }).then(function (res) {
       if (query !== _lastQ) return;
       var serverHits = (!res.error && res.accounts) ? res.accounts : null;
       if (serverHits && serverHits.length) {

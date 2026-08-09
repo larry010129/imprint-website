@@ -38,14 +38,17 @@ _LIST_LIMIT = 1000
 def referenced_product_object_keys(cur) -> set[str]:
     """Object keys under products/ still referenced by product_images."""
     cur.execute(
-        "select file_path from product_images "
-        "where file_path is not null and btrim(file_path) <> ''"
+        "select file_path, previous_file_path from product_images"
     )
     found: set[str] = set()
     for row in cur.fetchall():
-        obj = object_path_from_public_url(str(row["file_path"]).strip())
-        if obj and obj.startswith(PRODUCTS_PREFIX):
-            found.add(obj)
+        for key in ("file_path", "previous_file_path"):
+            raw = str(row.get(key) or "").strip()
+            if not raw:
+                continue
+            obj = object_path_from_public_url(raw)
+            if obj and obj.startswith(PRODUCTS_PREFIX):
+                found.add(obj)
     return found
 
 

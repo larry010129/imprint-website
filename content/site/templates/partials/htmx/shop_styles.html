@@ -43,6 +43,17 @@
       </button>
       {% endfor %}
     </div>
+    {% if has_more and more_qs %}
+    <div class="shop-styles-more" id="shop-styles-more">
+      <button
+        type="button"
+        class="shop-back"
+        hx-get="/htmx/shop/step/styles?{{ more_qs }}"
+        hx-target="#shop-htmx-root"
+        hx-swap="innerHTML"
+      >載入更多（{{ products|length }}/{{ total }}）</button>
+    </div>
+    {% endif %}
     {% else %}
     <div class="catalog-filter-empty">
       <p>此品項暫無上架款式。</p>

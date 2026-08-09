@@ -425,6 +425,9 @@ const CATEGORY_DISPLAY_ORDER = ['diamond', 'pendant', 'ring', 'earring', 'bracel
 //    CATEGORY_STYLES / STYLE_NAMES / CATEGORY_METALS / WEIGHT_TABLE. ───────
 let catalog = {};          // { category: [ {id, nameZh, nameEn, defaultColor, golds, carats, colors, images, weights, manualPrices}, ... ] }
 let catalogLoaded = false;
+/** Per-category paging: { pageSize, total, loaded, complete } */
+const catalogPaging = {};
+const CATALOG_PAGE_SIZE = 20;
 
 function productsFor(category) {
   const list = catalog[category] || [];
@@ -433,12 +436,63 @@ function productsFor(category) {
 }
 
 function catalogCategories() {
-  const present = Object.keys(catalog).filter(cat => productsFor(cat).length > 0);
+  // Keys may be empty arrays seeded by paged /api/catalog (available but not loaded yet).
+  const present = Object.keys(catalog).filter((cat) => Array.isArray(catalog[cat]));
   const preferred = (window._catalogCategoryOrder && window._catalogCategoryOrder.length)
     ? window._catalogCategoryOrder
     : CATEGORY_DISPLAY_ORDER;
   const ordered = preferred.filter(cat => present.includes(cat));
   return ordered.concat(present.filter(cat => !ordered.includes(cat)));
+}
+
+function mergeCategoryProducts(category, incoming) {
+  if (!category || !Array.isArray(incoming)) return catalog[category] || [];
+  const list = catalog[category] || (catalog[category] = []);
+  const byId = new Map(list.map((p) => [String(p.id), p]));
+  incoming.forEach((product) => {
+    if (!product?.id) return;
+    const id = String(product.id);
+    const prev = byId.get(id);
+    if (prev) {
+      const idx = list.findIndex((p) => String(p.id) === id);
+      const merged =
+        !product.thumbUrl && prev?.thumbUrl
+          ? { ...product, thumbUrl: prev.thumbUrl }
+          : { ...prev, ...product };
+      if (idx >= 0) list[idx] = merged;
+      byId.set(id, merged);
+    } else {
+      list.push(product);
+      byId.set(id, product);
+    }
+  });
+  return list;
+}
+
+async function fetchCatalogPage({ category, page, pageSize } = {}) {
+  const params = new URLSearchParams({
+    page: String(page || 1),
+    page_size: String(pageSize || CATALOG_PAGE_SIZE),
+  });
+  if (category) params.set('category', category);
+  if (window.shopConfig?.preview) params.set('preview', '1');
+  const { res, data } = await shopApiFetch(`/api/catalog?${params.toString()}`);
+  if (!res.ok) throw new Error(`API ${res.status}`);
+  return data;
+}
+
+function applyCatalogMeta(data) {
+  if (!data) return;
+  if (data.categoryMeta) {
+    window._catalogCategoryMeta = {
+      ...(window._catalogCategoryMeta || {}),
+      ...data.categoryMeta,
+    };
+    applyCategoryAddonPricesFromMeta(window._catalogCategoryMeta);
+  }
+  if (data.categoryOrder?.length) {
+    window._catalogCategoryOrder = data.categoryOrder;
+  }
 }
 
 function getProduct(category, typeId) {
@@ -1240,23 +1294,27 @@ async function ensureProductDetail(productId, category) {
 
 async function ensureCategoryCatalog(category) {
   if (!category || category === 'diamond' || !shopUsesApi() || !shopApiConfigured()) return;
-  if ((catalog[category] || []).length) return;
-  const params = new URLSearchParams({ category });
-  if (window.shopConfig?.preview) params.set('preview', '1');
+  const paging = catalogPaging[category];
+  if (paging?.complete) return;
   try {
-    const { res, data } = await shopApiFetch(`/api/catalog?${params.toString()}`);
-    if (!res.ok) throw new Error(`API ${res.status}`);
-    const incoming = data.categories?.[category] || [];
-    if (incoming.length) catalog[category] = incoming;
-    if (data.categoryMeta) {
-      window._catalogCategoryMeta = {
-        ...(window._catalogCategoryMeta || {}),
-        ...data.categoryMeta,
+    let page = 1;
+    const pageSize = CATALOG_PAGE_SIZE;
+    let total = Infinity;
+    // Load pages until category is complete (no full-catalog dump).
+    while (page === 1 || ((catalog[category] || []).length < total && page <= 50)) {
+      const data = await fetchCatalogPage({ category, page, pageSize });
+      applyCatalogMeta(data);
+      const incoming = data.categories?.[category] || [];
+      mergeCategoryProducts(category, incoming);
+      total = Number.isFinite(Number(data.total)) ? Number(data.total) : incoming.length;
+      catalogPaging[category] = {
+        pageSize,
+        total,
+        loaded: (catalog[category] || []).length,
+        complete: (catalog[category] || []).length >= total || incoming.length === 0,
       };
-      applyCategoryAddonPricesFromMeta(window._catalogCategoryMeta);
-    }
-    if (data.categoryOrder?.length && !window._catalogCategoryOrder?.length) {
-      window._catalogCategoryOrder = data.categoryOrder;
+      if (catalogPaging[category].complete || !incoming.length) break;
+      page += 1;
     }
   } catch (err) {
     console.error('failed to load category catalog', err);
@@ -1293,14 +1351,26 @@ async function loadCatalog() {
       return;
     }
     if (!shopApiConfigured()) throw new Error('API_NOT_CONFIGURED');
-    // Lite list by default — full weights/images load per style via ensureProductDetail.
-    const catalogPath = window.shopConfig?.preview ? '/api/catalog?preview=1' : '/api/catalog';
-    const { res, data } = await shopApiFetch(catalogPath);
-    if (!res.ok) throw new Error(`API ${res.status}`);
+    // Boot: paged meta + available category keys (empty arrays OK). Styles load per category.
+    const data = await fetchCatalogPage({ page: 1, pageSize: 1 });
     catalog = data.categories || {};
-    window._catalogCategoryOrder = data.categoryOrder || null;
-    window._catalogCategoryMeta = data.categoryMeta || null;
-    applyCategoryAddonPricesFromMeta(window._catalogCategoryMeta);
+    applyCatalogMeta(data);
+    // Mark first-page crumbs incomplete so ensureCategoryCatalog refetches full category.
+    Object.keys(catalog).forEach((cat) => {
+      if (cat === 'diamond') {
+        catalogPaging.diamond = { complete: true, total: (catalog.diamond || []).length };
+        return;
+      }
+      const n = (catalog[cat] || []).length;
+      catalogPaging[cat] = {
+        pageSize: CATALOG_PAGE_SIZE,
+        total: n > 0 ? Number(data.total) || n : 0,
+        loaded: n,
+        complete: false,
+      };
+      // Drop boot crumb products — category fetch loads a clean page-1 set.
+      if (n > 0) catalog[cat] = [];
+    });
     if (shopAllowsStaticCatalog()) {
       enrichCatalogFromStatic();
     } else {
@@ -1385,6 +1455,7 @@ function renderCatalogTiles() {
 
     const img = document.createElement('img');
     img.loading = 'lazy';
+    img.decoding = 'async';
     img.alt = '';
     img.src = categoryImageUrl(cat) || (products[0] ? styleGridImageUrl(products[0]) : '');
     window.ShopAssets?.attachImageFallback(img, categoryImageUrl(cat));
@@ -2862,6 +2933,7 @@ function renderTypeCards() {
     img.src = imgSrc;
     img.alt = productName(product);
     img.loading = "lazy";
+    img.decoding = "async";
     const fallbacks = candidates.slice(1);
     if (imgSrc && fallbacks.length) {
       window.ShopAssets?.attachImageFallbackChain(img, fallbacks);
@@ -3464,6 +3536,7 @@ function renderDiamondColorCarousel() {
       img.src = diamondAssetUrl(imagePath);
       img.alt = diamondMetaLabel(color);
       img.loading = 'lazy';
+      img.decoding = 'async';
       icon.appendChild(img);
     } else {
       icon.style.background = color.swatch || '#eee';
@@ -4722,6 +4795,8 @@ function renderProductThumbnails(images) {
     const thumb = document.createElement('img');
     thumb.src = url;
     thumb.alt = '';
+    thumb.loading = 'lazy';
+    thumb.decoding = 'async';
     btn.appendChild(thumb);
     btn.addEventListener('click', () => {
       productImageIndex = index;

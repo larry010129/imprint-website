@@ -31,12 +31,17 @@ from app.storage import (
     StorageUploadError,
     delete_by_url,
     english_label_for_folder,
+    is_flat_page_image_object_key,
     is_flat_product_object_key,
+    is_nested_page_image_object_key,
     is_nested_product_object_key,
     is_pending_product_object_key,
     is_supabase_storage_url,
     local_upload_to_object_key,
     metal_color_from_slot,
+    page_image_folder_from_object_key,
+    page_image_object_key,
+    page_image_upload_relative_path,
     pending_product_object_key,
     product_category_from_object_key,
     product_folder_from_object_key,
@@ -213,11 +218,12 @@ def test_storage_upload_convert_failure_returns_err():
 
 
 def test_storage_upload_helper_not_configured():
+    webp = _pillow_image_bytes("WEBP")
     with patch(
         "app.storage.upload_image",
         side_effect=StorageNotConfiguredError("missing env"),
     ):
-        url, err = _storage_upload("products", "abc.webp", b"x", ".webp")
+        url, err = _storage_upload("products", "abc.webp", webp, ".webp")
     assert url is None
     assert "missing env" in (err or "")
 
@@ -401,6 +407,60 @@ def test_pending_product_object_key():
     assert pending_product_object_key("white", "abc.webp", category="pendant") == (
         "products/_pending/pendant/white/abc.webp"
     )
+
+
+def test_page_image_upload_relative_path_maps_tabs():
+    assert page_image_upload_relative_path("a.webp", page_key="/") == "home/a.webp"
+    assert (
+        page_image_upload_relative_path("b.webp", page_key="/about")
+        == "brand-story/b.webp"
+    )
+    assert (
+        page_image_upload_relative_path("c.webp", page_key="/series")
+        == "series-overview/c.webp"
+    )
+    assert (
+        page_image_upload_relative_path("d.webp", page_key="/series/pet/")
+        == "pet-diamond/d.webp"
+    )
+    assert (
+        page_image_upload_relative_path("e.webp", page_key="/series/pet")
+        == "pet-diamond/e.webp"
+    )
+    assert (
+        page_image_upload_relative_path("f.webp", page_key="/series/first-love/")
+        == "moon-diamond/f.webp"
+    )
+    assert (
+        page_image_upload_relative_path("g.webp", page_key="/series/love/")
+        == "wedding-diamond/g.webp"
+    )
+    assert (
+        page_image_upload_relative_path("h.webp", page_key="/series/family/")
+        == "family-diamond/h.webp"
+    )
+    assert (
+        page_image_upload_relative_path("i.webp", page_key="/series/heirloom/")
+        == "life-diamond/i.webp"
+    )
+    assert (
+        page_image_upload_relative_path("j.webp", page_key="/what-is-dna-diamond")
+        == "dna-diamond/j.webp"
+    )
+    assert page_image_upload_relative_path("k.webp") == "_pending/k.webp"
+    assert (
+        page_image_upload_relative_path("m.webp", page_key="/stories")
+        == "stories/m.webp"
+    )
+
+
+def test_page_image_object_key_helpers():
+    assert page_image_object_key("home", "x.webp") == "page-images/home/x.webp"
+    assert is_flat_page_image_object_key("page-images/abc.webp")
+    assert not is_flat_page_image_object_key("page-images/home/abc.webp")
+    assert is_nested_page_image_object_key("page-images/home/abc.webp")
+    assert page_image_folder_from_object_key("page-images/home/abc.webp") == "home"
+    assert page_image_folder_from_object_key("page-images/abc.webp") is None
 
 
 def test_product_upload_relative_path():
@@ -728,7 +788,8 @@ def test_purge_unused_deletes_only_orphans(monkeypatch):
                     "file_path": (
                         f"{SUPABASE_URL}/storage/v1/object/public/shop-media/"
                         "products/pid/white/keep.webp"
-                    )
+                    ),
+                    "previous_file_path": None,
                 }
             ]
 
@@ -836,7 +897,7 @@ def test_product_upload_uses_nested_metal_path(monkeypatch):
     assert resp.status_code == 200
     assert calls and calls[0][0] == "products"
     assert calls[0][1].startswith(f"{folder}/white/")
-    assert calls[0][1].endswith(".webp")
+    assert calls[0][1].endswith("photo.webp")
     assert calls[0][3] == ".webp"
     assert calls[0][2][:4] == b"RIFF" and calls[0][2][8:12] == b"WEBP"
     assert calls[0][4] is True
@@ -880,9 +941,11 @@ def test_page_image_upload_returns_storage_url(monkeypatch):
         lambda _req: "admin-user",
     )
     kinds: list[str] = []
+    names: list[str] = []
 
     def fake_upload(kind: str, name: str, data: bytes, ext: str):
         kinds.append(kind)
+        names.append(name)
         return PUBLIC_PAGE_IMAGE, None
 
     monkeypatch.setattr(
@@ -894,10 +957,16 @@ def test_page_image_upload_returns_storage_url(monkeypatch):
         lambda: None,
     )
 
-    resp = asyncio.run(page_image_upload(MagicMock(), file=_png_upload()))
+    resp = asyncio.run(
+        page_image_upload(
+            MagicMock(), file=_png_upload("hero-shot.png"), page_key="/about"
+        )
+    )
     assert resp.status_code == 200
     assert PUBLIC_PAGE_IMAGE in resp.body.decode()
     assert kinds == ["page-images"]
+    # Basename kept (no uuid.hex); ensure_webp runs inside real _storage_upload.
+    assert names == ["brand-story/hero-shot.png"]
 
 
 def test_page_image_upload_fails_when_storage_missing(monkeypatch):

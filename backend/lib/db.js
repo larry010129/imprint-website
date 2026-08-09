@@ -1,4 +1,4 @@
-/* Supabase Postgres via postgres.js (tagged-template SQL, neon-compatible). */
+/* Supabase Postgres via postgres.js (tagged-template SQL). */
 const postgres = require('postgres');
 
 if (!process.env.DATABASE_URL) {

@@ -4,6 +4,10 @@ export type CmsMediaItem = { id: string; url: string; alt?: string };
 
 export default function CmsMediaModal({
   media,
+  total,
+  page = 1,
+  pageSize = 20,
+  onPageChange,
   onClose,
   onDelete,
   onSelect,
@@ -11,12 +15,20 @@ export default function CmsMediaModal({
   onInvalid,
 }: {
   media: CmsMediaItem[];
+  total?: number;
+  page?: number;
+  pageSize?: number;
+  onPageChange?: (page: number) => void;
   onClose: () => void;
   onDelete: (item: CmsMediaItem) => void;
   onSelect: (item: CmsMediaItem) => void;
   onUpload: (file: File) => void;
   onInvalid?: (message: string) => void;
 }) {
+  const recordCount = total ?? media.length;
+  const pageCount = Math.max(1, Math.ceil(recordCount / Math.max(pageSize, 1)));
+  const showPager = typeof onPageChange === "function" && recordCount > pageSize;
+
   return (
     <div
       className="cms-media-modal"
@@ -53,6 +65,7 @@ export default function CmsMediaModal({
         </label>
         <p className="cms-hint">
           JPG / PNG / WEBP，來源 ≤1MB；上傳後轉 WebP 並壓縮至 ≤500KB
+          {recordCount ? ` · 共 ${recordCount} 張` : ""}
         </p>
         <div className="cms-media-grid">
           {media.map((item) => (
@@ -62,7 +75,7 @@ export default function CmsMediaModal({
                 className="cms-media-item__select"
                 onClick={() => onSelect(item)}
               >
-                <img src={item.url} alt={item.alt || ""} />
+                <img src={item.url} alt={item.alt || ""} loading="lazy" decoding="async" />
               </button>
               <button
                 type="button"
@@ -74,6 +87,29 @@ export default function CmsMediaModal({
             </div>
           ))}
         </div>
+        {showPager ? (
+          <div className="cms-media-pager" style={{ display: "flex", gap: 8, marginTop: 12, alignItems: "center" }}>
+            <button
+              type="button"
+              className="btn-sm"
+              disabled={page <= 1}
+              onClick={() => onPageChange?.(page - 1)}
+            >
+              上一頁
+            </button>
+            <span className="cms-hint">
+              第 {page} / {pageCount} 頁
+            </span>
+            <button
+              type="button"
+              className="btn-sm"
+              disabled={page >= pageCount}
+              onClick={() => onPageChange?.(page + 1)}
+            >
+              下一頁
+            </button>
+          </div>
+        ) : null}
       </div>
     </div>
   );

@@ -141,6 +141,14 @@ def ensure_product_ring_size_config_column(cur) -> None:
     cur.execute("alter table products add column if not exists ring_size_config jsonb")
 
 
+def ensure_product_images_previous_column(cur) -> None:
+    """Add product_images.previous_file_path if missing (migration 20260809140000)."""
+    cur.execute(
+        "alter table product_images "
+        "add column if not exists previous_file_path text"
+    )
+
+
 def as_jsonb(value: Any) -> Jsonb | None:
     """Wrap dict/list for jsonb params. Bare dict → ProgrammingError in psycopg3."""
     if value is None:
@@ -523,7 +531,11 @@ def validate_product_fields(body: dict | None, *, valid_categories: set[str] | N
             url = normalize_product_image_url(img.get("url"), shape)
             if not url:
                 continue
-            images.append({"color": shape, "url": url})
+            prev = _optional_previous_image_url(img)
+            entry = {"color": shape, "url": url}
+            if prev:
+                entry["previousFilePath"] = prev
+            images.append(entry)
         final_shapes = {img["color"] for img in images}
         if not final_shapes:
             if is_published:
@@ -715,7 +727,11 @@ def validate_product_fields(body: dict | None, *, valid_categories: set[str] | N
         if not url:
             # Drop blob:/data:/dead SVG quietly; publish gate still requires real images.
             continue
-        images.append({"color": color, "url": url})
+        prev = _optional_previous_image_url(img)
+        entry = {"color": color, "url": url}
+        if prev:
+            entry["previousFilePath"] = prev
+        images.append(entry)
     final_colors = {img["color"] for img in images}
     if not final_colors:
         if is_published:
@@ -863,8 +879,19 @@ def _format_product_errors(errors: list[str]) -> str:
     return "；".join(parts)
 
 
+def _optional_previous_image_url(img: dict) -> str | None:
+    raw = img.get("previousFilePath")
+    if raw is None:
+        raw = img.get("previous_file_path")
+    if not raw:
+        return None
+    path = normalize_product_image_url(raw, str(img.get("color") or "").strip().lower())
+    return path or None
+
+
 def append_product_image(cur, product_id: str, color: str, file_path: str) -> dict | None:
     """Insert one image row for an existing product (upload-time SQL persist)."""
+    ensure_product_images_previous_column(cur)
     color_key = str(color or "").strip().lower()
     path = normalize_product_image_url(file_path, color_key)
     if not path or not valid_image_color(color_key):
@@ -881,12 +908,73 @@ def append_product_image(cur, product_id: str, color: str, file_path: str) -> di
         """
         insert into product_images (product_id, color, file_path, sort_order)
         values (%s, %s, %s, %s)
-        returning id, product_id, color, file_path, sort_order
+        returning id, product_id, color, file_path, sort_order, previous_file_path
         """,
         (product_id, color_key, path, next_sort),
     )
     row = cur.fetchone()
     return dict(row) if row else None
+
+
+def replace_product_image(cur, image_id: str, new_url: str) -> tuple[dict | None, str | None]:
+    """Swap file_path; keep one-deep previous. Drops older previous from Storage when unreferenced."""
+    ensure_product_images_previous_column(cur)
+    path = normalize_product_image_url(new_url, "")
+    if not path:
+        return None, "圖片網址無效"
+    cur.execute(
+        "select id, file_path, previous_file_path from product_images where id = %s",
+        (image_id,),
+    )
+    row = cur.fetchone()
+    if not row:
+        return None, "找不到圖片"
+    old_current = str(row.get("file_path") or "").strip()
+    old_prev = str(row.get("previous_file_path") or "").strip()
+    # Same Storage key (upsert overwrite): no separate previous object to keep.
+    next_prev = old_current if old_current and old_current != path else None
+    cur.execute(
+        """
+        update product_images
+        set file_path = %s, previous_file_path = %s
+        where id = %s
+        returning id, product_id, color, file_path, sort_order, previous_file_path
+        """,
+        (path, next_prev, image_id),
+    )
+    updated = cur.fetchone()
+    if old_prev and old_prev != path and old_prev != next_prev:
+        delete_product_image_urls_if_unreferenced(cur, [old_prev])
+    return (dict(updated) if updated else None), None
+
+
+def restore_product_image(cur, image_id: str) -> tuple[dict | None, str | None]:
+    """Put previous_file_path back as current; GC discarded current when unreferenced."""
+    ensure_product_images_previous_column(cur)
+    cur.execute(
+        "select id, file_path, previous_file_path from product_images where id = %s",
+        (image_id,),
+    )
+    row = cur.fetchone()
+    if not row:
+        return None, "找不到圖片"
+    prev = str(row.get("previous_file_path") or "").strip()
+    if not prev:
+        return None, "沒有可還原的圖片"
+    current = str(row.get("file_path") or "").strip()
+    cur.execute(
+        """
+        update product_images
+        set file_path = %s, previous_file_path = null
+        where id = %s
+        returning id, product_id, color, file_path, sort_order, previous_file_path
+        """,
+        (prev, image_id),
+    )
+    updated = cur.fetchone()
+    if current and current != prev:
+        delete_product_image_urls_if_unreferenced(cur, [current])
+    return (dict(updated) if updated else None), None
 
 
 _VARIANT_NUMERIC_KEYS = (
@@ -989,13 +1077,15 @@ def resolve_product_folder(
 
 
 def _url_shared_with_other_products(cur, url: str, product_id: str) -> bool:
+    ensure_product_images_previous_column(cur)
     cur.execute(
         """
         select 1 from product_images
-        where file_path = %s and product_id <> %s
+        where (file_path = %s or previous_file_path = %s)
+          and product_id <> %s
         limit 1
         """,
-        (url, product_id),
+        (url, url, product_id),
     )
     return cur.fetchone() is not None
 
@@ -1030,8 +1120,9 @@ def align_product_images_to_folder(
 def delete_product_image_urls_if_unreferenced(cur, urls) -> int:
     """Delete Storage objects when no product_images row still references them.
 
-    Only Supabase URLs under products/. Dedupes. Best-effort: Storage failures
-    do not raise. Returns how many delete_by_url calls reported success.
+    Live refs: file_path and previous_file_path. Only Supabase URLs under
+    products/. Dedupes. Best-effort: Storage failures do not raise. Returns how
+    many delete_by_url calls reported success.
     """
     candidates: list[str] = []
     seen: set[str] = set()
@@ -1042,11 +1133,19 @@ def delete_product_image_urls_if_unreferenced(cur, urls) -> int:
         seen.add(url)
         candidates.append(url)
 
+    if not candidates:
+        return 0
+
+    ensure_product_images_previous_column(cur)
     deleted = 0
     for url in candidates:
         cur.execute(
-            "select 1 from product_images where file_path = %s limit 1",
-            (url,),
+            """
+            select 1 from product_images
+            where file_path = %s or previous_file_path = %s
+            limit 1
+            """,
+            (url, url),
         )
         if cur.fetchone():
             continue
@@ -1116,15 +1215,17 @@ def save_product_children(cur, product_id: str, cleaned: dict) -> None:
         cur, product_id, folder, cleaned.get("images") or [], category=category
     )
 
+    ensure_product_images_previous_column(cur)
     cur.execute(
-        "select file_path from product_images where product_id = %s",
+        "select file_path, previous_file_path from product_images where product_id = %s",
         (product_id,),
     )
-    previous_urls = {
-        str(row["file_path"]).strip()
-        for row in cur.fetchall()
-        if row.get("file_path")
-    }
+    previous_urls: set[str] = set()
+    for row in cur.fetchall():
+        for key in ("file_path", "previous_file_path"):
+            value = str(row.get(key) or "").strip()
+            if value:
+                previous_urls.add(value)
 
     cur.execute("delete from product_images where product_id = %s", (product_id,))
     for sort_order, image in enumerate(cleaned["images"]):
@@ -1132,15 +1233,30 @@ def save_product_children(cur, product_id: str, cleaned: dict) -> None:
         metal = metal_color_from_slot(image.get("color"))
         url = promote_pending_product_url(url, folder, metal, category=category)
         image["url"] = url
+        prev = image.get("previousFilePath") or image.get("previous_file_path")
+        prev_url = None
+        if prev:
+            prev_url = promote_pending_product_url(
+                str(prev), folder, metal, category=category
+            )
+            image["previousFilePath"] = prev_url
         cur.execute(
             """
-            insert into product_images (product_id, color, file_path, sort_order)
-            values (%s, %s, %s, %s)
+            insert into product_images (
+                product_id, color, file_path, sort_order, previous_file_path
+            )
+            values (%s, %s, %s, %s, %s)
             """,
-            (product_id, image["color"], url, sort_order),
+            (product_id, image["color"], url, sort_order, prev_url),
         )
 
-    new_urls = {str(img["url"]).strip() for img in cleaned["images"] if img.get("url")}
+    new_urls: set[str] = set()
+    for img in cleaned["images"]:
+        if img.get("url"):
+            new_urls.add(str(img["url"]).strip())
+        prev = img.get("previousFilePath") or img.get("previous_file_path")
+        if prev:
+            new_urls.add(str(prev).strip())
     delete_product_image_urls_if_unreferenced(cur, previous_urls - new_urls)
 
 

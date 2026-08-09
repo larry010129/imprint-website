@@ -84,10 +84,12 @@ def test_fetch_published_journal_posts_sql_filters_unpublished():
     class FakeCursor:
         def __init__(self):
             self.query = ""
+            self.params = None
             self._rows: list[dict] = []
 
         def execute(self, query, params=None):
             self.query = " ".join(query.split())
+            self.params = params
             assert "is_published = true" in self.query
             assert "order by posted_at desc" in self.query.lower()
             self._rows = [
@@ -110,6 +112,7 @@ def test_fetch_published_journal_posts_sql_filters_unpublished():
 
     cur = FakeCursor()
     posts = fetch_published_journal_posts(cur)
+    assert "limit" not in cur.query.lower()
     assert len(posts) == 1
     assert posts[0]["title"] == "Published only"
     assert posts[0]["posted_at"] == "2026-02-01"
@@ -117,3 +120,8 @@ def test_fetch_published_journal_posts_sql_filters_unpublished():
     assert posts[0]["is_archived"] is True
     assert posts[0]["image_url"] == "/static/j.jpg"
     assert isinstance(posts[0]["id"], str)
+
+    cur_page = FakeCursor()
+    fetch_published_journal_posts(cur_page, limit=12, offset=24)
+    assert "limit %s offset %s" in cur_page.query.lower()
+    assert cur_page.params == [12, 24]

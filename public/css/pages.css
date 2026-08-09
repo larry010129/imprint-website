@@ -710,6 +710,23 @@
   -webkit-line-clamp:4;
   overflow:hidden;
 }
+.stories-page-load-more{
+  display:flex;
+  justify-content:center;
+  padding:0 0 40px;
+}
+.stories-page-load-more__btn{
+  appearance:none;
+  border:0;
+  background:transparent;
+  color:#2a2438;
+  font-size:13.5px;
+  letter-spacing:.08em;
+  text-decoration:underline;
+  text-underline-offset:4px;
+  cursor:pointer;
+}
+.stories-page-load-more__btn:hover{ color:#5ecfcf; }
 .stories-page-cta{
   border-top:1px solid #E3DCD3;
   background:#fdfcfa;

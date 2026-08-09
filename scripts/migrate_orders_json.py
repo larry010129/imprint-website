@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import os
 import sys
 from pathlib import Path
 
@@ -12,6 +11,8 @@ from dotenv import load_dotenv
 
 ROOT = Path(__file__).resolve().parent.parent
 load_dotenv(ROOT / ".env")
+sys.path.insert(0, str(ROOT))
+from app.database import require_database_url  # noqa: E402
 
 STEPS = [
     """
@@ -116,9 +117,10 @@ def _has_column(cur, table: str, column: str) -> bool:
 
 
 def main() -> None:
-    dsn = os.environ.get("DATABASE_URL")
-    if not dsn:
-        sys.exit("DATABASE_URL is not set")
+    try:
+        dsn = require_database_url()
+    except RuntimeError as exc:
+        sys.exit(str(exc))
 
     with psycopg.connect(dsn, autocommit=True) as conn:
         with conn.cursor() as cur:

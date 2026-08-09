@@ -35,6 +35,11 @@
     { value: '__custom__', label: '其他（請說明）' },
   ];
 
+  var _pageIndex = 0;
+  var _pageSize = 20;
+  var _total = 0;
+  var _lastQuery = '';
+
   var STATUS_COLORS = {
     received: '#e0a458',
     order_confirming: '#e09a6a',
@@ -489,7 +494,7 @@
   }
 
   function renderRows(orders) {
-    if (!orders.length) {
+    if (!orders.length && !_total) {
       unmountTable();
       tbody.innerHTML = '<p class="orders-empty">目前沒有訂單</p>';
       updateBulkBar();
@@ -501,6 +506,17 @@
     }
     window.AdminTables.renderOrdersTable(tbody, {
       rows: orders.map(toOrderTableRow),
+      total: _total,
+      pageIndex: _pageIndex,
+      pageSize: _pageSize,
+      onPaginationChange: function (pagination) {
+        var nextIndex = pagination.pageIndex || 0;
+        var nextSize = pagination.pageSize || _pageSize;
+        if (nextIndex === _pageIndex && nextSize === _pageSize) return;
+        _pageIndex = nextIndex;
+        _pageSize = nextSize;
+        load(_lastQuery || null, true, true);
+      },
       onRendered: function () {
         bindRowEvents();
         updateBulkBar();
@@ -551,7 +567,12 @@
   }
 
   function load(query, silent, force) {
-    if (!query && _loaded && !force) return;
+    var q = (query == null ? _lastQuery : query) || '';
+    if (query != null && query !== _lastQuery) {
+      _lastQuery = q;
+      _pageIndex = 0;
+    }
+    if (!q && _loaded && !force) return;
     if (!silent) {
       unmountTable();
       tbody.innerHTML = window.SkeletonUI
@@ -563,17 +584,22 @@
         })
         : '<p class="orders-empty">載入中…</p>';
     }
-    var req = query
-      ? fetch('/api/admin/orders?q=' + encodeURIComponent(query), { credentials: 'include' }).then(function (r) { return r.json(); })
-      : api.admin.getOrders();
-    req.then(function (res) {
+    var params = {
+      page: _pageIndex + 1,
+      page_size: _pageSize,
+    };
+    if (q) params.q = q;
+    api.admin.getOrders(params).then(function (res) {
       if (res.error) {
         unmountTable();
         tbody.innerHTML = '<p class="orders-empty">載入失敗</p>';
         return;
       }
+      _total = typeof res.total === 'number' ? res.total : (res.orders || []).length;
+      if (typeof res.page === 'number' && res.page > 0) _pageIndex = res.page - 1;
+      if (typeof res.page_size === 'number' && res.page_size > 0) _pageSize = res.page_size;
       renderRows(res.orders || []);
-      if (!query) _loaded = true;
+      if (!q) _loaded = true;
     });
   }
 

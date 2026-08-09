@@ -34,7 +34,7 @@
           {% for item in items %}
           <li class="checkout-line-item">
             {% if item.image_url %}
-            <img class="checkout-line-item__thumb" src="{{ item.image_url }}" alt="" width="56" height="56">
+            <img class="checkout-line-item__thumb" src="{{ item.image_url }}" alt="" width="56" height="56" loading="lazy" decoding="async">
             {% else %}
             <span class="checkout-line-item__thumb checkout-line-item__thumb--empty" aria-hidden="true"></span>
             {% endif %}

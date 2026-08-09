@@ -18,11 +18,17 @@ from psycopg.types.json import Jsonb
 from app.auth import get_user_id, is_admin
 from app.catalog import (
     build_catalog_product,
+    build_catalog_product_lite,
     build_catalog_response,
+    count_catalog_rows,
     fetch_catalog_rows,
     fetch_product_row,
+    list_catalog_category_slugs,
     load_product_children,
+    normalize_catalog_detail,
+    resolve_product_id,
 )
+from app.paging import page_window_from_params
 from app.controllers.htmx_common import (
     cart_count,
     form_bool,
@@ -108,37 +114,22 @@ def _type_grid_layout(count: int) -> dict[str, Any]:
     return {"type_grid_size": size, "type_grid_cols": cols, "type_grid_count": count}
 
 
-def _load_catalog(*, include_drafts: bool = False, detail: str = "lite") -> dict[str, Any]:
-    with get_connection() as conn, conn.cursor() as cur:
-        products = fetch_catalog_rows(cur, include_drafts=include_drafts)
-        variants, images = load_product_children(cur, [row["id"] for row in products])
-        category_rows = fetch_categories(cur)
-        cat_order = [row["slug"] for row in category_rows]
-        cat_meta = {
-            row["slug"]: {
-                "labelZh": row["label_zh"],
-                "labelEn": row.get("label_en"),
-                "thumbUrl": row.get("thumbUrl") or category_image_url(row["slug"]),
-            }
-            for row in category_rows
+def _category_meta_map(category_rows: list[dict]) -> dict[str, dict]:
+    return {
+        row["slug"]: {
+            "labelZh": row["label_zh"],
+            "labelEn": row.get("label_en"),
+            "thumbUrl": row.get("thumbUrl") or category_image_url(row["slug"]),
         }
-        diamond_tombstones = list_tombstoned_style_keys(cur)
-    catalog = build_catalog_response(
-        products,
-        variants,
-        images,
-        category_order=cat_order,
-        category_meta=cat_meta,
-        detail=detail,
-    )
-    categories = dict(catalog.get("categories") or {})
-    # Static keys stay; admin products overlay name / image / color.
-    categories["diamond"] = merge_memorial_diamond_catalog(
-        categories.get("diamond") or [],
-        excluded_style_keys=diamond_tombstones,
-    )
-    order = ["diamond"] + [c for c in (catalog.get("categoryOrder") or []) if c != "diamond"]
-    meta = dict(catalog.get("categoryMeta") or {})
+        for row in category_rows
+    }
+
+
+def _finalize_catalog_meta(
+    categories: dict[str, list],
+    order: list[str],
+    meta: dict[str, dict],
+) -> dict[str, Any]:
     diamond_list = categories.get("diamond") or []
     diamond_thumb = _product_thumb(diamond_list[0]) if diamond_list else ""
     meta.setdefault(
@@ -153,6 +144,100 @@ def _load_catalog(*, include_drafts: bool = False, detail: str = "lite") -> dict
         if not info.get("thumbUrl"):
             info["thumbUrl"] = category_image_url(slug)
     return {"categories": categories, "categoryOrder": order, "categoryMeta": meta}
+
+
+def _load_catalog(
+    *,
+    include_drafts: bool = False,
+    detail: str = "lite",
+    category: str | None = None,
+    limit: int | None = None,
+    offset: int | None = None,
+) -> dict[str, Any]:
+    """Load catalog; optional category + limit/offset. Children only for fetched IDs."""
+    cat = (category or "").strip() or None
+    # Memorial merge needs every DB overlay; page diamond after merge.
+    page_sql = cat != "diamond"
+    with get_connection() as conn, conn.cursor() as cur:
+        total = count_catalog_rows(cur, category=cat, include_drafts=include_drafts)
+        products = fetch_catalog_rows(
+            cur,
+            category=cat,
+            include_drafts=include_drafts,
+            limit=limit if page_sql else None,
+            offset=offset if page_sql else None,
+        )
+        variants, images = load_product_children(cur, [row["id"] for row in products])
+        category_rows = fetch_categories(cur)
+        cat_order = [row["slug"] for row in category_rows]
+        cat_meta = _category_meta_map(category_rows)
+        diamond_tombstones = (
+            list_tombstoned_style_keys(cur) if cat in (None, "diamond") else set()
+        )
+    catalog = build_catalog_response(
+        products,
+        variants,
+        images,
+        category_order=cat_order,
+        category_meta=cat_meta,
+        detail=detail,
+    )
+    categories = dict(catalog.get("categories") or {})
+    if cat in (None, "diamond"):
+        merged = merge_memorial_diamond_catalog(
+            categories.get("diamond") or [],
+            excluded_style_keys=diamond_tombstones,
+        )
+        if cat == "diamond" and (limit is not None or offset is not None):
+            total = len(merged)
+            start = max(0, int(offset or 0))
+            end = start + int(limit) if limit is not None else None
+            categories["diamond"] = merged[start:end]
+        else:
+            categories["diamond"] = merged
+    order = list(catalog.get("categoryOrder") or [])
+    if "diamond" in categories and "diamond" not in order:
+        order = ["diamond"] + order
+    elif "diamond" in order:
+        order = ["diamond"] + [c for c in order if c != "diamond"]
+    out = _finalize_catalog_meta(categories, order, dict(catalog.get("categoryMeta") or {}))
+    out["total"] = total
+    out["page_limit"] = limit
+    out["page_offset"] = offset
+    return out
+
+
+def _load_catalog_tiles(*, include_drafts: bool = False) -> dict[str, Any]:
+    """Category tiles only — no full product dump; diamond children for memorial default."""
+    with get_connection() as conn, conn.cursor() as cur:
+        category_rows = fetch_categories(cur)
+        nonempty = set(list_catalog_category_slugs(cur, include_drafts=include_drafts))
+        diamond_rows = fetch_catalog_rows(
+            cur, category="diamond", include_drafts=include_drafts
+        )
+        variants, images = load_product_children(
+            cur, [row["id"] for row in diamond_rows]
+        )
+        diamond_tombstones = list_tombstoned_style_keys(cur)
+    diamond_products = [
+        build_catalog_product_lite(
+            row,
+            variants.get(row["id"], []),
+            images.get(row["id"], []),
+        )
+        for row in diamond_rows
+    ]
+    categories: dict[str, list] = {
+        slug: [] for slug in nonempty if slug != "diamond"
+    }
+    categories["diamond"] = merge_memorial_diamond_catalog(
+        diamond_products,
+        excluded_style_keys=diamond_tombstones,
+    )
+    cat_order = [row["slug"] for row in category_rows]
+    order = ["diamond"] + [c for c in cat_order if c != "diamond" and c in categories]
+    order.extend(c for c in categories if c not in order)
+    return _finalize_catalog_meta(categories, order, _category_meta_map(category_rows))
 
 
 def _find_product(catalog: dict[str, Any], category: str, type_ref: str) -> dict[str, Any] | None:
@@ -190,12 +275,24 @@ def _resolve_configure_product(
     include_drafts: bool,
 ) -> dict[str, Any] | None:
     product = _find_product(catalog, category, type_ref)
-    if not product:
+    if product:
+        if category == "diamond" or product.get("weights") is not None:
+            return product
+        full = _load_full_product(str(product["id"]), include_drafts=include_drafts)
+        return full or product
+    # Not in lite page — resolve UUID / style key directly (no category dump).
+    if category == "diamond":
         return None
-    if category == "diamond" or product.get("weights") is not None:
-        return product
-    full = _load_full_product(str(product["id"]), include_drafts=include_drafts)
-    return full or product
+    with get_connection() as conn, conn.cursor() as cur:
+        product_id = resolve_product_id(
+            cur,
+            category=category,
+            type_ref=type_ref,
+            require_published=not include_drafts,
+        )
+    if not product_id:
+        return None
+    return _load_full_product(str(product_id), include_drafts=include_drafts)
 
 
 def _config_from_form(form: Any) -> dict[str, Any]:
@@ -255,10 +352,22 @@ def _preview_ctx(request: Request) -> dict[str, Any]:
     return {"preview": preview, "preview_qs": "preview=1" if preview else ""}
 
 
-def _catalog_for_request(request: Request, *, detail: str = "lite") -> dict[str, Any]:
-    preview = is_shop_preview(request)
-    include_drafts = bool(preview and is_admin(get_user_id(request)))
-    return _load_catalog(include_drafts=include_drafts, detail=detail)
+def _catalog_for_request(
+    request: Request,
+    *,
+    detail: str = "lite",
+    category: str | None = None,
+    limit: int | None = None,
+    offset: int | None = None,
+) -> dict[str, Any]:
+    include_drafts = _include_drafts_for_request(request)
+    return _load_catalog(
+        include_drafts=include_drafts,
+        detail=normalize_catalog_detail(detail),
+        category=category,
+        limit=limit,
+        offset=offset,
+    )
 
 
 def _include_drafts_for_request(request: Request) -> bool:
@@ -288,14 +397,19 @@ def _step_ctx(
 
 @router.get("/step/catalog", response_class=HTMLResponse)
 async def shop_step_catalog(request: Request) -> HTMLResponse:
-    catalog = _catalog_for_request(request)
+    include_drafts = _include_drafts_for_request(request)
+    catalog = _load_catalog_tiles(include_drafts=include_drafts)
     tiles = []
     for slug in catalog["categoryOrder"]:
         products = catalog["categories"].get(slug) or []
         if not products and slug != "diamond":
-            continue
+            # Seeded empty = category has published rows; still show tile.
+            if slug not in catalog["categories"]:
+                continue
         meta = catalog["categoryMeta"].get(slug) or {}
-        thumb = meta.get("thumbUrl") or _product_thumb(products[0]) if products else category_image_url(slug)
+        thumb = meta.get("thumbUrl") or (
+            _product_thumb(products[0]) if products else category_image_url(slug)
+        )
         tiles.append(
             {
                 "slug": slug,
@@ -316,7 +430,13 @@ async def shop_step_styles(request: Request) -> HTMLResponse:
     category = str(request.query_params.get("category") or "").strip()
     if not category:
         return await shop_step_catalog(request)
-    catalog = _catalog_for_request(request)
+    window = page_window_from_params(request.query_params)
+    catalog = _catalog_for_request(
+        request,
+        category=category,
+        limit=window.limit,
+        offset=window.offset,
+    )
     if category == "diamond":
         products = catalog["categories"].get("diamond") or []
         type_ref = _default_memorial_diamond_type_ref(products)
@@ -331,6 +451,14 @@ async def shop_step_styles(request: Request) -> HTMLResponse:
     products = []
     for product in catalog["categories"].get(category) or []:
         products.append({**product, "thumb": _product_thumb(product)})
+    total = int(catalog.get("total") or len(products))
+    loaded = window.offset + len(products)
+    has_more = loaded < total
+    next_page_size = min(window.page_size + window.page_size, 100)
+    preview = is_shop_preview(request)
+    more_qs = f"category={quote(category)}&page=1&page_size={next_page_size}"
+    if preview:
+        more_qs += "&preview=1"
     return html(
         request,
         "shop_styles.html",
@@ -340,6 +468,11 @@ async def shop_step_styles(request: Request) -> HTMLResponse:
             category=category,
             category_label=meta.get("labelZh") or category,
             products=products,
+            page=window.page,
+            page_size=window.page_size,
+            total=total,
+            has_more=has_more,
+            more_qs=more_qs,
             **_type_grid_layout(len(products)),
         ),
     )
@@ -353,15 +486,34 @@ async def shop_step_configure(request: Request) -> HTMLResponse:
         return await shop_step_catalog(request)
     if not type_ref:
         return await shop_step_styles(request)
-    catalog = _catalog_for_request(request, detail="lite")
+    # Diamond: need merged memorial list. Jewelry: resolve by id (no full dump).
     include_drafts = _include_drafts_for_request(request)
+    if category == "diamond":
+        catalog = _catalog_for_request(request, detail="lite", category="diamond")
+    else:
+        catalog = {
+            "categories": {category: []},
+            "categoryOrder": [category],
+            "categoryMeta": {},
+        }
+        with get_connection() as conn, conn.cursor() as cur:
+            from app.product_categories import build_category_meta
+
+            catalog["categoryMeta"] = build_category_meta(cur)
     product = _resolve_configure_product(
         catalog, category, type_ref, include_drafts=include_drafts
     )
     if not product:
+        window = page_window_from_params(request.query_params)
+        styles = _catalog_for_request(
+            request,
+            category=category,
+            limit=window.limit,
+            offset=window.offset,
+        )
         products = [
             {**p, "thumb": _product_thumb(p)}
-            for p in (catalog["categories"].get(category) or [])
+            for p in (styles["categories"].get(category) or [])
         ]
         return html(
             request,
@@ -370,9 +522,14 @@ async def shop_step_configure(request: Request) -> HTMLResponse:
                 request,
                 step="styles",
                 category=category,
-                category_label=(catalog["categoryMeta"].get(category) or {}).get("labelZh") or category,
+                category_label=(styles["categoryMeta"].get(category) or {}).get("labelZh") or category,
                 products=products,
                 error="找不到此款式，請重新選擇。",
+                page=window.page,
+                page_size=window.page_size,
+                total=int(styles.get("total") or len(products)),
+                has_more=False,
+                more_qs="",
                 **_type_grid_layout(len(products)),
             ),
             404,

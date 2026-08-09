@@ -204,13 +204,68 @@ def test_api_catalog_default_is_lite(client):
     assert "public, max-age=60" in (resp.headers.get("Cache-Control") or "")
     data = resp.json()
     assert "categories" in data
+    assert "page" in data and "page_size" in data and "total" in data
+    assert data["page"] == 1
+    assert data["page_size"] == 20
     for products in (data.get("categories") or {}).values():
         for product in products:
+            # Memorial diamond merge keeps style payloads (weights/images).
+            style_key = str(product.get("styleKey") or "")
+            if product.get("category") == "diamond" or style_key.startswith("diamond-"):
+                continue
             assert "weights" not in product
             assert "images" not in product
             assert "golds" in product
             assert "carats" in product
             assert "thumbUrl" in product
+
+
+def test_api_catalog_category_paging(client):
+    listing = client.get("/api/catalog", params={"page": 1, "page_size": 1})
+    assert listing.status_code == 200
+    body = listing.json()
+    assert body["page"] == 1
+    assert body["page_size"] == 1
+    assert isinstance(body["total"], int)
+
+    # Pick a jewelry category that has products (skip diamond-only).
+    jewelry_cat = next(
+        (
+            cat
+            for cat, products in (body.get("categories") or {}).items()
+            if cat != "diamond" and (products or cat in (body.get("categories") or {}))
+        ),
+        None,
+    )
+    # Prefer a category with a nonempty list or seeded empty key from available slugs.
+    for cat in body.get("categoryOrder") or []:
+        if cat == "diamond":
+            continue
+        jewelry_cat = cat
+        break
+    if not jewelry_cat:
+        pytest.skip("no jewelry categories in DB")
+
+    page1 = client.get(
+        "/api/catalog",
+        params={"category": jewelry_cat, "page": 1, "page_size": 1},
+    )
+    assert page1.status_code == 200
+    p1 = page1.json()
+    assert p1["page"] == 1
+    assert p1["page_size"] == 1
+    products = p1.get("categories", {}).get(jewelry_cat) or []
+    assert len(products) <= 1
+    if p1["total"] > 1:
+        page2 = client.get(
+            "/api/catalog",
+            params={"category": jewelry_cat, "page": 2, "page_size": 1},
+        )
+        assert page2.status_code == 200
+        p2 = page2.json()
+        ids1 = {p["id"] for p in products}
+        ids2 = {p["id"] for p in (p2.get("categories", {}).get(jewelry_cat) or [])}
+        assert ids1.isdisjoint(ids2) or not ids2
 
 
 def test_api_catalog_detail_full_has_weights(client):

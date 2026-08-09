@@ -26,6 +26,7 @@ from app.admin_products import (
     as_jsonb,
     delete_product_image_urls_if_unreferenced,
     ensure_product_chain_type_column,
+    ensure_product_images_previous_column,
     ensure_product_length_weights_column,
     ensure_product_sell_mode_columns,
     ensure_product_ear_clasp_price_column,
@@ -38,7 +39,9 @@ from app.admin_products import (
     normalize_variant_row_for_admin,
     publish_readiness,
     purge_auto_stock_product_images,
+    replace_product_image,
     resolve_product_folder,
+    restore_product_image,
     save_product_children,
     serialize_product_row,
     valid_image_color,
@@ -78,6 +81,7 @@ from app.orders import (
     hydrate_order,
     merge_status_timestamps,
 )
+from app.paging import page_response, parse_paging_from_mapping, sql_count_total
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -290,10 +294,30 @@ async def leads_mark_done(request: Request) -> JSONResponse:
 async def orders_list(request: Request, q: str | None = Query(None)) -> dict:
     _require_admin(request)
     search = (q or "").strip()
+    page, page_size, limit, offset = parse_paging_from_mapping(request.query_params)
 
     with get_connection() as conn, conn.cursor() as cur:
         if search:
             like = f"%{search}%"
+            like_params = (like, like, like, like, like, like)
+            total = sql_count_total(
+                cur,
+                """
+                select count(*)::int from (
+                  select distinct o.id
+                  from orders o
+                  left join order_items oi on oi.order_id = o.id
+                  left join order_contacts oc on oc.order_id = o.id
+                  where o.order_number ilike %s
+                     or o.status ilike %s
+                     or o.summary_zh ilike %s
+                     or oc.customer_name ilike %s
+                     or oc.customer_phone ilike %s
+                     or oi.summary_zh ilike %s
+                ) t
+                """,
+                like_params,
+            )
             cur.execute(
                 """
                 select distinct o.*
@@ -307,16 +331,22 @@ async def orders_list(request: Request, q: str | None = Query(None)) -> dict:
                    or oc.customer_phone ilike %s
                    or oi.summary_zh ilike %s
                 order by o.created_at desc
-                limit 200
+                limit %s offset %s
                 """,
-                (like, like, like, like, like, like),
+                (*like_params, limit, offset),
             )
         else:
-            cur.execute("select * from orders order by created_at desc limit 100")
+            total = sql_count_total(cur, "select count(*)::int from orders")
+            cur.execute(
+                "select * from orders order by created_at desc limit %s offset %s",
+                (limit, offset),
+            )
         orders = cur.fetchall()
         attach_order_display(cur, orders)
 
-    return {"orders": orders}
+    return page_response(
+        orders, page=page, page_size=page_size, total=total, items_key="orders"
+    )
 
 
 @router.post("/orders")
@@ -561,6 +591,8 @@ def _storage_upload(kind: str, name: str, data: bytes, ext: str) -> tuple[str | 
 
     try:
         data, name, ext = ensure_webp(data, name, ext)
+        if not str(name).lower().endswith(".webp") or str(ext).lower() != ".webp":
+            return None, _ClientImageError("圖片必須儲存為 WebP")
         # Upsert: category thumbs reuse categories/{slug}{ext}; overwrite on re-upload.
         return upload_image(kind, name, data, ext, upsert=True), None
     except ImageConvertError as exc:
@@ -575,14 +607,37 @@ def _storage_upload(kind: str, name: str, data: bytes, ext: str) -> tuple[str | 
         return None, msg or "Storage upload failed"
 
 
+def _product_upload_basename(filename: str | None) -> str:
+    """Keep client basename (path-safe); ensure_webp forces .webp stem later."""
+    name = Path(filename or "").name.strip()
+    if not name or name in {".", ".."}:
+        return "image.webp"
+    return name
+
+
+def _serialize_admin_image_row(image_row: dict | None) -> dict | None:
+    if not image_row:
+        return None
+    out = dict(image_row)
+    if out.get("id") is not None:
+        out["id"] = str(out["id"])
+    if out.get("product_id") is not None:
+        out["product_id"] = str(out["product_id"])
+    return out
+
+
 @router.post("/product-upload")
 async def product_upload(
     request: Request,
     file: UploadFile = File(...),
     product_id: str | None = Form(None),
     color: str | None = Form(None),
+    replace_image_id: str | None = Form(None),
 ) -> JSONResponse:
-    """Upload to Supabase Storage; when product_id+color given, also insert product_images row."""
+    """Upload to Supabase Storage; when product_id+color given, also insert product_images row.
+
+    With replace_image_id: update that slide (one-deep previous_file_path stack).
+    """
     _require_admin(request)
     if not file.filename:
         return JSONResponse(status_code=400, content={"error": "missing file"})
@@ -593,14 +648,21 @@ async def product_upload(
     if err:
         return JSONResponse(status_code=400, content={"error": err})
 
-    pid = (product_id or "").strip()
-    slot = (color or "").strip().lower()
+    # Direct unit calls may receive FastAPI Form() defaults — only accept real strings.
+    pid = (product_id if isinstance(product_id, str) else "") or ""
+    pid = pid.strip()
+    slot = (color if isinstance(color, str) else "") or ""
+    slot = slot.strip().lower()
+    replace_id = (replace_image_id if isinstance(replace_image_id, str) else "") or ""
+    replace_id = replace_id.strip()
     if slot and not valid_image_color(slot):
         return JSONResponse(status_code=400, content={"error": "圖片選項代碼無效"})
+    if replace_id and not pid:
+        return JSONResponse(status_code=400, content={"error": "取代圖片需要 product_id"})
 
     from app.storage import product_folder_segment, product_upload_relative_path
 
-    name = f"{uuid.uuid4().hex}{ext}"
+    name = _product_upload_basename(file.filename)
     folder = None
     category = None
     if pid:
@@ -624,18 +686,43 @@ async def product_upload(
         return _upload_err_response(upload_err)
 
     image_row = None
-    if pid and slot:
+    if replace_id:
+        with get_transaction() as conn, conn.cursor() as cur:
+            ensure_product_images_previous_column(cur)
+            image_row, replace_err = replace_product_image(cur, replace_id, url)
+        if replace_err:
+            return JSONResponse(status_code=400, content={"error": replace_err})
+        image_row = _serialize_admin_image_row(image_row)
+    elif pid and slot:
         with get_transaction() as conn, conn.cursor() as cur:
             image_row = append_product_image(cur, pid, slot, url)
-        if image_row and image_row.get("id") is not None:
-            image_row["id"] = str(image_row["id"])
-        if image_row and image_row.get("product_id") is not None:
-            image_row["product_id"] = str(image_row["product_id"])
+        image_row = _serialize_admin_image_row(image_row)
 
     payload: dict = {"url": url}
     if image_row:
         payload["image"] = image_row
     return JSONResponse(content=payload)
+
+
+@router.post("/product-image-action")
+async def product_image_action(request: Request) -> JSONResponse:
+    """Restore (or future slide actions) for a persisted product_images row."""
+    _require_admin(request)
+    body = await request.json()
+    if not isinstance(body, dict):
+        return JSONResponse(status_code=400, content={"error": "invalid body"})
+    action = str(body.get("action") or "").strip().lower()
+    image_id = str(body.get("image_id") or body.get("imageId") or "").strip()
+    if not image_id:
+        return JSONResponse(status_code=400, content={"error": "缺少 image_id"})
+    if action != "restore":
+        return JSONResponse(status_code=400, content={"error": "未知操作"})
+    with get_transaction() as conn, conn.cursor() as cur:
+        image_row, error = restore_product_image(cur, image_id)
+    if error:
+        status = 404 if error == "找不到圖片" else 400
+        return JSONResponse(status_code=status, content={"error": error})
+    return JSONResponse(content={"image": _serialize_admin_image_row(image_row)})
 
 
 @router.get("/plugins")
@@ -806,17 +893,48 @@ async def product_category_upload(
     return JSONResponse(content={"url": url, "category": category})
 
 
-def _products_with_children(cur) -> list[dict]:
+def _products_with_children(
+    cur,
+    *,
+    limit: int | None = None,
+    offset: int = 0,
+    product_ids: list | None = None,
+    category: str | None = None,
+) -> list[dict]:
     ensure_product_side_stone_total_column(cur)
     ensure_product_ear_clasp_price_column(cur)
     ensure_product_variant_addon_price_column(cur)
     ensure_product_style_key_column(cur)
     ensure_product_ring_size_config_column(cur)
     ensure_memorial_diamond_products(cur)
-    cur.execute("select * from products order by sort_order, created_at desc")
+
+    if product_ids is not None:
+        ids = list(product_ids)
+        if not ids:
+            return []
+        cur.execute(
+            """
+            select * from products
+            where id = any(%s)
+            order by sort_order, created_at desc
+            """,
+            (ids,),
+        )
+    else:
+        sql = "select * from products"
+        params: list = []
+        if category:
+            sql += " where category = %s"
+            params.append(category)
+        sql += " order by sort_order, created_at desc"
+        if limit is not None:
+            sql += " limit %s offset %s"
+            params.extend([limit, offset])
+        cur.execute(sql, params)
+
     rows = cur.fetchall()
-    product_ids = [row["id"] for row in rows]
-    variants_by_product, images_by_product = load_product_children(cur, product_ids)
+    page_ids = [row["id"] for row in rows]
+    variants_by_product, images_by_product = load_product_children(cur, page_ids)
     products: list[dict] = []
     for row in rows:
         pid = row["id"]
@@ -864,17 +982,40 @@ def _product_with_children(cur, product: dict) -> dict:
 @router.get("/products")
 async def products_list(request: Request) -> dict:
     _require_admin(request)
+    page, page_size, limit, offset = parse_paging_from_mapping(request.query_params)
+    category = (request.query_params.get("category") or "").strip() or None
     try:
         with get_transaction() as conn, conn.cursor() as cur:
             purge_auto_stock_product_images(cur)
     except Exception:
         pass
     with get_connection() as conn, conn.cursor() as cur:
-        products = _products_with_children(cur)
+        if category:
+            total = sql_count_total(
+                cur,
+                "select count(*)::int from products where category = %s",
+                (category,),
+            )
+        else:
+            total = sql_count_total(cur, "select count(*)::int from products")
+        products = _products_with_children(
+            cur, limit=limit, offset=offset, category=category
+        )
+        cur.execute(
+            "select category, count(*)::int as n from products group by category"
+        )
+        category_counts = {
+            str(row["category"]): int(row["n"] or 0) for row in cur.fetchall()
+        }
         categories = fetch_categories(cur)
         labels = category_labels(cur)
     return {
         "products": products,
+        "page": page,
+        "page_size": page_size,
+        "pageSize": page_size,
+        "total": total,
+        "categoryCounts": category_counts,
         "categoryLabels": labels or CATEGORY_LABELS,
         "categories": categories,
         "categoryOrder": [row["slug"] for row in categories],
@@ -1068,15 +1209,18 @@ async def product_action(request: Request) -> JSONResponse:
             )
         elif action == "delete":
             style_key = product.get("style_key")
+            ensure_product_images_previous_column(cur)
             cur.execute(
-                "select file_path from product_images where product_id = %s",
+                "select file_path, previous_file_path from product_images "
+                "where product_id = %s",
                 (product_id,),
             )
-            image_urls = [
-                str(row["file_path"]).strip()
-                for row in cur.fetchall()
-                if row.get("file_path")
-            ]
+            image_urls: list[str] = []
+            for row in cur.fetchall():
+                for key in ("file_path", "previous_file_path"):
+                    value = str(row.get(key) or "").strip()
+                    if value:
+                        image_urls.append(value)
             cur.execute("delete from products where id = %s", (product_id,))
             delete_product_image_urls_if_unreferenced(cur, image_urls)
             # Color seeds must not reappear on next admin list load.
@@ -1184,8 +1328,10 @@ def _serialize_invite(row: dict) -> dict:
 @router.get("/invites")
 async def invites_list(request: Request) -> dict:
     _require_admin(request)
+    page, page_size, limit, offset = parse_paging_from_mapping(request.query_params)
     with get_connection() as conn, conn.cursor() as cur:
         _ensure_invite_schema(cur)
+        total = sql_count_total(cur, "select count(*)::int from invite_codes")
         cur.execute(
             """
             select i.*,
@@ -1195,10 +1341,14 @@ async def invites_list(request: Request) -> dict:
             left join users u on u.id = i.used_by_id
             left join profiles p on p.id = i.used_by_id
             order by i.created_at desc
-            """
+            limit %s offset %s
+            """,
+            (limit, offset),
         )
         invites = [_serialize_invite(row) for row in cur.fetchall()]
-    return {"invites": invites}
+    return page_response(
+        invites, page=page, page_size=page_size, total=total, items_key="invites"
+    )
 
 
 @router.post("/invites")
@@ -1331,6 +1481,7 @@ def _ensure_membership_profile_cols(cur) -> None:
 async def accounts_list(request: Request, q: str | None = Query(None)) -> dict:
     _require_admin(request)
     search = (q or "").strip()
+    page, page_size, limit, offset = parse_paging_from_mapping(request.query_params)
     # Card shows short id like "9A68 6CB8 40" — match against UUID without hyphens/spaces.
     compact = re.sub(r"[\s\-]+", "", search)
     with get_connection() as conn, conn.cursor() as cur:
@@ -1351,9 +1502,7 @@ async def accounts_list(request: Request, q: str | None = Query(None)) -> dict:
         if search:
             like = f"%{search}%"
             like_compact = f"%{compact}%"
-            cur.execute(
-                base_sql
-                + """
+            where = """
                 where u.email ilike %s
                    or coalesce(p.full_name, '') ilike %s
                    or coalesce(p.phone, '') ilike %s
@@ -1361,15 +1510,28 @@ async def accounts_list(request: Request, q: str | None = Query(None)) -> dict:
                    or coalesce(p.referral_code, '') ilike %s
                    or u.id::text ilike %s
                    or replace(u.id::text, '-', '') ilike %s
-                order by u.created_at desc
-                limit 100
-                """,
-                (like, like, like, like, like, like, like_compact),
+            """
+            like_params = (like, like, like, like, like, like, like_compact)
+            total = sql_count_total(
+                cur,
+                "select count(*)::int from users u left join profiles p on p.id = u.id "
+                + where,
+                like_params,
+            )
+            cur.execute(
+                base_sql + where + " order by u.created_at desc limit %s offset %s",
+                (*like_params, limit, offset),
             )
         else:
-            cur.execute(base_sql + " order by u.created_at desc")
+            total = sql_count_total(cur, "select count(*)::int from users")
+            cur.execute(
+                base_sql + " order by u.created_at desc limit %s offset %s",
+                (limit, offset),
+            )
         accounts = [_serialize_account(row) for row in cur.fetchall()]
-    return {"accounts": accounts}
+    return page_response(
+        accounts, page=page, page_size=page_size, total=total, items_key="accounts"
+    )
 
 
 @router.get("/accounts/{account_id}", response_model=None)
@@ -1733,10 +1895,17 @@ def _parse_coupon_fields(body: dict):
 @router.get("/coupons")
 async def coupons_list(request: Request) -> dict:
     _require_admin(request)
+    page, page_size, limit, offset = parse_paging_from_mapping(request.query_params)
     with get_connection() as conn, conn.cursor() as cur:
-        cur.execute("select * from coupons order by created_at desc")
+        total = sql_count_total(cur, "select count(*)::int from coupons")
+        cur.execute(
+            "select * from coupons order by created_at desc limit %s offset %s",
+            (limit, offset),
+        )
         coupons = [_serialize_coupon(row) for row in cur.fetchall()]
-    return {"coupons": coupons}
+    return page_response(
+        coupons, page=page, page_size=page_size, total=total, items_key="coupons"
+    )
 
 
 @router.post("/coupons")
@@ -1935,11 +2104,20 @@ async def coupon_action(request: Request) -> JSONResponse:
 @router.get("/testimonials")
 async def admin_testimonials_list(request: Request) -> dict:
     _require_admin(request)
-    from app.content import ensure_testimonial_country_column, fetch_all_testimonials
+    from app.content import (
+        count_all_testimonials,
+        ensure_testimonial_country_column,
+        fetch_all_testimonials,
+    )
 
+    page, page_size, limit, offset = parse_paging_from_mapping(request.query_params)
     with get_connection() as conn, conn.cursor() as cur:
         ensure_testimonial_country_column(cur)
-        return {"testimonials": fetch_all_testimonials(cur)}
+        total = count_all_testimonials(cur)
+        rows = fetch_all_testimonials(cur, limit=limit, offset=offset)
+    return page_response(
+        rows, page=page, page_size=page_size, total=total, items_key="testimonials"
+    )
 
 
 @router.post("/testimonials")
@@ -2153,10 +2331,15 @@ async def admin_testimonial_action(request: Request) -> JSONResponse:
 @router.get("/journal-posts")
 async def admin_journal_posts_list(request: Request) -> dict:
     _require_admin(request)
-    from app.content import fetch_all_journal_posts
+    from app.content import count_all_journal_posts, fetch_all_journal_posts
 
+    page, page_size, limit, offset = parse_paging_from_mapping(request.query_params)
     with get_connection() as conn, conn.cursor() as cur:
-        return {"posts": fetch_all_journal_posts(cur)}
+        total = count_all_journal_posts(cur)
+        rows = fetch_all_journal_posts(cur, limit=limit, offset=offset)
+    return page_response(
+        rows, page=page, page_size=page_size, total=total, items_key="posts"
+    )
 
 
 @router.post("/journal-posts")
@@ -2308,10 +2491,16 @@ async def admin_faq_categories(request: Request) -> dict:
 @router.get("/faq-items")
 async def admin_faq_items_list(request: Request) -> dict:
     _require_admin(request)
-    from app.content import fetch_faq_admin
+    from app.content import count_faq_items, fetch_faq_admin
 
+    page, page_size, limit, offset = parse_paging_from_mapping(request.query_params)
     with get_connection() as conn, conn.cursor() as cur:
-        return fetch_faq_admin(cur)
+        total = count_faq_items(cur)
+        payload = fetch_faq_admin(cur, limit=limit, offset=offset)
+    payload.update(
+        {"page": page, "page_size": page_size, "pageSize": page_size, "total": total}
+    )
+    return payload
 
 
 @router.post("/faq-items")
@@ -2486,10 +2675,15 @@ def _parse_banner_fields(body: dict):
 @router.get("/banners")
 async def admin_banners_list(request: Request) -> dict:
     _require_admin(request)
-    from app.content import fetch_all_banners
+    from app.content import count_all_banners, fetch_all_banners
 
+    page, page_size, limit, offset = parse_paging_from_mapping(request.query_params)
     with get_connection() as conn, conn.cursor() as cur:
-        return {"banners": fetch_all_banners(cur)}
+        total = count_all_banners(cur)
+        rows = fetch_all_banners(cur, limit=limit, offset=offset)
+    return page_response(
+        rows, page=page, page_size=page_size, total=total, items_key="banners"
+    )
 
 
 @router.post("/banner-upload")
@@ -2647,11 +2841,23 @@ async def admin_banner_action(request: Request) -> JSONResponse:
 @router.get("/page-images")
 async def admin_page_images_list(request: Request) -> dict:
     _require_admin(request)
-    from app.content import ensure_page_images_schema, fetch_all_page_images
+    from app.content import (
+        count_all_page_images,
+        ensure_page_images_schema,
+        fetch_all_page_images,
+    )
 
+    page, page_size, limit, offset = parse_paging_from_mapping(request.query_params)
+    page_key = (request.query_params.get("page_key") or "").strip() or None
     with get_connection() as conn, conn.cursor() as cur:
         ensure_page_images_schema(cur)
-        return {"pageImages": fetch_all_page_images(cur)}
+        total = count_all_page_images(cur, page_key=page_key)
+        rows = fetch_all_page_images(
+            cur, limit=limit, offset=offset, page_key=page_key
+        )
+    return page_response(
+        rows, page=page, page_size=page_size, total=total, items_key="pageImages"
+    )
 
 
 @router.get("/page-image-create-options")
@@ -2705,7 +2911,11 @@ async def admin_page_image_create(request: Request) -> JSONResponse:
 
 
 @router.post("/page-image-upload")
-async def page_image_upload(request: Request, file: UploadFile = File(...)) -> JSONResponse:
+async def page_image_upload(
+    request: Request,
+    file: UploadFile = File(...),
+    page_key: str | None = Form(None),
+) -> JSONResponse:
     _require_admin(request)
     if not file.filename:
         return JSONResponse(status_code=400, content={"error": "missing file"})
@@ -2714,7 +2924,14 @@ async def page_image_upload(request: Request, file: UploadFile = File(...)) -> J
     err = _image_upload_error(file, data, ext)
     if err:
         return JSONResponse(status_code=400, content={"error": err})
-    name = f"{uuid.uuid4().hex}{ext}"
+    from app.storage import page_image_upload_relative_path
+
+    key = page_key if isinstance(page_key, str) else ""
+    key = key.strip() or None
+    # Keep client basename; ensure_webp (via _storage_upload) forces .webp.
+    name = page_image_upload_relative_path(
+        _product_upload_basename(file.filename), page_key=key
+    )
     url, upload_err = _storage_upload("page-images", name, data, ext)
     if upload_err:
         return _upload_err_response(upload_err)
@@ -2730,7 +2947,11 @@ async def admin_page_image_update(request: Request) -> JSONResponse:
     body = await request.json()
     if not isinstance(body, dict):
         body = {}
-    from app.content import parse_page_image_payload, serialize_page_image
+    from app.content import (
+        apply_page_image_replace_stack,
+        parse_page_image_payload,
+        serialize_page_image,
+    )
 
     fields, err = parse_page_image_payload(body)
     if err:
@@ -2738,7 +2959,8 @@ async def admin_page_image_update(request: Request) -> JSONResponse:
     assert fields is not None
     page_key = fields["page_key"]
     slot_key = fields["slot_key"]
-    with get_connection() as conn, conn.cursor() as cur:
+    webp_provided = "image_webp" in fields
+    with get_transaction() as conn, conn.cursor() as cur:
         cur.execute(
             "select * from page_images where page_key = %s and slot_key = %s",
             (page_key, slot_key),
@@ -2746,43 +2968,38 @@ async def admin_page_image_update(request: Request) -> JSONResponse:
         existing = cur.fetchone()
         if not existing:
             return JSONResponse(status_code=404, content={"error": "找不到頁面圖片設定"})
+        row = apply_page_image_replace_stack(
+            cur,
+            existing,
+            new_url=fields["image_url"],
+            new_webp=fields.get("image_webp"),
+            image_alt=fields["image_alt"],
+            is_published=fields["is_published"],
+            webp_provided=webp_provided,
+        )
         if existing.get("group_key") == "cms-section":
             from app.cms_section_images import update_section_from_page_image
 
+            # Stack already on page_images; sync section props from current only.
+            published = bool(row.get("is_published")) if row else fields["is_published"]
             update_section_from_page_image(
                 cur,
                 page_key=page_key,
                 slot_key=slot_key,
-                image_url=fields["image_url"] if fields["is_published"] else "",
-                image_alt=fields["image_alt"],
-                image_webp=fields.get("image_webp"),
+                image_url=(row.get("image_url") if row else fields["image_url"])
+                if published
+                else "",
+                image_alt=(row.get("image_alt") if row else fields["image_alt"]) or "",
+                image_webp=(row.get("image_webp") if row else fields.get("image_webp"))
+                if published
+                else None,
             )
             cur.execute(
                 "select * from page_images where page_key = %s and slot_key = %s",
                 (page_key, slot_key),
             )
-            row = serialize_page_image(cur.fetchone())
-        else:
-            sets = [
-                "image_url = %s",
-                "image_alt = %s",
-                "is_published = %s",
-                "updated_at = now()",
-            ]
-            params: list = [fields["image_url"], fields["image_alt"], fields["is_published"]]
-            if "image_webp" in fields:
-                sets.insert(1, "image_webp = %s")
-                params.insert(1, fields["image_webp"])
-            params.extend((page_key, slot_key))
-            cur.execute(
-                f"""
-                update page_images set {', '.join(sets)}
-                where page_key = %s and slot_key = %s
-                returning *
-                """,
-                params,
-            )
-            row = serialize_page_image(cur.fetchone())
+            row = cur.fetchone()
+        row = serialize_page_image(row)
     from app.controllers.web_controller import clear_page_image_cache, clear_site_cms_cache
 
     clear_page_image_cache()
@@ -2810,12 +3027,16 @@ async def admin_page_image_action(request: Request) -> JSONResponse:
     if (
         not page_key
         or not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,63}", slot_key)
-        or action not in {"publish", "unpublish", "reset"}
+        or action not in {"publish", "unpublish", "reset", "restore"}
     ):
         return JSONResponse(status_code=400, content={"error": "invalid page_key/slot_key/action"})
-    from app.content import serialize_page_image
+    from app.content import (
+        reset_page_image_row,
+        restore_page_image_row,
+        serialize_page_image,
+    )
 
-    with get_connection() as conn, conn.cursor() as cur:
+    with get_transaction() as conn, conn.cursor() as cur:
         cur.execute(
             "select * from page_images where page_key = %s and slot_key = %s",
             (page_key, slot_key),
@@ -2823,7 +3044,46 @@ async def admin_page_image_action(request: Request) -> JSONResponse:
         existing = cur.fetchone()
         if not existing:
             return JSONResponse(status_code=404, content={"error": "找不到頁面圖片設定"})
-        if existing.get("group_key") == "cms-section":
+        if action == "restore":
+            row, restore_err = restore_page_image_row(cur, existing)
+            if restore_err:
+                return JSONResponse(status_code=400, content={"error": restore_err})
+            if existing.get("group_key") == "cms-section" and row:
+                from app.cms_section_images import update_section_from_page_image
+
+                update_section_from_page_image(
+                    cur,
+                    page_key=page_key,
+                    slot_key=slot_key,
+                    image_url=row.get("image_url") or "",
+                    image_alt=row.get("image_alt") or "",
+                    image_webp=row.get("image_webp"),
+                )
+                cur.execute(
+                    "select * from page_images where page_key = %s and slot_key = %s",
+                    (page_key, slot_key),
+                )
+                row = cur.fetchone()
+        elif action == "reset":
+            row = reset_page_image_row(cur, existing)
+            if existing.get("group_key") == "cms-section":
+                from app.cms_section_images import update_section_from_page_image
+
+                # CMS defaults are usually empty — clear section props after GC.
+                update_section_from_page_image(
+                    cur,
+                    page_key=page_key,
+                    slot_key=slot_key,
+                    image_url=row.get("image_url") or "",
+                    image_alt=row.get("image_alt") or "",
+                    image_webp=row.get("image_webp"),
+                )
+                cur.execute(
+                    "select * from page_images where page_key = %s and slot_key = %s",
+                    (page_key, slot_key),
+                )
+                row = cur.fetchone()
+        elif existing.get("group_key") == "cms-section":
             from app.cms_section_images import update_section_from_page_image
 
             keep_image = action == "publish"
@@ -2839,6 +3099,7 @@ async def admin_page_image_action(request: Request) -> JSONResponse:
                 "select * from page_images where page_key = %s and slot_key = %s",
                 (page_key, slot_key),
             )
+            row = cur.fetchone()
         elif action == "publish":
             cur.execute(
                 """
@@ -2849,7 +3110,8 @@ async def admin_page_image_action(request: Request) -> JSONResponse:
                 """,
                 (page_key, slot_key),
             )
-        elif action == "unpublish":
+            row = cur.fetchone()
+        else:
             cur.execute(
                 """
                 update page_images
@@ -2859,20 +3121,7 @@ async def admin_page_image_action(request: Request) -> JSONResponse:
                 """,
                 (page_key, slot_key),
             )
-        else:
-            cur.execute(
-                """
-                update page_images
-                set image_url = default_image_url,
-                    image_webp = default_image_webp,
-                    is_published = true,
-                    updated_at = now()
-                where page_key = %s and slot_key = %s
-                returning *
-                """,
-                (page_key, slot_key),
-            )
-        row = cur.fetchone()
+            row = cur.fetchone()
         if not row:
             return JSONResponse(status_code=404, content={"error": "找不到頁面圖片設定"})
         payload = serialize_page_image(row)

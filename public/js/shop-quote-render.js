@@ -219,11 +219,11 @@
       + '<section class="share-hero">'
       + (imgComposite
         ? '<div class="share-image-composite">'
-          + '<img class="share-image share-image--chain" src="' + urlAttr(imgChain) + '" alt="">'
-          + '<img class="share-image share-image--pendant" src="' + urlAttr(imgSrc) + '" alt="">'
+          + '<img class="share-image share-image--chain" src="' + urlAttr(imgChain) + '" alt="" loading="lazy" decoding="async">'
+          + '<img class="share-image share-image--pendant" src="' + urlAttr(imgSrc) + '" alt="" loading="lazy" decoding="async">'
           + '</div>'
         : (imgSrc
-          ? '<img class="share-image" src="' + urlAttr(imgSrc) + '" alt=""'
+          ? '<img class="share-image" src="' + urlAttr(imgSrc) + '" alt="" loading="lazy" decoding="async"'
             + (imgFallback ? ' data-fallback="' + urlAttr(imgFallback) + '"' : '') + '>'
           : ''))
       + '<div class="share-hero-copy">'
