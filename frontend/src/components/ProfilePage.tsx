@@ -132,7 +132,7 @@ export default function ProfilePage() {
       items.unshift({
         icon: <LayoutDashboard className="h-5 w-5" aria-hidden="true" />,
         label: "管理後台",
-        href: "/admin.html",
+        href: "/admin",
       });
     }
     items.push({

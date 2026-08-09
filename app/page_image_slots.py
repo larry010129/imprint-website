@@ -16,6 +16,7 @@ _URL_ATTRS = r"(?:src|srcset|data-src|data-srcset|data-jpg)"
 # Admin「頁面圖片」sub-tab label (page_label) → Storage folder under page-images/.
 # Keys are page_key values from SlotSpec; folder slugs are short English kebab-case.
 PAGE_IMAGE_STORAGE_FOLDERS: dict[str, str] = {
+    "/journal": "journal",
     "/": "home",  # 首頁
     "/about": "brand-story",  # 品牌故事
     "/series": "series-overview",  # 五大系列總覽
@@ -250,6 +251,23 @@ def _dna_specs() -> list[SlotSpec]:
     return specs
 
 
+def _journal_specs() -> list[SlotSpec]:
+    """Expose the page-level journal image slot in the admin uploader."""
+    return [
+        _slot(
+            "/journal",
+            "品牌日誌",
+            "hero",
+            "頁首圖片",
+            "brand",
+            "pages/journal.html",
+            (),
+            (2400, 900),
+            allow_empty=True,
+        )
+    ]
+
+
 def page_image_slot_specs() -> tuple[SlotSpec, ...]:
     """Return content-page image slots only.
 
@@ -262,6 +280,7 @@ def page_image_slot_specs() -> tuple[SlotSpec, ...]:
         + _series_overview_specs()
         + _series_detail_specs()
         + _dna_specs()
+        + _journal_specs()
     )
     return tuple(specs)
 

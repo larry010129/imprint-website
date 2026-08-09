@@ -73,15 +73,25 @@ echo.
 echo Starting FastAPI + Jinja SSR on http://%HOST%:%PORT%
 echo Open the site at http://%HOST%:%PORT%/
 echo.
-echo Note: On Windows, brief "SpawnProcess" tracebacks during reload are harmless.
-echo       If the site loads in the browser, you can ignore them.
-echo.
 echo Keep this window open while the server runs. Ctrl+C to stop.
 echo.
-
-"%VENV_PY%" -m uvicorn main:app --reload --host %HOST% --port %PORT% ^
-  --reload-dir app --reload-dir config --reload-dir content ^
-  --reload-delay 0.25
+if /I "%DEV_NO_RELOAD%"=="1" (
+  echo Reload OFF ^(DEV_NO_RELOAD=1^). Prefer this for admin image upload testing on Windows.
+  echo.
+  "%VENV_PY%" -m uvicorn main:app --host %HOST% --port %PORT%
+) else (
+  echo Note: On Windows, WatchFiles --reload can print SpawnProcess / namedtuple crashes.
+  echo       That race makes uploads look broken. If uploads flake, restart with:
+  echo         set DEV_NO_RELOAD=1 ^&^& dev.bat
+  echo.
+  echo uvicorn cmdline:
+  echo   "%VENV_PY%" -m uvicorn main:app --reload --host %HOST% --port %PORT% --reload-dir app --reload-dir config --reload-dir content --reload-delay 1.0 --reload-exclude "__pycache__" --reload-exclude "*.pyc" --reload-exclude "*.log"
+  echo.
+  "%VENV_PY%" -m uvicorn main:app --reload --host %HOST% --port %PORT% ^
+    --reload-dir app --reload-dir config --reload-dir content ^
+    --reload-delay 1.0 ^
+    --reload-exclude "__pycache__" --reload-exclude "*.pyc" --reload-exclude "*.log"
+)
 set "UV_EXIT=%ERRORLEVEL%"
 if not "%UV_EXIT%"=="0" (
   echo.

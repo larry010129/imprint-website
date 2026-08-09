@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ImagePlus, Trash2, Upload } from "lucide-react";
 
 import { useImageUpload } from "@/components/hooks/use-image-upload";
@@ -28,6 +28,10 @@ export type ImageUploadFieldProps = {
   uploadOnSelect?: boolean;
   className?: string;
   onValidationError?: (message: string) => void;
+  /** Fired when a newly picked file is waiting for 「確認裁切並上傳」. */
+  onPendingChange?: (pending: boolean) => void;
+  /** Fired when a pending local file/crop is ignored (e.g. parent save without confirm). */
+  onPendingDiscarded?: (message: string) => void;
   aspectRatio?: number;
   targetW?: number;
   targetH?: number;
@@ -63,12 +67,16 @@ export function ImageUploadField({
   uploadOnSelect = true,
   className,
   onValidationError,
+  onPendingChange,
+  onPendingDiscarded,
   aspectRatio,
   targetW,
   targetH,
   cropEnabled = true,
 }: ImageUploadFieldProps) {
+  const rootRef = useRef<HTMLDivElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
   const [crop, setCrop] = useState<CropPercent>(() =>
     defaultCropPercent(resolveAspectRatio(aspectRatio, targetW, targetH)),
   );
@@ -86,7 +94,6 @@ export function ImageUploadField({
     handleDragOver,
     handleDragLeave,
     handleDrop,
-    clearPendingFile,
     resetPreview,
     setRemotePreview,
     hasPreview,
@@ -95,9 +102,12 @@ export function ImageUploadField({
     onValidationError,
   });
 
+  // Sync from controlled `value` only when that prop changes.
+  // Do not re-run when `file` clears after upload — setRemotePreview already
+  // applied the new URL; re-syncing from a stale mount-time value would revert it.
   useEffect(() => {
     if (!file) setRemotePreview(value);
-  }, [file, setRemotePreview, value]);
+  }, [value, setRemotePreview]); // eslint-disable-line react-hooks/exhaustive-deps -- omit file on purpose
 
   useEffect(() => {
     setCropTouched(false);
@@ -112,9 +122,22 @@ export function ImageUploadField({
     setCrop(next);
   }, []);
 
+  const discardPending = useCallback(() => {
+    if (!file && !cropTouched) return false;
+    setRemotePreview(value || "");
+    setCropTouched(false);
+    setLocalError(null);
+    const msg = value
+      ? "尚未確認裁切，將使用原圖"
+      : "尚未確認裁切，將使用空白圖片";
+    onPendingDiscarded?.(msg);
+    return true;
+  }, [cropTouched, file, onPendingDiscarded, setRemotePreview, value]);
+
   const runUpload = useCallback(async () => {
     if (!onUpload || !previewUrl) return;
     setUploading(true);
+    setLocalError(null);
     try {
       const uploadFile = await resolveUploadFile(
         previewUrl,
@@ -124,22 +147,25 @@ export function ImageUploadField({
       );
       const res = await onUpload(uploadFile);
       if (res.error || !res.url) {
-        onValidationError?.(resolveError(res.error));
-        if (file) clearPendingFile();
+        const resolved = resolveError(res.error);
+        setLocalError(resolved);
+        onValidationError?.(resolved);
+        // Keep crop preview so the error stays visible next to the control.
         return;
       }
       onChange?.(res.url);
       setRemotePreview(res.url);
       setCropTouched(false);
+      setLocalError(null);
     } catch (error) {
-      onValidationError?.(error instanceof Error ? error.message : "裁切失敗");
+      const msg = error instanceof Error ? error.message : "裁切失敗";
+      setLocalError(msg);
+      onValidationError?.(msg);
     } finally {
       setUploading(false);
     }
   }, [
-    clearPendingFile,
     crop,
-    cropTouched,
     file,
     onChange,
     onUpload,
@@ -149,15 +175,43 @@ export function ImageUploadField({
     targetW,
   ]);
 
+  const isPendingLocal = Boolean(file);
+
+  useEffect(() => {
+    onPendingChange?.(isPendingLocal);
+  }, [isPendingLocal, onPendingChange]);
+
+  // Soft-discard pending local crop on parent <form> submit (capture), so save
+  // never blocks on 「確認裁切並上傳」. Hidden image_url already holds prior/empty.
+  useEffect(() => {
+    if (!uploadOnSelect || !onUpload) return;
+    const onSubmitCapture = (event: Event) => {
+      const form = event.target;
+      const root = rootRef.current;
+      if (!(form instanceof HTMLFormElement) || !root) return;
+      if (!form.contains(root)) return;
+      if (root.getAttribute("data-pending-upload") !== "1") return;
+      discardPending();
+    };
+    document.addEventListener("submit", onSubmitCapture, true);
+    return () => document.removeEventListener("submit", onSubmitCapture, true);
+  }, [discardPending, onUpload, uploadOnSelect]);
+
   const showDropZone = !hasPreview || uploading;
-  const showCrop = cropEnabled && hasPreview && !uploading;
+  // Crop only for a newly picked local file — never force re-crop of committed URLs.
+  const showCrop = cropEnabled && isPendingLocal && !uploading;
+  const showCommittedPreview = hasPreview && !isPendingLocal && !uploading;
   const pendingUpload =
-    Boolean(onUpload) &&
-    uploadOnSelect &&
-    (Boolean(file) || (cropTouched && hasPreview));
+    Boolean(onUpload) && uploadOnSelect && isPendingLocal;
 
   return (
-    <div className={cn("space-y-2", className)} data-admin-root="">
+    <div
+      ref={rootRef}
+      className={cn("space-y-2", className)}
+      data-admin-root=""
+      data-image-upload-root=""
+      data-pending-upload={isPendingLocal ? "1" : "0"}
+    >
       {label ? <Label>{label}</Label> : null}
       <div className="relative">
         <Input
@@ -165,6 +219,7 @@ export function ImageUploadField({
           type="file"
           accept={accept}
           className="hidden"
+          tabIndex={-1}
           onChange={handleInputChange}
         />
 
@@ -195,6 +250,45 @@ export function ImageUploadField({
           </button>
         ) : null}
 
+        {showCommittedPreview ? (
+          <div className="space-y-3">
+            <div className="overflow-hidden rounded-lg border border-[#ede7e0] bg-[#fafaf8]">
+              <img
+                src={previewUrl}
+                alt=""
+                className="block h-auto max-h-64 w-full object-contain"
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="border-[#ede7e0] bg-white text-[#2b2320] shadow-none hover:bg-[#f7f3ee]"
+                onClick={openFilePicker}
+              >
+                <Upload className="size-3.5" aria-hidden />
+                更換
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="border-[#ede7e0] bg-white text-[#c0392b] shadow-none hover:bg-[#fef5f4]"
+                onClick={() => {
+                  resetPreview("");
+                  onChange?.("");
+                  setCropTouched(false);
+                  setLocalError(null);
+                }}
+              >
+                <Trash2 className="size-3.5" aria-hidden />
+                移除
+              </Button>
+            </div>
+          </div>
+        ) : null}
+
         {showCrop ? (
           <div className="space-y-3">
             <ImageCropEditor
@@ -222,13 +316,14 @@ export function ImageUploadField({
                 variant="outline"
                 className="border-[#ede7e0] bg-white text-[#c0392b] shadow-none hover:bg-[#fef5f4]"
                 onClick={() => {
-                  resetPreview("");
-                  onChange?.("");
+                  resetPreview(value || "");
+                  if (!value) onChange?.("");
                   setCropTouched(false);
+                  setLocalError(null);
                 }}
               >
                 <Trash2 className="size-3.5" aria-hidden />
-                移除
+                取消選圖
               </Button>
               {pendingUpload ? (
                 <Button
@@ -248,7 +343,14 @@ export function ImageUploadField({
         <p className="text-xs text-[#8a817b]">已選擇新圖片，儲存後才會上傳。</p>
       ) : null}
       {file && uploadOnSelect ? (
-        <p className="text-xs text-[#8a817b]">調整裁切範圍後，請按「確認裁切並上傳」。</p>
+        <p className="text-xs text-[#8a817b]">
+          調整裁切後按「確認裁切並上傳」；也可直接儲存表單（沿用原圖或空白）。
+        </p>
+      ) : null}
+      {localError ? (
+        <p className="text-xs text-[#c0392b]" role="alert">
+          {localError}
+        </p>
       ) : null}
     </div>
   );

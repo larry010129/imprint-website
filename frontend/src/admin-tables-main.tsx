@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import AdminOrdersTable, { type AdminOrdersTableProps } from "@/components/admin/AdminOrdersTable";
 import AdminProductsTable, { type AdminProductsTableProps } from "@/components/admin/AdminProductsTable";
@@ -33,6 +34,25 @@ import {
   type ImageUploadFieldProps,
 } from "@/components/ui/image-upload";
 import "./index.css";
+
+/** Keeps `value` in sync after imperative onChange (DOM callers never re-render). */
+function ImageUploadFieldBridge(props: ImageUploadFieldProps) {
+  const [url, setUrl] = useState(props.value ?? "");
+  useEffect(() => {
+    setUrl(props.value ?? "");
+  }, [props.value]);
+
+  return (
+    <ImageUploadField
+      {...props}
+      value={url}
+      onChange={(next) => {
+        setUrl(next);
+        props.onChange?.(next);
+      }}
+    />
+  );
+}
 
 const roots = new WeakMap<Element, Root>();
 
@@ -71,7 +91,7 @@ function renderPageImageCreateModal(container: Element, props: PageImageCreateMo
 }
 
 function renderImageUploadField(container: Element, props: ImageUploadFieldProps) {
-  getRoot(container).render(<ImageUploadField {...props} />);
+  getRoot(container).render(<ImageUploadFieldBridge {...props} />);
 }
 
 function renderBannerCropModal(container: Element, props: BannerCropModalProps) {

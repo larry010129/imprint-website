@@ -5,7 +5,7 @@
   <li><a class="mobile-animated-nav__sublink" href="/account">我的帳戶</a></li>
   <li><a class="mobile-animated-nav__sublink" href="/history">訂購紀錄</a></li>
   <li><a class="mobile-animated-nav__sublink" href="/cart">購物車</a></li>
-  {% if nav_user.is_admin %}<li><a class="mobile-animated-nav__sublink" href="/admin.html">管理後台</a></li>{% endif %}
+  {% if nav_user.is_admin %}<li><a class="mobile-animated-nav__sublink" href="/admin">管理後台</a></li>{% endif %}
   <li>
     <button type="button" class="mobile-animated-nav__sublink mobile-animated-nav__sublink--button account-menu-item"
       hx-post="/htmx/logout" hx-swap="none">登出</button>
@@ -24,7 +24,7 @@
     <a role="menuitem" class="account-menu-item" href="/account">我的帳戶</a>
     <a role="menuitem" class="account-menu-item" href="/history">訂購紀錄</a>
     <a role="menuitem" class="account-menu-item" href="/cart">購物車 {% include "partials/htmx/cart_badge.html" %}</a>
-    {% if nav_user.is_admin %}<a role="menuitem" class="account-menu-item account-menu-admin" href="/admin.html">管理後台</a>{% endif %}
+    {% if nav_user.is_admin %}<a role="menuitem" class="account-menu-item account-menu-admin" href="/admin">管理後台</a>{% endif %}
     <button type="button" role="menuitem" class="account-menu-item account-menu-logout"
       hx-post="/htmx/logout" hx-swap="none">登出</button>
   </div>

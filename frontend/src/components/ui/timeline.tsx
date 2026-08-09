@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 interface TimelineEntry {
   year: string;
   month: string;
+  day: string;
   content: React.ReactNode;
 }
 
@@ -71,9 +72,6 @@ export const Timeline = ({ data, eyebrow, heading, description }: TimelineProps)
                 <div className="h-10 absolute left-3 md:left-3 w-10 rounded-full bg-white flex items-center justify-center">
                   <div className="h-4 w-4 rounded-full bg-neutral-200 border border-neutral-300 p-2" />
                 </div>
-                <span className="hidden md:block absolute left-14 text-sm md:text-base font-medium tabular-nums text-neutral-400">
-                  {item.month}
-                </span>
                 {showYear && (
                   <h3 className="hidden md:block text-xl md:pl-24 md:text-5xl font-bold text-neutral-500">
                     {item.year}
@@ -86,8 +84,13 @@ export const Timeline = ({ data, eyebrow, heading, description }: TimelineProps)
                   {showYear && (
                     <h3 className="text-2xl font-bold text-neutral-500">{item.year}</h3>
                   )}
-                  <p className="text-sm font-medium tabular-nums text-neutral-400">{item.month}</p>
+                  <p className="text-sm font-medium tabular-nums text-neutral-400">
+                    {item.month}{item.day ? `.${item.day}` : ""}
+                  </p>
                 </div>
+                <p className="hidden md:block text-sm md:text-base font-medium tabular-nums text-neutral-400 mb-3">
+                  {item.month}{item.day ? `.${item.day}` : ""}
+                </p>
                 {item.content}
               </div>
             </div>

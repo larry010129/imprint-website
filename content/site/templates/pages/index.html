@@ -276,7 +276,7 @@
             data-yt-facade
             data-yt-id="{{ featured_video.youtube_id }}"
             data-yt-title="{{ featured_video.title }}"
-            data-yt-poster="/static/images/video/featured-{{ featured_video.youtube_id }}.webp"
+            data-yt-poster="https://i.ytimg.com/vi/{{ featured_video.youtube_id }}/hqdefault.jpg"
             aria-label="播放影片：{{ featured_video.title }}"
           >
             {# No image element here on purpose: app/page_image_slots.py assigns CMS

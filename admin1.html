@@ -11,7 +11,7 @@
 <link rel="stylesheet" href="/css/admin1-shell.css?v=6">
 <link rel="stylesheet" href="/css/admin-orders.css?v=11">
 <link rel="stylesheet" href="/css/admin-tables.css?v=29">
-<link rel="stylesheet" href="/static/react/admin-tables.css?v=36">
+<link rel="stylesheet" href="/static/react/admin-tables.css?v=39">
 <link rel="stylesheet" href="/css/cms-editor.css?v=12">
 <link rel="stylesheet" href="/css/toast.css?v=1">
 <!-- 上線時建議打開 Google Fonts:
@@ -105,11 +105,11 @@
       <div class="side-nav-section">
         <p class="side-nav-label">系統</p>
         <div class="side-nav-items">
-          <a class="side-nav-link" href="/admin1-settings.html">
+          <a class="side-nav-link" href="/admin/settings">
             <svg class="side-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
             <span>系統設定</span>
           </a>
-          <a class="side-nav-link" href="/admin1-plugins.html">
+          <a class="side-nav-link" href="/admin/plugins">
             <svg class="side-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
             <span>插件</span>
           </a>
@@ -132,7 +132,7 @@
           </svg>
         </button>
         <nav class="admin1-crumbs" aria-label="目前位置">
-          <a href="/admin1.html" class="admin1-crumb-root" id="admin1CrumbHome">
+          <a href="/admin" class="admin1-crumb-root" id="admin1CrumbHome">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 10.5L12 3l9 7.5"/><path d="M5 10v10h14V10"/></svg>
             首頁
           </a>
@@ -161,7 +161,7 @@
             <div id="admin1NotifyList"><div class="admin1-notify-empty">尚無新通知</div></div>
           </div>
         </div>
-        <a class="admin1-icon-btn" href="/admin1-settings.html" id="admin1SettingsBtn" title="設定" aria-label="系統設定">
+        <a class="admin1-icon-btn" href="/admin/settings" id="admin1SettingsBtn" title="設定" aria-label="系統設定">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         </a>
         <div class="admin1-dropdown" id="admin1AvatarWrap">
@@ -174,8 +174,8 @@
           </button>
           <div class="admin1-dropdown-panel" role="menu">
             <div class="admin1-dropdown-label">我的帳戶</div>
-            <a class="admin1-dropdown-item" href="/admin1-settings.html#profile" role="menuitem">個人資料</a>
-            <a class="admin1-dropdown-item" href="/admin1-settings.html" role="menuitem">設定</a>
+            <a class="admin1-dropdown-item" href="/admin/settings#profile" role="menuitem">個人資料</a>
+            <a class="admin1-dropdown-item" href="/admin/settings" role="menuitem">設定</a>
             <div class="admin1-dropdown-sep"></div>
             <a class="admin1-dropdown-item is-danger" href="#" id="admin1SignOut" role="menuitem">登出</a>
           </div>
@@ -536,8 +536,8 @@
   </div>
 </div>
 
-<script type="module" src="/static/react/admin-tables.js?v=51"></script>
-<script src="js/api-client.js?v=19"></script>
+<script type="module" src="/static/react/admin-tables.js?v=58"></script>
+<script src="js/api-client.js?v=22"></script>
 <script src="js/admin1-shell.js?v=3"></script>
 <script src="js/toast.js?v=1"></script>
 <script src="js/skeleton-ui.js?v=4"></script>
@@ -557,7 +557,7 @@
 <script src="js/admin-invites.js?v=12"></script>
 <script src="js/admin-coupons.js?v=5"></script>
 <script src="js/taiwan-admin-divisions.js?v=2"></script>
-<script src="js/admin-content.js?v=38"></script>
+<script src="js/admin-content.js?v=43"></script>
 <script src="js/admin-featured-video.js?v=2"></script>
 <script src="js/pricing-config.js?v=1.3"></script>
 <script src="js/membership-config.js?v=7"></script>

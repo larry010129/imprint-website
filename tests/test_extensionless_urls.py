@@ -144,14 +144,33 @@ def test_canonical_matches_og_url(client):
     assert canonical.group(1) == og_url.group(1)
 
 
-def test_admin_html_shell_not_redirected_to_clean(client):
-    """admin.html stays a static shell route (may 302 to login)."""
-    resp = client.get("/admin.html", follow_redirects=False)
-    assert resp.status_code in {200, 302}
-    if resp.status_code == 302:
-        loc = resp.headers.get("location", "")
-        assert loc.startswith("/login")
-        assert "admin.html" in loc
+@pytest.mark.parametrize(
+    ("legacy", "clean"),
+    [
+        ("/admin.html", "/admin"),
+        ("/admin1.html", "/admin"),
+        ("/admin1-settings.html", "/admin/settings"),
+        ("/admin1-plugins.html", "/admin/plugins"),
+    ],
+)
+def test_admin_legacy_html_301_to_canonical(client, legacy: str, clean: str):
+    """Legacy admin shells 301 to clean CMS paths (not served as FileResponse)."""
+    resp = client.get(legacy, follow_redirects=False)
+    assert resp.status_code == 301
+    assert resp.headers.get("location") == clean
+
+
+def test_admin_guest_redirects_to_login_with_next(client):
+    """Unauthenticated /admin goes to login with next=/admin."""
+    resp = client.get("/admin", follow_redirects=False)
+    assert resp.status_code == 302
+    assert resp.headers.get("location") == "/login?next=/admin"
+
+
+def test_admin1_login_html_redirects_to_login(client):
+    resp = client.get("/admin1-login.html", follow_redirects=False)
+    assert resp.status_code == 302
+    assert resp.headers.get("location") == "/login?next=/admin"
 
 
 def test_routes_registry_has_no_html_public_paths():

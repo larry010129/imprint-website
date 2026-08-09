@@ -395,7 +395,7 @@ def _build_canonical_url(canonical_path: str | None, *, omit: bool = False) -> s
     return f"{base}/{path}"
 
 
-def _context(request: Request, meta: PageMeta) -> dict:
+def _context(request: Request, meta: PageMeta, *, include_journal_ssr: bool = True) -> dict:
     page_images = _load_page_images(meta.route)
     page_image = _load_page_image(meta.route, page_images)
     page_copy_slots = _load_page_copy_slots(meta.route)
@@ -442,7 +442,7 @@ def _context(request: Request, meta: PageMeta) -> dict:
         context["faq_json_ld"] = _faq_page_json_ld(context["faq_public"])
     if meta.route == "/stories":
         context["stories_ssr"] = _load_stories_ssr()
-    if meta.route == "/journal":
+    if meta.route == "/journal" and include_journal_ssr:
         context["journal_ssr"] = _load_journal_ssr()
     if meta.route in {"/", "/about"}:
         context["featured_video"] = load_featured_video(request)
@@ -499,12 +499,18 @@ def _make_handler(meta: PageMeta, status_code: int = 200):
     return handler
 
 
+# Legacy on-disk shells; excluded from generic *.html→clean PageMeta redirects.
+# Canonical CMS URLs: /admin, /admin/settings, /admin/plugins (see register_pages).
+_ADMIN_LEGACY_TO_CANONICAL: dict[str, str] = {
+    "/admin.html": "/admin",
+    "/admin1.html": "/admin",
+    "/admin1-settings.html": "/admin/settings",
+    "/admin1-plugins.html": "/admin/plugins",
+}
+
 _ADMIN_HTML_SHELLS = frozenset(
     {
-        "/admin.html",
-        "/admin1.html",
-        "/admin1-settings.html",
-        "/admin1-plugins.html",
+        *_ADMIN_LEGACY_TO_CANONICAL.keys(),
         "/admin1-login.html",
     }
 )
@@ -559,6 +565,54 @@ def register_pages(app: FastAPI) -> None:
             include_in_schema=False,
         )
 
+    journal_meta = next((item for item in ALL_PAGES if item.route == "/journal"), None)
+    if journal_meta is not None:
+        @app.api_route(
+            "/journal/{post_id}",
+            methods=["GET", "HEAD"],
+            include_in_schema=False,
+        )
+        async def journal_post_detail(request: Request, post_id: str) -> HTMLResponse:
+            from uuid import UUID
+
+            from app.content import fetch_published_journal_post
+            from app.database import get_connection
+
+            try:
+                post_uuid = UUID(post_id)
+            except (ValueError, AttributeError):
+                raise StarletteHTTPException(status_code=404, detail="Not Found") from None
+
+            try:
+                with get_connection() as conn, conn.cursor() as cur:
+                    post = fetch_published_journal_post(cur, post_uuid)
+            except Exception:
+                raise StarletteHTTPException(status_code=404, detail="Not Found") from None
+            if not post:
+                raise StarletteHTTPException(status_code=404, detail="Not Found")
+
+            title = str(post.get("title") or journal_meta.title).strip()
+            body = str(post.get("body") or "").strip()
+            context = _context(request, journal_meta, include_journal_ssr=False)
+            canonical_path = f"journal/{post['id']}"
+            context.update(
+                {
+                    "title": title,
+                    "description": body[:160] or journal_meta.description,
+                    "canonical_path": canonical_path,
+                    "canonical_url": _build_canonical_url(canonical_path),
+                    "og_title": title,
+                    "og_description": body[:160] or journal_meta.description,
+                    "breadcrumbs": [
+                        (journal_meta.breadcrumbs[0][0], journal_meta.breadcrumbs[0][1]),
+                        (journal_meta.breadcrumbs[1][0], "/journal"),
+                        (title, None),
+                    ],
+                    "journal_post": post,
+                }
+            )
+            return templates.TemplateResponse(request, journal_meta.template, context)
+
     @app.get("/favicon.svg", include_in_schema=False)
     async def favicon() -> FileResponse:
         return FileResponse(settings.site_root / "favicon.svg")
@@ -575,46 +629,45 @@ def register_pages(app: FastAPI) -> None:
     async def sitemap() -> FileResponse:
         return FileResponse(settings.site_root / "sitemap.xml")
 
-    @app.get("/admin.html", include_in_schema=False)
-    async def admin_page(request: Request):
+    def _admin_gated_html(request: Request, filename: str, next_path: str):
+        """Serve an admin HTML shell; non-admins go to login with next=/admin…."""
         from app.auth import get_user_id, is_admin
 
+        if not next_path.startswith("/") or next_path.startswith("//"):
+            next_path = "/admin"
         if not is_admin(get_user_id(request)):
-            return RedirectResponse(url="/login?next=admin.html", status_code=302)
-        path = settings.site_root / "admin.html"
-        if not path.is_file():
-            raise StarletteHTTPException(status_code=404, detail="Not Found")
-        return FileResponse(path, media_type="text/html; charset=utf-8")
-
-    def _admin1_gated_html(request: Request, filename: str):
-        from app.auth import get_user_id, is_admin
-
-        if not is_admin(get_user_id(request)):
-            return RedirectResponse(url=f"/login?next={filename}", status_code=302)
+            return RedirectResponse(url=f"/login?next={next_path}", status_code=302)
         path = settings.site_root / filename
         if not path.is_file():
             raise StarletteHTTPException(status_code=404, detail="Not Found")
         return FileResponse(path, media_type="text/html; charset=utf-8")
 
-    @app.get("/admin1.html", include_in_schema=False)
-    async def admin1_page(request: Request):
-        return _admin1_gated_html(request, "admin1.html")
+    # Official CMS shells (admin1 UI) at clean URLs.
+    @app.api_route("/admin", methods=["GET", "HEAD"], include_in_schema=False)
+    async def admin_page(request: Request):
+        return _admin_gated_html(request, "admin1.html", "/admin")
 
-    @app.get("/admin1-settings.html", include_in_schema=False)
-    async def admin1_settings_page(request: Request):
-        return _admin1_gated_html(request, "admin1-settings.html")
+    @app.api_route("/admin/settings", methods=["GET", "HEAD"], include_in_schema=False)
+    async def admin_settings_page(request: Request):
+        return _admin_gated_html(request, "admin1-settings.html", "/admin/settings")
 
-    @app.get("/admin1-plugins.html", include_in_schema=False)
-    async def admin1_plugins_page(request: Request):
-        return _admin1_gated_html(request, "admin1-plugins.html")
+    @app.api_route("/admin/plugins", methods=["GET", "HEAD"], include_in_schema=False)
+    async def admin_plugins_page(request: Request):
+        return _admin_gated_html(request, "admin1-plugins.html", "/admin/plugins")
 
-    @app.get("/admin1-login.html", include_in_schema=False)
-    async def admin1_login_page(request: Request):
-        """Admin1 login chrome helper; does not replace /login."""
-        path = settings.site_root / "admin1-login.html"
-        if not path.is_file():
-            raise StarletteHTTPException(status_code=404, detail="Not Found")
-        return FileResponse(path, media_type="text/html; charset=utf-8")
+    # Legacy *.html shells → canonical paths (query string preserved).
+    for legacy, clean in _ADMIN_LEGACY_TO_CANONICAL.items():
+        app.add_api_route(
+            legacy,
+            _make_html_redirect(clean),
+            methods=["GET", "HEAD"],
+            include_in_schema=False,
+        )
+
+    @app.api_route("/admin1-login.html", methods=["GET", "HEAD"], include_in_schema=False)
+    async def admin1_login_redirect() -> RedirectResponse:
+        """Old admin1 login helper → site login with CMS next target."""
+        return RedirectResponse(url="/login?next=/admin", status_code=302)
 
     @app.get("/s/{token}", include_in_schema=False)
     async def share_config(request: Request, token: str) -> HTMLResponse:

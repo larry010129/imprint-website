@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 
 import PageLinkSelect from "@/components/admin/PageLinkSelect";
+import JournalPostsEditor, {
+  type JournalPostsApi,
+} from "@/components/admin/JournalPostsEditor";
 import {
   type CmsPage,
   type CmsSection,
@@ -47,7 +50,7 @@ export type ExistingSitePageEditorProps = {
       section?: CmsSection;
       error?: string;
     }>;
-  };
+  } & JournalPostsApi;
   onBack: () => void;
 };
 
@@ -391,6 +394,7 @@ export default function ExistingSitePageEditor({
 
   const stateLabel = (state: SaveState | undefined) =>
     state === "saving" ? "儲存中…" : state === "saved" ? "已儲存" : state === "error" ? "儲存失敗" : "";
+  const isJournal = page.route === "/journal";
 
   return (
     <div className="cms-editor cms-site-editor cms-fixed-content-editor">
@@ -403,10 +407,11 @@ export default function ExistingSitePageEditor({
         這裡只編輯文字、按鈕名稱與頁面連結。頁面版型、圖片與區塊順序由系統固定。
       </p>
 
-      {loading ? <p className="cms-hint">載入內容中…</p> : null}
-      {loadError ? <p className="cms-msg cms-msg--error">{loadError}</p> : null}
+      {isJournal ? <JournalPostsEditor api={api} /> : <>
+        {loading ? <p className="cms-hint">載入內容中…</p> : null}
+        {loadError ? <p className="cms-msg cms-msg--error">{loadError}</p> : null}
 
-      {!loading && !loadError ? (
+        {!loading && !loadError ? (
         <div className="cms-fixed-content-list">
           {pageSlots.length ? (
             <section className="cms-copy-group">
@@ -465,7 +470,8 @@ export default function ExistingSitePageEditor({
             <p className="cms-hint">此頁面目前沒有可編輯的文字或按鈕。</p>
           ) : null}
         </div>
-      ) : null}
+        ) : null}
+      </>}
     </div>
   );
 }

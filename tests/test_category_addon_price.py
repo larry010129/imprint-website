@@ -10,7 +10,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 ADMIN_PRODUCTS_JS = ROOT / "public" / "js" / "admin-products.js"
 API_CLIENT_JS = ROOT / "public" / "js" / "api-client.js"
-ADMIN_HTML = ROOT / "admin.html"
+ADMIN_HTML = ROOT / "admin1.html"
 
 
 def _load_product_categories():
@@ -241,7 +241,7 @@ def test_admin_js_wires_patch_and_surfaces_errors():
     assert "/api/admin/product-category/" in api
     assert "method: 'PATCH'" in api
     html = ADMIN_HTML.read_text(encoding="utf-8")
-    assert "api-client.js?v=19" in html
+    assert "api-client.js?v=22" in html
     assert "admin-products.js?v=58" in html
 
 

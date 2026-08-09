@@ -3,13 +3,28 @@
 from __future__ import annotations
 
 from datetime import date, datetime, timezone
+from pathlib import Path
 from uuid import uuid4
 
 from app.content import (
+    ensure_journal_posts_schema,
     fetch_published_journal_posts,
+    fetch_published_journal_post,
     parse_journal_post_payload,
     serialize_journal_post,
 )
+
+
+def test_ensure_journal_posts_schema_creates_table_and_index():
+    statements: list[str] = []
+
+    class FakeCursor:
+        def execute(self, query, params=None):
+            statements.append(" ".join(query.split()).lower())
+
+    ensure_journal_posts_schema(FakeCursor())
+    assert any("create table if not exists journal_posts" in query for query in statements)
+    assert any("create index if not exists journal_posts_published_posted_idx" in query for query in statements)
 
 
 def year_month_from_date(date_str: str) -> dict[str, str]:
@@ -44,6 +59,32 @@ def test_parse_journal_post_payload_accepts_yyyy_mm_dd():
     assert error is None
     assert cleaned is not None
     assert cleaned["posted_at"] == "2026-03-15"
+
+
+def test_parse_journal_post_payload_image_url_optional():
+    cleaned, error = parse_journal_post_payload(
+        {
+            "title": "No image",
+            "body": "text only",
+            "posted_at": "2026-03-15",
+            "image_url": "",
+            "is_published": True,
+        }
+    )
+    assert error is None
+    assert cleaned is not None
+    assert cleaned["image_url"] is None
+
+    cleaned2, error2 = parse_journal_post_payload(
+        {
+            "title": "Keep image",
+            "posted_at": "2026-03-15",
+            "image_url": "https://example.com/j.webp",
+        }
+    )
+    assert error2 is None
+    assert cleaned2 is not None
+    assert cleaned2["image_url"] == "https://example.com/j.webp"
 
 
 def test_parse_journal_post_payload_rejects_bad_date():
@@ -125,3 +166,45 @@ def test_fetch_published_journal_posts_sql_filters_unpublished():
     fetch_published_journal_posts(cur_page, limit=12, offset=24)
     assert "limit %s offset %s" in cur_page.query.lower()
     assert cur_page.params == [12, 24]
+
+
+def test_fetch_published_journal_post_uses_id_and_published_filter():
+    post_id = uuid4()
+
+    class FakeCursor:
+        def __init__(self):
+            self.query = ""
+            self.params = None
+
+        def execute(self, query, params=None):
+            self.query = " ".join(query.split()).lower()
+            self.params = params
+
+        def fetchone(self):
+            return {
+                "id": post_id,
+                "title": "Details",
+                "body": "Full post body",
+                "posted_at": date(2026, 4, 2),
+                "image_url": None,
+                "is_archived": False,
+                "is_published": True,
+                "sort_order": 0,
+            }
+
+    cur = FakeCursor()
+    post = fetch_published_journal_post(cur, post_id)
+    assert "where id = %s and is_published = true" in cur.query
+    assert cur.params == (post_id,)
+    assert post["id"] == str(post_id)
+    assert post["posted_at"] == "2026-04-02"
+
+
+def test_journal_listing_keeps_ssr_body_fallback_separate_from_react_mount():
+    root = Path(__file__).resolve().parents[1]
+    template = (root / "content/site/templates/pages/journal.html").read_text(encoding="utf-8")
+    mount = (root / "frontend/src/journal-main.tsx").read_text(encoding="utf-8")
+    assert 'data-journal-ssr' in template
+    assert 'post.body[:280]' in template
+    assert 'data-journal-app' in template
+    assert 'querySelectorAll("[data-journal-app]")' in mount

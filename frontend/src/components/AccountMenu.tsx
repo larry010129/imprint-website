@@ -70,7 +70,7 @@ function AccountLinks({
         <a
           role="menuitem"
           className="account-menu-item account-menu-admin"
-          href={resolveHref("/admin.html", siteRoot)}
+          href={resolveHref("/admin", siteRoot)}
           onClick={onNavigate}
         >
           <LayoutDashboard size={16} aria-hidden="true" />
@@ -194,7 +194,7 @@ export function AccountMenu({
           {session.isAdmin ? (
             <li>
               <a
-                href={resolveHref("/admin.html", siteRoot)}
+                href={resolveHref("/admin", siteRoot)}
                 className="mobile-animated-nav__sublink"
                 onClick={onNavigate}
               >

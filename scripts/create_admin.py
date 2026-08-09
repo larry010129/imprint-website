@@ -89,7 +89,7 @@ def main() -> int:
             )
             print(f"Created admin account: {email}")
 
-    print("Login at /login.html then open /admin.html")
+    print("Login at /login.html then open /admin")
     if created or reset:
         print(f"Password: {password}")
     return 0

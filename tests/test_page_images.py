@@ -119,6 +119,7 @@ def test_page_image_storage_folders_cover_admin_tabs():
     assert page_keys == set(PAGE_IMAGE_STORAGE_FOLDERS)
     assert PAGE_IMAGE_STORAGE_FOLDERS["/"] == "home"
     assert PAGE_IMAGE_STORAGE_FOLDERS["/about"] == "brand-story"
+    assert PAGE_IMAGE_STORAGE_FOLDERS["/journal"] == "journal"
     assert PAGE_IMAGE_STORAGE_FOLDERS["/series"] == "series-overview"
     assert PAGE_IMAGE_STORAGE_FOLDERS["/series/first-love/"] == "moon-diamond"
     assert PAGE_IMAGE_STORAGE_FOLDERS["/series/pet/"] == "pet-diamond"
@@ -135,7 +136,8 @@ def test_inventory_excludes_empty_calculator_and_jewelry_slots():
     counts = Counter(row["page_key"] for row in rows)
     by_slot = {row["slot_key"]: row for row in rows if row["page_key"] == "/what-is-dna-diamond"}
     assert len(rows) == 45
-    assert len(counts) == 9
+    assert len(counts) == 10
+    assert counts["/journal"] == 1
     assert counts["/about"] == 3
     assert counts["/what-is-dna-diamond"] == 14
     assert "/shop/calculator/" not in counts
@@ -150,7 +152,7 @@ def test_inventory_excludes_empty_calculator_and_jewelry_slots():
     assert "usp-lab-photo" in by_slot
     assert by_slot["usp-lab-photo"]["slot_label"] == "四大保障・在地實驗室"
     assert by_slot["usp-lab-photo"]["default_image_url"] == ""
-    empty_slots = {"lab-photo", "usp-lab-photo"}
+    empty_slots = {"lab-photo", "usp-lab-photo", "hero"}
     assert all(row["default_image_url"] or row["slot_key"] in empty_slots for row in rows)
     assert all(not str(row["default_image_url"]).startswith("{{") for row in rows)
 

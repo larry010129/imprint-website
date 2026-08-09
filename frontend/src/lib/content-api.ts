@@ -72,6 +72,7 @@ export async function fetchFaqApi(): Promise<{
 }
 
 export type JournalPostsPage = {
+  ok: boolean
   posts: ApiJournalPost[]
   page: number
   page_size: number
@@ -96,6 +97,7 @@ export async function fetchJournalPostsApi(options?: {
   }>(`/api/journal/posts?${qs}`)
   const posts = Array.isArray(data?.posts) ? data.posts : []
   return {
+    ok: Boolean(data),
     posts,
     page: typeof data?.page === "number" ? data.page : page,
     page_size: typeof data?.page_size === "number" ? data.page_size : pageSize,

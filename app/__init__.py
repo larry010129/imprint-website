@@ -127,6 +127,7 @@ async def lifespan(_app: FastAPI):
     from app.cms_seed import remove_legacy_seeded_pages
     from app.content import (
         ensure_banner_mobile_column,
+        ensure_journal_posts_schema,
         ensure_page_images_schema,
         ensure_testimonial_country_column,
     )
@@ -185,6 +186,7 @@ async def lifespan(_app: FastAPI):
             ensure_admin_plugins_schema(cur)
             ensure_membership_schema(cur)
             ensure_page_images_schema(cur)
+            ensure_journal_posts_schema(cur)
             ensure_banner_mobile_column(cur)
             ensure_testimonial_country_column(cur)
             ensure_cms_pages_schema(cur)

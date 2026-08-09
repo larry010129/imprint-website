@@ -567,14 +567,22 @@
         }).then(function (res) {
           return res.json().catch(function () { return {}; }).then(function (data) {
             if (!res.ok && !data.error) {
-              if (typeof data.detail === 'string') data.error = data.detail;
-              else data.error = 'HTTP ' + res.status;
+              if (typeof data.detail === 'string') {
+                data.error = data.detail;
+              } else if (Array.isArray(data.detail) && data.detail.length) {
+                data.error = data.detail.map(function (item) {
+                  if (typeof item === 'string') return item;
+                  return (item && (item.msg || item.message)) || '';
+                }).filter(Boolean).join('；') || ('HTTP ' + res.status);
+              } else {
+                data.error = 'HTTP ' + res.status;
+              }
             }
             data._httpStatus = res.status;
             return data;
           });
         }).catch(function () {
-          return { error: '系統連線異常，請稍後再試。' };
+          return { error: '系統連線異常（伺服器可能正在重載），請稍後再試。' };
         });
       },
       getAccounts: function (qOrOpts, maybeOpts) {

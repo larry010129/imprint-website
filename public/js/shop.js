@@ -95,7 +95,7 @@ if (new URLSearchParams(window.location.search).get('preview') === '1') {
       '<span class="apb-label">返回商品上架</span>' +
       '<span class="apb-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg></span>';
     returnBtn.addEventListener('click', function () {
-      window.location.href = '/admin.html#products';
+      window.location.href = '/admin#products';
     });
     banner.appendChild(returnBtn);
 

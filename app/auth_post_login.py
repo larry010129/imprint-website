@@ -23,17 +23,27 @@ class PostLoginDecision:
     next_url: str
 
 
+# Legacy admin shell next= values → canonical CMS paths.
+_ADMIN_NEXT_ALIASES: dict[str, str] = {
+    "/admin.html": "/admin",
+    "/admin1.html": "/admin",
+    "/admin1-settings.html": "/admin/settings",
+    "/admin1-plugins.html": "/admin/plugins",
+    "/admin1-login.html": "/admin",
+}
+
+
 def safe_next_url(raw: str | None, default: str = "/account") -> str:
     next_url = (raw or default).strip() or default
     if not next_url.startswith("/") or next_url.startswith("//"):
         return default
-    # Normalize legacy *.html bookmarks (keep admin*.html shells).
     path, sep, query = next_url.partition("?")
-    if (
-        path.endswith(".html")
-        and not path.startswith("/admin")
-        and path.count("/") <= 2
-    ):
+    # Canonicalize admin shells so post-login lands on /admin (not *.html).
+    admin_canonical = _ADMIN_NEXT_ALIASES.get(path)
+    if admin_canonical is not None:
+        return f"{admin_canonical}?{query}" if sep else admin_canonical
+    # Normalize legacy *.html bookmarks (non-admin).
+    if path.endswith(".html") and path.count("/") <= 2:
         path = path[: -len(".html")]
         next_url = f"{path}?{query}" if sep else path
     return next_url or default

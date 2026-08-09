@@ -301,6 +301,32 @@ def fetch_all_testimonials(
     return [serialize_testimonial(r) for r in cur.fetchall()]
 
 
+def ensure_journal_posts_schema(cur) -> None:
+    """Create the journal storage used by both public SSR and admin posts."""
+    cur.execute(
+        """
+        create table if not exists journal_posts (
+          id uuid primary key default gen_random_uuid(),
+          title text not null,
+          body text not null default '',
+          posted_at date not null,
+          image_url text,
+          is_archived boolean not null default false,
+          is_published boolean not null default true,
+          sort_order int not null default 0,
+          created_at timestamptz not null default now(),
+          updated_at timestamptz not null default now()
+        )
+        """
+    )
+    cur.execute(
+        """
+        create index if not exists journal_posts_published_posted_idx
+          on journal_posts (is_published, posted_at desc, sort_order)
+        """
+    )
+
+
 def _parse_posted_at(value: Any) -> tuple[str | None, str | None]:
     raw = str(value or "").strip()
     if not raw:
@@ -407,6 +433,20 @@ def fetch_published_journal_posts(
     sql, params = _apply_limit_offset(sql, None, limit=limit, offset=offset)
     cur.execute(sql, params)
     return [serialize_journal_post(r) for r in cur.fetchall()]
+
+
+def fetch_published_journal_post(cur, post_id) -> dict | None:
+    """Fetch one published journal post for its public detail page."""
+    cur.execute(
+        """
+        select * from journal_posts
+        where id = %s and is_published = true
+        limit 1
+        """,
+        (post_id,),
+    )
+    row = cur.fetchone()
+    return serialize_journal_post(row) if row else None
 
 
 def count_all_journal_posts(cur) -> int:

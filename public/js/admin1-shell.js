@@ -8,7 +8,7 @@
   var BP = 961;
   var STORAGE_THEME = 'admin1-theme';
   var STORAGE_MENU = 'admin1-menu-state';
-  var LOGIN_NEXT = '/login?next=admin1.html';
+  var LOGIN_NEXT = '/login?next=/admin';
   var PENDING_ORDER = {
     received: 1, order_confirming: 1, dna_lab: 1, deposit_confirmed: 1
   };
@@ -89,8 +89,8 @@
       btn.click();
       return;
     }
-    if (!/admin1\.html/i.test(location.pathname)) {
-      location.href = '/admin1.html#' + panel;
+    if (!/^\/admin\/?$/i.test(location.pathname)) {
+      location.href = '/admin#' + panel;
     }
   }
 

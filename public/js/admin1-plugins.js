@@ -31,7 +31,7 @@
     var hint = String(panelHint || '').trim();
     if (!hint) return '';
     if (HINT_FALLBACK[hint]) hint = HINT_FALLBACK[hint];
-    return '/admin1.html#' + encodeURIComponent(hint);
+    return '/admin#' + encodeURIComponent(hint);
   }
 
   function escapeHtml(s) {

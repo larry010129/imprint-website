@@ -13,6 +13,7 @@
   var _pageImagePage = '';
   var _testimonials = [];
   var _journalPosts = [];
+  var _journalError = '';
   var _faqItems = [];
   var _faqCategories = [];
   var _faqCategoryId = '';
@@ -612,6 +613,10 @@
       },
       getCopySlots: function () { return api.admin.getPageCopySlots(); },
       updateCopySlot: function (fields) { return api.admin.updatePageCopySlot(fields); },
+      getJournalPosts: function (opts) { return api.admin.getJournalPosts(opts); },
+      createJournalPost: function (fields) { return api.admin.createJournalPost(fields); },
+      updateJournalPost: function (fields) { return api.admin.updateJournalPost(fields); },
+      journalPostAction: function (id, action) { return api.admin.journalPostAction(id, action); },
     };
   }
 
@@ -1202,6 +1207,14 @@
 
   function renderJournal(body) {
     if (!body) return;
+    if (_journalError) {
+      body.innerHTML =
+        '<p class="note warn">日誌文章載入失敗：' + esc(_journalError) + '</p>' +
+        '<button type="button" class="btn-sm" id="acJournalRetryBtn">重新載入</button>';
+      var retry = document.getElementById('acJournalRetryBtn');
+      if (retry) retry.addEventListener('click', function () { load(true, true); });
+      return;
+    }
     var rows = journalRowsSorted();
     var tableHtml = !rows.length
       ? '<p class="adx-table-empty">尚無日誌。點「新增日誌」建立第一則。</p>'
@@ -1249,7 +1262,7 @@
         '<button type="button" class="qr-modal-close" data-modal-close aria-label="關閉">&times;</button>' +
         '<h3>' + (isEdit ? '編輯日誌' : '新增日誌') + '</h3>' +
         '<p class="ap-form-error" id="acFormError" hidden></p>' +
-        '<form id="acJournalForm" class="ap-form" data-id="' + esc(isEdit ? p.id : '') + '">' +
+        '<form id="acJournalForm" class="ap-form" novalidate data-id="' + esc(isEdit ? p.id : '') + '">' +
           '<div class="ap-form-grid">' +
             '<label class="ap-field"><span>日期' + reqStar() + '</span>' +
               '<input type="date" name="posted_at" required value="' + esc(postedAt) + '"></label>' +
@@ -1258,11 +1271,11 @@
             '<label class="ap-field ap-field--full"><span>內容</span>' +
               '<textarea name="body" class="ap-textarea" rows="8" placeholder="日誌內容…">' +
                 esc(isEdit ? (p.body || '') : '') + '</textarea></label>' +
-            '<label class="ap-field ap-field--full"><span>圖片（選填）</span>' +
+            '<div class="ap-field ap-field--full"><span>圖片（選填）</span>' +
               '<div id="acJournalImageUploadMount"></div>' +
-              '<p class="ap-section-hint">JPG / PNG / WEBP；上傳後轉 WebP。可留空。</p>' +
+              '<p class="ap-section-hint">JPG / PNG / WEBP；上傳後轉 WebP。可留空；已有圖不必重傳。</p>' +
               '<input type="hidden" name="image_url" id="acJournalImageUrl" value="' + esc(imageUrl) + '">' +
-            '</label>' +
+            '</div>' +
             '<label class="ap-field ap-field--check"><input type="checkbox" name="is_archived"' +
               (isEdit && p.is_archived ? ' checked' : '') + '><span>活動已結束</span></label>' +
             '<label class="ap-field ap-field--check"><input type="checkbox" name="is_published"' +
@@ -1286,9 +1299,23 @@
         window.AdminTables.renderImageUploadField(mount, {
           value: imageUrl,
           onChange: function (url) { urlInput.value = url || ''; },
-          onUpload: function (file) { return api.admin.uploadPageImage(file); },
-          onValidationError: function (message) { alert(message); },
+          onUpload: function (file) { return api.admin.uploadPageImage(file, '/journal'); },
+          onValidationError: function (message) {
+            var errEl = document.getElementById('acFormError');
+            if (errEl) { errEl.textContent = String(message || '上傳失敗'); errEl.hidden = false; }
+          },
+          onPendingDiscarded: function (message) {
+            if (typeof window.showToast === 'function') {
+              window.showToast(String(message || '尚未確認裁切，將使用原圖/空白'), 'info');
+            }
+          },
         });
+      }
+    } else {
+      var hintMissing = document.getElementById('acFormError');
+      if (hintMissing) {
+        hintMissing.textContent = '圖片上傳元件未載入（仍可無圖儲存）。請硬重新整理後再上傳圖片。';
+        hintMissing.hidden = false;
       }
     }
   }
@@ -1299,6 +1326,7 @@
     var fd = new FormData(form);
     var errEl = document.getElementById('acFormError');
     var id = form.dataset.id;
+    // image_url optional: null / keep existing hidden value / new URL after confirm upload.
     var payload = {
       id: id || undefined,
       title: String(fd.get('title') || '').trim(),
@@ -1310,6 +1338,10 @@
     };
     if (!payload.title) {
       if (errEl) { errEl.textContent = '請填寫標題'; errEl.hidden = false; }
+      return;
+    }
+    if (!payload.posted_at) {
+      if (errEl) { errEl.textContent = '請填寫日期'; errEl.hidden = false; }
       return;
     }
     if (errEl) errEl.hidden = true;
@@ -1608,7 +1640,8 @@
       _faqCategories = fRes.categories || [];
       _banners = bRes.banners || [];
       // Soft-fail journal until backend routes land (parallel Phase 1).
-      _journalPosts = (!jRes.error && (jRes.posts || jRes.journal_posts)) || [];
+      _journalError = jRes.error ? String(jRes.error.message || jRes.error) : '';
+      _journalPosts = (!_journalError && (jRes.posts || jRes.journal_posts)) || [];
       _pageImages = pRes.pageImages || [];
       if (keysRes && !keysRes.error) rememberPageImagePages(keysRes.pageImages || []);
       rememberPageImagePages(_pageImages);

@@ -552,9 +552,11 @@ def test_validate_diamond_rejects_metal_default_and_color_image_slot():
 
 
 def test_admin_html_cache_bust_v50():
-    for name in ("admin.html", "admin1.html"):
+    # Canonical CMS shell is admin1.html (served at /admin); keep legacy in sync.
+    for name in ("admin1.html", "admin.html"):
         html = (ROOT / name).read_text(encoding="utf-8")
         assert "admin-products.js?v=58" in html
+        assert "api-client.js?v=22" in html
 
 
 def test_jewelry_validate_still_requires_variant():

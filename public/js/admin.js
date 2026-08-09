@@ -665,7 +665,7 @@
     /* ---------- 啟動：登入與員工權限檢查 ---------- */
     api.getSession().then(function (res) {
       if (!res || !res.user) {
-        window.location.href = '/login?next=admin.html';
+        window.location.href = '/login?next=/admin';
         return;
       }
 

@@ -14,7 +14,7 @@ from app.pricing import compute_order_pricing
 
 ROOT = Path(__file__).resolve().parents[1]
 ADMIN_PRODUCTS_JS = ROOT / "public" / "js" / "admin-products.js"
-ADMIN_HTML = ROOT / "admin.html"
+ADMIN_HTML = ROOT / "admin1.html"
 
 
 def _variant_body(category: str, **variant_extra):
