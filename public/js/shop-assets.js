@@ -268,14 +268,21 @@
     }, { once: true });
   }
 
+  function markImageMissing(img) {
+    if (!img) return;
+    img.onerror = null;
+    img.removeAttribute('src');
+    img.alt = '';
+    img.classList.add('img-placeholder', 'is-missing');
+  }
+
   function attachImageFallbackChain(img, fallbackUrls) {
-    if (!img || !fallbackUrls || !fallbackUrls.length) return;
-    var queue = fallbackUrls.filter(Boolean);
-    if (!queue.length) return;
+    if (!img) return;
+    var queue = (fallbackUrls || []).filter(Boolean);
     var idx = 0;
     img.onerror = function onErr() {
       if (idx >= queue.length) {
-        img.onerror = null;
+        markImageMissing(img);
         return;
       }
       img.src = queue[idx++];

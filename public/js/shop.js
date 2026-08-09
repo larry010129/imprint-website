@@ -2987,23 +2987,27 @@ function renderTypeCards() {
     card.dataset.type = styleId;
     if (state.type === styleId) card.classList.add("active");
 
-    const img = document.createElement("img");
     const candidates = styleGridImageCandidates(product);
     const imgSrc = candidates[0] || '';
-    img.src = imgSrc;
-    img.alt = productName(product);
-    img.loading = "lazy";
-    img.decoding = "async";
-    const fallbacks = candidates.slice(1);
-    if (imgSrc && fallbacks.length) {
-      window.ShopAssets?.attachImageFallbackChain(img, fallbacks);
+    if (imgSrc) {
+      const img = document.createElement("img");
+      img.src = imgSrc;
+      img.alt = productName(product);
+      img.loading = "lazy";
+      img.decoding = "async";
+      window.ShopAssets?.attachImageFallbackChain(img, candidates.slice(1));
+      card.appendChild(img);
+    } else {
+      const ph = document.createElement("span");
+      ph.className = "img-placeholder is-missing";
+      ph.setAttribute("aria-hidden", "true");
+      card.appendChild(ph);
     }
 
     const name = document.createElement("span");
     name.className = "type-name";
     name.textContent = productName(product);
 
-    card.appendChild(img);
     card.appendChild(name);
     if (product.draft) {
       const badge = document.createElement("span");

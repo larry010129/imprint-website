@@ -310,8 +310,16 @@ body.shop-mobile-bar {
   box-shadow: 0 0 0 1px var(--color-accent);
 }
 
-#shop-styles .type-card .img-placeholder {
+#shop-styles .type-card .img-placeholder,
+#shop-styles .type-card .img-placeholder.is-missing,
+#shop-styles .type-card img.img-placeholder.is-missing {
   border-radius: 0;
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  background: var(--color-surface-muted, #f3f1ec);
+  border: 0;
+  object-fit: none;
 }
 
 #shop-styles .type-card .type-name {

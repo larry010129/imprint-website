@@ -21,7 +21,7 @@
       <div class="membership-metal-card__inner">
         <header class="membership-metal-card__head">
           <div class="membership-metal-card__brand">
-            <img src="/favicon.svg" alt="" aria-hidden="true" class="membership-metal-card__logo">
+            <img src="/favicon.svg" alt="" aria-hidden="true" class="membership-metal-card__logo" loading="lazy">
             <div>
               <p class="membership-metal-card__eyebrow">IMPRINT</p>
               <h2 class="membership-metal-card__title">{{ membership.tier_name }}</h2>
@@ -96,7 +96,7 @@
           </div>
         </div>
         <div class="member-id-card__mark" aria-hidden="true">
-          <img src="/favicon.svg" alt="" class="member-id-card__mark-logo">
+          <img src="/favicon.svg" alt="" class="member-id-card__mark-logo" loading="lazy">
           <span class="member-id-card__mark-id">{{ member_id_display or '————' }}</span>
         </div>
       </header>

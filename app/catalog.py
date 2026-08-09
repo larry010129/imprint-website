@@ -66,6 +66,11 @@ from app.image_urls import (
 )
 from app.memorial_diamonds import DIAMOND_CARATS, normalize_style_key
 from app.pricing_overrides import canonical_carat
+from app.storage import (
+    object_path_from_public_url,
+    prefer_category_scoped_product_url,
+    product_folder_from_object_key,
+)
 
 
 def _variant_carat_key(raw: object) -> str:
@@ -167,13 +172,45 @@ def _diamond_carats_or_default(carats: list[str]) -> list[str]:
     return carats if carats else list(DIAMOND_CARATS)
 
 
-def _usable_images_by_color(images: list[dict]) -> dict[str, list[str]]:
+def _canonical_product_image_folder(
+    images: list[dict],
+    *,
+    category: str | None = None,
+) -> str | None:
+    """Most common Storage product folder among usable uploads (collision-slug wins)."""
+    counts: dict[str, int] = {}
+    for image in images:
+        raw = image.get("file_path")
+        if is_auto_stock_product_image(raw) or is_pending_product_image(raw):
+            continue
+        url = resolve_product_image_url(raw)
+        if not url:
+            continue
+        url = prefer_category_scoped_product_url(url, category) or url
+        folder = product_folder_from_object_key(object_path_from_public_url(url) or "")
+        if not folder:
+            continue
+        counts[folder] = counts.get(folder, 0) + 1
+    if not counts:
+        return None
+    return max(counts.items(), key=lambda item: (item[1], len(item[0])))[0]
+
+
+def _usable_images_by_color(
+    images: list[dict],
+    *,
+    category: str | None = None,
+) -> dict[str, list[str]]:
+    preferred_folder = _canonical_product_image_folder(images, category=category)
     images_by_color: dict[str, list[str]] = {}
+    seen_by_color: dict[str, set[str]] = {}
     for image in images:
         raw = image.get("file_path")
         if is_auto_stock_product_image(raw):
             continue
         url = resolve_product_image_url(raw)
+        if url:
+            url = prefer_category_scoped_product_url(url, category) or url
         if (
             url
             and _is_raster_url(url)
@@ -182,7 +219,18 @@ def _usable_images_by_color(images: list[dict]) -> dict[str, list[str]]:
             and not is_pending_product_image(url)
             and (not url.startswith("/static/") or static_url_exists(url))
         ):
-            images_by_color.setdefault(image["color"], []).append(url)
+            if preferred_folder:
+                folder = product_folder_from_object_key(
+                    object_path_from_public_url(url) or ""
+                )
+                if folder and folder != preferred_folder:
+                    continue
+            color = image["color"]
+            seen = seen_by_color.setdefault(color, set())
+            if url in seen:
+                continue
+            seen.add(url)
+            images_by_color.setdefault(color, []).append(url)
     return images_by_color
 
 
@@ -301,7 +349,9 @@ def build_catalog_product_lite(product: dict, variants: list[dict], images: list
     if product.get("category") == "diamond":
         golds = []
         carats = _diamond_carats_or_default(carats)
-    images_by_color = _usable_images_by_color(images)
+    images_by_color = _usable_images_by_color(
+        images, category=product.get("category")
+    )
     slot_colors = _catalog_slot_colors(images, images_by_color)
     entry = {
         "id": str(product["id"]),
@@ -380,7 +430,9 @@ def build_catalog_product(
             ear_clasp_prices.setdefault(gold, {})[carat] = float(ear_clasp_raw)
 
     style_key = legacy_style_key(product, images)
-    images_by_color = _usable_images_by_color(images)
+    images_by_color = _usable_images_by_color(
+        images, category=product.get("category")
+    )
     slot_colors = _catalog_slot_colors(images, images_by_color)
 
     return {

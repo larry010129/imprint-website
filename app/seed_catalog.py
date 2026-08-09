@@ -9,6 +9,7 @@ from pathlib import Path
 from app.database import get_connection, get_transaction
 from app.admin_products import is_auto_stock_product_image, is_dead_catalog_placeholder, purge_auto_stock_product_images
 from app.memorial_diamonds import ensure_memorial_diamond_products
+from app.storage import prefer_category_scoped_product_url
 
 log = logging.getLogger(__name__)
 
@@ -23,9 +24,10 @@ def backfill_catalog_image_slots(cur, seed_rows: list[dict]) -> tuple[int, int]:
 
     cur.execute(
         """
-        select id, product_id, color, file_path
-        from product_images
-        order by product_id, sort_order, id
+        select pi.id, pi.product_id, pi.color, pi.file_path, p.category
+        from product_images pi
+        join products p on p.id = pi.product_id
+        order by pi.product_id, pi.sort_order, pi.id
         """
     )
     images = cur.fetchall()
@@ -38,6 +40,14 @@ def backfill_catalog_image_slots(cur, seed_rows: list[dict]) -> tuple[int, int]:
         path = image.get("file_path")
         if is_auto_stock_product_image(path):
             continue
+        rewritten = prefer_category_scoped_product_url(path, image.get("category"))
+        if rewritten and rewritten != path:
+            cur.execute(
+                "update product_images set file_path = %s where id = %s",
+                (rewritten, image["id"]),
+            )
+            path = rewritten
+            normalized += 1
         if color in _LEGACY_METALS:
             cur.execute(
                 "update product_images set color = %s where id = %s",

@@ -40,7 +40,7 @@
       <div class="journal-detail-body">{{ journal_post.body }}</div>
       {% endif %}
       {% if journal_post.image_url %}
-      <img class="journal-detail-image" src="{{ journal_post.image_url }}" alt="" decoding="async">
+      <img class="journal-detail-image" src="{{ journal_post.image_url }}" alt="" decoding="async" loading="lazy">
       {% endif %}
       <p class="journal-detail-back"><a href="/journal">← 品牌日誌</a></p>
     </div>

@@ -415,6 +415,42 @@ def product_category_from_object_key(object_path: str | None) -> str | None:
     return None
 
 
+def prefer_category_scoped_product_url(
+    url: str | None,
+    category: str | None,
+) -> str | None:
+    """Rewrite legacy ``products/{folder}/…`` URLs to ``products/{category}/{folder}/…``.
+
+    Objects live under the category folder; untyped public URLs return 400.
+    Path rewrite only — no Storage API call.
+    """
+    if not url:
+        return url
+    cat = normalize_product_category(category)
+    if not cat:
+        return url
+    raw = str(url).strip()
+    path_only, _sep, query = raw.partition("?")
+    decoded = unquote(path_only)
+    match = _STORAGE_PUBLIC_PATH.search(decoded)
+    if not match:
+        return url
+    obj = unquote(match.group(2))
+    if not obj or is_pending_product_object_key(obj):
+        return url
+    if product_category_from_object_key(obj):
+        return url
+    parts = _product_key_segments(obj)
+    # Nested untyped only (folder + metal/file). Skip flat ``products/{file}``.
+    if len(parts) < 3 or parts[0] != "products" or parts[1] == _PENDING_FOLDER:
+        return url
+    new_obj = "/".join(["products", cat, *parts[1:]])
+    out = decoded[: match.start(2)] + new_obj
+    if query:
+        out = f"{out}?{query}"
+    return out
+
+
 def product_object_key(
     folder_segment: str,
     metal_color: str | None,

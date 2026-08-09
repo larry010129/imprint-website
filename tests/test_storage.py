@@ -43,6 +43,7 @@ from app.storage import (
     page_image_object_key,
     page_image_upload_relative_path,
     pending_product_object_key,
+    prefer_category_scoped_product_url,
     product_category_from_object_key,
     product_folder_from_object_key,
     product_folder_segment,
@@ -372,6 +373,18 @@ def test_product_folder_segment_fallback_and_collision():
         "Four Claw Solitaire Necklace"
     )
     assert product_folder_segment(None, pid, name_zh="四爪單鑽項鍊") == "a1b2c3d4"
+
+
+def test_prefer_category_scoped_product_url_rewrites_untyped_nested():
+    base = "https://abc.supabase.co/storage/v1/object/public/shop-media"
+    untyped = f"{base}/products/imprint-necklace/white/a605.png"
+    typed = f"{base}/products/pendant/imprint-necklace/white/a605.png"
+    assert prefer_category_scoped_product_url(untyped, "pendant") == typed
+    assert prefer_category_scoped_product_url(typed, "pendant") == typed
+    assert prefer_category_scoped_product_url(untyped, None) == untyped
+    assert prefer_category_scoped_product_url(
+        f"{base}/products/_pending/white/a.png", "pendant"
+    ) == f"{base}/products/_pending/white/a.png"
 
 
 def test_product_object_key_nested():

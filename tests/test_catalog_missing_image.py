@@ -31,6 +31,73 @@ def test_build_catalog_includes_supabase_storage_url():
     assert entry["styleKey"] is None
 
 
+def test_build_catalog_rewrites_untyped_storage_thumb_to_category_folder():
+    """Legacy products/{slug}/… URLs 400 after move under products/{category}/…."""
+    from app.catalog import build_catalog_product_lite
+
+    base = "https://abc123.supabase.co/storage/v1/object/public/shop-media"
+    untyped = f"{base}/products/imprint-necklace/white/a605.png"
+    typed = f"{base}/products/pendant/imprint-necklace/white/a605.png"
+    product = {
+        "id": "c54963cb-7c3d-469e-b26d-ae4372870445",
+        "category": "pendant",
+        "name_zh": "銘印單鑽項鍊",
+        "name_en": None,
+        "default_color": "white",
+        "sort_order": 0,
+        "is_published": True,
+        "allows_engraving": True,
+        "allows_fancy_shapes": True,
+        "allows_pendant_only": True,
+        "allows_with_chain": True,
+    }
+    images = [
+        {"color": "white-white", "file_path": untyped, "sort_order": 0},
+        {"color": "white-white", "file_path": typed, "sort_order": 1},
+    ]
+    entry = build_catalog_product_lite(product, [], images)
+    assert entry["thumbUrl"] == typed
+    assert "/products/imprint-necklace/" not in (entry["thumbUrl"] or "")
+
+
+def test_build_catalog_prefers_majority_storage_folder_for_thumb():
+    """Collision-slug folder used by other slots beats orphan untyped rewrite."""
+    from app.catalog import build_catalog_product_lite
+
+    base = "https://abc123.supabase.co/storage/v1/object/public/shop-media"
+    orphan = f"{base}/products/pendant/four-prong-solitaire-necklace/white/a.png"
+    keep = (
+        f"{base}/products/pendant/four-prong-solitaire-necklace-408642ff/white/a.png"
+    )
+    product = {
+        "id": "c54963cb-7c3d-469e-b26d-ae4372870445",
+        "category": "pendant",
+        "name_zh": "四爪單鑽項鍊",
+        "name_en": None,
+        "default_color": "white",
+        "sort_order": 0,
+        "is_published": True,
+        "allows_engraving": True,
+        "allows_fancy_shapes": True,
+        "allows_pendant_only": True,
+        "allows_with_chain": True,
+    }
+    images = [
+        {"color": "white-white", "file_path": orphan, "sort_order": 0},
+        {"color": "white-white", "file_path": keep, "sort_order": 0},
+        {
+            "color": "yellow-white",
+            "file_path": (
+                f"{base}/products/pendant/"
+                "four-prong-solitaire-necklace-408642ff/yellow/b.png"
+            ),
+            "sort_order": 1,
+        },
+    ]
+    entry = build_catalog_product_lite(product, [], images)
+    assert entry["thumbUrl"] == keep
+
+
 def test_build_catalog_drops_pending_autosave_urls():
     """Temp Storage _pending paths must not appear in shop catalog."""
     from app.catalog import build_catalog_product_lite
@@ -54,7 +121,7 @@ def test_build_catalog_drops_pending_autosave_urls():
     )
     good = (
         "https://x.supabase.co/storage/v1/object/public/shop-media/"
-        "products/bubble-bracelet/yellow/23274bf09a66468fb57642f44b93e602.png"
+        "products/bracelet/bubble-bracelet/yellow/23274bf09a66468fb57642f44b93e602.png"
     )
     images = [
         {"color": "white-white", "file_path": pending},

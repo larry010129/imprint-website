@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import unquote
 
-from app.storage import is_supabase_storage_url
+from app.storage import is_supabase_storage_url, prefer_category_scoped_product_url
 
 _STYLE_ID = re.compile(r"^([a-z]+)-([A-C])$", re.I)
 _STYLE_FROM_PATH = re.compile(r"(?:^|/)([a-z]+)-([A-C])\.(?:svg|png|jpe?g|webp)", re.I)
@@ -474,6 +474,8 @@ def config_image_url(
             if not row:
                 continue
             url = resolve_product_image_url(row.get("file_path"))
+            if url:
+                url = prefer_category_scoped_product_url(url, cat) or url
             if url and _is_raster_url(url):
                 return url
         return ""
@@ -523,6 +525,8 @@ def config_image_url(
         return db_url
     if not db_url and image_rows:
         first = resolve_product_image_url(image_rows[0].get("file_path"))
+        if first:
+            first = prefer_category_scoped_product_url(first, cat) or first
         if first and _is_raster_url(first):
             db_url = first
             if diamond == "white":
