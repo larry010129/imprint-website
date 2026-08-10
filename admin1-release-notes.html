@@ -5,14 +5,51 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>銘印鑽石｜更新說明</title>
 <meta name="robots" content="noindex">
-<link rel="stylesheet" href="/css/admin1-shell.css?v=7">
+<link rel="stylesheet" href="/css/admin1-shell.css?v=8">
 <link rel="stylesheet" href="/static/react/admin-tables.css?v=40">
 <style>
   body.admin1-body .rn-editor-main {
-    max-width: 42rem;
-    margin: 0 auto;
-    padding: 1.25rem 1rem 2.5rem;
+    max-width: none;
+    margin: 0;
+    padding: 1.25rem 1.5rem 2.5rem;
+    width: 100%;
   }
+  body.admin1-body .rn-editor-main [data-admin-root] {
+    max-width: none;
+  }
+  body.admin1-body .admin-nav-visibility-panel {
+    display: grid;
+    gap: 1.25rem;
+  }
+  body.admin1-body .admin-nav-visibility-panel h2 {
+    margin: 0;
+    font-size: 1.25rem;
+  }
+  body.admin1-body .admin-nav-visibility-panel p {
+    margin: .35rem 0 0;
+    color: var(--a1-muted, #8a817b);
+    font-size: .875rem;
+  }
+  body.admin1-body .admin-nav-visibility-list {
+    display: grid;
+    gap: .5rem;
+  }
+  body.admin1-body .admin-nav-visibility-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+    gap: .75rem;
+    padding: .8rem 1rem;
+    border: 1px solid var(--a1-border, #ede7e0);
+    border-radius: .6rem;
+    background: var(--a1-surface, #fff);
+    cursor: pointer;
+  }
+  body.admin1-body .admin-nav-visibility-row span { display: grid; gap: .15rem; }
+  body.admin1-body .admin-nav-visibility-row small { color: var(--a1-muted, #8a817b); font-size: .7rem; }
+  body.admin1-body .admin-nav-visibility-row em { min-width: 2.5rem; color: var(--a1-muted, #8a817b); font-size: .75rem; font-style: normal; }
+  body.admin1-body .admin-nav-visibility-actions { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+  body.admin1-body .admin-nav-visibility-actions [role="status"] { color: var(--a1-muted, #8a817b); font-size: .8rem; }
 </style>
 </head>
 <body class="admin1-body">
@@ -33,6 +70,18 @@
             <svg class="side-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
             <span>返回後台</span>
           </a>
+          <button type="button" class="is-active" data-rn-tab="release-notes">
+            <svg class="side-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 4h16v16H4z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
+            <span>版本公告</span>
+          </button>
+          <button type="button" data-rn-tab="release-history">
+            <svg class="side-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><path d="M12 7v5l3 2"/></svg>
+            <span>版本更新紀錄</span>
+          </button>
+          <button type="button" data-rn-tab="nav-visibility">
+            <svg class="side-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="8" cy="6" r="2" fill="currentColor"/><circle cx="16" cy="12" r="2" fill="currentColor"/><circle cx="10" cy="18" r="2" fill="currentColor"/></svg>
+            <span>後台分頁顯示設定</span>
+          </button>
         </div>
       </div>
     </nav>
@@ -61,11 +110,20 @@
       </div>
     </header>
     <main class="main rn-editor-main">
-      <div id="admin-release-notes-root"></div>
+      <section data-rn-tab-panel="release-notes">
+        <div id="admin-release-notes-root"></div>
+      </section>
+      <section data-rn-tab-panel="release-history" hidden>
+        <div id="admin-release-notes-history-root"></div>
+      </section>
+      <section data-rn-tab-panel="nav-visibility" hidden>
+        <div id="admin-nav-visibility-root"></div>
+      </section>
     </main>
   </div>
 </div>
-<script type="module" src="/static/react/admin-tables.js?v=60"></script>
+<script type="module" src="/static/react/admin-tables.js?v=65"></script>
 <script src="/js/admin1-shell.js?v=3"></script>
+<script src="/js/admin-nav-visibility.js?v=1"></script>
 </body>
 </html>

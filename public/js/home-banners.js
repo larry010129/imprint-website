@@ -206,6 +206,7 @@
       norm(b.cta_primary_href),
       norm(b.cta_secondary_label),
       norm(b.cta_secondary_href),
+      norm(b.align || ''),
       // Phone crop / desktop swap must invalidate SSR skip.
       norm(b.image_url_mobile || ''),
       assetKey(b.image_url || b.image_webp || ''),
@@ -261,6 +262,7 @@
         norm(primary && primary.getAttribute('href')),
         norm(secondary && secondary.textContent),
         norm(secondaryHref(secondary)),
+        norm(slide.getAttribute('data-align') || ''),
         norm(mobileCustom),
         assetKey(imgSrc || firstSrcToken(mobileRaw)),
       ].join('|'));

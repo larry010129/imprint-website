@@ -64,6 +64,15 @@ def test_home_banners_expands_local_hero_srcset():
     assert "replace(/-\\d+w$/i, '')" in src
 
 
+def test_home_banners_use_saved_alignment_and_invalidate_ssr_match():
+    src = HOME_BANNERS.read_text(encoding="utf-8")
+    admin = (ROOT / "public" / "js" / "admin-content.js").read_text(encoding="utf-8")
+    assert "b.align || (index === 3 ? 'right' : 'left')" in src
+    assert "data-align=\"' + esc(align)" in src
+    assert "name=\"align\"" in admin
+    assert "align: String(fd.get('align') || 'left').trim()" in admin
+
+
 def test_home_yt_gallery_autoplay_mute_has_gesture_unmute():
     """IO autoplay may mute for browser policy; user gesture must unmute."""
     html = INDEX.read_text(encoding="utf-8")
@@ -75,4 +84,4 @@ def test_home_yt_gallery_autoplay_mute_has_gesture_unmute():
     assert "activateThumb(thumb, { play: true, muted: false })" in html
     assert "embedFacade(btn, { muted: false })" in html
     assert ".gh-yt-unmute{" in css
-    assert "home-ghibli.css?v=58" in html
+    assert "home-ghibli.css?v=61" in html

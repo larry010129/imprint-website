@@ -157,13 +157,10 @@ export async function publishReleaseNotes(): Promise<PublishedRelease> {
   return normalizePublished((body.published ?? body) as Partial<PublishedRelease>);
 }
 
-export function notesToTextarea(notes: string[]): string {
-  return notes.join("\n");
-}
-
-export function textareaToNotes(value: string): string[] {
-  return value
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
-}
+export {
+  notesHaveSections,
+  notesToTextarea,
+  parseReleaseNoteSections,
+  textareaToNotes,
+  type ReleaseNoteSection,
+} from "@/components/admin/releaseNotesFormat";

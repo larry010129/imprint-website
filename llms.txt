@@ -24,10 +24,10 @@
 
 ## 主要頁面
 
-- [首頁](https://www.imprintdiamond.com/): 品牌總覽與五大系列入口
+- [首頁](https://www.imprintdiamond.com/): 品牌總覽與六大系列入口
 - [線上客製試算](https://www.imprintdiamond.com/shop/calculator/): 選品項、款式、金屬與鑽石規格並即時試算
 - [價格總覽](https://www.imprintdiamond.com/price): DNA 鑽石價格與試算入口
-- [系列總覽](https://www.imprintdiamond.com/series): 五大 DNA 紀念鑽石系列
+- [系列總覽](https://www.imprintdiamond.com/series): 六大 DNA 紀念鑽石系列
 - [關於我們](https://www.imprintdiamond.com/about): 品牌故事與在地實驗室
 - [常見問題](https://www.imprintdiamond.com/faq): 訂製流程、價格、時程與保障
 - [DNA 鑽石知識](https://www.imprintdiamond.com/what-is-dna-diamond): DNA／CVD 紀念鑽石製程與說明

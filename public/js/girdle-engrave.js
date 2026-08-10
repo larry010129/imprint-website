@@ -2,20 +2,44 @@
 (function () {
   'use strict';
 
+  var EMBLEM_BASE = '/static/images/engraving/';
   var EMBLEMS = {
-    bow: { label: '蝴蝶結', svg: '<svg viewBox="0 0 24 24"><path d="M12 12L4 6v12l8-6z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 12l8-6v12l-8-6z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/></svg>' },
-    clover: { label: '幸運草', svg: '<svg viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="7.5" r="3.6"/><circle cx="12" cy="16.5" r="3.6"/><circle cx="7.5" cy="12" r="3.6"/><circle cx="16.5" cy="12" r="3.6"/></g></svg>' },
-    infinity: { label: '無限', svg: '<svg viewBox="0 0 24 24"><path d="M7 9a3 3 0 100 6 5 5 0 004-2 5 5 0 004 2 3 3 0 100-6 5 5 0 00-4 2 5 5 0 00-4-2z" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>' },
-    heart: { label: '愛心', svg: '<svg viewBox="0 0 24 24"><path d="M12 20s-7-4.6-9.3-9A5 5 0 0112 6a5 5 0 019.3 5c-2.3 4.4-9.3 9-9.3 9z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>' },
-    hearts: { label: '雙愛心', svg: '<svg viewBox="0 0 24 24"><path d="M9 17s-5-3.2-6.6-6.3A3.6 3.6 0 019 8a3.6 3.6 0 016.6 2.7C14 13.8 9 17 9 17z" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M16.5 19.2s-4.4-2.8-5.7-5.5a3.1 3.1 0 015.7-2.3 3.1 3.1 0 015.7 2.3c-1.3 2.7-5.7 5.5-5.7 5.5z" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>' },
-    paw: { label: '肉球', svg: '<svg viewBox="0 0 24 24"><g fill="currentColor"><ellipse cx="12" cy="16.2" rx="5" ry="4"/><circle cx="5.6" cy="9.2" r="2"/><circle cx="10.4" cy="5.8" r="2"/><circle cx="13.6" cy="5.8" r="2"/><circle cx="18.4" cy="9.2" r="2"/></g></svg>' },
-    bone: { label: '骨頭', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4.9 4.9a2.5 2.5 0 013.5 0l.7.7a2.5 2.5 0 010 3.6L7.8 10.6l5.6 5.6 1.3-1.4a2.5 2.5 0 013.6 0l.7.7a2.5 2.5 0 01-3.6 3.5l-.7-.7a2.5 2.5 0 010-3.5l-1.3 1.3-5.6-5.6-1.4 1.3a2.5 2.5 0 01-3.5 0l-.7-.7a2.5 2.5 0 010-3.6z"/></svg>' },
-    ring: { label: '戒圈', svg: '<svg viewBox="0 0 24 24"><circle cx="12" cy="14.5" r="6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9.4 8.6L12 4l2.6 4.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>' }
+    catPaw: { label: '貓掌', image: 'cat-paw.png' },
+    doubleHeart: { label: '雙心', image: 'double-heart.png' },
+    bowArrow: { label: '弓箭', image: 'bow-arrow.png' },
+    dogBone: { label: '狗骨', image: 'dog-bone.png' },
+    clover: { label: '四葉草', image: 'clover.png' },
+    dogPaw: { label: '狗掌', image: 'dog-paw.png' },
+    heart: { label: '愛心', image: 'heart.png' },
+    infinity: { label: '無限', image: 'infinity.png' }
+  };
+
+  var LEGACY_RING = {
+    label: '戒圈',
+    svg: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="14.5" r="6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9.4 8.6L12 4l2.6 4.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>'
+  };
+
+  Object.keys(EMBLEMS).forEach(function (name) {
+    var def = EMBLEMS[name];
+    def.svg = '<img src="' + EMBLEM_BASE + def.image + '" alt="" aria-hidden="true">';
+  });
+
+  // Keep old stored labels and button IDs readable after the pattern refresh.
+  var LEGACY_LABELS = {
+    '蝴蝶結': 'bowArrow', '雙愛心': 'doubleHeart', '幸運草': 'clover',
+    '肉球': 'catPaw', '骨頭': 'dogBone', '戒圈': 'legacyRing'
+  };
+  var LEGACY_IDS = {
+    bow: 'bowArrow', hearts: 'doubleHeart', paw: 'catPaw', bone: 'dogBone', ring: 'legacyRing'
   };
 
   var LABEL_TO_NAME = {};
   Object.keys(EMBLEMS).forEach(function (name) {
     LABEL_TO_NAME[EMBLEMS[name].label] = name;
+  });
+  LABEL_TO_NAME[LEGACY_RING.label] = 'legacyRing';
+  Object.keys(LEGACY_LABELS).forEach(function (label) {
+    LABEL_TO_NAME[label] = LEGACY_LABELS[label];
   });
 
   var ZWS = '\u200B';
@@ -105,7 +129,7 @@
     while ((match = re.exec(String(str)))) {
       if (match[0].charAt(0) === '〔') {
         var emblemName = LABEL_TO_NAME[match[1]];
-        var def = emblemName ? EMBLEMS[emblemName] : null;
+        var def = emblemName === 'legacyRing' ? LEGACY_RING : (emblemName ? EMBLEMS[emblemName] : null);
         if (def) {
           out +=
             '<span class="cfg-emblem-token" data-emblem="' + escapeHtml(emblemName) +
@@ -243,7 +267,7 @@
   }
 
   function createToken(name) {
-    var def = EMBLEMS[name];
+    var def = name === 'legacyRing' ? LEGACY_RING : EMBLEMS[name];
     if (!def) return null;
     var token = document.createElement('span');
     token.className = 'cfg-emblem-token';
@@ -538,6 +562,22 @@
     setGirdlePreview(previewEl, shapeId || 'round', colorId || 'white');
   }
 
+  function normalizeEmblemButtons(root) {
+    if (!root) return;
+    var buttons = root.querySelectorAll('.cfg-emblem');
+    var names = Object.keys(EMBLEMS);
+    buttons.forEach(function (button, index) {
+      var oldName = button.getAttribute('data-emblem');
+      // Templates may still contain the legacy order; the supplied artwork order is canonical.
+      var name = names[index] || LEGACY_IDS[oldName] || oldName;
+      var def = EMBLEMS[name];
+      if (!def) return;
+      button.setAttribute('data-emblem', name);
+      button.setAttribute('aria-label', '插入' + def.label + '圖樣');
+      button.innerHTML = def.svg;
+    });
+  }
+
   function init(opts) {
     var input = typeof opts.input === 'string' ? document.getElementById(opts.input) : opts.input;
     if (!input) return null;
@@ -548,6 +588,7 @@
     var previewColor = opts.previewColor || 'white';
     var previewShape = opts.previewShape || 'round';
     var allowChinese = !!opts.allowChinese;
+    normalizeEmblemButtons(emblemsRoot);
     useRealGirdlePreview(previewEl, previewShape, previewColor);
     var lastValidHtml = input.innerHTML;
     var rangeStore = { range: null };

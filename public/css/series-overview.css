@@ -1,4 +1,4 @@
-/* Series overview — Five Collections introduction */
+/* Series overview — Six Collections introduction */
 
 .page-series {
   --gh-cream: #FBF6ED;
@@ -355,10 +355,140 @@
   justify-content: center;
 }
 
+/* Buttons + series photo cards — only the ghibli classes this page uses.
+   Kept local so /series/ no longer blocks on home-ghibli-critical.css + home-ghibli.css;
+   btn-neon anchor styling still comes from inlined base.css. */
+
+.gh-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--tap-target-min, 44px);
+  padding: 14px 32px;
+  border-radius: 999px;
+  font-size: 14px;
+  letter-spacing: 0.14em;
+  transition: transform 0.3s var(--ease), box-shadow 0.3s var(--ease), filter 0.3s;
+  white-space: nowrap;
+}
+
+.gh-btn--primary {
+  background: #8eedf0;
+  color: #2b2320;
+  box-shadow: 0 8px 28px rgba(var(--gh-accent-rgb), 0.45);
+}
+
+.gh-btn--primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 36px rgba(var(--gh-accent-rgb), 0.55);
+  filter: brightness(1.05);
+}
+
+.gh-btn--dark {
+  border-color: rgba(42, 36, 56, 0.2);
+  color: var(--gh-ink);
+  background: #fff;
+}
+
+.gh-btn--dark:hover {
+  background: var(--gh-ink);
+  color: #fff;
+  border-color: var(--gh-ink);
+}
+
+.gh-series-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 22px;
+  max-width: 980px;
+  margin: 0 auto 36px;
+  text-align: left;
+}
+
+.gh-series-card {
+  display: flex;
+  flex-direction: column;
+  border-radius: 20px;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid rgba(42, 36, 56, 0.08);
+  box-shadow: 0 4px 24px rgba(42, 36, 56, 0.06);
+  text-decoration: none;
+  color: var(--gh-ink);
+  transition: transform 0.35s var(--ease), box-shadow 0.35s var(--ease);
+}
+
+.gh-series-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 16px 40px rgba(42, 36, 56, 0.12);
+}
+
+.gh-series-card__media {
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  background: var(--paper-warm, #F6ECDD);
+}
+
+.gh-series-card__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.6s var(--ease);
+}
+
+.gh-series-card:hover .gh-series-card__media img {
+  transform: scale(1.04);
+}
+
+.gh-series-card__body {
+  padding: 18px 18px 20px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.gh-series-card__en {
+  font-size: 10px;
+  letter-spacing: 0.28em;
+  color: var(--gh-label, #2F6B6B);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.gh-series-card__body h3 {
+  font-family: var(--serif);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  margin-bottom: 8px;
+}
+
+.gh-series-card__body p {
+  font-size: 12.5px;
+  color: var(--gh-muted);
+  line-height: 1.9;
+  flex: 1;
+  margin-bottom: 12px;
+}
+
+.gh-series-card__more {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  font-weight: 500;
+  color: var(--gh-ink-mint, #1F6F72);
+  background: none;
+  -webkit-text-fill-color: currentColor;
+}
+
 @media (max-width: 900px) {
   .sov-pillars {
     grid-template-columns: repeat(2, 1fr);
     max-width: 640px;
+  }
+
+  .gh-series-cards {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
   }
 
   .sov-detail,
@@ -381,6 +511,11 @@
   .sov-pillars {
     grid-template-columns: 1fr;
     max-width: 480px;
+  }
+
+  .gh-series-cards {
+    grid-template-columns: 1fr;
+    gap: 16px;
   }
 
   .sov-guide__row {

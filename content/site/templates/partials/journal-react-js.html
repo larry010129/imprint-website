@@ -1,1 +1,23 @@
-<script type="module" src="/static/react/journal.js?v=6"></script>
+<script>
+  (() => {
+    let loaded = false;
+    const loadJournal = () => {
+      if (loaded) return;
+      loaded = true;
+      import("/static/react/journal.js?v=7").catch(() => { loaded = false; });
+    };
+    /* SSR list is the LCP; upgrade to the React island on idle or when it nears the viewport. */
+    const app = document.querySelector("[data-journal-app]");
+    if (app && "IntersectionObserver" in window) {
+      const io = new IntersectionObserver((entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          io.disconnect();
+          loadJournal();
+        }
+      }, { rootMargin: "600px 0px" });
+      io.observe(app);
+    }
+    const ric = window.requestIdleCallback || ((cb) => setTimeout(cb, 2000));
+    ric(loadJournal, { timeout: 4000 });
+  })();
+</script>

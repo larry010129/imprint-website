@@ -5,8 +5,10 @@ from __future__ import annotations
 import json
 import re
 from datetime import date, datetime
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
+from urllib.parse import unquote
 from uuid import uuid4
 
 TESTIMONIAL_CATEGORIES = (
@@ -193,8 +195,64 @@ def move_testimonial(cur, testimonial_id: str, direction: str) -> bool:
     return True
 
 
+_TESTIMONIAL_IMG_PREFIX = "/static/images/testimonials/"
+
+
+@lru_cache(maxsize=1)
+def _local_testimonial_webps() -> frozenset[str]:
+    """WebP files under public/images/testimonials, posix-relative paths.
+
+    Cached per process; deploys restart the process so new files are picked up.
+    """
+    from config.settings import settings
+
+    base = settings.static_dir / "images" / "testimonials"
+    found: set[str] = set()
+    try:
+        if base.is_dir():
+            for p in base.rglob("*.webp"):
+                found.add(p.relative_to(base).as_posix())
+    except OSError:
+        pass
+    return frozenset(found)
+
+
+def normalize_testimonial_image_url(url: str | None) -> str:
+    """Single image origin: seeded testimonial art always serves as local WebP.
+
+    Local /static/images/testimonials/*.jpg with a WebP sibling → WebP path.
+    Supabase-hosted copies of the same files (basename match) → local WebP path,
+    so one session never fetches the same image from both origins. Admin uploads
+    (uuid filenames) and unrelated URLs pass through unchanged.
+    """
+    u = (url or "").strip()
+    if not u:
+        return u
+    available = _local_testimonial_webps()
+    if not available:
+        return u
+    if u.startswith(_TESTIMONIAL_IMG_PREFIX):
+        rel = u[len(_TESTIMONIAL_IMG_PREFIX):].split("?", 1)[0]
+        if rel.lower().endswith(".webp"):
+            return u
+        stem = rel.rsplit(".", 1)[0]
+        cand = f"{stem}.webp"
+        if cand in available:
+            return f"{_TESTIMONIAL_IMG_PREFIX}{cand}"
+        return u
+    if u.startswith("https://") and ".supabase.co/" in u:
+        basename = unquote(u.split("?", 1)[0]).rsplit("/", 1)[-1]
+        stem = basename.rsplit(".", 1)[0] if "." in basename else basename
+        for cand in (f"{stem}.webp", f"presets/{stem}.webp"):
+            if cand in available:
+                return f"{_TESTIMONIAL_IMG_PREFIX}{cand}"
+    return u
+
+
 def serialize_testimonial(row: dict) -> dict:
     out = dict(row)
+    if out.get("image_url"):
+        out["image_url"] = normalize_testimonial_image_url(out["image_url"])
     if out.get("id") is not None:
         out["id"] = str(out["id"])
     for key in ("created_at", "updated_at"):
@@ -662,6 +720,29 @@ def ensure_banner_mobile_column(cur) -> None:
     cur.execute(
         "alter table home_banners add column if not exists image_url_mobile text not null default ''"
     )
+
+
+def ensure_banner_align_column(cur) -> None:
+    """Idempotent: add the per-banner desktop copy alignment setting."""
+    cur.execute(
+        """
+        select exists (
+          select 1 from information_schema.columns
+          where table_name = 'home_banners' and column_name = 'align'
+        ) as present
+        """
+    )
+    had_column = bool((cur.fetchone() or {}).get("present"))
+    cur.execute(
+        "alter table home_banners add column if not exists align text not null default 'left'"
+    )
+    cur.execute(
+        "update home_banners set align = 'left' where align is null or align not in ('left', 'right')"
+    )
+    if not had_column:
+        cur.execute(
+            "update home_banners set align = 'right' where sort_order = 3 and align = 'left'"
+        )
 
 
 def ensure_testimonial_country_column(cur) -> None:

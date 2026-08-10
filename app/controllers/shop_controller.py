@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
@@ -28,6 +29,8 @@ from app.pricing import (
     normalize_gold,
 )
 from app.tw_address import validate_tw_shipping_parts as _validate_tw_shipping_parts
+
+log = logging.getLogger(__name__)
 
 router = APIRouter(tags=["shop"])
 
@@ -67,13 +70,24 @@ def _pricing(config: dict[str, Any]) -> dict[str, Any]:
 
 
 def _validate_config(body: dict[str, Any]) -> str | None:
-    # ponytail: required-field only; upgrade = port choice/engraving/length checks
+    # ponytail: required-field + length; upgrade = port choice/engraving checks
     # from retired backend/lib/validation.js when bad CMS/cart payloads show up.
     for key in ("category", "type", "carat"):
         if not body.get(key):
             return f"缺少欄位：{key}"
     if body.get("category") != "diamond" and not body.get("gold"):
         return "缺少欄位：gold"
+    # Chain/bracelet price by length — a missing/invalid lengthCm otherwise only
+    # surfaces late as pricing ready:false ("無法計算價格…") or a 500 on float().
+    if body.get("category") in ("chain", "bracelet"):
+        length_cm = body.get("lengthCm")
+        if length_cm is None or length_cm == "":
+            return "缺少欄位：lengthCm"
+        try:
+            if float(length_cm) <= 0:
+                return "長度格式錯誤：lengthCm"
+        except (TypeError, ValueError):
+            return "長度格式錯誤：lengthCm"
     return None
 
 
@@ -103,6 +117,21 @@ def _validate_product_variant(cur, body: dict[str, Any], *, require_published: b
 CART_UNAVAILABLE_REASON = "商品已下架或規格已變更"
 CART_UNAVAILABLE_CHECKOUT_MSG = "請先移除無法購買品項"
 
+# Wizard defaults (htmx_shop_wizard) — backfilled for legacy chain/bracelet
+# cart rows stored before lengthCm became required, so they stay purchasable.
+DEFAULT_CHAIN_LENGTH_CM = 46
+DEFAULT_BRACELET_LENGTH_CM = 18
+
+
+def _backfill_length_cm(config: dict[str, Any]) -> None:
+    if config.get("lengthCm") not in (None, ""):
+        return
+    category = str(config.get("category") or "")
+    if category == "chain":
+        config["lengthCm"] = DEFAULT_CHAIN_LENGTH_CM
+    elif category == "bracelet":
+        config["lengthCm"] = DEFAULT_BRACELET_LENGTH_CM
+
 
 def _cart_item_config(item: dict[str, Any]) -> dict[str, Any]:
     """Normalize cart row config; fill category/type from row columns when missing."""
@@ -112,6 +141,7 @@ def _cart_item_config(item: dict[str, Any]) -> dict[str, Any]:
         config["category"] = item["category"]
     if not config.get("type") and item.get("style_type"):
         config["type"] = item["style_type"]
+    _backfill_length_cm(config)
     return config
 
 
@@ -868,16 +898,15 @@ def _request_is_shop_preview(request: Request, body: dict[str, Any] | None = Non
 
 @router.post("/cart-checkout")
 async def cart_checkout(request: Request) -> dict:
-    import logging
-
-    logger = logging.getLogger(__name__)
     try:
         return await _cart_checkout_impl(request)
     except HTTPException:
         raise
-    except Exception:
-        logger.exception("cart_checkout failed")
-        return _err(500, "訂單建立失敗，請稍後再試或聯絡客服")
+    except Exception as exc:
+        # Client gets the exception class only — str(exc) can leak SQL/connection
+        # internals. The class flows into checkout form_error for support triage.
+        log.exception("cart_checkout failed")
+        return _err(500, f"訂單建立失敗（{type(exc).__name__}），請稍後再試或聯絡客服")
 
 
 async def _cart_checkout_impl(request: Request, body: dict[str, Any] | None = None) -> dict:

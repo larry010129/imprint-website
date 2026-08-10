@@ -331,7 +331,7 @@ export default function DnaDiamondPage() {
                   href={`${root}series.html`}
                   className="inline-flex items-center rounded-full bg-[#9cefef] px-6 py-3 text-sm tracking-wider text-[#2b2320] transition hover:bg-[#b7f4f4] hover:shadow-[0_8px_24px_rgba(94,207,207,0.25)]"
                 >
-                  探索您的專屬紀念｜五大訂製系列
+                  探索您的專屬紀念｜六大訂製系列
                 </a>
                 <a
                   href={`${root}faq.html`}

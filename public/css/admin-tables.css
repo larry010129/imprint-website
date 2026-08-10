@@ -769,286 +769,175 @@
 }
 
 /* ============================================================
-   Mobile card lists (≤900) — products + orders
-   Thumb + name/meta + status + actions; no primary H-scroll tables
+   Mobile tables (≤900) — ONE design language for every admin table
+   (orders / products / leads / invites / pricing / membership /
+   content / CMS React tables):
+
+   Pattern: horizontal scroll + sticky identity column + compact
+   density. Rows stay one-line-per-record (no long vertical card
+   stacking); actions stay reachable by a short sideways swipe.
+
+   Note: the previous per-row card stack assigned several cells to
+   the same grid-area, which overlapped text on phones — removed.
    ============================================================ */
 @media (max-width: 900px) {
+  /* 1. Every admin table lives inside a horizontal scroller */
   .ap-table-root,
   #panel-products .ap-table-root,
   .records-table-wrap,
   #panel-orders .records-table-wrap,
   .adx-table-card,
-  .adx-table-wrap {
-    overflow-x: visible;
+  .adx-table-wrap,
+  .ai-table-wrap,
+  .admin-scroll,
+  .card:has(> table),
+  [data-admin-root] :is(div, section):has(> table) {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
     max-width: 100%;
   }
 
-  #panel-orders .records-table-wrap {
-    border: 0;
-    background: transparent;
-    box-shadow: none;
-  }
+  /* 2. Minimum widths — columns stay readable instead of crushing text */
+  .admin-table.records-table--compact { min-width: 860px; }
+  .ap-table { min-width: 620px; }
+  .adx-table { min-width: 600px; }
+  .admin-scroll > table { min-width: 640px; }
+  [data-admin-root] table { min-width: 600px; }
 
-  /* ---- Products (.ap-table) ---- */
-  .ap-table {
-    display: block;
-    min-width: 0;
-    width: 100%;
-  }
-
-  .ap-table thead {
-    display: none;
-  }
-
-  .ap-table tbody {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .ap-table tbody tr {
-    display: grid;
-    grid-template-columns: 52px minmax(0, 1fr);
-    grid-template-areas:
-      "thumb meta"
-      "status status"
-      "actions actions";
-    gap: 8px 12px;
-    align-items: start;
-    padding: 14px 16px;
-    border: 1px solid #EDE7E0;
-    border-radius: 10px;
-    background: var(--card, #fff);
-    box-shadow: 0 2px 10px rgba(43, 35, 32, 0.04);
-  }
-
-  .ap-table tbody tr:hover td {
-    background: transparent;
-  }
-
-  .ap-table tbody tr.is-dragging {
-    opacity: 0.85;
-  }
-
-  .ap-table tbody tr td {
-    display: block;
-    padding: 0;
-    border: none;
-    background: transparent !important;
-    vertical-align: top;
-  }
-
-  .ap-table tbody tr td:nth-child(1) {
-    display: none;
-  }
-
-  .ap-table tbody tr td:nth-child(2) {
-    grid-area: thumb;
-  }
-
-  .ap-table tbody tr td:nth-child(2) .ap-thumb {
-    width: 52px;
-    height: 52px;
-  }
-
-  .ap-table tbody tr td:nth-child(3),
-  .ap-table tbody tr td:nth-child(4) {
-    grid-area: meta;
-  }
-
-  .ap-table tbody tr td:nth-child(3) {
+  /* 3. Compact, consistent cells — same header/row rhythm everywhere */
+  .ap-table th,
+  .admin-table.records-table--compact th,
+  .adx-table th,
+  .ai-table th,
+  .card > table th,
+  .price-edit-table th,
+  [data-admin-root] table th {
+    padding: 10px 12px;
     font-size: 11px;
-    color: var(--ink-faint, #8A817B);
-    letter-spacing: 0.06em;
   }
 
-  .ap-table tbody tr td:nth-child(4) .name {
-    font-size: 15px;
-    font-weight: 600;
-    line-height: 1.35;
+  .ap-table td,
+  .admin-table.records-table--compact td,
+  .adx-table td,
+  .ai-table td,
+  .card > table td,
+  .price-edit-table td,
+  [data-admin-root] table td {
+    padding: 10px 12px;
+    font-size: 12.5px;
   }
 
-  .ap-table tbody tr td:nth-child(5) {
-    grid-area: status;
+  .card table th.adx-sort-th .adx-sort-btn,
+  .ap-table th.adx-sort-th .adx-sort-btn,
+  .admin-table.records-table--compact th.adx-sort-th .adx-sort-btn {
+    padding: 10px 12px;
   }
 
-  .ap-table tbody tr td:nth-child(6) {
-    grid-area: actions;
+  /* Comfortable tap targets without inflating row height */
+  .ap-table .btn-sm,
+  .adx-table .btn-sm,
+  .admin-table.records-table--compact .btn-sm {
+    min-height: 36px;
+    padding-top: 6px;
+    padding-bottom: 6px;
   }
 
-  .ap-table tbody tr .ap-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
+  /* Collapsed borders don't follow sticky cells — switch families with
+     per-cell borders to separate so row lines stay intact mid-scroll */
+  .ap-table,
+  .admin-table.records-table--compact,
+  .ai-table,
+  .price-edit-table,
+  .admin-scroll > table,
+  .card > table {
+    border-collapse: separate;
+    border-spacing: 0;
   }
 
-  .ap-table tbody tr .ap-actions .btn-sm {
-    min-height: var(--tap-target-min, 44px);
-    flex: 1 1 calc(50% - 4px);
-    justify-content: center;
-    text-align: center;
+  /* 4. Sticky identity column — record context survives the swipe.
+        Sticky cells keep a solid background so scrolled content
+        never shows through; hover highlight intentionally skips
+        the sticky column (stays readable while scrolling). */
+  .ap-table thead th:nth-child(2),
+  .ap-table tbody td:nth-child(2),
+  .admin-table.records-table--compact thead th:nth-child(-n+2),
+  .admin-table.records-table--compact tbody td:nth-child(-n+2),
+  .adx-table thead th:first-child,
+  .adx-table tbody td:first-child,
+  .ai-table thead th:first-child,
+  .ai-table tbody td:first-child,
+  .price-edit-table thead th:first-child,
+  .price-edit-table tbody td:first-child,
+  .admin-scroll > table thead th:first-child,
+  .admin-scroll > table tbody td:first-child,
+  .card > table thead th:first-child,
+  .card > table tbody td:first-child,
+  [data-admin-root] table thead th:first-child,
+  [data-admin-root] table tbody td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: var(--card, #fff);
   }
 
-  .ap-table tbody tr .ap-actions .btn-sm[data-action="edit"],
-  .ap-table tbody tr .ap-actions .btn-sm[data-action="publish"],
-  .ap-table tbody tr .ap-actions .btn-sm[data-action="unpublish"] {
-    flex: 1 1 100%;
-  }
-
-  .ap-table tbody tr td.ap-empty,
-  .ap-table tbody tr td[colspan] {
-    display: block;
-    grid-column: 1 / -1;
-    padding: 20px 0;
-    text-align: center;
-  }
-
-  .ap-table tbody tr:has(td[colspan]) {
-    display: block;
-    padding: 16px;
-  }
-
-  /* ---- Orders (.admin-table.records-table--compact) ---- */
-  .admin-table.records-table--compact {
-    display: block;
-    min-width: 0;
-    width: 100%;
-  }
-
-  .admin-table.records-table--compact thead {
+  /* Products: col 1 is the drag handle (desktop-only affordance);
+     hide it on touch so the thumbnail column becomes the sticky edge */
+  .ap-table thead th:first-child,
+  .ap-table tbody td:first-child {
     display: none;
   }
 
-  .admin-table.records-table--compact tbody {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+  /* Orders: col 1 is the 40px bulk-select checkbox, col 2 the order no. */
+  .admin-table.records-table--compact thead th:nth-child(2),
+  .admin-table.records-table--compact tbody td:nth-child(2) {
+    left: 40px;
+    box-shadow: 1px 0 0 var(--a1-border, #EDE7E0);
   }
 
-  .admin-table.records-table--compact tr.order-row-main {
-    display: grid;
-    grid-template-columns: auto 52px minmax(0, 1fr);
-    grid-template-areas:
-      "check thumb meta"
-      "status status status"
-      "actions actions actions"
-      "detail detail detail";
-    gap: 8px 12px;
-    align-items: start;
-    padding: 14px 16px;
-    border: 1px solid var(--color-border, #EDE7E0);
-    border-radius: 10px;
-    background: var(--color-surface, #fff);
-    box-shadow: 0 2px 10px rgba(43, 35, 32, 0.04);
-    cursor: default;
+  .ap-table thead th:nth-child(2),
+  .ap-table tbody td:nth-child(2),
+  .adx-table thead th:first-child,
+  .adx-table tbody td:first-child,
+  .ai-table thead th:first-child,
+  .ai-table tbody td:first-child,
+  .price-edit-table thead th:first-child,
+  .price-edit-table tbody td:first-child,
+  .admin-scroll > table thead th:first-child,
+  .admin-scroll > table tbody td:first-child,
+  .card > table thead th:first-child,
+  .card > table tbody td:first-child,
+  [data-admin-root] table thead th:first-child,
+  [data-admin-root] table tbody td:first-child {
+    box-shadow: 1px 0 0 var(--a1-border, #EDE7E0);
   }
 
-  .admin-table.records-table--compact tr.order-row-main:hover td {
-    background: transparent;
+  /* Header cells sit above body cells; match each family's header tint */
+  .ap-table thead th:nth-child(2),
+  .admin-table.records-table--compact thead th:nth-child(-n+2),
+  .adx-table thead th:first-child,
+  .ai-table thead th:first-child,
+  .price-edit-table thead th:first-child,
+  .admin-scroll > table thead th:first-child,
+  .card > table thead th:first-child,
+  [data-admin-root] table thead th:first-child {
+    z-index: 3;
+    background: #FAF8F5;
   }
 
-  .admin-table.records-table--compact tr.order-row-main td {
-    display: block;
-    padding: 0;
-    border: none;
-    background: transparent !important;
-    vertical-align: top;
+  .ai-table thead th:first-child { background: #F7F3EE; }
+
+  /* Expanded detail rows / empty-state colspan cells never stick */
+  .admin-table.records-table--compact tbody tr.order-detail-row > td,
+  .ap-table tbody tr > td[colspan]:first-child,
+  .ap-table tbody tr > td[colspan]:nth-child(2),
+  .adx-table tbody tr > td[colspan]:first-child,
+  .card > table tbody tr > td[colspan]:first-child,
+  .price-edit-table tbody tr > td[colspan]:first-child,
+  [data-admin-root] table tbody tr > td[colspan]:first-child {
+    position: static;
   }
 
-  .admin-table.records-table--compact tr.order-row-main td:nth-child(1) {
-    grid-area: check;
-    align-self: center;
-  }
-
-  .admin-table.records-table--compact tr.order-row-main td:nth-child(6) {
-    grid-area: thumb;
-  }
-
-  .admin-table.records-table--compact tr.order-row-main td:nth-child(2),
-  .admin-table.records-table--compact tr.order-row-main td:nth-child(3),
-  .admin-table.records-table--compact tr.order-row-main td:nth-child(4),
-  .admin-table.records-table--compact tr.order-row-main td:nth-child(5),
-  .admin-table.records-table--compact tr.order-row-main td:nth-child(7),
-  .admin-table.records-table--compact tr.order-row-main td:nth-child(8) {
-    grid-area: meta;
-  }
-
-  .admin-table.records-table--compact tr.order-row-main td:nth-child(2) {
-    font-weight: 600;
-    font-size: 14px;
-  }
-
-  .admin-table.records-table--compact tr.order-row-main td:nth-child(8) {
-    color: #3aa8a8;
-    font-weight: 600;
-  }
-
-  .admin-table.records-table--compact tr.order-row-main td:nth-child(9) {
-    grid-area: status;
-  }
-
-  .admin-table.records-table--compact tr.order-row-main td:nth-child(10) {
-    grid-area: actions;
-  }
-
-  .admin-table.records-table--compact tr.order-row-main td:nth-child(11) {
-    grid-area: detail;
-  }
-
-  .admin-table.records-table--compact tr.order-row-main .admin-actions-inner {
-    flex-wrap: wrap;
-    gap: 8px;
-    width: 100%;
-  }
-
-  .admin-table.records-table--compact tr.order-row-main .status-select {
-    flex: 1 1 auto;
-    min-height: var(--tap-target-min, 44px);
-    max-width: none;
-    width: 100%;
-  }
-
-  .admin-table.records-table--compact tr.order-row-main .admin-delete-btn {
-    width: var(--tap-target-min, 44px);
-    height: var(--tap-target-min, 44px);
-    flex: none;
-  }
-
-  .admin-table.records-table--compact tr.order-row-main .order-detail-btn {
-    width: 100%;
-    min-height: var(--tap-target-min, 44px);
-    justify-content: center;
-  }
-
-  .admin-table.records-table--compact tr.order-detail-row {
-    display: block;
-    width: 100%;
-    margin: -4px 0 10px;
-    border: 1px solid var(--color-border, #EDE7E0);
-    border-radius: 0 0 10px 10px;
-    overflow: hidden;
-    background: #fdfcfa;
-  }
-
-  .admin-table.records-table--compact tr.order-detail-row[hidden] {
-    display: none !important;
-  }
-
-  .admin-table.records-table--compact tr.order-detail-row td {
-    display: block;
-    padding: 0;
-    border: none;
-  }
-
-  .admin-table.records-table--compact tr:not(.order-row-main):not(.order-detail-row) td {
-    display: block;
-    padding: 20px 16px;
-    text-align: center;
-    border: 1px solid var(--color-border, #EDE7E0);
-    border-radius: 10px;
-  }
-
-  /* ---- Member accounts list ---- */
+  /* ---- Member accounts list (flex rows, not a table) ---- */
   .adx-member-list {
     border: 0;
     background: transparent;
@@ -1125,11 +1014,5 @@
   .orders-search input {
     width: 100%;
     min-height: var(--tap-target-min, 44px);
-  }
-}
-
-@media (max-width: 640px) {
-  .ap-table tbody tr .ap-actions .btn-sm {
-    flex: 1 1 100%;
   }
 }

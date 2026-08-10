@@ -216,7 +216,7 @@
 .cfg-engrave-input:focus{ border-color:var(--mint-deep); }
 .cfg-engrave-input:empty:before{ content:attr(data-placeholder); color:var(--ink-faint); }
 .cfg-emblem-token{ display:inline-flex; vertical-align:middle; width:16px; height:16px; flex:none; color:inherit; }
-.cfg-emblem-token svg{ width:100%; height:100%; }
+.cfg-emblem-token svg,.cfg-emblem-token img{ width:100%; height:100%; object-fit:contain; display:block; }
 /* Display surfaces (summary / chips / order specs) — same icons as typing */
 .config-chip .cfg-emblem-token,
 .cfg-summary-row .cfg-emblem-token,
@@ -232,7 +232,7 @@
   width:36px; height:36px; border-radius:50%; border:1px solid #E4DCD2; background:#fff;
   display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all .2s; color:var(--ink-soft); padding:0;
 }
-.cfg-emblem svg{ width:18px; height:18px; }
+.cfg-emblem svg,.cfg-emblem img{ width:18px; height:18px; object-fit:contain; display:block; }
 .cfg-emblem:hover{ border-color:var(--mint-deep); color:var(--ink); background:var(--mint-soft); }
 .cfg-engrave-preview{ position:relative; margin-top:18px; max-width:360px; }
 .cfg-engrave-gem-picture{ display:block; width:100%; }
@@ -769,6 +769,12 @@
 }
 @media (min-width:1100px){
   .stories-page-masonry{ column-count:3; }
+}
+@media (max-width:639px){
+  /* 手機單欄：壓低過高的直式比例（最低 3/5→4/3），卡片不再一整版長圖 */
+  .stories-page-card__media{ aspect-ratio:4/3; }
+  .stories-page-card[data-aspect="2"] .stories-page-card__media,
+  .stories-page-card[data-aspect="4"] .stories-page-card__media{ aspect-ratio:1/1; }
 }
 .stories-note{
   background:var(--mint-soft); border:1px solid var(--mint-line); border-radius:8px;
@@ -1896,10 +1902,12 @@
    Breakpoints: 640 phone / 900 tablet / 1100 desk
 ============================================================ */
 @media (max-width: 900px) {
+  /* Above-fold values folded in from print-deferred responsive.css (identical
+     computed output; they must be blocking so mobile heroes never re-flow). */
   .page-hero {
     grid-template-columns: 1fr;
-    gap: 32px;
-    padding: 48px var(--page-padding-x, 16px) 40px;
+    gap: 28px;
+    padding: 40px 0 36px;
     width: 100%;
   }
   .page-hero::before {
@@ -1907,10 +1915,10 @@
     width: 100%;
     margin-left: 0;
   }
-  .page-hero-inner { order: 2; }
+  .page-hero-inner { order: 1; }
   .page-hero-media {
-    order: 1;
-    min-height: 220px;
+    order: 2;
+    min-height: 0;
     aspect-ratio: 16 / 10;
   }
   .page-hero h1 {
@@ -1920,10 +1928,13 @@
   .page-hero p { max-width: none; }
 
   .series-page-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 32px;
-    padding: 32px 0 64px;
+    grid-template-columns: 1fr;
+    gap: 36px;
+    padding: 36px 0 60px;
   }
+
+  .stories-page-masonry { column-count: 1; padding: 8px 0 36px; }
+  .stories-page-card:hover { transform: none; }
   .series-page-intro { padding-top: 48px; }
 
   .jewelry-block { padding: 56px 0; }
@@ -1965,17 +1976,14 @@
 }
 
 @media (max-width: 640px) {
+  /* Keep every series page's hero and intro content symmetrically inset on phones. */
   .page-hero {
-    padding-top: 36px;
-    gap: 24px;
+    padding-inline: var(--page-padding-x, 16px);
   }
-  .page-hero-media { min-height: 200px; }
-
   .series-page-grid {
-    grid-template-columns: 1fr;
-    gap: 28px;
-    padding-bottom: 48px;
+    padding-inline: var(--page-padding-x, 16px);
   }
+
   .series-related a {
     min-height: var(--tap-target-min, 44px);
     display: inline-flex;
@@ -2016,7 +2024,6 @@
     font-size: 14px;
   }
   .faq--offset { padding: 36px 0 72px; }
-  .page-hero--text { padding: 36px 0 28px; }
   .faq-intro__cta {
     padding: 13px 28px;
     font-size: 13.5px;

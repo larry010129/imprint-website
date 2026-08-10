@@ -89,23 +89,34 @@
   var root = document.getElementById('htmx-checkout');
   if (!root) return;
   var errHtml = '<p class="form-msg is-error" role="alert">無法載入訂單，請重新整理或<a href="/cart">返回購物車</a>。</p>';
+  var timer = null;
+  function disarmTimer() {
+    window.clearTimeout(timer);
+    timer = null;
+  }
   function showErr() {
+    disarmTimer();
     if (!root.isConnected) return;
     root.innerHTML = errHtml;
   }
   // CSP blocks unsafe-eval — do not use hx-on:: (new Function). Native listeners OK.
   root.addEventListener('htmx:responseError', showErr);
   root.addEventListener('htmx:sendError', showErr);
-  var timer = null;
   function armTimer() {
-    window.clearTimeout(timer);
+    disarmTimer();
     timer = window.setTimeout(function () {
       if (root.querySelector('.checkout-skel')) showErr();
     }, 25000);
   }
   armTimer();
   root.addEventListener('htmx:beforeRequest', armTimer);
-  root.addEventListener('htmx:afterSwap', function () { window.clearTimeout(timer); });
+  root.addEventListener('htmx:afterSwap', disarmTimer);
+  root.addEventListener('htmx:afterSettle', disarmTimer);
+  // HX-Redirect swaps nothing — disarm so the timer can't fire during navigation.
+  root.addEventListener('htmx:beforeOnLoad', function (event) {
+    var xhr = event.detail && event.detail.xhr;
+    if (xhr && xhr.getResponseHeader('HX-Redirect')) disarmTimer();
+  });
 })();
 </script>
 {% endblock %}

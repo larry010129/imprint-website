@@ -7,12 +7,13 @@ from typing import Any
 EDITABLE_SITE_PAGES: tuple[dict[str, str], ...] = (
     {"route": "/", "title": "首頁", "content_tab": "page"},
     {"route": "/about", "title": "品牌故事", "content_tab": "page"},
-    {"route": "/series", "title": "五大系列總覽", "content_tab": "page"},
+    {"route": "/series", "title": "六大系列總覽", "content_tab": "page"},
     {"route": "/series/first-love/", "title": "滿月鑽石", "content_tab": "page"},
     {"route": "/series/pet/", "title": "寵物鑽石", "content_tab": "page"},
     {"route": "/series/love/", "title": "結髮鑽石", "content_tab": "page"},
     {"route": "/series/family/", "title": "全家福鑽石", "content_tab": "page"},
     {"route": "/series/heirloom/", "title": "生命鑽石", "content_tab": "page"},
+    {"route": "/series/signature/", "title": "真我鑽石", "content_tab": "page"},
     {"route": "/what-is-dna-diamond", "title": "DNA 鑽石的誕生", "content_tab": "page"},
     {"route": "/diamond-4c", "title": "鑽石 4C", "content_tab": "page"},
     {"route": "/lab-grown-diamond", "title": "什麼是培育鑽石", "content_tab": "page"},
@@ -76,7 +77,6 @@ def _home_slots() -> list[dict[str, Any]]:
             2,
         ),
         _btn(p, "hero-cta", "首頁・主視覺主按鈕", "開始訂製", "/shop/calculator/", 3),
-        _t(p, "poem-brand", "首頁・詩文品牌名", "銘印鑽石", 10),
         _t(p, "poem-title", "首頁・詩文標題", "一段思念，如何成為永恆。", 11),
         _t(
             p,
@@ -98,13 +98,13 @@ def _home_slots() -> list[dict[str, Any]]:
         ),
         _btn(p, "dna-cta-process", "首頁・DNA主按鈕", "了解完整製程與保障", "/what-is-dna-diamond", 23),
         _btn(p, "dna-cta-about", "首頁・DNA次按鈕", "為什麼選擇銘印 →", "/about", 24),
-        _t(p, "series-script", "首頁・系列眉標", "Five Collections", 30),
+        _t(p, "series-script", "首頁・系列眉標", "Six Collections", 30),
         _t(p, "series-title", "首頁・系列標題", "選擇屬於您的系列", 31),
         _t(
             p,
             "series-lead",
             "首頁・系列引言",
-            "每一種羈絆，都有屬於它的光。先了解五大系列；若從紀念物、鑽石尺寸到珠寶設計都想量身打造，也可走 Signature｜專屬訂製——世界上不會有第二顆與您相同的 DNA 鑽石。再點進系列頁選擇克拉數、形狀與飾品款式。",
+            "每一種羈絆，都有屬於它的光。先了解六大系列；真我鑽石以自己的髮絲，萃煉成獨一無二的鑽石，獻給值得被自己慶祝的此刻。",
             32,
         ),
         _t(p, "card-first-love-title", "首頁・滿月卡標題", "滿月鑽石", 33),
@@ -260,21 +260,21 @@ def _about_slots() -> list[dict[str, Any]]:
 def _series_slots() -> list[dict[str, Any]]:
     p = "/series"
     return [
-        _t(p, "hero-eyebrow", "系列總覽・眉標", "Five Collections", 1),
+        _t(p, "hero-eyebrow", "系列總覽・眉標", "Six Collections", 1),
         _t(p, "hero-title", "系列總覽・主標", "選擇屬於您的系列", 2),
         _t(
             p,
             "hero-lead",
             "系列總覽・引言",
-            "銘印鑽石依不同的羈絆與生命階段，整理成五個系列；若故事無法被既有系列完整涵蓋，也可走 Signature｜專屬訂製。每一顆鑽石都從您珍視的樣本中真實培育而成——先了解各系列意義，再選擇克拉數、形狀與飾品款式。",
+            "銘印鑽石依不同的羈絆與生命階段，整理成六個系列；真我鑽石以自己的髮絲，萃煉成獨一無二的鑽石，獻給值得被自己慶祝的此刻。每一顆鑽石都從您珍視的樣本中真實培育而成——先了解各系列意義，再選擇克拉數、形狀與飾品款式。",
             3,
         ),
-        _t(p, "intro-title", "系列總覽・介紹標題", "五大系列，對應五種珍視的連結", 10),
+        _t(p, "intro-title", "系列總覽・介紹標題", "六大系列，對應六種珍視的連結", 10),
         _t(
             p,
             "intro-body",
             "系列總覽・介紹內文",
-            "無論是寶寶的第一縷胎髮、毛孩多年的陪伴、伴侶之間的誓約、全家人的髮絲，或是已離開的摯愛——我們以相同的在地培育技術，為不同故事找到最貼切的起點。系列之間沒有優劣，只有「哪一種連結，此刻最貼近您的心」。Signature｜專屬訂製則從紀念物、鑽石尺寸到珠寶設計皆依您的故事量身打造——世界上不會有第二顆與您相同的 DNA 鑽石。",
+            "無論是寶寶的第一縷胎髮、毛孩多年的陪伴、伴侶之間的誓約、全家人的髮絲，或是已離開的摯愛——我們以相同的在地培育技術，為不同故事找到最貼切的起點。系列之間沒有優劣，只有「哪一種連結，此刻最貼近您的心」。真我鑽石則以自己的髮絲，萃煉成獨一無二的鑽石，獻給值得被自己慶祝的此刻。",
             11,
         ),
         _t(p, "guide-title", "系列總覽・導引標題", "不確定從哪個系列開始？", 20),
@@ -377,6 +377,11 @@ def _series_detail_slots() -> list[dict[str, Any]]:
             "/series/heirloom/",
             "生命鑽石－讓思念，有永恆的形狀",
             "以摯愛親人的毛髮或骨灰，讓思念有永恆的形狀，靜靜陪在您身邊。",
+        ),
+        (
+            "/series/signature/",
+            "真我鑽石",
+            "以自己的髮絲，萃煉成獨一無二的鑽石，獻給值得被自己慶祝的此刻。",
         ),
     )
     out: list[dict[str, Any]] = []

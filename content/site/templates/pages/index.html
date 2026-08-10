@@ -6,8 +6,8 @@
 {% endblock %}
 {% block extra_css %}
 <style>{{ inline_css('home-ghibli-critical.css') | safe }}</style>
-<link rel="stylesheet" href="/static/css/home-ghibli.css?v=58" media="print" onload="this.media='all'">
-    <noscript><link rel="stylesheet" href="/static/css/home-ghibli.css?v=58"></noscript>
+<link rel="stylesheet" href="/static/css/home-ghibli.css?v=61" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="/static/css/home-ghibli.css?v=61"></noscript>
 {% endblock %}
 {% block extra_head %}
 <style>
@@ -16,6 +16,32 @@
     aspect-ratio:800/388;
     object-fit:cover;
   }
+}
+/* Scroll cue — center-bottom affordance; dark glass + gold edge (brand), gentle bounce.
+   Kept inline (first paint): critical CSS budget has no headroom (18KB cap). */
+.gh-scroll-cue{
+  position:absolute; left:50%; bottom:14px; transform:translateX(-50%);
+  z-index:6; width:44px; height:44px; margin:0; padding:0; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  background:rgba(43,35,32,.55); border:1px solid rgba(232,213,183,.65); color:#F5E9D3;
+  box-shadow:0 2px 14px rgba(0,0,0,.22);
+  backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+  cursor:pointer; appearance:none; -webkit-appearance:none;
+  animation:ghScrollCue 2.6s ease-in-out infinite;
+  transition:background .3s, border-color .3s;
+}
+.gh-scroll-cue:hover{ background:rgba(43,35,32,.8); border-color:rgba(232,213,183,.95); }
+.gh-scroll-cue:focus-visible{ outline:2px solid #E8D5B7; outline-offset:2px; }
+.gh-scroll-cue svg{ display:block; flex:none; }
+@keyframes ghScrollCue{
+  0%,100%{ transform:translate(-50%,0); }
+  50%{ transform:translate(-50%,7px); }
+}
+@media (max-width:640px){
+  .gh-scroll-cue{ bottom:calc(10px + var(--safe-area-bottom, 0px)); }
+}
+@media (prefers-reduced-motion: reduce){
+  .gh-scroll-cue{ animation:none; }
 }
 </style>
 <script type="application/ld+json">
@@ -159,7 +185,7 @@
           <p class="gh-hero__lead reveal reveal-d2">以寶寶的胎髮，珍藏生命最初的印記，成為陪伴孩子一生的傳家珍藏。從滿月剃髮的那一刻，到孩子長大成人，這顆鑽石始終記得最初的模樣。</p>
           <div class="gh-hero__actions reveal reveal-d3">
             <a class="gh-btn gh-btn--primary btn-neon btn-neon--solid" href="/series/first-love/">探索滿月鑽石</a>
-            <a class="gh-btn gh-btn--ghost" href="/#series">五大系列</a>
+            <a class="gh-btn gh-btn--ghost" href="/#series">六大系列</a>
           </div>
         </div>
       </li>
@@ -262,6 +288,11 @@
       <button type="button" class="hc-dot" data-index="5" role="tab" aria-label="生命鑽石" aria-selected="false"></button>
     </div>
   </div>
+
+  {# Scroll cue: outside carousel region; main.js [data-scroll-to] handles smooth scroll + reduced-motion. #}
+  <button type="button" class="gh-scroll-cue" data-scroll-to="home-poem" aria-label="向下捲動">
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
 </section>
 
 <section class="gh-poem gh-poem--split home-stack" id="home-poem" data-home-stack>
@@ -297,8 +328,7 @@
         {% endif %}
       </div>
       <div class="gh-poem__copy">
-        <p class="gh-poem__brand reveal" data-cms-text="poem-brand">銘印鑽石</p>
-        <h2 class="gh-poem__title reveal reveal-d1" data-cms-text="poem-title">一段思念，<br>如何成為永恆。</h2>
+        <h2 class="gh-poem__title reveal reveal-d1" data-cms-text="poem-title">一段思念，如何成為永恆。</h2>
         <p class="gh-poem__text reveal reveal-d2" data-cms-text="poem-text">我們樂意傾聽您的故事。照片無法滿足思念、信物無法填補情感：為了讓思親更親，才有了 DNA 鑽石，煉製獨一無二的專屬寶物。DNA 鑽石與天然鑽石唯一的不同：天然鑽石來自地底挖採；DNA 鑽石來自您的摯愛。</p>
         <div class="gh-poem__links reveal reveal-d3">
           <a class="gh-poem__link gh-poem__link--primary" href="/what-is-dna-diamond">
@@ -345,8 +375,8 @@
         <img
           data-cms-slot="dna-cta-diamond"
           src="/static/images/diamonds/colors/blue-320.webp"
-          srcset="/static/images/diamonds/colors/blue-320.webp 320w, /static/images/diamonds/colors/blue.webp 609w"
-          sizes="320px"
+          srcset="/static/images/diamonds/colors/blue-320.webp 320w"
+          sizes="(max-width:640px) min(58vw, 230px), 280px"
           alt=""
           width="320"
           height="320"
@@ -367,9 +397,9 @@
 {% include "partials/cms/site_section_stack.html" %}
 
 <section class="gh-section home-stack" id="series" data-home-stack>
-  <p class="gh-script reveal" data-cms-text="series-script">Five Collections</p>
+  <p class="gh-script reveal" data-cms-text="series-script">Six Collections</p>
   <h2 class="gh-section__title reveal reveal-d1" data-cms-text="series-title">選擇屬於您的系列</h2>
-  <p class="gh-section__lead reveal reveal-d2" data-cms-text="series-lead">每一種羈絆，都有屬於它的光。先<a href="/series">了解五大系列</a>；若從紀念物、鑽石尺寸到珠寶設計都想量身打造，也可走 Signature｜專屬訂製。世界上不會有第二顆與您相同的 DNA 鑽石。再點進系列頁選擇克拉數、形狀與飾品款式。</p>
+  <p class="gh-section__lead reveal reveal-d2" data-cms-text="series-lead">每一種羈絆，都有屬於它的光。先<a href="/series">了解六大系列</a>；真我鑽石以自己的髮絲，萃煉成獨一無二的鑽石，獻給值得被自己慶祝的此刻。</p>
 
 {% set cms_anchor = 'series-top' %}
   {% include "partials/cms/site_section_stack.html" %}
@@ -446,6 +476,21 @@
         <p class="gh-series-card__en">Heirloom</p>
         <h3 data-cms-text="card-heirloom-title">生命鑽石</h3>
         <p data-cms-text="card-heirloom-text">回憶如汩汩泉湧，思念如雲煙繞樑。請永遠留在我身邊，讓記憶成為永恆的存在。</p>
+        <span class="gh-series-card__more">立即客製 →</span>
+      </div>
+    </a>
+
+    <a class="gh-series-card reveal reveal-d5" href="/series/signature/">
+      <div class="gh-series-card__media">
+        <picture>
+          <source type="image/webp" srcset="/static/images/hero/imprint-diamond-wedding-couple-ring-400w.webp 400w, /static/images/hero/imprint-diamond-wedding-couple-ring-800w.webp 800w, /static/images/hero/imprint-diamond-wedding-couple-ring-960w.webp 960w, /static/images/hero/imprint-diamond-wedding-couple-ring-1200w.webp 1200w" sizes="(max-width:640px) 92vw, (max-width:900px) 45vw, 320px">
+          <img data-cms-slot="series-signature" src="/static/images/hero/imprint-diamond-wedding-couple-ring-800w.webp" srcset="/static/images/hero/imprint-diamond-wedding-couple-ring-800w.webp 800w, /static/images/hero/imprint-diamond-wedding-couple-ring-960w.webp 960w, /static/images/hero/imprint-diamond-wedding-couple-ring-1200w.webp 1200w" sizes="(max-width:640px) 92vw, (max-width:900px) 45vw, 320px" alt="真我鑽石" width="800" height="388" loading="lazy" decoding="async" onerror="imgFallback(this)">
+        </picture>
+      </div>
+      <div class="gh-series-card__body">
+        <p class="gh-series-card__en">Signature</p>
+        <h3>真我鑽石</h3>
+        <p>以自己的髮絲，萃煉成獨一無二的鑽石，獻給值得被自己慶祝的此刻。</p>
         <span class="gh-series-card__more">立即客製 →</span>
       </div>
     </a>

@@ -1,8 +1,11 @@
 {% extends "layouts/base.html" %}
 {% block extra_css %}
-<script>document.documentElement.classList.add("journal-js");</script>
+{# SSR list stays visible until the island fetches OK — journal.js hides [data-journal-ssr]
+   itself. Eager journal-js hide caused the 2.45s LCP render delay. #}
 <style>
-  .journal-js [data-journal-ssr] { display: none !important; }
+  /* journal.css loads non-blocking; replicate its two global side effects so late apply shifts nothing. */
+  @media (min-width:64rem) and (max-width:79.99rem) { body .container { max-width:64rem; } }
+  @media (min-width:901px) { .site-footer { min-height:20rem; } }
 </style>
 {% include "partials/journal-react-css.html" %}
 <style>

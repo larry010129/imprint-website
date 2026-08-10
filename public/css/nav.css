@@ -433,18 +433,6 @@ a.account-menu-trigger{
   color:#fff;
   box-shadow:0 0 0 2px rgba(255,255,255,.5);
 }
-[data-site-nav-root].is-nav-hero .account-menu-trigger{
-  background:rgba(255,255,255,.12);
-  border-color:rgba(255,255,255,.38);
-  box-shadow:0 4px 20px rgba(42,24,69,.18);
-}
-[data-site-nav-root].is-nav-hero .account-menu-trigger:hover{
-  border-color:rgba(255,255,255,.55);
-  background:rgba(255,255,255,.2);
-  box-shadow:0 6px 24px rgba(42,24,69,.22);
-}
-[data-site-nav-root].is-nav-hero .account-menu-name{ color:#fff; }
-[data-site-nav-root].is-nav-hero .account-menu-email{ color:rgba(255,255,255,.78); }
 .account-menu-text{
   display:flex;
   flex-direction:column;
@@ -725,15 +713,6 @@ a.account-menu-trigger{
   opacity:1;
   transform:translateX(-0.15rem);
 }
-[data-site-nav-root].is-nav-hero .nav-ihb{
-  background:rgba(255,255,255,.14);
-  border-color:rgba(255,255,255,.45);
-  color:var(--gh-twilight, #2b2320);
-  box-shadow:0 4px 18px rgba(42,24,69,.18);
-}
-[data-site-nav-root].is-nav-hero .nav-ihb__dot{
-  background:var(--mint, #8eedf0);
-}
 @media (prefers-reduced-motion:reduce){
   .nav-ihb__dot,
   .nav-ihb__label,
@@ -775,10 +754,6 @@ a.account-menu-trigger{
   .nav-ihb__hover{
     opacity:1;
     transform:translateX(-0.15rem);
-  }
-  [data-site-nav-root].is-nav-hero .nav-ihb{
-    border-color:var(--nav-ihb-fill-deep);
-    box-shadow:0 4px 16px color-mix(in srgb, var(--nav-ihb-fill-deep) 28%, transparent);
   }
   .nav-ihb:hover,
   .nav-ihb:focus-visible{
@@ -823,6 +798,9 @@ a.account-menu-trigger{
 /* Mobile drawer — migrated from frozen public/react/src.css */
 .mobile-animated-nav{ display:none; }
 @media (max-width:900px){
+  /* Solid bar from first paint (was print-deferred responsive.css); backdrop-filter
+     would also trap the fixed drawer inside the nav on mobile. */
+  .nav{ backdrop-filter:none; background:var(--paper); }
   [data-site-nav-root] .nav-inner.container{
     width:100%;
     max-width:100%;
@@ -855,7 +833,7 @@ a.account-menu-trigger{
     font-size:clamp(14px,3.6vw,17px);
     letter-spacing:clamp(.06em,1.2vw,.14em);
   }
-  /* CTA may shrink; burger is a sibling outside .nav-cta and must never clip. */
+  /* CTA column flexes; the 開始試算 pill itself never shrinks. Burger is a sibling outside .nav-cta and must never clip. */
   [data-site-nav-root] .nav-cta{
     flex:1 1 auto;
     min-width:0;
@@ -863,18 +841,11 @@ a.account-menu-trigger{
     justify-content:flex-end;
     overflow:visible;
   }
-  /* Phone CTA: keep pill tap-friendly; one-line label */
+  /* Phone CTA: primary button — fixed desktop size, never shrinks to an icon */
   [data-site-nav-root] .nav-cta .nav-ihb{
-    min-width:0;
-    max-width:min(8.5rem,38vw);
-    flex:0 1 auto;
-    padding:clamp(6px,1.5vw,9px) clamp(10px,2.4vw,14px);
-    font-size:clamp(10.5px,2.85vw,12px);
-    letter-spacing:.02em;
-  }
-  [data-site-nav-root] .nav-cta .nav-ihb__dot{
-    width:0.4rem;
-    height:0.4rem;
+    flex:0 0 auto;
+    min-width:7.5rem;
+    max-width:none;
   }
   [data-site-nav-root] .nav-cta .gradient-button,
   [data-site-nav-root] .nav-cta .nav-gradient-cta{
@@ -893,6 +864,13 @@ a.account-menu-trigger{
     max-width:100%;
     box-sizing:border-box;
   }
+  /* One CTA + burger on mobile from first paint (was print-deferred responsive.css;
+     !important mirrors it to keep beating stale page React CSS). */
+  .nav-cta .btn-line{ display:none !important; }
+  .nav-cta .btn-calc,
+  .nav-cta .btn-contact{ display:none !important; }
+  .nav-cta .btn-dark{ display:none !important; }
+  .nav-cta .nav-ihb{ display:inline-flex !important; flex:0 0 auto; }
   [data-site-nav-root] .nav-brand .brand-name .en{ display:none; }
   /* Account lives in the mobile drawer — keep top bar clear for CTA + burger. */
   [data-site-nav-root] .site-nav-account-desktop{ display:none !important; }

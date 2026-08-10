@@ -1709,6 +1709,17 @@ body.admin1-body.dark #admin1KpiStrip .dash-metric {
     padding: 12px 12px calc(12px + env(safe-area-inset-bottom, 0px));
   }
 
+  /* Top-nav: keep one-handed tap targets, stop text crush */
+  body.admin1-body .main-top,
+  body.admin1-body .admin1-topnav {
+    gap: 8px;
+    padding: 0 12px;
+  }
+
+  body.admin1-body .admin1-top-trailing {
+    gap: 4px;
+  }
+
   body.admin1-body #panel-orders .adx-orders-page {
     padding: 8px 0 20px;
   }
@@ -1720,5 +1731,30 @@ body.admin1-body.dark #admin1KpiStrip .dash-metric {
   body.admin1-body .ap-editor-actions {
     background: var(--a1-main-surface, var(--card));
     border-top-color: var(--a1-border, #EDE7E0);
+  }
+}
+
+/* ---- Phones (≤639): top-nav fits 375px without overlap ---- */
+@media (max-width: 639px) {
+  /* Session meta text competes with title + icon buttons — drop it */
+  body.admin1-body .main-top .meta,
+  body.admin1-body #topMeta {
+    display: none;
+  }
+
+  body.admin1-body button.nav-toggle,
+  body.admin1-body #navToggle {
+    width: 40px;
+    min-width: 40px;
+  }
+
+  body.admin1-body .admin1-icon-btn {
+    width: 34px;
+    height: 34px;
+  }
+
+  body.admin1-body .admin1-dropdown-panel {
+    min-width: 0;
+    width: min(280px, calc(100vw - 24px));
   }
 }

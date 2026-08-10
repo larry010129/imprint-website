@@ -15,24 +15,24 @@ PUBLIC = ROOT / "public"
 
 # 11 rings : 5 necklaces — shop presets + generated (not shop-product paths)
 RINGS = [
-    "/static/images/testimonials/presets/ring-A.jpg",
-    "/static/images/testimonials/presets/ring-B.jpg",
-    "/static/images/testimonials/presets/ring-C.jpg",
-    "/static/images/testimonials/testimonial-ring-01.jpg",
-    "/static/images/testimonials/testimonial-ring-02.jpg",
-    "/static/images/testimonials/testimonial-ring-03.jpg",
-    "/static/images/testimonials/testimonial-ring-04.jpg",
-    "/static/images/testimonials/testimonial-ring-05.jpg",
-    "/static/images/testimonials/testimonial-ring-06.jpg",
-    "/static/images/testimonials/testimonial-ring-07.jpg",
-    "/static/images/testimonials/testimonial-ring-08.jpg",
+    "/static/images/testimonials/presets/ring-A.webp",
+    "/static/images/testimonials/presets/ring-B.webp",
+    "/static/images/testimonials/presets/ring-C.webp",
+    "/static/images/testimonials/testimonial-ring-01.webp",
+    "/static/images/testimonials/testimonial-ring-02.webp",
+    "/static/images/testimonials/testimonial-ring-03.webp",
+    "/static/images/testimonials/testimonial-ring-04.webp",
+    "/static/images/testimonials/testimonial-ring-05.webp",
+    "/static/images/testimonials/testimonial-ring-06.webp",
+    "/static/images/testimonials/testimonial-ring-07.webp",
+    "/static/images/testimonials/testimonial-ring-08.webp",
 ]
 NECKLACES = [
-    "/static/images/testimonials/presets/pendant-A.jpg",
-    "/static/images/testimonials/presets/pendant-B.jpg",
-    "/static/images/testimonials/presets/pendant-C.jpg",
-    "/static/images/testimonials/testimonial-pendant-01.jpg",
-    "/static/images/testimonials/testimonial-pendant-02.jpg",
+    "/static/images/testimonials/presets/pendant-A.webp",
+    "/static/images/testimonials/presets/pendant-B.webp",
+    "/static/images/testimonials/presets/pendant-C.webp",
+    "/static/images/testimonials/testimonial-pendant-01.webp",
+    "/static/images/testimonials/testimonial-pendant-02.webp",
 ]
 
 # Prefer necklace for wear/pendant stories

@@ -74,9 +74,18 @@
       document.body.classList.add('shop-terms-blocked');
       setReadBottom(false);
       dialog.showModal();
-      var focused = document.activeElement;
-      if (focused && dialog.contains(focused)) focused.blur();
-      requestAnimationFrame(onScroll);
+      /* Layout reads (scrollHeight/clientHeight) and blur() must wait until the
+         dialog's first paint — same-turn access after showModal forces reflow
+         and delays the terms text, which is the page LCP. */
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          var focused = document.activeElement;
+          if (focused && dialog.contains(focused) && typeof focused.blur === 'function') {
+            focused.blur();
+          }
+          onScroll();
+        });
+      });
     });
   }
 

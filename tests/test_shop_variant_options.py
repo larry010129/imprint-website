@@ -245,7 +245,7 @@ def test_shop_js_fancy_carat_dropdown_intersects_admin_min():
     assert "stockFancyDiamondColors" in (
         ROOT / "public" / "js" / "shop-assets.js"
     ).read_text(encoding="utf-8")
-    assert "shop.js?v=152" in (
+    assert "shop.js?v=154" in (
         ROOT / "content" / "site" / "templates" / "pages" / "shop" / "calculator.html"
     ).read_text(encoding="utf-8")
     assert "shop.js?v=152" in (
@@ -271,7 +271,7 @@ def test_shop_js_fancy_carat_dropdown_intersects_admin_min():
         "// Full catalog: 預設顏色 slots first; lite uses server thumbUrl (same priority)."
         in src
     )
-    assert "shop-assets.js?v=15" in (
+    assert "shop-assets.js?v=16" in (
         ROOT / "content" / "site" / "templates" / "pages" / "shop" / "calculator.html"
     ).read_text(encoding="utf-8")
     # Fancy preview must not reuse metal-only / white-stone catalog slots.
@@ -315,7 +315,7 @@ def test_shop_js_non_round_shape_requires_min_carat():
     css = (ROOT / "public" / "css" / "shop.css").read_text(encoding="utf-8")
     assert ".shop-page .shop-option--disabled" in css
     assert ".diamond-carousel-item.is-disabled" in css
-    assert "shop.css?v=6.34" in (
+    assert "shop.css?v=6.36" in (
         ROOT / "content" / "site" / "templates" / "pages" / "shop" / "calculator.html"
     ).read_text(encoding="utf-8")
     assert "shop-i18n.js?v=22" in (

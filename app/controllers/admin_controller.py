@@ -564,7 +564,7 @@ def _image_upload_error(file: UploadFile, data: bytes, ext: str) -> str | None:
         return "僅支援 JPG / PNG / WEBP"
     if not data:
         return "empty file"
-    if len(data) > _MAX_IMAGE_BYTES:
+    if len(data) >= _MAX_IMAGE_BYTES:
         return "來源圖片需小於 1MB"
     if not _image_signature_matches(data, ext):
         return "檔案內容與副檔名不符"
@@ -577,6 +577,10 @@ class _ClientImageError(str):
 
 def _upload_err_response(upload_err: str) -> JSONResponse:
     code = 400 if isinstance(upload_err, _ClientImageError) else 503
+    if not isinstance(upload_err, _ClientImageError):
+        from app.storage import storage_error_sentence
+
+        upload_err = storage_error_sentence(str(upload_err))
     return JSONResponse(status_code=code, content={"error": str(upload_err)})
 
 
@@ -2660,6 +2664,9 @@ def _parse_banner_fields(body: dict):
     tone = str(body.get("tone") or "warm").strip() or "warm"
     if tone not in {"warm", "light", "soft"}:
         tone = "warm"
+    align = str(body.get("align") or "left").strip() or "left"
+    if align not in {"left", "right"}:
+        align = "left"
     is_published = bool(body.get("isPublished") if body.get("isPublished") is not None else True)
     return {
         "eyebrow": str(body.get("eyebrow") or "").strip(),
@@ -2674,6 +2681,7 @@ def _parse_banner_fields(body: dict):
         "cta_secondary_label": str(body.get("ctaSecondaryLabel") or body.get("cta_secondary_label") or "").strip(),
         "cta_secondary_href": str(body.get("ctaSecondaryHref") or body.get("cta_secondary_href") or "").strip(),
         "tone": tone,
+        "align": align,
         "sort_order": sort_order,
         "is_published": is_published,
     }, None
@@ -2728,8 +2736,8 @@ async def admin_banners_create(request: Request) -> JSONResponse:
               eyebrow, title, lead, image_url, image_url_mobile, image_webp, image_alt,
               cta_primary_label, cta_primary_href,
               cta_secondary_label, cta_secondary_href,
-              tone, sort_order, is_published
-            ) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+              tone, align, sort_order, is_published
+            ) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
             returning *
             """,
             (
@@ -2745,6 +2753,7 @@ async def admin_banners_create(request: Request) -> JSONResponse:
                 fields["cta_secondary_label"],
                 fields["cta_secondary_href"],
                 fields["tone"],
+                fields["align"],
                 fields["sort_order"],
                 fields["is_published"],
             ),
@@ -2778,7 +2787,7 @@ async def admin_banners_update(request: Request) -> JSONResponse:
               eyebrow = %s, title = %s, lead = %s, image_url = %s, image_url_mobile = %s,
               image_webp = %s, image_alt = %s, cta_primary_label = %s, cta_primary_href = %s,
               cta_secondary_label = %s, cta_secondary_href = %s,
-              tone = %s, sort_order = %s, is_published = %s, updated_at = now()
+              tone = %s, align = %s, sort_order = %s, is_published = %s, updated_at = now()
             where id = %s
             returning *
             """,
@@ -2795,6 +2804,7 @@ async def admin_banners_update(request: Request) -> JSONResponse:
                 fields["cta_secondary_label"],
                 fields["cta_secondary_href"],
                 fields["tone"],
+                fields["align"],
                 fields["sort_order"],
                 fields["is_published"],
                 bid,
@@ -2935,9 +2945,11 @@ async def page_image_upload(
 
     key = page_key if isinstance(page_key, str) else ""
     key = key.strip() or None
-    # Keep client basename; ensure_webp (via _storage_upload) forces .webp.
+    # Supabase Storage keys must be ASCII-safe; keep the original filename only
+    # in the browser/UI and use a unique ASCII key for the stored object.
+    storage_name = f"image-{uuid.uuid4().hex}{ext}"
     name = page_image_upload_relative_path(
-        _product_upload_basename(file.filename), page_key=key
+        storage_name, page_key=key
     )
     url, upload_err = _storage_upload("page-images", name, data, ext)
     if upload_err:

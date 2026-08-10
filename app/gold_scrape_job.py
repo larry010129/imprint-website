@@ -104,6 +104,29 @@ async def scrape_and_persist_gold(*, force: bool = True) -> dict | None:
         return payload
 
 
+def _is_transient_scrape_error(exc: BaseException) -> bool:
+    name = type(exc).__name__.lower()
+    msg = str(exc).lower()
+    return (
+        "timeout" in name
+        or "timed out" in msg
+        or "curl: (28)" in msg
+        or "connection" in name
+    )
+
+
+def _log_scrape_failure(when: str, exc: BaseException) -> None:
+    """Timeouts / network blips: warning only. Unexpected errors: full traceback."""
+    if _is_transient_scrape_error(exc):
+        log.warning(
+            "gold scrape %s timed out/unavailable; keeping last cache row (%s)",
+            when,
+            type(exc).__name__,
+        )
+        return
+    log.exception("gold scrape %s failed; keeping last cache row", when)
+
+
 async def gold_scrape_loop() -> None:
     """Startup scrape (optional) then every GOLD_SCRAPE_INTERVAL_SEC."""
     interval = scrape_interval_sec()
@@ -112,13 +135,13 @@ async def gold_scrape_loop() -> None:
         try:
             await scrape_and_persist_gold(force=True)
             log.info("gold scrape startup ok")
-        except Exception:
-            log.exception("gold scrape startup failed; keeping last cache row")
+        except Exception as exc:
+            _log_scrape_failure("startup", exc)
     while True:
         await asyncio.sleep(interval)
         try:
             await scrape_and_persist_gold(force=True)
             log.info("gold scrape interval ok (%ss)", interval)
-        except Exception:
-            log.exception("gold scrape interval failed; keeping last cache row")
+        except Exception as exc:
+            _log_scrape_failure("interval", exc)
 

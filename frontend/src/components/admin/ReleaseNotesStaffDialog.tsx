@@ -7,7 +7,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button-1";
-import type { PublishedRelease } from "@/components/admin/releaseNotesApi";
+import {
+  parseReleaseNoteSections,
+  type PublishedRelease,
+} from "@/components/admin/releaseNotesApi";
 
 type Props = {
   open: boolean;
@@ -42,7 +45,7 @@ export default function ReleaseNotesStaffDialog({
     onOpenChange(next);
   }
 
-  const notes = release?.notes?.filter((n) => String(n).trim()) ?? [];
+  const sections = parseReleaseNoteSections(release?.notes ?? []);
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -64,12 +67,30 @@ export default function ReleaseNotesStaffDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {notes.length > 0 ? (
-          <ul className="max-h-[50vh] list-disc space-y-2 overflow-y-auto pl-5 text-sm text-foreground">
-            {notes.map((note, i) => (
-              <li key={`${i}-${note.slice(0, 24)}`}>{note}</li>
+        {sections.length > 0 ? (
+          <div className="max-h-[50vh] space-y-5 overflow-y-auto pr-1 text-sm text-foreground">
+            {sections.map((section, sectionIndex) => (
+              <section
+                key={`${sectionIndex}-${section.title ?? "items"}`}
+                className="space-y-2"
+              >
+                {section.title ? (
+                  <h3 className="text-sm font-semibold leading-snug text-foreground">
+                    {section.title}
+                  </h3>
+                ) : null}
+                {section.items.length > 0 ? (
+                  <ul className="list-disc space-y-1.5 pl-5">
+                    {section.items.map((item, itemIndex) => (
+                      <li key={`${sectionIndex}-${itemIndex}-${item.slice(0, 24)}`}>
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </section>
             ))}
-          </ul>
+          </div>
         ) : release ? (
           <p className="text-sm text-muted-foreground">此版本尚無詳細說明。</p>
         ) : null}

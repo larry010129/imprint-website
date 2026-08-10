@@ -32,7 +32,7 @@ export type CopySlot = {
 export type ExistingSitePageEditorProps = {
   page: SitePage;
   api: {
-    getCopySlots: () => Promise<{
+    getCopySlots: (pageKey?: string) => Promise<{
       slots?: CopySlot[];
       pages?: SitePage[];
       error?: string;
@@ -300,7 +300,7 @@ export default function ExistingSitePageEditor({
     let cancelled = false;
     setLoading(true);
     setLoadError(null);
-    void Promise.all([api.getCopySlots(), api.getCmsSitePage(page.route)])
+    void Promise.all([api.getCopySlots(page.route), api.getCmsSitePage(page.route)])
       .then(([slotResult, pageResult]) => {
         if (cancelled) return;
         const error = slotResult.error || pageResult.error;

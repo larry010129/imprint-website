@@ -58,15 +58,43 @@
     var buttons = footer.querySelectorAll(
       ".sf-cinematic__stage [data-sf-magnetic]"
     );
+    var rects = new Map();
+    var raf = 0;
+    var pending = null;
+
+    function refreshRects() {
+      buttons.forEach(function (btn) {
+        rects.set(btn, btn.getBoundingClientRect());
+      });
+    }
+
+    function scheduleTransform(btn, x, y) {
+      pending = { btn: btn, x: x, y: y };
+      if (raf) return;
+      raf = window.requestAnimationFrame(function () {
+        raf = 0;
+        if (!pending) return;
+        var next = pending;
+        pending = null;
+        next.btn.style.transform =
+          "translate(" + (next.x * 0.18).toFixed(1) + "px," +
+          (next.y * 0.18).toFixed(1) + "px)";
+      });
+    }
+
+    refreshRects();
+    window.addEventListener("resize", refreshRects, { passive: true });
     buttons.forEach(function (btn) {
+      btn.addEventListener("pointerenter", refreshRects);
       btn.addEventListener("pointermove", function (e) {
-        var rect = btn.getBoundingClientRect();
+        var rect = rects.get(btn);
+        if (!rect) return;
         var x = e.clientX - rect.left - rect.width / 2;
         var y = e.clientY - rect.top - rect.height / 2;
-        btn.style.transform =
-          "translate(" + (x * 0.18).toFixed(1) + "px," + (y * 0.18).toFixed(1) + "px)";
+        scheduleTransform(btn, x, y);
       });
       btn.addEventListener("pointerleave", function () {
+        pending = null;
         btn.style.transform = "";
       });
     });
@@ -128,24 +156,17 @@
       });
   }
 
-  function nearFooter() {
-    var rect = reveal.getBoundingClientRect();
-    return rect.top < window.innerHeight * 1.35;
-  }
-
-  function onScrollOrIdle() {
-    if (nearFooter()) {
+  if ("IntersectionObserver" in window) {
+    var observer = new IntersectionObserver(function (entries) {
+      if (!entries.some(function (entry) { return entry.isIntersecting; })) return;
+      observer.disconnect();
       bootAnimations();
-      window.removeEventListener("scroll", onScrollOrIdle);
-    }
-  }
-
-  window.addEventListener("scroll", onScrollOrIdle, { passive: true });
-  if (document.readyState === "complete") {
-    onScrollOrIdle();
+    }, { rootMargin: "35% 0px" });
+    observer.observe(reveal);
   } else {
-    window.addEventListener("load", onScrollOrIdle, { once: true });
+    /* Older browsers get one deferred boot instead of a geometry read per scroll. */
+    window.addEventListener("load", bootAnimations, { once: true });
+    setTimeout(bootAnimations, 8000);
   }
-  setTimeout(onScrollOrIdle, 8000);
 })();
 

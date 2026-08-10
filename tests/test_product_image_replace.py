@@ -45,9 +45,17 @@ def _storage_env(monkeypatch):
     monkeypatch.setenv("SUPABASE_STORAGE_BUCKET", "shop-media")
 
 
-def test_product_object_key_allows_unicode_filename():
-    key = product_object_key("ring-front", "white", "玫瑰金主圖.webp", category="ring")
-    assert key.endswith("/玫瑰金主圖.webp")
+def test_product_object_key_preserves_chinese_filename_reversibly():
+    """Supabase rejects raw Chinese keys — encode as u-<base64url>, decode back."""
+    from app.storage import decode_storage_filename
+
+    original = "玫瑰金主圖.webp"
+    key = product_object_key("ring-front", "white", original, category="ring")
+    name = key.rsplit("/", 1)[-1]
+    assert name.endswith(".webp")
+    assert name.startswith("u-")
+    assert all(ord(ch) < 128 for ch in name)
+    assert decode_storage_filename(name) == original
 
 
 def test_product_upload_keeps_original_stem_webp(monkeypatch):

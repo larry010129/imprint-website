@@ -1,6 +1,6 @@
 /* 銘印鑽石｜共用價格設定
    說明給工程師/接手的人：
-   - 這是全站唯一的「價格資料來源」。五大系列頁的客製選單(configurator.js)
+   - 這是全站唯一的「價格資料來源」。六大系列頁的客製選單(configurator.js)
      跟後台的「價格設定」頁(admin.html)都讀寫同一份資料，靠這支檔案串起來。
    - 價格真正存在 Postgres 的 pricing_settings 資料表
      (一筆固定 id=1 的 JSON)，透過 js/api-client.js 呼叫 FastAPI /api 讀寫，

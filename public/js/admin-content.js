@@ -8,7 +8,7 @@
   var root = document.getElementById('contentRoot');
   if (!root) return;
 
-  var _loaded = false;
+  var _loadedTabs = {};
   var _tab = 'banners';
   var _pageImagePage = '';
   var _testimonials = [];
@@ -543,6 +543,10 @@
           load(true, true);
           return;
         }
+        if (!_loadedTabs[_tab]) {
+          load(false);
+          return;
+        }
         renderShell();
       });
     });
@@ -611,7 +615,7 @@
           action: 'delete',
         });
       },
-      getCopySlots: function () { return api.admin.getPageCopySlots(); },
+      getCopySlots: function (pageKey) { return api.admin.getPageCopySlots(pageKey); },
       updateCopySlot: function (fields) { return api.admin.updatePageCopySlot(fields); },
       getJournalPosts: function (opts) { return api.admin.getJournalPosts(opts); },
       createJournalPost: function (fields) { return api.admin.createJournalPost(fields); },
@@ -773,6 +777,7 @@
         is_published: !!b.is_published,
         image_url: b.image_url || '',
         image_url_mobile: b.image_url_mobile || '',
+        align: b.align || 'left',
       };
     });
 
@@ -1016,6 +1021,7 @@
   function openBannerModal(b) {
     var isEdit = !!(b && b.id);
     var tone = isEdit ? (b.tone || 'warm') : 'warm';
+    var align = isEdit ? (b.align || 'left') : 'left';
     var existDesktop = isEdit ? (b.image_url || '') : '';
     var existMobile = isEdit ? (b.image_url_mobile || '') : '';
     var html =
@@ -1037,6 +1043,12 @@
                 '<option value="light"' + (tone === 'light' ? ' selected' : '') + '>light</option>' +
                 '<option value="soft"' + (tone === 'soft' ? ' selected' : '') + '>soft</option>' +
               '</select></label>' +
+              '<div class="ap-field ac-banner-align-field"><span>文字位置</span>' +
+                '<div class="ac-banner-align" role="group" aria-label="文字位置">' +
+                  '<label class="ac-banner-align__option"><input type="radio" name="align" value="left"' + (align === 'left' ? ' checked' : '') + '><span>靠左</span></label>' +
+                  '<label class="ac-banner-align__option"><input type="radio" name="align" value="right"' + (align === 'right' ? ' checked' : '') + '><span>靠右</span></label>' +
+                '</div>' +
+              '</div>' +
               '<label class="ap-field ap-field--full"><span>標題</span><input name="title" required value="' + esc(isEdit ? b.title : '') + '"></label>' +
               '<label class="ap-field ap-field--full"><span>說明</span><textarea name="lead" class="ap-textarea" rows="3">' + esc(isEdit ? b.lead : '') + '</textarea></label>' +
               '<div class="ap-field ap-field--full">' +
@@ -1140,6 +1152,7 @@
       ctaSecondaryLabel: String(fd.get('ctaSecondaryLabel') || '').trim(),
       ctaSecondaryHref: String(fd.get('ctaSecondaryHref') || '').trim(),
       tone: String(fd.get('tone') || 'warm').trim(),
+      align: String(fd.get('align') || 'left').trim(),
       sortOrder: fd.get('sortOrder'),
       isPublished: !!form.querySelector('[name="isPublished"]').checked,
     };
@@ -1594,7 +1607,8 @@
   }
 
   function load(silent, force) {
-    if (_loaded && !force) return;
+    var tab = _tab === 'copy' ? 'pages' : _tab;
+    if (_loadedTabs[tab] && !force) return;
     if (!silent) {
       root.setAttribute('aria-busy', 'true');
       root.classList.add('skel-panel');
@@ -1602,52 +1616,56 @@
         ? window.SkeletonUI.contentShell()
         : '<p class="adx-loading-inline">載入內容中…</p>';
     }
+    /* 只抓目前分頁的資料集；其他分頁第一次切過去時再各自載入。 */
     var opts = listPageOpts();
-    var pageImageOpts = Object.assign({}, opts);
-    if (_tab === 'page-images' && _pageImagePage) {
-      pageImageOpts.page_key = _pageImagePage;
+    var mainP = null;
+    if (tab === 'testimonials') mainP = api.admin.getTestimonials(opts);
+    else if (tab === 'faq') mainP = api.admin.getFaqItems(opts);
+    else if (tab === 'journal') mainP = api.admin.getJournalPosts(opts);
+    else if (tab === 'banners') mainP = api.admin.getBanners(opts);
+    else if (tab === 'page-images') {
+      var pageImageOpts = Object.assign({}, opts);
+      if (_pageImagePage) pageImageOpts.page_key = _pageImagePage;
+      mainP = api.admin.getPageImages(pageImageOpts);
     }
     var pageImageKeysP = _pageImagePageOptions.length
       ? Promise.resolve(null)
       : api.admin.getPageImages({ page: 1, pageSize: 100 });
-    Promise.all([
-      api.admin.getTestimonials(opts),
-      api.admin.getFaqItems(opts),
-      api.admin.getBanners(opts),
-      api.admin.getPageImages(pageImageOpts),
-      api.admin.getJournalPosts(opts),
-      pageImageKeysP,
-    ]).then(function (results) {
-      var tRes = results[0];
-      var fRes = results[1];
-      var bRes = results[2];
-      var pRes = results[3];
-      var jRes = results[4];
-      var keysRes = results[5];
-      if (tRes.error || fRes.error || bRes.error || pRes.error) {
+    Promise.all([mainP || Promise.resolve(null), pageImageKeysP]).then(function (results) {
+      var res = results[0];
+      var keysRes = results[1];
+      // Soft-fail journal until backend routes land (parallel Phase 1).
+      if (res && res.error && tab !== 'journal') {
         root.innerHTML =
           '<p class="note warn">載入失敗：' +
-          esc(tRes.error || fRes.error || bRes.error || pRes.error) +
+          esc(res.error.message || res.error) +
           '</p>';
         root.removeAttribute('aria-busy');
         return;
       }
-      _testimonials = tRes.testimonials || [];
-      _faqItems = fRes.items || [];
-      _faqCategories = fRes.categories || [];
-      _banners = bRes.banners || [];
-      // Soft-fail journal until backend routes land (parallel Phase 1).
-      _journalError = jRes.error ? String(jRes.error.message || jRes.error) : '';
-      _journalPosts = (!_journalError && (jRes.posts || jRes.journal_posts)) || [];
-      _pageImages = pRes.pageImages || [];
+      if (res) {
+        if (tab === 'testimonials') {
+          _testimonials = res.testimonials || [];
+          _totals.testimonials = typeof res.total === 'number' ? res.total : _testimonials.length;
+        } else if (tab === 'faq') {
+          _faqItems = res.items || [];
+          _faqCategories = res.categories || [];
+          _totals.faq = typeof res.total === 'number' ? res.total : _faqItems.length;
+        } else if (tab === 'journal') {
+          _journalError = res.error ? String(res.error.message || res.error) : '';
+          _journalPosts = (!_journalError && (res.posts || res.journal_posts)) || [];
+          _totals.journal = typeof res.total === 'number' ? res.total : _journalPosts.length;
+        } else if (tab === 'page-images') {
+          _pageImages = res.pageImages || [];
+          rememberPageImagePages(_pageImages);
+          _totals['page-images'] = typeof res.total === 'number' ? res.total : _pageImages.length;
+        } else if (tab === 'banners') {
+          _banners = res.banners || [];
+          _totals.banners = typeof res.total === 'number' ? res.total : _banners.length;
+        }
+      }
       if (keysRes && !keysRes.error) rememberPageImagePages(keysRes.pageImages || []);
-      rememberPageImagePages(_pageImages);
-      _totals.testimonials = typeof tRes.total === 'number' ? tRes.total : _testimonials.length;
-      _totals.faq = typeof fRes.total === 'number' ? fRes.total : _faqItems.length;
-      _totals.banners = typeof bRes.total === 'number' ? bRes.total : _banners.length;
-      _totals['page-images'] = typeof pRes.total === 'number' ? pRes.total : _pageImages.length;
-      _totals.journal = typeof jRes.total === 'number' ? jRes.total : _journalPosts.length;
-      _loaded = true;
+      _loadedTabs[tab] = true;
       root.removeAttribute('aria-busy');
       root.classList.remove('skel-panel');
       renderShell();
@@ -1655,7 +1673,15 @@
   }
 
   function ensureLoaded() {
-    load(_loaded);
+    /* admin-tables.js 按需載入：bundle 就緒後再取資料渲染表格。 */
+    if (!window.AdminTables && typeof window.__adminLoadTables === 'function') {
+      window.__adminLoadTables().then(
+        function () { ensureLoaded(); },
+        function () { load(false); }
+      );
+      return;
+    }
+    load(_loadedTabs[_tab === 'copy' ? 'pages' : _tab] ? true : false);
   }
 
   window.AdminContentPanel = { load: load, ensureLoaded: ensureLoaded };
@@ -1664,7 +1690,7 @@
     btn.addEventListener('click', ensureLoaded);
   });
 
-  if (root && window.SkeletonUI && !_loaded && root.querySelector('.skel-line')) {
+  if (root && window.SkeletonUI && !_loadedTabs[_tab] && root.querySelector('.skel-line')) {
     root.innerHTML = window.SkeletonUI.contentShell
       ? window.SkeletonUI.contentShell()
       : root.innerHTML;

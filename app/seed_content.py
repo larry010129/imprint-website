@@ -165,8 +165,8 @@ def _seed_banners() -> int:
                       eyebrow, title, lead, image_url, image_webp, image_alt,
                       cta_primary_label, cta_primary_href,
                       cta_secondary_label, cta_secondary_href,
-                      tone, sort_order, is_published
-                    ) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,true)
+                      tone, align, sort_order, is_published
+                    ) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,true)
                     """,
                     (
                         entry.get("eyebrow") or "",
@@ -180,6 +180,7 @@ def _seed_banners() -> int:
                         entry.get("cta_secondary_label") or "",
                         entry.get("cta_secondary_href") or "",
                         entry.get("tone") or "warm",
+                        entry.get("align") or "left",
                         int(entry.get("sort_order") or 0),
                     ),
                 )

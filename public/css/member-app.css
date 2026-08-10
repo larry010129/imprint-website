@@ -1244,7 +1244,9 @@ a.member-cart-item__title:hover {
   color: inherit;
 }
 .order-detail-value .cfg-emblem-token svg,
-.girdle-engrave-display .cfg-emblem-token svg {
+.girdle-engrave-display .cfg-emblem-token svg,
+.order-detail-value .cfg-emblem-token img,
+.girdle-engrave-display .cfg-emblem-token img {
   width: 100%;
   height: 100%;
 }

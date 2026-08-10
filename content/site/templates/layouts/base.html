@@ -2,6 +2,16 @@
 <html lang="zh-Hant-TW">
 <head>
 {% set is_home = extra_body_class and 'page-home' in extra_body_class %}
+{% set is_series_overview = extra_body_class and 'page-series' in extra_body_class %}
+{% set _cp = canonical_path or '' %}
+{# home.css = legacy home/jewelry chrome + the shared .faq--teaser skin. Skip on home,
+   series OVERVIEW (own CSS / ghibli) + PSI lanes. Series DETAIL keeps it: its FAQ
+   teaser (.faq/.faq-list/.faq-q/.faq-a-inner/.faq-more) is styled only by home.css. #}
+{% set skip_home_css = is_home
+  or is_series_overview
+  or _cp in ['about', 'stories', 'journal', 'gold-price', 'shop/calculator/'] %}
+{# pages.css defer only when page ships above-fold CSS (stories/journal/gold-price still need it) #}
+{% set defer_pages_css = is_series_overview or _cp in ['about', 'shop/calculator/'] %}
 <!-- Google tag (gtag.js) ??hard delay on home (rIC can fire during PSI idle) -->
 <script>
 (function () {
@@ -43,7 +53,9 @@
 <meta name="robots" content="index, follow, max-image-preview:large">
 {% endif %}
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-{% if lcp_image %}
+{# about hero ships a responsive srcset (480/800/1200w transforms); a fixed-URL preload
+   fetches the 2400w original while mobile picks a transform = double download. Skip. #}
+{% if lcp_image and _cp != 'about' %}
 <link rel="preload" as="image" href="{{ lcp_image }}"{% if lcp_image_type %} type="{{ lcp_image_type }}"{% endif %} fetchpriority="high">
 {% endif %}
 {# Early discoverability for critical path (LCP / critical CSS). Keep before blocking styles. #}
@@ -66,41 +78,34 @@
 {# Closed-bar shell inlined — nav-ihb hover included so CTA works before nav.css #}
 <style>{{ inline_css('nav-critical.css') | safe }}</style>
 {% endif %}
-{# Sync nav.css all pages — InteractiveHoverButton + drawer must not defer on home #}
+{# nav.css: home defers (critical inline); non-home blocks — avoid CTA FOUC #}
 {% if is_home %}
-<link rel="stylesheet" href="/static/css/nav.css?v=4.30" media="print" onload="this.media='all'">
-<noscript><link rel="stylesheet" href="/static/css/nav.css?v=4.30"></noscript>
+<link rel="stylesheet" href="/static/css/nav.css?v=4.33" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="/static/css/nav.css?v=4.33"></noscript>
 {% else %}
-<link rel="stylesheet" href="/static/css/nav.css?v=4.29">
+<link rel="stylesheet" href="/static/css/nav.css?v=4.33">
 {% endif %}
+{% if not skip_home_css %}
+<link rel="stylesheet" href="/static/css/home.css?v=5.8">
+{% endif %}
+{# footer / responsive / social-fab: print-onload all routes (home pattern) #}
+<link rel="stylesheet" href="/static/css/footer.css?v=25" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="/static/css/footer.css?v=25"></noscript>
 {% if not is_home %}
-<link rel="stylesheet" href="/static/css/home.css?v=5.7">
-{% endif %}
-{# Blocking footer.css — dark site-footer must paint with first layout #}
-{% if is_home %}
-<link rel="stylesheet" href="/static/css/footer.css?v=22" media="print" onload="this.media='all'">
-<noscript><link rel="stylesheet" href="/static/css/footer.css?v=22"></noscript>
+{% if defer_pages_css %}
+<link rel="stylesheet" href="/static/css/pages.css?v=5.35" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="/static/css/pages.css?v=5.35"></noscript>
 {% else %}
-<link rel="stylesheet" href="/static/css/footer.css?v=22">
+<link rel="stylesheet" href="/static/css/pages.css?v=5.35">
 {% endif %}
-{% if not is_home %}
-<link rel="stylesheet" href="/static/css/pages.css?v=5.32">
 {% endif %}
 {% if load_skeleton_css or load_skeleton_ui %}
 <link rel="stylesheet" href="/static/css/skeleton.css?v=3">
 {% endif %}
-{% if is_home %}
-<link rel="stylesheet" href="/static/css/responsive.css?v=3.27" media="print" onload="this.media='all'">
-<noscript><link rel="stylesheet" href="/static/css/responsive.css?v=3.27"></noscript>
-{% else %}
-<link rel="stylesheet" href="/static/css/responsive.css?v=3.27">
-{% endif %}
-{% if is_home %}
-<link rel="stylesheet" href="/static/css/social-fab.css?v=11" media="print" onload="this.media='all'">
-<noscript><link rel="stylesheet" href="/static/css/social-fab.css?v=11"></noscript>
-{% else %}
-<link rel="stylesheet" href="/static/css/social-fab.css?v=11">
-{% endif %}
+<link rel="stylesheet" href="/static/css/responsive.css?v=3.30" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="/static/css/responsive.css?v=3.30"></noscript>
+<link rel="stylesheet" href="/static/css/social-fab.css?v=12" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="/static/css/social-fab.css?v=12"></noscript>
 {% block extra_css %}{% endblock %}
 {% if site_cms_sections or site_cms_edit %}
 {% if is_home %}
@@ -137,8 +142,8 @@
 
 {% include "partials/footer.html" %}
 {% if is_home %}
-<script src="/static/js/home-section-reveal.js?v=2" defer></script>
-<script src="/static/js/cinematic-footer.js?v=5" defer></script>
+<script src="/static/js/home-section-reveal.js?v=3" defer></script>
+<script src="/static/js/cinematic-footer.js?v=6" defer></script>
 {% endif %}
 {% if is_home %}
 <script>

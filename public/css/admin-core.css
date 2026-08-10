@@ -357,6 +357,10 @@ button:not(.btn-sm):not(.ap-tab-btn):not(.nav-toggle):not(.side-backdrop):not([d
 .ap-form-grid input,.ap-form-grid select{
   font-family:inherit;font-size:13.5px;padding:8px 10px;border:1px solid #DDD5CC;border-radius:6px;color:var(--ink);
 }
+.ac-banner-align{display:flex;gap:8px;}
+.ac-banner-align__option{display:inline-flex!important;flex-direction:row!important;align-items:center;justify-content:center;min-width:74px;padding:8px 12px;border:1px solid #DDD5CC;border-radius:6px;background:#fff;color:var(--ink);cursor:pointer;}
+.ac-banner-align__option:has(input:checked){border-color:var(--mint-deep,#5ECFCF);background:var(--mint-soft,#EAFBFB);color:var(--ink);}
+.ac-banner-align__option input{position:absolute;opacity:0;pointer-events:none;}
 
 /* BasicDropdown-style combobox (vanilla) — testimonials 城市 etc. */
 .ap-combo{position:relative;width:100%;}

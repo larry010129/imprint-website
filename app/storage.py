@@ -2,12 +2,22 @@
 
 from __future__ import annotations
 
+import base64
+import hashlib
+import logging
 import re
 from urllib.parse import quote, unquote
 
 import httpx
 
 from config.settings import settings
+
+log = logging.getLogger(__name__)
+
+# Supabase Storage on this project still rejects raw non-ASCII object keys
+# (InvalidKey). Encode Unicode stems as ASCII `u-<base64url>` so Chinese
+# filenames upload and remain reversible for display.
+_UNICODE_FILE_PREFIX = "u-"
 
 _EXT_MIME = {
     ".png": "image/png",
@@ -39,9 +49,10 @@ PRODUCT_CATEGORY_KEYS = frozenset(
 _PENDING_PREFIX = "products/_pending/"
 _PENDING_FOLDER = "_pending"
 PRODUCT_FOLDER_MAX_LEN = 80
-# Filenames: Unicode word chars OK (e.g. 玫瑰金主圖.webp); no path separators.
-_UNSAFE_SEGMENT = re.compile(r"[^\w.\-]", re.UNICODE)
-_UNSAFE_FOLDER_CHAR = re.compile(r"[^\w.\-]", re.UNICODE)
+# Supabase Storage rejects non-ASCII object keys (InvalidKey) even when
+# percent-encoded — filenames/folders must stay ASCII-safe.
+_UNSAFE_SEGMENT = re.compile(r"[^A-Za-z0-9._-]")
+_UNSAFE_FOLDER_CHAR = re.compile(r"[^A-Za-z0-9._-]")
 _MULTI_DASH = re.compile(r"[-_]{2,}")
 _HEX_ONLY = re.compile(r"[^a-fA-F0-9]")
 _STORAGE_ASCII_SAFE = re.compile(r"^[A-Za-z0-9._-]+$")
@@ -57,6 +68,16 @@ class StorageNotConfiguredError(Exception):
 
 class StorageUploadError(Exception):
     """Supabase Storage upload failed."""
+
+
+def storage_error_sentence(message: str) -> str:
+    """Convert provider errors into one short, user-facing sentence."""
+    raw = " ".join(str(message or "").split())
+    if "InvalidKey" in raw:
+        return "圖片上傳失敗：檔名或儲存路徑包含不支援的字元，請重新上傳。"
+    if "not configured" in raw.lower() or "SUPABASE_" in raw:
+        return "圖片上傳失敗：圖片儲存服務尚未完成設定，請聯絡管理員。"
+    return "圖片上傳失敗：儲存服務拒絕了這次上傳，請稍後再試。"
 
 
 def _require_config() -> tuple[str, str, str]:
@@ -186,10 +207,25 @@ def upload_bytes(
     object_path = _object_path(kind, filename)
     api_url = _object_api_url(base, bucket, object_path)
     headers = _storage_headers(key, content_type=content_type, upsert=upsert)
+    # Attach original Chinese/display name; Storage object key stays ASCII-safe.
+    leaf = filename.replace("\\", "/").rstrip("/").rsplit("/", 1)[-1]
+    display_name = decode_storage_filename(leaf)
+    if display_name:
+        ascii_fallback = "image.webp" if leaf.lower().endswith(".webp") else "image.bin"
+        headers["Content-Disposition"] = (
+            f'inline; filename="{ascii_fallback}"; '
+            f"filename*=UTF-8''{quote(display_name, safe='')}"
+        )
     with httpx.Client(timeout=60.0) as client:
         resp = client.post(api_url, content=data, headers=headers)
         if resp.status_code not in (200, 201):
             detail = (resp.text or "")[:200]
+            log.warning(
+                "storage upload rejected status=%s path=%s detail=%s",
+                resp.status_code,
+                object_path,
+                detail,
+            )
             if resp.status_code == 409 or "KeyAlreadyExists" in detail:
                 raise StorageUploadError(
                     "圖片已存在且無法覆寫，請稍後再試或換檔名上傳"
@@ -253,10 +289,79 @@ def metal_color_from_slot(slot: str | None) -> str | None:
     return first if first in PRODUCT_METAL_FOLDERS else None
 
 
+def encode_unicode_filename_stem(stem: str) -> str:
+    """Encode a Unicode filename stem into ASCII `u-<base64url>` for Storage keys."""
+    cleaned = (stem or "").replace("/", "").replace("\\", "").strip()
+    if not cleaned:
+        raise StorageUploadError("invalid filename for Storage path")
+    payload = (
+        base64.urlsafe_b64encode(cleaned.encode("utf-8")).decode("ascii").rstrip("=")
+    )
+    return f"{_UNICODE_FILE_PREFIX}{payload}"
+
+
+def decode_storage_filename(filename: str) -> str:
+    """Restore original filename when Storage key used `u-` Unicode encoding."""
+    raw = (filename or "").strip().strip("/")
+    if not raw or "/" in raw or "\\" in raw:
+        return raw
+    if "." in raw and not raw.startswith("."):
+        stem, ext = raw.rsplit(".", 1)
+        ext = f".{ext}"
+    else:
+        stem, ext = raw, ""
+    if not stem.startswith(_UNICODE_FILE_PREFIX):
+        return raw
+    payload = stem[len(_UNICODE_FILE_PREFIX) :]
+    if not payload:
+        return raw
+    pad = "=" * (-len(payload) % 4)
+    try:
+        decoded = base64.urlsafe_b64decode(payload + pad).decode("utf-8")
+    except (ValueError, UnicodeDecodeError):
+        return raw
+    return f"{decoded}{ext}" if decoded else raw
+
+
+def _ascii_filename(value: str) -> str:
+    """Map any filename to an ASCII-safe Storage key (Unicode kept via u- encode)."""
+    raw = (value or "").strip().strip("/")
+    if not raw or "/" in raw or "\\" in raw or raw in {".", ".."}:
+        raise StorageUploadError("invalid filename for Storage path")
+    # Already a reversible Unicode key — keep stable on re-upload/replace.
+    if raw.startswith(_UNICODE_FILE_PREFIX) or (
+        "." in raw
+        and not raw.startswith(".")
+        and raw.rsplit(".", 1)[0].startswith(_UNICODE_FILE_PREFIX)
+    ):
+        if _UNSAFE_SEGMENT.search(raw):
+            raise StorageUploadError("invalid filename for Storage path")
+        return raw
+    if "." in raw and not raw.startswith("."):
+        stem, ext = raw.rsplit(".", 1)
+        ext = f".{ext.lower()}"
+    else:
+        stem, ext = raw, ""
+    # Chinese / other non-ASCII: reversible encode (not a lossy hash).
+    if any(ord(ch) > 127 for ch in stem):
+        out = f"{encode_unicode_filename_stem(stem)}{ext}"
+    else:
+        safe_stem = sanitize_product_name_slug(stem) if stem else ""
+        if not safe_stem:
+            digest = hashlib.sha1(raw.encode("utf-8")).hexdigest()[:10]
+            safe_stem = f"image-{digest}"
+        out = f"{safe_stem}{ext}"
+    if _UNSAFE_SEGMENT.search(out):
+        raise StorageUploadError("invalid filename for Storage path")
+    return out
+
+
 def _safe_path_segment(value: str, *, label: str) -> str:
     raw = (value or "").strip().strip("/")
     if not raw or "/" in raw or "\\" in raw or raw in {".", ".."}:
         raise StorageUploadError(f"invalid {label} for Storage path")
+    if label == "filename":
+        return _ascii_filename(raw)
     if _UNSAFE_SEGMENT.search(raw):
         raise StorageUploadError(f"invalid {label} for Storage path")
     return raw
@@ -272,9 +377,10 @@ def _safe_folder_segment(value: str, *, label: str = "folder") -> str:
         or raw == _PENDING_FOLDER
     ):
         raise StorageUploadError(f"invalid {label} for Storage path")
-    if _UNSAFE_FOLDER_CHAR.search(raw):
+    safe = sanitize_product_name_slug(raw) or storage_safe_folder_segment(raw)
+    if not safe or _UNSAFE_FOLDER_CHAR.search(safe):
         raise StorageUploadError(f"invalid {label} for Storage path")
-    return raw
+    return safe
 
 
 def short_product_id_segment(product_id: str) -> str:

@@ -1,15 +1,29 @@
 {% extends "layouts/base.html" %}
+{% block resource_hints %}
+{# Preconnect only when surviving SSR cards still resolve to Supabase (uuid uploads; seeded images normalize to local WebP). #}
+{% set _ns = namespace(supa_origin='') %}
+{% for t in stories_ssr or [] %}
+  {% set _u = (t.image_url or '') %}
+  {% if not _ns.supa_origin and _u.startswith('https://') and '.supabase.co/' in _u %}
+    {% set _ns.supa_origin = _u.split('/')[:3] | join('/') %}
+  {% endif %}
+{% endfor %}
+{% if _ns.supa_origin %}<link rel="preconnect" href="{{ _ns.supa_origin }}" crossorigin>
+{% endif %}
+{% endblock %}
 {% block extra_head %}
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"CollectionPage","name":"客戶見證","url":"https://www.imprintdiamond.com/stories"}
 </script>
 {% endblock %}
 {% block content %}
-{# SSR first N for AI/crawler HTML; HTMX load swaps in full list for users. #}
+{# SSR first N for AI/crawler HTML. SSR present: keep it (no eager→lazy swap); HTMX only appends page 2+. SSR empty: hx-load fetches the list partial. #}
 <div id="htmx-stories"
+  {% if not stories_ssr %}
   hx-get="/htmx/stories"
   hx-trigger="load"
-  hx-swap="innerHTML">
+  hx-swap="innerHTML"
+  {% endif %}>
   <section class="stories-page page-section">
     <div class="container">
       <header class="price-reference-head">
@@ -18,7 +32,7 @@
         <p class="price-reference-lead">真實故事，銘印成永恆。</p>
       </header>
       {% if stories_ssr %}
-      <div class="stories-page-masonry">
+      <div class="stories-page-masonry" id="stories-masonry">
         {% for t in stories_ssr %}
         <article class="stories-page-card" data-aspect="{{ loop.index0 % 6 }}">
           {% if t.image_url %}
@@ -27,6 +41,7 @@
             src="{{ t.image_url }}"
             alt="{{ t.name or '客戶' }}的紀念鑽石見證"
             loading="{% if loop.index0 < 4 %}eager{% else %}lazy{% endif %}"
+            {% if loop.index0 < 2 %}fetchpriority="high"{% endif %}
             decoding="async"
             width="640"
             height="800"
@@ -44,6 +59,31 @@
           </div>
         </article>
         {% endfor %}
+      </div>
+      {# Full SSR page ⇒ maybe more rows; 12 must match STORIES_SSR_LIMIT in web_controller. Empty next page self-heals via the partial's hx-swap-oob done span. #}
+      {% if stories_ssr|length >= 12 %}
+      <div class="stories-page-load-more">
+        <button
+          id="stories-load-more"
+          type="button"
+          class="stories-page-load-more__btn"
+          hx-get="/htmx/stories?page=2&page_size={{ stories_ssr|length }}"
+          hx-target="#stories-masonry"
+          hx-swap="beforeend"
+        >
+          載入更多
+        </button>
+      </div>
+      {% endif %}
+      <div class="stories-page-cta">
+        <p class="stories-page-cta__title">您的故事，也值得被好好記住</p>
+        <p class="stories-page-cta__lead">歡迎加入官方 LINE，讓顧問陪您慢慢聊聊。</p>
+        <a
+          class="stories-page-cta__btn"
+          href="https://lin.ee/ktVBtmx"
+          target="_blank"
+          rel="noopener noreferrer"
+        >加入官方 LINE 好友</a>
       </div>
       {% else %}
       <div class="stories-page-masonry skel-panel" aria-busy="true" aria-label="載入見證中">

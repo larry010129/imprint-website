@@ -22,7 +22,7 @@
     "image_alt": "滿月鑽石－以寶寶胎髮培育的紀念鑽石項鍊",
     "cta_primary_label": "探索滿月鑽石",
     "cta_primary_href": "/series/first-love/",
-    "cta_secondary_label": "五大系列",
+    "cta_secondary_label": "六大系列",
     "cta_secondary_href": "/#series",
     "tone": "light",
     "sort_order": 1
@@ -53,6 +53,7 @@
     "cta_secondary_label": "戒指款式",
     "cta_secondary_href": "/jewelry/rings/",
     "tone": "light",
+    "align": "right",
     "sort_order": 3
   },
   {

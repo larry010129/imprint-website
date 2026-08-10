@@ -2,7 +2,7 @@
  *
  * Layout:
  *   shop-product/silver|gold|rose_gold/  — PNG renders ({品項}{style}_{metal}[_diamond].png)
- *   shop-product/thumbs/{category}/      — JPG grid previews (A.jpg, B.jpg, C.jpg)
+ *   shop-product/thumbs/{category}/      — WebP grid previews + JPG fallback (A.webp/A.jpg, B.jpg, C.jpg)
  */
 (function (global) {
   'use strict';
@@ -80,6 +80,16 @@
   };
 
   var CATEGORY_THUMB = {
+    diamond: '/static/images/diamonds/colors/catalog-cluster.webp',
+    pendant: 'thumbs/pendant/A.webp',
+    ring: 'thumbs/ring/A.webp',
+    earring: 'thumbs/earring/A.webp',
+    bracelet: 'thumbs/bracelet/A.webp',
+    chain: 'thumbs/chain/A.webp',
+  };
+
+  /* Pre-WebP originals, kept on disk as onerror fallback for categoryThumb. */
+  var CATEGORY_THUMB_LEGACY = {
     diamond: '/static/images/diamonds/colors/catalog-cluster.png',
     pendant: 'thumbs/pendant/A.jpg',
     ring: 'thumbs/ring/A.jpg',
@@ -88,11 +98,18 @@
     chain: 'thumbs/chain/A.jpg',
   };
 
-  function categoryThumb(category) {
-    var rel = CATEGORY_THUMB[category];
+  function thumbUrl(rel) {
     if (!rel) return '';
     if (/^https?:\/\//i.test(rel) || rel.charAt(0) === '/') return rel;
     return joinPath(rel);
+  }
+
+  function categoryThumb(category) {
+    return thumbUrl(CATEGORY_THUMB[category]);
+  }
+
+  function categoryThumbLegacy(category) {
+    return thumbUrl(CATEGORY_THUMB_LEGACY[category]);
   }
 
   function styleThumbRel(productId) {
@@ -314,6 +331,7 @@
   global.ShopAssets = {
     imageRoot: IMAGE_ROOT,
     categoryThumb: categoryThumb,
+    categoryThumbLegacy: categoryThumbLegacy,
     styleThumb: styleThumb,
     productImage: productImage,
     productImageResolve: productImageResolve,

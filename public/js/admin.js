@@ -679,6 +679,10 @@
       bindDashboardRangeControls();
       loadDashboardStats();
 
+      /* React 表格島按需載入：僅訂單／商品／內容／品牌影片面板需要 window.AdminTables。
+         每面板只重試一次；失敗時落到各面板既有的「元件尚未載入」提示。 */
+      var tablesGateRetried = {};
+
       window.AdminPanel = {
         currentUserId: res.user.id,
         openModal: openModal,
@@ -690,6 +694,20 @@
           if (main) main.classList.toggle('is-orders-view', panel === 'orders');
           if (panel === 'dash') loadDashboardStats();
           if (panel === 'leads') loadLeads(leadsLoaded);
+          var needsTables =
+            panel === 'orders' || panel === 'products' ||
+            panel === 'content' || panel === 'featured-video';
+          if (
+            needsTables &&
+            !window.AdminTables &&
+            typeof window.__adminLoadTables === 'function' &&
+            !tablesGateRetried[panel]
+          ) {
+            tablesGateRetried[panel] = true;
+            var retry = function () { window.AdminPanel.onPanelSwitch(panel); };
+            window.__adminLoadTables().then(retry, retry);
+            return;
+          }
           if (panel === 'orders' && window.AdminOrdersPanel) window.AdminOrdersPanel.ensureLoaded();
           if (panel === 'products' && window.AdminProductsPanel) window.AdminProductsPanel.ensureLoaded();
           if (panel === 'invites' && window.AdminInvitesPanel) window.AdminInvitesPanel.ensureLoaded();
@@ -712,6 +730,24 @@
       if (typeof window.__adminFlushPendingPanel === 'function') {
         window.__adminFlushPendingPanel();
       }
+
+      /* 未讀版本公告：每台裝置首次、或新推送後，載入 release-notes gate 並彈窗。 */
+      (function bootUnreadReleaseNotes() {
+        if (typeof window.__adminLoadTables !== 'function') return;
+        var seenKey = 'adminReleaseSeenId';
+        fetch('/api/admin/release-notes', { credentials: 'include' })
+          .then(function (res) { return res.ok ? res.json() : null; })
+          .then(function (data) {
+            var pub = data && data.published;
+            if (!pub || !pub.releaseId) return;
+            var seen = null;
+            try { seen = localStorage.getItem(seenKey); } catch (e) { /* private mode */ }
+            if (pub.releaseId !== seen) {
+              window.__adminLoadTables();
+            }
+          })
+          .catch(function () { /* silent */ });
+      })();
 
     });
   });

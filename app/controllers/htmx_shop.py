@@ -76,7 +76,6 @@ async def cart_qty(request: Request) -> HTMLResponse:
 @router.get("/checkout", response_class=HTMLResponse)
 async def checkout_partial(request: Request) -> Response:
     from app.image_urls import is_uuid
-    from app.profile_schema import fetch_profile
 
     raw_ids = (
         request.query_params.get("items") or request.query_params.get("item") or ""
@@ -92,6 +91,17 @@ async def checkout_partial(request: Request) -> Response:
     ]
     if not item_ids:
         return hx_redirect("/cart")
+    try:
+        return _checkout_panel(request, user_id, item_ids)
+    except Exception:
+        # Last-resort net: bounce to /cart instead of a raw 5xx → htmx:responseError.
+        logger.exception("htmx checkout load failed")
+        return hx_redirect("/cart")
+
+
+def _checkout_panel(request: Request, user_id: str, item_ids: list[str]) -> Response:
+    from app.profile_schema import fetch_profile
+
     try:
         items = fetch_cart_items(user_id, item_ids)
     except Exception:

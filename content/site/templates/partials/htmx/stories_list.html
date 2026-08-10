@@ -1,11 +1,14 @@
 {% macro story_card(t, index) -%}
+{# First 2 cards stay LCP-eligible when this partial is the first paint (SSR empty fallback); append pages always pass index >= page_size so stay lazy. #}
+{% set eager = index < 2 %}
 <article class="stories-page-card" data-aspect="{{ index % 6 }}">
   {% if t.image_url %}
   <img
     class="stories-page-card__media"
     src="{{ t.image_url }}"
     alt="{{ t.name or '客戶' }}的紀念鑽石見證"
-    loading="lazy"
+    loading="{{ 'eager' if eager else 'lazy' }}"
+    {% if eager %}fetchpriority="high"{% endif %}
     decoding="async"
     width="640"
     height="800"

@@ -70,19 +70,17 @@
     position:relative;
     z-index:111;
   }
-  .nav-cta .btn-line{ display:none; }
+  .nav-cta .btn-line{ display:none !important; }
   .nav-cta .btn-calc,
-  .nav-cta .btn-contact{ display:none; }
+  .nav-cta .btn-contact{ display:none !important; }
   /* Mobile header CTA: 開始試算 — !important beats stale page React CSS
-     (price.css/checkout.css/…) that still ship display:none after src.css. */
+     (price.css/checkout.css/…) that still ship display:none after src.css.
+     Fixed desktop size: never rescales or shrinks to an icon on phone. */
   .nav-cta .nav-ihb{
     display:inline-flex !important;
-    flex:0 1 auto;
-    min-width:0;
-    max-width:min(8.5rem,38vw);
-    padding:clamp(6px,1.5vw,9px) clamp(10px,2.4vw,14px) !important;
-    font-size:clamp(10.5px,2.85vw,12px) !important;
-    letter-spacing:.02em !important;
+    flex:0 0 auto;
+    min-width:7.5rem;
+    max-width:none;
   }
   .nav-cta .gradient-button,
   .nav-cta .nav-gradient-cta{
@@ -127,11 +125,8 @@
   .about, .process, .pricing{ padding:80px 0; }
   .series, .faq, .stories{ padding:80px 0 90px; }
 
-  /* 內頁共用元件的手機版 */
-  .page-hero{ grid-template-columns:1fr; gap:28px; padding:40px 0 36px; }
-  .page-hero-media{ order:2; min-height:0; aspect-ratio:16/10; }
-  .page-hero-inner{ order:1; }
-  .series-page-grid{ grid-template-columns:1fr; gap:36px; padding:36px 0 60px; }
+  /* 內頁共用元件的手機版 — page-hero / series-page-grid / stories-masonry moved to
+     blocking pages.css (they decide above-fold layout; this file is print-deferred) */
   .prose-section{ padding:56px 0; }
   .configurator{ padding:56px 0 70px; }
   .configurator-inner{ grid-template-columns:1fr; gap:34px; }
@@ -141,8 +136,6 @@
   .jewelry-block-grid.is-rev{ direction:ltr; }
   .contact-grid{ grid-template-columns:1fr; gap:36px; }
   .contact-section--intro .contact-map iframe{ height:180px; }
-  .stories-page-masonry{ column-count:1; padding:8px 0 36px; }
-  .stories-page-card:hover{ transform:none; }
   .diamond-hub-cta{ flex-direction:column; align-items:flex-start; padding:32px 26px; }
   .shape-grid{ grid-template-columns:repeat(3, 1fr); }
   .price-tab-labels{ flex-direction:column; align-items:flex-start; }
@@ -159,8 +152,8 @@
   .gh-chip__icon{ width:48px; height:48px; border-radius:14px; font-size:15px; }
   .gh-series-grid{ grid-template-columns:repeat(2, 1fr); gap:24px 12px; }
   .gh-cards{ grid-template-columns:1fr; }
-  .gh-section{ padding:48px 16px 56px; }
-  .gh-poem{ padding:48px 16px 40px; }
+  .gh-section{ padding:48px 24px 56px; }
+  .gh-poem{ padding:48px 24px 40px; }
   /* Sync with home-ghibli-critical: topbar ~36px + nav-inner 76px chrome */
   .page-home .nav{ top:36px; }
 }

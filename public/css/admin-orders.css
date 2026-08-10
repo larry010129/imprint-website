@@ -247,9 +247,12 @@ tr.order-row-main.is-detail-open td { background: var(--mint-soft, #f4fbfb); }
   margin: 0 1px;
   color: inherit;
 }
-.order-detail-value .cfg-emblem-token svg {
+.order-detail-value .cfg-emblem-token svg,
+.order-detail-value .cfg-emblem-token img {
   width: 100%;
   height: 100%;
+  object-fit: contain;
+  display: block;
 }
 .order-detail-value {
   font-size: 13px;

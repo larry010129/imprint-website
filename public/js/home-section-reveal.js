@@ -103,6 +103,17 @@
       });
   }
 
-  if (document.readyState === "complete") boot();
-  else window.addEventListener("load", boot, { once: true });
+  if ("IntersectionObserver" in window) {
+    var firstStack = stacks[0];
+    var observer = new IntersectionObserver(function (entries) {
+      if (!entries.some(function (entry) { return entry.isIntersecting; })) return;
+      observer.disconnect();
+      boot();
+    }, { rootMargin: "25% 0px" });
+    observer.observe(firstStack);
+  } else if (document.readyState === "complete") {
+    boot();
+  } else {
+    window.addEventListener("load", boot, { once: true });
+  }
 })();

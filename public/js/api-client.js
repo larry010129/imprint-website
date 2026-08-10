@@ -489,7 +489,11 @@
           body: Object.assign({ action: 'delete' }, fields || {}),
         });
       },
-      getPageCopySlots: function () { return request('/api/admin/page-copy-slots'); },
+      getPageCopySlots: function (pageKey) {
+        var url = '/api/admin/page-copy-slots';
+        if (pageKey) url += '?page_key=' + encodeURIComponent(pageKey);
+        return request(url);
+      },
       updatePageCopySlot: function (fields) {
         return request('/api/admin/page-copy-slot-update', { method: 'POST', body: fields });
       },

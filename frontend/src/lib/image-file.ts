@@ -27,7 +27,7 @@ export function validateImageFile(
   maxBytes = IMAGE_MAX_UPLOAD_BYTES,
 ): string | null {
   if (!isAllowedImageFile(file)) return "僅支援 JPG / PNG / WEBP";
-  if (file.size > maxBytes) {
+  if (file.size >= maxBytes) {
     if (maxBytes >= IMAGE_MAX_UPLOAD_BYTES * 2) {
       return `來源圖片需小於 ${Math.round(maxBytes / (1024 * 1024))}MB`;
     }

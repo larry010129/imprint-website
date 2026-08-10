@@ -179,10 +179,14 @@ async def fetch_bot_gold_quote(*, force: bool = False) -> dict:
 
 async def _fetch_bot_gold_quote_live() -> dict:
     last_error: Exception | None = None
+    # 18s each attempt — Allbeauty is often slow; fail before blocking admin work.
+    request_timeout = 18
     async with AsyncSession(impersonate="chrome120") as client:
         for url in ALLBEAUTY_URLS:
             try:
-                response = await client.get(url, headers=BOT_HEADERS, timeout=30)
+                response = await client.get(
+                    url, headers=BOT_HEADERS, timeout=request_timeout
+                )
                 if response.status_code >= 400:
                     raise RuntimeError(f"HTTP {response.status_code}")
                 html = response.text

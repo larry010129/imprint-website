@@ -35,7 +35,7 @@ HTML_CONTENT_SECURITY_POLICY = (
     "script-src 'self' 'unsafe-inline' https://cdn.botpress.cloud "
     "https://files.bpcontent.cloud https://*.botpress.cloud "
     "https://accounts.google.com https://www.google.com https://www.gstatic.com "
-    "https://www.googletagmanager.com; "
+    "https://www.googletagmanager.com https://www.youtube.com; "
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
     "font-src 'self' https://fonts.gstatic.com data:; "
     "img-src 'self' data: blob: https://*.supabase.co https://*.bpcontent.cloud "
@@ -128,6 +128,7 @@ async def lifespan(_app: FastAPI):
     from app.cms_pages import ensure_cms_pages_schema
     from app.cms_seed import remove_legacy_seeded_pages
     from app.content import (
+        ensure_banner_align_column,
         ensure_banner_mobile_column,
         ensure_journal_posts_schema,
         ensure_page_images_schema,
@@ -190,6 +191,7 @@ async def lifespan(_app: FastAPI):
             ensure_page_images_schema(cur)
             ensure_journal_posts_schema(cur)
             ensure_banner_mobile_column(cur)
+            ensure_banner_align_column(cur)
             ensure_testimonial_country_column(cur)
             ensure_cms_pages_schema(cur)
             ensure_page_copy_slots_schema(cur)

@@ -7,11 +7,15 @@ import {
   type DragEvent,
 } from "react";
 
-import { IMAGE_ACCEPT, validateImageFile } from "@/lib/image-file";
+import {
+  IMAGE_ACCEPT,
+  IMAGE_MAX_UPLOAD_BYTES,
+  validateImageFile,
+} from "@/lib/image-file";
 
 const DEFAULT_ACCEPT = IMAGE_ACCEPT;
 // Selected sources are resized and compressed before upload.
-const DEFAULT_MAX_BYTES = 20 * 1024 * 1024;
+const DEFAULT_MAX_BYTES = IMAGE_MAX_UPLOAD_BYTES;
 
 export type UseImageUploadOptions = {
   accept?: string;

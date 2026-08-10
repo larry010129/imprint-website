@@ -70,7 +70,7 @@ def _image_upload_error(file: UploadFile, data: bytes, ext: str) -> str | None:
         return "僅支援 JPG / PNG / WEBP"
     if not data:
         return "empty file"
-    if len(data) > _MAX_IMAGE_BYTES:
+    if len(data) >= _MAX_IMAGE_BYTES:
         return "來源圖片需小於 1MB"
     if not _image_signature_matches(data, ext):
         return "圖片內容與副檔名不符"
@@ -83,6 +83,10 @@ class _ClientImageError(str):
 
 def _upload_err_response(upload_err: str) -> JSONResponse:
     code = 400 if isinstance(upload_err, _ClientImageError) else 503
+    if not isinstance(upload_err, _ClientImageError):
+        from app.storage import storage_error_sentence
+
+        upload_err = storage_error_sentence(str(upload_err))
     return JSONResponse(status_code=code, content={"error": str(upload_err)})
 
 
@@ -517,13 +521,19 @@ async def cms_sections_reorder(request: Request, page_id: str) -> JSONResponse:
 @router.get("/page-copy-slots")
 async def page_copy_slots_list(request: Request) -> dict:
     _require_admin(request)
-    from app.cms_copy_slots import fetch_all_copy_slots
+    from app.cms_copy_slots import fetch_all_copy_slots, fetch_copy_slots_for_page
     from app.cms_copy_slot_specs import EDITABLE_SITE_PAGES
 
+    page_key = str(request.query_params.get("page_key") or "").strip()
     with get_connection() as conn, conn.cursor() as cur:
         _ensure_all(cur)
+        slots = (
+            fetch_copy_slots_for_page(cur, page_key)
+            if page_key
+            else fetch_all_copy_slots(cur)
+        )
         return {
-            "slots": fetch_all_copy_slots(cur),
+            "slots": slots,
             "pages": list(EDITABLE_SITE_PAGES),
         }
 

@@ -282,7 +282,7 @@ def test_history_template_has_cancel_controls():
     assert "member-order-cancel-btn" in rows
     assert "order.can_cancel" in rows
     assert EDIT_ORDER not in rows
-    assert 'href="/shop"' in rows
+    assert 'href="/shop/calculator/"' in rows
     assert 'id="member-order-cancel-dialog"' in page
     assert 'name="cancel_preset"' in page
     assert 'name="cancel_reason"' in page

@@ -340,7 +340,10 @@
 
 /* ============================================================
    Home cinematic closing stage (curtain reveal)
-   Main covers fixed panel. Document scroll only — no nested trap.
+   Mobile-first: phone gets the compact in-flow footer by default —
+   never the fixed 100dvh panel (a missed ≤900px override showed a
+   full-viewport dark void between the CTA stage and the legal line).
+   Desktop ≥901 opts into the fixed curtain. Document scroll only.
 ============================================================ */
 
 .page-home main.site-main--curtain{
@@ -349,32 +352,22 @@
   background:var(--gh-cream, #FBF6ED);
   border-bottom-left-radius:0;
   border-bottom-right-radius:0;
-  overflow:hidden;
+  overflow:visible;
   margin-bottom:0;
 }
 
 .footer-reveal{
   position:relative;
-  height:100vh;
-  height:100dvh;
-  clip-path:polygon(0% 0, 100% 0%, 100% 100%, 0 100%);
   margin:0;
   padding:0;
 }
 
 .site-footer--cinematic{
-  position:fixed;
-  left:0;
-  right:0;
-  bottom:0;
-  z-index:0;
+  position:relative;
+  z-index:10;
   width:100%;
-  height:100vh;
-  height:100dvh;
-  max-height:100dvh;
   margin:0;
-  /* Document scroll = sole owner. Nested overflow-y:auto ate wheel + fake scrollbar at end. */
-  overflow:hidden;
+  overflow:visible;
   border-radius:0;
   background:var(--sf-bg);
   font-size:inherit;
@@ -412,17 +405,17 @@
 .sf-cinematic__giant{
   position:absolute;
   left:50%;
-  top:48%;
+  top:22%;
   z-index:0;
   margin:0;
   transform:translate(-50%, -50%);
   font-family:var(--serif, "Noto Serif TC", serif);
-  font-size:clamp(5.5rem, 22vw, 16rem);
+  font-size:clamp(3.5rem, 22vw, 6rem);
   font-weight:700;
   letter-spacing:.14em;
   line-height:1;
   white-space:nowrap;
-  color:rgba(158,239,239,.1);
+  color:rgba(158,239,239,.08);
   -webkit-text-stroke:1px rgba(232,226,219,.05);
   text-stroke:1px rgba(232,226,219,.05);
   pointer-events:none;
@@ -467,14 +460,14 @@
   display:flex;
   flex-direction:column;
   align-items:center;
-  justify-content:center;
-  min-height:100%;
+  justify-content:flex-start;
+  min-height:0;
   box-sizing:border-box;
   max-width:none;
   padding:
-    clamp(3.25rem, 8vh, 5rem)
+    3.25rem
     var(--page-padding-x, 16px)
-    clamp(1.75rem, 4vh, 2.5rem);
+    var(--fab-page-clearance, calc(88px + env(safe-area-inset-bottom,0px)));
 }
 
 .sf-cinematic__stage{
@@ -482,7 +475,7 @@
   flex-direction:column;
   align-items:center;
   text-align:center;
-  gap:clamp(.7rem, 1.6vh, 1.15rem);
+  gap:.85rem;
   width:100%;
   max-width:42rem;
 }
@@ -515,21 +508,25 @@
 .sf-cinematic__title{
   margin:0;
   font-family:var(--serif, "Noto Serif TC", serif);
-  font-size:clamp(1.35rem, 3.4vw, 2rem);
+  font-size:clamp(1.2rem, 3.4vw, 2rem);
   font-weight:600;
   letter-spacing:.06em;
   line-height:1.45;
   color:rgba(247,244,241,.92);
-  max-width:16ch;
+  white-space:nowrap;
 }
 
 .sf-cinematic__lead{
   margin:0;
-  max-width:28rem;
+  max-width:none;
   font-family:var(--sans, "Noto Sans TC", sans-serif);
-  font-size:clamp(13px, 1.3vw, 15px);
+  font-size:clamp(12px, 1.3vw, 15px);
   line-height:1.75;
   color:rgba(247,244,241,.68);
+}
+/* One line on PC; below 700px it may wrap as last resort (min font reached). */
+@media (min-width:700px){
+  .sf-cinematic__lead{ white-space:nowrap; }
 }
 
 .sf-cinematic__actions{
@@ -538,12 +535,14 @@
   justify-content:center;
   gap:.6rem;
   margin-top:.35rem;
+  width:100%;
 }
 
 .sf-cinematic__btn{
   display:inline-flex;
   align-items:center;
   justify-content:center;
+  flex:1 1 auto;
   min-height:var(--tap-target-min, 44px);
   padding:.72rem 1.35rem;
   border-radius:2px;
@@ -584,10 +583,10 @@
   flex-wrap:wrap;
   justify-content:center;
   align-items:center;
-  gap:.35rem .85rem;
+  gap:.3rem .65rem;
   margin-top:.55rem;
   font-family:var(--sans, "Noto Sans TC", sans-serif);
-  font-size:12px;
+  font-size:11px;
   letter-spacing:.08em;
 }
 
@@ -621,10 +620,10 @@
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  width:36px;
-  height:36px;
-  min-width:36px;
-  min-height:36px;
+  width:var(--tap-target-min, 44px);
+  height:var(--tap-target-min, 44px);
+  min-width:var(--tap-target-min, 44px);
+  min-height:var(--tap-target-min, 44px);
   color:rgba(158,239,239,.45);
   text-decoration:none;
   transition:color .2s;
@@ -637,14 +636,15 @@
 
 /* Quiet edge legal — not a footer bar */
 .sf-cinematic__legal{
-  position:absolute;
+  position:relative;
   left:0;
   right:0;
-  bottom:clamp(.65rem, 2vh, 1.1rem);
+  bottom:auto;
   display:flex;
   flex-direction:column;
   align-items:center;
   gap:.2rem;
+  margin-top:1.5rem;
   padding:0 var(--page-padding-x, 16px);
   pointer-events:none;
 }
@@ -690,71 +690,74 @@
   transform:translateY(28px);
 }
 
-/* Mobile: keep stage look, drop fixed curtain (nested scroll / FAB pain). */
-@media (max-width:900px){
+/* Desktop ≥901: fixed curtain reveal — main peels away, stage centers in 100dvh. */
+@media (min-width:901px){
   .page-home main.site-main--curtain{
-    border-bottom-left-radius:0;
-    border-bottom-right-radius:0;
-    overflow:visible;
+    overflow:hidden;
   }
 
   .footer-reveal{
-    height:auto;
-    clip-path:none;
+    height:100vh;
+    height:100dvh;
+    clip-path:polygon(0% 0, 100% 0%, 100% 100%, 0 100%);
   }
 
   .site-footer--cinematic{
-    position:relative;
-    z-index:10;
-    height:auto;
-    max-height:none;
-    overflow:visible;
+    position:fixed;
+    left:0;
+    right:0;
+    bottom:0;
+    z-index:0;
+    height:100vh;
+    height:100dvh;
+    max-height:100dvh;
+    /* Document scroll = sole owner. Nested overflow-y:auto ate wheel + fake scrollbar at end. */
+    overflow:hidden;
   }
 
   .sf-cinematic__giant{
-    font-size:clamp(3.5rem, 22vw, 6rem);
-    top:22%;
-    color:rgba(158,239,239,.08);
+    top:48%;
+    font-size:clamp(5.5rem, 22vw, 16rem);
+    color:rgba(158,239,239,.1);
   }
 
   .sf-cinematic__inner{
-    min-height:0;
-    padding-top:3.25rem;
-    padding-bottom:var(
-      --fab-page-clearance,
-      calc(88px + env(safe-area-inset-bottom,0px))
-    );
-    justify-content:flex-start;
+    justify-content:center;
+    min-height:100%;
+    padding:
+      clamp(3.25rem, 8vh, 5rem)
+      var(--page-padding-x, 16px)
+      clamp(1.75rem, 4vh, 2.5rem);
   }
 
   .sf-cinematic__stage{
-    gap:.85rem;
+    gap:clamp(.7rem, 1.6vh, 1.15rem);
   }
 
   .sf-cinematic__actions{
-    width:100%;
+    width:auto;
   }
 
   .sf-cinematic__btn{
-    flex:1 1 auto;
+    flex:0 1 auto;
   }
 
   .sf-cinematic__explore{
-    gap:.3rem .65rem;
-    font-size:11px;
+    gap:.35rem .85rem;
+    font-size:12px;
   }
 
   .sf-cinematic__social a{
-    width:var(--tap-target-min, 44px);
-    height:var(--tap-target-min, 44px);
-    min-width:var(--tap-target-min, 44px);
-    min-height:var(--tap-target-min, 44px);
+    width:36px;
+    height:36px;
+    min-width:36px;
+    min-height:36px;
   }
 
   .sf-cinematic__legal{
-    position:relative;
-    bottom:auto;
-    margin-top:1.5rem;
+    position:absolute;
+    bottom:clamp(.65rem, 2vh, 1.1rem);
+    margin-top:0;
     padding-bottom:0;
   }
 }

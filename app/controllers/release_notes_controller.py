@@ -39,6 +39,29 @@ async def get_published(request: Request) -> JSONResponse:
     )
 
 
+@router.get("/nav-visibility")
+async def get_nav_visibility(request: Request) -> JSONResponse:
+    _require_admin(request)
+    store = rn.load_store()
+    return JSONResponse(content={"visibility": store.get("nav_visibility")})
+
+
+@router.patch("/nav-visibility")
+async def update_nav_visibility(request: Request) -> JSONResponse:
+    _require_admin(request)
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    if not isinstance(body, dict):
+        body = {}
+    visibility = rn.normalize_nav_visibility(body.get("visibility"))
+    store = rn.load_store()
+    store["nav_visibility"] = visibility
+    rn.save_store(store)
+    return JSONResponse(content={"ok": True, "visibility": visibility})
+
+
 @router.post("/release-notes/unlock")
 async def unlock(request: Request) -> JSONResponse:
     admin_id = _require_admin(request)

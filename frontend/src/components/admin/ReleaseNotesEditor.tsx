@@ -127,7 +127,7 @@ export default function ReleaseNotesEditor({ className }: ReleaseNotesEditorProp
   const busy = loading || saving || publishing;
 
   return (
-    <div className={cn("mx-auto w-full max-w-xl space-y-5", className)}>
+    <div className={cn("w-full space-y-5", className)}>
       <div className="space-y-1">
         <h2 className="text-xl font-semibold tracking-tight text-foreground">
           版本更新筆記
@@ -137,82 +137,90 @@ export default function ReleaseNotesEditor({ className }: ReleaseNotesEditorProp
         </p>
       </div>
 
-      <div className="space-y-4 rounded-lg border border-border bg-background/60 p-5">
-        <div className="space-y-2">
-          <Label htmlFor="rn-version">版本</Label>
-          <Input
-            id="rn-version"
-            value={version}
-            onChange={(e) => setVersion(e.target.value)}
-            placeholder="例如 1.2.0"
-            disabled={busy}
-            autoComplete="off"
-          />
+      <div className="grid w-full gap-5 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">
+        <div className="space-y-4 rounded-lg border border-border bg-background/60 p-5">
+          <div className="space-y-2">
+            <Label htmlFor="rn-version">版本</Label>
+            <Input
+              id="rn-version"
+              value={version}
+              onChange={(e) => setVersion(e.target.value)}
+              placeholder="例如 1.2.0"
+              disabled={busy}
+              autoComplete="off"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="rn-title">標題</Label>
+            <Input
+              id="rn-title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="本次更新標題"
+              disabled={busy}
+              autoComplete="off"
+            />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={busy}
+              onClick={() => void handleSaveDraft()}
+            >
+              {saving ? "儲存中…" : "儲存草稿"}
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              disabled={busy}
+              onClick={() => void handlePublish()}
+            >
+              {publishing ? "推送中…" : "推送發布"}
+            </Button>
+            <a
+              href="/admin"
+              className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+            >
+              返回後台
+            </a>
+          </div>
+
+          <p
+            className={cn(
+              "min-h-[1.25rem] text-sm",
+              statusTone === "ok" && "text-emerald-700 dark:text-emerald-400",
+              statusTone === "err" && "text-destructive",
+              statusTone === "neutral" && "text-muted-foreground",
+            )}
+            role="status"
+            aria-live="polite"
+          >
+            {loading ? "載入中…" : statusMsg}
+          </p>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="rn-title">標題</Label>
-          <Input
-            id="rn-title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="本次更新標題"
-            disabled={busy}
-            autoComplete="off"
-          />
-        </div>
-
-        <div className="space-y-2">
+        <div className="space-y-2 rounded-lg border border-border bg-background/60 p-5">
           <Label htmlFor="rn-notes">更新內容</Label>
           <Textarea
             id="rn-notes"
             value={notesText}
             onChange={(e) => setNotesText(e.target.value)}
-            placeholder={"每行一則重點\n例如：修正訂單篩選\n例如：加速商品列表"}
+            placeholder={
+              "## 商店 / 訂單\n- 修正項鍊長度驗證\n- 結帳頁載入錯誤已修\n\n## 後台管理\n- 內容編輯頁載入加速"
+            }
             disabled={busy}
-            rows={10}
-            className="min-h-[12rem] font-sans"
+            rows={22}
+            className="min-h-[26rem] w-full font-sans"
           />
-          <p className="text-xs text-muted-foreground">每行一則；空行會略過。</p>
+          <p className="text-xs text-muted-foreground">
+            用 <code className="rounded bg-muted px-1">## 分類標題</code> 分段；
+            項目行前加 <code className="rounded bg-muted px-1">-</code>；
+            分類之間空一行。
+          </p>
         </div>
-
-        <div className="flex flex-wrap items-center gap-2 pt-1">
-          <Button
-            type="button"
-            variant="outline"
-            disabled={busy}
-            onClick={() => void handleSaveDraft()}
-          >
-            {saving ? "儲存中…" : "儲存草稿"}
-          </Button>
-          <Button
-            type="button"
-            variant="primary"
-            disabled={busy}
-            onClick={() => void handlePublish()}
-          >
-            {publishing ? "推送中…" : "推送發布"}
-          </Button>
-          <a
-            href="/admin"
-            className="ml-auto text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-          >
-            返回後台
-          </a>
-        </div>
-
-        <p
-          className={cn(
-            "min-h-[1.25rem] text-sm",
-            statusTone === "ok" && "text-emerald-700 dark:text-emerald-400",
-            statusTone === "err" && "text-destructive",
-            statusTone === "neutral" && "text-muted-foreground",
-          )}
-          role="status"
-          aria-live="polite"
-        >
-          {loading ? "載入中…" : statusMsg}
-        </p>
       </div>
 
       <ReleaseNotesStaffDialog

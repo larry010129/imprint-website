@@ -43,6 +43,14 @@
 
   function ensureLoaded() {
     if (_mounted && root.getAttribute('data-admin-root') != null) return;
+    /* admin-tables.js 按需載入：等 bundle 就緒再掛載，避免超過 mount() 的重試上限。 */
+    if (!window.AdminTables && typeof window.__adminLoadTables === 'function') {
+      window.__adminLoadTables().then(
+        function () { ensureLoaded(); },
+        function () { mount(40); }
+      );
+      return;
+    }
     mount();
   }
 

@@ -30,20 +30,6 @@
 .page-home [data-site-nav-root].is-nav-hero .nav.is-mobile-menu-open .nav-cart-link{
   color:var(--ink,#2b2320);
 }
-.page-home .nav .btn-line:hover,
-.page-home [data-site-nav-root].is-nav-hero .nav-cta .btn-line:hover{
-  background:rgba(255,255,255,.12) !important; color:#fff !important;
-}
-.page-home [data-site-nav-root].is-nav-hero .nav-cta .btn-dark:hover{
-  background:rgba(255,255,255,.22) !important;
-}
-.page-home .nav .account-menu-trigger:hover,
-.page-home [data-site-nav-root].is-nav-hero .account-menu-trigger:hover{
-  background:rgba(255,255,255,.2);
-  border-color:rgba(255,255,255,.55);
-}
-.page-home .nav .account-menu-email,
-.page-home [data-site-nav-root].is-nav-hero .account-menu-email{ color:rgba(255,255,255,.78); }
 .page-home .nav .account-menu-panel,
 .page-home [data-site-nav-root].is-nav-hero .account-menu-panel{
   background:rgba(42,24,69,.42);
@@ -88,7 +74,6 @@
 .page-home [data-site-nav-root].is-nav-hero .dropdown .dd-label{
   color:rgba(255,255,255,.6);
 }
-.page-home .nav .btn-mint:hover{ filter:brightness(1.05); }
 .page-home .hc-arrow:hover{ background:rgba(156,239,239,.6); }
 .gh-hc-arrow:hover{ background:rgba(255,255,255,.35); }
 
@@ -105,10 +90,12 @@
   background:linear-gradient(to top, var(--gh-cream) 0%, transparent 100%);
   pointer-events:none;
 }
+.page-home .gh-hero__fade-bottom,
+.page-home .hc-media::after{ display:none; }
 .page-home .hc-copy,
 .gh-hc-copy{
   z-index:2;
-  padding-bottom:calc(96px + var(--safe-area-bottom, 0px));
+  padding-bottom:calc(124px + var(--safe-area-bottom, 0px));
 }
 @media (max-width:900px){
   .gh-hero__fade-bottom{ height:4.5rem; }
@@ -122,7 +109,7 @@
   .gh-hc-copy{
     padding-top:calc(112px + var(--safe-area-top, 0px));
     padding-right:var(--page-padding-x, 20px);
-    padding-bottom:calc(100px + var(--safe-area-bottom, 0px));
+    padding-bottom:calc(120px + var(--safe-area-bottom, 0px));
     padding-left:var(--page-padding-x, 20px);
   }
 }
@@ -140,7 +127,7 @@
 .gh-btn--primary:hover{
   transform:translateY(-2px); box-shadow:0 12px 36px rgba(var(--gh-accent-rgb),.55); filter:brightness(1.05);
 }
-.gh-btn--ghost:hover{ background:rgba(255,255,255,.16); }
+.gh-btn--ghost:hover{ background:#3e322e; color:#fff; }
 
 /* Secondary carousel tones / right align (not first slide) */
 .hc-slide[data-tone="light"] .gh-hc-scrim{
@@ -223,9 +210,10 @@
 }
 .gh-poem .gh-script{ margin-bottom:8px; }
 .gh-poem__title{
-  font-family:var(--serif); font-size:clamp(24px, 3.6vw, 40px);
+  font-family:var(--serif); font-size:clamp(18px, 3.2vw, 34px);
   font-weight:600; letter-spacing:.08em; line-height:1.65;
   color:var(--gh-ink); max-width:640px; margin:0 auto 28px;
+  white-space:normal;
 }
 .gh-poem__link{
   display:inline-flex; align-items:center; gap:12px;
@@ -633,6 +621,8 @@
   padding:18px 6px; cursor:pointer;
   font-size:16px; font-weight:500; letter-spacing:.06em;
   color:var(--gh-ink); list-style:none;
+  /* PC: keep each question on one line; ellipsis only if it ever overflows */
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
 .page-home .faq--teaser .faq-q::-webkit-details-marker{ display:none; }
 .page-home .faq--teaser .faq-q::marker{ content:""; }
@@ -804,6 +794,8 @@
   .gh-stories__copy{ text-align:center; }
   .gh-about-grid{ text-align:center; }
   .gh-about-step{ text-align:left; }
+  .gh-poem__visual{ order:2; }
+  .gh-poem__copy{ order:1; }
   .gh-series-grid{ grid-template-columns:repeat(2, 1fr); gap:20px 14px; }
   .gh-series-cards,
   .gh-cards{ grid-template-columns:repeat(2, 1fr); gap:16px; }
@@ -823,6 +815,12 @@
   }
 }
 @media (max-width:640px){
+  .gh-section,
+  .gh-poem--split{ padding-left:24px; padding-right:24px; }
+  .gh-section__title,
+  .gh-section__lead,
+  .gh-poem__title,
+  .gh-poem__text{ max-width:100%; }
   .gh-about-teaser{ grid-template-columns:1fr; gap:20px; }
   .gh-about-diamond{ width:min(58vw, 230px); margin:0 auto; }
   .gh-about-actions{
@@ -844,6 +842,8 @@
     padding-top:18px;
     padding-bottom:18px;
   }
+  /* mobile: long questions may wrap again */
+  .page-home .faq--teaser .faq-q{ white-space:normal; }
   .gh-poem__links{
     flex-direction:column;
     align-items:stretch;

@@ -62,7 +62,9 @@
     if (/(?:^|\/)(?:static\/)?images\/shop-product(?:\/|$)/i.test(url.replace(/\\/g, '/'))) {
       return '';
     }
-    if (/\.(png|jpe?g|webp)$/i.test(url)) return url;
+    if (/\.(png|jpe?g|webp)(\?|#|$)/i.test(url)) return url;
+    // Supabase Storage public object URLs (extension may be odd after encode).
+    if (/\/storage\/v1\/object\/public\//i.test(url)) return url;
     return '';
   }
 

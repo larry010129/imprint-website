@@ -89,6 +89,36 @@
     return '';
   }
 
+  /** UTF-8 → base64url (matches server app.storage.encode_unicode_filename_stem). */
+  function utf8ToBase64Url(str) {
+    var bytes = new TextEncoder().encode(String(str || ''));
+    var bin = '';
+    for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+  }
+
+  /**
+   * Supabase Storage rejects raw Chinese keys. Rename File to ASCII `u-<base64url>`
+   * before upload so the carousel can show after success.
+   */
+  function storageSafeUploadFile(file) {
+    if (!file || !file.name) return file;
+    var name = String(file.name);
+    if (!/[^\x00-\x7F]/.test(name)) return file;
+    if (/^u-[A-Za-z0-9_-]+\.[A-Za-z0-9]+$/.test(name)) return file;
+    var ext = imageFileExt(name) || '.webp';
+    var stem = name.slice(0, Math.max(0, name.length - ext.length)) || 'image';
+    var safeName = 'u-' + utf8ToBase64Url(stem) + ext;
+    try {
+      return new File([file], safeName, {
+        type: file.type || 'application/octet-stream',
+        lastModified: file.lastModified || Date.now(),
+      });
+    } catch (e) {
+      return file;
+    }
+  }
+
   // Image slots are metal × diamond. Legacy 3-part keys (metal-diamond-chainMetal)
   // still parse for folding into metal-diamond; calculator no longer picks chain color.
   function buildSlotKey(metal, diamond, chainMetal) {
@@ -199,6 +229,14 @@
     if (!path || isBrowserLocalImageUrl(path)) return '';
     if (isAutoStockProductImage(path)) return '';
     var resolved = imageUrl(path, color) || path;
+    // productPhoto can be picky; keep absolute Storage / https image URLs.
+    if (
+      (!resolved || isDeadCatalogPlaceholder(resolved))
+      && /^https?:\/\//i.test(String(path).trim())
+      && /\.(png|jpe?g|webp)(\?|#|$)/i.test(String(path).trim())
+    ) {
+      resolved = String(path).trim();
+    }
     if (
       !resolved
       || isBrowserLocalImageUrl(resolved)
@@ -586,11 +624,18 @@
     return (api && api.apiErrorMessage) ? api.apiErrorMessage(data) : (data && data.error) || '未知錯誤';
   }
 
+  var _tablesLoadRequested = false;
+
   function whenAdminTablesReady(fn, tries) {
     tries = tries == null ? 120 : tries;
     if (window.AdminTables) {
       fn();
       return;
+    }
+    /* 觸發按需載入，不再空等輪詢逾時（面板也可能由側欄點擊／hash 直連開啟）。 */
+    if (!_tablesLoadRequested && typeof window.__adminLoadTables === 'function') {
+      _tablesLoadRequested = true;
+      window.__adminLoadTables().then(null, function () {});
     }
     if (tries <= 0) {
       var container = document.getElementById('apProductsTableRoot');
@@ -608,6 +653,10 @@
     if (window.AdminTables && window.AdminTables.renderProductImageCropModal) {
       fn(true);
       return;
+    }
+    if (!_tablesLoadRequested && typeof window.__adminLoadTables === 'function') {
+      _tablesLoadRequested = true;
+      window.__adminLoadTables().then(null, function () {});
     }
     if (tries <= 0) {
       fn(false);
@@ -1918,8 +1967,8 @@
     return new Promise(function (resolve) {
       whenProductCropReady(function (ready) {
         if (!ready) {
-          alert('裁切元件尚未載入，請重新整理後再試。');
-          resolve(null);
+          // Crop island missing — still upload original so the carousel can show.
+          resolve(file);
           return;
         }
         var previewUrl = URL.createObjectURL(file);
@@ -2005,6 +2054,7 @@
 
       function uploadOne(file, index) {
         return new Promise(function (resolve) {
+          var uploadFile = storageSafeUploadFile(file);
           var xhr = new XMLHttpRequest();
           xhr.open('POST', '/api/admin/product-upload');
           xhr.withCredentials = true;
@@ -2019,6 +2069,7 @@
             try { res = JSON.parse(xhr.responseText); } catch (e) { res = { error: 'parse' }; }
             if (!res.error && xhr.status >= 400) {
               if (typeof res.detail === 'string') res.error = res.detail;
+              else if (typeof res.error === 'string') { /* keep */ }
               else res.error = (api && api.apiErrorMessage) ? api.apiErrorMessage(res) : ('HTTP ' + xhr.status);
             }
             progressByIndex[index] = 100;
@@ -2027,7 +2078,7 @@
           };
           xhr.onerror = function () { resolve({ error: 'network' }); };
           var fd = new FormData();
-          fd.append('file', file);
+          fd.append('file', uploadFile, uploadFile.name || 'image.webp');
           // Existing product: persist URL into product_images immediately (SQL SoT).
           if (state.editingId) {
             fd.append('product_id', state.editingId);
@@ -2045,8 +2096,13 @@
         if (progressWrap) progressWrap.hidden = true;
         if (progressBar) progressBar.style.width = '0%';
         var hadError = false;
+        var lastError = '';
         results.forEach(function (res) {
-          if (res.error || !res.url || isBrowserLocalImageUrl(res.url)) { hadError = true; return; }
+          if (res.error || !res.url || isBrowserLocalImageUrl(res.url)) {
+            hadError = true;
+            lastError = res.error || lastError || '上傳失敗';
+            return;
+          }
           var imageMeta = res.image || {};
           var wrap = document.createElement('div');
           wrap.innerHTML = imageSlideHtml({
@@ -2055,16 +2111,31 @@
             previousFilePath: imageMeta.previous_file_path || imageMeta.previousFilePath || '',
           }, color);
           var item = wrap.firstElementChild;
-          if (!item) { hadError = true; return; }
+          if (!item) {
+            // Fallback slide if URL helpers rejected Storage URL.
+            wrap.innerHTML = imageSlideHtml({ url: res.url, id: imageMeta.id || '' }, color)
+              || (
+                '<div class="ap-carousel-item" data-url="' + esc(res.url) + '" data-color="' + esc(color || '') + '">' +
+                  '<div class="ap-carousel-card"><div class="ap-carousel-card-media">' +
+                    '<img class="ap-carousel-img" src="' + esc(res.url) + '" alt="" width="180" height="180">' +
+                    '<button type="button" class="ap-remove-image" aria-label="移除">X</button>' +
+                  '</div></div></div>'
+              );
+            item = wrap.firstElementChild;
+          }
+          if (!item) { hadError = true; lastError = '無法顯示上傳圖片'; return; }
           item.dataset.url = res.url;
           item.dataset.color = color;
           track.insertBefore(item, uploadItem);
           bindCarouselItemActions(item, slot, form);
         });
         refreshAllCarousels(form);
-        if (hadError && uploading) {
-          uploading.hidden = false;
-          uploading.textContent = '上傳失敗';
+        if (hadError) {
+          if (uploading) {
+            uploading.hidden = false;
+            uploading.textContent = lastError || '上傳失敗';
+          }
+          alert(lastError || '上傳失敗');
         }
         endImageBusy();
       }, function () {
@@ -2128,8 +2199,9 @@
           endImageBusy();
           return;
         }
+        var uploadFile = storageSafeUploadFile(cropped);
         var fd = new FormData();
-        fd.append('file', cropped);
+        fd.append('file', uploadFile, uploadFile.name || 'image.webp');
         fd.append('product_id', state.editingId);
         fd.append('color', color);
         fd.append('replace_image_id', imageId);
@@ -3108,6 +3180,12 @@
       state.listTotal = typeof res.total === 'number' ? res.total : state.products.length;
       if (typeof res.page === 'number' && res.page > 0) _pageIndex = res.page - 1;
       if (typeof res.page_size === 'number' && res.page_size > 0) _pageSize = res.page_size;
+      /* 編輯（下架／改品項／刪除）可能讓目前頁超出範圍：退回上一頁重抓，避免誤顯示「此品項尚無商品」。 */
+      if (!state.products.length && state.listTotal > 0 && _pageIndex > 0) {
+        _pageIndex -= 1;
+        load(true, true);
+        return;
+      }
       state.chainCatalog = res.chainCatalog || state.chainCatalog;
       if (state.categoryOrder.indexOf(state.activeTab.replace('cat-', '')) < 0 && state.categoryOrder.length) {
         state.activeTab = 'cat-' + state.categoryOrder[0];

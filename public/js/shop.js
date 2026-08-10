@@ -41,16 +41,26 @@ const isGuestShop = shopMode === 'guest';
    that resolves, so the UI doesn't flash a wrong state for logged-in users. */
 let shopIsLoggedIn = null;
 let shopLoginPromise = null;
-function refreshShopLoginState() {
-  if (shopLoginPromise) return shopLoginPromise;
-  shopLoginPromise = shopApiFetch('/api/auth/session').then(({ data }) => {
+function fetchShopSessionState() {
+  return shopApiFetch('/api/auth/session').then(({ data }) => {
     shopIsLoggedIn = !!(data && data.user);
     updateSummary();
     return shopIsLoggedIn;
-  }).catch(() => {
-    shopIsLoggedIn = true;
-    return true;
-  }); // fail open — don't block checkout on a network hiccup
+  });
+}
+function refreshShopLoginState() {
+  if (shopLoginPromise) return shopLoginPromise;
+  /* Fail closed, with one retry: a dead session check must not masquerade as
+     logged-in — the cart POST would 401 and bounce to login mid-submit, which
+     looks like "order can't send". Both slots reset so the next click re-checks
+     fresh instead of reusing a stale failure. */
+  shopLoginPromise = fetchShopSessionState()
+    .catch(() => fetchShopSessionState())
+    .catch(() => {
+      shopIsLoggedIn = null;
+      shopLoginPromise = null;
+      return false;
+    });
   return shopLoginPromise;
 }
 
@@ -1505,8 +1515,10 @@ function renderCatalogTiles() {
     img.loading = 'lazy';
     img.decoding = 'async';
     img.alt = '';
-    img.src = categoryImageUrl(cat) || (products[0] ? styleGridImageUrl(products[0]) : '');
-    window.ShopAssets?.attachImageFallback(img, categoryImageUrl(cat));
+    const catUrl = categoryImageUrl(cat);
+    img.src = catUrl || (products[0] ? styleGridImageUrl(products[0]) : '');
+    // WebP category thumbs keep their pre-WebP original as onerror fallback.
+    window.ShopAssets?.attachImageFallback(img, window.ShopAssets?.categoryThumbLegacy?.(cat) || catUrl);
 
     const label = document.createElement('span');
     label.textContent = categoryLabel(cat);
@@ -1597,10 +1609,23 @@ const DEFAULT_ATTACHED_CHAIN_THICKNESS = '1.0mm';
 const BRACELET_LENGTH_OPTIONS_CM = [15, 16, 17, 18, 19, 20, 21];
 const BRACELET_REFERENCE_LENGTH_CM = 18;
 
+function lengthTableHasWeights(table) {
+  return !!(
+    table &&
+    typeof table === 'object' &&
+    Object.keys(table).some((k) => Number(table[k]) > 0)
+  );
+}
+
 /** Lengths (cm) from admin override or Excel/type standard table. */
 function chainLengthOptionsCm(product, thickness) {
   if (!thickness) return [];
-  const table = effectiveChainLengthWeights(product)?.[thickness];
+  let table = effectiveChainLengthWeights(product)?.[thickness];
+  if (!lengthTableHasWeights(table)) {
+    // Admin table missing this thickness / all-zero wax → Excel/type standard,
+    // same fallback chainConfiguredThicknesses uses.
+    table = necklaceTypeLengthWeights(product?.chainType || 'douyuan')[thickness];
+  }
   if (!table || typeof table !== 'object') return [];
   return Object.keys(table)
     .map((k) => parseInt(k, 10))
@@ -1611,10 +1636,7 @@ function chainLengthOptionsCm(product, thickness) {
 function thicknessesFromLengthWeights(lw) {
   if (!lw || !Object.keys(lw).length) return [];
   return Object.keys(lw)
-    .filter((t) => {
-      const table = lw[t];
-      return table && typeof table === 'object' && Object.keys(table).some((k) => Number(table[k]) > 0);
-    })
+    .filter((t) => lengthTableHasWeights(lw[t]))
     .sort((a, b) => parseFloat(a) - parseFloat(b));
 }
 
@@ -4717,6 +4739,7 @@ function updateLengthStep() {
     syncChainLengthState(options, 'lengthCm');
     renderLengthSelect('chain-length-select', options, state.lengthCm, 'chain_length_placeholder');
   } else if (isBracelet) {
+    syncChainLengthState(BRACELET_LENGTH_OPTIONS_CM, 'lengthCm');
     renderLengthSelect('chain-length-select', BRACELET_LENGTH_OPTIONS_CM, state.lengthCm, 'bracelet_length_placeholder');
   } else {
     state.lengthCm = null;
@@ -6109,7 +6132,7 @@ async function handleSubmit() {
   } catch (err) {
     console.error(err);
     resetButtons();
-    toast(tr('generic_error'));
+    toast(tr('generic_error') + (err && err.message ? ': ' + err.message : ''));
   } finally {
     updateSummary();
   }

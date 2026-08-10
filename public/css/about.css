@@ -197,6 +197,25 @@
 .about-video__embed iframe{
   display:block; width:100%; height:100%; border:0;
 }
+/* Click-to-load facade — poster paints via JS as background (no <img>: CMS slots count images) */
+.about-video__facade{
+  position:relative; display:block; width:100%; height:100%; padding:0;
+  cursor:pointer; border:0;
+  background:#000 center/cover no-repeat;
+}
+.about-video__facade::after{
+  position:absolute; inset:0; content:""; pointer-events:none;
+  background:linear-gradient(to top,rgba(0,0,0,.42),transparent 45%);
+}
+.about-video__play{
+  position:absolute; inset:0; z-index:1; display:grid; place-items:center;
+  transition:transform .3s var(--ease);
+}
+.about-video__facade:hover .about-video__play,
+.about-video__facade:focus-visible .about-video__play{ transform:scale(1.06); }
+.about-video__facade:focus-visible{
+  outline:2px solid var(--about-teal); outline-offset:4px;
+}
 .about-video__follow{
   position:relative; max-width:590px; margin:18px 0 0;
   font-size:13px; letter-spacing:.08em;
@@ -406,5 +425,6 @@
 
 @media (prefers-reduced-motion:reduce){
   .about-scroll-cue__arrow,
-  .about-button{ transition:none; }
+  .about-button,
+  .about-video__play{ transition:none; }
 }

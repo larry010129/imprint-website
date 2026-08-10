@@ -33,18 +33,13 @@ async function parseError(res: Response, fallback: string): Promise<string> {
   }
 }
 
-export function notesToTextarea(notes: string[] | undefined | null): string {
-  if (!Array.isArray(notes)) return "";
-  return notes.map((n) => String(n ?? "").trim()).filter(Boolean).join("\n");
-}
-
-export function textareaToNotes(text: string): string[] {
-  return String(text || "")
-    .replace(/\r\n/g, "\n")
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
-}
+export {
+  notesHaveSections,
+  notesToTextarea,
+  parseReleaseNoteSections,
+  textareaToNotes,
+  type ReleaseNoteSection,
+} from "@/components/admin/releaseNotesFormat";
 
 export async function fetchReleaseNotesDraft(): Promise<ReleaseNotesDraft> {
   const res = await fetch("/api/admin/release-notes/draft", {

@@ -4,6 +4,12 @@
     const loadTour = () => {
       if (loaded) return;
       loaded = true;
+      // Tour CSS (151KB) rides the same first-interaction gate as the JS —
+      // no tour UI can render before this runs, so blocking on it wastes LCP.
+      const css = document.createElement("link");
+      css.rel = "stylesheet";
+      css.href = "/static/react/shop-tour.css?v=17";
+      document.head.appendChild(css);
       import("/static/react/shop-tour.js?v=17").catch(() => { loaded = false; });
     };
     window.addEventListener("pointerdown", loadTour, { once: true, passive: true });

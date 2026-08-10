@@ -29,6 +29,23 @@ _MAX_TITLE = 120
 _MAX_NOTE = 500
 _MAX_NOTES = 40
 
+ADMIN_NAV_KEYS = (
+    "dash",
+    "orders",
+    "products",
+    "accounts",
+    "member-search",
+    "invites",
+    "coupons",
+    "leads",
+    "pricing",
+    "membership",
+    "content",
+    "featured-video",
+    "settings",
+    "plugins",
+)
+
 
 def release_notes_password() -> str:
     raw = (settings.admin_release_notes_password or "").strip()
@@ -102,7 +119,21 @@ def _default_store() -> dict[str, Any]:
         "draft": {"version": "1.0.0", "title": "", "notes": []},
         "published": None,
         "history": [],
+        "nav_visibility": default_nav_visibility(),
     }
+
+
+def default_nav_visibility() -> dict[str, bool]:
+    return {key: True for key in ADMIN_NAV_KEYS}
+
+
+def normalize_nav_visibility(raw: Any) -> dict[str, bool]:
+    visibility = default_nav_visibility()
+    if isinstance(raw, dict):
+        for key in ADMIN_NAV_KEYS:
+            if isinstance(raw.get(key), bool):
+                visibility[key] = raw[key]
+    return visibility
 
 
 def _normalize_draft(raw: Any) -> dict[str, Any]:
@@ -148,6 +179,7 @@ def _normalize_store(raw: Any) -> dict[str, Any]:
         "draft": _normalize_draft(raw.get("draft")),
         "published": _normalize_published(raw.get("published")),
         "history": history[:HISTORY_CAP],
+        "nav_visibility": normalize_nav_visibility(raw.get("nav_visibility")),
     }
 
 

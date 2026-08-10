@@ -9,12 +9,10 @@
   max-width: 1100px;
 }
 
+/* Header blends into page — no card box; spacing + type separate it */
 .shop-wizard-header {
   margin-bottom: 28px;
-  padding: 28px 28px 24px;
-  background: linear-gradient(165deg, var(--paper-warm) 0%, #fff 55%);
-  border: 1px solid var(--mint-line);
-  border-radius: 16px;
+  padding: 0 0 24px;
 }
 
 .shop-stepper {
@@ -141,6 +139,7 @@
 }
 
 /* shadcn-style Alert (vanilla) */
+/* Notices render flat — icon + text rows, no alert card chrome */
 .ui-alert {
   display: grid;
   grid-template-columns: 16px 1fr auto;
@@ -148,9 +147,7 @@
   column-gap: 8px;
   row-gap: 2px;
   width: 100%;
-  border-radius: 12px;
-  border: 1px solid transparent;
-  padding: 12px 14px;
+  padding: 12px 0;
   font-size: 14px;
   line-height: 1.5;
   transition: opacity 0.4s ease, transform 0.4s ease;
@@ -185,7 +182,6 @@
 
 .ui-alert--default {
   background: transparent;
-  border-color: rgba(95, 113, 117, 0.25);
   color: var(--ink);
 }
 
@@ -228,8 +224,6 @@
 }
 
 .ui-alert--warning {
-  border-color: rgba(245, 158, 11, 0.3);
-  background: rgba(245, 158, 11, 0.05);
   color: #b45309;
 }
 
@@ -524,15 +518,13 @@
   display: none;
 }
 
+/* About/details blends into the column — no bordered card */
 .product-about-details {
   margin-bottom: 20px;
-  border: 1px solid var(--mint-line);
-  border-radius: 10px;
-  background: #fff;
 }
 
 .product-about-details summary {
-  padding: 12px 16px;
+  padding: 12px 0;
   cursor: pointer;
   font-size: 14px;
   color: var(--ink-soft);
@@ -540,7 +532,7 @@
 }
 
 .product-about-details .product-tab-panels {
-  padding: 0 16px 16px;
+  padding: 0 0 16px;
 }
 
 /* Step 3 config — flat layout, all options visible (imprint shop style) */
@@ -624,7 +616,7 @@
   }
 
   .shop-wizard-header {
-    padding: 20px 16px 18px;
+    padding: 0 0 18px;
   }
 
   .shop-page.shop-step-product .shop-body {

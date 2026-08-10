@@ -3,9 +3,8 @@
 {% block title %}{% if q_preview %}預覽模式｜不會送出真實訂單｜{% endif %}{{ title }}{% endblock %}
 {% block main_class %} class="main-content shop-calculator-page{% if q_preview %} is-shop-preview{% endif %}"{% endblock %}
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/shop.css?v=6.34">
-<link rel="stylesheet" href="/static/css/shop-wizard.css?v=24">
-{% include "partials/shop-tour-react-css.html" %}
+<link rel="stylesheet" href="/static/css/shop.css?v=6.36">
+<link rel="stylesheet" href="/static/css/shop-wizard.css?v=25">
 {% if q_preview %}
 <meta name="robots" content="noindex, nofollow">
 {% endif %}
@@ -826,12 +825,12 @@
     preview: {% if q_preview %}true{% else %}false{% endif %},
   }, window.shopConfig || {});
 </script>
-<script src="/static/js/shop-assets.js?v=15" defer></script>
+<script src="/static/js/shop-assets.js?v=16" defer></script>
 <script src="/static/js/shop-catalog-data.js?v=7" defer></script>
 <script src="/static/js/shop-pricing-local.js?v=23" defer></script>
 <script src="/static/js/shop-i18n.js?v=22" defer></script>
 <script src="/static/js/girdle-engrave.js?v=24" defer></script>
-<script src="/static/js/shop-terms.js?v=4" defer></script>
+<script src="/static/js/shop-terms.js?v=5" defer></script>
 <script src="/static/js/catalog-multi-filter.js?v=1" defer></script>
-<script src="/static/js/shop.js?v=152" defer></script>
+<script src="/static/js/shop.js?v=154" defer></script>
 {% endblock %}

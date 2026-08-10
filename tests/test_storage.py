@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from io import BytesIO
 from pathlib import Path
+import re
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -53,6 +54,7 @@ from app.storage import (
     sanitize_product_name_slug,
     short_product_id_segment,
     storage_safe_folder_segment,
+    storage_error_sentence,
     upload_bytes,
 )
 
@@ -978,8 +980,9 @@ def test_page_image_upload_returns_storage_url(monkeypatch):
     assert resp.status_code == 200
     assert PUBLIC_PAGE_IMAGE in resp.body.decode()
     assert kinds == ["page-images"]
-    # Basename kept (no uuid.hex); ensure_webp runs inside real _storage_upload.
-    assert names == ["brand-story/hero-shot.png"]
+    # Storage key is ASCII-safe and unique; ensure_webp runs inside real _storage_upload.
+    assert len(names) == 1
+    assert re.fullmatch(r"brand-story/image-[0-9a-f]{32}\.png", names[0])
 
 
 def test_page_image_upload_fails_when_storage_missing(monkeypatch):
@@ -996,7 +999,7 @@ def test_page_image_upload_fails_when_storage_missing(monkeypatch):
 
     resp = asyncio.run(page_image_upload(MagicMock(), file=_png_upload()))
     assert resp.status_code == 503
-    assert "Supabase Storage" in resp.body.decode()
+    assert "圖片上傳失敗" in resp.body.decode()
     assert "/static/uploads/" not in resp.body.decode()
 
 
@@ -1154,3 +1157,13 @@ def test_product_upload_convert_failure_returns_400(monkeypatch):
     assert resp.status_code == 400
     assert b"error" in resp.body
     mocked.assert_not_called()
+
+
+def test_storage_errors_are_one_sentence():
+    invalid = storage_error_sentence(
+        'Storage upload failed (400): {"statusCode":"400","error":"InvalidKey"}'
+    )
+    generic = storage_error_sentence("Storage upload failed (503): upstream unavailable\ntrace")
+    assert invalid == "圖片上傳失敗：檔名或儲存路徑包含不支援的字元，請重新上傳。"
+    assert generic == "圖片上傳失敗：儲存服務拒絕了這次上傳，請稍後再試。"
+    assert "{" not in invalid and "\n" not in generic

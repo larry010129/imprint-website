@@ -19,12 +19,13 @@ PAGE_IMAGE_STORAGE_FOLDERS: dict[str, str] = {
     "/journal": "journal",
     "/": "home",  # 首頁
     "/about": "brand-story",  # 品牌故事
-    "/series": "series-overview",  # 五大系列總覽
+    "/series": "series-overview",  # 六大系列總覽
     "/series/first-love/": "moon-diamond",  # 滿月鑽石
     "/series/pet/": "pet-diamond",  # 寵物鑽石
     "/series/love/": "wedding-diamond",  # 結髮鑽石
     "/series/family/": "family-diamond",  # 全家福鑽石
     "/series/heirloom/": "life-diamond",  # 生命鑽石
+    "/series/signature/": "signature-diamond",  # 真我鑽石
     "/what-is-dna-diamond": "dna-diamond",  # DNA 鑽石的誕生
 }
 PAGE_IMAGE_PENDING_FOLDER = "_pending"
@@ -56,6 +57,7 @@ _SERIES = {
     "love": ("結髮鑽石", "imprint-diamond-wedding-couple-ring"),
     "family": ("全家福鑽石", "imprint-diamond-family-portrait-jewelry"),
     "heirloom": ("生命鑽石", "imprint-diamond-heirloom-memorial"),
+    "signature": ("真我鑽石", "imprint-diamond-wedding-couple-ring"),
 }
 _HERO_STEM_MAX_W = {
     "imprint-diamond-newborn-baby-necklace": 2400,
@@ -179,7 +181,7 @@ def _series_overview_specs() -> list[SlotSpec]:
     return [
         _slot(
             "/series",
-            "五大系列總覽",
+            "六大系列總覽",
             key,
             f"系列・{label}",
             "series",
@@ -465,6 +467,18 @@ def _prefer_local_home_asset(slot_key: str, url: str, webp: str) -> tuple[str, s
     return url, webp
 
 
+def _prefer_local_series_asset(url: str, webp: str) -> tuple[str, str]:
+    """Series overview: known hero stems ship local responsive srcset (PSI srcset save).
+
+    Same-content remotes (e.g. Supabase copies of hero assets) resolve to local
+    400/800/960/1200w variants; genuinely different custom uploads pass through.
+    """
+    stem = _hero_stem(webp or url)
+    if stem in _HERO_STEM_MAX_W:
+        return url, _hero_responsive_srcset(stem)
+    return url, webp
+
+
 def _looks_like_srcset(value: str) -> bool:
     text = str(value or "").strip()
     return bool(re.search(r"\s+\d+w\b", text)) or "," in text
@@ -564,6 +578,8 @@ def apply_page_image_slots(html: str, route: str, rows: list[dict]) -> str:
         )
         if route == "/":
             url, webp = _prefer_local_home_asset(spec.slot_key, url, webp)
+        elif route == "/series":
+            url, webp = _prefer_local_series_asset(url, webp)
         marked = _replace_marked(html, spec.slot_key, url, webp)
         if marked is not None:
             html = marked

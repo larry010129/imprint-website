@@ -32,6 +32,9 @@ import AdminFeaturedVideoEditor, {
 import ReleaseNotesEditor, {
   type ReleaseNotesEditorProps,
 } from "@/components/admin/ReleaseNotesEditor";
+import ReleaseNotesHistory, {
+  type ReleaseNotesHistoryProps,
+} from "@/components/admin/ReleaseNotesHistory";
 import ReleaseNotesGate, {
   type ReleaseNotesGateProps,
 } from "@/components/admin/ReleaseNotesGate";
@@ -133,6 +136,13 @@ function renderReleaseNotesEditor(
   getRoot(container).render(<ReleaseNotesEditor {...props} />);
 }
 
+function renderReleaseNotesHistory(
+  container: Element,
+  props: ReleaseNotesHistoryProps = {},
+) {
+  getRoot(container).render(<ReleaseNotesHistory {...props} />);
+}
+
 function renderReleaseNotesGate(
   container: Element,
   props: ReleaseNotesGateProps = {},
@@ -176,6 +186,7 @@ declare global {
       renderCmsPagesPanel: typeof renderCmsPagesPanel;
       renderFeaturedVideoEditor: typeof renderFeaturedVideoEditor;
       renderReleaseNotesEditor: typeof renderReleaseNotesEditor;
+      renderReleaseNotesHistory: typeof renderReleaseNotesHistory;
       renderReleaseNotesGate: typeof renderReleaseNotesGate;
       unmount: typeof unmount;
     };
@@ -196,6 +207,7 @@ window.AdminTables = {
   renderCmsPagesPanel,
   renderFeaturedVideoEditor,
   renderReleaseNotesEditor,
+  renderReleaseNotesHistory,
   renderReleaseNotesGate,
   unmount,
 };
@@ -205,6 +217,10 @@ function bootReleaseNotesMounts() {
   const editorRoot = document.getElementById("admin-release-notes-root");
   if (editorRoot) {
     renderReleaseNotesEditor(editorRoot);
+  }
+  const historyRoot = document.getElementById("admin-release-notes-history-root");
+  if (historyRoot) {
+    renderReleaseNotesHistory(historyRoot);
   }
   // Prefer explicit mount; else attach when credit button exists.
   const gateRoot =

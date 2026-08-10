@@ -129,13 +129,14 @@ def test_page_image_storage_folders_cover_admin_tabs():
     assert PAGE_IMAGE_STORAGE_FOLDERS["/what-is-dna-diamond"] == "dna-diamond"
     assert page_image_storage_folder(None) == "_pending"
     assert page_image_storage_folder("/series/pet") == "pet-diamond"
+    assert page_image_storage_folder("/series/signature/") == "signature-diamond"
 
 
 def test_inventory_excludes_empty_calculator_and_jewelry_slots():
     rows = build_page_image_seed()
     counts = Counter(row["page_key"] for row in rows)
     by_slot = {row["slot_key"]: row for row in rows if row["page_key"] == "/what-is-dna-diamond"}
-    assert len(rows) == 45
+    assert len(rows) == 48
     assert len(counts) == 10
     assert counts["/journal"] == 1
     assert counts["/about"] == 3

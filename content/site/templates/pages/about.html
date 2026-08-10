@@ -1,6 +1,6 @@
 {% extends "layouts/base.html" %}
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/about.css?v=7">
+<link rel="stylesheet" href="/static/css/about.css?v=8">
 {% endblock %}
 {% block content %}
 <article class="about-story">
@@ -37,11 +37,25 @@
     {% set _pi = page_image or {} %}
     {% set _pi_url = _pi.display_url or _pi.image_url or '/static/images/legacy-live/styles/taiwan-local-lab.jpg' %}
     {% set _pi_alt = _pi.image_alt or '銘印鑽石台灣在地培育實驗室' %}
-    {% if _pi.display_webp or _pi.image_webp %}
+    {% set _pi_webp = _pi.display_webp or _pi.image_webp %}
+    {# Supabase object URLs get responsive widths via the render/image transform
+       endpoint (no new assets). base.html skips its fixed-URL lcp preload on about:
+       it would fetch the 2400w original while mobile picks a transform. #}
+    {% set _pi_src = _pi_webp or _pi_url %}
+    {% set _pi_rw = _pi_src.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/') %}
+    {% set _pi_srcset = _pi_rw + '?width=480&quality=78 480w, ' + _pi_rw + '?width=800&quality=78 800w, ' + _pi_rw + '?width=1200&quality=78 1200w, ' + _pi_src + ' 2400w' %}
+    {% set _pi_sizes = '(max-width:700px) calc(100vw - 20px), (max-width:1440px) 100vw, 1440px' %}
+    {% if _pi_webp %}
     <picture>
-      <source srcset="{{ _pi.display_webp or _pi.image_webp }}" type="image/webp">
+      {% if _pi_rw != _pi_src %}
+      <source srcset="{{ _pi_srcset }}" sizes="{{ _pi_sizes }}" type="image/webp">
+      {% else %}
+      <source srcset="{{ _pi_webp }}" type="image/webp">
+      {% endif %}
       <img src="{{ _pi_url }}" alt="{{ _pi_alt }}" width="2400" height="1165" loading="eager" fetchpriority="high" decoding="async" onerror="imgFallback(this)">
     </picture>
+    {% elif _pi_rw != _pi_src %}
+    <img src="{{ _pi_url }}" srcset="{{ _pi_srcset }}" sizes="{{ _pi_sizes }}" alt="{{ _pi_alt }}" width="2400" height="1165" loading="eager" fetchpriority="high" decoding="async" onerror="imgFallback(this)">
     {% else %}
     <img src="{{ _pi_url }}" alt="{{ _pi_alt }}" width="2400" height="1165" loading="eager" fetchpriority="high" decoding="async" onerror="imgFallback(this)">
     {% endif %}
@@ -103,14 +117,31 @@
           <h2 id="about-video-title">{{ featured_video.heading }}</h2>
           <p class="about-video__lead">{{ featured_video.lead }}</p>
           <div class="about-video__embed">
-            <iframe
-              src="https://www.youtube-nocookie.com/embed/{{ featured_video.youtube_id }}"
-              title="{{ featured_video.title }}"
-              loading="lazy"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              referrerpolicy="strict-origin-when-cross-origin"
-              allowfullscreen
-            ></iframe>
+            <button
+              type="button"
+              class="about-video__facade"
+              data-yt-facade
+              data-yt-id="{{ featured_video.youtube_id }}"
+              data-yt-title="{{ featured_video.title }}"
+              aria-label="播放影片：{{ featured_video.title }}"
+            >
+              {# No <img> here on purpose: page_image_slots.py assigns CMS image
+                 slots by counting image tags positionally (cinema=0). Poster
+                 loads via JS (IntersectionObserver) as background-image. #}
+              <span class="about-video__play" aria-hidden="true">
+                <svg viewBox="0 0 68 48" width="68" height="48"><path d="M66.52 7.74c-.78-2.93-2.49-5.42-5.42-6.2C55.79.13 34 0 34 0S12.21.13 6.9 1.54c-2.93.78-4.64 3.27-5.42 6.2C.13 13.05 0 24 0 24s.13 10.95 1.48 16.26c.78 2.93 2.49 5.32 5.42 6.1C12.21 47.87 34 48 34 48s21.79-.13 27.1-1.54c2.93-.78 4.64-3.17 5.42-6.1C67.87 34.95 68 24 68 24s-.13-10.95-1.48-16.26z" fill="rgba(20,20,20,.75)"/><path d="M45 24 27 14v20" fill="#fff"/></svg>
+              </span>
+            </button>
+            <noscript>
+              <iframe
+                src="https://www.youtube-nocookie.com/embed/{{ featured_video.youtube_id }}"
+                title="{{ featured_video.title }}"
+                loading="lazy"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                referrerpolicy="strict-origin-when-cross-origin"
+                allowfullscreen
+              ></iframe>
+            </noscript>
           </div>
         </section>
         {% endif %}
@@ -121,14 +152,28 @@
           <h2 id="about-youtube-latest-title">{{ youtube_latest_video.heading }}</h2>
           <p class="about-video__lead">{{ youtube_latest_video.lead }}</p>
           <div class="about-video__embed">
-            <iframe
-              src="https://www.youtube-nocookie.com/embed/{{ youtube_latest_video.youtube_id }}"
-              title="{{ youtube_latest_video.title }}"
-              loading="lazy"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              referrerpolicy="strict-origin-when-cross-origin"
-              allowfullscreen
-            ></iframe>
+            <button
+              type="button"
+              class="about-video__facade"
+              data-yt-facade
+              data-yt-id="{{ youtube_latest_video.youtube_id }}"
+              data-yt-title="{{ youtube_latest_video.title }}"
+              aria-label="播放影片：{{ youtube_latest_video.title }}"
+            >
+              <span class="about-video__play" aria-hidden="true">
+                <svg viewBox="0 0 68 48" width="68" height="48"><path d="M66.52 7.74c-.78-2.93-2.49-5.42-5.42-6.2C55.79.13 34 0 34 0S12.21.13 6.9 1.54c-2.93.78-4.64 3.27-5.42 6.2C.13 13.05 0 24 0 24s.13 10.95 1.48 16.26c.78 2.93 2.49 5.32 5.42 6.1C12.21 47.87 34 48 34 48s21.79-.13 27.1-1.54c2.93-.78 4.64-3.17 5.42-6.1C67.87 34.95 68 24 68 24s-.13-10.95-1.48-16.26z" fill="rgba(20,20,20,.75)"/><path d="M45 24 27 14v20" fill="#fff"/></svg>
+              </span>
+            </button>
+            <noscript>
+              <iframe
+                src="https://www.youtube-nocookie.com/embed/{{ youtube_latest_video.youtube_id }}"
+                title="{{ youtube_latest_video.title }}"
+                loading="lazy"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                referrerpolicy="strict-origin-when-cross-origin"
+                allowfullscreen
+              ></iframe>
+            </noscript>
           </div>
           <p class="about-video__follow">
             <a href="{{ youtube_latest_video.channel_url or 'https://www.youtube.com/@imprintdiamond' }}" target="_blank" rel="noopener">前往 YouTube 頻道 →</a>
@@ -211,4 +256,64 @@
     </div>
   </section>
 </article>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+(function () {
+  /* Click-to-load facade: no YouTube player JS until the user taps play. */
+  function posterForId(id) {
+    return id ? 'https://i.ytimg.com/vi/' + encodeURIComponent(id) + '/hqdefault.jpg' : '';
+  }
+  function paintPoster(btn) {
+    if (btn.dataset.ytPosterPainted) return;
+    var poster = posterForId(btn.getAttribute('data-yt-id') || '');
+    if (!poster) return;
+    btn.style.backgroundImage = 'url("' + poster + '")';
+    btn.dataset.ytPosterPainted = '1';
+  }
+  function activate(btn) {
+    var id = btn.getAttribute('data-yt-id') || '';
+    if (!id) return;
+    var iframe = document.createElement('iframe');
+    iframe.src =
+      'https://www.youtube-nocookie.com/embed/' +
+      encodeURIComponent(id) +
+      '?autoplay=1&rel=0';
+    iframe.title = btn.getAttribute('data-yt-title') || '';
+    iframe.allow =
+      'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+    iframe.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
+    iframe.allowFullscreen = true;
+    btn.replaceWith(iframe);
+  }
+  var buttons = Array.prototype.slice.call(
+    document.querySelectorAll('.about-video__facade[data-yt-id]')
+  );
+  if (!buttons.length) return;
+  buttons.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      activate(btn);
+    });
+  });
+  /* Posters are below the fold — fetch only when near viewport. */
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(
+      function (entries) {
+        entries.forEach(function (entry) {
+          if (!entry.isIntersecting) return;
+          paintPoster(entry.target);
+          io.unobserve(entry.target);
+        });
+      },
+      { rootMargin: '300px' }
+    );
+    buttons.forEach(function (btn) {
+      io.observe(btn);
+    });
+  } else {
+    buttons.forEach(paintPoster);
+  }
+})();
+</script>
+<noscript><style>.about-video__facade{display:none}</style></noscript>
 {% endblock %}
