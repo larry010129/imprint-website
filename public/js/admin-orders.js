@@ -15,9 +15,8 @@
   var bulkClear = document.getElementById('ordersBulkClear');
   var cancelDialog = document.getElementById('orderCancelDialog');
   var cancelForm = document.getElementById('orderCancelForm');
-  var cancelPreset = document.getElementById('orderCancelPreset');
-  var cancelCustomWrap = document.getElementById('orderCancelCustomWrap');
-  var cancelCustom = document.getElementById('orderCancelCustom');
+  var cancelChips = document.getElementById('orderCancelChips');
+  var cancelReasonInput = document.getElementById('orderCancelReason');
   var cancelError = document.getElementById('orderCancelError');
 
   var STATUS_OPTIONS = [
@@ -26,13 +25,14 @@
   ];
   var BULK_STATUS_OPTIONS = STATUS_OPTIONS.concat(['cancelled']);
 
-  var CANCEL_REASONS = [
-    { value: 'customer_request', label: '客戶要求取消' },
-    { value: 'no_contact', label: '無法聯繫客戶' },
-    { value: 'out_of_stock', label: '庫存／原料不足' },
-    { value: 'payment_incomplete', label: '付款未完成' },
-    { value: 'duplicate_order', label: '重複訂單' },
-    { value: '__custom__', label: '其他（請說明）' },
+  // Admin: chips fill the typing box (editable). Broader cancel than member.
+  var CANCEL_REASON_CHIPS = [
+    '客戶要求取消',
+    '無法聯繫客戶',
+    '庫存／原料不足',
+    '付款未完成',
+    '重複訂單',
+    '其他',
   ];
 
   var _pageIndex = 0;
@@ -375,33 +375,30 @@
     }).join('');
   }
 
-  function fillCancelPresetSelect() {
-    if (!cancelPreset) return;
-    cancelPreset.innerHTML = '<option value="" disabled selected>請選擇原因</option>' +
-      CANCEL_REASONS.map(function (r) {
-        return '<option value="' + r.value + '">' + esc(r.label) + '</option>';
-      }).join('');
+  function fillCancelChips() {
+    if (!cancelChips) return;
+    cancelChips.innerHTML = CANCEL_REASON_CHIPS.map(function (label) {
+      return '<button type="button" class="order-cancel-chip" data-cancel-chip="' +
+        esc(label) + '">' + esc(label) + '</button>';
+    }).join('');
   }
 
   function resolveCancelReason() {
-    if (!cancelPreset) return '';
-    var preset = cancelPreset.value;
-    if (!preset) return '';
-    if (preset === '__custom__') {
-      return String(cancelCustom && cancelCustom.value || '').trim();
-    }
-    var match = CANCEL_REASONS.find(function (r) { return r.value === preset; });
-    return match ? match.label : preset;
+    return String(cancelReasonInput && cancelReasonInput.value || '').trim();
   }
 
   function openCancelDialog(ids) {
     if (!cancelDialog || !ids.length) return;
     cancelContext = { mode: ids.length > 1 ? 'bulk' : 'single', ids: ids.slice() };
-    if (cancelPreset) cancelPreset.selectedIndex = 0;
-    if (cancelCustom) cancelCustom.value = '';
-    if (cancelCustomWrap) cancelCustomWrap.hidden = true;
+    if (cancelReasonInput) cancelReasonInput.value = '';
+    if (cancelChips) {
+      cancelChips.querySelectorAll('.order-cancel-chip').forEach(function (chip) {
+        chip.classList.remove('is-active');
+      });
+    }
     if (cancelError) cancelError.hidden = true;
     cancelDialog.showModal();
+    if (cancelReasonInput) cancelReasonInput.focus();
   }
 
   function closeCancelDialog() {
@@ -413,9 +410,7 @@
     var reason = resolveCancelReason();
     if (!reason) {
       if (cancelError) {
-        cancelError.textContent = cancelPreset && cancelPreset.value === '__custom__'
-          ? '請填寫其他原因說明'
-          : '請選擇取消原因';
+        cancelError.textContent = '請填寫取消原因';
         cancelError.hidden = false;
       }
       return;
@@ -610,7 +605,7 @@
   }
 
   fillBulkStatusSelect();
-  fillCancelPresetSelect();
+  fillCancelChips();
 
   bulkApply?.addEventListener('click', applyBulkStatus);
   bulkClear?.addEventListener('click', function () {
@@ -618,9 +613,16 @@
     updateBulkBar();
   });
 
-  cancelPreset?.addEventListener('change', function () {
-    if (cancelCustomWrap) cancelCustomWrap.hidden = cancelPreset.value !== '__custom__';
+  cancelChips?.addEventListener('click', function (e) {
+    var chip = e.target.closest('[data-cancel-chip]');
+    if (!chip || !cancelReasonInput) return;
+    var label = chip.getAttribute('data-cancel-chip') || '';
+    cancelReasonInput.value = label === '其他' ? '' : label;
+    cancelChips.querySelectorAll('.order-cancel-chip').forEach(function (el) {
+      el.classList.toggle('is-active', el === chip);
+    });
     if (cancelError) cancelError.hidden = true;
+    cancelReasonInput.focus();
   });
 
   cancelForm?.addEventListener('submit', function (e) {

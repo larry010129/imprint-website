@@ -104,23 +104,7 @@
       return ordersByNumber[orderNumber] || null;
     },
     bindEdit: function () {
-      var root = document.getElementById('mvc-history');
-      if (!root || !Display) return;
-      root.addEventListener('click', function (e) {
-        var btn = e.target.closest('.member-order-edit-btn');
-        if (!btn) return;
-        e.preventDefault();
-        e.stopPropagation();
-        var no = btn.getAttribute('data-order-number');
-        var order = ordersByNumber[no];
-        if (!order || !Display.canEditOrder(order)) return;
-        try {
-          sessionStorage.setItem('imprint_order_edit', JSON.stringify(Display.orderToShopConfig(order)));
-        } catch (err) {
-          console.error(err);
-        }
-        global.location.href = '/shop/calculator/?editOrder=' + encodeURIComponent(no);
-      });
+      // Edit-in-place removed; cancel + /shop reorder handled by order-detail.js.
     },
   };
 })(window);

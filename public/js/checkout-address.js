@@ -9,6 +9,69 @@
     return global.ImprintTaiwanAdminDivisions;
   }
 
+  var STREET_MARKER_RE = /路|街|巷|弄|段|號|樓|室|大道|村|鄉|鎮|里|鄰|道/;
+  var CJK_RE = /[\u4e00-\u9fff]/;
+  var MSG = {
+    city: '請選擇縣市',
+    district: '請選擇鄉鎮市區',
+    streetEmpty: '請填寫詳細地址',
+    streetInvalid: '請填寫有效街道地址（需含路／街／巷／弄等與門牌號碼）',
+  };
+
+  function validTwStreet(address) {
+    var text = String(address || '').trim();
+    if (text.length < 6) return false;
+    if (/(.)\1{3,}/.test(text.replace(/\s+/g, ''))) return false;
+    if (!CJK_RE.test(text) || !STREET_MARKER_RE.test(text)) return false;
+    if (!/\d/.test(text) && text.indexOf('號') === -1) return false;
+    var letters = text.match(/[A-Za-z]/g) || [];
+    var cjk = text.match(/[\u4e00-\u9fff]/g) || [];
+    if (letters.length && letters.length > cjk.length) return false;
+    return true;
+  }
+
+  function setValidity(el, message) {
+    if (!el) return;
+    el.setCustomValidity(message || '');
+  }
+
+  function validateAddressControl(el) {
+    if (!el || el.disabled || el.readOnly) return;
+    if (!el.required && !String(el.value || '').trim()) {
+      setValidity(el, '');
+      return;
+    }
+    var val = String(el.value || '').trim();
+    if (el.hasAttribute('data-tw-city')) {
+      setValidity(el, val ? '' : MSG.city);
+      return;
+    }
+    if (el.hasAttribute('data-tw-district')) {
+      setValidity(el, val ? '' : MSG.district);
+      return;
+    }
+    if (el.hasAttribute('data-tw-street')) {
+      if (!val) setValidity(el, el.required ? MSG.streetEmpty : '');
+      else setValidity(el, validTwStreet(val) ? '' : MSG.streetInvalid);
+    }
+  }
+
+  function bindAddressValidation(block) {
+    var controls = block.querySelectorAll(
+      '[data-tw-city], [data-tw-district], [data-tw-street]'
+    );
+    var i;
+    for (i = 0; i < controls.length; i++) {
+      (function (el) {
+        var refresh = function () { validateAddressControl(el); };
+        el.addEventListener('input', refresh);
+        el.addEventListener('change', refresh);
+        el.addEventListener('invalid', refresh);
+        refresh();
+      })(controls[i]);
+    }
+  }
+
   function districtForPostal(city, postal) {
     var div = tw();
     if (!div || !city || !postal) return '';
@@ -114,6 +177,7 @@
         block.dispatchEvent(new CustomEvent('tw-address-change', { bubbles: true }));
       });
     }
+    bindAddressValidation(block);
   }
 
   function readBlock(block) {
@@ -150,6 +214,8 @@
     var i;
     for (i = 0; i < controls.length; i++) {
       controls[i].required = !!required;
+      if (!required) setValidity(controls[i], '');
+      else validateAddressControl(controls[i]);
     }
   }
 

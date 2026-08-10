@@ -75,22 +75,31 @@ echo Open the site at http://%HOST%:%PORT%/
 echo.
 echo Keep this window open while the server runs. Ctrl+C to stop.
 echo.
-if /I "%DEV_NO_RELOAD%"=="1" (
-  echo Reload OFF ^(DEV_NO_RELOAD=1^). Prefer this for admin image upload testing on Windows.
+
+rem Windows + Python 3.14: uvicorn WatchFiles --reload often dies mid-spawn
+rem (multiprocessing namedtuple/eval race) after "Shutting down", leaving :8080 dead.
+rem Default: no reload. Opt in with DEV_RELOAD=1. Force off with DEV_NO_RELOAD=1.
+set "USE_RELOAD=0"
+if /I "%DEV_RELOAD%"=="1" set "USE_RELOAD=1"
+if /I "%DEV_NO_RELOAD%"=="1" set "USE_RELOAD=0"
+
+if "%USE_RELOAD%"=="0" (
+  echo Reload OFF ^(Windows-safe default^). After .py edits, restart this window.
+  echo Opt in to WatchFiles reload ^(flaky on Windows^): set DEV_RELOAD=1 ^&^& dev.bat
   echo.
   "%VENV_PY%" -m uvicorn main:app --host %HOST% --port %PORT%
 ) else (
-  echo Note: On Windows, WatchFiles --reload can print SpawnProcess / namedtuple crashes.
-  echo       That race makes uploads look broken. If uploads flake, restart with:
-  echo         set DEV_NO_RELOAD=1 ^&^& dev.bat
+  echo Reload ON ^(DEV_RELOAD=1^). WatchFiles can still crash spawn on Windows —
+  echo server may die after "Shutting down". Prefer default no-reload for admin/uploads.
   echo.
   echo uvicorn cmdline:
-  echo   "%VENV_PY%" -m uvicorn main:app --reload --host %HOST% --port %PORT% --reload-dir app --reload-dir config --reload-dir content --reload-delay 1.0 --reload-exclude "__pycache__" --reload-exclude "*.pyc" --reload-exclude "*.log"
+  echo   "%VENV_PY%" -m uvicorn main:app --reload --host %HOST% --port %PORT% --reload-dir app --reload-dir config --reload-dir content --reload-delay 1.0 --reload-exclude "__pycache__" --reload-exclude "*.pyc" --reload-exclude "*.log" --reload-exclude ".youtube-embed-cache.json" --reload-exclude ".featured-video-cache.json"
   echo.
   "%VENV_PY%" -m uvicorn main:app --reload --host %HOST% --port %PORT% ^
     --reload-dir app --reload-dir config --reload-dir content ^
     --reload-delay 1.0 ^
-    --reload-exclude "__pycache__" --reload-exclude "*.pyc" --reload-exclude "*.log"
+    --reload-exclude "__pycache__" --reload-exclude "*.pyc" --reload-exclude "*.log" ^
+    --reload-exclude ".youtube-embed-cache.json" --reload-exclude ".featured-video-cache.json"
 )
 set "UV_EXIT=%ERRORLEVEL%"
 if not "%UV_EXIT%"=="0" (

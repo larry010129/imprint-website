@@ -122,6 +122,25 @@
           </form>
           {% endif %}
 
+          {% if order.can_cancel and order.id %}
+          <div class="order-detail-actions">
+            <button type="button"
+              class="btn btn-ghost member-order-cancel-btn"
+              data-order-id="{{ order.id }}"
+              data-order-number="{{ order.order_number or '' }}"
+              data-i18n="history_cancel_order">取消訂單</button>
+            <p class="order-detail-edit-hint">
+              若要更改商品請取消後<a href="/shop">重新下單</a>；訂金已確認後無法取消。
+            </p>
+          </div>
+          {% elif order.status in ['deposit_confirmed', 'dna_lab', 'in_production', 'quality_check'] %}
+          <div class="order-detail-actions">
+            <p class="order-detail-edit-hint">
+              訂金已確認後無法取消。若要另購請<a href="/shop">重新下單</a>。
+            </p>
+          </div>
+          {% endif %}
+
           {% if order.ready_for_pickup %}
           <div class="order-pickup-schedule" id="{{ schedule_id }}">
             {% with schedule_target = schedule_id %}

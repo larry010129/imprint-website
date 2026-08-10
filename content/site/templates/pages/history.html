@@ -1,6 +1,6 @@
 {% extends "layouts/base.html" %}
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/member-app.css?v=12">
+<link rel="stylesheet" href="/static/css/member-app.css?v=14">
 {% endblock %}
 {% block content %}
 <section class="page-section member-app" aria-label="訂購紀錄">
@@ -19,7 +19,66 @@
     </div>
   </div>
 </section>
+
+<dialog
+  id="member-order-cancel-dialog"
+  class="member-dialog member-order-cancel-dialog"
+  aria-labelledby="member-cancel-title"
+  aria-describedby="member-cancel-desc"
+>
+  <div class="member-dialog__inner">
+    <header class="member-dialog__header">
+      <h2 id="member-cancel-title" data-i18n="history_cancel_title">取消訂單</h2>
+      <button type="button" class="member-dialog__close" data-member-cancel-close aria-label="關閉">&times;</button>
+    </header>
+    <form
+      id="member-order-cancel-form"
+      class="member-order-cancel-dialog__body"
+      hx-post="/htmx/history/cancel?tab=cancelled&page=1"
+      hx-target="#htmx-history"
+      hx-swap="innerHTML"
+    >
+      <p id="member-cancel-desc" class="member-order-cancel-dialog__warn">
+        請選擇取消原因；下方說明會帶入預設文字，可再編輯。若要更改商品，取消後請重新下單。
+      </p>
+      <p class="member-order-cancel-dialog__meta" id="member-cancel-order-label" hidden></p>
+      <input type="hidden" name="order_id" id="member-cancel-order-id" value="">
+      <label class="member-order-cancel-dialog__label" for="member-cancel-preset">
+        取消原因
+      </label>
+      <select
+        id="member-cancel-preset"
+        class="member-order-cancel-dialog__select"
+        name="cancel_preset"
+        required
+      >
+        <option value="" disabled selected>請選擇原因</option>
+        <option value="想更改商品（需重新下單）">想更改商品（需重新下單）</option>
+        <option value="下錯訂單">下錯訂單</option>
+        <option value="暫時不需要">暫時不需要</option>
+        <option value="付款問題">付款問題</option>
+        <option value="其他">其他</option>
+      </select>
+      <label class="member-order-cancel-dialog__label" for="member-cancel-reason">
+        取消原因說明
+      </label>
+      <textarea
+        id="member-cancel-reason"
+        class="member-order-cancel-dialog__textarea"
+        name="cancel_reason"
+        rows="3"
+        maxlength="500"
+        required
+        placeholder="請簡述取消原因…"
+      ></textarea>
+      <div class="member-order-cancel-dialog__actions">
+        <button type="button" class="btn btn-ghost" data-member-cancel-close data-i18n="btn_cancel">返回</button>
+        <button type="submit" class="btn btn-mint" data-i18n="history_cancel_confirm">確認取消</button>
+      </div>
+    </form>
+  </div>
+</dialog>
 {% endblock %}
 {% block extra_scripts %}
-<script src="/static/js/order-detail.js?v=7" defer></script>
+<script src="/static/js/order-detail.js?v=11" defer></script>
 {% endblock %}

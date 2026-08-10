@@ -865,10 +865,7 @@
           });
           return;
         }
-        if (action === 'delete') {
-          var label = _tab === 'banners' ? '首頁圖片' : _tab === 'testimonials' ? '見證' : 'FAQ';
-          if (!confirm('確定刪除此' + label + '？')) return;
-        }
+        // Delete is confirmed by AdminContentTables DeleteConfirmDialog — no window.confirm.
         var req =
           _tab === 'banners'
             ? api.admin.bannerAction(id, action)

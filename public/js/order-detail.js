@@ -287,4 +287,83 @@
   });
 
   refreshPickupForms(document);
+
+  // Member order cancel dialog (outside #htmx-history so swaps keep it).
+  // Dropdown fills always-visible「取消原因說明」; submit trimmed textarea.
+  const cancelDialog = document.getElementById('member-order-cancel-dialog');
+  const cancelForm = document.getElementById('member-order-cancel-form');
+  const cancelOrderId = document.getElementById('member-cancel-order-id');
+  const cancelPreset = document.getElementById('member-cancel-preset');
+  const cancelReason = document.getElementById('member-cancel-reason');
+  const cancelOrderLabel = document.getElementById('member-cancel-order-label');
+
+  function applyCancelPreset() {
+    if (!cancelPreset || !cancelReason) return;
+    const v = cancelPreset.value;
+    cancelReason.value = !v || v === '其他' ? '' : v;
+  }
+
+  function openMemberCancelDialog(orderId, orderNumber) {
+    if (!cancelDialog || !cancelOrderId || !orderId) return;
+    cancelOrderId.value = orderId;
+    if (cancelPreset) cancelPreset.selectedIndex = 0;
+    if (cancelReason) cancelReason.value = '';
+    if (cancelOrderLabel) {
+      if (orderNumber) {
+        cancelOrderLabel.hidden = false;
+        cancelOrderLabel.textContent = '訂單編號：' + orderNumber;
+      } else {
+        cancelOrderLabel.hidden = true;
+        cancelOrderLabel.textContent = '';
+      }
+    }
+    if (typeof cancelDialog.showModal === 'function') {
+      cancelDialog.showModal();
+    }
+  }
+
+  function closeMemberCancelDialog() {
+    if (!cancelDialog) return;
+    if (typeof cancelDialog.close === 'function') cancelDialog.close();
+  }
+
+  document.addEventListener('click', e => {
+    const openBtn = e.target.closest('.member-order-cancel-btn');
+    if (openBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      openMemberCancelDialog(
+        openBtn.getAttribute('data-order-id'),
+        openBtn.getAttribute('data-order-number') || ''
+      );
+      return;
+    }
+    if (e.target.closest('[data-member-cancel-close]')) {
+      e.preventDefault();
+      closeMemberCancelDialog();
+    }
+  });
+
+  cancelPreset?.addEventListener('change', applyCancelPreset);
+
+  cancelForm?.addEventListener('submit', e => {
+    if (!cancelOrderId?.value || !cancelPreset?.value) {
+      e.preventDefault();
+      return;
+    }
+    const text = (cancelReason?.value || '').trim();
+    if (!text) {
+      e.preventDefault();
+      cancelReason?.focus();
+      return;
+    }
+    if (cancelReason) cancelReason.value = text;
+  });
+
+  document.body.addEventListener('htmx:afterSwap', e => {
+    const target = htmxSwapRoot(e);
+    if (target && target.id === 'htmx-history') {
+      closeMemberCancelDialog();
+    }
+  });
 })();

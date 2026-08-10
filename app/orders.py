@@ -169,6 +169,53 @@ ORDER_STATUS_LABELS_ZH = {
     "cancelled": "已取消",
 }
 
+# Member cancel only before 訂金已確認 (deposit_confirmed).
+# 已收到申請 / 訂單已確認 OK; 訂金已確認 and later blocked.
+MEMBER_CANCELABLE_STATUSES = frozenset({"received", "order_confirming"})
+
+MEMBER_CANCEL_REASON_PRESETS = (
+    "想更改商品（需重新下單）",
+    "下錯訂單",
+    "暫時不需要",
+    "付款問題",
+    "其他",
+)
+
+
+def can_member_cancel_order(status: str | None) -> bool:
+    return (status or "").strip().lower() in MEMBER_CANCELABLE_STATUSES
+
+
+def resolve_member_cancel_reason(preset: str | None, note: str | None = None) -> str | None:
+    """Require known preset; persist trimmed textarea (dropdown fills presets)."""
+    choice = (preset or "").strip()
+    text = (note or "").strip()
+    if choice not in MEMBER_CANCEL_REASON_PRESETS:
+        return None
+    return text[:500] if text else None
+
+
+def notify_order_cancelled(cur, order: dict, reason: str) -> None:
+    user_id = order.get("user_id")
+    if not user_id:
+        return
+    order_number = order.get("order_number") or order.get("id") or ""
+    message = f"您的訂單 {order_number} 已取消：{reason}"
+    summary = (
+        order.get("summary_zh")
+        or order.get("summary")
+        or order.get("product_name")
+        or order_number
+        or "訂單"
+    )
+    cur.execute(
+        """
+        insert into user_notifications (user_id, kind, message, order_id, order_summary)
+        values (%s, 'order_cancelled', %s, %s, %s)
+        """,
+        (user_id, message, order.get("id"), summary),
+    )
+
 
 def order_status_label(
     status: str | None, fulfillment_method: str | None = None
@@ -529,6 +576,7 @@ def enrich_member_order(order: dict) -> dict:
     if status == "shipped" and method == "pickup":
         order["status_label"] = "可取貨"
     order["status_cancelled"] = status in {"cancelled", "canceled"}
+    order["can_cancel"] = can_member_cancel_order(status)
     stamps = _as_dict(order.get("status_timestamps"))
     order["status_timestamps"] = stamps
     order["status_steps"] = order_status_steps(status, stamps, method)

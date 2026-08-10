@@ -389,14 +389,14 @@
           <form method="dialog" id="orderCancelForm" class="order-cancel-form">
             <button type="button" class="order-cancel-close" id="orderCancelClose" aria-label="關閉">&times;</button>
             <h3>取消訂單</h3>
-            <p class="order-cancel-sub">請選擇取消原因，關聯帳號的店家將在「通知」頁面看到說明。</p>
+            <p class="order-cancel-sub">請填寫取消原因（可點預設標籤帶入後再編輯）。會員通知會看到此說明。</p>
+            <div class="order-cancel-field">
+              <span>常用原因</span>
+              <div class="order-cancel-chips" id="orderCancelChips" role="group" aria-label="取消原因預設"></div>
+            </div>
             <label class="order-cancel-field">
               <span>取消原因</span>
-              <select id="orderCancelPreset" required></select>
-            </label>
-            <label class="order-cancel-field" id="orderCancelCustomWrap" hidden>
-              <span>其他原因說明</span>
-              <textarea id="orderCancelCustom" rows="3" maxlength="500" placeholder="請簡述取消原因…"></textarea>
+              <textarea id="orderCancelReason" rows="3" maxlength="500" required placeholder="請輸入或點上方標籤填入取消原因…"></textarea>
             </label>
             <p class="order-cancel-error" id="orderCancelError" hidden></p>
             <div class="order-cancel-actions">
@@ -569,7 +569,7 @@
 <script src="js/admin-invites.js?v=12"></script>
 <script src="js/admin-coupons.js?v=5"></script>
 <script src="js/taiwan-admin-divisions.js?v=2"></script>
-<script src="js/admin-content.js?v=43"></script>
+<script src="js/admin-content.js?v=44"></script>
 <script src="js/admin-featured-video.js?v=2"></script>
 <script src="js/pricing-config.js?v=1.3"></script>
 <script src="js/membership-config.js?v=7"></script>

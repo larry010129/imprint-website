@@ -2,7 +2,7 @@
 {% block resource_hints %}
 {# LCP only — hero critical CSS is inlined below (no render-blocking stylesheet request). #}
 <link rel="preload" as="image" href="/static/images/hero/imprint-diamond-family-memorial-800w.webp" type="image/webp" media="(max-width:900px)" fetchpriority="high" imagesrcset="/static/images/hero/imprint-diamond-family-memorial-800w.webp 800w, /static/images/hero/imprint-diamond-family-memorial-960w.webp 960w" imagesizes="100vw">
-<link rel="preload" as="image" href="/static/images/hero/imprint-diamond-family-memorial.webp" type="image/webp" media="(min-width:901px)" fetchpriority="high">
+<link rel="preload" as="image" href="/static/images/hero/imprint-diamond-family-memorial-1800w.webp" type="image/webp" media="(min-width:901px)" fetchpriority="high" imagesrcset="/static/images/hero/imprint-diamond-family-memorial-1200w.webp 1200w, /static/images/hero/imprint-diamond-family-memorial-1800w.webp 1800w, /static/images/hero/imprint-diamond-family-memorial.webp 2400w" imagesizes="100vw">
 {% endblock %}
 {% block extra_css %}
 <style>{{ inline_css('home-ghibli-critical.css') | safe }}</style>
@@ -128,7 +128,7 @@
         <div class="hc-media">
           <picture>
             <source media="(max-width:900px)" srcset="/static/images/hero/imprint-diamond-family-memorial-800w.webp 800w, /static/images/hero/imprint-diamond-family-memorial-960w.webp 960w, /static/images/hero/imprint-diamond-family-memorial-1200w.webp 1200w" type="image/webp" sizes="100vw">
-            <source srcset="/static/images/hero/imprint-diamond-family-memorial.webp" type="image/webp" sizes="100vw">
+            <source srcset="/static/images/hero/imprint-diamond-family-memorial-1200w.webp 1200w, /static/images/hero/imprint-diamond-family-memorial-1800w.webp 1800w, /static/images/hero/imprint-diamond-family-memorial.webp 2400w" type="image/webp" sizes="100vw">
             <img src="/static/images/hero/imprint-diamond-family-memorial-800w.webp" srcset="/static/images/hero/imprint-diamond-family-memorial-800w.webp 800w, /static/images/hero/imprint-diamond-family-memorial-960w.webp 960w, /static/images/hero/imprint-diamond-family-memorial-1200w.webp 1200w, /static/images/hero/imprint-diamond-family-memorial.webp 2400w" alt="銘印鑽石品牌意象｜家人手心捧著 DNA 紀念鑽石" width="800" height="388" sizes="100vw" loading="eager" fetchpriority="high" decoding="async" onerror="imgFallback(this)">
           </picture>
         </div>
@@ -276,7 +276,6 @@
             data-yt-facade
             data-yt-id="{{ featured_video.youtube_id }}"
             data-yt-title="{{ featured_video.title }}"
-            data-yt-poster="https://i.ytimg.com/vi/{{ featured_video.youtube_id }}/hqdefault.jpg"
             aria-label="播放影片：{{ featured_video.title }}"
           >
             {# No image element here on purpose: app/page_image_slots.py assigns CMS
@@ -323,8 +322,6 @@
           data-yt-thumb
           data-yt-id="{{ video.youtubeId }}"
           data-yt-title="{{ video.title }}"
-          data-yt-poster="https://i.ytimg.com/vi/{{ video.youtubeId }}/hqdefault.jpg"
-          style="background-image:url('https://i.ytimg.com/vi/{{ video.youtubeId }}/hqdefault.jpg')"
           aria-label="選擇影片：{{ video.label }}"
           aria-pressed="{{ 'true' if loop.first else 'false' }}"
         >
@@ -347,7 +344,9 @@
       <div class="gh-about-diamond" aria-hidden="true">
         <img
           data-cms-slot="dna-cta-diamond"
-          src="/static/images/diamonds/colors/blue.webp"
+          src="/static/images/diamonds/colors/blue-320.webp"
+          srcset="/static/images/diamonds/colors/blue-320.webp 320w, /static/images/diamonds/colors/blue.webp 609w"
+          sizes="320px"
           alt=""
           width="320"
           height="320"
@@ -379,7 +378,7 @@
     <a class="gh-series-card reveal" href="/series/first-love/">
       <div class="gh-series-card__media">
         <picture>
-          <source type="image/webp" srcset="/static/images/hero/imprint-diamond-newborn-baby-necklace-800w.webp 800w, /static/images/hero/imprint-diamond-newborn-baby-necklace-960w.webp 960w, /static/images/hero/imprint-diamond-newborn-baby-necklace-1200w.webp 1200w" sizes="(max-width:640px) 92vw, (max-width:900px) 45vw, 320px">
+          <source type="image/webp" srcset="/static/images/hero/imprint-diamond-newborn-baby-necklace-400w.webp 400w, /static/images/hero/imprint-diamond-newborn-baby-necklace-800w.webp 800w, /static/images/hero/imprint-diamond-newborn-baby-necklace-960w.webp 960w, /static/images/hero/imprint-diamond-newborn-baby-necklace-1200w.webp 1200w" sizes="(max-width:640px) 92vw, (max-width:900px) 45vw, 320px">
           <img data-cms-slot="series-first-love" src="/static/images/hero/imprint-diamond-newborn-baby-necklace-800w.webp" srcset="/static/images/hero/imprint-diamond-newborn-baby-necklace-800w.webp 800w, /static/images/hero/imprint-diamond-newborn-baby-necklace-960w.webp 960w, /static/images/hero/imprint-diamond-newborn-baby-necklace-1200w.webp 1200w" sizes="(max-width:640px) 92vw, (max-width:900px) 45vw, 320px" alt="滿月鑽石" width="800" height="388" loading="lazy" decoding="async" onerror="imgFallback(this)">
         </picture>
       </div>
@@ -394,7 +393,7 @@
     <a class="gh-series-card reveal reveal-d1" href="/series/pet/">
       <div class="gh-series-card__media">
         <picture>
-          <source type="image/webp" srcset="/static/images/hero/imprint-diamond-pet-memorial-cat-800w.webp 800w, /static/images/hero/imprint-diamond-pet-memorial-cat-960w.webp 960w, /static/images/hero/imprint-diamond-pet-memorial-cat-1200w.webp 1200w" sizes="(max-width:640px) 92vw, (max-width:900px) 45vw, 320px">
+          <source type="image/webp" srcset="/static/images/hero/imprint-diamond-pet-memorial-cat-400w.webp 400w, /static/images/hero/imprint-diamond-pet-memorial-cat-800w.webp 800w, /static/images/hero/imprint-diamond-pet-memorial-cat-960w.webp 960w, /static/images/hero/imprint-diamond-pet-memorial-cat-1200w.webp 1200w" sizes="(max-width:640px) 92vw, (max-width:900px) 45vw, 320px">
           <img data-cms-slot="series-pet" src="/static/images/hero/imprint-diamond-pet-memorial-cat-800w.webp" srcset="/static/images/hero/imprint-diamond-pet-memorial-cat-800w.webp 800w, /static/images/hero/imprint-diamond-pet-memorial-cat-960w.webp 960w, /static/images/hero/imprint-diamond-pet-memorial-cat-1200w.webp 1200w" sizes="(max-width:640px) 92vw, (max-width:900px) 45vw, 320px" alt="寵物鑽石" width="800" height="388" loading="lazy" decoding="async" onerror="imgFallback(this)">
         </picture>
       </div>
@@ -409,7 +408,7 @@
     <a class="gh-series-card reveal reveal-d2" href="/series/love/">
       <div class="gh-series-card__media">
         <picture>
-          <source type="image/webp" srcset="/static/images/hero/imprint-diamond-wedding-couple-ring-800w.webp 800w, /static/images/hero/imprint-diamond-wedding-couple-ring-960w.webp 960w, /static/images/hero/imprint-diamond-wedding-couple-ring-1200w.webp 1200w" sizes="(max-width:640px) 92vw, (max-width:900px) 45vw, 320px">
+          <source type="image/webp" srcset="/static/images/hero/imprint-diamond-wedding-couple-ring-400w.webp 400w, /static/images/hero/imprint-diamond-wedding-couple-ring-800w.webp 800w, /static/images/hero/imprint-diamond-wedding-couple-ring-960w.webp 960w, /static/images/hero/imprint-diamond-wedding-couple-ring-1200w.webp 1200w" sizes="(max-width:640px) 92vw, (max-width:900px) 45vw, 320px">
           <img data-cms-slot="series-love" src="/static/images/hero/imprint-diamond-wedding-couple-ring-800w.webp" srcset="/static/images/hero/imprint-diamond-wedding-couple-ring-800w.webp 800w, /static/images/hero/imprint-diamond-wedding-couple-ring-960w.webp 960w, /static/images/hero/imprint-diamond-wedding-couple-ring-1200w.webp 1200w" sizes="(max-width:640px) 92vw, (max-width:900px) 45vw, 320px" alt="結髮鑽石" width="800" height="388" loading="lazy" decoding="async" onerror="imgFallback(this)">
         </picture>
       </div>
@@ -424,7 +423,7 @@
     <a class="gh-series-card reveal reveal-d3" href="/series/family/">
       <div class="gh-series-card__media">
         <picture>
-          <source type="image/webp" srcset="/static/images/hero/imprint-diamond-family-portrait-jewelry-800w.webp 800w, /static/images/hero/imprint-diamond-family-portrait-jewelry-960w.webp 960w, /static/images/hero/imprint-diamond-family-portrait-jewelry-1200w.webp 1200w" sizes="(max-width:640px) 92vw, (max-width:900px) 45vw, 320px">
+          <source type="image/webp" srcset="/static/images/hero/imprint-diamond-family-portrait-jewelry-400w.webp 400w, /static/images/hero/imprint-diamond-family-portrait-jewelry-800w.webp 800w, /static/images/hero/imprint-diamond-family-portrait-jewelry-960w.webp 960w, /static/images/hero/imprint-diamond-family-portrait-jewelry-1200w.webp 1200w" sizes="(max-width:640px) 92vw, (max-width:900px) 45vw, 320px">
           <img data-cms-slot="series-family" src="/static/images/hero/imprint-diamond-family-portrait-jewelry-800w.webp" srcset="/static/images/hero/imprint-diamond-family-portrait-jewelry-800w.webp 800w, /static/images/hero/imprint-diamond-family-portrait-jewelry-960w.webp 960w, /static/images/hero/imprint-diamond-family-portrait-jewelry-1200w.webp 1200w" sizes="(max-width:640px) 92vw, (max-width:900px) 45vw, 320px" alt="全家福鑽石" width="800" height="388" loading="lazy" decoding="async" onerror="imgFallback(this)">
         </picture>
       </div>
@@ -439,7 +438,7 @@
     <a class="gh-series-card reveal reveal-d4" href="/series/heirloom/">
       <div class="gh-series-card__media">
         <picture>
-          <source type="image/webp" srcset="/static/images/hero/imprint-diamond-heirloom-memorial-800w.webp 800w, /static/images/hero/imprint-diamond-heirloom-memorial-960w.webp 960w, /static/images/hero/imprint-diamond-heirloom-memorial-1200w.webp 1200w" sizes="(max-width:640px) 92vw, (max-width:900px) 45vw, 320px">
+          <source type="image/webp" srcset="/static/images/hero/imprint-diamond-heirloom-memorial-400w.webp 400w, /static/images/hero/imprint-diamond-heirloom-memorial-800w.webp 800w, /static/images/hero/imprint-diamond-heirloom-memorial-960w.webp 960w, /static/images/hero/imprint-diamond-heirloom-memorial-1200w.webp 1200w" sizes="(max-width:640px) 92vw, (max-width:900px) 45vw, 320px">
           <img data-cms-slot="series-heirloom" src="/static/images/hero/imprint-diamond-heirloom-memorial-800w.webp" srcset="/static/images/hero/imprint-diamond-heirloom-memorial-800w.webp 800w, /static/images/hero/imprint-diamond-heirloom-memorial-960w.webp 960w, /static/images/hero/imprint-diamond-heirloom-memorial-1200w.webp 1200w" sizes="(max-width:640px) 92vw, (max-width:900px) 45vw, 320px" alt="生命鑽石" width="800" height="388" loading="lazy" decoding="async" onerror="imgFallback(this)">
         </picture>
       </div>
@@ -639,9 +638,13 @@
     stage.appendChild(btn);
   }
 
+  function posterForId(id) {
+    return id ? 'https://i.' + 'ytimg.com/vi/' + encodeURIComponent(id) + '/hqdefault.jpg' : '';
+  }
+
   function paintPoster(btn) {
     if (!btn || btn.dataset.ytPosterPainted) return;
-    var poster = btn.getAttribute('data-yt-poster') || '';
+    var poster = btn.getAttribute('data-yt-poster') || posterForId(btn.getAttribute('data-yt-id') || '');
     if (!poster) return;
     btn.style.backgroundImage = 'url("' + poster + '")';
     btn.dataset.ytPosterPainted = '1';
@@ -847,9 +850,10 @@
 
   function activateThumb(thumb, opts) {
     opts = opts || {};
+    paintPoster(thumb);
     var id = thumb.getAttribute('data-yt-id') || '';
     var title = thumb.getAttribute('data-yt-title') || '';
-    var poster = thumb.getAttribute('data-yt-poster') || '';
+    var poster = thumb.getAttribute('data-yt-poster') || posterForId(id);
     if (!id || skipped[id]) return;
 
     document.querySelectorAll('[data-yt-thumb]').forEach(function (node) {
@@ -874,7 +878,7 @@
   }
 
   function bindFacades() {
-    var nodes = document.querySelectorAll('[data-yt-facade][data-yt-poster]');
+    var nodes = document.querySelectorAll('[data-yt-facade][data-yt-id]');
     if (!nodes.length) return;
     if ('IntersectionObserver' in window) {
       var io = new IntersectionObserver(function (entries) {
@@ -888,6 +892,20 @@
     } else {
       nodes.forEach(paintPoster);
     }
+  }
+
+  function bindThumbPosters() {
+    var nodes = document.querySelectorAll('[data-yt-thumb][data-yt-id]');
+    if (!nodes.length) return;
+    if (!('IntersectionObserver' in window)) return;
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) return;
+        paintPoster(entry.target);
+        io.unobserve(entry.target);
+      });
+    }, { rootMargin: '0px 0px 120px 0px' });
+    nodes.forEach(function (node) { io.observe(node); });
   }
 
   function flushYtWaiters() {
@@ -1059,6 +1077,7 @@
 
   function boot() {
     bindFacades();
+    bindThumbPosters();
     bindGalleryAutoplay();
   }
 

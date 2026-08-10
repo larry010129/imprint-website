@@ -487,6 +487,35 @@ tr.order-row-main.is-detail-open td { background: var(--mint-soft, #f4fbfb); }
   color: var(--color-text);
 }
 
+.order-cancel-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.order-cancel-chip {
+  appearance: none;
+  border: 1px solid var(--color-border);
+  background: #f7f3ee;
+  color: var(--color-text);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  line-height: 1.3;
+  cursor: pointer;
+}
+
+.order-cancel-chip:hover {
+  border-color: #c4b8ae;
+  background: #fff;
+}
+
+.order-cancel-chip.is-active {
+  border-color: #3d8b7a;
+  background: rgba(61, 139, 122, 0.12);
+  color: #2f6b5e;
+}
+
 .order-cancel-error {
   font-size: 12px;
   color: #b5523d;

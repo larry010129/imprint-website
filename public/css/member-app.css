@@ -1397,7 +1397,8 @@ a.member-cart-item__title:hover {
   flex: 0 0 auto;
 }
 
-.member-order-edit-btn {
+.member-order-edit-btn,
+.member-order-cancel-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1408,6 +1409,69 @@ a.member-cart-item__title:hover {
   margin: 8px 0 0;
   font-size: 12px;
   color: var(--ink-faint);
+}
+
+.order-detail-edit-hint a {
+  color: var(--mint-deep, #3d8b7a);
+  text-decoration: underline;
+}
+
+.member-order-cancel-dialog {
+  width: min(440px, calc(100vw - 32px));
+}
+
+.member-order-cancel-dialog__body {
+  padding: 18px 22px 22px;
+}
+
+.member-order-cancel-dialog__warn,
+.member-order-cancel-dialog__meta {
+  margin: 0 0 14px;
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--ink-soft, #5c534d);
+}
+
+.member-order-cancel-dialog__meta {
+  font-size: 13px;
+  color: var(--ink-faint);
+}
+
+.member-order-cancel-dialog__label {
+  display: block;
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--ink-faint);
+}
+
+.member-order-cancel-dialog__select,
+.member-order-cancel-dialog__textarea {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 6px 0 14px;
+  padding: 10px 12px;
+  border: 1px solid #efe9e3;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--ink);
+  background: #fff;
+}
+
+.member-order-cancel-dialog__select:focus,
+.member-order-cancel-dialog__textarea:focus {
+  outline: 2px solid rgba(61, 139, 122, 0.35);
+  outline-offset: 1px;
+  border-color: var(--mint-deep, #3d8b7a);
+}
+
+.member-order-cancel-dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 4px;
 }
 
 @media (max-width: 900px) {

@@ -105,17 +105,12 @@ def _order_summary(order: dict) -> str:
 
 
 def _notify_order_cancelled(cur, order: dict, reason: str) -> None:
-    user_id = order.get("user_id")
-    if not user_id:
-        return
-    message = f"您的訂單 {order['order_number']} 已取消：{reason}"
-    cur.execute(
-        """
-        insert into user_notifications (user_id, kind, message, order_id, order_summary)
-        values (%s, 'order_cancelled', %s, %s, %s)
-        """,
-        (user_id, message, order["id"], _order_summary(order)),
-    )
+    from app.orders import notify_order_cancelled
+
+    # Preserve summary fallback used historically for admin cancels.
+    if not order.get("summary_zh") and not order.get("summary"):
+        order = {**order, "summary_zh": _order_summary(order)}
+    notify_order_cancelled(cur, order, reason)
 
 
 def _require_admin(request: Request) -> str:
@@ -444,11 +439,9 @@ async def order_update(request: Request) -> JSONResponse:
 
 @router.post("/order-cancel")
 async def order_cancel(request: Request) -> JSONResponse:
-    admin_id = _require_admin(request)
+    # Cancel uses reason only — no password / step-up re-auth.
+    _require_admin(request)
     body = await request.json()
-    step_resp = _step_up_response(admin_id, body if isinstance(body, dict) else {})
-    if step_resp:
-        return step_resp
     order_id = body.get("id")
     reason = (body.get("reason") or "").strip()
     if not order_id or not reason:
@@ -487,9 +480,6 @@ async def order_delete(request: Request) -> JSONResponse:
 async def orders_bulk_update(request: Request) -> JSONResponse:
     admin_id = _require_admin(request)
     body = await request.json()
-    step_resp = _step_up_response(admin_id, body if isinstance(body, dict) else {})
-    if step_resp:
-        return step_resp
     ids = body.get("ids") or []
     status = body.get("status")
     cancel_reason = (body.get("cancelReason") or "").strip() or None
@@ -500,6 +490,11 @@ async def orders_bulk_update(request: Request) -> JSONResponse:
         return JSONResponse(status_code=400, content={"error": "invalid status"})
     if status == "cancelled" and not cancel_reason:
         return JSONResponse(status_code=400, content={"error": "請選擇或填寫取消原因"})
+    # Cancel = reason only (no password). Other bulk status changes still step-up.
+    if status != "cancelled":
+        step_resp = _step_up_response(admin_id, body if isinstance(body, dict) else {})
+        if step_resp:
+            return step_resp
 
     updated = 0
     with get_transaction() as conn, conn.cursor() as cur:

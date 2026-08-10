@@ -349,6 +349,112 @@ async def history_partial(request: Request) -> HTMLResponse:
     return html(request, "history_list.html", ctx)
 
 
+@router.post("/history/cancel", response_class=HTMLResponse)
+async def history_cancel_order(request: Request) -> HTMLResponse:
+    """Member cancels own order (before 訂金已確認); dropdown fills always-visible note."""
+    user_id = get_user_id(request)
+    if not user_id:
+        return html(
+            request,
+            "history_list.html",
+            _empty_history_context(guest=True),
+            401,
+        )
+    if not enforce_rate_limit(request, action="history-cancel", limit=20, window_seconds=600):
+        ctx = _history_context_from_request(request, user_id)
+        ctx["flash_ok"] = False
+        ctx["flash_message"] = "操作過於頻繁，請稍後再試"
+        return html(request, "history_list.html", ctx, 429)
+
+    from app.orders import (
+        MEMBER_CANCEL_REASON_PRESETS,
+        can_member_cancel_order,
+        notify_order_cancelled,
+        resolve_member_cancel_reason,
+    )
+
+    form = await request.form()
+    order_id = str(form.get("order_id") or "").strip()
+    # Form: cancel_preset=<select>, cancel_reason=<textarea always visible>
+    preset = str(form.get("cancel_preset") or "").strip()
+    note = str(form.get("cancel_reason") or form.get("cancel_note") or "").strip()
+    # Legacy: select was named cancel_reason; optional cancel_note for 其他
+    if not preset:
+        legacy = str(form.get("cancel_reason") or "").strip()
+        if legacy in MEMBER_CANCEL_REASON_PRESETS:
+            preset = legacy
+            note = str(form.get("cancel_note") or "").strip()
+            if preset != "其他" and not note:
+                note = preset
+    reason = resolve_member_cancel_reason(preset, note)
+
+    flash_ok = False
+    flash_message = ""
+    status_code = 200
+    if not order_id:
+        flash_ok = False
+        flash_message = "缺少訂單編號"
+        status_code = 400
+    elif not reason:
+        flash_ok = False
+        flash_message = "請選擇取消原因並填寫說明"
+        status_code = 400
+    else:
+        with get_connection() as conn, conn.cursor() as cur:
+            cur.execute(
+                """
+                select id, user_id, order_number, status, summary_zh
+                from orders
+                where id = %s and user_id = %s
+                """,
+                (order_id, user_id),
+            )
+            order = cur.fetchone()
+            if not order:
+                flash_ok = False
+                flash_message = "找不到訂單"
+                status_code = 404
+            else:
+                status = (order.get("status") or "").strip().lower()
+                if status in {"cancelled", "canceled"}:
+                    flash_ok = False
+                    flash_message = "訂單已取消"
+                    status_code = 400
+                elif not can_member_cancel_order(status):
+                    flash_ok = False
+                    flash_message = "訂金已確認後無法取消，如需協助請聯繫客服"
+                    status_code = 400
+                else:
+                    cur.execute(
+                        """
+                        update orders
+                        set status = 'cancelled',
+                            cancel_reason = %s,
+                            status_note = %s,
+                            updated_at = now()
+                        where id = %s
+                          and user_id = %s
+                          and lower(status) in ('received', 'order_confirming')
+                        """,
+                        (reason, reason, order_id, user_id),
+                    )
+                    if cur.rowcount == 0:
+                        flash_ok = False
+                        flash_message = "訂金已確認後無法取消，如需協助請聯繫客服"
+                        status_code = 400
+                    else:
+                        notify_order_cancelled(cur, order, reason)
+                        flash_ok = True
+                        flash_message = "訂單已取消（可於不成立查看）"
+                        status_code = 200
+
+    land_tab = "cancelled" if flash_ok else request.query_params.get("tab")
+    ctx = _history_context_from_request(request, user_id, tab=land_tab)
+    ctx["flash_ok"] = flash_ok
+    ctx["flash_message"] = flash_message
+    return html(request, "history_list.html", ctx, status_code)
+
+
 @router.post("/history/confirm-receipt", response_class=HTMLResponse)
 async def history_confirm_receipt(request: Request) -> HTMLResponse:
     """Member marks shipped delivery order as received → completed."""

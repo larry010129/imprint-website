@@ -69,7 +69,7 @@ _LOCAL_HERO_SKY = (
     "/static/images/ghibli/hero-sky.jpg",
     "/static/images/ghibli/hero-sky.webp",
 )
-_LOCAL_DNA_BLUE = "/static/images/diamonds/colors/blue.webp"
+_LOCAL_DNA_BLUE = "/static/images/diamonds/colors/blue-320.webp"
 _HOME_RESPONSIVE_SLOTS = frozenset(
     {
         "poem-visual",
@@ -426,6 +426,7 @@ def _hero_stem(url: str) -> str:
 def _hero_responsive_srcset(stem: str) -> str:
     max_w = _HERO_STEM_MAX_W.get(stem, 2400)
     return (
+        f"/static/images/hero/{stem}-400w.webp 400w, "
         f"/static/images/hero/{stem}-800w.webp 800w, "
         f"/static/images/hero/{stem}-960w.webp 960w, "
         f"/static/images/hero/{stem}-1200w.webp 1200w, "

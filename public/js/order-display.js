@@ -117,8 +117,15 @@
     return lines;
   }
 
-  function canEditOrder(o) {
-    return (o.status || '').toLowerCase() === 'received';
+  function canEditOrder() {
+    // In-place edit removed — change order = cancel + reorder.
+    return false;
+  }
+
+  function canCancelOrder(o) {
+    if (typeof o.can_cancel === 'boolean') return o.can_cancel;
+    var s = (o.status || '').toLowerCase();
+    return s === 'received' || s === 'order_confirming';
   }
 
   function orderToShopConfig(o) {
@@ -274,13 +281,23 @@
     var statusNote = o.status_note
       ? specItem('狀態說明', o.status_note)
       : '';
-    var editBtn = canEditOrder(o)
-      ? '<div class="order-detail-actions">' +
-          '<a href="/shop/calculator/?editOrder=' + encodeURIComponent(o.order_number || '') + '" ' +
-          'class="btn btn-mint member-order-edit-btn" data-order-number="' + esc(o.order_number || '') + '">修改訂單</a>' +
-          '<p class="order-detail-edit-hint">僅「已收到申請」狀態可修改規格並重新試算</p>' +
-        '</div>'
-      : '';
+    var actions = '';
+    if (canCancelOrder(o) && o.id) {
+      actions =
+        '<div class="order-detail-actions">' +
+          '<button type="button" class="btn btn-ghost member-order-cancel-btn" ' +
+          'data-order-id="' + esc(o.id) + '" data-order-number="' + esc(o.order_number || '') + '">取消訂單</button>' +
+          '<p class="order-detail-edit-hint">若要更改商品請取消後<a href="/shop">重新下單</a>；訂金已確認後無法取消。</p>' +
+        '</div>';
+    } else if (!isCancelled(o)) {
+      var late = ['deposit_confirmed', 'dna_lab', 'in_production', 'quality_check'];
+      if (late.indexOf((o.status || '').toLowerCase()) >= 0) {
+        actions =
+          '<div class="order-detail-actions">' +
+            '<p class="order-detail-edit-hint">訂金已確認後無法取消。若要另購請<a href="/shop">重新下單</a>。</p>' +
+          '</div>';
+      }
+    }
 
     return (
       '<div class="order-detail-panel">' +
@@ -312,7 +329,7 @@
               statusNote +
             '</div>' +
             progressHtml(o, statusLabel) +
-            editBtn +
+            actions +
           '</div>' +
         '</div>' +
       '</div>'
@@ -354,6 +371,7 @@
     rowHtml: rowHtml,
     detailId: detailId,
     canEditOrder: canEditOrder,
+    canCancelOrder: canCancelOrder,
     orderToShopConfig: orderToShopConfig,
   };
 })(window);

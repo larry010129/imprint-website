@@ -283,17 +283,23 @@
       createOrder: function (fields) { return request('/api/admin/orders', { method: 'POST', body: fields }); },
       updateOrderStatus: function (id, status, statusNote) { return request('/api/admin/order-update', { method: 'POST', body: { id: id, status: status, statusNote: statusNote } }); },
       cancelOrder: function (id, reason) {
-        var body = withStepUp('取消訂單', { id: id, reason: reason });
-        if (body.error) return Promise.resolve(body);
-        return request('/api/admin/order-cancel', { method: 'POST', body: body });
+        // Cancel: reason only — no admin password / step-up.
+        return request('/api/admin/order-cancel', {
+          method: 'POST',
+          body: { id: id, reason: reason },
+        });
       },
       bulkUpdateOrders: function (ids, status, cancelReason) {
-        var body = withStepUp('批次更新訂單', {
+        var body = {
           ids: ids,
           status: status,
           cancelReason: cancelReason || null,
-        });
-        if (body.error) return Promise.resolve(body);
+        };
+        // Cancel uses reason only; other bulk status changes still step-up.
+        if (status !== 'cancelled') {
+          body = withStepUp('批次更新訂單', body);
+          if (body.error) return Promise.resolve(body);
+        }
         return request('/api/admin/orders-bulk-update', { method: 'POST', body: body });
       },
       deleteOrder: function (id, reason) {

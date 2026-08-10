@@ -67,12 +67,22 @@
 <style>{{ inline_css('nav-critical.css') | safe }}</style>
 {% endif %}
 {# Sync nav.css all pages — InteractiveHoverButton + drawer must not defer on home #}
+{% if is_home %}
+<link rel="stylesheet" href="/static/css/nav.css?v=4.30" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="/static/css/nav.css?v=4.30"></noscript>
+{% else %}
 <link rel="stylesheet" href="/static/css/nav.css?v=4.29">
+{% endif %}
 {% if not is_home %}
 <link rel="stylesheet" href="/static/css/home.css?v=5.7">
 {% endif %}
 {# Blocking footer.css — dark site-footer must paint with first layout #}
+{% if is_home %}
+<link rel="stylesheet" href="/static/css/footer.css?v=22" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="/static/css/footer.css?v=22"></noscript>
+{% else %}
 <link rel="stylesheet" href="/static/css/footer.css?v=22">
+{% endif %}
 {% if not is_home %}
 <link rel="stylesheet" href="/static/css/pages.css?v=5.32">
 {% endif %}

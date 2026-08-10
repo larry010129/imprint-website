@@ -17,10 +17,7 @@ REPEAT_RUN_RE = re.compile(r"(.)\1{3,}")
 
 SHIPPING_CITIES = frozenset(c for c in TAIWAN_CITIES if c != "其他")
 
-STREET_ERROR = (
-    "請填寫有效街道地址（含路／街／巷／弄／號等）"
-    " / Please enter a valid street address with road markers and a number"
-)
+STREET_ERROR = "請填寫有效街道地址（需含路／街／巷／弄等與門牌號碼）"
 
 
 def normalize_tw_city(city: str) -> str:

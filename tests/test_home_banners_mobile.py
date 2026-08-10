@@ -34,6 +34,7 @@ def test_home_hero_slides_use_responsive_webp_srcset():
         "imprint-diamond-heirloom-memorial",
     ]
     for stem in stems:
+        assert f"{stem}-400w.webp 400w" in html
         assert f"{stem}-800w.webp 800w" in html
         assert f"{stem}-1200w.webp 1200w" in html
 
@@ -49,8 +50,10 @@ def test_home_series_cards_use_local_hero_srcset():
     ):
         assert f'data-cms-slot="{slot}"' in html
         assert f"/static/images/hero/{stem}-800w.webp" in html
-    assert 'src="/static/images/diamonds/colors/blue.webp"' in html
-    assert "data-yt-poster=" in html
+    assert 'src="/static/images/diamonds/colors/blue-320.webp"' in html
+    assert "function posterForId" in html
+    assert "data-yt-poster=" not in html
+    assert "style=\"background-image:url" not in html
     assert "i.ytimg.com" not in html
 
 

@@ -109,7 +109,7 @@ def test_home_dna_cta_prefers_local_webp():
         "is_published": True,
     }
     out = apply_page_image_slots(html, "/", [row])
-    assert 'src="/static/images/diamonds/colors/blue.webp"' in out
+    assert 'src="/static/images/diamonds/colors/blue-320.webp"' in out
     assert "supabase.co" not in out
 
 
