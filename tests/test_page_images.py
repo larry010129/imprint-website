@@ -100,6 +100,33 @@ def test_home_series_slot_remaps_supabase_to_local_srcset():
     assert "/static/images/hero/imprint-diamond-family-portrait-jewelry-1200w.webp 1200w" in out
 
 
+def test_home_series_custom_upload_replaces_stale_local_srcset():
+    """Admin custom crop must win — stale local srcset must not keep PC hero bytes."""
+    html = (
+        '<picture><source type="image/webp" '
+        'srcset="/static/images/hero/imprint-diamond-wedding-couple-ring-800w.webp 800w, '
+        '/static/images/hero/imprint-diamond-wedding-couple-ring-1200w.webp 1200w" '
+        'sizes="(max-width:640px) 92vw, 320px">'
+        '<img data-cms-slot="series-signature" '
+        'src="/static/images/hero/imprint-diamond-wedding-couple-ring-800w.webp" '
+        'srcset="/static/images/hero/imprint-diamond-wedding-couple-ring-800w.webp 800w, '
+        '/static/images/hero/imprint-diamond-wedding-couple-ring-1200w.webp 1200w" '
+        'sizes="(max-width:640px) 92vw, 320px" alt="銘印鑽石"></picture>'
+    )
+    custom = "https://xxx.supabase.co/storage/v1/object/public/shop-media/page-images/home/1786367609718.webp"
+    row = {
+        "slot_key": "series-signature",
+        "display_url": custom,
+        "display_webp": custom,
+        "is_published": True,
+    }
+    out = apply_page_image_slots(html, "/", [row])
+    assert custom in out
+    assert "imprint-diamond-wedding-couple-ring" not in out
+    assert f'src="{custom}"' in out
+    assert f'srcset="{custom}"' in out
+
+
 def test_home_dna_cta_prefers_local_webp():
     html = '<img data-cms-slot="dna-cta-diamond" src="/static/images/diamonds/colors/blue.webp">'
     row = {
@@ -126,6 +153,7 @@ def test_page_image_storage_folders_cover_admin_tabs():
     assert PAGE_IMAGE_STORAGE_FOLDERS["/series/love/"] == "wedding-diamond"
     assert PAGE_IMAGE_STORAGE_FOLDERS["/series/family/"] == "family-diamond"
     assert PAGE_IMAGE_STORAGE_FOLDERS["/series/heirloom/"] == "life-diamond"
+    assert PAGE_IMAGE_STORAGE_FOLDERS["/series/signature/"] == "signature-diamond"
     assert PAGE_IMAGE_STORAGE_FOLDERS["/what-is-dna-diamond"] == "dna-diamond"
     assert page_image_storage_folder(None) == "_pending"
     assert page_image_storage_folder("/series/pet") == "pet-diamond"
@@ -136,11 +164,12 @@ def test_inventory_excludes_empty_calculator_and_jewelry_slots():
     rows = build_page_image_seed()
     counts = Counter(row["page_key"] for row in rows)
     by_slot = {row["slot_key"]: row for row in rows if row["page_key"] == "/what-is-dna-diamond"}
-    assert len(rows) == 48
-    assert len(counts) == 10
+    assert len(rows) == 50
+    assert len(counts) == 11
     assert counts["/journal"] == 1
     assert counts["/about"] == 3
     assert counts["/what-is-dna-diamond"] == 14
+    assert counts["/series/signature/"] == 2
     assert "/shop/calculator/" not in counts
     assert not any(key.startswith("/jewelry") for key in counts)
     assert "intro" in by_slot

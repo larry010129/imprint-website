@@ -13,7 +13,7 @@ EDITABLE_SITE_PAGES: tuple[dict[str, str], ...] = (
     {"route": "/series/love/", "title": "結髮鑽石", "content_tab": "page"},
     {"route": "/series/family/", "title": "全家福鑽石", "content_tab": "page"},
     {"route": "/series/heirloom/", "title": "生命鑽石", "content_tab": "page"},
-    {"route": "/series/signature/", "title": "真我鑽石", "content_tab": "page"},
+    {"route": "/series/signature/", "title": "銘印鑽石（me-in）", "content_tab": "page"},
     {"route": "/what-is-dna-diamond", "title": "DNA 鑽石的誕生", "content_tab": "page"},
     {"route": "/diamond-4c", "title": "鑽石 4C", "content_tab": "page"},
     {"route": "/lab-grown-diamond", "title": "什麼是培育鑽石", "content_tab": "page"},
@@ -104,7 +104,7 @@ def _home_slots() -> list[dict[str, Any]]:
             p,
             "series-lead",
             "首頁・系列引言",
-            "每一種羈絆，都有屬於它的光。先了解六大系列；真我鑽石以自己的髮絲，萃煉成獨一無二的鑽石，獻給值得被自己慶祝的此刻。",
+            "每一種羈絆，都有屬於它的光。先了解六大系列；銘印鑽石以自己的髮絲，萃煉成獨一無二的鑽石，獻給值得被自己慶祝的此刻。",
             32,
         ),
         _t(p, "card-first-love-title", "首頁・滿月卡標題", "滿月鑽石", 33),
@@ -147,7 +147,15 @@ def _home_slots() -> list[dict[str, Any]]:
             "回憶如汩汩泉湧，思念如雲煙繞樑——請永遠留在我身邊，讓記憶成為永恆的存在。",
             42,
         ),
-        _btn(p, "series-cta", "首頁・系列總覽按鈕", "查看系列總覽", "/series", 43),
+        _t(p, "card-signature-title", "首頁・銘印卡標題", "銘印鑽石", 43),
+        _t(
+            p,
+            "card-signature-text",
+            "首頁・銘印卡說明",
+            "以自己的髮絲，萃煉成獨一無二的鑽石，獻給值得被自己慶祝的此刻。",
+            44,
+        ),
+        _btn(p, "series-cta", "首頁・系列總覽按鈕", "查看系列總覽", "/series", 45),
         _t(p, "wall-script", "首頁・見證眉標", "Testimonials", 50),
         _t(p, "wall-title", "首頁・見證標題", "他們選擇把思念，留成永恆", 51),
         _t(
@@ -266,7 +274,7 @@ def _series_slots() -> list[dict[str, Any]]:
             p,
             "hero-lead",
             "系列總覽・引言",
-            "銘印鑽石依不同的羈絆與生命階段，整理成六個系列；真我鑽石以自己的髮絲，萃煉成獨一無二的鑽石，獻給值得被自己慶祝的此刻。每一顆鑽石都從您珍視的樣本中真實培育而成——先了解各系列意義，再選擇克拉數、形狀與飾品款式。",
+            "銘印鑽石依不同的羈絆與生命階段，整理成六個系列；銘印鑽石以自己的髮絲，萃煉成獨一無二的鑽石，獻給值得被自己慶祝的此刻。每一顆鑽石都從您珍視的樣本中真實培育而成——先了解各系列意義，再選擇克拉數、形狀與飾品款式。",
             3,
         ),
         _t(p, "intro-title", "系列總覽・介紹標題", "六大系列，對應六種珍視的連結", 10),
@@ -274,7 +282,7 @@ def _series_slots() -> list[dict[str, Any]]:
             p,
             "intro-body",
             "系列總覽・介紹內文",
-            "無論是寶寶的第一縷胎髮、毛孩多年的陪伴、伴侶之間的誓約、全家人的髮絲，或是已離開的摯愛——我們以相同的在地培育技術，為不同故事找到最貼切的起點。系列之間沒有優劣，只有「哪一種連結，此刻最貼近您的心」。真我鑽石則以自己的髮絲，萃煉成獨一無二的鑽石，獻給值得被自己慶祝的此刻。",
+            "無論是寶寶的第一縷胎髮、毛孩多年的陪伴、伴侶之間的誓約、全家人的髮絲，或是已離開的摯愛——我們以相同的在地培育技術，為不同故事找到最貼切的起點。系列之間沒有優劣，只有「哪一種連結，此刻最貼近您的心」。銘印鑽石則以自己的髮絲，萃煉成獨一無二的鑽石，獻給值得被自己慶祝的此刻。",
             11,
         ),
         _t(p, "guide-title", "系列總覽・導引標題", "不確定從哪個系列開始？", 20),
@@ -380,7 +388,7 @@ def _series_detail_slots() -> list[dict[str, Any]]:
         ),
         (
             "/series/signature/",
-            "真我鑽石",
+            "銘印鑽石｜為自己留下此刻",
             "以自己的髮絲，萃煉成獨一無二的鑽石，獻給值得被自己慶祝的此刻。",
         ),
     )
@@ -388,5 +396,6 @@ def _series_detail_slots() -> list[dict[str, Any]]:
     for route, title, lead in series:
         out.append(_t(route, "hero-title", f"{title}・主標", title, 1))
         out.append(_t(route, "hero-lead", f"{title}・引言", lead, 2))
-        out.append(_btn(route, "cta-calculator", f"{title}・試算", "開始客製試算", "/shop/calculator/", 3))
+        calc = "/shop/calculator/?category=diamond" if route.startswith("/series/") else "/shop/calculator/"
+        out.append(_btn(route, "cta-calculator", f"{title}・試算", "開始客製試算", calc, 3))
     return out

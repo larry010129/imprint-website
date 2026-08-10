@@ -12,6 +12,7 @@ const dnaLinks = [
   { label: "結髮鑽石", href: "/series/love/" },
   { label: "全家福鑽石", href: "/series/family/" },
   { label: "生命鑽石", href: "/series/heirloom/" },
+  { label: "銘印鑽石", href: "/series/signature/" },
 ];
 
 const learnLinks = [

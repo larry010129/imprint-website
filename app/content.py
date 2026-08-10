@@ -752,6 +752,31 @@ def ensure_testimonial_country_column(cur) -> None:
     )
 
 
+def _sync_page_image_labels_from_registry(cur) -> None:
+    """Push SlotSpec page_label / slot_label into existing page_images rows."""
+    from app.page_image_slots import page_image_slot_specs
+
+    for spec in page_image_slot_specs():
+        cur.execute(
+            """
+            update page_images
+            set label = %s,
+                slot_label = %s
+            where page_key = %s
+              and slot_key = %s
+              and (label is distinct from %s or slot_label is distinct from %s)
+            """,
+            (
+                spec.page_label,
+                spec.slot_label,
+                spec.page_key,
+                spec.slot_key,
+                spec.page_label,
+                spec.slot_label,
+            ),
+        )
+
+
 def ensure_page_images_schema(cur) -> None:
     cur.execute(
         """
@@ -810,6 +835,8 @@ def ensure_page_images_schema(cur) -> None:
     cur.execute("update page_images set slot_label = label where slot_label is null or btrim(slot_label) = ''")
     cur.execute("alter table page_images alter column slot_label set default '主視覺'")
     cur.execute("alter table page_images alter column slot_label set not null")
+    # Keep admin labels in sync with code registry (e.g. 真我→銘印 rename).
+    _sync_page_image_labels_from_registry(cur)
     cur.execute(
         """
         do $$
@@ -1111,6 +1138,22 @@ def apply_page_image_replace_stack(
 
 def serialize_page_image(row: dict) -> dict:
     out = dict(row)
+    # Prefer live registry labels so renames show in admin without reseed.
+    try:
+        from app.page_image_slots import page_image_slot_specs
+
+        specs = getattr(serialize_page_image, "_spec_labels", None)
+        if specs is None:
+            specs = {
+                (spec.page_key, spec.slot_key): (spec.page_label, spec.slot_label)
+                for spec in page_image_slot_specs()
+            }
+            serialize_page_image._spec_labels = specs  # type: ignore[attr-defined]
+        labels = specs.get((str(out.get("page_key") or ""), str(out.get("slot_key") or "hero")))
+        if labels:
+            out["label"], out["slot_label"] = labels
+    except Exception:
+        pass
     for key in ("created_at", "updated_at"):
         val = out.get(key)
         if isinstance(val, datetime):

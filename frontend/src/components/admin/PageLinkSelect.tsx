@@ -25,6 +25,7 @@ export const PAGE_LINK_OPTIONS: PageLinkOption[] = [
   { value: "/series/love/", label: "愛情系列" },
   { value: "/series/family/", label: "家庭系列" },
   { value: "/series/heirloom/", label: "傳家系列" },
+  { value: "/series/signature/", label: "銘印鑽石（me-in）" },
   { value: "/what-is-dna-diamond.html", label: "什麼是 DNA Diamond" },
   { value: "/faq.html", label: "常見問題" },
   { value: "/about.html", label: "關於我們" },

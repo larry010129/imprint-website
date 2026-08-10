@@ -11,10 +11,12 @@
 {% endblock %}
 {% block extra_head %}
 <style>
+/* Phone: fill hero box with cover — never force PC 800/388 landscape ratio
+   (that re-crops admin 9:16 phone banners back into laptop framing). */
 @media (max-width:900px){
   .page-home .gh-hc-viewport .hc-media img{
-    aspect-ratio:800/388;
     object-fit:cover;
+    object-position:center;
   }
 }
 /* Scroll cue — center-bottom affordance; dark glass + gold edge (brand), gentle bounce.
@@ -399,7 +401,7 @@
 <section class="gh-section home-stack" id="series" data-home-stack>
   <p class="gh-script reveal" data-cms-text="series-script">Six Collections</p>
   <h2 class="gh-section__title reveal reveal-d1" data-cms-text="series-title">選擇屬於您的系列</h2>
-  <p class="gh-section__lead reveal reveal-d2" data-cms-text="series-lead">每一種羈絆，都有屬於它的光。先<a href="/series">了解六大系列</a>；真我鑽石以自己的髮絲，萃煉成獨一無二的鑽石，獻給值得被自己慶祝的此刻。</p>
+  <p class="gh-section__lead reveal reveal-d2" data-cms-text="series-lead">每一種羈絆，都有屬於它的光。先<a href="/series">了解六大系列</a>；銘印鑽石以自己的髮絲，萃煉成獨一無二的鑽石，獻給值得被自己慶祝的此刻。</p>
 
 {% set cms_anchor = 'series-top' %}
   {% include "partials/cms/site_section_stack.html" %}
@@ -484,13 +486,13 @@
       <div class="gh-series-card__media">
         <picture>
           <source type="image/webp" srcset="/static/images/hero/imprint-diamond-wedding-couple-ring-400w.webp 400w, /static/images/hero/imprint-diamond-wedding-couple-ring-800w.webp 800w, /static/images/hero/imprint-diamond-wedding-couple-ring-960w.webp 960w, /static/images/hero/imprint-diamond-wedding-couple-ring-1200w.webp 1200w" sizes="(max-width:640px) 92vw, (max-width:900px) 45vw, 320px">
-          <img data-cms-slot="series-signature" src="/static/images/hero/imprint-diamond-wedding-couple-ring-800w.webp" srcset="/static/images/hero/imprint-diamond-wedding-couple-ring-800w.webp 800w, /static/images/hero/imprint-diamond-wedding-couple-ring-960w.webp 960w, /static/images/hero/imprint-diamond-wedding-couple-ring-1200w.webp 1200w" sizes="(max-width:640px) 92vw, (max-width:900px) 45vw, 320px" alt="真我鑽石" width="800" height="388" loading="lazy" decoding="async" onerror="imgFallback(this)">
+          <img data-cms-slot="series-signature" src="/static/images/hero/imprint-diamond-wedding-couple-ring-800w.webp" srcset="/static/images/hero/imprint-diamond-wedding-couple-ring-800w.webp 800w, /static/images/hero/imprint-diamond-wedding-couple-ring-960w.webp 960w, /static/images/hero/imprint-diamond-wedding-couple-ring-1200w.webp 1200w" sizes="(max-width:640px) 92vw, (max-width:900px) 45vw, 320px" alt="銘印鑽石" width="800" height="388" loading="lazy" decoding="async" onerror="imgFallback(this)">
         </picture>
       </div>
       <div class="gh-series-card__body">
-        <p class="gh-series-card__en">Signature</p>
-        <h3>真我鑽石</h3>
-        <p>以自己的髮絲，萃煉成獨一無二的鑽石，獻給值得被自己慶祝的此刻。</p>
+        <p class="gh-series-card__en">Me-in</p>
+        <h3 data-cms-text="card-signature-title">銘印鑽石</h3>
+        <p data-cms-text="card-signature-text">以自己的髮絲，萃煉成獨一無二的鑽石，獻給值得被自己慶祝的此刻。</p>
         <span class="gh-series-card__more">立即客製 →</span>
       </div>
     </a>
@@ -1135,23 +1137,24 @@
 </script>
 <script>
 (function () {
-  /* Below-fold wall/banners: hard delay past PSI (rIC fires during lab idle). */
-  var HOME_EXTRAS_MS = 10000;
   function inject(src) {
     var s = document.createElement('script');
     s.src = src;
     s.defer = true;
     document.body.appendChild(s);
   }
-  function loadHomeExtras() {
-    if (window.__homeExtrasInjected) return;
-    window.__homeExtrasInjected = true;
+  /* Banner CMS (phone 9:16 crop) must load ASAP — delayed inject left phones on
+     PC landscape SSR for 10s+. Wall stays below-fold / PSI-deferred. */
+  inject('/static/js/home-banners.js?v=11');
+  var HOME_WALL_MS = 10000;
+  function loadHomeWall() {
+    if (window.__homeWallInjected) return;
+    window.__homeWallInjected = true;
     inject('/static/js/home-wall.js?v=4');
-    inject('/static/js/home-banners.js?v=10');
   }
-  function schedule() { setTimeout(loadHomeExtras, HOME_EXTRAS_MS); }
-  if (document.readyState === 'complete') schedule();
-  else window.addEventListener('load', schedule);
+  function scheduleWall() { setTimeout(loadHomeWall, HOME_WALL_MS); }
+  if (document.readyState === 'complete') scheduleWall();
+  else window.addEventListener('load', scheduleWall);
 })();
 </script>
 {% endblock %}

@@ -357,7 +357,7 @@ button.gh-btn--primary{ border:none; }
   }
   .gh-hero__fade-bottom{ height:3.75rem; }
   .page-home .hc-media::after{ height:4.5rem; }
-  .hc-media img{ object-position:center 28%; }
+  .hc-media img{ object-position:center; }
   .page-home .hc-copy,
   .gh-hc-copy{
     padding:calc(112px + var(--safe-area-top, 0px)) var(--page-padding-x, 20px)

@@ -25,7 +25,7 @@ PAGE_IMAGE_STORAGE_FOLDERS: dict[str, str] = {
     "/series/love/": "wedding-diamond",  # 結髮鑽石
     "/series/family/": "family-diamond",  # 全家福鑽石
     "/series/heirloom/": "life-diamond",  # 生命鑽石
-    "/series/signature/": "signature-diamond",  # 真我鑽石
+    "/series/signature/": "signature-diamond",  # 銘印鑽石 me-in
     "/what-is-dna-diamond": "dna-diamond",  # DNA 鑽石的誕生
 }
 PAGE_IMAGE_PENDING_FOLDER = "_pending"
@@ -57,7 +57,7 @@ _SERIES = {
     "love": ("結髮鑽石", "imprint-diamond-wedding-couple-ring"),
     "family": ("全家福鑽石", "imprint-diamond-family-portrait-jewelry"),
     "heirloom": ("生命鑽石", "imprint-diamond-heirloom-memorial"),
-    "signature": ("真我鑽石", "imprint-diamond-wedding-couple-ring"),
+    "signature": ("銘印鑽石", "imprint-diamond-wedding-couple-ring"),
 }
 _HERO_STEM_MAX_W = {
     "imprint-diamond-newborn-baby-necklace": 2400,
@@ -522,6 +522,15 @@ def _replace_tag_url(tag: str, url: str, webp: str = "") -> str:
             "data-srcset" if _attribute(tag, "data-srcset") else "srcset"
         )
         tag = _replace_attr(tag, name, webp)
+    else:
+        # Custom single-URL upload: drop stale local responsive srcset or
+        # browser keeps old PC hero bytes and ignores the new src.
+        single = (webp or url).strip()
+        if single:
+            if _attribute(tag, "srcset"):
+                tag = _replace_attr(tag, "srcset", single)
+            if _attribute(tag, "data-srcset"):
+                tag = _replace_attr(tag, "data-srcset", single)
     return tag
 
 

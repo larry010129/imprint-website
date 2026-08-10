@@ -21,12 +21,25 @@ def test_home_banners_honors_mobile_crop_on_memorial_slide():
     assert "var imgSrc = mobileValue || MEMORIAL_IMG;" in src
     assert 'media="(min-width:901px)"' in src
     assert "b.image_url || desktop" not in src
+    # Desktop must not ride along on <img srcset> (phone-safe only).
+    assert "MEMORIAL_MOBILE + ', ' + MEMORIAL_DESKTOP" not in src
+    assert "localHeroMobileSrcset(stem) + ', ' + desktopSrcset" not in src
 
 
 def test_home_banners_cache_bust():
     html = INDEX.read_text(encoding="utf-8")
-    assert "home-banners.js?v=10" in html
+    assert "home-banners.js?v=11" in html
+    # Phone crops must not wait on 10s below-fold delay.
+    assert "HOME_EXTRAS_MS" not in html
+    assert "inject('/static/js/home-banners.js?v=11');" in html
+    assert "aspect-ratio:800/388" not in html
 
+
+def test_home_banners_refresh_asap():
+    src = HOME_BANNERS.read_text(encoding="utf-8")
+    assert "timeout: 800" in src
+    assert "DOMContentLoaded" in src
+    assert "window.addEventListener('load', scheduleRefresh" not in src
 
 def test_home_hero_slides_use_responsive_webp_srcset():
     html = INDEX.read_text(encoding="utf-8")
