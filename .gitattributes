@@ -1,0 +1,3 @@
+# Windows cmd requires CRLF in .bat/.cmd or lines parse as 'tlocal', '/d', etc.
+*.bat text eol=crlf
+*.cmd text eol=crlf

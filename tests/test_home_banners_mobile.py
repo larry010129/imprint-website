@@ -17,11 +17,15 @@ def test_home_banners_honors_mobile_crop_on_memorial_slide():
     # matchesSsr must see image_url_mobile or CMS phone crops never apply.
     assert "norm(b.image_url_mobile || '')" in src
     assert "assetKey" in src
+    # Phone <img> must use phone crop URL — never desktop — when admin crop set.
+    assert "var imgSrc = mobileValue || MEMORIAL_IMG;" in src
+    assert 'media="(min-width:901px)"' in src
+    assert "b.image_url || desktop" not in src
 
 
 def test_home_banners_cache_bust():
     html = INDEX.read_text(encoding="utf-8")
-    assert "home-banners.js?v=9" in html
+    assert "home-banners.js?v=10" in html
 
 
 def test_home_hero_slides_use_responsive_webp_srcset():

@@ -92,6 +92,8 @@
   /**
    * Slide 0 memorial: keep local desktop LCP assets.
    * When CMS has image_url_mobile, use that for ≤900px (phone crop).
+   * <img> fallback must be the phone asset when a phone crop exists —
+   * never desktop — or phone paints landscape first then swaps.
    */
   function memorialPicture(sourceAttr, mobileOverride) {
     var mobileValue = String(mobileOverride || '').trim();
@@ -100,17 +102,19 @@
     var mobileType = (!mobileValue || mobileIsWebp) ? ' type="image/webp"' : '';
     var mobile = '<source media="(max-width:900px)" ' + sourceAttr + '="' +
       esc(mobileSrc) + '"' + mobileType + ' sizes="100vw">';
-    var webp = '<source ' + sourceAttr + '="' + esc(MEMORIAL_DESKTOP) +
-      '" type="image/webp" sizes="100vw">';
+    var webp = '<source media="(min-width:901px)" ' + sourceAttr + '="' +
+      esc(MEMORIAL_DESKTOP) + '" type="image/webp" sizes="100vw">';
+    var imgSrc = mobileValue || MEMORIAL_IMG;
     var imgExtra = mobileValue
       ? ''
       : ' width="800" height="388" sizes="100vw" srcset="' +
         esc(MEMORIAL_MOBILE + ', ' + MEMORIAL_DESKTOP + ' 2400w') + '"';
-    return { mobile: mobile, webp: webp, imgSrc: MEMORIAL_IMG, imgExtra: imgExtra };
+    return { mobile: mobile, webp: webp, imgSrc: imgSrc, imgExtra: imgExtra };
   }
 
   function remotePicture(b, sourceAttr) {
     var mobileValue = String(b.image_url_mobile || '').trim();
+    var desktopUrl = String(b.image_webp || b.image_url || '').trim();
     var stem = localHeroStem(b.image_webp || b.image_url);
     // Local hero assets: serve 800/960/1200 on phone (never full 2400w).
     // Custom image_url_mobile (admin crop) still wins at ≤900px.
@@ -124,11 +128,11 @@
       var mobile = '<source media="(max-width:900px)" ' + sourceAttr + '="' +
         esc(mobileSrcset) + '"' + (mobileIsWebp ? ' type="image/webp"' : '') +
         ' sizes="100vw">';
-      var webp = '<source ' + sourceAttr + '="' + esc(desktopSrcset) +
-        '" type="image/webp" sizes="100vw">';
-      var imgSrc = mobileValue
-        ? (b.image_url || desktop)
-        : '/static/images/hero/' + stem + '-800w.webp';
+      var webp = '<source media="(min-width:901px)" ' + sourceAttr + '="' +
+        esc(desktopSrcset) + '" type="image/webp" sizes="100vw">';
+      // Phone crop → img is phone URL only (lazy loader sets img.src = this).
+      var imgSrc = mobileValue ||
+        '/static/images/hero/' + stem + '-800w.webp';
       var imgExtra = '';
       if (!mobileValue) {
         imgExtra = ' width="800" height="388" sizes="100vw"';
@@ -139,16 +143,21 @@
       }
       return { mobile: mobile, webp: webp, imgSrc: imgSrc, imgExtra: imgExtra };
     }
-    var mobileSrc = mobileValue || String(b.image_webp || b.image_url || '');
+    var mobileSrc = mobileValue || desktopUrl;
     var remoteMobileIsWebp = /\.webp(\s|\?|$)/i.test(mobileSrc);
     var mobile = '<source media="(max-width:900px)" ' + sourceAttr + '="' +
       esc(mobileSrc) + '"' + (remoteMobileIsWebp ? ' type="image/webp"' : '') +
       ' sizes="100vw">';
-    var webp = b.image_webp
-      ? '<source ' + sourceAttr + '="' + esc(b.image_webp) + '" type="image/webp" sizes="100vw">'
-      : '';
-    var imgSrc = b.image_url || '';
-    if (b.image_webp && !mobileValue) imgSrc = b.image_webp;
+    var desktopSrc = String(b.image_webp || b.image_url || '').trim();
+    var webp = '';
+    if (desktopSrc) {
+      var desktopIsWebp = /\.webp(\s|\?|$)/i.test(desktopSrc);
+      webp = '<source media="(min-width:901px)" ' + sourceAttr + '="' +
+        esc(desktopSrc) + '"' + (desktopIsWebp ? ' type="image/webp"' : '') +
+        ' sizes="100vw">';
+    }
+    // Prefer phone crop as <img> fallback so phone never paints desktop first.
+    var imgSrc = mobileValue || desktopSrc;
     return { mobile: mobile, webp: webp, imgSrc: imgSrc, imgExtra: '' };
   }
 
