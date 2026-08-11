@@ -183,21 +183,43 @@ def _normalize_store(raw: Any) -> dict[str, Any]:
     }
 
 
-def load_store(path: Path | None = None) -> dict[str, Any]:
-    target = path or STORE_PATH
+_KV_KEY = "release-notes"
+
+
+def _read_legacy_file(target: Path) -> dict[str, Any] | None:
     if not target.is_file():
-        return _default_store()
+        return None
     try:
         data = json.loads(target.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def load_store(path: Path | None = None) -> dict[str, Any]:
+    """Default path → shared DB (cms_kv, one-time legacy import); explicit
+    path → file (tests/tools)."""
+    if path is not None:
+        data = _read_legacy_file(path)
+    else:
+        from app.cms_kv_store import kv_get_or_import_file
+
+        data = kv_get_or_import_file(_KV_KEY, lambda: _read_legacy_file(STORE_PATH))
+    if not isinstance(data, dict):
         return _default_store()
     return _normalize_store(data)
 
 
 def save_store(data: dict[str, Any], path: Path | None = None) -> None:
-    target = path or STORE_PATH
-    target.parent.mkdir(parents=True, exist_ok=True)
+    """Default path → shared DB only (raises on failure); explicit path → file."""
     payload = _normalize_store(data)
+    if path is None:
+        from app.cms_kv_store import kv_set
+
+        kv_set(_KV_KEY, payload)
+        return
+    target = path
+    target.parent.mkdir(parents=True, exist_ok=True)
     text = json.dumps(payload, ensure_ascii=False, indent=2) + "\n"
     fd, tmp_name = tempfile.mkstemp(
         dir=str(target.parent), prefix=".release-notes-", suffix=".tmp"

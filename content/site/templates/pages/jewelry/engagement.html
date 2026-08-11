@@ -69,38 +69,23 @@
       <p class="series-lead-narrow">以下為戒指系列入口；主石可為結髮 DNA 鑽石或其他紀念鑽石。</p>
     </div>
     <div class="series-grid shop-grid">
-      <a class="series-card" href="/jewelry/rings/classic-solitaire/">
+      {% for ring in engagement_rings %}
+      <a class="series-card" href="{{ ring.href }}">
+        {% if ring.image_url %}
+        <div class="series-media sm-{{ loop.index }}">
+          <picture>
+            <img src="{{ ring.image_url }}" alt="{{ ring.name_zh }}" loading="lazy" decoding="async" onerror="imgFallback(this)">
+          </picture>
+        </div>
+        {% endif %}
         <div class="series-body">
-          <p class="series-en">CLASSIC SOLITAIRE</p>
-          <h3>經典單鑽戒指</h3>
-          <p>凸顯主石光芒，常見求婚首選。</p>
+          <p class="series-en">{{ ring.name_en }}</p>
+          <h3>{{ ring.name_zh }}</h3>
+          <p>{{ ring.description }}</p>
           <span class="series-more">查看款式</span>
         </div>
       </a>
-      <a class="series-card" href="/jewelry/rings/pave-halo/">
-        <div class="series-body">
-          <p class="series-en">PAVE HALO</p>
-          <h3>華麗排鑽戒指</h3>
-          <p>主石外圈排鑽，儀式感更足。</p>
-          <span class="series-more">查看款式</span>
-        </div>
-      </a>
-      <a class="series-card" href="/jewelry/rings/vintage-vine/">
-        <div class="series-body">
-          <p class="series-en">VINTAGE VINE</p>
-          <h3>復古藤蔓戒指</h3>
-          <p>線條溫柔，適合重視故事感的訂製。</p>
-          <span class="series-more">查看款式</span>
-        </div>
-      </a>
-      <a class="series-card" href="/jewelry/rings/modern-band/">
-        <div class="series-body">
-          <p class="series-en">MODERN BAND</p>
-          <h3>極簡線戒</h3>
-          <p>簡潔日常，也適合作為對戒搭配。</p>
-          <span class="series-more">查看款式</span>
-        </div>
-      </a>
+      {% endfor %}
     </div>
   </div>
 </section>

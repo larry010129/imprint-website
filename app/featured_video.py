@@ -189,17 +189,29 @@ def admin_featured_payload(data: dict[str, Any]) -> dict[str, Any]:
     return payload
 
 
-def read_featured_video_file(path: Path | None = None) -> dict[str, Any]:
-    target = path or _DEFAULT_PATH
+def _read_legacy_file(target: Path) -> dict[str, Any] | None:
+    """Raw legacy JSON file payload; None when missing/corrupt."""
     if not target.is_file():
-        return {"enabled": False, "videos": []}
+        return None
     try:
         data = json.loads(target.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
-        return {"enabled": False, "videos": []}
-    if not isinstance(data, dict):
-        return {"enabled": False, "videos": []}
-    return data
+        return None
+    return data if isinstance(data, dict) else None
+
+
+_KV_KEY = "featured-video"
+
+
+def read_featured_video_file(path: Path | None = None) -> dict[str, Any]:
+    """Read gallery config. Default path → shared DB (cms_kv); explicit path →
+    file (tests/tools). DB reads one-time-import the legacy local JSON."""
+    if path is not None:
+        return _read_legacy_file(path) or {"enabled": False, "videos": []}
+    from app.cms_kv_store import kv_get_or_import_file
+
+    data = kv_get_or_import_file(_KV_KEY, lambda: _read_legacy_file(_DEFAULT_PATH))
+    return data or {"enabled": False, "videos": []}
 
 
 def _fetch_channel_candidates(
@@ -297,7 +309,7 @@ def _persist_repaired_gallery(
         saved["title"] = videos[0]["title"]
     try:
         save_featured_video_file(saved, path)
-    except OSError as exc:
+    except Exception as exc:  # noqa: BLE001 — repair persist must not break render
         _logger.warning("featured video repair persist failed: %s", exc)
 
 
@@ -439,8 +451,15 @@ def save_featured_video_file(
     data: dict[str, Any],
     path: Path | None = None,
 ) -> dict[str, Any]:
-    """Atomically write featured-video.json; return admin payload."""
-    target = path or _DEFAULT_PATH
+    """Persist gallery config. Default path → shared DB only (raises on
+    failure so an admin save never silently lands in a local-only file);
+    explicit path → atomic file write (tests/tools)."""
+    if path is None:
+        from app.cms_kv_store import kv_set
+
+        kv_set(_KV_KEY, data)
+        return admin_featured_payload(data)
+    target = path
     target.parent.mkdir(parents=True, exist_ok=True)
     text = json.dumps(data, ensure_ascii=False, indent=2) + "\n"
     with tempfile.NamedTemporaryFile(

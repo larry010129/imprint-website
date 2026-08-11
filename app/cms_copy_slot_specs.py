@@ -18,7 +18,6 @@ EDITABLE_SITE_PAGES: tuple[dict[str, str], ...] = (
     {"route": "/diamond-4c", "title": "鑽石 4C", "content_tab": "page"},
     {"route": "/lab-grown-diamond", "title": "什麼是培育鑽石", "content_tab": "page"},
     {"route": "/diamond-comparison", "title": "天然 vs 培育／DNA", "content_tab": "page"},
-    {"route": "/jewelry/engagement/", "title": "求婚／結髮", "content_tab": "page"},
     {"route": "/contact", "title": "聯絡我們", "content_tab": "page"},
     {"route": "/faq", "title": "常見問題", "content_tab": "faq"},
     {"route": "/stories", "title": "客戶見證", "content_tab": "testimonials"},
@@ -54,14 +53,19 @@ def _btn(page: str, key: str, label: str, text: str, href: str, order: int) -> d
 
 
 def copy_slot_specs() -> tuple[dict[str, Any], ...]:
+    # Lazy imports: the sibling modules import _t/_btn from this module,
+    # so importing them here (not at module top) avoids an import cycle.
+    from app.cms_copy_slot_specs_education import education_slot_specs
+    from app.cms_copy_slot_specs_legal import legal_slot_specs
+    from app.cms_copy_slot_specs_series import series_slot_specs
+
     specs: list[dict[str, Any]] = []
     specs.extend(_home_slots())
     specs.extend(_about_slots())
-    specs.extend(_series_slots())
     specs.extend(_contact_slots())
-    specs.extend(_dna_slots())
-    specs.extend(_legal_slots())
-    specs.extend(_series_detail_slots())
+    specs.extend(education_slot_specs())
+    specs.extend(legal_slot_specs())
+    specs.extend(series_slot_specs())
     return tuple(specs)
 
 
@@ -252,6 +256,12 @@ def _about_slots() -> list[dict[str, Any]]:
             "從樣本進入實驗室的那一刻，到成品被交回您手中——每一位客戶、每一段旅程，都以尊嚴與專屬的方式被對待。",
             41,
         ),
+        _t(p, "care-1-title", "品牌故事・託付卡標題", "專屬託付", 42),
+        _t(p, "care-1-body", "品牌故事・託付卡內文", "每一份樣本獨立處理，不混 batch、不代用。了解完整製程 →", 43),
+        _t(p, "care-2-title", "品牌故事・透明卡標題", "透明可見", 44),
+        _t(p, "care-2-body", "品牌故事・透明卡內文", "關鍵階段可追蹤；歡迎預約見證生長。查詢訂製進度 →", 45),
+        _t(p, "care-3-title", "品牌故事・交付卡標題", "完整交付", 46),
+        _t(p, "care-3-body", "品牌故事・交付卡內文", "鑽石連同紀念與證明一併交還，讓故事被保存。鑑定與保障說明 →", 47),
         _t(p, "next-title", "品牌故事・收尾標題", "不需要急著決定。準備好的那一天，我們都在。", 50),
         _t(
             p,
@@ -262,33 +272,6 @@ def _about_slots() -> list[dict[str, Any]]:
         ),
         _btn(p, "cta-calculator", "品牌故事・試算按鈕", "開始客製試算", "/shop/calculator/", 52),
         _btn(p, "cta-dna", "品牌故事・DNA按鈕", "了解 DNA 鑽石的誕生", "/what-is-dna-diamond", 53),
-    ]
-
-
-def _series_slots() -> list[dict[str, Any]]:
-    p = "/series"
-    return [
-        _t(p, "hero-eyebrow", "系列總覽・眉標", "Six Collections", 1),
-        _t(p, "hero-title", "系列總覽・主標", "選擇屬於您的系列", 2),
-        _t(
-            p,
-            "hero-lead",
-            "系列總覽・引言",
-            "銘印鑽石依不同的羈絆與生命階段，整理成六個系列；銘印鑽石以自己的髮絲，萃煉成獨一無二的鑽石，獻給值得被自己慶祝的此刻。每一顆鑽石都從您珍視的樣本中真實培育而成——先了解各系列意義，再選擇克拉數、形狀與飾品款式。",
-            3,
-        ),
-        _t(p, "intro-title", "系列總覽・介紹標題", "六大系列，對應六種珍視的連結", 10),
-        _t(
-            p,
-            "intro-body",
-            "系列總覽・介紹內文",
-            "無論是寶寶的第一縷胎髮、毛孩多年的陪伴、伴侶之間的誓約、全家人的髮絲，或是已離開的摯愛——我們以相同的在地培育技術，為不同故事找到最貼切的起點。系列之間沒有優劣，只有「哪一種連結，此刻最貼近您的心」。銘印鑽石則以自己的髮絲，萃煉成獨一無二的鑽石，獻給值得被自己慶祝的此刻。",
-            11,
-        ),
-        _t(p, "guide-title", "系列總覽・導引標題", "不確定從哪個系列開始？", 20),
-        _t(p, "guide-lead", "系列總覽・導引引言", "依您目前的狀況快速對照——點選即可進入該系列詳細介紹。", 21),
-        _t(p, "details-title", "系列總覽・詳情標題", "各系列詳細介紹", 30),
-        _btn(p, "cta-calculator", "系列總覽・試算按鈕", "開始客製試算", "/shop/calculator/", 90),
     ]
 
 
@@ -304,6 +287,12 @@ def _contact_slots() -> list[dict[str, Any]]:
             2,
         ),
         _btn(p, "card-line", "聯絡・LINE按鈕", "加入官方 LINE 諮詢", "https://lin.ee/ktVBtmx", 3),
+        _t(p, "info-title", "聯絡・聯絡方式標題", "聯絡方式", 4),
+        _t(p, "info-k-address", "聯絡・門市標籤", "門市", 5),
+        _btn(p, "info-address", "聯絡・門市地址", "新北市三重區福德南路 43 號 1 樓（預約制，請先聯繫再蒞臨）", "https://maps.app.goo.gl/3Fed2YEpWa8LxQoy9", 6),
+        _t(p, "info-k-phone", "聯絡・電話標籤", "電話", 7),
+        _t(p, "info-phone", "聯絡・電話號碼", "02-2977-0268", 8),
+        _t(p, "info-k-hours", "聯絡・時段標籤", "預約時段", 9),
         _t(p, "form-title", "聯絡・表單標題", "線上留言諮詢", 10),
         _t(
             p,
@@ -312,90 +301,24 @@ def _contact_slots() -> list[dict[str, Any]]:
             "不方便加 LINE 也沒關係，留下您的聯絡方式、需求與希望預約時段（上午 10:00–12:00 或下午 1:30–6:30），顧問會盡快與您聯繫。",
             11,
         ),
+        _t(p, "info-hours", "聯絡・預約時段", "上午 10:00～12:00／下午 1:30～6:30（預約制）", 12),
+        _t(p, "info-k-line", "聯絡・LINE標籤", "LINE", 13),
+        _btn(p, "info-line", "聯絡・LINE帳號", "@imprintdiamond 官方帳號", "https://lin.ee/ktVBtmx", 14),
+        _t(p, "info-k-fb", "聯絡・FB標籤", "Facebook", 15),
+        _btn(p, "info-fb", "聯絡・FB專頁", "Imprint Diamond 銘印鑽石", "https://www.facebook.com/Imprintdiamond/", 16),
+        _t(p, "scroll-hint", "聯絡・捲動提示", "↓ 線上留言諮詢", 17),
+        _t(p, "reach-muted", "聯絡・直接聯繫提示", "也可以直接聯繫", 18),
+        _t(p, "reach-or", "聯絡・LINE分隔字", "官方 LINE", 19),
+        _t(p, "form-muted", "聯絡・表單提示", "留下簡短訊息", 20),
+        _t(p, "form-label-name", "聯絡・姓名標籤", "姓名 *", 21),
+        _t(p, "form-label-phone", "聯絡・電話標籤", "電話 *", 22),
+        _t(p, "form-label-email", "聯絡・Email標籤", "Email", 23),
+        _t(p, "form-label-slot", "聯絡・時段標籤", "希望預約時段", 24),
+        _t(p, "form-opt-1", "聯絡・時段選項1", "尚未決定／稍後再約", 25),
+        _t(p, "form-opt-2", "聯絡・時段選項2", "上午 10:00～12:00", 26),
+        _t(p, "form-opt-3", "聯絡・時段選項3", "下午 1:30～6:30", 27),
+        _t(p, "form-label-message", "聯絡・需求標籤", "您的需求 *", 28),
+        _btn(p, "form-submit", "聯絡・送出按鈕", "送出留言", "", 29),
     ]
 
 
-def _dna_slots() -> list[dict[str, Any]]:
-    p = "/what-is-dna-diamond"
-    return [
-        _t(p, "hero-eyebrow", "DNA知識・眉標", "WHAT IS DNA DIAMOND", 1),
-        _t(p, "hero-title", "DNA知識・主標", "DNA 鑽石的誕生", 2),
-        _t(
-            p,
-            "hero-lead",
-            "DNA知識・引言",
-            "從一縷髮絲，到一顆會發光的鑽石——完整的製作過程與品質保障。",
-            3,
-        ),
-        _t(p, "sec-what-title", "DNA知識・什麼是標題", "什麼是 DNA 鑽石", 10),
-        _t(
-            p,
-            "sec-what-body",
-            "DNA知識・什麼是內文",
-            "每一顆 DNA 鑽石，都是一段無可取代的生命印記。我們溫柔萃取毛髮或骨灰中獨一無二的碳元素，在台灣唯一擁有培育技術的實驗室裡，讓思念隨著時間的沉澱，緩緩結晶成永恆的璀璨。",
-            11,
-        ),
-        _t(p, "sec-process-title", "DNA知識・流程標題", "時光與情感的淬鍊｜完整製作流程", 20),
-        _t(p, "sec-sample-title", "DNA知識・樣本標題", "需要準備多少樣本", 30),
-        _t(
-            p,
-            "sec-sample-body",
-            "DNA知識・樣本內文",
-            "毛髮約需一顆雞蛋的大小（或養樂多瓶約 8 分滿）；骨灰約需 3 至 5 公克。若份量不如預期，請透過官方 LINE 聯繫顧問評估，確認可行前不需寄出樣本。",
-            31,
-        ),
-        _t(p, "sec-local-title", "DNA知識・在地標題", "最近的距離，最深的安心", 40),
-        _t(p, "sec-cert-title", "DNA知識・鑑定標題", "鑑定與保障", 50),
-        _t(p, "sec-care-title", "DNA知識・四大保障標題", "四大保障，讓您安心託付", 60),
-    ]
-
-
-def _legal_slots() -> list[dict[str, Any]]:
-    return [
-        _t("/privacy", "hero-title", "隱私權・標題", "隱私權政策", 1),
-        _t("/terms", "hero-title", "服務條款・標題", "服務條款", 1),
-        _t("/return-policy", "hero-title", "退換貨・標題", "退換貨與取消政策", 1),
-    ]
-
-
-def _series_detail_slots() -> list[dict[str, Any]]:
-    """Series detail fragments share series_detail.html shell; slots on fragment HTML."""
-    series = (
-        (
-            "/series/first-love/",
-            "滿月鑽石－珍藏生命最初的印記",
-            "以寶寶的胎髮，在台灣在地實驗室培育成專屬鑽石。從滿月剃髮的那一刻，到孩子長大成人，這顆鑽石始終記得最初的模樣。",
-        ),
-        (
-            "/series/pet/",
-            "寵物鑽石－讓陪伴延續成光",
-            "以毛孩的毛髮，在台灣在地實驗室培育成專屬鑽石。牠不在身邊了，但那份無條件的陪伴，可以換一種方式繼續跟著您。",
-        ),
-        (
-            "/series/love/",
-            "結髮鑽石－把兩人，凝成一顆鑽石",
-            "結髮為夫妻。以兩人的髮絲共同培育一顆鑽石，見證一生一次的誓約——這顆鑽石裡，有你也有我。",
-        ),
-        (
-            "/series/family/",
-            "全家福鑽石－讓家的記憶，可以傳承",
-            "集合全家人的髮絲，凝成一顆象徵家族連結的鑽石，讓家的記憶可以傳承。",
-        ),
-        (
-            "/series/heirloom/",
-            "生命鑽石－讓思念，有永恆的形狀",
-            "以摯愛親人的毛髮或骨灰，讓思念有永恆的形狀，靜靜陪在您身邊。",
-        ),
-        (
-            "/series/signature/",
-            "真我鑽石｜為自己留下此刻",
-            "以自己的髮絲，萃煉成獨一無二的鑽石，獻給值得被自己慶祝的此刻。",
-        ),
-    )
-    out: list[dict[str, Any]] = []
-    for route, title, lead in series:
-        out.append(_t(route, "hero-title", f"{title}・主標", title, 1))
-        out.append(_t(route, "hero-lead", f"{title}・引言", lead, 2))
-        calc = "/shop/calculator/?category=diamond" if route.startswith("/series/") else "/shop/calculator/"
-        out.append(_btn(route, "cta-calculator", f"{title}・試算", "開始客製試算", calc, 3))
-    return out

@@ -274,6 +274,10 @@ def test_attached_chain_uses_full_o_chain_price(monkeypatch):
     assert quote["ready"] is True
     assert quote["laborPrice"] == 1200  # pendant row addon only
     assert quote["chainPrice"] == expected_chain
+    # PDP rows: 金工價格 = pendant only; 鍊條費用 = chainPrice (never folded into metalwork).
+    assert quote["metalworkPrice"] == quote["taijinPrice"] + quote["laborPrice"]
+    assert quote["chainPrice"] > 0
+    assert quote["total"] == 10000 + quote["metalworkPrice"] + quote["chainPrice"]
     assert quote["total"] == 10000 + quote["taijinPrice"] + 1200 + expected_chain
 
 
@@ -405,3 +409,10 @@ console.log(JSON.stringify({ withAddon, noAddon, alone }));
     # Base labor 3000 when no addon; attach must include it.
     assert out["noAddon"]["chainPrice"] == out["withAddon"]["chainPrice"] - 1500
     assert out["withAddon"]["total"] == out["noAddon"]["total"] + 1500
+    # Client quote fields for PDP: 金工 and 鍊條費用 stay separate.
+    mw = out["withAddon"]["metalworkPrice"]
+    assert mw == out["withAddon"]["taijinPrice"] + out["withAddon"]["laborPrice"]
+    assert mw == out["noAddon"]["metalworkPrice"]
+    assert out["withAddon"]["total"] == (
+        out["withAddon"]["diamondPrice"] + mw + out["withAddon"]["chainPrice"]
+    )

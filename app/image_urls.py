@@ -18,6 +18,7 @@ _UUID = re.compile(
 _VALID_CATEGORIES = frozenset({"pendant", "ring", "earring", "bracelet", "chain"})
 _DIAMOND_COLOR_ORDER = ("white", "yellow", "blue", "pink")
 _DIAMOND_COLORS = frozenset(_DIAMOND_COLOR_ORDER)
+# Loose preview allow-list; registry / slug cuts also resolve when PNG exists.
 _DIAMOND_MATRIX_SHAPES = frozenset(
     {
         "round",
@@ -358,16 +359,19 @@ def diamond_matrix_image_url(
 ) -> str:
     """Loose memorial-diamond preview from public/images/diamonds/matrix/."""
     shape_id = (shape or "round").strip().lower()
-    if shape_id not in _DIAMOND_MATRIX_SHAPES:
-        shape_id = "round"
     color_id = _resolve_diamond(diamond_color)
-    url = f"/static/images/diamonds/matrix/{shape_id}-{color_id}.png"
-    if static_url_exists(url):
-        return url
-    if color_id != "white":
-        white = f"/static/images/diamonds/matrix/{shape_id}-white.png"
-        if static_url_exists(white):
-            return white
+    # Prefer requested cut; unknown custom ids still resolve if asset exists.
+    candidates = [shape_id]
+    if shape_id not in _DIAMOND_MATRIX_SHAPES and shape_id != "round":
+        candidates.append("round")
+    for sid in candidates:
+        url = f"/static/images/diamonds/matrix/{sid}-{color_id}.png"
+        if static_url_exists(url):
+            return url
+        if color_id != "white":
+            white = f"/static/images/diamonds/matrix/{sid}-white.png"
+            if static_url_exists(white):
+                return white
     return ""
 
 

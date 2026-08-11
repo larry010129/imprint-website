@@ -19,9 +19,9 @@ from app.image_urls import (
     resolve_product_image_url,
     static_url_exists,
 )
+from app.diamond_shapes import is_allowed_shape_id
 from app.memorial_diamonds import (
     VALID_DIAMOND_COLORS,
-    VALID_DIAMOND_SHAPES,
     normalize_style_key,
     style_key_from_name_en,
 )
@@ -416,10 +416,10 @@ def image_covers_default_color(
     if not key or not default:
         return False
     if category == "diamond":
-        # Product = gem color; image slots are shapes (round, oval, …).
+        # Product = gem color; image slots are shapes (round, oval, asscher, …).
         if default not in VALID_DIAMOND_COLORS:
             return False
-        return key in VALID_DIAMOND_SHAPES
+        return is_allowed_shape_id(key)
     if default not in VALID_COLORS:
         return False
     if key == default:
@@ -525,7 +525,7 @@ def validate_product_fields(body: dict | None, *, valid_categories: set[str] | N
             if not img or not img.get("url"):
                 continue
             shape = str(img.get("color") or "").strip().lower()
-            if shape not in VALID_DIAMOND_SHAPES:
+            if not is_allowed_shape_id(shape):
                 errors.append(f"invalid image option: {shape or '(empty)'}")
                 continue
             url = normalize_product_image_url(img.get("url"), shape)

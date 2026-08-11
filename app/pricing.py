@@ -856,14 +856,28 @@ def compute_order_pricing(cur, data: dict[str, Any], *, require_published: bool 
         ring_size_addon = ring_size_addon_from_config(ring_cfg, data.get("ringSize"))
 
     # 手動定價: fixed unit total for every metal category (incl. standalone chain).
+    # Manual price is the pendant-only price; 搭配鏈條 still stacks on top.
     if variant.get("manual_price_twd") is not None:
         gold_prices = get_metal_prices(cur)
         unit_total = float(variant["manual_price_twd"]) + ring_size_addon
+        total = unit_total * line_qty
+        chain_display = None
+        if category == "pendant" and include_chain and chain_product_id and chain_gold and chain_length:
+            addon = _compute_chain_addon(
+                cur, gold_prices, chain_product_id=chain_product_id, chain_gold=chain_gold,
+                chain_length_cm=chain_length, require_published=require_published,
+                chain_thickness=chain_thickness, tax_rate=tax_rate,
+            )
+            if not addon:
+                return {"ready": False, "error": "invalid chain option"}
+            chain_display = round(addon["chainPrice"]) * line_qty
+            total += chain_display
         return {
             "ready": True,
-            "total": unit_total * line_qty,
+            "total": total,
             "manualOverride": True,
             "ringSizePrice": ring_size_addon or None,
+            "chainPrice": chain_display,
             "weightGrams": weight_grams * line_qty,
             "goldRatePerGram": gold_prices[METAL_SYMBOL[gold]] * PURITY_MULTIPLIER[gold],
             "priceSource": "server",

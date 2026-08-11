@@ -508,13 +508,26 @@
 
     var manual = product.manualPrices && product.manualPrices[gold] && product.manualPrices[gold][carat];
     // 手動定價: fixed unit total for every metal category (incl. standalone chain).
+    // Manual price is the pendant-only price; 搭配鏈條 still stacks on top.
     if (manual != null) {
       var manualRingAddon = category === 'ring' ? resolveRingSizeAddon(product, data.ringSize) : 0;
+      var manualChainDisplay = null;
+      var manualTotal = (Number(manual) + manualRingAddon) * earringQty;
+      if (category === 'pendant' && includeChain && chainProductId && chainGold && chainLength) {
+        try {
+          var manualChainAddon = computeChainAddon(catalog, chainProductId, chainGold, chainLength, chainThickness);
+          manualChainDisplay = Math.round(manualChainAddon.chainPrice);
+          manualTotal += manualChainDisplay;
+        } catch (e) {
+          return { ready: false, error: 'invalid chain option' };
+        }
+      }
       return {
         ready: true,
-        total: (Number(manual) + manualRingAddon) * earringQty,
+        total: manualTotal,
         manualOverride: true,
         ringSizePrice: manualRingAddon || undefined,
+        chainPrice: manualChainDisplay,
         quantity: category === 'earring' ? earringQty : undefined,
       };
     }
@@ -673,6 +686,7 @@
           { id: 'radiant', labelZh: '雷地恩形', labelEn: 'Radiant' },
           { id: 'pear', labelZh: '梨形', labelEn: 'Pear' },
           { id: 'cushion', labelZh: '枕形', labelEn: 'Cushion' },
+          { id: 'asscher', labelZh: '阿斯切', labelEn: 'Asscher' },
         ],
         shapes: [
           { id: 'round', labelZh: '圓形明亮式', labelEn: 'Round', image: 'diamonds/shapes/round.svg' },

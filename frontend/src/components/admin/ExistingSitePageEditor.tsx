@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 
 import PageLinkSelect from "@/components/admin/PageLinkSelect";
+import EngagementRingsEditor, {
+  type EngagementRingsApi,
+} from "@/components/admin/EngagementRingsEditor";
 import JournalPostsEditor, {
   type JournalPostsApi,
 } from "@/components/admin/JournalPostsEditor";
@@ -50,7 +53,8 @@ export type ExistingSitePageEditorProps = {
       section?: CmsSection;
       error?: string;
     }>;
-  } & JournalPostsApi;
+  } & JournalPostsApi &
+    EngagementRingsApi;
   onBack: () => void;
 };
 
@@ -395,6 +399,7 @@ export default function ExistingSitePageEditor({
   const stateLabel = (state: SaveState | undefined) =>
     state === "saving" ? "儲存中…" : state === "saved" ? "已儲存" : state === "error" ? "儲存失敗" : "";
   const isJournal = page.route === "/journal";
+  const isEngagement = page.route === "/jewelry/engagement/";
 
   return (
     <div className="cms-editor cms-site-editor cms-fixed-content-editor">
@@ -413,6 +418,7 @@ export default function ExistingSitePageEditor({
 
         {!loading && !loadError ? (
         <div className="cms-fixed-content-list">
+          {isEngagement ? <EngagementRingsEditor api={api} /> : null}
           {pageSlots.length ? (
             <section className="cms-copy-group">
               <h3 className="cms-copy-group__title">既有頁面文字與按鈕</h3>
@@ -466,7 +472,7 @@ export default function ExistingSitePageEditor({
             </section>
           ) : null}
 
-          {!pageSlots.length && !editableSections.length ? (
+          {!isEngagement && !pageSlots.length && !editableSections.length ? (
             <p className="cms-hint">此頁面目前沒有可編輯的文字或按鈕。</p>
           ) : null}
         </div>

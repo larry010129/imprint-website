@@ -569,8 +569,8 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 
-<script src="js/api-client.js?v=23"></script>
-<script src="js/admin1-shell.js?v=3"></script>
+<script src="js/api-client.js?v=24"></script>
+<script src="js/admin1-shell.js?v=4"></script>
 <script src="js/admin-nav-visibility.js?v=1"></script>
 <script src="js/toast.js?v=1"></script>
 <script src="js/skeleton-ui.js?v=4"></script>
@@ -584,7 +584,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <script src="js/girdle-engrave.js?v=11"></script>
 <script src="js/admin-orders.js?v=21"></script>
 <script src="js/order-detail.js"></script>
-<script src="js/admin-products.js?v=60"></script>
+<script src="js/admin-products.js?v=61"></script>
 <script src="js/admin-accounts.js?v=12"></script>
 <script src="js/admin-member-search.js?v=3"></script>
 <script src="js/admin-invites.js?v=12"></script>
@@ -596,6 +596,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <script src="js/membership-config.js?v=7"></script>
 <script>
 /* 側邊欄分頁切換（僅 data-panel；頂欄互動見 admin1-shell.js） */
+/* 每個分頁有自己的 URL：/admin/<panel>，支援上一頁/下一頁與深層連結。 */
 (function(){
   var buttons = document.querySelectorAll('.side-nav button[data-panel]');
   var titles = {
@@ -606,22 +607,57 @@ document.addEventListener('DOMContentLoaded', function () {
   };
   var mainEl = document.querySelector('.main');
   var pendingPanel = null;
+
+  function pathFor(panel) {
+    return panel === 'dash' ? '/admin' : '/admin/' + panel;
+  }
+
+  function panelFromLocation() {
+    var m = location.pathname.match(/^\/admin\/?([a-z0-9-]*)\/?$/i);
+    var slug = m && m[1] ? m[1].toLowerCase() : '';
+    if (slug && titles[slug]) return slug;
+    if (!slug) {
+      /* 舊版 hash 連結（/admin#orders）仍然有效 */
+      var hash = (location.hash || '').replace('#', '');
+      if (hash && titles[hash]) return hash;
+    }
+    return 'dash';
+  }
+
+  function activatePanel(panel, push) {
+    var btn = document.querySelector('.side-nav button[data-panel="' + panel + '"]');
+    if (!btn) return;
+    buttons.forEach(function(b){ b.classList.remove('is-active'); });
+    btn.classList.add('is-active');
+    document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('is-active'); });
+    var panelEl = document.getElementById('panel-' + panel);
+    if (panelEl) panelEl.classList.add('is-active');
+    if (mainEl) mainEl.classList.toggle('is-orders-view', panel === 'orders');
+    document.getElementById('pageTitle').textContent = titles[panel] || '';
+    var canonical = pathFor(panel);
+    if (push) {
+      if (location.pathname !== canonical) {
+        history.pushState({ adminPanel: panel }, '', canonical);
+      }
+    } else if (location.pathname !== canonical || location.hash) {
+      /* 初始載入：把舊 hash 或未知 slug 改成正式 URL */
+      history.replaceState({ adminPanel: panel }, '', canonical);
+    }
+    if (panel === 'pricing' && window.PricingPanel) window.PricingPanel.refresh();
+    if (window.AdminPanel) {
+      window.AdminPanel.onPanelSwitch(panel);
+    } else {
+      pendingPanel = panel;
+    }
+  }
+
   buttons.forEach(function(btn){
     btn.addEventListener('click', function(){
-      buttons.forEach(function(b){ b.classList.remove('is-active'); });
-      btn.classList.add('is-active');
-      document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('is-active'); });
-      var panelEl = document.getElementById('panel-' + btn.dataset.panel);
-      if (panelEl) panelEl.classList.add('is-active');
-      if (mainEl) mainEl.classList.toggle('is-orders-view', btn.dataset.panel === 'orders');
-      document.getElementById('pageTitle').textContent = titles[btn.dataset.panel] || '';
-      if (btn.dataset.panel === 'pricing' && window.PricingPanel) window.PricingPanel.refresh();
-      if (window.AdminPanel) {
-        window.AdminPanel.onPanelSwitch(btn.dataset.panel);
-      } else {
-        pendingPanel = btn.dataset.panel;
-      }
+      activatePanel(btn.dataset.panel, true);
     });
+  });
+  window.addEventListener('popstate', function(){
+    activatePanel(panelFromLocation(), false);
   });
   window.__adminFlushPendingPanel = function () {
     if (!pendingPanel || !window.AdminPanel) return;
@@ -630,10 +666,11 @@ document.addEventListener('DOMContentLoaded', function () {
     window.AdminPanel.onPanelSwitch(panel);
   };
 
-  var initialPanel = (window.location.hash || '').replace('#', '');
-  if (initialPanel && titles[initialPanel]) {
-    var initialBtn = document.querySelector('.side-nav button[data-panel="' + initialPanel + '"]');
-    if (initialBtn) initialBtn.click();
+  var initialPanel = panelFromLocation();
+  if (initialPanel !== 'dash') {
+    activatePanel(initialPanel, false);
+  } else if (location.pathname !== '/admin' || location.hash) {
+    history.replaceState({ adminPanel: 'dash' }, '', '/admin');
   }
 })();
 

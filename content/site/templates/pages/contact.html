@@ -39,13 +39,13 @@
       <p class="text-faint-lead contact-card__answer" data-cms-text="card-lead">
         銘印鑽石（IMPRINT DIAMOND／心之銘印鑽石有限公司）門市位於新北市三重區福德南路 43 號 1 樓，採預約制；電話 <a href="tel:+886229770268">02-2977-0268</a>。歡迎預約來店，親眼見證鑽石生長：可先到<a href="/shop/calculator/">線上客製試算</a>，或了解<a href="/series/love/">結髮鑽石</a>／訂製婚戒後再蒞臨。
       </p>
-      <h2 class="contact-card__subtitle">聯絡方式</h2>
+      <h2 class="contact-card__subtitle" data-cms-text="info-title">聯絡方式</h2>
       <ul class="contact-list">
-        <li><span class="k">門市</span><span class="v"><a href="https://maps.app.goo.gl/3Fed2YEpWa8LxQoy9" target="_blank" rel="noopener noreferrer">新北市三重區福德南路 43 號 1 樓（預約制，請先聯繫再蒞臨）</a></span></li>
-        <li><span class="k">電話</span><span class="v"><a href="tel:+886229770268">02-2977-0268</a></span></li>
-        <li><span class="k">預約時段</span><span class="v">上午 10:00～12:00／下午 1:30～6:30（預約制）</span></li>
-        <li><span class="k">LINE</span><span class="v"><a href="https://lin.ee/ktVBtmx" target="_blank" rel="noopener">@imprintdiamond 官方帳號</a></span></li>
-        <li><span class="k">Facebook</span><span class="v"><a href="https://www.facebook.com/Imprintdiamond/" target="_blank" rel="noopener">Imprint Diamond 銘印鑽石</a></span></li>
+        <li><span class="k" data-cms-text="info-k-address">門市</span><span class="v"><a href="https://maps.app.goo.gl/3Fed2YEpWa8LxQoy9" target="_blank" rel="noopener noreferrer" data-cms-button="info-address">新北市三重區福德南路 43 號 1 樓（預約制，請先聯繫再蒞臨）</a></span></li>
+        <li><span class="k" data-cms-text="info-k-phone">電話</span><span class="v"><a href="tel:+886229770268" data-cms-text="info-phone">02-2977-0268</a></span></li>
+        <li><span class="k" data-cms-text="info-k-hours">預約時段</span><span class="v" data-cms-text="info-hours">上午 10:00～12:00／下午 1:30～6:30（預約制）</span></li>
+        <li><span class="k" data-cms-text="info-k-line">LINE</span><span class="v"><a href="https://lin.ee/ktVBtmx" target="_blank" rel="noopener" data-cms-button="info-line">@imprintdiamond 官方帳號</a></span></li>
+        <li><span class="k" data-cms-text="info-k-fb">Facebook</span><span class="v"><a href="https://www.facebook.com/Imprintdiamond/" target="_blank" rel="noopener" data-cms-button="info-fb">Imprint Diamond 銘印鑽石</a></span></li>
       </ul>
       <div class="mt-lg">
         <a class="btn btn-dark btn-neon btn-neon--solid" href="https://lin.ee/ktVBtmx" target="_blank" rel="noopener" data-cms-button="card-line">加入官方 LINE 諮詢</a>
@@ -56,7 +56,7 @@
     </div>
   </div>
   <p class="contact-scroll-hint">
-    <a href="#view-contact-form">↓ 線上留言諮詢</a>
+    <a href="#view-contact-form" data-cms-text="scroll-hint">↓ 線上留言諮詢</a>
   </p>
 </section>
 
@@ -70,9 +70,9 @@
       </p>
 
       <div class="contact-form-panel__reach">
-        <p class="contact-form-panel__muted">也可以直接聯繫</p>
+        <p class="contact-form-panel__muted" data-cms-text="reach-muted">也可以直接聯繫</p>
         <div class="contact-form-panel__socials">
-          <span class="contact-form-panel__or">官方 LINE</span>
+          <span class="contact-form-panel__or" data-cms-text="reach-or">官方 LINE</span>
           <a
             class="contact-form-panel__social contact-form-panel__social--line"
             href="https://lin.ee/ktVBtmx"
@@ -105,34 +105,34 @@
         hx-target="#contactFormMsg"
         hx-swap="innerHTML"
         hx-disabled-elt="button[type=submit]">
-        <p class="contact-form-panel__muted">留下簡短訊息</p>
+        <p class="contact-form-panel__muted" data-cms-text="form-muted">留下簡短訊息</p>
         <div class="contact-form-panel__grid">
           <div class="form-field">
-            <label for="cName">姓名 <span class="req">*</span></label>
+            <label for="cName" data-cms-text="form-label-name">姓名 <span class="req">*</span></label>
             <input type="text" id="cName" name="name" autocomplete="name" placeholder="您的姓名" required>
           </div>
           <div class="form-field">
-            <label for="cPhone">電話 <span class="req">*</span></label>
+            <label for="cPhone" data-cms-text="form-label-phone">電話 <span class="req">*</span></label>
             <input type="tel" id="cPhone" name="phone" autocomplete="tel" placeholder="09xxxxxxxx" required>
           </div>
         </div>
         <div class="form-field">
-          <label for="cEmail">Email</label>
+          <label for="cEmail" data-cms-text="form-label-email">Email</label>
           <input type="email" id="cEmail" name="email" autocomplete="email" placeholder="name@example.com">
         </div>
         <div class="form-field">
-          <label for="cSlot">希望預約時段</label>
+          <label for="cSlot" data-cms-text="form-label-slot">希望預約時段</label>
           <select id="cSlot" name="preferred_slot">
-            <option value="">尚未決定／稍後再約</option>
-            <option value="上午 10:00～12:00">上午 10:00～12:00</option>
-            <option value="下午 1:30～6:30">下午 1:30～6:30</option>
+            <option value="" data-cms-text="form-opt-1">尚未決定／稍後再約</option>
+            <option value="上午 10:00～12:00" data-cms-text="form-opt-2">上午 10:00～12:00</option>
+            <option value="下午 1:30～6:30" data-cms-text="form-opt-3">下午 1:30～6:30</option>
           </select>
         </div>
         <div class="form-field">
-          <label for="cMessage">您的需求 <span class="req">*</span></label>
+          <label for="cMessage" data-cms-text="form-label-message">您的需求 <span class="req">*</span></label>
           <textarea id="cMessage" name="message" rows="4" placeholder="簡述您想了解的克拉、系列或預約時間…" required></textarea>
         </div>
-        <button type="submit" class="contact-form-panel__submit" id="contactSubmitBtn">送出留言</button>
+        <button type="submit" class="contact-form-panel__submit" id="contactSubmitBtn" data-cms-button="form-submit">送出留言</button>
         <div id="contactFormMsg" role="status" aria-live="polite"></div>
       </form>
     </div>

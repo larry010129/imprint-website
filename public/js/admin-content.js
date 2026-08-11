@@ -10,6 +10,7 @@
 
   var _loadedTabs = {};
   var _tab = 'banners';
+  var _loading = false;
   var _pageImagePage = '';
   var _testimonials = [];
   var _journalPosts = [];
@@ -487,13 +488,63 @@
     });
   }
 
-  function renderShell() {
+  function unmountContentIslands() {
     ['contentReactMount', 'cmsPagesMount'].forEach(function (id) {
       var oldMount = document.getElementById(id);
       if (oldMount && window.AdminTables && window.AdminTables.unmount) {
         try { window.AdminTables.unmount(oldMount); } catch (e) {}
       }
     });
+  }
+
+  function contentBodyLoadingHtml() {
+    if (window.SkeletonUI && window.SkeletonUI.table) {
+      return (
+        '<div class="skel-panel" aria-busy="true" aria-label="載入內容中">' +
+        window.SkeletonUI.table({
+          headers: ['圖', '標題', '狀態', '操作'],
+          rows: 4,
+          label: '載入內容中',
+        }) +
+        '</div>'
+      );
+    }
+    return '<p class="adx-loading-inline" role="status">載入內容中…</p>';
+  }
+
+  function tabClassName(id, current) {
+    var cls = 'adx-tab';
+    if (current === id) {
+      cls += ' is-active';
+      if (_loading) cls += ' is-pending';
+    }
+    return cls;
+  }
+
+  function paintContentLoading() {
+    unmountContentIslands();
+    var body = document.getElementById('contentPanelBody');
+    if (!body) return false;
+    body.setAttribute('aria-busy', 'true');
+    body.innerHTML = contentBodyLoadingHtml();
+    root.querySelectorAll('[data-tab]').forEach(function (btn) {
+      var on = btn.dataset.tab === _tab;
+      btn.classList.toggle('is-active', on);
+      btn.classList.toggle('is-pending', on);
+      btn.disabled = true;
+      btn.setAttribute('aria-busy', on ? 'true' : 'false');
+    });
+    root.querySelectorAll('[data-page-tab]').forEach(function (btn) {
+      var on = btn.dataset.pageTab === _pageImagePage;
+      btn.classList.toggle('is-active', on);
+      btn.classList.toggle('is-pending', on);
+      btn.disabled = true;
+    });
+    return true;
+  }
+
+  function renderShell() {
+    unmountContentIslands();
 
     var imagePages = pageImagePages();
     if (_tab === 'page-images' && (!_pageImagePage || !imagePages.some(function (p) { return p.value === _pageImagePage; }))) {
@@ -506,11 +557,13 @@
       for (var pi = 0; pi < imagePages.length; pi++) {
         var pg = imagePages[pi];
         pageSubTabsHtml +=
-          '<button type="button" class="adx-tab' +
-          (_pageImagePage === pg.value ? ' is-active' : '') +
+          '<button type="button" class="' +
+          tabClassName(pg.value, _pageImagePage) +
           '" data-page-tab="' +
           esc(pg.value) +
-          '">' +
+          '"' +
+          (_loading ? ' disabled' : '') +
+          '>' +
           esc(pg.label) +
           '</button>';
       }
@@ -519,16 +572,17 @@
 
     if (_tab === 'copy') _tab = 'pages';
 
+    var tabDisabled = _loading ? ' disabled' : '';
     root.innerHTML =
       '<p class="adx-panel-note">「頁面」= 編輯現有官網文字／圖片。圖片素材也可用「頁面圖片／首頁圖片」。FAQ／見證用對應分頁。商店試算／上架／價格表不在此編輯。</p>' +
       '<p class="note warn" role="status">Beta 測試功能：開發中，使用請自負風險。</p>' +
       '<div class="adx-tabs" role="tablist">' +
-        '<button type="button" class="adx-tab' + (_tab === 'banners' ? ' is-active' : '') + '" data-tab="banners">首頁圖片</button>' +
-        '<button type="button" class="adx-tab' + (_tab === 'page-images' ? ' is-active' : '') + '" data-tab="page-images">頁面圖片</button>' +
-        '<button type="button" class="adx-tab' + (_tab === 'testimonials' ? ' is-active' : '') + '" data-tab="testimonials">見證</button>' +
-        '<button type="button" class="adx-tab' + (_tab === 'journal' ? ' is-active' : '') + '" data-tab="journal">日誌</button>' +
-        '<button type="button" class="adx-tab' + (_tab === 'faq' ? ' is-active' : '') + '" data-tab="faq">FAQ</button>' +
-        '<button type="button" class="adx-tab' + (_tab === 'pages' ? ' is-active' : '') + '" data-tab="pages">頁面 <span class="adx-risk-tag">Beta · 風險</span></button>' +
+        '<button type="button" class="' + tabClassName('banners', _tab) + '" data-tab="banners"' + tabDisabled + '>首頁圖片</button>' +
+        '<button type="button" class="' + tabClassName('page-images', _tab) + '" data-tab="page-images"' + tabDisabled + '>頁面圖片</button>' +
+        '<button type="button" class="' + tabClassName('testimonials', _tab) + '" data-tab="testimonials"' + tabDisabled + '>見證</button>' +
+        '<button type="button" class="' + tabClassName('journal', _tab) + '" data-tab="journal"' + tabDisabled + '>日誌</button>' +
+        '<button type="button" class="' + tabClassName('faq', _tab) + '" data-tab="faq"' + tabDisabled + '>FAQ</button>' +
+        '<button type="button" class="' + tabClassName('pages', _tab) + '" data-tab="pages"' + tabDisabled + '>頁面 <span class="adx-risk-tag">Beta · 風險</span></button>' +
       '</div>' +
       pageSubTabsHtml +
       '<div id="contentPanelBody"></div>';
@@ -536,15 +590,17 @@
     root.querySelectorAll('[data-tab]').forEach(function (btn) {
       btn.addEventListener('click', function () {
         var nextTab = btn.dataset.tab;
-        if (!nextTab || nextTab === _tab) return;
+        if (!nextTab || nextTab === _tab || _loading) return;
         _tab = nextTab;
+        var force = false;
         if (_pageIndex !== 0) {
           _pageIndex = 0;
-          load(true, true);
-          return;
+          force = true;
         }
-        if (!_loadedTabs[_tab]) {
-          load(false);
+        if (!_loadedTabs[_tab] || force) {
+          _loading = true;
+          renderShell();
+          load(true, force);
           return;
         }
         renderShell();
@@ -554,14 +610,20 @@
     root.querySelectorAll('[data-page-tab]').forEach(function (btn) {
       btn.addEventListener('click', function () {
         var pageKey = btn.dataset.pageTab;
-        if (!pageKey || pageKey === _pageImagePage) return;
+        if (!pageKey || pageKey === _pageImagePage || _loading) return;
         _pageImagePage = pageKey;
         _pageIndex = 0;
+        _loading = true;
+        renderShell();
         load(true, true);
       });
     });
 
     var body = document.getElementById('contentPanelBody');
+    if (_loading) {
+      body.innerHTML = contentBodyLoadingHtml();
+      return;
+    }
     if (_tab === 'pages') renderCmsPages(body);
     else if (_tab === 'journal') {
       body.innerHTML = '';
@@ -621,6 +683,8 @@
       createJournalPost: function (fields) { return api.admin.createJournalPost(fields); },
       updateJournalPost: function (fields) { return api.admin.updateJournalPost(fields); },
       journalPostAction: function (id, action) { return api.admin.journalPostAction(id, action); },
+      getEngagementRings: function () { return api.admin.getEngagementRings(); },
+      saveEngagementRings: function (fields) { return api.admin.saveEngagementRings(fields); },
     };
   }
 
@@ -1661,13 +1725,19 @@
   function load(silent, force) {
     var tab = _tab === 'copy' ? 'pages' : _tab;
     if (_loadedTabs[tab] && !force) return;
-    if (!silent) {
+
+    _loading = true;
+    /* Keep tab chrome; show skeleton only in panel body when shell already exists. */
+    if (!paintContentLoading()) {
       root.setAttribute('aria-busy', 'true');
       root.classList.add('skel-panel');
-      root.innerHTML = window.SkeletonUI && window.SkeletonUI.contentShell
-        ? window.SkeletonUI.contentShell()
-        : '<p class="adx-loading-inline">載入內容中…</p>';
+      if (!silent && window.SkeletonUI && window.SkeletonUI.contentShell) {
+        root.innerHTML = window.SkeletonUI.contentShell();
+      } else {
+        root.innerHTML = contentBodyLoadingHtml();
+      }
     }
+
     /* 只抓目前分頁的資料集；其他分頁第一次切過去時再各自載入。 */
     var opts = listPageOpts();
     var mainP = null;
@@ -1688,11 +1758,25 @@
       var keysRes = results[1];
       // Soft-fail journal until backend routes land (parallel Phase 1).
       if (res && res.error && tab !== 'journal') {
-        root.innerHTML =
+        _loading = false;
+        root.removeAttribute('aria-busy');
+        root.classList.remove('skel-panel');
+        var errHtml =
           '<p class="note warn">載入失敗：' +
           esc(res.error.message || res.error) +
           '</p>';
-        root.removeAttribute('aria-busy');
+        var errBody = document.getElementById('contentPanelBody');
+        if (errBody) {
+          errBody.removeAttribute('aria-busy');
+          errBody.innerHTML = errHtml;
+          root.querySelectorAll('[data-tab], [data-page-tab]').forEach(function (btn) {
+            btn.disabled = false;
+            btn.classList.remove('is-pending');
+            btn.removeAttribute('aria-busy');
+          });
+        } else {
+          root.innerHTML = errHtml;
+        }
         return;
       }
       if (res) {
@@ -1718,9 +1802,27 @@
       }
       if (keysRes && !keysRes.error) rememberPageImagePages(keysRes.pageImages || []);
       _loadedTabs[tab] = true;
+      _loading = false;
       root.removeAttribute('aria-busy');
       root.classList.remove('skel-panel');
       renderShell();
+    }).catch(function () {
+      _loading = false;
+      root.removeAttribute('aria-busy');
+      root.classList.remove('skel-panel');
+      var failHtml = '<p class="note warn">載入失敗，請重試。</p>';
+      var failBody = document.getElementById('contentPanelBody');
+      if (failBody) {
+        failBody.removeAttribute('aria-busy');
+        failBody.innerHTML = failHtml;
+        root.querySelectorAll('[data-tab], [data-page-tab]').forEach(function (btn) {
+          btn.disabled = false;
+          btn.classList.remove('is-pending');
+          btn.removeAttribute('aria-busy');
+        });
+      } else {
+        root.innerHTML = failHtml;
+      }
     });
   }
 

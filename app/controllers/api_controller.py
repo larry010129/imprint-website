@@ -675,6 +675,8 @@ def shop_prices() -> dict:
         get_metal_prices,
     )
 
+    from app.diamond_shapes import matrix_shapes_payload
+
     with get_connection() as conn, conn.cursor() as cur:
         overrides = load_overrides(cur)
         metal = get_metal_prices(cur)
@@ -682,6 +684,7 @@ def shop_prices() -> dict:
             row["slug"]: int(row.get("addonPrice") or 0)
             for row in fetch_categories(cur)
         }
+        matrix_shapes = matrix_shapes_payload(cur)
     per_gram = {
         gold: metal[METAL_SYMBOL[gold]] * PURITY_MULTIPLIER[gold]
         for gold in PURITY_MULTIPLIER
@@ -696,6 +699,8 @@ def shop_prices() -> dict:
         "categoryAddonPrices": category_addons,
         "chinToGrams": CHIN_TO_GRAMS,
         "taxRate": ov_tax if isinstance(ov_tax, (int, float)) else TAX_RATE,
+        # Shape / cut table for memorial diamond picker (grows with admin cuts).
+        "diamondOptions": {"matrixShapes": matrix_shapes},
     }
 
 

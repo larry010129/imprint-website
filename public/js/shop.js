@@ -3442,19 +3442,24 @@ function diamondShapeDisplayMeta(shapeId = state.diamondShape) {
 
 function diamondShapeOptions() {
   if (isDiamondOnlyCategory()) {
-    if (diamondOptions.matrixShapes?.length) return diamondOptions.matrixShapes;
-    return [
-      { id: 'round', labelZh: '圓形', labelEn: 'Round' },
-      { id: 'marquise', labelZh: '馬眼型', labelEn: 'Marquise' },
-      { id: 'oval', labelZh: '橢圓形', labelEn: 'Oval' },
-      { id: 'princess', labelZh: '公主方', labelEn: 'Princess' },
-      { id: 'trilliant', labelZh: '三角形', labelEn: 'Trilliant' },
-      { id: 'emerald', labelZh: '祖母綠形', labelEn: 'Emerald' },
-      { id: 'heart', labelZh: '心形', labelEn: 'Heart' },
-      { id: 'radiant', labelZh: '雷地恩形', labelEn: 'Radiant' },
-      { id: 'pear', labelZh: '梨形', labelEn: 'Pear' },
-      { id: 'cushion', labelZh: '枕形', labelEn: 'Cushion' },
-    ];
+    const matrix = diamondOptions.matrixShapes?.length
+      ? diamondOptions.matrixShapes
+      : [
+        { id: 'round', labelZh: '圓形', labelEn: 'Round' },
+        { id: 'marquise', labelZh: '馬眼型', labelEn: 'Marquise' },
+        { id: 'oval', labelZh: '橢圓形', labelEn: 'Oval' },
+        { id: 'princess', labelZh: '公主方', labelEn: 'Princess' },
+        { id: 'trilliant', labelZh: '三角形', labelEn: 'Trilliant' },
+        { id: 'emerald', labelZh: '祖母綠形', labelEn: 'Emerald' },
+        { id: 'heart', labelZh: '心形', labelEn: 'Heart' },
+        { id: 'radiant', labelZh: '雷地恩形', labelEn: 'Radiant' },
+        { id: 'pear', labelZh: '梨形', labelEn: 'Pear' },
+        { id: 'cushion', labelZh: '枕形', labelEn: 'Cushion' },
+      ];
+    // Never-available non-round: omit from matrix picker (not greyed).
+    return productAllowsFancyShapes()
+      ? matrix
+      : matrix.filter((s) => s.id === 'round');
   }
   if (diamondOptions.shapes?.length) {
     return productAllowsFancyShapes()
@@ -3600,20 +3605,14 @@ function renderDiamondColorCarousel() {
   ensureOfferedDiamondColorSelection();
   carousel.innerHTML = '';
   const activeId = selectedDiamondColorId();
-  allDiamondColorDefs().forEach((color) => {
-    const locked = !!color
-      && color.id !== 'white'
-      && color.kind !== 'white'
-      && !isFancyDiamondColorOffered(color.id);
+  // Never-available fancy (no ≥min carat and/or no designed image): omit.
+  // Temp carat gate lives on the carat dropdown, not greyed color chips.
+  diamondColorOptions().forEach((color) => {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'diamond-carousel-item fancy-color-item';
     btn.dataset.color = color.id;
-    btn.classList.toggle('active', !locked && activeId === color.id);
-    setShopOptionDisabled(btn, locked, {
-      title: locked ? tr('diamond_fancy_min_carat') : undefined,
-      reasonKey: locked ? 'diamond_fancy_min_carat' : undefined,
-    });
+    btn.classList.toggle('active', activeId === color.id);
     const icon = document.createElement('span');
     icon.className = 'gem-icon';
     const imagePath = color.image || DIAMOND_WHITE_PREVIEW_PATH;
@@ -3632,14 +3631,7 @@ function renderDiamondColorCarousel() {
     label.textContent = diamondMetaLabel(color);
     btn.appendChild(icon);
     btn.appendChild(label);
-    btn.addEventListener('click', () => {
-      if (locked || shopOptionIsDisabled(btn)) {
-        toastShopBlocked('diamond_fancy_min_carat');
-        document.getElementById('diamond-fancy-min-carat-notice')?.classList.remove('hidden');
-        return;
-      }
-      selectDiamondColor(color.id);
-    });
+    btn.addEventListener('click', () => selectDiamondColor(color.id));
     carousel.appendChild(btn);
   });
   scheduleDiamondCarouselNavUpdate();
@@ -3682,7 +3674,7 @@ function renderDiamondShapeButtons() {
   const row = document.getElementById('diamond-shape-row');
   if (!row) return;
   const allowsFancy = productAllowsFancyShapes();
-  let shapes = diamondShapeOptions();
+  const shapes = diamondShapeOptions();
   const useMatrix = isDiamondOnlyCategory();
   // Diamond-only: reuse diamond-shape-picker. Jewelry keeps chips + other picker.
   row.classList.remove('variant-chips--matrix-shapes');
@@ -3695,26 +3687,17 @@ function renderDiamondShapeButtons() {
     return;
   }
 
-  // Round-only products: still list "other" greyed so policy is visible.
-  if (!allowsFancy && !shapes.some((s) => s.id === 'other')) {
-    shapes = [
-      ...shapes,
-      { id: 'other', labelZh: '其它形狀', labelEn: 'Other (+10%)' },
-    ];
-  }
-
+  // Never-available (product round-only): omit non-round chips entirely.
+  // Temp-blocked (carat < min): keep chip, grey-disabled — may unlock later.
   shapes.forEach((shape) => {
     const isRound = shape.id === 'round';
-    const roundOnlyLocked = !isRound && !allowsFancy;
-    const caratLocked = !isRound && allowsFancy && !caratAllowsNonRoundShape();
-    const locked = roundOnlyLocked || caratLocked;
-    const reasonKey = roundOnlyLocked
-      ? 'diamond_shape_round_only'
-      : (caratLocked ? 'diamond_shape_min_carat_blocked' : undefined);
+    if (!isRound && !allowsFancy) return;
+    const caratLocked = !isRound && !caratAllowsNonRoundShape();
+    const reasonKey = caratLocked ? 'diamond_shape_min_carat_blocked' : undefined;
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.dataset.shape = shape.id;
-    const isActive = !locked && isDiamondShapeChipActive(shape.id);
+    const isActive = !caratLocked && isDiamondShapeChipActive(shape.id);
     btn.className = `variant-chip diamond-shape-btn${isActive ? ' active' : ''}`;
     btn.textContent = diamondMetaLabel(shape);
     if (shape.id === 'round') {
@@ -3722,13 +3705,13 @@ function renderDiamondShapeButtons() {
     } else if (shape.id === 'other') {
       btn.textContent = shopLang() === 'en' ? 'Other (+10%)' : '其它形狀 +10%';
     }
-    setShopOptionDisabled(btn, locked, {
+    setShopOptionDisabled(btn, caratLocked, {
       title: reasonKey ? tr(reasonKey) : undefined,
       reasonKey,
     });
     btn.addEventListener('click', () => {
-      if (locked || shopOptionIsDisabled(btn)) {
-        toastShopBlocked(reasonKey || 'diamond_shape_round_only');
+      if (caratLocked || shopOptionIsDisabled(btn)) {
+        toastShopBlocked(reasonKey || 'diamond_shape_min_carat_blocked');
         return;
       }
       selectDiamondShape(shape.id);
@@ -4212,7 +4195,11 @@ function selectDiamondColor(colorId) {
 
 function buildQuotePayload() {
   ensureStoneCountDefault();
-  if (state.category === 'pendant') applyPendantSellMode(getSelectedProduct());
+  if (state.category === 'pendant') {
+    applyPendantSellMode(getSelectedProduct());
+    // Keep chain SKU/gold filled whenever 含鍊 is on (catalog may load late in API mode).
+    if (state.includeChain) syncAttachedChainFromPendant();
+  }
   return {
     category: state.category,
     type: state.type,
@@ -4383,8 +4370,31 @@ function animateShopTotal(el, targetValue) {
 
 window.animateCountUp = animateShopTotal;
 
+/** Fill #sum-chain-row for 含鍊 pendants. Row stays visible; amount may be "-" until quote ready. */
+function renderChainFeeRow(chainRow, quote) {
+  const wantsChain = state.category === 'pendant' && !!state.includeChain;
+  chainRow?.classList.toggle('hidden', !wantsChain);
+  const chainPriceEl = document.getElementById('sum-chain-price');
+  if (!chainPriceEl) return;
+  if (!wantsChain) {
+    chainPriceEl.textContent = '-';
+    return;
+  }
+  const amount = quote && quote.chainPrice != null ? Number(quote.chainPrice) : null;
+  chainPriceEl.textContent = Number.isFinite(amount)
+    ? Math.round(amount).toLocaleString()
+    : '-';
+}
+
 async function refreshQuotePrices() {
   const pricePanel = document.getElementById('shop-price-panel');
+  // API boot leaves catalog.chain empty until ensureCategoryCatalog — without this,
+  // 含鍊 length UI still works (Excel fallback) but chainProductId stays null and
+  // 鍊條費用 never appears (chainPrice omitted; fee looks folded into 金工).
+  if (state.category === 'pendant' && state.includeChain) {
+    await ensureCategoryCatalog('chain');
+    syncAttachedChainFromPendant();
+  }
   const requestFingerprint = JSON.stringify(buildQuotePayload());
   // Keep last known breakdown/total visible while recalculating.
   // Skeleton (is-loading-prices) is only for initial boot via HTML + loadMetalPrices.
@@ -4414,13 +4424,11 @@ async function refreshQuotePrices() {
       window.showToast(tr('price_unavailable'), 'error');
     }
     if (diamondRow) diamondRow.style.display = state.category === 'chain' ? 'none' : '';
-    chainRow?.classList.add('hidden');
+    renderChainFeeRow(chainRow, null);
     document.getElementById('sum-side-stone-row')?.classList.add('hidden');
     document.getElementById('sum-side-stone-cts-row')?.classList.add('hidden');
     document.getElementById('sum-diamond-price').textContent = state.carat ? '-' : '0';
     document.getElementById('sum-metalwork-price').textContent = '-';
-    const chainPriceEl = document.getElementById('sum-chain-price');
-    if (chainPriceEl) chainPriceEl.textContent = '-';
     if (totalEl) animateShopTotal(totalEl, NaN);
     if (mobileTotal) mobileTotal.textContent = '—';
     updateCompareAtDisplay(null, null);
@@ -4436,7 +4444,7 @@ async function refreshQuotePrices() {
     if (diamondRow) diamondRow.style.display = 'none';
     sideStoneRow?.classList.add('hidden');
     sideStoneCtsRow?.classList.add('hidden');
-    chainRow?.classList.add('hidden');
+    renderChainFeeRow(chainRow, quote);
     document.getElementById('sum-metalwork-price').textContent = '—';
   } else {
     if (diamondRow) diamondRow.style.display = state.category === 'chain' ? 'none' : '';
@@ -4464,6 +4472,7 @@ async function refreshQuotePrices() {
       document.getElementById('sum-metalwork-price').textContent = '0';
     } else {
       metalworkRow?.classList.remove('hidden');
+      // 金工 = pendant taijin+labor only. Chain is never folded in (see metalworkPrice).
       const metalwork = quote.metalworkPrice != null
         ? quote.metalworkPrice
         : (quote.taijinPrice != null && quote.laborPrice != null ? quote.taijinPrice + quote.laborPrice : null);
@@ -4471,11 +4480,7 @@ async function refreshQuotePrices() {
         document.getElementById('sum-metalwork-price').textContent = Math.round(metalwork).toLocaleString();
       }
     }
-    const showChain = state.category === 'pendant' && state.includeChain && quote.chainPrice != null;
-    chainRow?.classList.toggle('hidden', !showChain);
-    if (showChain) {
-      document.getElementById('sum-chain-price').textContent = Math.round(quote.chainPrice).toLocaleString();
-    }
+    renderChainFeeRow(chainRow, quote);
   }
 
   const total = quote.total;
@@ -4840,9 +4845,15 @@ async function updateChainOptions() {
   pendantGuideStep?.classList.toggle('hidden', !state.includeChain);
   updateLengthStep();
 
-  syncAttachedChainFromPendant();
-  if (!state.includeChain) return;
+  if (!state.includeChain) {
+    syncAttachedChainFromPendant();
+    return;
+  }
 
+  // Must load chain SKUs before defaultChainProductId — Excel length tables work
+  // without a product, but pricing/鍊條費用 row needs chainProductId.
+  await ensureCategoryCatalog('chain');
+  syncAttachedChainFromPendant();
   if (state.chainProductId) {
     await ensureProductDetail(state.chainProductId, 'chain');
   }
@@ -5665,6 +5676,7 @@ document.getElementById('pendant-chain-toggle-row')?.addEventListener('click', a
   if (!wantChain && !flags.allowOnly) return;
   state.includeChain = wantChain;
   if (state.includeChain) {
+    await ensureCategoryCatalog('chain');
     syncAttachedChainFromPendant();
     if (state.chainProductId) await ensureProductDetail(state.chainProductId, 'chain');
     const chainProduct = getProduct('chain', state.chainProductId);

@@ -245,10 +245,10 @@ def test_shop_js_fancy_carat_dropdown_intersects_admin_min():
     assert "stockFancyDiamondColors" in (
         ROOT / "public" / "js" / "shop-assets.js"
     ).read_text(encoding="utf-8")
-    assert "shop.js?v=154" in (
+    assert "shop.js?v=157" in (
         ROOT / "content" / "site" / "templates" / "pages" / "shop" / "calculator.html"
     ).read_text(encoding="utf-8")
-    assert "shop.js?v=152" in (
+    assert "shop.js?v=157" in (
         ROOT / "content" / "site" / "page-registry.json"
     ).read_text(encoding="utf-8")
     assert "function setShopOptionDisabled" in src
@@ -293,6 +293,27 @@ def test_shop_js_fancy_carat_dropdown_intersects_admin_min():
     assert "FALLBACK_DIAMOND_COLOR_DEFS" in src
 
 
+def test_shop_js_chain_fee_row_separate_from_metalwork():
+    """PDP: 鍊條費用 own row under 金工; 含鍊 loads chain catalog so chainPrice fills."""
+    src = (ROOT / "public" / "js" / "shop.js").read_text(encoding="utf-8")
+    body = (ROOT / "content" / "site" / "bodies" / "shop__calculator.html").read_text(
+        encoding="utf-8"
+    )
+    tmpl = (
+        ROOT / "content" / "site" / "templates" / "pages" / "shop" / "calculator.html"
+    ).read_text(encoding="utf-8")
+    assert 'id="sum-chain-row"' in body
+    assert "鍊條費用" in body
+    assert body.index("sum-metalwork-price") < body.index("sum-chain-row")
+    assert 'id="sum-chain-row"' in tmpl
+    assert tmpl.index("sum-metalwork-price") < tmpl.index("sum-chain-row")
+    assert "function renderChainFeeRow" in src
+    assert "await ensureCategoryCatalog('chain')" in src
+    # Visibility keyed on includeChain (not only chainPrice != null).
+    assert "state.category === 'pendant' && !!state.includeChain" in src
+    assert "showChain = state.category === 'pendant' && state.includeChain && quote.chainPrice != null" not in src
+
+
 def test_shop_js_non_round_shape_requires_min_carat():
     """All products: non-round /「其它形狀」need ≥ nonRoundShapeMinCarat (0.3)."""
     import json
@@ -310,12 +331,18 @@ def test_shop_js_non_round_shape_requires_min_carat():
     assert "isNonRoundShape(nextId) && !caratAllowsNonRoundShape()" in src
     assert "if (!isDiamondOnlyCategory()) return;" not in src
     assert "const lockNonRound = !caratAllowsNonRoundShape();" in src
+    # Never-available (round-only product): omit chip — do not inject greyed「其它形狀」.
+    assert "still list \"other\" greyed" not in src
+    assert "if (!isRound && !allowsFancy) return;" in src
+    # Fancy colors never offered by catalog: omit from carousel (not grey-disabled).
+    assert "diamondColorOptions().forEach((color) => {" in src
+    assert "allDiamondColorDefs().forEach((color) => {" not in src
     i18n = (ROOT / "public" / "js" / "shop-i18n.js").read_text(encoding="utf-8")
     assert "diamond_shape_min_carat_blocked" in i18n
     css = (ROOT / "public" / "css" / "shop.css").read_text(encoding="utf-8")
     assert ".shop-page .shop-option--disabled" in css
     assert ".diamond-carousel-item.is-disabled" in css
-    assert "shop.css?v=6.36" in (
+    assert "shop.css?v=6.40" in (
         ROOT / "content" / "site" / "templates" / "pages" / "shop" / "calculator.html"
     ).read_text(encoding="utf-8")
     assert "shop-i18n.js?v=22" in (

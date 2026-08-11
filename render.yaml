@@ -1,6 +1,12 @@
 # Single Render web service (featured video refreshes lazily on home/about load).
 # Dashboard → Blueprints → Sync after push
 # https://render.com/docs/blueprint-spec
+#
+# CMS content lives in the cloud DB + Supabase Storage. For edits made on any
+# device to appear everywhere, DATABASE_URL here must point at the SAME
+# database (host + db name) as your local .env — if local uses the Neon
+# database, paste the identical Neon URI here (or switch BOTH to Supabase).
+# sync: false = set the value in the Render dashboard; never commit secrets.
 services:
   - type: web
     name: imprint-api
@@ -14,6 +20,28 @@ services:
         value: "3.12.8"
       - key: NO_OPEN
         value: "1"
+      # --- Persistence (required — must match local .env targets) ---
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_STORAGE_BUCKET
+        value: shop-media
+      # --- Auth / integrations (required for full functionality) ---
+      - key: JWT_SECRET
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: RECAPTCHA_SITE_KEY
+        sync: false
+      - key: RECAPTCHA_SECRET_KEY
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: PUBLIC_SITE_URL
+        value: https://www.imprintdiamond.com
       # Optional: Bearer for POST /api/featured-video-sync (not required; home load auto-refreshes).
       - key: FEATURED_VIDEO_SYNC_SECRET
         sync: false

@@ -9,26 +9,22 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from app.diamond_shapes import (
+    DEFAULT_SHAPES,
+    builtin_shape_ids,
+    is_allowed_shape_id,
+    matrix_shapes_payload,
+)
+
 DIAMOND_CARATS = [
     "0.1", "0.2", "0.3", "0.5", "0.6", "0.7", "0.8", "0.9", "1.0", "1.5", "2.0", "3.0",
 ]
 
 VALID_DIAMOND_COLORS = frozenset({"white", "yellow", "blue", "pink"})
 
-DIAMOND_MATRIX_SHAPES: list[dict[str, str]] = [
-    {"id": "round", "labelZh": "圓形", "labelEn": "Round"},
-    {"id": "marquise", "labelZh": "馬眼型", "labelEn": "Marquise"},
-    {"id": "oval", "labelZh": "橢圓形", "labelEn": "Oval"},
-    {"id": "princess", "labelZh": "公主方", "labelEn": "Princess"},
-    {"id": "trilliant", "labelZh": "三角形", "labelEn": "Trilliant"},
-    {"id": "emerald", "labelZh": "祖母綠形", "labelEn": "Emerald"},
-    {"id": "heart", "labelZh": "心形", "labelEn": "Heart"},
-    {"id": "radiant", "labelZh": "雷地恩形", "labelEn": "Radiant"},
-    {"id": "pear", "labelZh": "梨形", "labelEn": "Pear"},
-    {"id": "cushion", "labelZh": "枕形", "labelEn": "Cushion"},
-]
-
-VALID_DIAMOND_SHAPES = frozenset(s["id"] for s in DIAMOND_MATRIX_SHAPES)
+# Built-in cuts (incl. Asscher). Custom cuts live in diamond_shapes table.
+DIAMOND_MATRIX_SHAPES: list[dict[str, str]] = matrix_shapes_payload()
+VALID_DIAMOND_SHAPES = builtin_shape_ids()
 
 # Old series products (滿月/寵物/…) — retired from admin listing + shop catalog.
 LEGACY_SERIES_STYLE_KEYS = frozenset(
@@ -57,7 +53,7 @@ _SLUG_RE = re.compile(r"[^a-z0-9]+")
 def matrix_shape_image_url(shape: str, color: str) -> str:
     """Bundled matrix PNG for shape × color."""
     shape_id = str(shape or "round").strip().lower()
-    if shape_id not in VALID_DIAMOND_SHAPES:
+    if not is_allowed_shape_id(shape_id):
         shape_id = "round"
     color_id = str(color or "white").strip().lower()
     if color_id not in VALID_DIAMOND_COLORS:
@@ -237,7 +233,7 @@ def _insert_product_image(cur, product_id: Any, slot: str, url: str, sort_order:
 
 def _seed_shape_images(cur, product_id: Any, color: str) -> None:
     sort_order = 0
-    for shape in DIAMOND_MATRIX_SHAPES:
+    for shape in DEFAULT_SHAPES:
         _insert_product_image(
             cur,
             product_id,
@@ -287,10 +283,11 @@ def sync_memorial_diamond_seed_images(cur, product_id: Any, color: str | None = 
     for row in rows:
         slot = str(row.get("color") or "").strip().lower()
         path = row.get("file_path")
+        # Keep custom cut slots (registry / slug). Drop only legacy junk.
         drop = (
             is_legacy_lifestyle_image(path)
             or is_legacy_gem_color_image(path)
-            or (slot and slot not in VALID_DIAMOND_SHAPES)
+            or (slot and not is_allowed_shape_id(slot))
         )
         if drop:
             cur.execute("delete from product_images where id = %s", (row["id"],))
@@ -307,8 +304,9 @@ def sync_memorial_diamond_seed_images(cur, product_id: Any, color: str | None = 
     present = {str(r["color"]).lower(): int(r["max_sort"]) for r in (cur.fetchall() or [])}
     next_sort = max(present.values(), default=-1) + 1
     inserted = 0
-    for shape in DIAMOND_MATRIX_SHAPES:
-        shape_id = shape["id"]
+    # Seed missing built-ins only — never wipe admin custom cuts.
+    for shape in DEFAULT_SHAPES:
+        shape_id = str(shape["id"])
         if shape_id in present:
             continue
         _insert_product_image(
@@ -469,13 +467,13 @@ def _images_shape_slots(
     images: dict[str, Any] | None,
     base_images: dict[str, list[str]],
 ) -> dict[str, list[str]]:
-    """Keep shape-keyed URLs; drop lifestyle/gem-swatch; fill missing shapes."""
+    """Keep shape-keyed URLs; drop lifestyle/gem-swatch; fill missing built-ins."""
     cleaned: dict[str, list[str]] = {}
     for slot, urls in (images or {}).items():
         if not isinstance(urls, list):
             continue
         shape = str(slot).strip().lower()
-        if shape not in VALID_DIAMOND_SHAPES:
+        if not is_allowed_shape_id(shape):
             continue
         kept = [
             str(u)

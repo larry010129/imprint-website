@@ -63,6 +63,7 @@ from app.auth import (
 )
 from app.auth_totp_service import step_up_from_body, verify_step_up_password
 from app.catalog import clear_public_catalog_cache, load_product_children
+from app.diamond_shapes import create_shape, fetch_shapes, matrix_shapes_payload
 from app.product_categories import (
     category_labels,
     create_category,
@@ -695,7 +696,20 @@ async def product_upload(
     elif pid and slot:
         with get_transaction() as conn, conn.cursor() as cur:
             image_row = append_product_image(cur, pid, slot, url)
+        if not image_row:
+            # Upload reached Storage but the product_images insert was skipped
+            # (product gone mid-upload). Never report bare success — that
+            # orphans the object and the shop keeps showing the old image.
+            return JSONResponse(
+                status_code=502,
+                content={"error": "圖片已上傳但寫入資料庫失敗，請重新整理後再試"},
+            )
         image_row = _serialize_admin_image_row(image_row)
+    elif pid and not slot:
+        # Existing product without a slot key would silently skip the DB
+        # write — reject so the admin UI shows an error instead of a preview
+        # that can never reach the shop.
+        return JSONResponse(status_code=400, content={"error": "缺少圖片選項代碼"})
 
     payload: dict = {"url": url}
     if image_row:
@@ -780,6 +794,29 @@ async def product_category_create(request: Request) -> JSONResponse:
         return JSONResponse(status_code=400, content={"error": error})
     clear_public_catalog_cache()
     return JSONResponse(content={"category": category})
+
+
+@router.post("/diamond-shape")
+async def diamond_shape_create(request: Request) -> JSONResponse:
+    """Add a diamond cut (切工) — appears in product image slots + shop picker."""
+    _require_admin(request)
+    body = await request.json()
+    if not isinstance(body, dict):
+        return JSONResponse(status_code=400, content={"error": "invalid body"})
+    label_zh = body.get("labelZh") or body.get("label_zh") or ""
+    label_en = body.get("labelEn") or body.get("label_en")
+    shape_id = body.get("id") or body.get("shapeId") or body.get("shape_id")
+    with get_transaction() as conn, conn.cursor() as cur:
+        shape, error = create_shape(
+            cur,
+            label_zh=label_zh,
+            label_en=label_en,
+            shape_id=shape_id,
+        )
+    if error:
+        return JSONResponse(status_code=400, content={"error": error})
+    clear_public_catalog_cache()
+    return JSONResponse(content={"shape": shape})
 
 
 @router.delete("/product-category/{slug}")
@@ -1015,6 +1052,7 @@ async def products_list(request: Request) -> dict:
         }
         categories = fetch_categories(cur)
         labels = category_labels(cur)
+        diamond_shapes = fetch_shapes(cur)
     return {
         "products": products,
         "page": page,
@@ -1025,6 +1063,8 @@ async def products_list(request: Request) -> dict:
         "categoryLabels": labels or CATEGORY_LABELS,
         "categories": categories,
         "categoryOrder": [row["slug"] for row in categories],
+        "diamondShapes": diamond_shapes,
+        "matrixShapes": matrix_shapes_payload(rows=diamond_shapes),
         "chainCatalog": chain_catalog_for_admin(),
     }
 
@@ -3170,6 +3210,62 @@ async def admin_page_image_action(request: Request) -> JSONResponse:
         {"page_key": page_key, "slot_key": slot_key},
     )
     return JSONResponse(content={"ok": True, "pageImage": payload})
+
+
+@router.get("/engagement-rings")
+def admin_get_engagement_rings(request: Request) -> JSONResponse:
+    """Read 4 iconic ring product slots for /jewelry/engagement/."""
+    _require_admin(request)
+    from app.engagement_rings import (
+        admin_engagement_rings_payload,
+        fetch_ring_options,
+        read_engagement_rings_file,
+    )
+
+    with get_connection() as conn, conn.cursor() as cur:
+        options = fetch_ring_options(cur)
+    return JSONResponse(
+        content={
+            **admin_engagement_rings_payload(read_engagement_rings_file()),
+            "options": options,
+        }
+    )
+
+
+@router.put("/engagement-rings")
+async def admin_put_engagement_rings(request: Request) -> JSONResponse:
+    """Replace 4 engagement-page ring product slots."""
+    user_id = _require_admin(request)
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse(status_code=400, content={"error": "invalid JSON"})
+    if not isinstance(body, dict):
+        return JSONResponse(status_code=400, content={"error": "invalid body"})
+
+    from app.engagement_rings import (
+        admin_engagement_rings_payload,
+        fetch_ring_options,
+        save_engagement_rings_file,
+        validate_admin_body,
+    )
+
+    with get_connection() as conn, conn.cursor() as cur:
+        saved, err = validate_admin_body(body, cur=cur)
+        if err or saved is None:
+            return JSONResponse(status_code=400, content={"error": err or "invalid body"})
+        options = fetch_ring_options(cur)
+        cur.execute("select email from users where id = %s", (user_id,))
+        actor = cur.fetchone()
+    payload = save_engagement_rings_file(saved)
+    log_admin_action(
+        actor["email"] if actor else None,
+        "engagement_rings_updated",
+        {"productIds": payload.get("productIds")},
+    )
+    return JSONResponse(
+        content={"ok": True, **admin_engagement_rings_payload(payload), "options": options}
+    )
 
 
 @router.get("/featured-video")

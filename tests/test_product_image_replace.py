@@ -259,3 +259,116 @@ def test_migrate_url_dry_run(monkeypatch):
     assert changed is True
     assert old_out == old
     assert new_url.endswith("old.webp")
+
+
+# ── upload must never orphan: pid given ⇒ DB row or hard error ──────────
+
+import contextlib  # noqa: E402
+
+
+class _FakeCur:
+    def execute(self, *args, **kwargs):
+        self._sql = str(args[0]).lower() if args else ""
+
+    def fetchone(self):
+        return None  # product lookup miss → folder falls back to id segment
+
+    def fetchall(self):
+        return []
+
+
+class _FakeConn:
+    @contextlib.contextmanager
+    def cursor(self):
+        yield _FakeCur()
+
+
+@contextlib.contextmanager
+def _fake_conn_cm():
+    yield _FakeConn()
+
+
+def _stub_upload_io(monkeypatch):
+    monkeypatch.setattr(
+        "app.controllers.admin_controller._require_admin",
+        lambda _req: "admin-user",
+    )
+    monkeypatch.setattr(
+        "app.storage.upload_image",
+        lambda kind, name, data, ext, upsert=False: f"{PUBLIC}/products/{name}",
+    )
+    monkeypatch.setattr(
+        "app.controllers.admin_controller.get_connection", _fake_conn_cm
+    )
+    monkeypatch.setattr(
+        "app.controllers.admin_controller.get_transaction", _fake_conn_cm
+    )
+    monkeypatch.setattr(
+        "app.controllers.admin_controller.clear_public_catalog_cache",
+        lambda: None,
+    )
+
+
+def test_upload_errors_when_insert_skipped(monkeypatch):
+    """pid+slot but append returns None → 502, not a bare success that orphans."""
+    _stub_upload_io(monkeypatch)
+    monkeypatch.setattr(
+        "app.controllers.admin_controller.append_product_image",
+        lambda cur, pid, slot, url: None,
+    )
+    resp = asyncio.run(
+        product_upload(
+            MagicMock(),
+            file=_png_upload("shot.png"),
+            product_id="2c4d5c52-2b05-4c71-a755-4db19f8c1260",
+            color="round",
+        )
+    )
+    assert resp.status_code == 502
+    assert "資料庫" in resp.body.decode("utf-8")
+
+
+def test_upload_requires_slot_when_product_given(monkeypatch):
+    """pid without slot would skip the insert silently → 400 instead."""
+    _stub_upload_io(monkeypatch)
+    resp = asyncio.run(
+        product_upload(
+            MagicMock(),
+            file=_png_upload("shot.png"),
+            product_id="2c4d5c52-2b05-4c71-a755-4db19f8c1260",
+            color=None,
+        )
+    )
+    assert resp.status_code == 400
+    assert "圖片選項" in resp.body.decode("utf-8")
+
+
+def test_upload_returns_persisted_image_row(monkeypatch):
+    """Happy path: response carries the product_images row the admin UI needs."""
+    _stub_upload_io(monkeypatch)
+    monkeypatch.setattr(
+        "app.controllers.admin_controller.append_product_image",
+        lambda cur, pid, slot, url: {
+            "id": "img-1",
+            "product_id": pid,
+            "color": slot,
+            "file_path": url,
+            "sort_order": 0,
+            "previous_file_path": None,
+        },
+    )
+    resp = asyncio.run(
+        product_upload(
+            MagicMock(),
+            file=_png_upload("shot.png"),
+            product_id="2c4d5c52-2b05-4c71-a755-4db19f8c1260",
+            color="round",
+        )
+    )
+    assert resp.status_code == 200
+    import json
+
+    payload = json.loads(resp.body.decode("utf-8"))
+    assert payload["image"]["id"] == "img-1"
+    assert payload["image"]["color"] == "round"
+    assert payload["image"]["file_path"] == payload["url"]

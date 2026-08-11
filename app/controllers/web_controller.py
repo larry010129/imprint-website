@@ -180,6 +180,18 @@ def clear_page_copy_cache() -> None:
     _fetch_page_copy_cached.cache_clear()
 
 
+def _load_engagement_rings() -> list[dict]:
+    """Four iconic ring cards for /jewelry/engagement/ (CMS product picks)."""
+    from app.database import get_connection
+    from app.engagement_rings import FALLBACK_CARDS, resolve_engagement_ring_cards
+
+    try:
+        with get_connection() as conn, conn.cursor() as cur:
+            return resolve_engagement_ring_cards(cur)
+    except Exception:
+        return [dict(card) for card in FALLBACK_CARDS]
+
+
 def _load_faq_public() -> dict:
     """Published FAQ categories for /faq (DB first, seed fallback)."""
     from app.content import faq_public_from_seed, fetch_faq_public
@@ -425,6 +437,7 @@ def _context(request: Request, meta: PageMeta, *, include_journal_ssr: bool = Tr
         "site_cms_sections": [],
         "site_cms_sections_by_anchor": {},
         "site_cms_edit": False,
+        "engagement_rings": [],
         "cms_page": {"title": meta.title, "slug": "", "site_route": meta.route},
         "cms_faq_items": [],
         "cms_faq_all_items": [],
@@ -448,6 +461,8 @@ def _context(request: Request, meta: PageMeta, *, include_journal_ssr: bool = Tr
         context["featured_video"] = load_featured_video(request)
     if meta.route == "/about":
         context["youtube_latest_video"] = load_youtube_latest_video()
+    if meta.route == "/jewelry/engagement/":
+        context["engagement_rings"] = _load_engagement_rings()
     if meta.route == "/gold-price":
         context["gold_quote_bootstrap"] = _load_gold_quote_bootstrap()
     # Live env read so register page picks up keys without process restart in tests.
@@ -673,6 +688,15 @@ def register_pages(app: FastAPI) -> None:
         if not path.is_file():
             raise StarletteHTTPException(status_code=404, detail="Not Found")
         return FileResponse(path, media_type="text/html; charset=utf-8")
+
+    # Deep-linkable admin tabs: /admin/<tab> serves the same admin1 shell.
+    # Registered AFTER the explicit /admin/settings|plugins|release-notes routes
+    # so those keep their own shells; single-segment {tab} never touches
+    # /api/admin/* (different prefix) or static mounts (/css, /js, /static).
+    @app.api_route("/admin/{tab}", methods=["GET", "HEAD"], include_in_schema=False)
+    async def admin_tab_page(request: Request, tab: str):
+        next_path = request.url.path
+        return _admin_gated_html(request, "admin1.html", next_path)
 
 
     # Legacy *.html shells → canonical paths (query string preserved).

@@ -141,6 +141,7 @@ async def lifespan(_app: FastAPI):
         ensure_order_status_timestamps_column,
         ensure_pickup_preferred_at_column,
     )
+    from app.diamond_shapes import ensure_diamond_shapes_schema
     from app.product_categories import ensure_product_categories_schema
     from app.profile_schema import ensure_profile_address_columns
     from app.seed_catalog import seed_catalog_if_empty
@@ -186,6 +187,7 @@ async def lifespan(_app: FastAPI):
     try:
         with get_connection() as conn, conn.cursor() as cur:
             ensure_product_categories_schema(cur)
+            ensure_diamond_shapes_schema(cur)
             ensure_admin_plugins_schema(cur)
             ensure_membership_schema(cur)
             ensure_page_images_schema(cur)
@@ -196,6 +198,9 @@ async def lifespan(_app: FastAPI):
             ensure_cms_pages_schema(cur)
             ensure_page_copy_slots_schema(cur)
             ensure_cms_media_schema(cur)
+            from app.cms_kv_store import ensure_cms_kv_schema
+
+            ensure_cms_kv_schema(cur)
             seed_page_copy_slots(cur)
             remove_legacy_seeded_pages(cur)
     except Exception:

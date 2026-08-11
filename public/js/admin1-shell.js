@@ -90,7 +90,7 @@
       return;
     }
     if (!/^\/admin\/?$/i.test(location.pathname)) {
-      location.href = '/admin#' + panel;
+      location.href = panel === 'dash' ? '/admin' : '/admin/' + panel;
     }
   }
 

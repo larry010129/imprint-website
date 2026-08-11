@@ -27,9 +27,9 @@
   <section class="stories-page page-section">
     <div class="container">
       <header class="price-reference-head">
-        <p class="eyebrow">STORIES</p>
-        <h1 class="price-reference-title">客戶見證</h1>
-        <p class="price-reference-lead">真實故事，銘印成永恆。</p>
+        <p class="eyebrow" data-cms-text="chrome-eyebrow">STORIES</p>
+        <h1 class="price-reference-title" data-cms-text="chrome-title">客戶見證</h1>
+        <p class="price-reference-lead" data-cms-text="chrome-lead">真實故事，銘印成永恆。</p>
       </header>
       {% if stories_ssr %}
       <div class="stories-page-masonry" id="stories-masonry">
@@ -70,19 +70,21 @@
           hx-get="/htmx/stories?page=2&page_size={{ stories_ssr|length }}"
           hx-target="#stories-masonry"
           hx-swap="beforeend"
+          data-cms-button="load-more"
         >
           載入更多
         </button>
       </div>
       {% endif %}
       <div class="stories-page-cta">
-        <p class="stories-page-cta__title">您的故事，也值得被好好記住</p>
-        <p class="stories-page-cta__lead">歡迎加入官方 LINE，讓顧問陪您慢慢聊聊。</p>
+        <p class="stories-page-cta__title" data-cms-text="cta-title">您的故事，也值得被好好記住</p>
+        <p class="stories-page-cta__lead" data-cms-text="cta-lead">歡迎加入官方 LINE，讓顧問陪您慢慢聊聊。</p>
         <a
           class="stories-page-cta__btn"
           href="https://lin.ee/ktVBtmx"
           target="_blank"
           rel="noopener noreferrer"
+          data-cms-button="cta-line"
         >加入官方 LINE 好友</a>
       </div>
       {% else %}

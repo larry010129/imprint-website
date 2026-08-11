@@ -133,6 +133,64 @@ def test_diamond_products_are_four_colors_with_shape_images():
     assert "diamond-first-love" in md.LEGACY_SERIES_STYLE_KEYS
 
 
+def test_sync_keeps_custom_cut_slots():
+    """Custom cuts (not in built-in list) must survive seed sync."""
+    md = _load_memorial()
+
+    class FakeCur:
+        def __init__(self):
+            self.images = [
+                {
+                    "id": 9,
+                    "color": "old-mine",
+                    "file_path": "/static/images/uploads/old-mine.png",
+                    "sort_order": 0,
+                },
+            ]
+            self._last = None
+
+        def execute(self, sql, params=None):
+            sql_l = " ".join(str(sql).lower().split())
+            if sql_l.startswith("select id, color, file_path"):
+                self._last = list(self.images)
+            elif sql_l.startswith("delete from product_images"):
+                self.images = [r for r in self.images if r["id"] != params[0]]
+                self._last = None
+            elif "group by color" in sql_l:
+                by_color = {}
+                for row in self.images:
+                    color = str(row["color"]).lower()
+                    by_color[color] = max(by_color.get(color, -1), int(row.get("sort_order", 0)))
+                self._last = [
+                    {"color": color, "max_sort": max_sort}
+                    for color, max_sort in by_color.items()
+                ]
+            elif sql_l.startswith("insert into product_images"):
+                product_id, color, url, sort_order = params
+                self.images.append(
+                    {
+                        "id": len(self.images) + 10,
+                        "product_id": product_id,
+                        "color": color,
+                        "file_path": url,
+                        "sort_order": sort_order,
+                    }
+                )
+                self._last = None
+            else:
+                self._last = None
+
+        def fetchall(self):
+            return self._last or []
+
+    cur = FakeCur()
+    md.sync_memorial_diamond_seed_images(cur, "pid-custom", "white")
+    slots = {row["color"] for row in cur.images}
+    assert "old-mine" in slots
+    assert "asscher" in slots
+    assert "round" in slots
+
+
 def test_sync_replaces_legacy_slots_and_fills_shapes():
     md = _load_memorial()
 
@@ -555,8 +613,8 @@ def test_admin_html_cache_bust_v50():
     # Canonical CMS shell is admin1.html (served at /admin); keep legacy in sync.
     for name in ("admin1.html", "admin.html"):
         html = (ROOT / name).read_text(encoding="utf-8")
-        assert "admin-products.js?v=58" in html
-        assert "api-client.js?v=22" in html
+        assert "admin-products.js?v=61" in html
+        assert "api-client.js?v=24" in html
 
 
 def test_jewelry_validate_still_requires_variant():

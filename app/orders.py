@@ -47,6 +47,7 @@ _SHAPE_ZH = {
     "radiant": "雷地恩形",
     "pear": "梨形",
     "cushion": "枕形",
+    "asscher": "阿斯切",
 }
 
 

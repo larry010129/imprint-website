@@ -309,6 +309,7 @@
         return request('/api/admin/products' + pagingQuery(opts));
       },
       createProductCategory: function (fields) { return request('/api/admin/product-category', { method: 'POST', body: fields }); },
+      createDiamondShape: function (fields) { return request('/api/admin/diamond-shape', { method: 'POST', body: fields }); },
       deleteProductCategory: function (slug) { return request('/api/admin/product-category/' + encodeURIComponent(slug), { method: 'DELETE' }); },
       updateProductCategory: function (slug, fields) {
         return request('/api/admin/product-category/' + encodeURIComponent(slug), { method: 'PATCH', body: fields });
@@ -639,6 +640,15 @@
         return request('/api/admin/featured-video/sync', {
           method: 'POST',
           body: {},
+        });
+      },
+      getEngagementRings: function () {
+        return request('/api/admin/engagement-rings');
+      },
+      saveEngagementRings: function (body) {
+        return request('/api/admin/engagement-rings', {
+          method: 'PUT',
+          body: body || {},
         });
       },
     },

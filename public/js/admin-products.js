@@ -36,6 +36,7 @@
     { value: 'pink', label: '粉鑽' },
   ];
   // Memorial diamond product = gem color; image slots = cut shapes (same as shop 選擇鑽石切工).
+  // Built-in fallback; live list grows from API diamondShapes (incl. Asscher + custom cuts).
   var DIAMOND_SHAPE_SLOT_OPTIONS = [
     { value: 'round', label: '圓形' },
     { value: 'marquise', label: '馬眼型' },
@@ -47,10 +48,51 @@
     { value: 'radiant', label: '雷地恩形' },
     { value: 'pear', label: '梨形' },
     { value: 'cushion', label: '枕形' },
+    { value: 'asscher', label: '阿斯切' },
   ];
+  var NEW_SHAPE_VALUE = '__new__';
   var METAL_SLOT_VALUES = METAL_SLOT_OPTIONS.map(function (o) { return o.value; });
   var DIAMOND_SLOT_VALUES = DIAMOND_SLOT_OPTIONS.map(function (o) { return o.value; });
   var DIAMOND_SHAPE_SLOT_VALUES = DIAMOND_SHAPE_SLOT_OPTIONS.map(function (o) { return o.value; });
+
+  function diamondShapeOptionsLive() {
+    var rows = state.diamondShapes;
+    if (rows && rows.length) {
+      return rows.map(function (row) {
+        return {
+          value: String(row.id || row.value || ''),
+          label: String(row.labelZh || row.label_zh || row.label || row.id || ''),
+        };
+      }).filter(function (o) { return o.value; });
+    }
+    return DIAMOND_SHAPE_SLOT_OPTIONS.slice();
+  }
+
+  function diamondShapeValuesLive() {
+    return diamondShapeOptionsLive().map(function (o) { return o.value; });
+  }
+
+  function isKnownDiamondShape(key) {
+    var k = String(key || '').toLowerCase();
+    if (!k || k === NEW_SHAPE_VALUE) return false;
+    if (diamondShapeValuesLive().indexOf(k) >= 0) return true;
+    // Allow custom slug not yet in cached list (just created / other tab).
+    return /^[a-z][a-z0-9-]{0,40}$/.test(k)
+      && ['other', 'white', 'yellow', 'blue', 'pink', 'rose', 'new', 'custom'].indexOf(k) < 0;
+  }
+
+  function rememberDiamondShape(shape) {
+    if (!shape || !shape.id) return;
+    state.diamondShapes = state.diamondShapes || [];
+    if (state.diamondShapes.some(function (s) { return s.id === shape.id; })) return;
+    state.diamondShapes.push({
+      id: shape.id,
+      labelZh: shape.labelZh || shape.label_zh || shape.id,
+      labelEn: shape.labelEn || shape.label_en || shape.id,
+      label_zh: shape.labelZh || shape.label_zh || shape.id,
+      label_en: shape.labelEn || shape.label_en || shape.id,
+    });
+  }
   // Shop memorial color product keys — seeded for admin name/shape-image edits.
   var MEMORIAL_DIAMOND_STYLE_KEYS = [
     'diamond-white',
@@ -151,7 +193,7 @@
   /** Calculator image axes per category (matches shop.js preview lookup). */
   function presetSlotKeysForCategory(category) {
     if (category === 'diamond') {
-      return DIAMOND_SHAPE_SLOT_VALUES.slice();
+      return diamondShapeValuesLive();
     }
     if (category === 'chain') {
       return METAL_SLOT_VALUES.map(function (metal) {
@@ -171,6 +213,9 @@
     categories: [],
     categoryOrder: [],
     categoryCounts: {},
+    diamondShapes: DIAMOND_SHAPE_SLOT_OPTIONS.map(function (o) {
+      return { id: o.value, labelZh: o.label, labelEn: o.value, label_zh: o.label, label_en: o.value };
+    }),
     listTotal: 0,
     chainCatalog: null,
     activeTab: 'cat-diamond',
@@ -255,7 +300,7 @@
     if (category === 'diamond') {
       // Product defaultColor is gem color; image slots are shapes.
       if (DIAMOND_SLOT_VALUES.indexOf(def) < 0) return false;
-      return DIAMOND_SHAPE_SLOT_VALUES.indexOf(key) >= 0;
+      return isKnownDiamondShape(key);
     }
     if (COLORS.indexOf(def) < 0) return false;
     return key === def || key.indexOf(def + '-') === 0;
@@ -475,6 +520,98 @@
     );
   }
 
+  function addDiamondShapeDialogHtml() {
+    return (
+      '<dialog id="apAddDiamondShapeDialog" class="ap-delete-dialog">' +
+        '<form method="dialog" id="apAddDiamondShapeForm">' +
+          '<h3>新增鑽石切工</h3>' +
+          '<label class="ap-add-cat-label"><span>中文名稱</span>' +
+            '<input id="apNewShapeLabelZh" maxlength="50" autocomplete="off" required placeholder="例如：阿斯切">' +
+          '</label>' +
+          '<label class="ap-add-cat-label"><span>英文名稱（選填，作代號）</span>' +
+            '<input id="apNewShapeLabelEn" maxlength="80" autocomplete="off" placeholder="例如：Asscher">' +
+          '</label>' +
+          '<p class="ap-hint">建立後可在紀念鑽石圖片選項選擇，並顯示於試算頁切工列表。</p>' +
+          '<p class="ap-form-error" id="apAddDiamondShapeError" hidden></p>' +
+          '<div class="ap-delete-actions">' +
+            '<button type="button" class="btn-sm" id="apAddDiamondShapeCancel">取消</button>' +
+            '<button type="submit" class="btn-sm btn-primary">建立</button>' +
+          '</div>' +
+        '</form>' +
+      '</dialog>'
+    );
+  }
+
+  function ensureAddDiamondShapeDialog() {
+    var dialog = document.getElementById('apAddDiamondShapeDialog');
+    if (dialog) return dialog;
+    var wrap = document.createElement('div');
+    wrap.innerHTML = addDiamondShapeDialogHtml();
+    dialog = wrap.firstElementChild;
+    document.body.appendChild(dialog);
+    return dialog;
+  }
+
+  /**
+   * Prompt for a new cut name. Resolves with shape row or null if cancelled.
+   */
+  function promptCreateDiamondShape() {
+    return new Promise(function (resolve) {
+      var dialog = ensureAddDiamondShapeDialog();
+      var form = document.getElementById('apAddDiamondShapeForm');
+      var errEl = document.getElementById('apAddDiamondShapeError');
+      var zhInput = document.getElementById('apNewShapeLabelZh');
+      var enInput = document.getElementById('apNewShapeLabelEn');
+      var cancelBtn = document.getElementById('apAddDiamondShapeCancel');
+      if (!dialog || !form || !zhInput) {
+        resolve(null);
+        return;
+      }
+      var settled = false;
+      function finish(value) {
+        if (settled) return;
+        settled = true;
+        form.onsubmit = null;
+        if (cancelBtn) cancelBtn.onclick = null;
+        try { dialog.close(); } catch (e) { /* ignore */ }
+        resolve(value);
+      }
+      if (errEl) { errEl.hidden = true; errEl.textContent = ''; }
+      zhInput.value = '';
+      if (enInput) enInput.value = '';
+      cancelBtn.onclick = function () { finish(null); };
+      form.onsubmit = function (ev) {
+        if (ev && ev.preventDefault) ev.preventDefault();
+        var labelZh = zhInput.value.trim();
+        var labelEn = enInput ? enInput.value.trim() : '';
+        if (!labelZh) {
+          if (errEl) { errEl.textContent = '請填寫切工名稱'; errEl.hidden = false; }
+          return;
+        }
+        if (!api.admin.createDiamondShape) {
+          if (errEl) { errEl.textContent = '請強制重新整理頁面後再試'; errEl.hidden = false; }
+          return;
+        }
+        api.admin.createDiamondShape({ labelZh: labelZh, labelEn: labelEn || undefined }).then(function (res) {
+          if (res.error || !res.shape) {
+            if (errEl) {
+              errEl.textContent = res.error || '建立失敗';
+              errEl.hidden = false;
+            }
+            return;
+          }
+          rememberDiamondShape(res.shape);
+          finish(res.shape);
+        }, function () {
+          if (errEl) { errEl.textContent = '建立失敗'; errEl.hidden = false; }
+        });
+      };
+      if (typeof dialog.showModal === 'function') dialog.showModal();
+      else dialog.setAttribute('open', '');
+      zhInput.focus();
+    });
+  }
+
   function chainCatalogTypes() {
     var cat = state.chainCatalog;
     return (cat && cat.types) || {};
@@ -592,6 +729,7 @@
           '<button type="submit" class="btn-sm btn-primary">確認刪除</button>' +
         '</div></form></dialog>' +
       addCategoryDialogHtml() +
+      addDiamondShapeDialogHtml() +
       deleteCategoryDialogHtml()
     );
     bindShellEvents();
@@ -1693,12 +1831,17 @@
 
   function slotPairSelectHtml(selectedKey, category) {
     if (category === 'diamond') {
-      var shape = DIAMOND_SHAPE_SLOT_VALUES.indexOf(selectedKey) >= 0 ? selectedKey : 'round';
+      var opts = diamondShapeOptionsLive();
+      var shape = isKnownDiamondShape(selectedKey) ? selectedKey : 'round';
+      if (isKnownDiamondShape(selectedKey) && !opts.some(function (o) { return o.value === selectedKey; })) {
+        opts = opts.concat([{ value: selectedKey, label: selectedKey }]);
+      }
+      opts = opts.concat([{ value: NEW_SHAPE_VALUE, label: '+ 新增切工…' }]);
       return (
         '<label class="ap-image-slot-pair">' +
           '<span>鑽石切工</span>' +
           '<select class="ap-image-slot-diamond-only">' +
-            slotSelectHtml(DIAMOND_SHAPE_SLOT_OPTIONS, shape) +
+            slotSelectHtml(opts, shape) +
           '</select>' +
         '</label>'
       );
@@ -2103,6 +2246,13 @@
             lastError = res.error || lastError || '上傳失敗';
             return;
           }
+          // Existing product: server must confirm the product_images row,
+          // otherwise the preview would show an image the shop can never see.
+          if (state.editingId && !(res.image && res.image.id)) {
+            hadError = true;
+            lastError = '圖片已上傳但未寫入資料庫，請重新整理後再試';
+            return;
+          }
           var imageMeta = res.image || {};
           var wrap = document.createElement('div');
           wrap.innerHTML = imageSlideHtml({
@@ -2215,7 +2365,13 @@
               alert((data && data.error) || '取代失敗');
               return;
             }
-            applyImageRowToSlide(item, data.image || { file_path: data.url, id: imageId }, data.url);
+            // Replace must echo the persisted row — a bare url means the DB
+            // still points at the old image and the shop will not change.
+            if (!(data.image && data.image.id)) {
+              alert('圖片已上傳但未寫入資料庫，請重新整理後再試');
+              return;
+            }
+            applyImageRowToSlide(item, data.image, data.url);
             refreshAllCarousels(form);
           });
         }).catch(function () {
@@ -2272,19 +2428,60 @@
 
     slot.dataset.lastKey = slotColorKey(slot);
 
-    function onSlotKeyChange() {
-      var key = slotColorKey(slot);
+    function restoreDiamondOnly(prevKey) {
+      if (!diamondOnly) return;
+      var fallback = isKnownDiamondShape(prevKey) ? prevKey : 'round';
+      if (!Array.from(diamondOnly.options).some(function (o) { return o.value === fallback; })) {
+        diamondOnly.appendChild(new Option(fallback, fallback));
+      }
+      diamondOnly.value = fallback;
+    }
+
+    function applyDiamondShapeKey(key) {
       var used = usedSlotKeys(form, slot);
       if (used[key]) {
         alert('此組合已用於其他圖片選項，請選擇不同的組合。');
-        var prevKey = slot.dataset.lastKey || (diamondOnly ? 'round' : 'white');
-        if (diamondOnly) {
-          diamondOnly.value = DIAMOND_SHAPE_SLOT_VALUES.indexOf(prevKey) >= 0 ? prevKey : 'round';
-        } else {
-          var prev = parseSlotKey(prevKey) || { metal: 'white', diamond: 'white', chainMetal: null };
-          if (metalSel) metalSel.value = prev.metal;
-          if (diamondSel) diamondSel.value = prev.diamond;
-        }
+        restoreDiamondOnly(slot.dataset.lastKey || 'round');
+        return;
+      }
+      slot.dataset.lastKey = key;
+      slot.querySelectorAll('.ap-carousel-item[data-url]').forEach(function (item) {
+        item.dataset.color = key;
+      });
+    }
+
+    function onSlotKeyChange() {
+      if (diamondOnly && diamondOnly.value === NEW_SHAPE_VALUE) {
+        var prevKey = slot.dataset.lastKey || 'round';
+        restoreDiamondOnly(prevKey);
+        promptCreateDiamondShape().then(function (shape) {
+          if (!shape || !shape.id) return;
+          refreshImageSlotCategory(slot, form, 'diamond');
+          diamondOnly = slot.querySelector('.ap-image-slot-diamond-only');
+          if (diamondOnly) {
+            if (!Array.from(diamondOnly.options).some(function (o) { return o.value === shape.id; })) {
+              diamondOnly.insertBefore(
+                new Option(shape.labelZh || shape.label_zh || shape.id, shape.id),
+                diamondOnly.querySelector('option[value="' + NEW_SHAPE_VALUE + '"]')
+              );
+            }
+            diamondOnly.value = shape.id;
+          }
+          applyDiamondShapeKey(shape.id);
+        });
+        return;
+      }
+      var key = slotColorKey(slot);
+      if (diamondOnly) {
+        applyDiamondShapeKey(key);
+        return;
+      }
+      var used = usedSlotKeys(form, slot);
+      if (used[key]) {
+        alert('此組合已用於其他圖片選項，請選擇不同的組合。');
+        var prev = parseSlotKey(slot.dataset.lastKey || 'white') || { metal: 'white', diamond: 'white', chainMetal: null };
+        if (metalSel) metalSel.value = prev.metal;
+        if (diamondSel) diamondSel.value = prev.diamond;
         return;
       }
       slot.dataset.lastKey = key;
@@ -2301,7 +2498,7 @@
   function refreshImageSlotCategory(slot, form, category) {
     var currentKey = slotColorKey(slot);
     var baseColor = category === 'diamond'
-      ? (DIAMOND_SHAPE_SLOT_VALUES.indexOf(currentKey) >= 0 ? currentKey : 'round')
+      ? (isKnownDiamondShape(currentKey) ? currentKey : 'round')
       : (parseSlotKey(currentKey)
         ? currentKey
         : buildSlotKey('white', 'white', null));
@@ -2748,18 +2945,35 @@
       if (!host) return;
       var cat = catSel.value;
       var used = usedSlotKeys(form);
+
+      function appendSlot(pick) {
+        var wrap = document.createElement('div');
+        wrap.innerHTML = imageSlotHtml({ color: pick, urls: [] }, cat);
+        var slot = wrap.firstElementChild;
+        host.appendChild(slot);
+        bindImageSlot(slot, form);
+        (slot.querySelector('.ap-image-slot-diamond-only')
+          || slot.querySelector('.ap-image-slot-metal'))?.focus();
+      }
+
       var pick = presetSlotKeysForCategory(cat).find(function (v) { return !used[v]; });
-      if (!pick) {
-        alert('所有組合都已建立，無法再新增圖片選項');
+      if (pick) {
+        appendSlot(pick);
         return;
       }
-      var wrap = document.createElement('div');
-      wrap.innerHTML = imageSlotHtml({ color: pick, urls: [] }, cat);
-      var slot = wrap.firstElementChild;
-      host.appendChild(slot);
-      bindImageSlot(slot, form);
-      (slot.querySelector('.ap-image-slot-diamond-only')
-        || slot.querySelector('.ap-image-slot-metal'))?.focus();
+      // Diamond cuts: open create-cut dialog instead of hard wall.
+      if (cat === 'diamond') {
+        promptCreateDiamondShape().then(function (shape) {
+          if (!shape || !shape.id) return;
+          if (used[shape.id]) {
+            alert('此切工已用於其他圖片選項');
+            return;
+          }
+          appendSlot(shape.id);
+        });
+        return;
+      }
+      alert('所有組合都已建立，無法再新增圖片選項');
     });
 
     function syncDiamondEditorChrome(cat) {
@@ -3187,6 +3401,19 @@
         return;
       }
       state.chainCatalog = res.chainCatalog || state.chainCatalog;
+      if (res.diamondShapes && res.diamondShapes.length) {
+        state.diamondShapes = res.diamondShapes;
+      } else if (res.matrixShapes && res.matrixShapes.length) {
+        state.diamondShapes = res.matrixShapes.map(function (s) {
+          return {
+            id: s.id,
+            labelZh: s.labelZh || s.label_zh || s.id,
+            labelEn: s.labelEn || s.label_en || s.id,
+            label_zh: s.labelZh || s.label_zh || s.id,
+            label_en: s.labelEn || s.label_en || s.id,
+          };
+        });
+      }
       if (state.categoryOrder.indexOf(state.activeTab.replace('cat-', '')) < 0 && state.categoryOrder.length) {
         state.activeTab = 'cat-' + state.categoryOrder[0];
         _pageIndex = 0;

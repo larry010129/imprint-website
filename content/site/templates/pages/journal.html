@@ -22,7 +22,7 @@
 <section class="page-hero page-hero--short">
   <div class="page-hero-scrim"></div>
   <div class="container page-hero-inner">
-    <p class="breadcrumb"><a href="/">首頁</a><span class="sep">/</span><span class="current">品牌日誌</span></p>
+    <p class="breadcrumb"><a href="/">首頁</a><span class="sep">/</span><span class="current" data-cms-text="crumb-current">品牌日誌</span></p>
   </div>
 </section>
 
@@ -51,9 +51,9 @@
   {% else %}
   <section class="prose-section" data-journal-ssr>
     <div class="container prose">
-      <p class="eyebrow">JOURNAL</p>
-      <h1>品牌日誌</h1>
-      <p>培育鑽石知識分享、品牌動態與展會紀錄。</p>
+      <p class="eyebrow" data-cms-text="list-eyebrow">JOURNAL</p>
+      <h1 data-cms-text="list-title">品牌日誌</h1>
+      <p data-cms-text="list-lead">培育鑽石知識分享、品牌動態與展會紀錄。</p>
       {% if journal_ssr %}
       <ol class="journal-ssr-list" style="list-style:none;padding:0;margin:2rem 0 0;">
         {% for post in journal_ssr %}

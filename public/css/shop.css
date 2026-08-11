@@ -3175,7 +3175,18 @@ body.app-shell:not(.dark-theme) .shop-fit {
   display: none;
 }
 
-/* Keep metal+color option groups in the same compact three-column grid. */
+/* Keep metal+color option groups in the same compact three-column grid.
+   Color spans the remaining two columns so 3×4rem chips fit one line
+   (uses the blank third column that was left empty by auto-placement). */
+.shop-fit #metal-step {
+  grid-column: 1 / 2;
+}
+
+.shop-fit #color-step {
+  grid-column: 2 / -1;
+  min-width: 0;
+}
+
 .shop-fit #color-step.hidden {
   visibility: hidden;
   pointer-events: none;
@@ -3192,18 +3203,106 @@ body.app-shell:not(.dark-theme) .shop-fit {
 .shop-fit #metal-step:has(+ #color-step.hidden-collapse) {
   grid-column: 1 / -1;
 }
-.shop-fit #metal-step:has(+ #color-step.hidden-collapse) #metal-btn-row {
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
-}
 
+/* Carat select + diamond color swatches share the first options row. */
+.shop-fit #carat-step {
+  grid-column: 1 / 2;
+}
+.shop-fit #fancy-diamond-step {
+  grid-column: 2 / -1;
+}
 
 .shop-fit #diamond-shape-step,
 .shop-fit #pendant-chain-step,
 .shop-fit #chain-length-step {
   grid-column: 1 / -1;
+}
+
+/* Metal / metal-color / shape rows: no scroll UI. */
+.shop-fit #metal-btn-row,
+.shop-fit #color-btn-row,
+.shop-fit #diamond-shape-row {
+  display: flex;
+  gap: 0.375rem;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.shop-fit #metal-btn-row,
+.shop-fit #diamond-shape-row {
+  overflow-x: hidden;
+}
+
+/* Metal: wrap to a second row before labels get squeezed vertical;
+   33% basis lands 5 chips as 3+2 — never a lone orphan row. */
+.shop-fit #metal-btn-row {
+  flex-wrap: wrap;
+}
+
+/* Metal color: always one horizontal line (1/2/3 chips) — never wrap.
+   Do not clip; column span 2 holds 3×4rem + gaps. */
+.shop-fit #color-btn-row {
+  flex-wrap: nowrap;
+  overflow-x: visible;
+}
+
+/* Shape chips stay on one line. */
+.shop-fit #diamond-shape-row {
+  flex-wrap: nowrap;
+}
+
+.shop-fit #metal-btn-row::-webkit-scrollbar,
+.shop-fit #color-btn-row::-webkit-scrollbar,
+.shop-fit #diamond-shape-row::-webkit-scrollbar {
+  display: none;
+}
+
+.shop-fit #metal-btn-row > * {
+  flex: 1 1 calc(33.333% - 0.25rem);
+  min-width: calc(33.333% - 0.25rem);
+}
+
+/* Exactly 4 chips: 2+2 reads better than 3+1 orphan. */
+.shop-fit #metal-btn-row:has(> :nth-child(4):last-child) > * {
+  flex-basis: calc(50% - 0.25rem);
+  min-width: calc(50% - 0.25rem);
+}
+
+/* Metal color: fixed chip size — same whether 1, 2, or 3 options.
+   Slightly under 4.5rem so three fit one line without scroll/wrap.
+   Do not flex-grow to fill the row (unlike #metal-btn-row). */
+.shop-fit #color-btn-row > *,
+.shop-fit .variant-chips--colors .color-btn {
+  flex: 0 0 auto;
+  width: 4rem;
+  min-width: 4rem;
+  max-width: 4rem;
+  box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Shape chips: content-sized (do not stretch to fill row). */
+.shop-fit #diamond-shape-row > * {
+  flex: 0 1 auto;
+  width: auto;
+  min-width: 0;
+}
+
+.shop-fit #metal-btn-row .metal-btn,
+.shop-fit #metal-btn-row .variant-chip,
+.shop-fit #diamond-shape-row .variant-chip,
+.shop-fit #diamond-shape-row .diamond-shape-btn {
+  padding: 0.3125rem 0.5rem;
+}
+
+/* Metal chips: label stays on one horizontal line — the row wraps to a
+   second row instead of stacking words vertically inside the button. */
+.shop-fit #metal-btn-row .metal-btn {
+  white-space: nowrap;
+  line-height: 1.25;
+  text-align: center;
+  box-sizing: border-box;
 }
 
 /* Full options row; stay inside column (no overflow into price panel) */
@@ -3314,14 +3413,10 @@ body.app-shell:not(.dark-theme) .shop-fit {
 
 .shop-fit .variant-chips--colors {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .shop-fit .product-buy-col .variant-chips:not(.variant-chips--colors) .variant-chip {
-  flex: 0 1 auto;
-}
-
-.shop-fit .variant-chips--colors .color-btn {
   flex: 0 1 auto;
 }
 
@@ -3423,9 +3518,15 @@ body.app-shell:not(.dark-theme) .shop-fit {
 }
 
 .shop-fit .ring-size-select,
-.shop-fit .carat-select,
 .shop-fit .engraving-input {
   max-width: 16rem;
+  padding: 0.375rem 0.625rem;
+  font-size: 0.8125rem;
+}
+
+/* Narrow carat select so it + 4 fancy color swatches fit one desktop row. */
+.shop-fit .carat-select {
+  max-width: 8.5rem;
   padding: 0.375rem 0.625rem;
   font-size: 0.8125rem;
 }
@@ -3872,10 +3973,17 @@ body.app-shell:not(.dark-theme) .shop-fit {
 }
 
 .shop-fit .color-swatch-labeled {
-  min-width: 48px;
-  padding: 6px 8px !important;
+  min-width: 4rem;
+  padding: 6px 4px !important;
   gap: 4px;
-  white-space: normal;
+  white-space: nowrap;
+}
+
+.shop-fit .variant-chips--colors .color-swatch-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .shop-fit .color-swatch-labeled.active {
@@ -4074,6 +4182,26 @@ body.app-shell:not(.dark-theme) .shop-fit {
 
   .shop-fit .product-options-section {
     grid-template-columns: 1fr;
+  }
+
+  /* Single-column stack: reset side-by-side option placement. */
+  .shop-fit #metal-step,
+  .shop-fit #color-step,
+  .shop-fit #carat-step,
+  .shop-fit #fancy-diamond-step {
+    grid-column: 1 / -1;
+  }
+
+  /* Shape: keep content width; 2 chips stay one line side-by-side. */
+  .shop-fit #diamond-shape-row {
+    flex-wrap: nowrap;
+    overflow-x: hidden;
+  }
+
+  .shop-fit #diamond-shape-row > * {
+    flex: 0 1 auto;
+    width: auto;
+    min-width: 0;
   }
 
   .shop-fit #color-step.hidden {

@@ -3,7 +3,7 @@
 {% block title %}{% if q_preview %}預覽模式｜不會送出真實訂單｜{% endif %}{{ title }}{% endblock %}
 {% block main_class %} class="main-content shop-calculator-page{% if q_preview %} is-shop-preview{% endif %}"{% endblock %}
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/shop.css?v=6.36">
+<link rel="stylesheet" href="/static/css/shop.css?v=6.40">
 <link rel="stylesheet" href="/static/css/shop-wizard.css?v=25">
 {% if q_preview %}
 <meta name="robots" content="noindex, nofollow">
@@ -418,7 +418,7 @@
             <div class="summary-row hidden" id="sum-side-stone-cts-row"><span class="lbl" data-i18n="sum_side_stone_cts">配鑽克拉</span><span class="colon">：</span><span class="val"><span id="sum-side-stone-cts">-</span> ct</span></div>
             <div class="summary-row hidden" id="sum-side-stone-row"><span class="lbl" data-i18n="sum_side_stone_price">配鑽價錢</span><span class="colon">：</span><span class="val">NT$ <span id="sum-side-stone-price">-</span></span></div>
             <div class="summary-row"><span class="lbl" data-i18n="sum_metalwork_price">金工價格</span><span class="colon">：</span><span class="val">NT$ <span id="sum-metalwork-price">-</span></span></div>
-            <div class="summary-row hidden" id="sum-chain-row"><span class="lbl" data-i18n="sum_chain_price">搭配鏈條</span><span class="colon">：</span><span class="val">NT$ <span id="sum-chain-price">-</span></span></div>
+            <div class="summary-row hidden" id="sum-chain-row"><span class="lbl" data-i18n="sum_chain_price">鍊條費用</span><span class="colon">：</span><span class="val">NT$ <span id="sum-chain-price">-</span></span></div>
           </div>
         </div>
       </details>
@@ -827,10 +827,10 @@
 </script>
 <script src="/static/js/shop-assets.js?v=16" defer></script>
 <script src="/static/js/shop-catalog-data.js?v=7" defer></script>
-<script src="/static/js/shop-pricing-local.js?v=23" defer></script>
+<script src="/static/js/shop-pricing-local.js?v=25" defer></script>
 <script src="/static/js/shop-i18n.js?v=22" defer></script>
 <script src="/static/js/girdle-engrave.js?v=24" defer></script>
 <script src="/static/js/shop-terms.js?v=5" defer></script>
 <script src="/static/js/catalog-multi-filter.js?v=1" defer></script>
-<script src="/static/js/shop.js?v=154" defer></script>
+<script src="/static/js/shop.js?v=157" defer></script>
 {% endblock %}
