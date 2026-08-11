@@ -543,8 +543,8 @@ PAGE_DIAMOND_COMPARISON = PageMeta(
 PAGE_SERIES = PageMeta(
     route='/series',
     template='pages/series.html',
-    title='六大系列總覽｜滿月・寵物・結髮・全家福・生命・銘印（me-in）－銘印鑽石 IMPRINT DIAMOND',
-    description='銘印鑽石六大系列完整介紹：滿月鑽石、寵物鑽石、結髮鑽石、全家福鑽石、生命鑽石與銘印鑽石（me-in）。依您的羈絆與生命階段選擇系列，了解樣本來源、培育方式與線上試算。',
+    title='六大系列總覽｜滿月・寵物・結髮・全家福・生命・真我（Signature）－銘印鑽石 IMPRINT DIAMOND',
+    description='銘印鑽石六大系列完整介紹：滿月鑽石、寵物鑽石、結髮鑽石、全家福鑽石、生命鑽石與真我鑽石（Signature）。依您的羈絆與生命階段選擇系列，了解樣本來源、培育方式與線上試算。',
     canonical_path='series',
     og_title='六大系列總覽｜選擇屬於您的 DNA 鑽石系列－銘印鑽石',
     og_description='每一種羈絆，都有屬於它的光。完整介紹六大系列代表的意義、適合對象與訂製方式。',
@@ -1012,17 +1012,17 @@ SERIES_PET = PageMeta(
 SERIES_SIGNATURE = PageMeta(
     route='/series/signature/',
     template='pages/series_detail.html',
-    title='銘印鑽石｜me-in 專屬訂製－銘印鑽石 IMPRINT DIAMOND',
-    description='銘印鑽石（me-in）｜以自己的髮絲，萃煉成獨一無二的鑽石，獻給值得被自己慶祝的此刻。全程台灣在地培育，可線上試算並由專屬顧問確認細節。',
+    title='真我鑽石｜Signature 專屬訂製－銘印鑽石 IMPRINT DIAMOND',
+    description='真我鑽石（Signature）｜以自己的髮絲，萃煉成獨一無二的鑽石，獻給值得被自己慶祝的此刻。全程台灣在地培育，可線上試算並由專屬顧問確認細節。',
     canonical_path='series/signature/',
-    og_title='銘印鑽石｜me-in 專屬 DNA 鑽石－銘印鑽石',
-    og_description='銘印鑽石（me-in）：以自己的髮絲萃煉成獨一無二的鑽石，獻給值得被自己慶祝的此刻。',
+    og_title='真我鑽石｜Signature 專屬 DNA 鑽石－銘印鑽石',
+    og_description='真我鑽石（Signature）：以自己的髮絲萃煉成獨一無二的鑽石，獻給值得被自己慶祝的此刻。',
     og_image='static/images/hero/imprint-diamond-wedding-couple-ring.jpg',
-    breadcrumbs=[('首頁', '/'), ('六大系列', '/series'), ('銘印鑽石', None)],
+    breadcrumbs=[('首頁', '/'), ('六大系列', '/series'), ('真我鑽石', None)],
     mvc_page=None,
     extra_body_class=None,
     content_fragment='series/signature.html',
-    extra_head_blocks=['{\n  "@context": "https://schema.org",\n  "@type": "FAQPage",\n  "mainEntity": [\n    {\n      "@type": "Question",\n      "name": "銘印鑽石可以使用哪些樣本？",\n      "acceptedAnswer": {\n        "@type": "Answer",\n        "text": "可依您的故事討論毛髮，正式評估由專屬顧問協助。"\n      }\n    },\n    {\n      "@type": "Question",\n      "name": "可以自己決定鑽石與飾品款式嗎？",\n      "acceptedAnswer": {\n        "@type": "Answer",\n        "text": "可以。克拉數、形狀、顏色、金屬材質與鑲嵌形式，都會依您的故事與預算一對一確認。"\n      }\n    },\n    {\n      "@type": "Question",\n      "name": "製作需要多久？",\n      "acceptedAnswer": {\n        "@type": "Answer",\n        "text": "全程於台灣在地實驗室完成，通常約 70～90 天交付，並附銘印保證卡與專屬影音紀念盒。"\n      }\n    }\n  ]\n}'],
+    extra_head_blocks=['{\n  "@context": "https://schema.org",\n  "@type": "FAQPage",\n  "mainEntity": [\n    {\n      "@type": "Question",\n      "name": "真我鑽石可以使用哪些樣本？",\n      "acceptedAnswer": {\n        "@type": "Answer",\n        "text": "可依您的故事討論毛髮，正式評估由專屬顧問協助。"\n      }\n    },\n    {\n      "@type": "Question",\n      "name": "可以自己決定鑽石與飾品款式嗎？",\n      "acceptedAnswer": {\n        "@type": "Answer",\n        "text": "可以。克拉數、形狀、顏色、金屬材質與鑲嵌形式，都會依您的故事與預算一對一確認。"\n      }\n    },\n    {\n      "@type": "Question",\n      "name": "製作需要多久？",\n      "acceptedAnswer": {\n        "@type": "Answer",\n        "text": "全程於台灣在地實驗室完成，通常約 70～90 天交付，並附銘印保證卡與專屬影音紀念盒。"\n      }\n    }\n  ]\n}'],
 )
 
 

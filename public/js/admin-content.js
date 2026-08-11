@@ -1017,10 +1017,34 @@
     renderShell();
   }
 
+  /* Banner text colors — presets mirror the home-ghibli palette
+     * (--gh-* vars in public/css/home-ghibli-critical.css). */
+  var BANNER_TEXT_COLORS = [
+    { value: 'white', label: '純白', hex: '#FFFFFF' },
+    { value: 'cream', label: '米白', hex: '#FBF6ED' },
+    { value: 'mint', label: '品牌青', hex: '#8EEDF0' },
+    { value: 'teal', label: '深青', hex: '#52C4C8' },
+    { value: 'deep-teal', label: '墨青', hex: '#1F6F72' },
+    { value: 'ink', label: '墨褐', hex: '#242220' },
+  ];
+  var BANNER_TONE_HEX_RE = /^#[0-9a-fA-F]{6}$/;
+  /* Legacy scrim tones all rendered white text — map them to 純白. */
+  var BANNER_LEGACY_TONE_MAP = { warm: 'white', light: 'white', soft: 'white' };
+
+  function bannerToneFormState(raw) {
+    var t = String(raw || 'white').trim().toLowerCase();
+    if (BANNER_LEGACY_TONE_MAP[t]) return { select: BANNER_LEGACY_TONE_MAP[t], hex: '' };
+    if (BANNER_TONE_HEX_RE.test(t)) return { select: 'custom', hex: t };
+    for (var i = 0; i < BANNER_TEXT_COLORS.length; i++) {
+      if (BANNER_TEXT_COLORS[i].value === t) return { select: t, hex: '' };
+    }
+    return { select: 'white', hex: '' };
+  }
+
   /** Full-page editor (not float modal) so crop dialog can sit above the page cleanly. */
   function openBannerModal(b) {
     var isEdit = !!(b && b.id);
-    var tone = isEdit ? (b.tone || 'warm') : 'warm';
+    var toneState = bannerToneFormState(isEdit ? b.tone : 'white');
     var align = isEdit ? (b.align || 'left') : 'left';
     var existDesktop = isEdit ? (b.image_url || '') : '';
     var existMobile = isEdit ? (b.image_url_mobile || '') : '';
@@ -1038,11 +1062,18 @@
           '<form id="acBannerForm" class="ap-form" data-id="' + esc(isEdit ? b.id : '') + '">' +
             '<div class="ap-form-grid">' +
               '<label class="ap-field"><span>眉題</span><input name="eyebrow" placeholder="Imprint Diamond" value="' + esc(isEdit ? b.eyebrow : '') + '"></label>' +
-              '<label class="ap-field"><span>色調</span><select name="tone">' +
-                '<option value="warm"' + (tone === 'warm' ? ' selected' : '') + '>warm</option>' +
-                '<option value="light"' + (tone === 'light' ? ' selected' : '') + '>light</option>' +
-                '<option value="soft"' + (tone === 'soft' ? ' selected' : '') + '>soft</option>' +
+              '<label class="ap-field"><span>文字顏色</span><select name="tone" id="acBannerTone">' +
+                BANNER_TEXT_COLORS.map(function (c) {
+                  return '<option value="' + c.value + '"' +
+                    (toneState.select === c.value ? ' selected' : '') + '>' +
+                    c.label + ' ' + c.hex + '</option>';
+                }).join('') +
+                '<option value="custom"' + (toneState.select === 'custom' ? ' selected' : '') + '>自訂色碼…</option>' +
               '</select></label>' +
+              '<label class="ap-field" id="acBannerToneCustomField"' + (toneState.select === 'custom' ? '' : ' hidden') + '>' +
+                '<span>自訂色碼</span>' +
+                '<input name="toneCustom" id="acBannerToneCustom" placeholder="#RRGGBB" maxlength="7" value="' + esc(toneState.hex) + '">' +
+              '</label>' +
               '<div class="ap-field ac-banner-align-field"><span>文字位置</span>' +
                 '<div class="ac-banner-align" role="group" aria-label="文字位置">' +
                   '<label class="ac-banner-align__option"><input type="radio" name="align" value="left"' + (align === 'left' ? ' checked' : '') + '><span>靠左</span></label>' +
@@ -1087,6 +1118,14 @@
 
     var form = document.getElementById('acBannerForm');
     if (form) form.addEventListener('submit', submitBanner);
+
+    var toneSelect = document.getElementById('acBannerTone');
+    var toneCustomField = document.getElementById('acBannerToneCustomField');
+    if (toneSelect && toneCustomField) {
+      toneSelect.addEventListener('change', function () {
+        toneCustomField.hidden = toneSelect.value !== 'custom';
+      });
+    }
 
     if (window.AdminTables && window.AdminTables.renderPageLinkSelect) {
       var primaryMount = document.getElementById('acPrimaryHrefMount');
@@ -1140,6 +1179,19 @@
     var fd = new FormData(form);
     var errEl = document.getElementById('acFormError');
     var id = form.dataset.id;
+    var toneValue = String(fd.get('tone') || 'white').trim();
+    if (toneValue === 'custom') {
+      toneValue = String(fd.get('toneCustom') || '').trim().toLowerCase();
+      if (!BANNER_TONE_HEX_RE.test(toneValue)) {
+        if (errEl) {
+          errEl.textContent = '自訂色碼格式錯誤，請輸入 #RRGGBB（例如 #8EEDF0）';
+          errEl.hidden = false;
+        } else {
+          alert('自訂色碼格式錯誤，請輸入 #RRGGBB（例如 #8EEDF0）');
+        }
+        return;
+      }
+    }
     var payload = {
       id: id || undefined,
       eyebrow: String(fd.get('eyebrow') || '').trim(),
@@ -1151,7 +1203,7 @@
       ctaPrimaryHref: String(fd.get('ctaPrimaryHref') || '').trim(),
       ctaSecondaryLabel: String(fd.get('ctaSecondaryLabel') || '').trim(),
       ctaSecondaryHref: String(fd.get('ctaSecondaryHref') || '').trim(),
-      tone: String(fd.get('tone') || 'warm').trim(),
+      tone: toneValue,
       align: String(fd.get('align') || 'left').trim(),
       sortOrder: fd.get('sortOrder'),
       isPublished: !!form.querySelector('[name="isPublished"]').checked,

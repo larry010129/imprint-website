@@ -350,6 +350,7 @@ button:not(.btn-sm):not(.ap-tab-btn):not(.nav-toggle):not(.side-backdrop):not([d
 .ap-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;}
 .ap-form-grid label,
 .ap-form-grid > .ap-field{display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:var(--ink-soft);}
+.ap-form-grid > .ap-field[hidden]{display:none;}
 .ap-form-grid label.ap-field--full,.ap-form-grid div.ap-field--full{grid-column:1 / -1;}
 .ap-form-grid label.ap-field--check{flex-direction:row;align-items:center;gap:8px;margin-top:8px;}
 .ac-code-row{display:flex;gap:8px;align-items:center;}

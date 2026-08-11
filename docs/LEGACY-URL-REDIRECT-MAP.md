@@ -24,7 +24,7 @@ Legacy origin audited: `https://www.imprint-diamond.com` (homepage also at `/imp
 | Love / 結髮 | `/series/love/` |
 | Family / 全家福 | `/series/family/` |
 | Heirloom / 生命／骨灰 | `/series/heirloom/` |
-| Me-in / 銘印鑽石 | `/series/signature/` |
+| Signature / 真我鑽石 | `/series/signature/` |
 | 六大系列總覽 | `/series` |
 | 時尚珠寶總覽 | `/jewelry/` |
 | 求婚戒指／結髮飾品入口 | `/jewelry/engagement/` |

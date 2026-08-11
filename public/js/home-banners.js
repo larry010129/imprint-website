@@ -24,6 +24,24 @@
     return String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
   }
 
+  /* Banner text colors — presets mirror the home-ghibli palette.
+     Legacy scrim tones (warm/light/soft) and 'white' use the default
+     white copy, so they resolve to '' (no override). */
+  var BANNER_TEXT_COLORS = {
+    cream: '#fbf6ed',
+    mint: '#8eedf0',
+    teal: '#52c4c8',
+    'deep-teal': '#1f6f72',
+    ink: '#242220'
+  };
+
+  function slideTextColor(tone) {
+    var t = String(tone || '').trim().toLowerCase();
+    if (BANNER_TEXT_COLORS[t]) return BANNER_TEXT_COLORS[t];
+    if (/^#[0-9a-f]{6}$/.test(t)) return t;
+    return '';
+  }
+
   /** Known local hero stems → full-width descriptor (for srcset). */
   var LOCAL_HERO_MAX_W = {
     'imprint-diamond-newborn-baby-necklace': 2400,
@@ -170,6 +188,7 @@
 
   function slideHtml(b, index) {
     var tone = b.tone || 'warm';
+    var textColor = slideTextColor(tone);
     var align = b.align || (index === 3 ? 'right' : 'left');
     /* Slide 0 = sole page h1. Other slides stay styled titles, not headings
        (all slides remain in DOM; extra h2s pollute heading-order outline). */
@@ -196,7 +215,9 @@
     var rActions = index === 0 ? '' : ' reveal reveal-d3';
     return (
       '<li class="hc-slide' + (index === 0 ? ' is-active' : '') +
-        '" data-align="' + esc(align) + '" data-tone="' + esc(tone) + '">' +
+        (textColor ? ' hc-slide--custom-text' : '') +
+        '" data-align="' + esc(align) + '" data-tone="' + esc(tone) + '"' +
+        (textColor ? ' style="--hc-text:' + esc(textColor) + '"' : '') + '>' +
         '<div class="hc-media"><picture>' +
           pic.mobile +
           pic.webp +
@@ -223,6 +244,8 @@
       norm(b.cta_secondary_label),
       norm(b.cta_secondary_href),
       norm(b.align || ''),
+      // Text color override must invalidate SSR skip.
+      slideTextColor(b.tone),
       // Phone crop / desktop swap must invalidate SSR skip.
       norm(b.image_url_mobile || ''),
       assetKey(b.image_url || b.image_webp || ''),
@@ -279,6 +302,7 @@
         norm(secondary && secondary.textContent),
         norm(secondaryHref(secondary)),
         norm(slide.getAttribute('data-align') || ''),
+        norm((slide.style.getPropertyValue('--hc-text') || '').toLowerCase()),
         norm(mobileCustom),
         assetKey(imgSrc || firstSrcToken(mobileRaw)),
       ].join('|'));

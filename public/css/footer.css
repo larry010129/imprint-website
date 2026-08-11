@@ -340,10 +340,8 @@
 
 /* ============================================================
    Home cinematic closing stage (curtain reveal)
-   Mobile-first: phone gets the compact in-flow footer by default —
-   never the fixed 100dvh panel (a missed ≤900px override showed a
-   full-viewport dark void between the CTA stage and the legal line).
-   Desktop ≥901 opts into the fixed curtain. Document scroll only.
+   Full-viewport fixed 100dvh panel on all viewports; main peels
+   away over it. Document scroll only — no nested trap.
 ============================================================ */
 
 .page-home main.site-main--curtain{
@@ -352,22 +350,31 @@
   background:var(--gh-cream, #FBF6ED);
   border-bottom-left-radius:0;
   border-bottom-right-radius:0;
-  overflow:visible;
+  overflow:hidden;
   margin-bottom:0;
 }
 
 .footer-reveal{
   position:relative;
+  height:100vh;
+  height:100dvh;
+  clip-path:polygon(0% 0, 100% 0%, 100% 100%, 0 100%);
   margin:0;
   padding:0;
 }
 
 .site-footer--cinematic{
-  position:relative;
-  z-index:10;
+  position:fixed;
+  left:0;
+  right:0;
+  bottom:0;
+  z-index:0;
   width:100%;
+  height:100vh;
+  height:100dvh;
+  max-height:100dvh;
   margin:0;
-  overflow:visible;
+  overflow:hidden;
   border-radius:0;
   background:var(--sf-bg);
   font-size:inherit;
@@ -460,8 +467,8 @@
   display:flex;
   flex-direction:column;
   align-items:center;
-  justify-content:flex-start;
-  min-height:0;
+  justify-content:center;
+  min-height:100%;
   box-sizing:border-box;
   max-width:none;
   padding:

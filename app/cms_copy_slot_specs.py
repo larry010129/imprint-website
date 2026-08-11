@@ -13,7 +13,7 @@ EDITABLE_SITE_PAGES: tuple[dict[str, str], ...] = (
     {"route": "/series/love/", "title": "結髮鑽石", "content_tab": "page"},
     {"route": "/series/family/", "title": "全家福鑽石", "content_tab": "page"},
     {"route": "/series/heirloom/", "title": "生命鑽石", "content_tab": "page"},
-    {"route": "/series/signature/", "title": "銘印鑽石（me-in）", "content_tab": "page"},
+    {"route": "/series/signature/", "title": "真我鑽石（Signature）", "content_tab": "page"},
     {"route": "/what-is-dna-diamond", "title": "DNA 鑽石的誕生", "content_tab": "page"},
     {"route": "/diamond-4c", "title": "鑽石 4C", "content_tab": "page"},
     {"route": "/lab-grown-diamond", "title": "什麼是培育鑽石", "content_tab": "page"},
@@ -147,7 +147,7 @@ def _home_slots() -> list[dict[str, Any]]:
             "回憶如汩汩泉湧，思念如雲煙繞樑——請永遠留在我身邊，讓記憶成為永恆的存在。",
             42,
         ),
-        _t(p, "card-signature-title", "首頁・銘印卡標題", "銘印鑽石", 43),
+        _t(p, "card-signature-title", "首頁・真我卡標題", "真我鑽石", 43),
         _t(
             p,
             "card-signature-text",
@@ -388,7 +388,7 @@ def _series_detail_slots() -> list[dict[str, Any]]:
         ),
         (
             "/series/signature/",
-            "銘印鑽石｜為自己留下此刻",
+            "真我鑽石｜為自己留下此刻",
             "以自己的髮絲，萃煉成獨一無二的鑽石，獻給值得被自己慶祝的此刻。",
         ),
     )

@@ -1,6 +1,6 @@
 {
-  "enabled": false,
-  "syncedAt": "2026-08-10T14:58:46Z",
+  "enabled": true,
+  "syncedAt": "2026-08-11T04:12:41Z",
   "videos": [
     {
       "youtubeId": "IFa_5chXdJ4",
@@ -40,6 +40,10 @@
     }
   ],
   "channelHeadId": "IFa_5chXdJ4",
+  "source": "fixed",
+  "eyebrow": "VIDEO",
+  "heading": "親眼見證，思念如何被慎重對待",
+  "lead": "從樣本到鑽石，我們如何把每一份託付留在您觸手可及的距離裡。",
   "youtube_id": "IFa_5chXdJ4",
   "title": "回家-DNA鑽石-銘印鑽石"
 }

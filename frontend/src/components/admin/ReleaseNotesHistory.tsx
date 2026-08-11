@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ChevronDown } from "lucide-react";
 
 import {
   fetchReleaseNotes,
@@ -71,31 +72,40 @@ export default function ReleaseNotesHistory({ className }: ReleaseNotesHistoryPr
         ) : (
           <>
             {published ? (
-              <div className="space-y-3 rounded-md border border-border/70 bg-background p-4">
-                <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                  <span className="text-sm font-semibold text-foreground">
-                    {published.version || "未命名版本"}
+              <details className="group rounded-md border border-border/60 bg-background/80 px-4 py-3">
+                <summary className="flex cursor-pointer list-none items-center gap-2 text-sm">
+                  <span className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                    <span className="font-semibold text-foreground">
+                      {published.version || "未命名版本"}
+                    </span>
+                    <span className="text-foreground">{published.title}</span>
+                    <span className="text-xs text-muted-foreground">
+                      發布於 {formatPublishedAt(published.publishedAt)}
+                    </span>
                   </span>
-                  <span className="text-sm text-foreground">{published.title}</span>
-                  <span className="text-xs text-muted-foreground">
-                    發布於 {formatPublishedAt(published.publishedAt)}
-                  </span>
+                  <ChevronDown
+                    size={16}
+                    aria-hidden="true"
+                    className="ml-auto shrink-0 text-muted-foreground transition-transform group-open:rotate-180"
+                  />
+                </summary>
+                <div className="mt-3 space-y-3 border-t border-border/60 pt-3">
+                  {parseReleaseNoteSections(published.notes).map((section, sectionIndex) => (
+                    <section key={sectionIndex} className="space-y-1.5">
+                      {section.title ? (
+                        <h4 className="text-sm font-medium text-foreground">{section.title}</h4>
+                      ) : null}
+                      {section.items.length > 0 ? (
+                        <ul className="list-disc space-y-1 pl-5 text-sm text-foreground">
+                          {section.items.map((item, itemIndex) => (
+                            <li key={itemIndex}>{item}</li>
+                          ))}
+                        </ul>
+                      ) : null}
+                    </section>
+                  ))}
                 </div>
-                {parseReleaseNoteSections(published.notes).map((section, sectionIndex) => (
-                  <section key={sectionIndex} className="space-y-1.5">
-                    {section.title ? (
-                      <h4 className="text-sm font-medium text-foreground">{section.title}</h4>
-                    ) : null}
-                    {section.items.length > 0 ? (
-                      <ul className="list-disc space-y-1 pl-5 text-sm text-foreground">
-                        {section.items.map((item, itemIndex) => (
-                          <li key={itemIndex}>{item}</li>
-                        ))}
-                      </ul>
-                    ) : null}
-                  </section>
-                ))}
-              </div>
+              </details>
             ) : (
               <p className="text-sm text-muted-foreground">目前尚無已發布版本。</p>
             )}

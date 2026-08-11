@@ -2651,6 +2651,21 @@ async def admin_faq_action(request: Request) -> JSONResponse:
 
 # ── Home banners ─────────────────────────────────────────────────────────────
 
+# tone = banner TEXT color. Legacy scrim keys stay valid so existing banners
+# render unchanged; presets mirror the home-ghibli palette; #RRGGBB = custom.
+_BANNER_TONE_LEGACY = {"warm", "light", "soft"}
+_BANNER_TONE_PRESETS = {"white", "cream", "mint", "teal", "deep-teal", "ink"}
+_BANNER_TONE_HEX_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
+
+
+def _parse_banner_tone(raw) -> str:
+    tone = str(raw or "white").strip().lower()
+    if tone in _BANNER_TONE_LEGACY or tone in _BANNER_TONE_PRESETS:
+        return tone
+    if _BANNER_TONE_HEX_RE.match(tone):
+        return tone
+    return "white"
+
 
 def _parse_banner_fields(body: dict):
     title = str(body.get("title") or "").strip()
@@ -2661,9 +2676,7 @@ def _parse_banner_fields(body: dict):
         sort_order = int(body.get("sortOrder") if body.get("sortOrder") not in (None, "") else 0)
     except (TypeError, ValueError):
         return None, JSONResponse(status_code=400, content={"error": "排序無效"})
-    tone = str(body.get("tone") or "warm").strip() or "warm"
-    if tone not in {"warm", "light", "soft"}:
-        tone = "warm"
+    tone = _parse_banner_tone(body.get("tone"))
     align = str(body.get("align") or "left").strip() or "left"
     if align not in {"left", "right"}:
         align = "left"

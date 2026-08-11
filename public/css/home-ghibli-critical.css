@@ -249,7 +249,8 @@
   -webkit-background-clip:text; background-clip:text; color:transparent;
 }
 .gh-poem .gh-script,
-.gh-section .gh-script{
+.gh-section .gh-script,
+.gh-wall .gh-script{
   background:var(--gh-grad-script-light);
   -webkit-background-clip:text; background-clip:text; color:transparent;
 }

@@ -25,7 +25,7 @@ PAGE_IMAGE_STORAGE_FOLDERS: dict[str, str] = {
     "/series/love/": "wedding-diamond",  # 結髮鑽石
     "/series/family/": "family-diamond",  # 全家福鑽石
     "/series/heirloom/": "life-diamond",  # 生命鑽石
-    "/series/signature/": "signature-diamond",  # 銘印鑽石 me-in
+    "/series/signature/": "signature-diamond",  # 真我鑽石 Signature
     "/what-is-dna-diamond": "dna-diamond",  # DNA 鑽石的誕生
 }
 PAGE_IMAGE_PENDING_FOLDER = "_pending"

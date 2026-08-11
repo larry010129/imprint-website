@@ -134,6 +134,7 @@
   margin:0; font-family:var(--serif); font-size:clamp(20px,2.3vw,28px);
   line-height:1.9; letter-spacing:.06em; color:var(--about-twilight);
 }
+.about-thesis__body blockquote .keep-line{ white-space:nowrap; }
 
 /* Sticky emotional chapters */
 .about-chapters{

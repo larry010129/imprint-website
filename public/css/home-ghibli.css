@@ -146,6 +146,20 @@
     rgba(10,10,10,.06) 100%
   ) !important;
 }
+/* Custom banner text color (admin 文字顏色) — --hc-text set inline on .hc-slide */
+.hc-slide--custom-text .gh-hc-copy{ color:var(--hc-text); }
+.hc-slide--custom-text .gh-hero__title{ color:var(--hc-text); }
+.hc-slide--custom-text .gh-hero__title em{ color:var(--hc-text); -webkit-text-fill-color:var(--hc-text); }
+.hc-slide--custom-text .gh-hero__lead{ color:var(--hc-text); }
+.hc-slide--custom-text .gh-script{
+  background:none;
+  color:var(--hc-text); -webkit-text-fill-color:var(--hc-text);
+}
+.hc-slide--custom-text .gh-hc-copy .gh-dna{
+  background:none;
+  color:var(--hc-text); -webkit-text-fill-color:var(--hc-text);
+}
+
 .hc-slide[data-align="right"] .gh-hc-scrim{ transform:scaleX(-1); }
 .hc-slide[data-align="right"] .gh-hc-copy{ align-items:flex-end; text-align:right; }
 .hc-slide[data-align="right"] .gh-hc-copy .gh-hero__lead{ margin-right:0; }
@@ -159,7 +173,8 @@
 
 /* Below-fold script / DNA — brand gradient clip (light theme) */
 .gh-poem .gh-script,
-.gh-section .gh-script{
+.gh-section .gh-script,
+.gh-wall .gh-script{
   background:var(--gh-grad-script-light);
   -webkit-background-clip:text; background-clip:text; color:transparent;
   -webkit-text-fill-color:transparent;
@@ -234,7 +249,7 @@
   font-size:14.5px; color:var(--gh-muted); line-height:2.05;
   max-width:480px; margin:0 auto 24px;
 }
-.gh-poem--split{ padding:64px 16px 56px; text-align:left; }
+.gh-poem--split{ padding:52px 16px 28px; text-align:left; }
 .gh-yt-gallery{
   max-width:980px; margin:0 auto;
 }
@@ -331,7 +346,7 @@
   display:grid;
   grid-template-columns:repeat(6, minmax(0, 1fr));
   gap:12px;
-  margin:28px 0 0;
+  margin:20px 0 0;
   padding:0;
   list-style:none;
 }
@@ -379,10 +394,11 @@
 }
 
 /* ---------- About (DNA diamond) ---------- */
-.gh-about{ padding-top:56px; }
+.gh-about{ padding-top:40px; }
+.gh-about .gh-section__lead{ margin-bottom:28px; }
 .gh-about-teaser{
   display:grid; grid-template-columns:minmax(180px, 280px) 1fr;
-  align-items:center; gap:36px; max-width:760px; margin:24px auto 0;
+  align-items:center; gap:28px; max-width:760px; margin:16px auto 0;
 }
 .gh-about-diamond{
   position:relative; aspect-ratio:1; border-radius:50%;
@@ -544,6 +560,19 @@
 .gh-wall__who strong{ font-size:13px; font-weight:600; color:var(--gh-ink); }
 .gh-wall__who em{ font-style:normal; font-size:11.5px; color:var(--gh-muted); }
 .gh-wall__more{ text-align:center; margin-top:44px; }
+/* Testimonials wall: opt out of scroll-reveal — always fully opaque/readable.
+   Overrides base.css .reveal (opacity:0), the GSAP-gated home-stack reveal
+   rule, and any inline opacity/transform GSAP writes mid-tween. */
+.page-home .gh-wall,
+.page-home .gh-wall .reveal,
+html.home-gsap-sections .page-home .home-stack.gh-wall .reveal,
+html.home-gsap-sections .page-home .home-stack.gh-wall .reveal:not(.is-in),
+.page-home .gh-wall .reveal-media,
+.page-home .gh-wall .reveal-media img{
+  opacity:1 !important;
+  transform:none !important;
+  transition:none !important;
+}
 .home-testimonial-marquee{
   overflow:hidden; cursor:grab; outline:none;
 }
@@ -593,10 +622,44 @@
   transform:none;
 }
 
+/* ---------- Full-viewport landing sections ----------
+   Mirror the hero's 100vh/100svh sizing so every landing section fills the
+   screen. min-height (never height) lets content-heavy sections grow; flex
+   centering keeps short sections from sitting top-cramped. Hero excluded —
+   .gh-hc-viewport already owns its full-screen sizing. Direct-child selector
+   skips CMS-injected sections inside .cms-site-stack wrappers. */
+.page-home .landing-ghibli > section:not(.gh-hero):not(#home-poem){
+  min-height:100vh;
+  min-height:100svh;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+}
+/* DNA intro: ~30% shorter than full-viewport shell */
+.page-home .landing-ghibli > #dna-intro{
+  min-height:70vh;
+  min-height:70svh;
+  justify-content:flex-start;
+}
+/* Poem / YT gallery: hug content — no forced viewport shell */
+.page-home .landing-ghibli > #home-poem{
+  min-height:0;
+}
+/* Series CTA is a direct flex child — stop stretch (mirror .gh-wall__more pill) */
+.page-home .landing-ghibli > #series > .gh-btn{
+  align-self:center;
+  width:auto;
+  max-width:max-content;
+}
+
 /* ---------- Section shell ---------- */
 .gh-section{
   background:linear-gradient(180deg, rgba(142,237,240,.1) 0%, var(--gh-cream) 180px);
   padding:64px 16px 72px; text-align:center;
+}
+.gh-section.gh-about{
+  padding-top:40px;
+  padding-bottom:44px;
 }
 .gh-section .gh-script{ margin-bottom:12px; }
 .gh-section__title{

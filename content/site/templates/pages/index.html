@@ -6,8 +6,8 @@
 {% endblock %}
 {% block extra_css %}
 <style>{{ inline_css('home-ghibli-critical.css') | safe }}</style>
-<link rel="stylesheet" href="/static/css/home-ghibli.css?v=61" media="print" onload="this.media='all'">
-    <noscript><link rel="stylesheet" href="/static/css/home-ghibli.css?v=61"></noscript>
+<link rel="stylesheet" href="/static/css/home-ghibli.css?v=62" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="/static/css/home-ghibli.css?v=62"></noscript>
 {% endblock %}
 {% block extra_head %}
 <style>
@@ -162,7 +162,7 @@
         </div>
         <div class="hc-scrim gh-hc-scrim"></div>
         <div class="container hc-copy gh-hc-copy">
-          <p class="gh-script">銘印鑽石 IMPRINT DIAMOND</p>
+          <p class="gh-script">Imprint Diamond</p>
           <h1 class="gh-hero__title" data-cms-text="hero-title">銘印鑽石｜把最深的情感，<em>銘印成永恆</em></h1>
           <p class="gh-hero__lead" data-cms-text="hero-lead">我們樂意傾聽您的故事。銘印鑽石是全台唯一擁有在地 <span class="gh-dna">DNA</span> 鑽石培育實驗室的紀念鑽石品牌：萃取毛髮、骨灰中的元素，於台灣在地（預約制）培育成專屬紀念鑽石，附鑑定保障與專屬影音紀念盒。</p>
           <div class="gh-hero__actions">
@@ -401,7 +401,7 @@
 <section class="gh-section home-stack" id="series" data-home-stack>
   <p class="gh-script reveal" data-cms-text="series-script">Six Collections</p>
   <h2 class="gh-section__title reveal reveal-d1" data-cms-text="series-title">選擇屬於您的系列</h2>
-  <p class="gh-section__lead reveal reveal-d2" data-cms-text="series-lead">每一種羈絆，都有屬於它的光。先<a href="/series">了解六大系列</a>；銘印鑽石以自己的髮絲，萃煉成獨一無二的鑽石，獻給值得被自己慶祝的此刻。</p>
+  <p class="gh-section__lead reveal reveal-d2" data-cms-text="series-lead">每一種羈絆，都有屬於它的光。先<a href="/series">了解六大系列</a>；真我鑽石以自己的髮絲，萃煉成獨一無二的鑽石，獻給值得被自己慶祝的此刻。</p>
 
 {% set cms_anchor = 'series-top' %}
   {% include "partials/cms/site_section_stack.html" %}
@@ -486,12 +486,12 @@
       <div class="gh-series-card__media">
         <picture>
           <source type="image/webp" srcset="/static/images/hero/imprint-diamond-wedding-couple-ring-400w.webp 400w, /static/images/hero/imprint-diamond-wedding-couple-ring-800w.webp 800w, /static/images/hero/imprint-diamond-wedding-couple-ring-960w.webp 960w, /static/images/hero/imprint-diamond-wedding-couple-ring-1200w.webp 1200w" sizes="(max-width:640px) 92vw, (max-width:900px) 45vw, 320px">
-          <img data-cms-slot="series-signature" src="/static/images/hero/imprint-diamond-wedding-couple-ring-800w.webp" srcset="/static/images/hero/imprint-diamond-wedding-couple-ring-800w.webp 800w, /static/images/hero/imprint-diamond-wedding-couple-ring-960w.webp 960w, /static/images/hero/imprint-diamond-wedding-couple-ring-1200w.webp 1200w" sizes="(max-width:640px) 92vw, (max-width:900px) 45vw, 320px" alt="銘印鑽石" width="800" height="388" loading="lazy" decoding="async" onerror="imgFallback(this)">
+          <img data-cms-slot="series-signature" src="/static/images/hero/imprint-diamond-wedding-couple-ring-800w.webp" srcset="/static/images/hero/imprint-diamond-wedding-couple-ring-800w.webp 800w, /static/images/hero/imprint-diamond-wedding-couple-ring-960w.webp 960w, /static/images/hero/imprint-diamond-wedding-couple-ring-1200w.webp 1200w" sizes="(max-width:640px) 92vw, (max-width:900px) 45vw, 320px" alt="真我鑽石" width="800" height="388" loading="lazy" decoding="async" onerror="imgFallback(this)">
         </picture>
       </div>
       <div class="gh-series-card__body">
-        <p class="gh-series-card__en">Me-in</p>
-        <h3 data-cms-text="card-signature-title">銘印鑽石</h3>
+        <p class="gh-series-card__en">Signature</p>
+        <h3 data-cms-text="card-signature-title">真我鑽石</h3>
         <p data-cms-text="card-signature-text">以自己的髮絲，萃煉成獨一無二的鑽石，獻給值得被自己慶祝的此刻。</p>
         <span class="gh-series-card__more">立即客製 →</span>
       </div>
@@ -1145,7 +1145,7 @@
   }
   /* Banner CMS (phone 9:16 crop) must load ASAP — delayed inject left phones on
      PC landscape SSR for 10s+. Wall stays below-fold / PSI-deferred. */
-  inject('/static/js/home-banners.js?v=11');
+  inject('/static/js/home-banners.js?v=12');
   var HOME_WALL_MS = 10000;
   function loadHomeWall() {
     if (window.__homeWallInjected) return;
