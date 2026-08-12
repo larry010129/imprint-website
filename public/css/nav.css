@@ -990,21 +990,6 @@ a.account-menu-trigger{
   .mobile-animated-nav__sublink:hover{ color:var(--mint-deep,#1aa8ad); }
 }
 
-/* Keep the compact trigger visually distinct from the CTA/cart cluster. */
-@media (max-width:1280px){
-  [data-site-nav-root] .nav-burger.mobile-menu-toggle{
-    margin-left:8px;
-    border:1px solid color-mix(in srgb, var(--mint-deep,#1aa8ad) 38%, transparent);
-    border-radius:8px;
-    background:color-mix(in srgb, var(--paper,#fdfcfa) 88%, var(--mint-soft,#e7f8f8));
-  }
-
-  [data-site-nav-root] .nav-burger.mobile-menu-toggle:hover,
-  [data-site-nav-root] .nav-burger.mobile-menu-toggle:focus-visible{
-    border-color:var(--mint-deep,#1aa8ad);
-    background:var(--mint-soft,#e7f8f8);
-  }
-}
 @media (max-width:1280px) and (prefers-reduced-motion:reduce){
   .mobile-animated-nav,.mobile-animated-nav__list{ transition:none; }
 }
