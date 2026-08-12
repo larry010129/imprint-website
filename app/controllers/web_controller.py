@@ -433,6 +433,7 @@ def _context(request: Request, meta: PageMeta, *, include_journal_ssr: bool = Tr
         "og_title": meta.og_title,
         "og_description": meta.og_description,
         "og_image": meta.og_image,
+        "keywords": meta.keywords,
         "breadcrumbs": meta.breadcrumbs,
         "mvc_page": meta.mvc_page,
         "extra_body_class": meta.extra_body_class,

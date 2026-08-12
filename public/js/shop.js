@@ -5562,6 +5562,12 @@ async function selectType(typeId, options) {
   document.querySelectorAll(".type-card").forEach(c =>
     c.classList.toggle("active", c.dataset.type === resolvedType));
 
+  // Reveal the configure step immediately using the already-loaded catalog
+  // (lite) product data, so the click feels instant instead of waiting on
+  // the network. Full detail (weights/gold options) streams in below and
+  // refreshes the step-3 controls once it arrives.
+  setShopView('product', opts);
+
   await ensureProductDetail(resolvedType, state.category);
   ensureLiveGoldPolling();
   const product = getSelectedProduct();
@@ -5587,7 +5593,6 @@ async function selectType(typeId, options) {
   updateEngravingSteps();
   updateDiamondSteps();
   await updateChainOptions();
-  setShopView('product', opts);
   updateSummary();
 }
 

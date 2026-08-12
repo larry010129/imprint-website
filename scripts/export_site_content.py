@@ -79,6 +79,7 @@ def meta_to_dict(meta: PageMeta) -> dict:
         "og_title": meta.og_title,
         "og_description": meta.og_description,
         "og_image": meta.og_image,
+        "keywords": meta.keywords,
         "breadcrumbs": [[a, b] for a, b in meta.breadcrumbs],
         "mvc_page": meta.mvc_page,
         "extra_body_class": meta.extra_body_class,

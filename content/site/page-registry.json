@@ -1817,7 +1817,8 @@
     "main_class": "",
     "extra_css": [],
     "extra_scripts": [],
-    "head_extras": []
+    "head_extras": [],
+    "keywords": "全家福鑽石,全家人紀念鑽石,家族紀念鑽石,家人髮絲鑽石,全家福紀念品,家族傳承鑽石,長輩生日禮物,結婚紀念禮物,家族團聚紀念,台灣全家福鑽石"
   },
   {
     "route": "/series/first-love/",
@@ -1853,7 +1854,8 @@
     "main_class": "",
     "extra_css": [],
     "extra_scripts": [],
-    "head_extras": []
+    "head_extras": [],
+    "keywords": "滿月鑽石,初生胎髮鑽石,寶寶胎髮鑽石,胎毛紀念,新生兒紀念鑽石,剃胎毛紀念品,寶寶滿月禮,胎髮變鑽石,台灣胎毛鑽石,嬰兒紀念鑽石"
   },
   {
     "route": "/series/heirloom/",
@@ -1889,7 +1891,8 @@
     "main_class": "",
     "extra_css": [],
     "extra_scripts": [],
-    "head_extras": []
+    "head_extras": [],
+    "keywords": "骨灰鑽石,生命鑽石,骨灰變鑽石,寵物骨灰鑽石,紀念鑽石推薦,台灣骨灰鑽石,親人紀念鑽石,GIA鑑定紀念鑽石,骨灰鑽石價格,生命鑽石訂製"
   },
   {
     "route": "/series/love/",
@@ -1925,7 +1928,8 @@
     "main_class": "",
     "extra_css": [],
     "extra_scripts": [],
-    "head_extras": []
+    "head_extras": [],
+    "keywords": "結髮鑽石,培育鑽石婚戒,結婚戒指訂製,情侶對戒,兩人髮絲鑽石,求婚戒指,婚戒推薦,DNA婚戒,培育鑽石對戒,台灣結髮鑽石"
   },
   {
     "route": "/series/pet/",
@@ -1961,7 +1965,8 @@
     "main_class": "",
     "extra_css": [],
     "extra_scripts": [],
-    "head_extras": []
+    "head_extras": [],
+    "keywords": "寵物鑽石,毛孩紀念鑽石,寵物毛髮鑽石,寵物紀念品,貓咪紀念鑽石,狗狗紀念鑽石,毛孩離世紀念,寵物骨灰鑽石,DNA寵物鑽石,台灣寵物鑽石推薦"
   },
   {
     "route": "/series/signature/",
@@ -1997,7 +2002,8 @@
     "main_class": "",
     "extra_css": [],
     "extra_scripts": [],
-    "head_extras": []
+    "head_extras": [],
+    "keywords": "真我鑽石,Signature鑽石,髮絲鑽石,自己的紀念鑽石,DNA紀念鑽石,客製化紀念鑽石,培育鑽石訂製,台灣DNA鑽石,送自己的禮物,頭髮變鑽石"
   },
   {
     "route": "/shop/quote-sheet",
