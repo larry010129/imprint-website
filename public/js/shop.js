@@ -335,11 +335,9 @@ function productHasAdminVariants(product) {
 }
 
 function necklaceTypeLengthWeights(chainType) {
-  const pricing = window.ShopPricingLocal;
-  if (pricing && typeof pricing.lengthWeightsForChainType === 'function') {
-    return pricing.lengthWeightsForChainType(chainType) || {};
-  }
-  return {};
+  const key = chainType || 'douyuan';
+  const table = chainLengthWeightDefaults[key] || chainLengthWeightDefaults.douyuan;
+  return table ? structuredClone(table) : {};
 }
 
 function effectiveChainLengthWeights(product) {
@@ -1554,7 +1552,10 @@ function renderCatalogTiles() {
     if (state.category === cat) btn.classList.add('active');
 
     const img = document.createElement('img');
-    img.loading = 'lazy';
+    // The memorial-diamond tile is the primary first-step choice. Let it paint
+    // first while browsers keep the remaining category images low priority.
+    img.loading = cat === 'diamond' ? 'eager' : 'lazy';
+    img.fetchPriority = cat === 'diamond' ? 'high' : 'low';
     img.decoding = 'async';
     img.alt = '';
     const catUrl = categoryImageUrl(cat);
@@ -1605,6 +1606,8 @@ let diamondOptions = {
   earringQuantityMax: 2,
 };
 let pricePerGram = {};  // filled by loadMetalPrices()
+let waxToMetalChin = {};
+let chainLengthWeightDefaults = {};
 let pricesLoaded = false;
 let quoteTimer = null;
 let quoteRequestId = 0;
@@ -2386,8 +2389,7 @@ function highlightMissingSubmitFields(missing) {
 function isSubmitPriceReady() {
   if (!shopUsesApi()) return true;
   if (!isReadyToSubmit()) return false;
-  const quote = window.ShopPricingLocal?.computeOrderPricing?.(buildQuotePayload(), catalog);
-  return !!(quote?.ready && quote.total != null);
+  return lastQuoteTotal != null;
 }
 
 function effectiveQuoteTotal(total) {
@@ -2639,6 +2641,12 @@ async function loadMetalPrices() {
     if (data.categoryAddonPrices) {
       window.ShopPricingLocal?.setCategoryAddons?.(data.categoryAddonPrices);
     }
+    if (data.waxToMetalChin && typeof data.waxToMetalChin === 'object') {
+      waxToMetalChin = data.waxToMetalChin;
+    }
+    if (data.chainLengthWeights && typeof data.chainLengthWeights === 'object') {
+      chainLengthWeightDefaults = data.chainLengthWeights;
+    }
     if (data.chinToGrams != null) chinToGrams = data.chinToGrams;
     if (data.taxRate != null) taxRate = data.taxRate;
     if (data.ringSizeMin != null) ringSizeMin = data.ringSizeMin;
@@ -2799,7 +2807,7 @@ function estimatedProductPrice(product) {
     if (!rate) return;
     Object.entries(byCarat || {}).forEach(([carat, waxChin]) => {
       const diamond = Number(diamondPrice[carat] || 0);
-      const waxFactor = window.ShopPricingLocal?.WAX_TO_METAL_CHIN?.[gold] ?? 1;
+      const waxFactor = waxToMetalChin[gold] ?? 1;
       const perChin = rate * chinToGrams;
       const metalChin = waxFactor * Number(waxChin);
       const metal = metalChin * perChin;
@@ -4624,6 +4632,7 @@ function updateEngravingSteps() {
     hint.setAttribute('data-i18n', key);
     hint.textContent = tr(key);
   }
+  if (hasGirdle) scheduleGirdleEngraveLoad();
 }
 
 function closeAllShopDropdowns(except) {
@@ -5698,6 +5707,54 @@ function updateGirdlePreview() {
 }
 
 let girdleEngraveCtrl = null;
+let girdleEngraveLoadPromise = null;
+let girdleEngraveObserver = null;
+
+function syncGirdleEngrave() {
+  const ctrl = ensureGirdleEngrave();
+  if (!ctrl) return;
+  ctrl.setAllowChinese(caratAllowsChineseEngraving());
+  ctrl.setValue(state.engravingGirdle || '');
+  ctrl.setPreviewShapeAndColor(resolvedDiamondShape(), selectedDiamondColorId() || 'white');
+}
+
+function loadGirdleEngrave() {
+  if (window.GirdleEngrave) return Promise.resolve(window.GirdleEngrave);
+  if (girdleEngraveLoadPromise) return girdleEngraveLoadPromise;
+  girdleEngraveLoadPromise = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = '/static/js/girdle-engrave.js?v=24';
+    script.async = true;
+    script.onload = () => resolve(window.GirdleEngrave);
+    script.onerror = () => reject(new Error('girdle engraving script failed to load'));
+    document.head.appendChild(script);
+  }).then((api) => {
+    syncGirdleEngrave();
+    return api;
+  }).catch((error) => {
+    girdleEngraveLoadPromise = null;
+    console.warn(error);
+    return null;
+  });
+  return girdleEngraveLoadPromise;
+}
+
+function scheduleGirdleEngraveLoad() {
+  const root = document.getElementById('engraving-girdle-step');
+  if (!root || root.classList.contains('hidden') || window.GirdleEngrave) return;
+  if (!girdleEngraveObserver && 'IntersectionObserver' in window) {
+    girdleEngraveObserver = new IntersectionObserver((entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) return;
+      girdleEngraveObserver.disconnect();
+      girdleEngraveObserver = null;
+      void loadGirdleEngrave();
+    }, { rootMargin: '160px 0px' });
+    girdleEngraveObserver.observe(root);
+  }
+  root.addEventListener('pointerdown', () => void loadGirdleEngrave(), { once: true });
+  root.addEventListener('focusin', () => void loadGirdleEngrave(), { once: true });
+}
+
 function ensureGirdleEngrave() {
   if (girdleEngraveCtrl) return girdleEngraveCtrl;
   const input = document.getElementById('shop-girdle-engrave-input');
@@ -5718,7 +5775,6 @@ function ensureGirdleEngrave() {
   });
   return girdleEngraveCtrl;
 }
-ensureGirdleEngrave();
 document.getElementById('pendant-chain-toggle-row')?.addEventListener('click', async (ev) => {
   const btn = ev.target.closest('.pendant-chain-seg__btn');
   if (!btn) return;
@@ -5883,20 +5939,6 @@ function buildSubmitPayload() {
     if (previewChain) payload.previewChainImage = previewChain;
   }
   if (state.category !== 'chain') payload.diamondColor = selectedDiamondColorId();
-  const pricing = window.ShopPricingLocal?.computeOrderPricing?.(buildQuotePayload(), catalog);
-  if (pricing?.ready && pricing.total != null) {
-    payload.clientPricing = {
-      total: pricing.total,
-      diamondPrice: pricing.diamondPrice,
-      taijinPrice: pricing.taijinPrice,
-      laborPrice: pricing.laborPrice,
-      metalworkPrice: pricing.metalworkPrice,
-      chainPrice: pricing.chainPrice,
-      weightGrams: pricing.weightGrams,
-      goldRatePerGram: pricing.goldRatePerGram,
-      priceSource: 'client',
-    };
-  }
   return payload;
 }
 
@@ -5921,7 +5963,8 @@ function openShareSummary() {
 
 function buildInquirySummaryLines() {
   const product = getSelectedProduct();
-  const pricing = window.ShopPricingLocal?.computeOrderPricing?.(buildQuotePayload(), catalog);
+  const pricing = window.ShopPricingLocal?.computeOrderPricing?.(buildQuotePayload(), catalog)
+    || (lastQuoteTotal != null ? { total: lastQuoteTotal } : null);
   const lines = [
     '【品項訂製諮詢】',
     `品項：${state.category ? tr('cat_' + state.category) : '-'}`,

@@ -70,9 +70,9 @@
     position:relative;
     z-index:111;
   }
-  .nav-cta .btn-line{ display:none !important; }
+  .nav-cta .btn-line,
   .nav-cta .btn-calc,
-  .nav-cta .btn-contact{ display:none !important; }
+  .nav-cta .btn-appointment{ display:none !important; }
   /* Mobile header CTA: 開始試算 — !important beats stale page React CSS
      (price.css/checkout.css/…) that still ship display:none after src.css.
      Fixed desktop size: never rescales or shrinks to an icon on phone. */
@@ -101,7 +101,6 @@
     max-width:100%;
     box-sizing:border-box;
   }
-  .nav-cta .btn-dark{ display:none !important; }
   .hc-viewport{ height:78vh; min-height:520px; }
   .hc-copy{ padding:0 4px; }
   .hc-copy h1, .hc-copy h2{ max-width:100%; }

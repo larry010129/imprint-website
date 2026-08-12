@@ -163,7 +163,7 @@ a.account-menu-trigger{ text-decoration:none; color:inherit; }
 .nav-burger span:nth-child(3){ top:28px; }
 .mobile-animated-nav{ display:none; }
 
-@media (min-width:901px){
+@media (min-width:1401px){
   [data-site-nav-root] .site-nav-desktop{
     display:flex; justify-content:center; align-items:center;
     width:100%; min-width:0; max-width:100%;
@@ -201,7 +201,8 @@ a.account-menu-trigger{ text-decoration:none; color:inherit; }
   .site-nav-desktop .dd-toggle{ display:none; }
 }
 
-@media (max-width:900px){
+@media (max-width:1400px){
+  [data-site-nav-root] .mobile-animated-nav{ display:block !important; }
   .nav{ backdrop-filter:none; background:var(--paper); }
   [data-site-nav-root] .nav-inner.container{
     width:100%; max-width:100%;
@@ -235,7 +236,9 @@ a.account-menu-trigger{ text-decoration:none; color:inherit; }
     border:0; background:transparent; color:var(--ink,#2b2320);
     position:relative; z-index:2; visibility:visible; opacity:1;
   }
-  .nav-cta .btn-line,.nav-cta .btn-calc,.nav-cta .btn-contact{ display:none !important; }
-  .nav-cta .btn-dark{ display:none !important; }
+  .nav-cta .btn-line,.nav-cta .btn-calc{ display:none !important; }
+  .nav-cta .btn-contact,.nav-cta .btn-appointment{ display:inline-flex !important; }
   .nav-cta .nav-ihb{ display:inline-flex !important; flex:0 0 auto; }
 }
+@media (max-width:900px){ .nav-cta .btn-appointment{ display:none !important; } }
+@media (max-width:640px){ .nav-cta .btn-contact{ display:none !important; } }

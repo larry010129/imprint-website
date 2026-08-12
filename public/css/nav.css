@@ -33,7 +33,7 @@
   display:none;
 }
 
-@media (min-width: 1281px){
+@media (min-width: 1401px){
   .nav-inner > nav.site-nav-desktop.nav-menu-col{ flex-shrink:1; min-width:0; }
 }
 
@@ -41,7 +41,7 @@
 
 /* Desktop: isolated columns — logo | menu | CTAs never share the same space */
 
-@media (min-width: 1281px){
+@media (min-width: 1401px){
 
   [data-site-nav-root] .site-nav-desktop{
     display:flex !important;
@@ -336,15 +336,8 @@
 
 
 
-/* Progressive CTA reveal — phone is already in the topbar */
-
-@media (min-width: 1281px) and (max-width: 1399px){
-
-  .nav-cta .btn-line,
-
-  .nav-cta .btn-contact{ display:none; }
-
-}
+/* CTA priority is handled by the compact header: appointment retracts first,
+   then contact; the persistent calculator CTA never leaves the top bar. */
 
 /* SSR cart icon + badge (HTMX; login-gated via /htmx/nav-cart) */
 .nav-cart-link{
@@ -773,10 +766,13 @@ a.account-menu-trigger{
 
 /* Mobile drawer — migrated from frozen public/react/src.css */
 .mobile-animated-nav{ display:none; }
-@media (max-width:1280px){
+@media (max-width:1400px){
   /* Authoritative compact pair: desktop links off, trigger on. */
   [data-site-nav-root] .site-nav-desktop{ display:none !important; }
   [data-site-nav-root] .nav-burger.mobile-menu-toggle{ display:flex !important; }
+  /* Generated tour CSS used an older 860px cutoff and hid the drawer again
+     above that width. The compact header and its drawer are one paired mode. */
+  [data-site-nav-root] .mobile-animated-nav{ display:block !important; }
 
   /* The desktop grid has a third implicit row for the burger when the link
      row is hidden.  Use an explicit compact bar so the trigger remains in
@@ -859,13 +855,14 @@ a.account-menu-trigger{
     max-width:100%;
     box-sizing:border-box;
   }
-  /* One CTA + burger on mobile from first paint (was print-deferred responsive.css;
-     !important mirrors it to keep beating stale page React CSS). */
+  /* Compact header keeps all three actions until space genuinely runs out. */
   .nav-cta .btn-line{ display:none !important; }
-  .nav-cta .btn-calc,
-  .nav-cta .btn-contact{ display:none !important; }
-  .nav-cta .btn-dark{ display:none !important; }
+  .nav-cta .btn-calc{ display:none !important; }
+  .nav-cta .btn-contact,
+  .nav-cta .btn-appointment{ display:inline-flex !important; }
   .nav-cta .nav-ihb{ display:inline-flex !important; flex:0 0 auto; }
+  .mobile-animated-nav__item--appointment,
+  .mobile-animated-nav__item--contact{ display:none; }
   [data-site-nav-root] .nav-brand .brand-name .en{ display:none; }
   /* Account lives in the mobile drawer — keep top bar clear for CTA + burger. */
   [data-site-nav-root] .site-nav-account-desktop{ display:none !important; }
@@ -887,6 +884,11 @@ a.account-menu-trigger{
     visibility:visible;
     opacity:1;
   }
+  /* The icon bars are backgrounds, not text glyphs. Keep the chosen white
+     icon colour even when other navigation variants change foreground text. */
+  [data-site-nav-root] .nav-burger.mobile-menu-toggle span{
+    background:#fff !important;
+  }
   [data-site-nav-root].is-nav-hero .mobile-menu-toggle{ color:#fff; }
   [data-site-nav-root] .nav.is-mobile-menu-open .mobile-menu-toggle{
     z-index:112;
@@ -894,7 +896,7 @@ a.account-menu-trigger{
   }
   /* Burger bars use background, not color — force ink X on open white drawer. */
   [data-site-nav-root] .nav.is-mobile-menu-open .nav-burger span{
-    background:var(--ink,#2b2320);
+    background:var(--ink,#2b2320) !important;
   }
   [data-site-nav-root] .nav.is-mobile-menu-open .nav-cart-link{
     position:relative;
@@ -990,13 +992,25 @@ a.account-menu-trigger{
   .mobile-animated-nav__sublink:hover{ color:var(--mint-deep,#1aa8ad); }
 }
 
-@media (max-width:1280px) and (prefers-reduced-motion:reduce){
+/* First priority: move appointment into the drawer. */
+@media (max-width:900px){
+  [data-site-nav-root] .nav-cta .btn-appointment{ display:none !important; }
+  [data-site-nav-root] .mobile-animated-nav__item--appointment{ display:list-item; }
+}
+
+/* Second priority: contact follows; calculator remains in the header. */
+@media (max-width:640px){
+  [data-site-nav-root] .nav-cta .btn-contact{ display:none !important; }
+  [data-site-nav-root] .mobile-animated-nav__item--contact{ display:list-item; }
+}
+
+@media (max-width:1400px) and (prefers-reduced-motion:reduce){
   .mobile-animated-nav,.mobile-animated-nav__list{ transition:none; }
 }
 
 /* Coarse pointer / touch: no hover-only dropdowns on desktop nav (≥901) */
 @media (hover:none),(pointer:coarse){
-  @media (min-width:1281px){
+@media (min-width:1401px){
     .site-nav-desktop .nav-item:hover .dropdown{
       opacity:0;
       visibility:hidden;

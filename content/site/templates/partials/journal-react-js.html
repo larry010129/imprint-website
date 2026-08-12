@@ -1,12 +1,22 @@
 <script>
   (() => {
     let loaded = false;
+    const loadJournalCss = () => {
+      if (document.querySelector('link[data-journal-react-css]')) return;
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = '/static/react/journal.css?v=7';
+      link.dataset.journalReactCss = '';
+      document.head.appendChild(link);
+    };
     const loadJournal = () => {
       if (loaded) return;
       loaded = true;
+      loadJournalCss();
       import("/static/react/journal.js?v=7").catch(() => { loaded = false; });
     };
-    /* SSR list is the LCP; upgrade to the React island on idle or when it nears the viewport. */
+    /* SSR list is the LCP. Upgrade only when the visitor reaches the island,
+       so the initial page does not download the React enhancement eagerly. */
     const app = document.querySelector("[data-journal-app]");
     if (app && "IntersectionObserver" in window) {
       const io = new IntersectionObserver((entries) => {
@@ -14,10 +24,8 @@
           io.disconnect();
           loadJournal();
         }
-      }, { rootMargin: "600px 0px" });
+      }, { rootMargin: "0px" });
       io.observe(app);
     }
-    const ric = window.requestIdleCallback || ((cb) => setTimeout(cb, 2000));
-    ric(loadJournal, { timeout: 4000 });
   })();
 </script>

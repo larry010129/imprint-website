@@ -708,19 +708,26 @@ async def admin_post_membership_config(request: Request) -> JSONResponse:
 
 @router.get("/prices")
 def shop_prices() -> dict:
-    """Server-authoritative pricing constants for the configurator (with admin
-    overrides applied). Ring-size/diamond-option tables stay client-side; this
-    only supplies the money-critical numbers so the browser never guesses."""
+    """Server-authoritative pricing and configurator metadata.
+
+    The API payload includes the option tables and chain defaults needed by the
+    live calculator, so API mode does not need its legacy local-pricing bundle.
+    """
     from app.pricing import (
         CHIN_TO_GRAMS,
+        DEFAULT_STONE_COUNT_BY_CATEGORY,
+        EARRING_QUANTITY_MAX,
+        EARRING_QUANTITY_MIN,
         LABOR_FEE_TWD,
         METAL_SYMBOL,
         PURITY_MULTIPLIER,
         TAX_RATE,
+        WAX_TO_METAL_CHIN,
         _effective_tables,
         get_metal_prices,
     )
 
+    from app.chain_catalog import DEFAULT_NECKLACE_TYPE, necklace_type_length_weights
     from app.diamond_shapes import matrix_shapes_payload
 
     with get_connection() as conn, conn.cursor() as cur:
@@ -745,8 +752,40 @@ def shop_prices() -> dict:
         "categoryAddonPrices": category_addons,
         "chinToGrams": CHIN_TO_GRAMS,
         "taxRate": ov_tax if isinstance(ov_tax, (int, float)) else TAX_RATE,
-        # Shape / cut table for memorial diamond picker (grows with admin cuts).
-        "diamondOptions": {"matrixShapes": matrix_shapes},
+        "waxToMetalChin": WAX_TO_METAL_CHIN,
+        "chainLengthWeights": {
+            DEFAULT_NECKLACE_TYPE: necklace_type_length_weights(DEFAULT_NECKLACE_TYPE),
+        },
+        "diamondOptions": {
+            "kinds": [
+                {"id": "white", "labelZh": "白鑽", "labelEn": "White"},
+                {"id": "fancy", "labelZh": "彩鑽", "labelEn": "Fancy Color"},
+            ],
+            "diamondColors": [
+                {"id": "white", "kind": "white", "labelZh": "白鑽", "labelEn": "White", "swatch": "#e8e8e8", "image": "diamonds/colors/white.png"},
+                {"id": "yellow", "kind": "fancy", "labelZh": "黃鑽", "labelEn": "Yellow", "swatch": "#e6c200", "image": "diamonds/colors/yellow.png"},
+                {"id": "blue", "kind": "fancy", "labelZh": "藍鑽", "labelEn": "Blue", "swatch": "#7ec8e3", "image": "diamonds/colors/blue.png"},
+                {"id": "pink", "kind": "fancy", "labelZh": "粉鑽", "labelEn": "Pink", "swatch": "#f4a6c8", "image": "diamonds/colors/pink.png"},
+            ],
+            "fancyColors": [
+                {"id": "yellow", "kind": "fancy", "labelZh": "黃鑽", "labelEn": "Yellow", "swatch": "#e6c200", "image": "diamonds/colors/yellow.png"},
+                {"id": "blue", "kind": "fancy", "labelZh": "藍鑽", "labelEn": "Blue", "swatch": "#7ec8e3", "image": "diamonds/colors/blue.png"},
+                {"id": "pink", "kind": "fancy", "labelZh": "粉鑽", "labelEn": "Pink", "swatch": "#f4a6c8", "image": "diamonds/colors/pink.png"},
+            ],
+            "matrixShapes": matrix_shapes,
+            "shapes": [
+                {"id": "round", "labelZh": "圓形", "labelEn": "Round", "image": "diamonds/shapes/round.svg"},
+                {"id": "other", "labelZh": "其他造型", "labelEn": "Other (+10%)", "image": "diamonds/shapes/round.svg"},
+            ],
+            "stoneCounts": [1, 2, 3, 4],
+            "stoneCountCategories": [],
+            "fancyMinCarat": "0.3",
+            "nonRoundShapeMinCarat": "0.3",
+            "nonRoundShapeSurcharge": 0.10,
+            "defaultStoneCountByCategory": {**DEFAULT_STONE_COUNT_BY_CATEGORY, "diamond": 1},
+            "earringQuantityMin": EARRING_QUANTITY_MIN,
+            "earringQuantityMax": EARRING_QUANTITY_MAX,
+        },
     }
 
 
