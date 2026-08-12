@@ -607,7 +607,6 @@ SHOP_CALCULATOR = PageMeta(
     extra_body_class=None,
     content_fragment=None,
     extra_head_blocks=[],
-    robots='noindex, follow',
 )
 
 JEWELRY_CATEGORY_BRACELETS = PageMeta(
