@@ -111,19 +111,22 @@
           </dl>
         </section>
 
-        {% if featured_video %}
+        {# This About-page film is deliberately fixed. It is independent from
+           the homepage featured-video gallery and its admin/channel sync. #}
+        {% set about_fixed_video_id = "eBLOrvHosR4" %}
+        {% set about_fixed_video_title = "Imprint Diamond 品牌影片" %}
         <section class="about-video reveal" aria-labelledby="about-video-title">
-          <p class="about-overline">{{ featured_video.eyebrow }}</p>
-          <h2 id="about-video-title">{{ featured_video.heading }}</h2>
-          <p class="about-video__lead">{{ featured_video.lead }}</p>
+          <p class="about-overline">VIDEO</p>
+          <h2 id="about-video-title">親眼見證，思念如何被慎重對待</h2>
+          <p class="about-video__lead">從樣本到鑽石，我們如何把每一份託付留在您觸手可及的距離裡。</p>
           <div class="about-video__embed">
             <button
               type="button"
               class="about-video__facade"
               data-yt-facade
-              data-yt-id="{{ featured_video.youtube_id }}"
-              data-yt-title="{{ featured_video.title }}"
-              aria-label="播放影片：{{ featured_video.title }}"
+              data-yt-id="{{ about_fixed_video_id }}"
+              data-yt-title="{{ about_fixed_video_title }}"
+              aria-label="播放影片：{{ about_fixed_video_title }}"
             >
               {# No <img> here on purpose: page_image_slots.py assigns CMS image
                  slots by counting image tags positionally (cinema=0). Poster
@@ -134,8 +137,8 @@
             </button>
             <noscript>
               <iframe
-                src="https://www.youtube-nocookie.com/embed/{{ featured_video.youtube_id }}"
-                title="{{ featured_video.title }}"
+                src="https://www.youtube-nocookie.com/embed/{{ about_fixed_video_id }}"
+                title="{{ about_fixed_video_title }}"
                 loading="lazy"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                 referrerpolicy="strict-origin-when-cross-origin"
@@ -144,8 +147,6 @@
             </noscript>
           </div>
         </section>
-        {% endif %}
-
         {% if youtube_latest_video %}
         <section class="about-video about-video--youtube-latest reveal" aria-labelledby="about-youtube-latest-title">
           <p class="about-overline">{{ youtube_latest_video.eyebrow }}</p>
