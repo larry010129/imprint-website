@@ -884,9 +884,13 @@ a.account-menu-trigger{
     visibility:visible;
     opacity:1;
   }
-  /* The icon bars are backgrounds, not text glyphs. Keep the chosen white
-     icon colour even when other navigation variants change foreground text. */
+  /* The icon bars are backgrounds, not text glyphs. Black by default so the
+     burger stays visible on the light/white nav most pages use; white only
+     while it overlays the hero photo. */
   [data-site-nav-root] .nav-burger.mobile-menu-toggle span{
+    background:var(--ink,#2b2320) !important;
+  }
+  [data-site-nav-root].is-nav-hero .nav-burger.mobile-menu-toggle span{
     background:#fff !important;
   }
   [data-site-nav-root].is-nav-hero .mobile-menu-toggle{ color:#fff; }
