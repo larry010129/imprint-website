@@ -4,6 +4,7 @@
 {% set is_home = extra_body_class and 'page-home' in extra_body_class %}
 {% set is_series_overview = extra_body_class and 'page-series' in extra_body_class %}
 {% set _cp = canonical_path or '' %}
+{% set is_shop_calculator = _cp == 'shop/calculator/' %}
 {# home.css = legacy home/jewelry chrome + the shared .faq--teaser skin. Skip on home,
    series OVERVIEW (own CSS / ghibli) + PSI lanes. Series DETAIL keeps it: its FAQ
    teaser (.faq/.faq-list/.faq-q/.faq-a-inner/.faq-more) is styled only by home.css. #}
@@ -11,11 +12,11 @@
   or is_series_overview
   or _cp in ['about', 'stories', 'journal', 'gold-price', 'shop/calculator/'] %}
 {# pages.css defer only when page ships above-fold CSS (stories/journal/gold-price still need it) #}
-{% set defer_pages_css = is_series_overview or _cp in ['about', 'shop/calculator/'] %}
+{% set defer_pages_css = is_series_overview or _cp == 'about' %}
 <!-- Google tag (gtag.js) ??hard delay on home (rIC can fire during PSI idle) -->
 <script>
 (function () {
-  var gtagMinDelayMs = {{ 14000 if is_home else 4000 }};
+  var gtagMinDelayMs = {{ 14000 if is_home or is_shop_calculator else 4000 }};
   function injectGtag() {
     if (window.__gtagInjected) return;
     window.__gtagInjected = true;
@@ -94,7 +95,7 @@
 {# footer / responsive / social-fab: print-onload all routes (home pattern) #}
 <link rel="stylesheet" href="/static/css/footer.css?v=25" media="print" onload="this.media='all'">
 <noscript><link rel="stylesheet" href="/static/css/footer.css?v=25"></noscript>
-{% if not is_home %}
+{% if not is_home and not is_shop_calculator %}
 {% if defer_pages_css %}
 <link rel="stylesheet" href="/static/css/pages.css?v=5.35" media="print" onload="this.media='all'">
 <noscript><link rel="stylesheet" href="/static/css/pages.css?v=5.35"></noscript>

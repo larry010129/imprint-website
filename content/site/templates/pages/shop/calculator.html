@@ -2,9 +2,54 @@
 {% set q_preview = request.query_params.get('preview', '') in ('1', 'true', 'yes') %}
 {% block title %}{% if q_preview %}預覽模式｜不會送出真實訂單｜{% endif %}{{ title }}{% endblock %}
 {% block main_class %} class="main-content shop-calculator-page{% if q_preview %} is-shop-preview{% endif %}"{% endblock %}
+{% block resource_hints %}
+<link rel="preconnect" href="https://erobemoojyptyxvnyvuf.supabase.co" crossorigin>
+{% endblock %}
 {% block extra_css %}
-  <link rel="stylesheet" href="/static/css/shop.css?v=6.46">
-<link rel="stylesheet" href="/static/css/shop-wizard.css?v=25">
+<style>
+  /* Keep the required terms gate paintable while the full calculator CSS loads. */
+  body.shop-terms-blocked .shop-calculator-wrap { visibility: hidden; }
+  .shop-terms-dialog:not([open]) { display: none; }
+  .shop-terms-dialog[open] {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    width: min(32rem, calc(100% - 2rem));
+    max-height: 80vh;
+    margin: auto;
+    padding: 0;
+    border: 1px solid #c7ddd2;
+    border-radius: 8px;
+    background: #fff;
+    color: #17231f;
+    overflow: hidden;
+  }
+  .shop-terms-dialog::backdrop { background: rgba(255, 255, 255, .5); }
+  .shop-terms-header,
+  .shop-terms-footer { flex-shrink: 0; padding: 16px; }
+  .shop-terms-header { border-bottom: 1px solid #c7ddd2; }
+  .shop-terms-header h2,
+  .shop-terms-desc,
+  .shop-terms-section p,
+  .shop-terms-scroll-hint { margin: 0; }
+  .shop-terms-header h2 { font-size: 18px; line-height: 1.25; }
+  .shop-terms-desc,
+  .shop-terms-section p { font-size: 14px; line-height: 1.65; }
+  .shop-terms-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 24px 16px; }
+  .shop-terms-sections { display: flex; flex-direction: column; gap: 20px; }
+  .shop-terms-footer { border-top: 1px solid #c7ddd2; }
+  .shop-terms-scroll-hint { font-size: 12px; text-align: center; }
+  .shop-terms-scroll-hint[hidden] { display: none; }
+  .shop-terms-actions { display: flex; gap: 8px; margin-top: 10px; }
+  .shop-terms-btn { min-height: 40px; padding: 8px 16px; border: 1px solid #9cbcaf; border-radius: 4px; background: #fff; color: #17231f; }
+  .shop-terms-btn--primary { background: #17231f; color: #fff; }
+</style>
+<link rel="stylesheet" href="/static/css/shop.css?v=6.46" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="/static/css/shop.css?v=6.46"></noscript>
+<link rel="stylesheet" href="/static/css/shop-wizard.css?v=25" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="/static/css/shop-wizard.css?v=25"></noscript>
 {% if q_preview %}
 <meta name="robots" content="noindex, nofollow">
 {% endif %}

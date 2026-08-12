@@ -1283,10 +1283,28 @@ function productImageUrl(product, metalColor, diamondColor, opts) {
   return '';
 }
 
+function optimizedCategoryImageUrl(url) {
+  const value = String(url || '').trim();
+  if (!value) return '';
+  try {
+    const parsed = new URL(value);
+    if (!/\.supabase\.co$/i.test(parsed.hostname)) return value;
+    const marker = '/storage/v1/object/public/';
+    if (!parsed.pathname.includes(marker)) return value;
+    parsed.pathname = parsed.pathname.replace(marker, '/storage/v1/render/image/public/');
+    parsed.searchParams.set('width', '320');
+    parsed.searchParams.set('quality', '60');
+    parsed.searchParams.set('format', 'webp');
+    return parsed.toString();
+  } catch (_) {
+    return value;
+  }
+}
+
 function categoryImageUrl(category) {
   const meta = window._catalogCategoryMeta?.[category];
-  if (meta?.thumbUrl) return meta.thumbUrl;
-  return window.ShopAssets?.categoryThumb(category) || '';
+  if (meta?.thumbUrl) return optimizedCategoryImageUrl(meta.thumbUrl);
+  return optimizedCategoryImageUrl(window.ShopAssets?.categoryThumb(category) || '');
 }
 
 function categoryLabel(cat) {
@@ -6721,14 +6739,12 @@ async function applyInitialShopState() {
 }
 
 async function init() {
-  const bootPromise = bootShopCore();
-
   if (window.ensureShopTermsAccepted) {
     const termsOk = await window.ensureShopTermsAccepted();
     if (!termsOk) return;
   }
 
-  await bootPromise;
+  await bootShopCore();
   await applyInitialShopState();
   finishShopBoot();
 }
