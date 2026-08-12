@@ -30,8 +30,6 @@ export type ImageUploadFieldProps = {
   onValidationError?: (message: string) => void;
   /** Fired when a newly picked file is waiting for 「確認裁切並上傳」. */
   onPendingChange?: (pending: boolean) => void;
-  /** Fired when a pending local file/crop is ignored (e.g. parent save without confirm). */
-  onPendingDiscarded?: (message: string) => void;
   aspectRatio?: number;
   targetW?: number;
   targetH?: number;
@@ -68,7 +66,6 @@ export function ImageUploadField({
   className,
   onValidationError,
   onPendingChange,
-  onPendingDiscarded,
   aspectRatio,
   targetW,
   targetH,
@@ -80,7 +77,6 @@ export function ImageUploadField({
   const [crop, setCrop] = useState<CropPercent>(() =>
     defaultCropPercent(resolveAspectRatio(aspectRatio, targetW, targetH)),
   );
-  const [cropTouched, setCropTouched] = useState(false);
   const resolvedAspect = resolveAspectRatio(aspectRatio, targetW, targetH) ?? 3 / 2;
 
   const {
@@ -109,33 +105,12 @@ export function ImageUploadField({
     if (!file) setRemotePreview(value);
   }, [value, setRemotePreview]); // eslint-disable-line react-hooks/exhaustive-deps -- omit file on purpose
 
-  useEffect(() => {
-    setCropTouched(false);
-  }, [file, previewUrl]);
-
   const handleCropChange = useCallback((next: CropPercent) => {
     setCrop(next);
-    setCropTouched(true);
   }, []);
 
-  const handleCropInit = useCallback((next: CropPercent) => {
-    setCrop(next);
-  }, []);
-
-  const discardPending = useCallback(() => {
-    if (!file && !cropTouched) return false;
-    setRemotePreview(value || "");
-    setCropTouched(false);
-    setLocalError(null);
-    const msg = value
-      ? "尚未確認裁切，將使用原圖"
-      : "尚未確認裁切，將使用空白圖片";
-    onPendingDiscarded?.(msg);
-    return true;
-  }, [cropTouched, file, onPendingDiscarded, setRemotePreview, value]);
-
-  const runUpload = useCallback(async () => {
-    if (!onUpload || !previewUrl) return;
+  const runUpload = useCallback(async (): Promise<string | null> => {
+    if (!onUpload || !previewUrl) return null;
     setUploading(true);
     setLocalError(null);
     try {
@@ -151,16 +126,17 @@ export function ImageUploadField({
         setLocalError(resolved);
         onValidationError?.(resolved);
         // Keep crop preview so the error stays visible next to the control.
-        return;
+        return null;
       }
       onChange?.(res.url);
       setRemotePreview(res.url);
-      setCropTouched(false);
       setLocalError(null);
+      return res.url;
     } catch (error) {
       const msg = error instanceof Error ? error.message : "裁切失敗";
       setLocalError(msg);
       onValidationError?.(msg);
+      return null;
     } finally {
       setUploading(false);
     }
@@ -181,8 +157,12 @@ export function ImageUploadField({
     onPendingChange?.(isPendingLocal);
   }, [isPendingLocal, onPendingChange]);
 
-  // Soft-discard pending local crop on parent <form> submit (capture), so save
-  // never blocks on 「確認裁切並上傳」. Hidden image_url already holds prior/empty.
+  // A pending local crop must never be silently dropped: the parent's hidden
+  // image_url still holds the OLD URL, so saving would look like a no-op replace.
+  // Cancel the submit (capture, before the form's own handler), upload, then
+  // re-submit so the parent reads the fresh URL. On failure nothing is saved and
+  // the error stays next to the control.
+  const committingRef = useRef(false);
   useEffect(() => {
     if (!uploadOnSelect || !onUpload) return;
     const onSubmitCapture = (event: Event) => {
@@ -191,11 +171,22 @@ export function ImageUploadField({
       if (!(form instanceof HTMLFormElement) || !root) return;
       if (!form.contains(root)) return;
       if (root.getAttribute("data-pending-upload") !== "1") return;
-      discardPending();
+      event.preventDefault();
+      event.stopPropagation();
+      if (committingRef.current) return;
+      committingRef.current = true;
+      void runUpload()
+        .then((url) => {
+          // Another pending field in the same form re-intercepts this submit.
+          if (url && form.isConnected) form.requestSubmit();
+        })
+        .finally(() => {
+          committingRef.current = false;
+        });
     };
     document.addEventListener("submit", onSubmitCapture, true);
     return () => document.removeEventListener("submit", onSubmitCapture, true);
-  }, [discardPending, onUpload, uploadOnSelect]);
+  }, [onUpload, runUpload, uploadOnSelect]);
 
   const showDropZone = !hasPreview || uploading;
   // Crop only for a newly picked local file — never force re-crop of committed URLs.
@@ -278,7 +269,6 @@ export function ImageUploadField({
                 onClick={() => {
                   resetPreview("");
                   onChange?.("");
-                  setCropTouched(false);
                   setLocalError(null);
                 }}
               >
@@ -296,7 +286,7 @@ export function ImageUploadField({
               aspectRatio={resolvedAspect}
               crop={crop}
               onCropChange={handleCropChange}
-              onCropInit={handleCropInit}
+              onCropInit={handleCropChange}
               disabled={uploading}
             />
             <div className="flex flex-wrap gap-2">
@@ -318,7 +308,6 @@ export function ImageUploadField({
                 onClick={() => {
                   resetPreview(value || "");
                   if (!value) onChange?.("");
-                  setCropTouched(false);
                   setLocalError(null);
                 }}
               >
@@ -344,7 +333,7 @@ export function ImageUploadField({
       ) : null}
       {file && uploadOnSelect ? (
         <p className="text-xs text-[#8a817b]">
-          調整裁切後按「確認裁切並上傳」；也可直接儲存表單（沿用原圖或空白）。
+          調整裁切後按「確認裁切並上傳」；直接儲存表單也會先自動上傳這張新圖。
         </p>
       ) : null}
       {localError ? (

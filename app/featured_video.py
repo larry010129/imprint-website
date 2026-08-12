@@ -655,13 +655,18 @@ def ensure_featured_video_fresh(
     head_ttl_seconds: int = CHANNEL_HEAD_CHECK_TTL_SECONDS,
     head_diverged_fn: Callable[[], bool] | None = None,
 ) -> bool:
-    """Lazy sync for homepage load. Returns True if a sync ran successfully.
+    """Optional stale/head-divergence sync helper. Returns True if a sync ran.
+
+    Not wired to app lifespan, homepage load, admin open, or field saves —
+    production channel sync is only via the admin sync button
+    (``POST /api/admin/featured-video/sync``) or the optional Bearer secret
+    endpoint. This helper remains for tests and explicit callers.
 
     Triggers ``run_featured_video_channel_sync`` when:
     - ``force`` is True, or
     - ``syncedAt`` missing / older than ``ttl_seconds``, or
     - channel head id differs from gallery primary / is absent from gallery
-      (peek cached ``head_ttl_seconds`` so pageviews do not hit RSS every time).
+      (peek cached ``head_ttl_seconds``).
 
     ``source: fixed`` never blocks refresh. Sync errors leave existing JSON
     untouched. Concurrent callers skip when a refresh lock is recent

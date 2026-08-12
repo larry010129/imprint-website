@@ -613,8 +613,8 @@ def test_admin_html_cache_bust_v50():
     # Canonical CMS shell is admin1.html (served at /admin); keep legacy in sync.
     for name in ("admin1.html", "admin.html"):
         html = (ROOT / name).read_text(encoding="utf-8")
-        assert "admin-products.js?v=61" in html
-        assert "api-client.js?v=24" in html
+        assert "admin-products.js?v=62" in html
+        assert "api-client.js?v=25" in html
 
 
 def test_jewelry_validate_still_requires_variant():

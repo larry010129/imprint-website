@@ -3,7 +3,7 @@
 {% block title %}{% if q_preview %}預覽模式｜不會送出真實訂單｜{% endif %}{{ title }}{% endblock %}
 {% block main_class %} class="main-content shop-calculator-page{% if q_preview %} is-shop-preview{% endif %}"{% endblock %}
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/shop.css?v=6.40">
+  <link rel="stylesheet" href="/static/css/shop.css?v=6.46">
 <link rel="stylesheet" href="/static/css/shop-wizard.css?v=25">
 {% if q_preview %}
 <meta name="robots" content="noindex, nofollow">
@@ -248,28 +248,34 @@
               <div class="stone-count-discount" id="stone-count-discount">
                 <p class="stone-count-discount__title" data-i18n="stone_count_table_title">多顆珍藏方案</p>
                 <table class="stone-count-discount-table" aria-describedby="stone-count-discount-note">
-                  <thead>
-                    <tr>
-                      <th scope="col" data-i18n="stone_count_table_carat">克拉</th>
-                      <th scope="col">2 <span data-i18n="stone_count_table_stones">顆</span></th>
-                      <th scope="col">3 <span data-i18n="stone_count_table_stones">顆</span></th>
-                      <th scope="col">4 <span data-i18n="stone_count_table_stones">顆</span></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <th scope="row" data-i18n="stone_count_table_below">0.30 以下</th>
-                      <td data-i18n="stone_count_disc_95">95 折</td>
-                      <td data-i18n="stone_count_disc_85">85 折</td>
-                      <td data-i18n="stone_count_disc_85">85 折</td>
-                    </tr>
-                    <tr>
-                      <th scope="row" data-i18n="stone_count_table_above">0.30 以上</th>
-                      <td data-i18n="stone_count_disc_85">85 折</td>
-                      <td data-i18n="stone_count_disc_80">8 折</td>
-                      <td data-i18n="stone_count_disc_75">75 折</td>
-                    </tr>
-                  </tbody>
+                    <colgroup>
+                      <col class="stone-count-discount-table__carat-col">
+                      <col class="stone-count-discount-table__quantity-col">
+                      <col class="stone-count-discount-table__quantity-col">
+                      <col class="stone-count-discount-table__quantity-col">
+                    </colgroup>
+                    <thead>
+                      <tr>
+                        <th scope="col" data-i18n="stone_count_table_carat">克拉</th>
+                        <th scope="col">2 <span data-i18n="stone_count_table_stones">顆</span></th>
+                        <th scope="col">3 <span data-i18n="stone_count_table_stones">顆</span></th>
+                        <th scope="col">4 <span data-i18n="stone_count_table_stones">顆</span></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <th scope="row" data-i18n="stone_count_table_below">0.30 以下</th>
+                        <td data-label="2 顆" data-i18n="stone_count_disc_95">95 折</td>
+                        <td data-label="3 顆" data-i18n="stone_count_disc_85">85 折</td>
+                        <td data-label="4 顆" data-i18n="stone_count_disc_85">85 折</td>
+                      </tr>
+                      <tr>
+                        <th scope="row" data-i18n="stone_count_table_above">0.30 以上</th>
+                        <td data-label="2 顆" data-i18n="stone_count_disc_85">85 折</td>
+                        <td data-label="3 顆" data-i18n="stone_count_disc_80">8 折</td>
+                        <td data-label="4 顆" data-i18n="stone_count_disc_75">75 折</td>
+                      </tr>
+                    </tbody>
                 </table>
                 <p class="stone-count-discount__note cfg-note" id="stone-count-discount-note" data-i18n="stone_count_table_note">（僅供參考）</p>
               </div>
@@ -832,5 +838,5 @@
 <script src="/static/js/girdle-engrave.js?v=24" defer></script>
 <script src="/static/js/shop-terms.js?v=5" defer></script>
 <script src="/static/js/catalog-multi-filter.js?v=1" defer></script>
-<script src="/static/js/shop.js?v=157" defer></script>
+<script src="/static/js/shop.js?v=158" defer></script>
 {% endblock %}

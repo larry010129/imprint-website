@@ -77,9 +77,15 @@ def parse_faq(text: str) -> tuple[list[dict], list[dict]]:
 
 
 def main() -> None:
-    testimonials = parse_testimonials(
-        (ROOT / "frontend/src/data/testimonials.ts").read_text(encoding="utf-8")
-    )
+    # Live site reads Postgres; testimonials.ts is type-only. Keep existing
+    # bootstrap rows in content-seed.json (empty-table seed only).
+    existing = {}
+    if OUT.is_file():
+        try:
+            existing = json.loads(OUT.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            existing = {}
+    testimonials = existing.get("testimonials") or []
     categories, faq_items = parse_faq(
         (ROOT / "frontend/src/data/faq-content.ts").read_text(encoding="utf-8")
     )
@@ -91,7 +97,7 @@ def main() -> None:
     }
     OUT.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     print(
-        f"Wrote {OUT}: {len(testimonials)} testimonials, "
+        f"Wrote {OUT}: {len(testimonials)} testimonials (preserved), "
         f"{len(categories)} categories, {len(faq_items)} faq items"
     )
 

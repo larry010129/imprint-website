@@ -1,4 +1,4 @@
-/** Fetch public content APIs with bundled fallbacks. */
+/** Fetch public content APIs (Supabase-backed). No local JSON fallbacks. */
 
 export type ApiTestimonial = {
   id: string

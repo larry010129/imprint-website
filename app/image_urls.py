@@ -3,11 +3,16 @@
 from __future__ import annotations
 
 import re
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-from urllib.parse import unquote
+from urllib.parse import parse_qsl, unquote, urlencode, urlsplit, urlunsplit
 
 from app.storage import is_supabase_storage_url, prefer_category_scoped_product_url
+
+# Query key for cache-busting. `?v=` is the repo convention: the static
+# middleware in app/__init__.py grants 1y+immutable to query-bearing URLs.
+CACHE_BUST_PARAM = "v"
 
 _STYLE_ID = re.compile(r"^([a-z]+)-([A-C])$", re.I)
 _STYLE_FROM_PATH = re.compile(r"(?:^|/)([a-z]+)-([A-C])\.(?:svg|png|jpe?g|webp)", re.I)
@@ -82,6 +87,66 @@ def _style_thumb_rel(style_key: str) -> str:
 
 def is_uuid(value: str | None) -> bool:
     return bool(value and _UUID.match(str(value).strip()))
+
+
+def cache_bust_stamp(updated_at: Any) -> str:
+    """Compact epoch-seconds token from a datetime, ISO string, or epoch value."""
+    if isinstance(updated_at, datetime):
+        moment = updated_at if updated_at.tzinfo else updated_at.replace(tzinfo=timezone.utc)
+        return str(int(moment.timestamp()))
+    if isinstance(updated_at, bool) or updated_at is None:
+        return ""
+    if isinstance(updated_at, (int, float)):
+        return str(int(updated_at)) if updated_at > 0 else ""
+    text = str(updated_at).strip()
+    if not text:
+        return ""
+    if text.isdigit():
+        return text
+    try:
+        return cache_bust_stamp(datetime.fromisoformat(text.replace("Z", "+00:00")))
+    except ValueError:
+        return ""
+
+
+def _rewrite_query(url: str, extra: tuple[str, str] | None) -> str:
+    parts = urlsplit(url)
+    query = [
+        (key, value)
+        for key, value in parse_qsl(parts.query, keep_blank_values=True)
+        if key != CACHE_BUST_PARAM
+    ]
+    if extra:
+        query.append(extra)
+    return urlunsplit(parts._replace(query=urlencode(query)))
+
+
+def with_cache_buster(url: str | None, updated_at: Any) -> str:
+    """Pin ``?v=<updated_at epoch>`` so a replaced image cannot serve stale bytes.
+
+    Keyed on the row timestamp rather than the clock, so the URL is stable
+    between renders and stays cacheable until the content actually changes.
+    An existing ``v`` is replaced, never appended twice.
+    """
+    value = str(url or "").strip()
+    stamp = cache_bust_stamp(updated_at)
+    if not value or not stamp or value.startswith("data:"):
+        return value
+    # Comma/space means a srcset or descriptor list, not a single URL.
+    if "," in value or any(char.isspace() for char in value):
+        return value
+    return _rewrite_query(value, (CACHE_BUST_PARAM, stamp))
+
+
+def strip_cache_buster(url: str | None) -> str:
+    """Drop ``?v=`` so a round-tripped admin URL never persists the buster."""
+    value = str(url or "").strip()
+    if "?" not in value:
+        return value
+    parsed = parse_qsl(urlsplit(value).query, keep_blank_values=True)
+    if not any(key == CACHE_BUST_PARAM for key, _ in parsed):
+        return value
+    return _rewrite_query(value, None)
 
 
 def resolve_product_image_url(file_path: str | None) -> str:

@@ -147,6 +147,15 @@ def ensure_product_images_previous_column(cur) -> None:
         "alter table product_images "
         "add column if not exists previous_file_path text"
     )
+    ensure_product_images_updated_at_column(cur)
+
+
+def ensure_product_images_updated_at_column(cur) -> None:
+    """Add product_images.updated_at if missing (migration 20260812140000)."""
+    cur.execute(
+        "alter table product_images "
+        "add column if not exists updated_at timestamptz not null default now()"
+    )
 
 
 def as_jsonb(value: Any) -> Jsonb | None:
@@ -889,6 +898,22 @@ def _optional_previous_image_url(img: dict) -> str | None:
     return path or None
 
 
+def serialize_product_image(row: dict | None) -> dict | None:
+    """Admin/list image row — iso timestamps so client can bust thumbs with ?v=."""
+    if not row:
+        return None
+    out = dict(row)
+    if out.get("id") is not None:
+        out["id"] = str(out["id"])
+    if out.get("product_id") is not None:
+        out["product_id"] = str(out["product_id"])
+    for key in ("created_at", "updated_at"):
+        val = out.get(key)
+        if isinstance(val, datetime):
+            out[key] = val.isoformat()
+    return out
+
+
 def append_product_image(cur, product_id: str, color: str, file_path: str) -> dict | None:
     """Insert one image row for an existing product (upload-time SQL persist)."""
     ensure_product_images_previous_column(cur)
@@ -908,12 +933,12 @@ def append_product_image(cur, product_id: str, color: str, file_path: str) -> di
         """
         insert into product_images (product_id, color, file_path, sort_order)
         values (%s, %s, %s, %s)
-        returning id, product_id, color, file_path, sort_order, previous_file_path
+        returning id, product_id, color, file_path, sort_order, previous_file_path, updated_at
         """,
         (product_id, color_key, path, next_sort),
     )
     row = cur.fetchone()
-    return dict(row) if row else None
+    return serialize_product_image(row) if row else None
 
 
 def replace_product_image(cur, image_id: str, new_url: str) -> tuple[dict | None, str | None]:
@@ -936,16 +961,16 @@ def replace_product_image(cur, image_id: str, new_url: str) -> tuple[dict | None
     cur.execute(
         """
         update product_images
-        set file_path = %s, previous_file_path = %s
+        set file_path = %s, previous_file_path = %s, updated_at = now()
         where id = %s
-        returning id, product_id, color, file_path, sort_order, previous_file_path
+        returning id, product_id, color, file_path, sort_order, previous_file_path, updated_at
         """,
         (path, next_prev, image_id),
     )
     updated = cur.fetchone()
     if old_prev and old_prev != path and old_prev != next_prev:
         delete_product_image_urls_if_unreferenced(cur, [old_prev])
-    return (dict(updated) if updated else None), None
+    return (serialize_product_image(updated) if updated else None), None
 
 
 def restore_product_image(cur, image_id: str) -> tuple[dict | None, str | None]:
@@ -965,16 +990,16 @@ def restore_product_image(cur, image_id: str) -> tuple[dict | None, str | None]:
     cur.execute(
         """
         update product_images
-        set file_path = %s, previous_file_path = null
+        set file_path = %s, previous_file_path = null, updated_at = now()
         where id = %s
-        returning id, product_id, color, file_path, sort_order, previous_file_path
+        returning id, product_id, color, file_path, sort_order, previous_file_path, updated_at
         """,
         (prev, image_id),
     )
     updated = cur.fetchone()
     if current and current != prev:
         delete_product_image_urls_if_unreferenced(cur, [current])
-    return (dict(updated) if updated else None), None
+    return (serialize_product_image(updated) if updated else None), None
 
 
 _VARIANT_NUMERIC_KEYS = (
@@ -1243,9 +1268,9 @@ def save_product_children(cur, product_id: str, cleaned: dict) -> None:
         cur.execute(
             """
             insert into product_images (
-                product_id, color, file_path, sort_order, previous_file_path
+                product_id, color, file_path, sort_order, previous_file_path, updated_at
             )
-            values (%s, %s, %s, %s, %s)
+            values (%s, %s, %s, %s, %s, now())
             """,
             (product_id, image["color"], url, sort_order, prev_url),
         )

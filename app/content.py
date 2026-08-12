@@ -5,20 +5,25 @@ from __future__ import annotations
 import json
 import re
 from datetime import date, datetime
-from functools import lru_cache
 from pathlib import Path
 from typing import Any
-from urllib.parse import unquote
 from uuid import uuid4
 
+# Match nav 六大系列 order (content/site/templates/partials/nav.html).
 TESTIMONIAL_CATEGORIES = (
+    "滿月鑽石",
     "寵物鑽石",
     "結髮鑽石",
-    "生命鑽石",
-    "毛髮鑽石",
     "全家福鑽石",
-    "初生鑽石",
+    "生命鑽石",
+    "真我鑽石",
 )
+
+# Old dropdown labels → current series names.
+LEGACY_TESTIMONIAL_CATEGORY_MAP = {
+    "初生鑽石": "滿月鑽石",  # /series/first-love/
+    "毛髮鑽石": "真我鑽石",  # /series/signature/ (self hair)
+}
 
 TAIWAN_CITIES = (
     "台北市",
@@ -56,8 +61,14 @@ def location_label_for_testimonial(city: str, country: str = "") -> str:
     return cty
 
 
-def build_testimonial_role(category: str, city: str, country: str = "") -> str:
+def normalize_testimonial_category(category: str) -> str:
+    """Map legacy labels to current 六大系列; leave unknown values unchanged."""
     cat = (category or "").strip()
+    return LEGACY_TESTIMONIAL_CATEGORY_MAP.get(cat, cat)
+
+
+def build_testimonial_role(category: str, city: str, country: str = "") -> str:
+    cat = normalize_testimonial_category(category)
     loc = location_label_for_testimonial(city, country)
     if cat and loc:
         return f"{cat}・{loc}"
@@ -84,15 +95,17 @@ def combine_display_name(name_part: str, honorific: str) -> str:
 
 
 def parse_testimonial_payload(body: dict | None) -> tuple[dict | None, str | None]:
+    from app.image_urls import strip_cache_buster
+
     body = body or {}
     name_part = str(body.get("name") or body.get("namePart") or "").strip()
     honorific = str(body.get("honorific") or "小姐").strip()
     name = combine_display_name(name_part, honorific)
-    category = str(body.get("category") or "").strip()
+    category = normalize_testimonial_category(str(body.get("category") or ""))
     city = str(body.get("city") or "").strip().replace("臺", "台")
     country = str(body.get("country") or "").strip()
     text = str(body.get("text") or "").strip()
-    image_url = str(body.get("imageUrl") or body.get("image_url") or "").strip()
+    image_url = strip_cache_buster(body.get("imageUrl") or body.get("image_url"))
     is_published = bool(body.get("isPublished") if body.get("isPublished") is not None else True)
 
     if city != "其他":
@@ -103,6 +116,8 @@ def parse_testimonial_payload(body: dict | None) -> tuple[dict | None, str | Non
         errors.append("請填寫姓名")
     if not category:
         errors.append("請選擇分類")
+    elif category not in TESTIMONIAL_CATEGORIES:
+        errors.append("請選擇有效分類（六大系列）")
     if not city:
         errors.append("請選擇城市")
     elif city not in TAIWAN_CITIES:
@@ -135,6 +150,23 @@ def parse_testimonial_payload(body: dict | None) -> tuple[dict | None, str | Non
         except (TypeError, ValueError):
             return None, "排序無效"
     return cleaned, None
+
+
+def remap_legacy_testimonial_categories(cur) -> int:
+    """Rewrite legacy category/role labels to current 六大系列. Idempotent."""
+    updated = 0
+    for old, new in LEGACY_TESTIMONIAL_CATEGORY_MAP.items():
+        cur.execute(
+            """
+            update testimonials
+            set category = %s,
+                role = regexp_replace(role, %s, %s)
+            where category = %s
+            """,
+            (new, f"^{old}", new, old),
+        )
+        updated += cur.rowcount or 0
+    return updated
 
 
 def next_testimonial_sort_order(cur) -> int:
@@ -196,63 +228,116 @@ def move_testimonial(cur, testimonial_id: str, direction: str) -> bool:
 
 
 _TESTIMONIAL_IMG_PREFIX = "/static/images/testimonials/"
+# Migrated seed art lives under site-images/… (see scripts/migrate_uploads_to_supabase_storage.py).
+# Admin uploads use kind "testimonials" → object key testimonials/{uuid}.webp.
+_TESTIMONIAL_SITE_IMAGES_PREFIX = "site-images/testimonials/"
 
 
-@lru_cache(maxsize=1)
-def _local_testimonial_webps() -> frozenset[str]:
-    """WebP files under public/images/testimonials, posix-relative paths.
+def _prefer_webp_object_key(rel: str) -> str:
+    """Admin uploads are stored as WebP via ensure_webp."""
+    lower = rel.lower()
+    if lower.endswith((".jpg", ".jpeg", ".png")):
+        return rel.rsplit(".", 1)[0] + ".webp"
+    return rel
 
-    Cached per process; deploys restart the process so new files are picked up.
-    """
+
+def _prefer_site_images_object_key(rel: str) -> str:
+    """Migrated seed art in Storage is JPEG (see site-images/testimonials/*)."""
+    lower = rel.lower()
+    if lower.endswith(".webp"):
+        return rel[:-5] + ".jpg"
+    if lower.endswith((".jpeg", ".png")):
+        return rel.rsplit(".", 1)[0] + ".jpg"
+    return rel
+
+
+def _testimonial_storage_object_path(url: str) -> str | None:
+    """Map local /static testimonial paths → Storage object key (no network)."""
+    from app.storage import local_upload_to_object_key
+
+    mapped = local_upload_to_object_key(url)
+    if mapped:
+        kind, rest = mapped
+        return f"{kind}/{_prefer_webp_object_key(rest)}"
+    path = url.replace("\\", "/").split("?", 1)[0]
+    if path.startswith(_TESTIMONIAL_IMG_PREFIX):
+        rel = path[len(_TESTIMONIAL_IMG_PREFIX) :]
+    elif path.startswith("static/images/testimonials/"):
+        rel = path[len("static/images/testimonials/") :]
+    else:
+        return None
+    rel = rel.lstrip("/")
+    if not rel or ".." in rel.split("/"):
+        return None
+    return f"{_TESTIMONIAL_SITE_IMAGES_PREFIX}{_prefer_site_images_object_key(rel)}"
+
+
+def _testimonial_public_storage_url(object_path: str) -> str | None:
+    """Build absolute Storage public URL from SUPABASE_URL + bucket (no secrets)."""
     from config.settings import settings
 
-    base = settings.static_dir / "images" / "testimonials"
-    found: set[str] = set()
-    try:
-        if base.is_dir():
-            for p in base.rglob("*.webp"):
-                found.add(p.relative_to(base).as_posix())
-    except OSError:
-        pass
-    return frozenset(found)
+    base = (settings.supabase_url or "").rstrip("/")
+    bucket = (settings.supabase_storage_bucket or "shop-media").strip() or "shop-media"
+    path = (object_path or "").strip().lstrip("/")
+    if not base or not path:
+        return None
+    return f"{base}/storage/v1/object/public/{bucket}/{path}"
 
 
 def normalize_testimonial_image_url(url: str | None) -> str:
-    """Single image origin: seeded testimonial art always serves as local WebP.
+    """Return a browser-loadable testimonial image URL for localhost + prod.
 
-    Local /static/images/testimonials/*.jpg with a WebP sibling → WebP path.
-    Supabase-hosted copies of the same files (basename match) → local WebP path,
-    so one session never fetches the same image from both origins. Admin uploads
-    (uuid filenames) and unrelated URLs pass through unchanged.
+    - Absolute Supabase Storage public URLs pass through unchanged.
+    - /static/uploads/testimonials/* → shop-media/testimonials/* (admin uploads).
+    - /static/images/testimonials/* → shop-media/site-images/testimonials/*
+      (migrated seed art; same mapping as migrate_uploads_to_supabase_storage).
+    Never rewrite a Supabase URL back to /static/.
     """
     u = (url or "").strip()
     if not u:
         return u
-    available = _local_testimonial_webps()
-    if not available:
+    if u.startswith("https://") and (
+        ".supabase.co/" in u or "/storage/v1/object/public/" in u
+    ):
         return u
-    if u.startswith(_TESTIMONIAL_IMG_PREFIX):
-        rel = u[len(_TESTIMONIAL_IMG_PREFIX):].split("?", 1)[0]
-        if rel.lower().endswith(".webp"):
-            return u
-        stem = rel.rsplit(".", 1)[0]
-        cand = f"{stem}.webp"
-        if cand in available:
-            return f"{_TESTIMONIAL_IMG_PREFIX}{cand}"
-        return u
-    if u.startswith("https://") and ".supabase.co/" in u:
-        basename = unquote(u.split("?", 1)[0]).rsplit("/", 1)[-1]
-        stem = basename.rsplit(".", 1)[0] if "." in basename else basename
-        for cand in (f"{stem}.webp", f"presets/{stem}.webp"):
-            if cand in available:
-                return f"{_TESTIMONIAL_IMG_PREFIX}{cand}"
+    object_path = _testimonial_storage_object_path(u)
+    if object_path:
+        absolute = _testimonial_public_storage_url(object_path)
+        if absolute:
+            return absolute
     return u
 
 
+def classify_testimonial_image_url(url: str | None) -> str:
+    """Bucket for diagnostics: supabase | static | empty | other (no secrets)."""
+    u = (url or "").strip()
+    if not u:
+        return "empty"
+    if u.startswith("https://") and ".supabase.co/" in u:
+        return "supabase"
+    if u.startswith(_TESTIMONIAL_IMG_PREFIX) or u.startswith("/static/"):
+        return "static"
+    return "other"
+
+
+def summarize_testimonial_image_urls(rows: list[dict]) -> dict[str, int]:
+    """Count image_url origins across testimonial rows (safe for logs)."""
+    counts = {"total": 0, "supabase": 0, "static": 0, "empty": 0, "other": 0}
+    for row in rows:
+        counts["total"] += 1
+        key = classify_testimonial_image_url(row.get("image_url"))
+        counts[key] = counts.get(key, 0) + 1
+    return counts
+
+
 def serialize_testimonial(row: dict) -> dict:
+    from app.image_urls import with_cache_buster
+
     out = dict(row)
     if out.get("image_url"):
-        out["image_url"] = normalize_testimonial_image_url(out["image_url"])
+        out["image_url"] = with_cache_buster(
+            normalize_testimonial_image_url(out["image_url"]), out.get("updated_at")
+        )
     if out.get("id") is not None:
         out["id"] = str(out["id"])
     for key in ("created_at", "updated_at"):
@@ -269,8 +354,10 @@ def serialize_testimonial(row: dict) -> dict:
         out["country"] = ""
     else:
         out["country"] = str(out.get("country") or "").strip()
+    # Public display always uses 六大系列 — even if DB row still has legacy label.
+    out["category"] = normalize_testimonial_category(out.get("category") or "")
     out["role"] = build_testimonial_role(
-        out.get("category") or "",
+        out["category"],
         out.get("city") or "",
         out.get("country") or "",
     )
@@ -443,6 +530,9 @@ def next_journal_post_sort_order(cur) -> int:
     return int(cur.fetchone()["next"])
 
 
+JOURNAL_BODY_PREVIEW_CHARS = 120
+
+
 def serialize_journal_post(row: dict) -> dict:
     out = dict(row)
     if out.get("id") is not None:
@@ -465,6 +555,19 @@ def serialize_journal_post(row: dict) -> dict:
         out["sort_order"] = int(out["sort_order"])
     if out.get("image_url") == "":
         out["image_url"] = None
+    return out
+
+
+def serialize_journal_post_list(row: dict) -> dict:
+    """Admin list row: body_preview only, never full body."""
+    src = dict(row)
+    body = src.pop("body", None)
+    preview = src.get("body_preview")
+    if preview is None and body is not None:
+        preview = str(body)[:JOURNAL_BODY_PREVIEW_CHARS]
+    out = serialize_journal_post(src)
+    out.pop("body", None)
+    out["body_preview"] = str(preview or "")[:JOURNAL_BODY_PREVIEW_CHARS]
     return out
 
 
@@ -519,13 +622,19 @@ def fetch_all_journal_posts(
     limit: int | None = None,
     offset: int = 0,
 ) -> list[dict]:
-    sql = """
-        select * from journal_posts
+    """Admin list: omit full body; expose body_preview only."""
+    sql = f"""
+        select
+          id, title,
+          left(coalesce(body, ''), {JOURNAL_BODY_PREVIEW_CHARS}) as body_preview,
+          posted_at, image_url, is_archived, is_published, sort_order,
+          created_at, updated_at
+        from journal_posts
         order by posted_at desc, sort_order asc, created_at desc
     """
     sql, params = _apply_limit_offset(sql, None, limit=limit, offset=offset)
     cur.execute(sql, params)
-    return [serialize_journal_post(r) for r in cur.fetchall()]
+    return [serialize_journal_post_list(r) for r in cur.fetchall()]
 
 
 def sanitize_faq_plain_text(value: str) -> str:
@@ -621,7 +730,7 @@ def fetch_faq_public(cur) -> dict[str, Any]:
 
 
 def faq_public_from_seed() -> dict[str, Any]:
-    """Offline fallback when DB has no FAQ rows."""
+    """Build FAQ payload from content-seed.json (seed tooling only; not live SSR)."""
     seed_path = Path(__file__).resolve().parent / "data" / "content-seed.json"
     try:
         data = json.loads(seed_path.read_text(encoding="utf-8"))
@@ -662,9 +771,14 @@ def new_faq_id(prefix: str = "faq") -> str:
 
 
 def serialize_banner(row: dict) -> dict:
+    from app.image_urls import with_cache_buster
+
     out = dict(row)
     if out.get("id") is not None:
         out["id"] = str(out["id"])
+    for key in ("image_url", "image_url_mobile", "image_webp"):
+        if out.get(key):
+            out[key] = with_cache_buster(out[key], out.get("updated_at"))
     for key in ("created_at", "updated_at"):
         val = out.get(key)
         if isinstance(val, datetime):
@@ -673,6 +787,19 @@ def serialize_banner(row: dict) -> dict:
         out["is_published"] = bool(out["is_published"])
     if out.get("sort_order") is not None:
         out["sort_order"] = int(out["sort_order"])
+    # Legacy rows / partial selects: fall back to single tone for all three.
+    tone = str(out.get("tone") or "white").strip() or "white"
+    for key in ("eyebrow_color", "title_color", "lead_color"):
+        val = str(out.get(key) or "").strip()
+        out[key] = val or tone
+    return out
+
+
+def serialize_banner_list(row: dict) -> dict:
+    """Admin list: URLs + titles; omit per-field color blobs (tone kept)."""
+    out = serialize_banner(row)
+    for key in ("eyebrow_color", "title_color", "lead_color"):
+        out.pop(key, None)
     return out
 
 
@@ -708,11 +835,15 @@ def fetch_all_banners(
     *,
     limit: int | None = None,
     offset: int = 0,
+    slim: bool = True,
 ) -> list[dict]:
     sql = "select * from home_banners order by sort_order asc, created_at asc"
     sql, params = _apply_limit_offset(sql, None, limit=limit, offset=offset)
     cur.execute(sql, params)
-    return [serialize_banner(r) for r in cur.fetchall()]
+    rows = cur.fetchall()
+    if slim:
+        return [serialize_banner_list(r) for r in rows]
+    return [serialize_banner(r) for r in rows]
 
 
 def ensure_banner_mobile_column(cur) -> None:
@@ -745,11 +876,50 @@ def ensure_banner_align_column(cur) -> None:
         )
 
 
+def ensure_banner_text_color_columns(cur) -> None:
+    """Idempotent: per-role text colors; backfill from legacy tone once."""
+    cur.execute(
+        """
+        select exists (
+          select 1 from information_schema.columns
+          where table_name = 'home_banners' and column_name = 'eyebrow_color'
+        ) as present
+        """
+    )
+    had_column = bool((cur.fetchone() or {}).get("present"))
+    cur.execute(
+        "alter table home_banners add column if not exists eyebrow_color text not null default 'white'"
+    )
+    cur.execute(
+        "alter table home_banners add column if not exists title_color text not null default 'white'"
+    )
+    cur.execute(
+        "alter table home_banners add column if not exists lead_color text not null default 'white'"
+    )
+    if not had_column:
+        cur.execute(
+            """
+            update home_banners
+            set
+              eyebrow_color = coalesce(nullif(trim(tone), ''), 'white'),
+              title_color = coalesce(nullif(trim(tone), ''), 'white'),
+              lead_color = coalesce(nullif(trim(tone), ''), 'white')
+            """
+        )
+
+
+_TESTIMONIAL_COUNTRY_READY = False
+
+
 def ensure_testimonial_country_column(cur) -> None:
-    """Idempotent: add country for「其他」city free-text region."""
+    """Idempotent ALTER — once per process (startup lifespan / first write)."""
+    global _TESTIMONIAL_COUNTRY_READY
+    if _TESTIMONIAL_COUNTRY_READY:
+        return
     cur.execute(
         "alter table testimonials add column if not exists country text not null default ''"
     )
+    _TESTIMONIAL_COUNTRY_READY = True
 
 
 def _sync_page_image_labels_from_registry(cur) -> None:
@@ -777,7 +947,19 @@ def _sync_page_image_labels_from_registry(cur) -> None:
         )
 
 
+_PAGE_IMAGES_SCHEMA_READY = False
+
+
 def ensure_page_images_schema(cur) -> None:
+    """CREATE/ALTER/label-sync — once per process (not on every list GET)."""
+    global _PAGE_IMAGES_SCHEMA_READY
+    if _PAGE_IMAGES_SCHEMA_READY:
+        return
+    _ensure_page_images_schema_impl(cur)
+    _PAGE_IMAGES_SCHEMA_READY = True
+
+
+def _ensure_page_images_schema_impl(cur) -> None:
     cur.execute(
         """
         create table if not exists page_images (
@@ -1137,6 +1319,8 @@ def apply_page_image_replace_stack(
 
 
 def serialize_page_image(row: dict) -> dict:
+    from app.image_urls import with_cache_buster
+
     out = dict(row)
     # Prefer live registry labels so renames show in admin without reseed.
     try:
@@ -1163,14 +1347,47 @@ def serialize_page_image(row: dict) -> dict:
     for key in ("target_w", "target_h", "sort_order"):
         if out.get(key) is not None:
             out[key] = int(out[key])
-    out["display_url"] = effective_page_image_url(out)
-    out["display_webp"] = effective_page_image_webp(out)
+    # Defaults ship with the deploy; only admin-set URLs need the ?v= buster.
+    stamp = out.get("updated_at")
+    display_url = effective_page_image_url(out)
+    display_webp = effective_page_image_webp(out)
+    default_url = str(out.get("default_image_url") or "").strip()
+    default_webp = str(out.get("default_image_webp") or "").strip()
+    raw_image_url = str(out.get("image_url") or "").strip()
+    out["display_url"] = (
+        display_url if display_url == default_url else with_cache_buster(display_url, stamp)
+    )
+    out["display_webp"] = (
+        display_webp if display_webp == default_webp else with_cache_buster(display_webp, stamp)
+    )
+    # Admin thumbs ignore publish: show uploaded asset even when unpublished.
+    admin_src = raw_image_url or display_url or default_url
+    out["admin_preview_url"] = (
+        admin_src
+        if (not admin_src or admin_src == default_url)
+        else with_cache_buster(admin_src, stamp)
+    )
     prev_url = _page_img_str(out.get("previous_image_url")) or None
     prev_webp = _page_img_str(out.get("previous_image_webp")) or None
     out["previous_image_url"] = prev_url
     out["previous_image_webp"] = prev_webp
     out["previousImageUrl"] = prev_url
     out["previousImageWebp"] = prev_webp
+    return out
+
+
+def serialize_page_image_list(row: dict) -> dict:
+    """Admin list: display URLs + labels; no previous_* or default blobs."""
+    out = serialize_page_image(row)
+    for key in (
+        "previous_image_url",
+        "previous_image_webp",
+        "previousImageUrl",
+        "previousImageWebp",
+        "default_image_url",
+        "default_image_webp",
+    ):
+        out.pop(key, None)
     return out
 
 
@@ -1226,6 +1443,7 @@ def fetch_all_page_images(
     limit: int | None = None,
     offset: int = 0,
     page_key: str | None = None,
+    slim: bool = True,
 ) -> list[dict]:
     """Admin list: content-page slots only (no shop/calculator or jewelry).
 
@@ -1242,7 +1460,49 @@ def fetch_all_page_images(
     sql += " order by group_key asc, sort_order asc, page_key asc, slot_key asc"
     sql, params = _apply_limit_offset(sql, params, limit=limit, offset=offset)
     cur.execute(sql, params)
-    return [serialize_page_image(r) for r in cur.fetchall()]
+    rows = cur.fetchall()
+    if slim:
+        return [serialize_page_image_list(r) for r in rows]
+    return [serialize_page_image(r) for r in rows]
+
+
+def fetch_page_image_keys(cur) -> list[dict]:
+    """Distinct page_key + label for admin filter chips (not full rows)."""
+    from app.page_image_slots import page_image_slot_specs
+
+    label_by_key: dict[str, str] = {}
+    for spec in page_image_slot_specs():
+        label_by_key.setdefault(spec.page_key, spec.page_label)
+
+    sql = f"""
+        select distinct page_key, label
+        from page_images
+        where {_PAGE_IMAGES_ADMIN_WHERE}
+        order by page_key asc
+    """
+    cur.execute(sql, list(_PAGE_IMAGES_ADMIN_PARAMS))
+    seen: set[str] = set()
+    out: list[dict] = []
+    for row in cur.fetchall():
+        key = str(row.get("page_key") or "").strip()
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        out.append(
+            {
+                "page_key": key,
+                "label": label_by_key.get(key) or str(row.get("label") or key),
+            }
+        )
+    for key, label in label_by_key.items():
+        if key in seen:
+            continue
+        if key.startswith("/shop/") or key.startswith("/jewelry"):
+            continue
+        seen.add(key)
+        out.append({"page_key": key, "label": label})
+    out.sort(key=lambda item: item["page_key"])
+    return out
 
 
 def fetch_page_images(cur, page_key: str) -> list[dict]:
@@ -1276,6 +1536,7 @@ def fetch_page_image(cur, page_key: str, slot_key: str = "hero") -> dict | None:
 
 def parse_page_image_payload(body: dict | None) -> tuple[dict | None, str | None]:
     from app.cms_boundary import assert_content_page_key
+    from app.image_urls import strip_cache_buster
 
     body = body or {}
     page_key, key_err = assert_content_page_key(
@@ -1289,7 +1550,7 @@ def parse_page_image_payload(body: dict | None) -> tuple[dict | None, str | None
     if not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,63}", slot_key):
         return None, "slot_key 無效"
 
-    image_url = str(body.get("imageUrl") or body.get("image_url") or "").strip()
+    image_url = strip_cache_buster(body.get("imageUrl") or body.get("image_url"))
     image_webp_raw = body.get("imageWebp") if "imageWebp" in body else body.get("image_webp")
     image_alt = str(body.get("imageAlt") or body.get("image_alt") or "").strip()
     is_published = bool(
@@ -1304,7 +1565,7 @@ def parse_page_image_payload(body: dict | None) -> tuple[dict | None, str | None
         "is_published": is_published,
     }
     if image_webp_raw is not None:
-        cleaned["image_webp"] = str(image_webp_raw or "").strip() or None
+        cleaned["image_webp"] = strip_cache_buster(image_webp_raw) or None
     return cleaned, None
 
 

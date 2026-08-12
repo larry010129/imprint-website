@@ -21,6 +21,7 @@
   var _banners = [];
   var _pageImages = [];
   var _pageImagePageOptions = [];
+  var _sitePages = [];
   var _pageIndex = 0;
   var _pageSize = 10;
   var _totals = {
@@ -49,9 +50,14 @@
     { value: 'https://lin.ee/ktVBtmx', label: '官方 LINE' },
   ];
 
+  // Match nav 六大系列 order (content/site/templates/partials/nav.html).
   var TESTIMONIAL_CATEGORIES = [
-    '寵物鑽石', '結髮鑽石', '生命鑽石', '毛髮鑽石', '全家福鑽石', '初生鑽石',
+    '滿月鑽石', '寵物鑽石', '結髮鑽石', '全家福鑽石', '生命鑽石', '真我鑽石',
   ];
+  var LEGACY_TESTIMONIAL_CATEGORY_MAP = {
+    '初生鑽石': '滿月鑽石',
+    '毛髮鑽石': '真我鑽石',
+  };
 
   // Fallback matches ImprintTaiwanAdminDivisions.testimonialCities (台 spelling; zh-Hant-TW).
   var TAIWAN_CITIES_FALLBACK = [
@@ -99,8 +105,13 @@
     return { part: full, honorific: '小姐' };
   }
 
+  function normalizeTestimonialCategory(raw) {
+    var v = String(raw || '').trim();
+    return LEGACY_TESTIMONIAL_CATEGORY_MAP[v] || v;
+  }
+
   function categoryOptions(selected) {
-    selected = String(selected || '').trim();
+    selected = normalizeTestimonialCategory(selected);
     var html = '<option value="">— 請選擇 —</option>';
     for (var i = 0; i < TESTIMONIAL_CATEGORIES.length; i++) {
       var c = TESTIMONIAL_CATEGORIES[i];
@@ -389,6 +400,13 @@
     return s.length > n ? s.slice(0, n) + '…' : s;
   }
 
+  /** Admin thumbs only — never persist the busted URL back to the DB. */
+  function bustImageUrl(url, updatedAt) {
+    return window.AdminImageUrls && window.AdminImageUrls.bust
+      ? window.AdminImageUrls.bust(url, updatedAt)
+      : String(url || '').trim();
+  }
+
   function findTestimonial(id) {
     for (var i = 0; i < _testimonials.length; i++) {
       if (String(_testimonials[i].id) === String(id)) return _testimonials[i];
@@ -615,7 +633,7 @@
         _pageIndex = 0;
         _loading = true;
         renderShell();
-        load(true, true);
+        reloadActiveTab();
       });
     });
 
@@ -640,7 +658,28 @@
 
   function cmsApiBridge() {
     return {
-      listPages: function () { return api.admin.listCmsPages(); },
+      /* site_pages from bootstrap — never unpaged listCmsPages walk. */
+      listPages: function () {
+        if (_sitePages.length) {
+          return Promise.resolve({ site_pages: _sitePages.slice() });
+        }
+        if (typeof api.admin.getContentBootstrap === 'function') {
+          return api.admin.getContentBootstrap({ tab: 'pages', page: 1, pageSize: 1 }).then(function (res) {
+            if (res && !res.error && Array.isArray(res.site_pages)) {
+              _sitePages = res.site_pages;
+              return { site_pages: _sitePages.slice() };
+            }
+            return api.admin.listCmsPages({ page: 1, pageSize: 1 }).then(function (r) {
+              _sitePages = (r && r.site_pages) || [];
+              return { site_pages: _sitePages.slice(), error: r && r.error };
+            });
+          });
+        }
+        return api.admin.listCmsPages({ page: 1, pageSize: 1 }).then(function (r) {
+          _sitePages = (r && r.site_pages) || [];
+          return { site_pages: _sitePages.slice(), error: r && r.error };
+        });
+      },
       getPage: function (id) { return api.admin.getCmsPage(id); },
       getCmsSitePage: function (route) { return api.admin.getCmsSitePage(route); },
       updatePage: function (fields) { return api.admin.updateCmsPage(fields); },
@@ -697,6 +736,7 @@
     body.innerHTML = '<div id="cmsPagesMount"></div>';
     window.AdminTables.renderCmsPagesPanel(document.getElementById('cmsPagesMount'), {
       api: cmsApiBridge(),
+      initialSitePages: _sitePages.slice(),
     });
   }
 
@@ -770,7 +810,7 @@
         }).then(function (res) {
           if (res.error) { alert(res.error.message || res.error); return; }
           if (res.category && res.category.id) _faqCategoryId = res.category.id;
-          load(true, true);
+          reloadActiveTab();
         });
       });
     }
@@ -786,7 +826,7 @@
           sortOrder: fd.get('sortOrder'),
         }).then(function (res) {
           if (res.error) { alert(res.error.message || res.error); return; }
-          load(true, true);
+          reloadActiveTab();
         });
       });
       bar.querySelector('#faqCatDeleteBtn').addEventListener('click', function () {
@@ -795,7 +835,7 @@
         api.admin.faqCategoryAction(id, 'delete').then(function (res) {
           if (res.error) { alert(res.error.message || res.error); return; }
           _faqCategoryId = '';
-          load(true, true);
+          reloadActiveTab();
         });
       });
     }
@@ -842,6 +882,7 @@
         image_url: b.image_url || '',
         image_url_mobile: b.image_url_mobile || '',
         align: b.align || 'left',
+        updated_at: b.updated_at || '',
       };
     });
 
@@ -857,6 +898,7 @@
         sort_order: Number(t.sort_order || 0),
         is_published: !!t.is_published,
         image_url: t.image_url || '',
+        updated_at: t.updated_at || '',
       };
     });
 
@@ -875,8 +917,13 @@
           target_w: Number(p.target_w || 0),
           target_h: Number(p.target_h || 0),
           is_published: !!p.is_published,
+          // display_url is the public/visitor view: the server forces the default
+          // for unpublished slots. Pass image_url + default so the admin thumb can
+          // preview the custom image even while the slot is unpublished.
           image_url: p.image_url || '',
           display_url: p.display_url || p.image_url || p.default_image_url || '',
+          default_image_url: p.default_image_url || '',
+          updated_at: p.updated_at || '',
         };
       });
 
@@ -896,7 +943,7 @@
         if (nextIndex === _pageIndex && nextSize === _pageSize) return;
         _pageIndex = nextIndex;
         _pageSize = nextSize;
-        load(true, true);
+        reloadActiveTab();
       },
       onAdd: function () {
         if (_tab === 'banners') openBannerModal(null);
@@ -916,7 +963,7 @@
             alert(res.error.message || res.error);
             return;
           }
-          load(true, true);
+          reloadActiveTab();
         });
       },
       onAction: function (id, action) {
@@ -930,7 +977,7 @@
               alert(res.error.message || res.error);
               return;
             }
-            load(true, true);
+            reloadActiveTab();
           });
           return;
         }
@@ -946,7 +993,7 @@
             alert(res.error.message || res.error);
             return;
           }
-          load(true, true);
+          reloadActiveTab();
         });
       },
     });
@@ -991,7 +1038,7 @@
       onClose: close,
       onSaved: function () {
         close();
-        load(true, true);
+        reloadActiveTab();
       },
       uploadImage: function (file) {
         return api.admin.uploadPageImage(file, row.page_key);
@@ -1034,7 +1081,7 @@
           closeCreate();
           _pageImagePage = createdRow.page_key;
           openPageImageModal(createdRow);
-          load(true, true);
+          reloadActiveTab();
         },
         createPageImage: function (pageKey, slotKey) {
           return api.admin.createPageImage(pageKey, slotKey);
@@ -1063,7 +1110,7 @@
       api.admin.bannerAction(id, apiAction).then(function (res) {
         btn.disabled = false;
         if (res.error) { alert(res.error.message || res.error); return; }
-        load(true, true);
+        reloadActiveTab();
       });
     });
   }
@@ -1105,10 +1152,64 @@
     return { select: 'white', hex: '' };
   }
 
+  function bannerRoleColorRaw(b, roleKey) {
+    if (!b) return 'white';
+    var legacy = b.tone || 'white';
+    if (roleKey === 'eyebrow') return b.eyebrow_color || b.eyebrowColor || legacy;
+    if (roleKey === 'title') return b.title_color || b.titleColor || legacy;
+    return b.lead_color || b.leadColor || legacy;
+  }
+
+  function bannerColorFieldHtml(label, selectName, customName, selectId, customFieldId, customInputId, state) {
+    return (
+      '<label class="ap-field"><span>' + label + '</span><select name="' + selectName + '" id="' + selectId + '">' +
+        BANNER_TEXT_COLORS.map(function (c) {
+          return '<option value="' + c.value + '"' +
+            (state.select === c.value ? ' selected' : '') + '>' +
+            c.label + ' ' + c.hex + '</option>';
+        }).join('') +
+        '<option value="custom"' + (state.select === 'custom' ? ' selected' : '') + '>自訂色碼…</option>' +
+      '</select></label>' +
+      '<label class="ap-field" id="' + customFieldId + '"' + (state.select === 'custom' ? '' : ' hidden') + '>' +
+        '<span>自訂色碼（' + label + '）</span>' +
+        '<input name="' + customName + '" id="' + customInputId + '" placeholder="#RRGGBB" maxlength="7" value="' + esc(state.hex) + '">' +
+      '</label>'
+    );
+  }
+
+  function bindBannerColorSelect(selectId, customFieldId) {
+    var toneSelect = document.getElementById(selectId);
+    var toneCustomField = document.getElementById(customFieldId);
+    if (toneSelect && toneCustomField) {
+      toneSelect.addEventListener('change', function () {
+        toneCustomField.hidden = toneSelect.value !== 'custom';
+      });
+    }
+  }
+
+  function readBannerColorValue(fd, selectName, customName, errEl) {
+    var toneValue = String(fd.get(selectName) || 'white').trim();
+    if (toneValue === 'custom') {
+      toneValue = String(fd.get(customName) || '').trim().toLowerCase();
+      if (!BANNER_TONE_HEX_RE.test(toneValue)) {
+        if (errEl) {
+          errEl.textContent = '自訂色碼格式錯誤，請輸入 #RRGGBB（例如 #8EEDF0）';
+          errEl.hidden = false;
+        } else {
+          alert('自訂色碼格式錯誤，請輸入 #RRGGBB（例如 #8EEDF0）');
+        }
+        return null;
+      }
+    }
+    return toneValue;
+  }
+
   /** Full-page editor (not float modal) so crop dialog can sit above the page cleanly. */
   function openBannerModal(b) {
     var isEdit = !!(b && b.id);
-    var toneState = bannerToneFormState(isEdit ? b.tone : 'white');
+    var eyebrowToneState = bannerToneFormState(isEdit ? bannerRoleColorRaw(b, 'eyebrow') : 'white');
+    var titleToneState = bannerToneFormState(isEdit ? bannerRoleColorRaw(b, 'title') : 'white');
+    var leadToneState = bannerToneFormState(isEdit ? bannerRoleColorRaw(b, 'lead') : 'white');
     var align = isEdit ? (b.align || 'left') : 'left';
     var existDesktop = isEdit ? (b.image_url || '') : '';
     var existMobile = isEdit ? (b.image_url_mobile || '') : '';
@@ -1126,18 +1227,11 @@
           '<form id="acBannerForm" class="ap-form" data-id="' + esc(isEdit ? b.id : '') + '">' +
             '<div class="ap-form-grid">' +
               '<label class="ap-field"><span>眉題</span><input name="eyebrow" placeholder="Imprint Diamond" value="' + esc(isEdit ? b.eyebrow : '') + '"></label>' +
-              '<label class="ap-field"><span>文字顏色</span><select name="tone" id="acBannerTone">' +
-                BANNER_TEXT_COLORS.map(function (c) {
-                  return '<option value="' + c.value + '"' +
-                    (toneState.select === c.value ? ' selected' : '') + '>' +
-                    c.label + ' ' + c.hex + '</option>';
-                }).join('') +
-                '<option value="custom"' + (toneState.select === 'custom' ? ' selected' : '') + '>自訂色碼…</option>' +
-              '</select></label>' +
-              '<label class="ap-field" id="acBannerToneCustomField"' + (toneState.select === 'custom' ? '' : ' hidden') + '>' +
-                '<span>自訂色碼</span>' +
-                '<input name="toneCustom" id="acBannerToneCustom" placeholder="#RRGGBB" maxlength="7" value="' + esc(toneState.hex) + '">' +
-              '</label>' +
+              bannerColorFieldHtml(
+                '眉題顏色', 'eyebrowColor', 'eyebrowColorCustom',
+                'acBannerEyebrowTone', 'acBannerEyebrowToneCustomField', 'acBannerEyebrowToneCustom',
+                eyebrowToneState
+              ) +
               '<div class="ap-field ac-banner-align-field"><span>文字位置</span>' +
                 '<div class="ac-banner-align" role="group" aria-label="文字位置">' +
                   '<label class="ac-banner-align__option"><input type="radio" name="align" value="left"' + (align === 'left' ? ' checked' : '') + '><span>靠左</span></label>' +
@@ -1145,7 +1239,17 @@
                 '</div>' +
               '</div>' +
               '<label class="ap-field ap-field--full"><span>標題</span><input name="title" required value="' + esc(isEdit ? b.title : '') + '"></label>' +
+              bannerColorFieldHtml(
+                '標題顏色', 'titleColor', 'titleColorCustom',
+                'acBannerTitleTone', 'acBannerTitleToneCustomField', 'acBannerTitleToneCustom',
+                titleToneState
+              ) +
               '<label class="ap-field ap-field--full"><span>說明</span><textarea name="lead" class="ap-textarea" rows="3">' + esc(isEdit ? b.lead : '') + '</textarea></label>' +
+              bannerColorFieldHtml(
+                '說明顏色', 'leadColor', 'leadColorCustom',
+                'acBannerLeadTone', 'acBannerLeadToneCustomField', 'acBannerLeadToneCustom',
+                leadToneState
+              ) +
               '<div class="ap-field ap-field--full">' +
                 '<input type="hidden" name="imageUrl" id="acBannerImageUrl" value="' + esc(existDesktop) + '">' +
                 '<input type="hidden" name="imageUrlMobile" id="acBannerImageUrlMobile" value="' + esc(existMobile) + '">' +
@@ -1183,13 +1287,9 @@
     var form = document.getElementById('acBannerForm');
     if (form) form.addEventListener('submit', submitBanner);
 
-    var toneSelect = document.getElementById('acBannerTone');
-    var toneCustomField = document.getElementById('acBannerToneCustomField');
-    if (toneSelect && toneCustomField) {
-      toneSelect.addEventListener('change', function () {
-        toneCustomField.hidden = toneSelect.value !== 'custom';
-      });
-    }
+    bindBannerColorSelect('acBannerEyebrowTone', 'acBannerEyebrowToneCustomField');
+    bindBannerColorSelect('acBannerTitleTone', 'acBannerTitleToneCustomField');
+    bindBannerColorSelect('acBannerLeadTone', 'acBannerLeadToneCustomField');
 
     if (window.AdminTables && window.AdminTables.renderPageLinkSelect) {
       var primaryMount = document.getElementById('acPrimaryHrefMount');
@@ -1243,19 +1343,12 @@
     var fd = new FormData(form);
     var errEl = document.getElementById('acFormError');
     var id = form.dataset.id;
-    var toneValue = String(fd.get('tone') || 'white').trim();
-    if (toneValue === 'custom') {
-      toneValue = String(fd.get('toneCustom') || '').trim().toLowerCase();
-      if (!BANNER_TONE_HEX_RE.test(toneValue)) {
-        if (errEl) {
-          errEl.textContent = '自訂色碼格式錯誤，請輸入 #RRGGBB（例如 #8EEDF0）';
-          errEl.hidden = false;
-        } else {
-          alert('自訂色碼格式錯誤，請輸入 #RRGGBB（例如 #8EEDF0）');
-        }
-        return;
-      }
-    }
+    var eyebrowColor = readBannerColorValue(fd, 'eyebrowColor', 'eyebrowColorCustom', errEl);
+    if (eyebrowColor == null) return;
+    var titleColor = readBannerColorValue(fd, 'titleColor', 'titleColorCustom', errEl);
+    if (titleColor == null) return;
+    var leadColor = readBannerColorValue(fd, 'leadColor', 'leadColorCustom', errEl);
+    if (leadColor == null) return;
     var payload = {
       id: id || undefined,
       eyebrow: String(fd.get('eyebrow') || '').trim(),
@@ -1267,7 +1360,11 @@
       ctaPrimaryHref: String(fd.get('ctaPrimaryHref') || '').trim(),
       ctaSecondaryLabel: String(fd.get('ctaSecondaryLabel') || '').trim(),
       ctaSecondaryHref: String(fd.get('ctaSecondaryHref') || '').trim(),
-      tone: toneValue,
+      eyebrowColor: eyebrowColor,
+      titleColor: titleColor,
+      leadColor: leadColor,
+      // Keep legacy tone (= title) for older API readers.
+      tone: titleColor,
       align: String(fd.get('align') || 'left').trim(),
       sortOrder: fd.get('sortOrder'),
       isPublished: !!form.querySelector('[name="isPublished"]').checked,
@@ -1289,7 +1386,7 @@
         return;
       }
       unmountBannerEditorMounts();
-      load(true, true);
+      reloadActiveTab();
     });
   }
 
@@ -1305,8 +1402,9 @@
   function renderJournalRow(p) {
     var published = !!p.is_published;
     var archived = !!p.is_archived;
-    var thumb = p.image_url
-      ? '<img src="' + esc(p.image_url) + '" alt="" width="40" height="40" loading="lazy" decoding="async" style="object-fit:cover;border-radius:4px">'
+    var thumbSrc = bustImageUrl(p.image_url, p.updated_at);
+    var thumb = thumbSrc
+      ? '<img src="' + esc(thumbSrc) + '" alt="" width="40" height="40" loading="lazy" decoding="async" style="object-fit:cover;border-radius:4px">'
       : '—';
     return (
       '<tr data-id="' + esc(String(p.id)) + '">' +
@@ -1338,7 +1436,7 @@
         '<p class="note warn">日誌文章載入失敗：' + esc(_journalError) + '</p>' +
         '<button type="button" class="btn-sm" id="acJournalRetryBtn">重新載入</button>';
       var retry = document.getElementById('acJournalRetryBtn');
-      if (retry) retry.addEventListener('click', function () { load(true, true); });
+      if (retry) retry.addEventListener('click', function () { reloadActiveTab(); });
       return;
     }
     var rows = journalRowsSorted();
@@ -1374,7 +1472,7 @@
       api.admin.journalPostAction(id, action).then(function (res) {
         btn.disabled = false;
         if (res.error) { alert(res.error.message || res.error); return; }
-        load(true, true);
+        reloadActiveTab();
       });
     });
   }
@@ -1430,11 +1528,6 @@
             var errEl = document.getElementById('acFormError');
             if (errEl) { errEl.textContent = String(message || '上傳失敗'); errEl.hidden = false; }
           },
-          onPendingDiscarded: function (message) {
-            if (typeof window.showToast === 'function') {
-              window.showToast(String(message || '尚未確認裁切，將使用原圖/空白'), 'info');
-            }
-          },
         });
       }
     } else {
@@ -1452,7 +1545,9 @@
     var fd = new FormData(form);
     var errEl = document.getElementById('acFormError');
     var id = form.dataset.id;
-    // image_url optional: null / keep existing hidden value / new URL after confirm upload.
+    // image_url optional. A pending crop is uploaded by ImageUploadField before
+    // this handler runs (submit is cancelled and replayed), so the hidden field is
+    // never the stale previous URL.
     var payload = {
       id: id || undefined,
       title: String(fd.get('title') || '').trim(),
@@ -1479,7 +1574,7 @@
         return;
       }
       if (window.AdminPanel.closeModal) window.AdminPanel.closeModal();
-      load(true, true);
+      reloadActiveTab();
     });
   }
 
@@ -1503,7 +1598,7 @@
       api.admin.testimonialAction(id, apiAction).then(function (res) {
         btn.disabled = false;
         if (res.error) { alert(res.error.message || res.error); return; }
-        load(true, true);
+        reloadActiveTab();
       });
     });
   }
@@ -1554,16 +1649,35 @@
     syncCountryField(isEdit ? t.city : '');
 
     var urlInput = document.getElementById('acTestimonialImageUrl');
+    function testimonialImageUrl(value) {
+      if (typeof value === 'string') return value.trim();
+      if (!value || typeof value !== 'object') return '';
+      return String(value.url || value.image_url || value.imageUrl || '').trim();
+    }
+    function commitTestimonialImageUrl(value) {
+      var nextUrl = testimonialImageUrl(value);
+      if (urlInput) urlInput.value = nextUrl;
+      if (form) form.dataset.imageUrl = nextUrl;
+      return nextUrl;
+    }
+    if (form) form.dataset.imageUrl = imageUrl;
     if (window.AdminTables && window.AdminTables.renderImageUploadField) {
       var testimonialUploadMount = document.getElementById('acTestimonialImageUploadMount');
       if (testimonialUploadMount && urlInput) {
         window.AdminTables.renderImageUploadField(testimonialUploadMount, {
           value: imageUrl,
           onChange: function (url) {
-            urlInput.value = url || '';
+            commitTestimonialImageUrl(url);
           },
           onUpload: function (file) {
-            return api.admin.uploadTestimonial(file);
+            return api.admin.uploadTestimonial(file).then(function (result) {
+              // Keep the form authoritative even if the React uploader's
+              // callback and requestSubmit occur in the same render turn.
+              if (!result || result.error) return result;
+              var uploadedUrl = testimonialImageUrl(result);
+              if (uploadedUrl) commitTestimonialImageUrl(uploadedUrl);
+              return result;
+            });
           },
           onValidationError: function (message) {
             alert(message);
@@ -1579,14 +1693,14 @@
     var fd = new FormData(form);
     var errEl = document.getElementById('acFormError');
     var id = form.dataset.id;
-    var imageUrl = String(fd.get('imageUrl') || '').trim();
+    var imageUrl = String(fd.get('imageUrl') || form.dataset.imageUrl || '').trim();
     var city = normalizeTaiwanCity(fd.get('city'));
     var country = city === '其他' ? String(fd.get('country') || '').trim() : '';
     var payload = {
       id: id || undefined,
       name: String(fd.get('namePart') || '').trim(),
       honorific: String(fd.get('honorific') || '小姐').trim(),
-      category: String(fd.get('category') || '').trim(),
+      category: normalizeTestimonialCategory(fd.get('category')),
       city: city,
       country: country,
       text: String(fd.get('text') || '').trim(),
@@ -1599,6 +1713,10 @@
     }
     if (!payload.category) {
       if (errEl) { errEl.textContent = '請選擇分類'; errEl.hidden = false; }
+      return;
+    }
+    if (TESTIMONIAL_CATEGORIES.indexOf(payload.category) < 0) {
+      if (errEl) { errEl.textContent = '請選擇有效分類（六大系列）'; errEl.hidden = false; }
       return;
     }
     if (!payload.city || !isTaiwanCity(payload.city)) {
@@ -1628,7 +1746,7 @@
         return;
       }
       if (window.AdminPanel.closeModal) window.AdminPanel.closeModal();
-      load(true, true);
+      reloadActiveTab();
     });
   }
 
@@ -1652,7 +1770,7 @@
       api.admin.faqAction(id, apiAction).then(function (res) {
         btn.disabled = false;
         if (res.error) { alert(res.error.message || res.error); return; }
-        load(true, true);
+        reloadActiveTab();
       });
     });
   }
@@ -1714,12 +1832,140 @@
         return;
       }
       if (window.AdminPanel.closeModal) window.AdminPanel.closeModal();
-      load(true, true);
+      reloadActiveTab();
     });
   }
 
   function listPageOpts() {
     return { page: _pageIndex + 1, pageSize: _pageSize };
+  }
+
+  function contentToastError(msg) {
+    if (window.showToast) window.showToast(msg, 'error');
+    else if (window.Toast && window.Toast.create) {
+      window.Toast.create({ type: 'error', title: '內容載入失敗', description: msg });
+    }
+  }
+
+  function paintLoadError(message) {
+    _loading = false;
+    root.removeAttribute('aria-busy');
+    root.classList.remove('skel-panel');
+    var errHtml = '<p class="note warn">載入失敗：' + esc(message) + '</p>';
+    var errBody = document.getElementById('contentPanelBody');
+    if (errBody) {
+      errBody.removeAttribute('aria-busy');
+      errBody.innerHTML = errHtml;
+      root.querySelectorAll('[data-tab], [data-page-tab]').forEach(function (btn) {
+        btn.disabled = false;
+        btn.classList.remove('is-pending');
+        btn.removeAttribute('aria-busy');
+      });
+    } else {
+      root.innerHTML = errHtml;
+    }
+  }
+
+  function applyBootstrapPayload(tab, res) {
+    if (Array.isArray(res.site_pages)) _sitePages = res.site_pages;
+    var keys = res.pageImageKeys || res.page_image_keys;
+    if (keys) rememberPageImagePages(keys);
+
+    var active = res.active || {};
+    var items = active.items;
+    if (!Array.isArray(items)) {
+      if (tab === 'testimonials') items = res.testimonials || [];
+      else if (tab === 'faq') items = res.items || [];
+      else if (tab === 'journal') items = res.posts || res.journal_posts || [];
+      else if (tab === 'page-images') items = res.pageImages || [];
+      else if (tab === 'banners') items = res.banners || [];
+      else items = [];
+    }
+    var total = typeof active.total === 'number'
+      ? active.total
+      : (typeof res.total === 'number' ? res.total : items.length);
+
+    if (tab === 'testimonials') {
+      _testimonials = items;
+      _totals.testimonials = total;
+    } else if (tab === 'faq') {
+      _faqItems = items;
+      if (Array.isArray(active.categories)) _faqCategories = active.categories;
+      else if (Array.isArray(res.categories)) _faqCategories = res.categories;
+      else if (Array.isArray(res.faq_categories)) _faqCategories = res.faq_categories;
+      _totals.faq = total;
+    } else if (tab === 'journal') {
+      _journalError = res.error ? String(res.error.message || res.error) : '';
+      _journalPosts = _journalError ? [] : items;
+      _totals.journal = total;
+    } else if (tab === 'page-images') {
+      _pageImages = items;
+      rememberPageImagePages(_pageImages);
+      _totals['page-images'] = total;
+    } else if (tab === 'banners') {
+      _banners = items;
+      _totals.banners = total;
+    }
+  }
+
+  function applyLegacyDualFetch(tab, res, keysRes) {
+    if (res) {
+      if (tab === 'testimonials') {
+        _testimonials = res.testimonials || [];
+        _totals.testimonials = typeof res.total === 'number' ? res.total : _testimonials.length;
+      } else if (tab === 'faq') {
+        _faqItems = res.items || [];
+        _faqCategories = res.categories || [];
+        _totals.faq = typeof res.total === 'number' ? res.total : _faqItems.length;
+      } else if (tab === 'journal') {
+        _journalError = res.error ? String(res.error.message || res.error) : '';
+        _journalPosts = (!_journalError && (res.posts || res.journal_posts)) || [];
+        _totals.journal = typeof res.total === 'number' ? res.total : _journalPosts.length;
+      } else if (tab === 'page-images') {
+        _pageImages = res.pageImages || [];
+        rememberPageImagePages(_pageImages);
+        _totals['page-images'] = typeof res.total === 'number' ? res.total : _pageImages.length;
+      } else if (tab === 'banners') {
+        _banners = res.banners || [];
+        _totals.banners = typeof res.total === 'number' ? res.total : _banners.length;
+      }
+      if (Array.isArray(res.site_pages)) _sitePages = res.site_pages;
+    }
+    if (keysRes && !keysRes.error) rememberPageImagePages(keysRes.pageImages || []);
+  }
+
+  function legacyDualFetch(tab, opts) {
+    var mainP = null;
+    if (tab === 'testimonials') mainP = api.admin.getTestimonials(opts);
+    else if (tab === 'faq') mainP = api.admin.getFaqItems(opts);
+    else if (tab === 'journal') mainP = api.admin.getJournalPosts(opts);
+    else if (tab === 'banners') mainP = api.admin.getBanners(opts);
+    else if (tab === 'page-images') {
+      var pageImageOpts = Object.assign({}, opts);
+      if (_pageImagePage) pageImageOpts.page_key = _pageImagePage;
+      mainP = api.admin.getPageImages(pageImageOpts);
+    } else if (tab === 'pages') {
+      mainP = api.admin.listCmsPages({ page: 1, pageSize: 1 });
+    }
+    var pageImageKeysP = _pageImagePageOptions.length
+      ? Promise.resolve(null)
+      : api.admin.getPageImages({ page: 1, pageSize: 100 });
+    return Promise.all([mainP || Promise.resolve(null), pageImageKeysP]);
+  }
+
+  function finishLoadOk(tab) {
+    _loadedTabs[tab] = true;
+    _loading = false;
+    root.removeAttribute('aria-busy');
+    root.classList.remove('skel-panel');
+    renderShell();
+  }
+
+  /** Invalidate one tab cache then refetch that tab only (bootstrap). */
+  function reloadActiveTab() {
+    var tab = _tab === 'copy' ? 'pages' : _tab;
+    delete _loadedTabs[tab];
+    load(true, true);
   }
 
   function load(silent, force) {
@@ -1738,92 +1984,80 @@
       }
     }
 
-    /* 只抓目前分頁的資料集；其他分頁第一次切過去時再各自載入。 */
     var opts = listPageOpts();
-    var mainP = null;
-    if (tab === 'testimonials') mainP = api.admin.getTestimonials(opts);
-    else if (tab === 'faq') mainP = api.admin.getFaqItems(opts);
-    else if (tab === 'journal') mainP = api.admin.getJournalPosts(opts);
-    else if (tab === 'banners') mainP = api.admin.getBanners(opts);
-    else if (tab === 'page-images') {
-      var pageImageOpts = Object.assign({}, opts);
-      if (_pageImagePage) pageImageOpts.page_key = _pageImagePage;
-      mainP = api.admin.getPageImages(pageImageOpts);
-    }
-    var pageImageKeysP = _pageImagePageOptions.length
-      ? Promise.resolve(null)
-      : api.admin.getPageImages({ page: 1, pageSize: 100 });
-    Promise.all([mainP || Promise.resolve(null), pageImageKeysP]).then(function (results) {
-      var res = results[0];
-      var keysRes = results[1];
-      // Soft-fail journal until backend routes land (parallel Phase 1).
-      if (res && res.error && tab !== 'journal') {
-        _loading = false;
-        root.removeAttribute('aria-busy');
-        root.classList.remove('skel-panel');
-        var errHtml =
-          '<p class="note warn">載入失敗：' +
-          esc(res.error.message || res.error) +
-          '</p>';
-        var errBody = document.getElementById('contentPanelBody');
-        if (errBody) {
-          errBody.removeAttribute('aria-busy');
-          errBody.innerHTML = errHtml;
-          root.querySelectorAll('[data-tab], [data-page-tab]').forEach(function (btn) {
-            btn.disabled = false;
-            btn.classList.remove('is-pending');
-            btn.removeAttribute('aria-busy');
-          });
-        } else {
-          root.innerHTML = errHtml;
-        }
+    var bootOpts = {
+      tab: tab,
+      page: opts.page,
+      pageSize: opts.pageSize,
+    };
+    if (tab === 'page-images' && _pageImagePage) bootOpts.page_key = _pageImagePage;
+
+    function onBootFail(errMsg, softJournal) {
+      if (softJournal) {
+        _journalError = String(errMsg || '載入失敗');
+        _journalPosts = [];
+        finishLoadOk(tab);
         return;
       }
-      if (res) {
-        if (tab === 'testimonials') {
-          _testimonials = res.testimonials || [];
-          _totals.testimonials = typeof res.total === 'number' ? res.total : _testimonials.length;
-        } else if (tab === 'faq') {
-          _faqItems = res.items || [];
-          _faqCategories = res.categories || [];
-          _totals.faq = typeof res.total === 'number' ? res.total : _faqItems.length;
-        } else if (tab === 'journal') {
-          _journalError = res.error ? String(res.error.message || res.error) : '';
-          _journalPosts = (!_journalError && (res.posts || res.journal_posts)) || [];
-          _totals.journal = typeof res.total === 'number' ? res.total : _journalPosts.length;
-        } else if (tab === 'page-images') {
-          _pageImages = res.pageImages || [];
-          rememberPageImagePages(_pageImages);
-          _totals['page-images'] = typeof res.total === 'number' ? res.total : _pageImages.length;
-        } else if (tab === 'banners') {
-          _banners = res.banners || [];
-          _totals.banners = typeof res.total === 'number' ? res.total : _banners.length;
+      contentToastError(errMsg || '載入失敗，請重試。');
+      paintLoadError(errMsg || '請重試');
+    }
+
+    var bootP =
+      typeof api.admin.getContentBootstrap === 'function'
+        ? api.admin.getContentBootstrap(bootOpts)
+        : Promise.resolve({ _httpStatus: 404, error: 'HTTP 404' });
+
+    bootP
+      .then(function (res) {
+        var status = res && res._httpStatus;
+        var is404 = status === 404 || (res && res.error && String(res.error).indexOf('404') !== -1);
+        if (is404) {
+          /* Bootstrap not live yet — one dual-fetch fallback for this request. */
+          return legacyDualFetch(tab, opts).then(function (results) {
+            var legacyRes = results[0];
+            var keysRes = results[1];
+            if (legacyRes && legacyRes.error && tab !== 'journal') {
+              onBootFail(legacyRes.error.message || legacyRes.error, false);
+              return;
+            }
+            applyLegacyDualFetch(tab, legacyRes, keysRes);
+            finishLoadOk(tab);
+          });
         }
-      }
-      if (keysRes && !keysRes.error) rememberPageImagePages(keysRes.pageImages || []);
-      _loadedTabs[tab] = true;
-      _loading = false;
-      root.removeAttribute('aria-busy');
-      root.classList.remove('skel-panel');
-      renderShell();
-    }).catch(function () {
-      _loading = false;
-      root.removeAttribute('aria-busy');
-      root.classList.remove('skel-panel');
-      var failHtml = '<p class="note warn">載入失敗，請重試。</p>';
-      var failBody = document.getElementById('contentPanelBody');
-      if (failBody) {
-        failBody.removeAttribute('aria-busy');
-        failBody.innerHTML = failHtml;
-        root.querySelectorAll('[data-tab], [data-page-tab]').forEach(function (btn) {
-          btn.disabled = false;
-          btn.classList.remove('is-pending');
-          btn.removeAttribute('aria-busy');
-        });
-      } else {
-        root.innerHTML = failHtml;
-      }
-    });
+        if (res && res.error && tab !== 'journal') {
+          onBootFail(res.error.message || res.error, false);
+          return;
+        }
+        /* The bootstrap endpoint supplies page-image keys but does not apply
+         * the selected page_key filter. Fetch the filtered rows so the table
+         * does not discard the bootstrap page of rows as unrelated. */
+        if (tab === 'page-images' && bootOpts.page_key && api.admin.getPageImages) {
+          var pageImageOpts = Object.assign({}, opts, { page_key: bootOpts.page_key });
+          return api.admin.getPageImages(pageImageOpts).then(function (pageImageRes) {
+            if (pageImageRes && pageImageRes.error) {
+              onBootFail(pageImageRes.error.message || pageImageRes.error, false);
+              return;
+            }
+            applyLegacyDualFetch(tab, pageImageRes, null);
+            finishLoadOk(tab);
+          });
+        }
+        applyBootstrapPayload(tab, res || {});
+        finishLoadOk(tab);
+      })
+      .catch(function () {
+        onBootFail('載入失敗，請重試。', false);
+      });
+  }
+
+  function prefetch() {
+    if (typeof window.__adminLoadTables === 'function') {
+      window.__adminLoadTables().then(function () {
+        var tab = _tab === 'copy' ? 'pages' : _tab;
+        if (!_loadedTabs[tab] && !_loading) load(true, false);
+      }, function () {});
+    }
   }
 
   function ensureLoaded() {
@@ -1838,7 +2072,12 @@
     load(_loadedTabs[_tab === 'copy' ? 'pages' : _tab] ? true : false);
   }
 
-  window.AdminContentPanel = { load: load, ensureLoaded: ensureLoaded };
+  window.AdminContentPanel = {
+    load: load,
+    ensureLoaded: ensureLoaded,
+    prefetch: prefetch,
+    reloadActiveTab: reloadActiveTab,
+  };
 
   document.querySelectorAll('.side-nav button[data-panel="content"]').forEach(function (btn) {
     btn.addEventListener('click', ensureLoaded);

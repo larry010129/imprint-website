@@ -81,10 +81,43 @@ def test_product_upload_keeps_original_stem_webp(monkeypatch):
     )
     assert resp.status_code == 200
     assert calls and calls[0][0] == "products"
-    assert calls[0][1].endswith("ring-front.webp")
-    assert Path(calls[0][1]).name == "ring-front.webp"
-    assert not _UUID32.fullmatch(Path(calls[0][1]).stem)
+    name = Path(calls[0][1]).name
+    assert re.fullmatch(r"ring-front-[0-9a-f]{8}\.webp", name)
+    assert not _UUID32.fullmatch(Path(name).stem)
     assert calls[0][2] == ".webp"
+
+
+def test_product_upload_same_filename_lands_on_unique_keys(monkeypatch):
+    """Two uploads of the same filename must produce different Storage keys/URLs
+    so a replace always cache-busts and advances the previous-stack."""
+    monkeypatch.setattr(
+        "app.controllers.admin_controller._require_admin",
+        lambda _req: "admin-user",
+    )
+    calls: list[tuple] = []
+
+    def fake_upload_image(kind: str, name: str, data: bytes, ext: str, upsert: bool = False):
+        calls.append((kind, name, ext, upsert))
+        return f"{PUBLIC}/products/{name}"
+
+    monkeypatch.setattr("app.storage.upload_image", fake_upload_image)
+
+    for _ in range(2):
+        resp = asyncio.run(
+            product_upload(
+                MagicMock(),
+                file=_png_upload("ring-front.PNG"),
+                product_id=None,
+                color=None,
+            )
+        )
+        assert resp.status_code == 200
+
+    assert len(calls) == 2
+    key_a, key_b = calls[0][1], calls[1][1]
+    assert key_a != key_b
+    for key in (key_a, key_b):
+        assert re.fullmatch(r"ring-front-[0-9a-f]{8}\.webp", Path(key).name)
 
 
 def test_replace_keeps_previous_and_drops_older(monkeypatch):

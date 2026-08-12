@@ -195,7 +195,8 @@ async def cms_section_page_image_sync(request: Request) -> JSONResponse:
         serialize_section,
         upsert_section_page_image,
     )
-    from app.controllers.web_controller import clear_page_image_cache
+    from app.content_cache import clear_content_api_caches
+    from app.controllers.web_controller import clear_page_image_cache, clear_site_cms_cache
 
     with get_connection() as conn, conn.cursor() as cur:
         _ensure_all(cur)
@@ -216,6 +217,8 @@ async def cms_section_page_image_sync(request: Request) -> JSONResponse:
                     cur, page_key=page_key, section_id=section_id, hide=action == "hide"
                 )
                 clear_page_image_cache()
+                clear_site_cms_cache()
+                clear_content_api_caches()
                 log_admin_action(
                     _actor_email(user_id),
                     f"cms_section_page_image_{action}",
@@ -242,6 +245,8 @@ async def cms_section_page_image_sync(request: Request) -> JSONResponse:
         except ValueError as exc:
             return JSONResponse(status_code=400, content={"error": str(exc)})
     clear_page_image_cache()
+    clear_site_cms_cache()
+    clear_content_api_caches()
     log_admin_action(
         _actor_email(user_id),
         "cms_section_page_image_upsert",
@@ -400,7 +405,7 @@ async def cms_section_update(request: Request) -> JSONResponse:
         sync_section_page_image_from_props,
         update_section,
     )
-    from app.controllers.web_controller import clear_page_image_cache
+    from app.controllers.web_controller import clear_page_image_cache, clear_site_cms_cache
 
     with get_connection() as conn, conn.cursor() as cur:
         _ensure_all(cur)
@@ -432,6 +437,7 @@ async def cms_section_update(request: Request) -> JSONResponse:
             if page:
                 sync_section_page_image_from_props(cur, section, page)
                 clear_page_image_cache()
+                clear_site_cms_cache()
     if not section:
         return JSONResponse(status_code=404, content={"error": "找不到區塊"})
     log_admin_action(_actor_email(user_id), "cms_section_updated", {"id": section_id})
@@ -660,6 +666,9 @@ async def faq_category_create(request: Request) -> JSONResponse:
             (cat_id, title, sort_order),
         )
         row = serialize_faq_category(cur.fetchone())
+    from app.content_cache import clear_content_api_caches
+
+    clear_content_api_caches()
     log_admin_action(_actor_email(user_id), "faq_category_created", {"id": cat_id})
     return JSONResponse(content={"category": row})
 
@@ -692,6 +701,9 @@ async def faq_category_update(request: Request) -> JSONResponse:
         if not row:
             return JSONResponse(status_code=404, content={"error": "找不到分類"})
         out = serialize_faq_category(row)
+    from app.content_cache import clear_content_api_caches
+
+    clear_content_api_caches()
     log_admin_action(_actor_email(user_id), "faq_category_updated", {"id": cat_id})
     return JSONResponse(content={"category": out})
 
@@ -720,5 +732,8 @@ async def faq_category_action(request: Request) -> JSONResponse:
         cur.execute("delete from faq_categories where id = %s returning id", (cat_id,))
         if not cur.fetchone():
             return JSONResponse(status_code=404, content={"error": "找不到分類"})
+    from app.content_cache import clear_content_api_caches
+
+    clear_content_api_caches()
     log_admin_action(_actor_email(user_id), "faq_category_deleted", {"id": cat_id})
     return JSONResponse(content={"ok": True})

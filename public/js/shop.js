@@ -487,6 +487,48 @@ let catalogLoaded = false;
 const catalogPaging = {};
 const CATALOG_PAGE_SIZE = 20;
 
+/**
+ * Admin product replacements can reuse the same Storage object URL. The
+ * static middleware serves query-bearing image URLs as immutable, so the
+ * storefront must give each API payload a fresh image URL when it is loaded.
+ */
+function bustCatalogImageUrl(url, token) {
+  const value = String(url || '').trim();
+  if (!value || /^(data|blob):/i.test(value) || /[?&]v=/.test(value)) return value;
+  return `${value}${value.includes('?') ? '&' : '?'}v=${token}`;
+}
+
+function bustCatalogProductImages(product, token) {
+  if (!product || !token) return product;
+  const images = product.images && typeof product.images === 'object'
+    ? Object.fromEntries(Object.entries(product.images).map(([key, urls]) => [
+      key,
+      Array.isArray(urls)
+        ? urls.map((url) => bustCatalogImageUrl(url, token))
+        : bustCatalogImageUrl(urls, token),
+    ]))
+    : product.images;
+  return {
+    ...product,
+    ...(product.thumbUrl ? { thumbUrl: bustCatalogImageUrl(product.thumbUrl, token) } : {}),
+    ...(images ? { images } : {}),
+  };
+}
+
+function bustCatalogPayloadImages(data) {
+  if (!data || typeof data !== 'object') return data;
+  const token = Date.now();
+  const categories = data.categories && typeof data.categories === 'object'
+    ? Object.fromEntries(Object.entries(data.categories).map(([category, products]) => [
+      category,
+      Array.isArray(products)
+        ? products.map((product) => bustCatalogProductImages(product, token))
+        : products,
+    ]))
+    : data.categories;
+  return categories ? { ...data, categories } : data;
+}
+
 function productsFor(category) {
   const list = catalog[category] || [];
   if (category !== 'chain' || list.length < 2) return list;
@@ -536,7 +578,7 @@ async function fetchCatalogPage({ category, page, pageSize } = {}) {
   if (window.shopConfig?.preview) params.set('preview', '1');
   const { res, data } = await shopApiFetch(`/api/catalog?${params.toString()}`);
   if (!res.ok) throw new Error(`API ${res.status}`);
-  return data;
+  return bustCatalogPayloadImages(data);
 }
 
 function applyCatalogMeta(data) {
@@ -1339,7 +1381,7 @@ async function ensureProductDetail(productId, category) {
       `/api/catalog/product/${encodeURIComponent(productId)}${qs}`,
     );
     if (!res.ok) throw new Error(`API ${res.status}`);
-    const full = data?.product;
+    const full = bustCatalogProductImages(data?.product, Date.now());
     if (!full?.id) return existing;
     const targetCat = cat || findProductCategory(full.id) || state.category;
     if (targetCat) return mergeProductIntoCatalog(targetCat, full);
@@ -3615,10 +3657,20 @@ function renderDiamondColorCarousel() {
     btn.classList.toggle('active', activeId === color.id);
     const icon = document.createElement('span');
     icon.className = 'gem-icon';
-    const imagePath = color.image || DIAMOND_WHITE_PREVIEW_PATH;
+    // Prefer the memorial color product's admin-editable 圓形 image (same slot
+    // as the calculator preview) over the bundled static swatch PNG.
+    const colorProduct = memorialDiamondProductForColor(color.id);
+    const roundUrls = colorProduct?.images?.round;
+    const adminIcon = (Array.isArray(roundUrls) ? roundUrls.find(Boolean) : null)
+      || colorProduct?.thumbUrl
+      || '';
+    const usableAdminIcon = adminIcon && isUsableCatalogImageUrl(adminIcon) ? adminIcon : '';
+    const imagePath = usableAdminIcon || color.image || DIAMOND_WHITE_PREVIEW_PATH;
     if (imagePath) {
       const img = document.createElement('img');
-      img.src = diamondAssetUrl(imagePath);
+      img.src = usableAdminIcon && (usableAdminIcon.startsWith('/') || /^https?:/i.test(usableAdminIcon))
+        ? usableAdminIcon
+        : diamondAssetUrl(imagePath);
       img.alt = diamondMetaLabel(color);
       img.loading = 'lazy';
       img.decoding = 'async';

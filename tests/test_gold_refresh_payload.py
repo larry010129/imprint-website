@@ -78,10 +78,10 @@ def test_shop_js_live_gold_poll_get_and_cache_bust() -> None:
     assert "setLiveGoldRates" in shop
     assert "initLiveGoldPoll" in shop
     assert "visibilityState" in shop
-    assert "shop.js?v=157" in (
+    assert "shop.js?v=158" in (
         _ROOT / "content" / "site" / "templates" / "pages" / "shop" / "calculator.html"
     ).read_text(encoding="utf-8")
-    assert "shop.js?v=157" in (
+    assert "shop.js?v=158" in (
         _ROOT / "content" / "site" / "page-registry.json"
     ).read_text(encoding="utf-8")
 
@@ -105,6 +105,10 @@ def test_lifespan_starts_and_cancels_gold_scrape_task() -> None:
     assert "gold_scrape_loop" in init_src
     assert 'name="imprint-gold-scrape"' in init_src
     assert "gold_task.cancel()" in init_src
+    # Featured video must not auto-sync on a timer — admin button only.
+    assert "featured_video_refresh_loop" not in init_src
+    assert "imprint-featured-video-refresh" not in init_src
+    assert "from app.featured_video import" not in init_src
 
 
 def test_get_bot_gold_skips_scrape_when_cache_present() -> None:

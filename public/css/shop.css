@@ -2726,7 +2726,7 @@ body.dark-theme .ring-size-guide-table thead th {
 
 .stone-count-discount {
   margin-top: 0.625rem;
-  max-width: 20rem;
+  max-width: 23.125rem;
 }
 
 .stone-count-discount__title {
@@ -2738,14 +2738,23 @@ body.dark-theme .ring-size-guide-table thead th {
 
 .stone-count-discount-table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
-  font-size: 0.6875rem;
+  font-size: 0.625rem;
   line-height: 1.4;
+}
+
+.stone-count-discount-table__carat-col {
+  width: 38%;
+}
+
+.stone-count-discount-table__quantity-col {
+  width: 20.666%;
 }
 
 .stone-count-discount-table th,
 .stone-count-discount-table td {
-  padding: 0.3125rem 0.5rem;
+  padding: 0.25rem 0.25rem;
   border: 1px solid var(--color-border);
   text-align: center;
 }
@@ -2754,6 +2763,7 @@ body.dark-theme .ring-size-guide-table thead th {
   background: color-mix(in srgb, var(--shop-cyan, #1aa8ad) 8%, var(--color-surface));
   font-weight: 600;
   color: var(--color-text-muted);
+  white-space: nowrap;
 }
 
 .stone-count-discount-table tbody th {
@@ -2767,6 +2777,7 @@ body.dark-theme .ring-size-guide-table thead th {
 .stone-count-discount-table tbody td {
   font-variant-numeric: tabular-nums;
   color: var(--color-text);
+  white-space: nowrap;
 }
 
 .stone-count-discount__note {
@@ -2775,7 +2786,10 @@ body.dark-theme .ring-size-guide-table thead th {
 }
 
 .shop-fit .stone-count-discount {
-  max-width: 18rem;
+  container: stone-discount / inline-size;
+  width: 100%;
+  max-width: 23.125rem;
+  box-sizing: border-box;
 }
 
 .shop-fit .stone-count-discount__title {
@@ -2783,17 +2797,126 @@ body.dark-theme .ring-size-guide-table thead th {
 }
 
 .shop-fit .stone-count-discount-table {
-  font-size: 0.625rem;
+  font-size: clamp(9px, 2.5vw, 10px);
+  letter-spacing: 0;
 }
 
 .shop-fit .stone-count-discount-table th,
 .shop-fit .stone-count-discount-table td {
-  padding: 0.25rem 0.375rem;
+  padding: 2px clamp(3px, 1.25vw, 10px);
+}
+
+.shop-fit .stone-count-discount-table__carat-col { width: 34%; }
+.shop-fit .stone-count-discount-table__quantity-col { width: 22%; }
+
+/* At high browser zoom a phone exposes a much smaller CSS viewport. Keep
+   the spreadsheet grid intact by fluidly reducing only this table's type and
+   padding; the columns remain equal and the table never needs to scroll. */
+@media (max-width: 360px) {
+  .shop-fit .stone-count-discount {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .shop-fit .stone-count-discount-table {
+    font-size: clamp(8px, 2.8vw, 9px);
+  }
+
+  .shop-fit .stone-count-discount-table th,
+  .shop-fit .stone-count-discount-table td {
+    padding-inline: clamp(2px, 0.8vw, 4px);
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
    Compact viewport-fit shop — full width, minimal scroll
    ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Wider table views use a true spreadsheet-style centered grid. Keep the
+   compact phone presentation unchanged. */
+@media (min-width: 641px) {
+  .shop-fit .stone-count-discount-table__carat-col { width: 28%; }
+  .shop-fit .stone-count-discount-table__quantity-col { width: 24%; }
+
+  .shop-fit .stone-count-discount-table tbody th {
+    text-align: center;
+  }
+}
+
+/* A component can become narrow even while the viewport remains desktop
+   sized (for example beside a configurator column or under browser zoom).
+   Reflow only this component into tier cards instead of allowing table cells
+   to compete for impossible width. */
+@container stone-discount (max-width: 22rem) {
+  .shop-fit .stone-count-discount-table {
+    display: block;
+    width: 100%;
+    font-size: clamp(8px, 2.6cqw, 10px);
+  }
+
+  .shop-fit .stone-count-discount-table colgroup {
+    display: none;
+  }
+
+  .shop-fit .stone-count-discount-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .shop-fit .stone-count-discount-table tbody {
+    display: grid;
+    gap: 0.375rem;
+  }
+
+  .shop-fit .stone-count-discount-table tbody tr {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+  }
+
+  .shop-fit .stone-count-discount-table tbody th {
+    grid-column: 1 / -1;
+    padding: 0.3rem 0.4rem;
+    border: 0;
+    border-bottom: 1px solid var(--color-border);
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  .shop-fit .stone-count-discount-table tbody td {
+    display: flex;
+    min-width: 0;
+    min-height: 2.45rem;
+    padding: 0.25rem 0.2rem;
+    border: 0;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 0.1rem;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .shop-fit .stone-count-discount-table tbody td + td {
+    border-left: 1px solid var(--color-border);
+  }
+
+  .shop-fit .stone-count-discount-table tbody td::before {
+    content: attr(data-label);
+    color: var(--color-text-muted);
+    font-size: 0.9em;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+}
 
 body.app-shell .page-container:has(.shop-fit) {
   max-width: 1480px;
@@ -3154,6 +3277,13 @@ body.app-shell:not(.dark-theme) .shop-fit {
   overflow: visible;
 }
 
+/* The multi-column options grid is useful only when a step has enough
+   inline space for its contents.  The discount grid is deliberately given
+   the full options width so it cannot collapse into one tiny grid track. */
+.shop-fit .product-options-section #stone-count-step {
+  grid-column: 1 / -1;
+}
+
 .shop-fit .variant-group--nested {
   margin-top: 0.375rem;
   margin-bottom: 0;
@@ -3457,6 +3587,26 @@ body.app-shell:not(.dark-theme) .shop-fit {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+}
+
+/* Only the three pale supplied patterns need extra definition. Keep the
+   other five artworks at their original palette and preserve transparency. */
+.shop-fit .shop-girdle-engrave .cfg-emblem[data-emblem="catPaw"] img,
+.shop-fit .shop-girdle-engrave .cfg-emblem[data-emblem="dogPaw"] img,
+.shop-fit .shop-girdle-engrave .cfg-emblem[data-emblem="infinity"] img,
+.shop-fit .shop-girdle-engrave .cfg-emblem-token[data-emblem="catPaw"] img,
+.shop-fit .shop-girdle-engrave .cfg-emblem-token[data-emblem="dogPaw"] img,
+.shop-fit .shop-girdle-engrave .cfg-emblem-token[data-emblem="infinity"] img {
+  filter: brightness(0.72) contrast(1.28);
+}
+
+.shop-fit .shop-girdle-engrave .cfg-emblem[data-emblem="catPaw"]:hover img,
+.shop-fit .shop-girdle-engrave .cfg-emblem[data-emblem="catPaw"]:focus-visible img,
+.shop-fit .shop-girdle-engrave .cfg-emblem[data-emblem="dogPaw"]:hover img,
+.shop-fit .shop-girdle-engrave .cfg-emblem[data-emblem="dogPaw"]:focus-visible img,
+.shop-fit .shop-girdle-engrave .cfg-emblem[data-emblem="infinity"]:hover img,
+.shop-fit .shop-girdle-engrave .cfg-emblem[data-emblem="infinity"]:focus-visible img {
+  filter: brightness(0.62) contrast(1.32);
 }
 
 .shop-fit .shop-girdle-engrave .cfg-engrave-input {
@@ -4279,6 +4429,23 @@ body.app-shell:not(.dark-theme) .shop-fit {
       var(--shop-mobile-buy-bar-height, calc(80px + env(safe-area-inset-bottom, 0px)))
       + 12px
     );
+  }
+}
+
+/* Intermediate calculator widths: keep the selection flow readable before
+   the phone breakpoint.  The price panel moves below the selection area so
+   the buy column is not squeezed beside a fixed sidebar during zoom/device
+   emulation. */
+@media (min-width: 901px) and (max-width: 1050px) {
+  .shop-fit .shop-body {
+    grid-template-columns: 1fr;
+  }
+
+  .shop-fit .shop-price-panel {
+    position: static;
+    top: auto;
+    order: 2;
+    max-height: none;
   }
 }
 

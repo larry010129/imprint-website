@@ -252,6 +252,23 @@
     return window.AdminImageUrls ? window.AdminImageUrls.resolve(path) : path;
   }
 
+  /**
+   * Cache-buster for admin previews only — data-url keeps the clean URL so a
+   * busted URL is never persisted. product_images has no updated_at column, so
+   * the shared save epoch (bumped after a replace) is the version source.
+   */
+  function bustImageUrl(url, updatedAt) {
+    return window.AdminImageUrls && window.AdminImageUrls.bust
+      ? window.AdminImageUrls.bust(url, updatedAt)
+      : String(url || '').trim();
+  }
+
+  function bumpImageCacheEpoch() {
+    if (window.AdminImageUrls && window.AdminImageUrls.bumpEpoch) {
+      window.AdminImageUrls.bumpEpoch();
+    }
+  }
+
   /** blob:/data: are tab-local — never persist or preview as SoT. */
   function isBrowserLocalImageUrl(url) {
     return /^(?:blob:|data:)/i.test(String(url || '').trim());
@@ -1774,7 +1791,8 @@
         '>' +
         '<div class="ap-carousel-card">' +
           '<div class="ap-carousel-card-media">' +
-            '<img class="ap-carousel-img" src="' + esc(persistUrl) + '" alt="" data-fallback="' + esc(persistUrl) +
+            '<img class="ap-carousel-img" src="' + esc(bustImageUrl(persistUrl)) +
+              '" alt="" data-fallback="' + esc(bustImageUrl(persistUrl)) +
               '" loading="lazy" decoding="async" width="180" height="180">' +
             '<button type="button" class="ap-remove-image" aria-label="移除">X</button>' +
             '<div class="ap-carousel-actions">' +
@@ -1898,8 +1916,9 @@
         else delete item.dataset.previousUrl;
         var img = item.querySelector('.ap-carousel-img');
         if (img) {
-          img.src = slide.url;
-          if (img.dataset) img.dataset.fallback = slide.url;
+          var slideSrc = bustImageUrl(slide.url);
+          img.src = slideSrc;
+          if (img.dataset) img.dataset.fallback = slideSrc;
         }
         var restoreBtn = item.querySelector('.ap-restore-image');
         if (restoreBtn) restoreBtn.hidden = !slide.previousFilePath;
@@ -2304,8 +2323,11 @@
       item.dataset.url = url;
       var img = item.querySelector('.ap-carousel-img');
       if (img) {
-        img.src = url;
-        if (img.dataset) img.dataset.fallback = url;
+        // A replace can reuse the same Storage key, so force a refetch.
+        bumpImageCacheEpoch();
+        var nextSrc = bustImageUrl(url);
+        img.src = nextSrc;
+        if (img.dataset) img.dataset.fallback = nextSrc;
       }
     }
     if (imageRow.id) item.dataset.imageId = String(imageRow.id);

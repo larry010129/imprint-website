@@ -42,6 +42,27 @@
     return '';
   }
 
+  function bannerRoleTone(b, roleKey) {
+    var legacy = b && (b.tone || 'warm');
+    if (!b) return legacy;
+    if (roleKey === 'eyebrow') return b.eyebrow_color || b.eyebrowColor || legacy;
+    if (roleKey === 'title') return b.title_color || b.titleColor || legacy;
+    return b.lead_color || b.leadColor || legacy;
+  }
+
+  function slideRoleColors(b) {
+    return {
+      eyebrow: slideTextColor(bannerRoleTone(b, 'eyebrow')),
+      title: slideTextColor(bannerRoleTone(b, 'title')),
+      lead: slideTextColor(bannerRoleTone(b, 'lead')),
+    };
+  }
+
+  function slideColorSig(b) {
+    var c = slideRoleColors(b);
+    return [c.eyebrow, c.title, c.lead].join(',');
+  }
+
   /** Known local hero stems → full-width descriptor (for srcset). */
   var LOCAL_HERO_MAX_W = {
     'imprint-diamond-newborn-baby-necklace': 2400,
@@ -188,7 +209,7 @@
 
   function slideHtml(b, index) {
     var tone = b.tone || 'warm';
-    var textColor = slideTextColor(tone);
+    var colors = slideRoleColors(b);
     var align = b.align || (index === 3 ? 'right' : 'left');
     /* Slide 0 = sole page h1. Other slides stay styled titles, not headings
        (all slides remain in DOM; extra h2s pollute heading-order outline). */
@@ -213,11 +234,18 @@
     var rTitle = index === 0 ? '' : ' reveal reveal-d1';
     var rLead = index === 0 ? '' : ' reveal reveal-d2';
     var rActions = index === 0 ? '' : ' reveal reveal-d3';
+    var styleParts = [];
+    if (colors.eyebrow) styleParts.push('--hc-eyebrow:' + colors.eyebrow);
+    if (colors.title) styleParts.push('--hc-title:' + colors.title);
+    if (colors.lead) styleParts.push('--hc-lead:' + colors.lead);
+    var styleAttr = styleParts.length
+      ? ' style="' + esc(styleParts.join(';')) + '"'
+      : '';
     return (
       '<li class="hc-slide' + (index === 0 ? ' is-active' : '') +
-        (textColor ? ' hc-slide--custom-text' : '') +
+        ((colors.eyebrow || colors.title || colors.lead) ? ' hc-slide--custom-text' : '') +
         '" data-align="' + esc(align) + '" data-tone="' + esc(tone) + '"' +
-        (textColor ? ' style="--hc-text:' + esc(textColor) + '"' : '') + '>' +
+        styleAttr + '>' +
         '<div class="hc-media"><picture>' +
           pic.mobile +
           pic.webp +
@@ -226,9 +254,17 @@
         '</picture></div>' +
         '<div class="hc-scrim gh-hc-scrim"></div>' +
         '<div class="container hc-copy gh-hc-copy">' +
-          (b.eyebrow ? '<p class="gh-script' + rEyebrow + '">' + esc(b.eyebrow) + '</p>' : '') +
-          '<' + titleTag + ' class="gh-hero__title' + rTitle + '">' + formatTitle(b.title, index) + '</' + titleTag + '>' +
-          (b.lead ? '<p class="gh-hero__lead' + rLead + '">' + formatLead(b.lead) + '</p>' : '') +
+          (b.eyebrow
+            ? '<p class="gh-script' + rEyebrow + (colors.eyebrow ? ' hc-has-color hc-has-color--eyebrow' : '') + '">' +
+              esc(b.eyebrow) + '</p>'
+            : '') +
+          '<' + titleTag + ' class="gh-hero__title' + rTitle +
+            (colors.title ? ' hc-has-color hc-has-color--title' : '') + '">' +
+            formatTitle(b.title, index) + '</' + titleTag + '>' +
+          (b.lead
+            ? '<p class="gh-hero__lead' + rLead + (colors.lead ? ' hc-has-color hc-has-color--lead' : '') + '">' +
+              formatLead(b.lead) + '</p>'
+            : '') +
           ((primary || secondary)
             ? '<div class="gh-hero__actions' + rActions + '">' + primary + secondary + '</div>'
             : '') +
@@ -244,8 +280,8 @@
       norm(b.cta_secondary_label),
       norm(b.cta_secondary_href),
       norm(b.align || ''),
-      // Text color override must invalidate SSR skip.
-      slideTextColor(b.tone),
+      // Text color overrides must invalidate SSR skip.
+      slideColorSig(b),
       // Phone crop / desktop swap must invalidate SSR skip.
       norm(b.image_url_mobile || ''),
       assetKey(b.image_url || b.image_webp || ''),
@@ -302,7 +338,12 @@
         norm(secondary && secondary.textContent),
         norm(secondaryHref(secondary)),
         norm(slide.getAttribute('data-align') || ''),
-        norm((slide.style.getPropertyValue('--hc-text') || '').toLowerCase()),
+        [
+          norm((slide.style.getPropertyValue('--hc-eyebrow') || '').toLowerCase()),
+          norm((slide.style.getPropertyValue('--hc-title') ||
+            slide.style.getPropertyValue('--hc-text') || '').toLowerCase()),
+          norm((slide.style.getPropertyValue('--hc-lead') || '').toLowerCase()),
+        ].join(','),
         norm(mobileCustom),
         assetKey(imgSrc || firstSrcToken(mobileRaw)),
       ].join('|'));

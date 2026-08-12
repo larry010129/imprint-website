@@ -60,21 +60,17 @@ def require_database_url() -> str:
         )
     host = (parsed.hostname or "").lower()
     if "neon.tech" in host:
-        # Temporary: allow boot on legacy Neon URI until DATABASE_URL is
-        # switched to Supabase. Prefer fixing .env over keeping this path.
-        log.warning(
-            "DATABASE_URL points at Neon (neon.tech). This app targets "
-            "Supabase Postgres only. Paste a Session pooler or Direct URI "
-            "into .env DATABASE_URL, then restart. Project erobemoojyptyxvnyvuf "
-            "(ap-northeast-1):\n"
-            "  Session: postgresql://postgres.erobemoojyptyxvnyvuf:"
-            "[PASSWORD]@aws-0-ap-northeast-1.pooler.supabase.com:5432/postgres\n"
-            "  Direct:  postgresql://postgres:[PASSWORD]@"
-            "db.erobemoojyptyxvnyvuf.supabase.co:5432/postgres\n"
+        # Neon is a different database than production Supabase CMS rows.
+        # Allowing it made localhost show stale seed content while prod
+        # showed admin edits. Force the same Supabase project (or replica).
+        raise RuntimeError(
+            "DATABASE_URL points at Neon (neon.tech). This app uses "
+            "Supabase Postgres only for live CMS (stories/testimonials). "
+            "Paste the same Session pooler or Direct URI as production into "
+            ".env DATABASE_URL, then restart. "
             "Dashboard → Project Settings → Database → Connection string "
             "(Session, port 5432). See .env.example and docs/SUPABASE.md."
         )
-        return dsn
     if not _is_supabase_postgres_host(host):
         raise RuntimeError(
             f"DATABASE_URL host {host!r} is not Supabase Postgres. "

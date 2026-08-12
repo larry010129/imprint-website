@@ -6,8 +6,8 @@
 {% endblock %}
 {% block extra_css %}
 <style>{{ inline_css('home-ghibli-critical.css') | safe }}</style>
-<link rel="stylesheet" href="/static/css/home-ghibli.css?v=62" media="print" onload="this.media='all'">
-    <noscript><link rel="stylesheet" href="/static/css/home-ghibli.css?v=62"></noscript>
+<link rel="stylesheet" href="/static/css/home-ghibli.css?v=63" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="/static/css/home-ghibli.css?v=63"></noscript>
 {% endblock %}
 {% block extra_head %}
 <style>
@@ -1145,7 +1145,7 @@
   }
   /* Banner CMS (phone 9:16 crop) must load ASAP — delayed inject left phones on
      PC landscape SSR for 10s+. Wall stays below-fold / PSI-deferred. */
-  inject('/static/js/home-banners.js?v=12');
+  inject('/static/js/home-banners.js?v=13');
   var HOME_WALL_MS = 10000;
   function loadHomeWall() {
     if (window.__homeWallInjected) return;

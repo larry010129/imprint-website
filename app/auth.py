@@ -444,18 +444,28 @@ def clear_session_cookie(response: Response, request: Request | None = None) -> 
 
 
 def get_user_id(request: Request) -> str | None:
+    if getattr(request.state, "_user_id_resolved", False):
+        return getattr(request.state, "user_id", None)
     token = request.cookies.get(COOKIE_NAME)
     if not token:
+        request.state._user_id_resolved = True
+        request.state.user_id = None
         return None
     decoded = verify_session_token(token)
     if not decoded:
+        request.state._user_id_resolved = True
+        request.state.user_id = None
         return None
     user_id, token_version = decoded
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute("select token_version, is_active from users where id = %s", (user_id,))
         row = cur.fetchone()
     if not row or row["token_version"] != token_version or not row["is_active"]:
+        request.state._user_id_resolved = True
+        request.state.user_id = None
         return None
+    request.state._user_id_resolved = True
+    request.state.user_id = user_id
     return user_id
 
 
@@ -480,11 +490,20 @@ def require_admin(request: Request) -> str:
     """Signed-in staff admin. TOTP is optional (setup/disable remain available)."""
     from fastapi import HTTPException
 
+    cached = getattr(request.state, "admin_user_id", None)
+    if cached:
+        return cached
+
     user_id = get_user_id(request)
     if not user_id:
         raise HTTPException(status_code=401, detail="not signed in")
-    if not is_admin(user_id):
+    admin_flag = getattr(request.state, "is_admin", None)
+    if admin_flag is None:
+        admin_flag = is_admin(user_id)
+        request.state.is_admin = admin_flag
+    if not admin_flag:
         raise HTTPException(status_code=403, detail="admin access required")
+    request.state.admin_user_id = user_id
     return user_id
 
 

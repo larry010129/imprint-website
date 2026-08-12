@@ -21,9 +21,20 @@ def _helpers():
 
 
 def _invalidate_public_cache() -> None:
+    from app.content_cache import clear_content_api_caches
     from app.controllers.web_controller import clear_site_cms_cache
 
     clear_site_cms_cache()
+    clear_content_api_caches()
+
+
+def _invalidate_page_image_cache() -> None:
+    """Needed whenever page_images rows move or vanish, not just on image edits."""
+    from app.content_cache import clear_content_api_caches
+    from app.controllers.web_controller import clear_page_image_cache
+
+    clear_page_image_cache()
+    clear_content_api_caches()
 
 
 def create_page(cur, fields: dict) -> dict:
@@ -72,6 +83,7 @@ def update_page(cur, page_id: str, fields: dict) -> dict | None:
         move_section_image_page_key(
             cur, page_key_for_cms_page(existing), page_key_for_cms_page(page)
         )
+        _invalidate_page_image_cache()
     _invalidate_public_cache()
     return page
 
@@ -91,6 +103,7 @@ def delete_page(cur, page_id: str) -> bool:
             "delete from page_images where page_key = %s and group_key = 'cms-section'",
             (page_key,),
         )
+        _invalidate_page_image_cache()
         _invalidate_public_cache()
     return deleted
 

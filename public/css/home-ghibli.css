@@ -146,18 +146,23 @@
     rgba(10,10,10,.06) 100%
   ) !important;
 }
-/* Custom banner text color (admin 文字顏色) — --hc-text set inline on .hc-slide */
-.hc-slide--custom-text .gh-hc-copy{ color:var(--hc-text); }
-.hc-slide--custom-text .gh-hero__title{ color:var(--hc-text); }
-.hc-slide--custom-text .gh-hero__title em{ color:var(--hc-text); -webkit-text-fill-color:var(--hc-text); }
-.hc-slide--custom-text .gh-hero__lead{ color:var(--hc-text); }
-.hc-slide--custom-text .gh-script{
+/* Custom banner text colors (admin 眉題/標題/說明顏色) — vars set inline on .hc-slide */
+.hc-slide--custom-text .gh-script.hc-has-color--eyebrow{
   background:none;
-  color:var(--hc-text); -webkit-text-fill-color:var(--hc-text);
+  color:var(--hc-eyebrow); -webkit-text-fill-color:var(--hc-eyebrow);
 }
-.hc-slide--custom-text .gh-hc-copy .gh-dna{
+.hc-slide--custom-text .gh-hero__title.hc-has-color--title{
+  color:var(--hc-title);
+}
+.hc-slide--custom-text .gh-hero__title.hc-has-color--title em{
+  color:var(--hc-title); -webkit-text-fill-color:var(--hc-title);
+}
+.hc-slide--custom-text .gh-hero__lead.hc-has-color--lead{
+  color:var(--hc-lead);
+}
+.hc-slide--custom-text .gh-hero__lead.hc-has-color--lead .gh-dna{
   background:none;
-  color:var(--hc-text); -webkit-text-fill-color:var(--hc-text);
+  color:var(--hc-lead); -webkit-text-fill-color:var(--hc-lead);
 }
 
 .hc-slide[data-align="right"] .gh-hc-scrim{ transform:scaleX(-1); }

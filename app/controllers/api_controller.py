@@ -26,6 +26,7 @@ from app.gold_scrape_job import (
 )
 from app.catalog import (
     build_catalog_product,
+    build_catalog_product_lite,
     build_catalog_response,
     count_catalog_rows,
     fetch_catalog_rows,
@@ -394,6 +395,31 @@ def catalog(
             )
         if cat in (None, "diamond"):
             diamond_tombstones = list_tombstoned_style_keys(cur)
+        diamond_overlay: list[dict] | None = None
+        if cat is None:
+            # Unscoped boot pages jewelry only — diamond rows are usually not in
+            # the page, so the memorial merge would fall back to static matrix
+            # images and ignore admin uploads. Fetch the (small) diamond set
+            # explicitly so DB overlays always reach the merge.
+            diamond_rows = fetch_catalog_rows(
+                cur, category="diamond", include_drafts=include_drafts
+            )
+            d_variants, d_images = load_product_children(
+                cur, [row["id"] for row in diamond_rows]
+            )
+            diamond_builder = (
+                build_catalog_product
+                if detail_mode == "full"
+                else build_catalog_product_lite
+            )
+            diamond_overlay = [
+                diamond_builder(
+                    row,
+                    d_variants.get(row["id"], []),
+                    d_images.get(row["id"], []),
+                )
+                for row in diamond_rows
+            ]
     payload = build_catalog_response(
         products,
         variants_by_product,
@@ -414,7 +440,7 @@ def catalog(
     # Always expose memorial diamond styles; DB overlays name/image/color.
     if cat in (None, "diamond"):
         merged_diamond = merge_memorial_diamond_catalog(
-            categories.get("diamond") or [],
+            diamond_overlay if cat is None else (categories.get("diamond") or []),
             excluded_style_keys=diamond_tombstones,
         )
         if cat == "diamond":
@@ -488,20 +514,30 @@ def public_testimonials() -> dict:
         count_published_testimonials,
         fetch_published_testimonials,
     )
+    from app.content_cache import (
+        get_public_content_api_cache,
+        set_public_content_api_cache,
+    )
     from app.paging import page_response
+
+    cached = get_public_content_api_cache("testimonials")
+    if cached is not None:
+        return cached
 
     with get_connection() as conn, conn.cursor() as cur:
         items = fetch_published_testimonials(
             cur, limit=TESTIMONIALS_PUBLIC_CAP, offset=0
         )
         total = count_published_testimonials(cur)
-    return page_response(
+    payload = page_response(
         items,
         page=1,
         page_size=TESTIMONIALS_PUBLIC_CAP,
         total=total,
         items_key="testimonials",
     )
+    set_public_content_api_cache("testimonials", payload)
+    return payload
 
 
 @router.get("/journal/posts")
@@ -581,9 +617,19 @@ def public_faq() -> dict:
 @router.get("/banners")
 def public_banners() -> dict:
     from app.content import fetch_published_banners
+    from app.content_cache import (
+        get_public_content_api_cache,
+        set_public_content_api_cache,
+    )
+
+    cached = get_public_content_api_cache("banners")
+    if cached is not None:
+        return cached
 
     with get_connection() as conn, conn.cursor() as cur:
-        return {"banners": fetch_published_banners(cur)}
+        payload = {"banners": fetch_published_banners(cur)}
+    set_public_content_api_cache("banners", payload)
+    return payload
 
 
 # ── pricing overrides (public read for the configurator, admin write) ───────

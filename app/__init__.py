@@ -68,7 +68,7 @@ HTML_PERMISSIONS_POLICY = (
 
 
 def _startup_banner() -> None:
-    from app.database import database_target_label, require_database_url
+    from app.database import database_target_label, get_connection, require_database_url
 
     api = settings.public_base_url
     label = "Diamond v3 on Render" if settings.is_render else "Diamond v3 local dev"
@@ -78,6 +78,19 @@ def _startup_banner() -> None:
     print(f"  DB: {database_target_label(dsn)}")
     print(f"  Site (Jinja SSR): {api}/")
     print(f"  API: {api}/api/bot-gold")
+    try:
+        from app.content import summarize_testimonial_image_urls
+
+        with get_connection() as conn, conn.cursor() as cur:
+            cur.execute("select image_url from testimonials")
+            stats = summarize_testimonial_image_urls(cur.fetchall() or [])
+        print(
+            "  Testimonials: "
+            f"total={stats['total']} supabase={stats['supabase']} "
+            f"static={stats['static']} empty={stats['empty']} other={stats['other']}"
+        )
+    except Exception:
+        print("  Testimonials: (count unavailable)")
     if not settings.is_render:
         print("  Browse http://127.0.0.1:8080/ — Next not required")
     print("")
@@ -130,6 +143,7 @@ async def lifespan(_app: FastAPI):
     from app.content import (
         ensure_banner_align_column,
         ensure_banner_mobile_column,
+        ensure_banner_text_color_columns,
         ensure_journal_posts_schema,
         ensure_page_images_schema,
         ensure_testimonial_country_column,
@@ -194,7 +208,13 @@ async def lifespan(_app: FastAPI):
             ensure_journal_posts_schema(cur)
             ensure_banner_mobile_column(cur)
             ensure_banner_align_column(cur)
+            ensure_banner_text_color_columns(cur)
             ensure_testimonial_country_column(cur)
+            from app.content import remap_legacy_testimonial_categories
+
+            remapped = remap_legacy_testimonial_categories(cur)
+            if remapped:
+                log.info("startup: remapped %s legacy testimonial categories", remapped)
             ensure_cms_pages_schema(cur)
             ensure_page_copy_slots_schema(cur)
             ensure_cms_media_schema(cur)
@@ -233,31 +253,14 @@ async def lifespan(_app: FastAPI):
         )
 
     from app.gold_scrape_job import gold_scrape_loop
-    from app.featured_video import ensure_featured_video_fresh
 
     gold_task = asyncio.create_task(gold_scrape_loop(), name="imprint-gold-scrape")
-
-    async def featured_video_refresh_loop() -> None:
-        while True:
-            await asyncio.sleep(60)
-            try:
-                await asyncio.to_thread(ensure_featured_video_fresh)
-            except Exception:
-                log.exception("featured video refresh failed")
-            await asyncio.sleep(20 * 60)
-
-    featured_video_task = asyncio.create_task(
-        featured_video_refresh_loop(), name="imprint-featured-video-refresh"
-    )
+    # Featured-video channel sync is button-only (admin POST /featured-video/sync).
+    # No background timer / lifespan refresh for the gallery.
 
     try:
         yield
     finally:
-        featured_video_task.cancel()
-        try:
-            await featured_video_task
-        except asyncio.CancelledError:
-            pass
         gold_task.cancel()
         try:
             await gold_task

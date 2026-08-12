@@ -12,6 +12,7 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button-1";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
+import { bustImageUrl } from "@/lib/image-cache-bust";
 
 export type ContentTab = "banners" | "testimonials" | "faq" | "page-images";
 
@@ -22,6 +23,7 @@ export type ContentBannerRow = {
   sort_order: number;
   is_published: boolean;
   image_url?: string;
+  updated_at?: string;
 };
 
 export type ContentTestimonialRow = {
@@ -33,6 +35,7 @@ export type ContentTestimonialRow = {
   sort_order: number;
   is_published: boolean;
   image_url?: string;
+  updated_at?: string;
 };
 
 export type ContentFaqRow = {
@@ -55,6 +58,8 @@ export type ContentPageImageRow = {
   is_published: boolean;
   image_url?: string;
   display_url?: string;
+  default_image_url?: string;
+  updated_at?: string;
 };
 
 export type AdminContentTablesProps = {
@@ -258,7 +263,7 @@ export default function AdminContentTables({
         cell: ({ row }) =>
           row.original.image_url ? (
             <img
-              src={row.original.image_url}
+              src={bustImageUrl(row.original.image_url, row.original.updated_at)}
               alt=""
               className="h-9 w-14 rounded object-cover"
               width={56}
@@ -327,7 +332,7 @@ export default function AdminContentTables({
         cell: ({ row }) =>
           row.original.image_url ? (
             <img
-              src={row.original.image_url}
+              src={bustImageUrl(row.original.image_url, row.original.updated_at)}
               alt=""
               className="h-9 w-14 rounded object-cover"
               width={56}
@@ -525,7 +530,14 @@ export default function AdminContentTables({
         header: "圖",
         size: 72,
         cell: ({ row }) => {
-          const src = row.original.display_url || row.original.image_url;
+          // display_url is the visitor view — the server swaps in the default for
+          // unpublished slots, which would hide a just-replaced custom image here.
+          const src = bustImageUrl(
+            row.original.image_url ||
+              row.original.display_url ||
+              row.original.default_image_url,
+            row.original.updated_at,
+          );
           return src ? (
             <img
               src={src}

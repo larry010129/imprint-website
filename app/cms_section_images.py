@@ -37,6 +37,7 @@ def upsert_section_page_image(
     image_webp: str | None = None,
 ) -> dict | None:
     from app.content import ensure_page_images_schema, serialize_page_image
+    from app.image_urls import strip_cache_buster
 
     if section_type not in SECTION_IMAGE_TYPES:
         return None
@@ -46,7 +47,8 @@ def upsert_section_page_image(
     slot_key = section_page_image_slot_key(section_id)
     if not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,63}", slot_key):
         raise ValueError("invalid slot_key")
-    url = str(image_url or "").strip()
+    # Editors may echo back a ?v= display URL; storage keys must stay clean.
+    url = strip_cache_buster(image_url)
     alt = str(image_alt or "").strip()
     ensure_page_images_schema(cur)
     if not url:
@@ -56,7 +58,7 @@ def upsert_section_page_image(
     label = SECTION_IMAGE_LABELS.get(section_type, "CMS 區塊")
     target_w, target_h = SECTION_IMAGE_TARGETS.get(section_type, (1200, 900))
     webp = (
-        str(image_webp).strip()
+        strip_cache_buster(image_webp)
         if image_webp is not None
         else (url if url.lower().endswith(".webp") else None)
     )

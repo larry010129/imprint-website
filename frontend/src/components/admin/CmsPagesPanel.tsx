@@ -7,6 +7,8 @@ import ExistingSitePageEditor, {
 import { ToastProvider, useToast } from "@/components/ui/toast-1";
 
 export type CmsPagesPanelProps = {
+  /** Prefer bootstrap/site_pages constants — never unpaged listCmsPages walk. */
+  initialSitePages?: SitePage[];
   api: ExistingSitePageEditorProps["api"] & {
     listPages: () => Promise<{
       site_pages?: SitePage[];
@@ -15,19 +17,23 @@ export type CmsPagesPanelProps = {
   };
 };
 
-function CmsPagesPanelInner({ api }: CmsPagesPanelProps) {
+function CmsPagesPanelInner({ api, initialSitePages }: CmsPagesPanelProps) {
   const { showToast } = useToast();
-  const [sitePages, setSitePages] = useState<SitePage[]>([]);
+  const [sitePages, setSitePages] = useState<SitePage[]>(() => initialSitePages || []);
   const [editingSiteRoute, setEditingSiteRoute] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
+    if (initialSitePages && initialSitePages.length) {
+      setSitePages(initialSitePages);
+      return;
+    }
     const res = await api.listPages();
     if (res.error) {
       showToast(String(res.error), "error", "top-right");
       return;
     }
     setSitePages(res.site_pages || []);
-  }, [api, showToast]);
+  }, [api, initialSitePages, showToast]);
 
   useEffect(() => {
     void reload();

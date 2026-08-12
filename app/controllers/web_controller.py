@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from copy import deepcopy
 from functools import lru_cache
 from pathlib import Path
@@ -20,6 +21,7 @@ from config.routes import ALL_PAGES, PAGE_404, STANDALONE_PAGES, STANDALONE_SHAR
 from config.settings import settings
 from app.youtube_channel import fetch_latest_channel_video, resolve_channel_id
 
+log = logging.getLogger(__name__)
 templates = Jinja2Templates(directory=str(settings.templates_dir))
 templates.env.globals["google_client_id"] = settings.google_client_id
 templates.env.globals["recaptcha_site_key"] = settings.recaptcha_site_key
@@ -83,7 +85,7 @@ def _strip_public_phone_metadata(block: str) -> str:
 
 
 def load_featured_video(request: Request | None = None) -> dict | None:
-    """Return the local featured-video snapshot without network work in SSR."""
+    """Return featured-video gallery for SSR (cms_kv / legacy file; no network)."""
     from app.featured_video import public_featured_payload, read_featured_video_file
 
     return public_featured_payload(read_featured_video_file())
@@ -157,6 +159,9 @@ def _load_page_image(route: str, rows: list[dict] | None = None) -> dict | None:
 
 def clear_page_image_cache() -> None:
     _fetch_page_images_cached.cache_clear()
+    from app.content_cache import clear_content_api_caches
+
+    clear_content_api_caches()
 
 
 @lru_cache(maxsize=512)
@@ -193,18 +198,17 @@ def _load_engagement_rings() -> list[dict]:
 
 
 def _load_faq_public() -> dict:
-    """Published FAQ categories for /faq (DB first, seed fallback)."""
-    from app.content import faq_public_from_seed, fetch_faq_public
+    """Published FAQ categories for /faq (Supabase only; empty on miss/error)."""
+    from app.content import fetch_faq_public
     from app.database import get_connection
 
+    empty: dict = {"categories": [], "teaser": [], "items": []}
     try:
         with get_connection() as conn, conn.cursor() as cur:
-            data = fetch_faq_public(cur)
-        if data.get("categories"):
-            return data
+            return fetch_faq_public(cur)
     except Exception:
-        pass
-    return faq_public_from_seed()
+        log.exception("FAQ SSR: Supabase fetch failed")
+        return empty
 
 
 def _faq_page_json_ld(faq_public: dict) -> str:
@@ -241,7 +245,7 @@ JOURNAL_SSR_LIMIT = 12
 
 
 def _load_stories_ssr(limit: int = STORIES_SSR_LIMIT) -> list[dict]:
-    """First N published testimonials for SSR on /stories."""
+    """First N published testimonials for SSR on /stories (Supabase only)."""
     from app.content import fetch_published_testimonials
     from app.database import get_connection
 
@@ -249,6 +253,7 @@ def _load_stories_ssr(limit: int = STORIES_SSR_LIMIT) -> list[dict]:
         with get_connection() as conn, conn.cursor() as cur:
             return fetch_published_testimonials(cur, limit=limit, offset=0)
     except Exception:
+        log.exception("stories SSR: Supabase fetch failed")
         return []
 
 
@@ -357,6 +362,9 @@ def _load_site_cms_bundle(route: str, *, visible_only: bool) -> dict:
 def clear_site_cms_cache() -> None:
     _fetch_site_cms_bundle_cached.cache_clear()
     _fetch_public_cms_page_cached.cache_clear()
+    from app.content_cache import clear_content_api_caches
+
+    clear_content_api_caches()
 
 
 def _fetch_public_cms_page(slug: str, *, visible_only: bool) -> dict | None:

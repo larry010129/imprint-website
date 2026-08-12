@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { TestimonialsRow } from "@/components/ui/testimonials-row";
-import { TESTIMONIALS, type Testimonial } from "@/data/testimonials";
+import { type Testimonial } from "@/data/testimonials";
 import { fetchTestimonialsApi } from "@/lib/content-api";
 
 function excerpt(text: string, max = 88) {
@@ -17,9 +17,9 @@ function toWallItems(list: Array<Pick<Testimonial, "name" | "role" | "text" | "i
   }));
 }
 
-/** Two horizontal rows scrolling L/R — home + stories. */
+/** Two horizontal rows scrolling L/R — `/api/testimonials` only (no local seed). */
 export default function TestimonialsWall() {
-  const [items, setItems] = useState(TESTIMONIALS);
+  const [items, setItems] = useState<Testimonial[]>([]);
 
   useEffect(() => {
     let cancelled = false;

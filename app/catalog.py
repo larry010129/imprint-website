@@ -63,6 +63,7 @@ from app.image_urls import (
     is_uuid,
     resolve_product_image_url,
     static_url_exists,
+    with_cache_buster,
 )
 from app.memorial_diamonds import DIAMOND_CARATS, normalize_style_key
 from app.pricing_overrides import canonical_carat
@@ -211,6 +212,9 @@ def _usable_images_by_color(
         url = resolve_product_image_url(raw)
         if url:
             url = prefer_category_scoped_product_url(url, category) or url
+            # A replacement may reuse the same Storage URL; expose the row
+            # timestamp so browsers/CDNs fetch the new object bytes.
+            url = with_cache_buster(url, image.get("updated_at"))
         if (
             url
             and _is_raster_url(url)

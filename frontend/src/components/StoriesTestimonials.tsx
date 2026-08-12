@@ -3,7 +3,7 @@ import {
   ImageTestimonialCard,
   MasonryGrid,
 } from "@/components/ui/image-testimonial-grid";
-import { TESTIMONIALS, type Testimonial } from "@/data/testimonials";
+import { type Testimonial } from "@/data/testimonials";
 import { fetchTestimonialsApi } from "@/lib/content-api";
 
 const LINE_URL = "https://lin.ee/ktVBtmx";
@@ -15,8 +15,9 @@ function columnsForWidth(width: number) {
   return 4;
 }
 
+/** Public stories grid — `/api/testimonials` (Supabase) only; no local seed. */
 export default function StoriesTestimonials() {
-  const [items, setItems] = useState<Testimonial[]>(TESTIMONIALS);
+  const [items, setItems] = useState<Testimonial[]>([]);
   const [columns, setColumns] = useState(3);
 
   useEffect(() => {

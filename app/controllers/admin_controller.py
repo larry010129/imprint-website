@@ -43,6 +43,7 @@ from app.admin_products import (
     resolve_product_folder,
     restore_product_image,
     save_product_children,
+    serialize_product_image,
     serialize_product_row,
     valid_image_color,
     validate_product_fields,
@@ -608,11 +609,14 @@ def _storage_upload(kind: str, name: str, data: bytes, ext: str) -> tuple[str | 
 
 
 def _product_upload_basename(filename: str | None) -> str:
-    """Keep client basename (path-safe); ensure_webp forces .webp stem later."""
+    """Keep client basename (path-safe) plus a unique suffix so a same-filename
+    replace lands on a new Storage key/URL (CDN cache-bust, previous-stack
+    advances); ensure_webp forces .webp stem later."""
     name = Path(filename or "").name.strip()
     if not name or name in {".", ".."}:
-        return "image.webp"
-    return name
+        name = "image.webp"
+    stem = Path(name).stem or "image"
+    return f"{stem}-{uuid.uuid4().hex[:8]}{Path(name).suffix}"
 
 
 def _serialize_admin_image_row(image_row: dict | None) -> dict | None:
@@ -734,6 +738,8 @@ async def product_image_action(request: Request) -> JSONResponse:
         return JSONResponse(status_code=400, content={"error": "未知操作"})
     with get_transaction() as conn, conn.cursor() as cur:
         image_row, error = restore_product_image(cur, image_id)
+    if not error:
+        clear_public_catalog_cache()
     if error:
         status = 404 if error == "找不到圖片" else 400
         return JSONResponse(status_code=status, content={"error": error})
@@ -988,15 +994,10 @@ def _products_with_children(
         ]
         # Never surface invented shop-product letter SKUs in admin editor.
         product["images"] = [
-            image
+            serialize_product_image(image)
             for image in images_by_product.get(pid, [])
             if not is_auto_stock_product_image(image.get("file_path"))
         ]
-        for image in product["images"]:
-            if image.get("id") is not None:
-                image["id"] = str(image["id"])
-            if image.get("product_id") is not None:
-                image["product_id"] = str(image["product_id"])
         products.append(product)
     return products
 
@@ -1010,15 +1011,10 @@ def _product_with_children(cur, product: dict) -> dict:
         for v in variants_by_product.get(pid, [])
     ]
     product["images"] = [
-        image
+        serialize_product_image(image)
         for image in images_by_product.get(pid, [])
         if not is_auto_stock_product_image(image.get("file_path"))
     ]
-    for image in product["images"]:
-        if image.get("id") is not None:
-            image["id"] = str(image["id"])
-        if image.get("product_id") is not None:
-            image["product_id"] = str(image["product_id"])
     return product
 
 
@@ -2151,24 +2147,191 @@ async def coupon_action(request: Request) -> JSONResponse:
 
 # ── Content CMS: testimonials + FAQ ──────────────────────────────────────────
 
+_CONTENT_BOOTSTRAP_TABS = frozenset(
+    {"banners", "testimonials", "journal", "faq", "page-images", "pages"}
+)
+
+
+def _clear_content_mutation_caches() -> None:
+    from app.content_cache import clear_content_api_caches
+
+    clear_content_api_caches()
+
+
+def _clear_testimonial_ssr_cache() -> None:
+    """Host pages with a testimonials_embed section cache the wall for ~30s."""
+    from app.controllers.web_controller import clear_site_cms_cache
+
+    clear_site_cms_cache()
+    _clear_content_mutation_caches()
+
+
+def _admin_cached_json(
+    request: Request,
+    cache_key: tuple,
+    builder,
+) -> Response:
+    """Private short TTL + ETag/304 for admin content list/bootstrap GETs."""
+    from app.content_cache import (
+        content_etag,
+        get_admin_content_cache,
+        set_admin_content_cache,
+    )
+
+    payload = get_admin_content_cache(cache_key)
+    if payload is None:
+        payload = builder()
+        set_admin_content_cache(cache_key, payload)
+    etag = content_etag(payload)
+    out = dict(payload)
+    out["etag"] = etag.strip('"')
+    headers = {
+        "ETag": etag,
+        "Cache-Control": "private, max-age=0",
+    }
+    if_none = (request.headers.get("if-none-match") or "").strip()
+    if if_none and if_none == etag:
+        return Response(status_code=304, headers=headers)
+    return JSONResponse(content=out, headers=headers)
+
+
+def _build_content_tab_active(
+    cur,
+    tab: str,
+    *,
+    page: int,
+    page_size: int,
+    limit: int,
+    offset: int,
+    page_key: str | None = None,
+) -> dict:
+    from app.content import (
+        count_all_banners,
+        count_all_journal_posts,
+        count_all_page_images,
+        count_all_testimonials,
+        count_faq_items,
+        fetch_all_banners,
+        fetch_all_journal_posts,
+        fetch_all_page_images,
+        fetch_all_testimonials,
+        fetch_faq_admin,
+    )
+
+    if tab == "banners":
+        total = count_all_banners(cur)
+        items = fetch_all_banners(cur, limit=limit, offset=offset, slim=True)
+    elif tab == "testimonials":
+        total = count_all_testimonials(cur)
+        items = fetch_all_testimonials(cur, limit=limit, offset=offset)
+    elif tab == "journal":
+        total = count_all_journal_posts(cur)
+        items = fetch_all_journal_posts(cur, limit=limit, offset=offset)
+    elif tab == "faq":
+        total = count_faq_items(cur)
+        faq = fetch_faq_admin(cur, limit=limit, offset=offset)
+        return {
+            "items": faq.get("items") or [],
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "categories": faq.get("categories") or [],
+        }
+    elif tab == "page-images":
+        total = count_all_page_images(cur, page_key=page_key)
+        items = fetch_all_page_images(
+            cur, limit=limit, offset=offset, page_key=page_key, slim=True
+        )
+    elif tab == "pages":
+        from app.cms_pages import count_all_pages, fetch_all_pages
+
+        total = count_all_pages(cur)
+        items = fetch_all_pages(cur, limit=limit, offset=offset)
+    else:
+        total = 0
+        items = []
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+    }
+
+
+def _build_content_bootstrap(
+    *,
+    tab: str,
+    page: int,
+    page_size: int,
+    limit: int,
+    offset: int,
+    page_key: str | None = None,
+) -> dict:
+    from app.cms_copy_slot_specs import EDITABLE_SITE_PAGES
+    from app.content import fetch_page_image_keys
+
+    with get_connection() as conn, conn.cursor() as cur:
+        active = _build_content_tab_active(
+            cur,
+            tab,
+            page=page,
+            page_size=page_size,
+            limit=limit,
+            offset=offset,
+            page_key=page_key,
+        )
+        keys = fetch_page_image_keys(cur)
+    return {
+        "tab": tab,
+        "active": active,
+        "pageImageKeys": keys,
+        "site_pages": list(EDITABLE_SITE_PAGES),
+    }
+
+
+@router.get("/content-bootstrap")
+async def admin_content_bootstrap(request: Request) -> Response:
+    """One roundtrip for admin Content panel: active tab + page-image keys + site_pages."""
+    _require_admin(request)
+    tab = (request.query_params.get("tab") or "banners").strip().lower()
+    if tab not in _CONTENT_BOOTSTRAP_TABS:
+        return JSONResponse(status_code=400, content={"error": "invalid tab"})
+    page, page_size, limit, offset = parse_paging_from_mapping(
+        request.query_params, default_page_size=10
+    )
+    page_key = (request.query_params.get("page_key") or "").strip() or None
+    cache_key = ("content-bootstrap", tab, page, page_size, page_key or "")
+    return _admin_cached_json(
+        request,
+        cache_key,
+        lambda: _build_content_bootstrap(
+            tab=tab,
+            page=page,
+            page_size=page_size,
+            limit=limit,
+            offset=offset,
+            page_key=page_key,
+        ),
+    )
+
 
 @router.get("/testimonials")
-async def admin_testimonials_list(request: Request) -> dict:
+async def admin_testimonials_list(request: Request) -> Response:
     _require_admin(request)
-    from app.content import (
-        count_all_testimonials,
-        ensure_testimonial_country_column,
-        fetch_all_testimonials,
-    )
+    from app.content import count_all_testimonials, fetch_all_testimonials
 
     page, page_size, limit, offset = parse_paging_from_mapping(request.query_params)
-    with get_connection() as conn, conn.cursor() as cur:
-        ensure_testimonial_country_column(cur)
-        total = count_all_testimonials(cur)
-        rows = fetch_all_testimonials(cur, limit=limit, offset=offset)
-    return page_response(
-        rows, page=page, page_size=page_size, total=total, items_key="testimonials"
-    )
+    cache_key = ("testimonials", page, page_size)
+
+    def build() -> dict:
+        with get_connection() as conn, conn.cursor() as cur:
+            total = count_all_testimonials(cur)
+            rows = fetch_all_testimonials(cur, limit=limit, offset=offset)
+        return page_response(
+            rows, page=page, page_size=page_size, total=total, items_key="testimonials"
+        )
+
+    return _admin_cached_json(request, cache_key, build)
 
 
 @router.post("/testimonials")
@@ -2224,6 +2387,7 @@ async def admin_testimonials_create(request: Request) -> JSONResponse:
             cur.execute("select * from testimonials where id = %s", (row["id"],))
             row = serialize_testimonial(cur.fetchone())
 
+    _clear_testimonial_ssr_cache()
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute("select email from users where id = %s", (user_id,))
         actor = cur.fetchone()
@@ -2309,6 +2473,7 @@ async def admin_testimonials_update(request: Request) -> JSONResponse:
             cur.execute("select * from testimonials where id = %s", (tid,))
             row = serialize_testimonial(cur.fetchone())
 
+    _clear_testimonial_ssr_cache()
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute("select email from users where id = %s", (user_id,))
         actor = cur.fetchone()
@@ -2332,6 +2497,7 @@ async def admin_testimonial_reorder(request: Request) -> JSONResponse:
     with get_transaction() as conn, conn.cursor() as cur:
         if not move_testimonial(cur, str(tid), direction):
             return JSONResponse(status_code=400, content={"error": "無法調整排序"})
+    _clear_testimonial_ssr_cache()
     return JSONResponse(content={"ok": True})
 
 
@@ -2365,6 +2531,7 @@ async def admin_testimonial_action(request: Request) -> JSONResponse:
 
             renormalize_testimonial_sort(cur)
 
+    _clear_testimonial_ssr_cache()
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute("select email from users where id = %s", (user_id,))
         actor = cur.fetchone()
@@ -2380,17 +2547,22 @@ async def admin_testimonial_action(request: Request) -> JSONResponse:
 
 
 @router.get("/journal-posts")
-async def admin_journal_posts_list(request: Request) -> dict:
+async def admin_journal_posts_list(request: Request) -> Response:
     _require_admin(request)
     from app.content import count_all_journal_posts, fetch_all_journal_posts
 
     page, page_size, limit, offset = parse_paging_from_mapping(request.query_params)
-    with get_connection() as conn, conn.cursor() as cur:
-        total = count_all_journal_posts(cur)
-        rows = fetch_all_journal_posts(cur, limit=limit, offset=offset)
-    return page_response(
-        rows, page=page, page_size=page_size, total=total, items_key="posts"
-    )
+    cache_key = ("journal-posts", page, page_size)
+
+    def build() -> dict:
+        with get_connection() as conn, conn.cursor() as cur:
+            total = count_all_journal_posts(cur)
+            rows = fetch_all_journal_posts(cur, limit=limit, offset=offset)
+        return page_response(
+            rows, page=page, page_size=page_size, total=total, items_key="posts"
+        )
+
+    return _admin_cached_json(request, cache_key, build)
 
 
 @router.post("/journal-posts")
@@ -2436,6 +2608,7 @@ async def admin_journal_posts_create(request: Request) -> JSONResponse:
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute("select email from users where id = %s", (user_id,))
         actor = cur.fetchone()
+    _clear_content_mutation_caches()
     log_admin_action(actor["email"] if actor else None, "journal_post_created", {"id": row["id"]})
     return JSONResponse(content={"post": row})
 
@@ -2488,6 +2661,7 @@ async def admin_journal_posts_update(request: Request) -> JSONResponse:
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute("select email from users where id = %s", (user_id,))
         actor = cur.fetchone()
+    _clear_content_mutation_caches()
     log_admin_action(actor["email"] if actor else None, "journal_post_updated", {"id": str(pid)})
     return JSONResponse(content={"post": row})
 
@@ -2521,6 +2695,7 @@ async def admin_journal_post_action(request: Request) -> JSONResponse:
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute("select email from users where id = %s", (user_id,))
         actor = cur.fetchone()
+    _clear_content_mutation_caches()
     log_admin_action(
         actor["email"] if actor else None,
         f"journal_post_{action}",
@@ -2540,18 +2715,23 @@ async def admin_faq_categories(request: Request) -> dict:
 
 
 @router.get("/faq-items")
-async def admin_faq_items_list(request: Request) -> dict:
+async def admin_faq_items_list(request: Request) -> Response:
     _require_admin(request)
     from app.content import count_faq_items, fetch_faq_admin
 
     page, page_size, limit, offset = parse_paging_from_mapping(request.query_params)
-    with get_connection() as conn, conn.cursor() as cur:
-        total = count_faq_items(cur)
-        payload = fetch_faq_admin(cur, limit=limit, offset=offset)
-    payload.update(
-        {"page": page, "page_size": page_size, "pageSize": page_size, "total": total}
-    )
-    return payload
+    cache_key = ("faq-items", page, page_size)
+
+    def build() -> dict:
+        with get_connection() as conn, conn.cursor() as cur:
+            total = count_faq_items(cur)
+            payload = fetch_faq_admin(cur, limit=limit, offset=offset)
+        payload.update(
+            {"page": page, "page_size": page_size, "pageSize": page_size, "total": total}
+        )
+        return payload
+
+    return _admin_cached_json(request, cache_key, build)
 
 
 @router.post("/faq-items")
@@ -2597,6 +2777,7 @@ async def admin_faq_items_create(request: Request) -> JSONResponse:
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute("select email from users where id = %s", (user_id,))
         actor = cur.fetchone()
+    _clear_content_mutation_caches()
     log_admin_action(actor["email"] if actor else None, "faq_created", {"id": item_id})
     return JSONResponse(content={"item": row})
 
@@ -2647,6 +2828,7 @@ async def admin_faq_update(request: Request) -> JSONResponse:
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute("select email from users where id = %s", (user_id,))
         actor = cur.fetchone()
+    _clear_content_mutation_caches()
     log_admin_action(actor["email"] if actor else None, "faq_updated", {"id": item_id})
     return JSONResponse(content={"item": out})
 
@@ -2685,6 +2867,7 @@ async def admin_faq_action(request: Request) -> JSONResponse:
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute("select email from users where id = %s", (user_id,))
         actor = cur.fetchone()
+    _clear_content_mutation_caches()
     log_admin_action(actor["email"] if actor else None, f"faq_{action}", {"id": str(item_id)})
     return JSONResponse(content={"ok": True})
 
@@ -2707,16 +2890,37 @@ def _parse_banner_tone(raw) -> str:
     return "white"
 
 
+def _banner_color_from_body(body: dict, *keys: str, fallback: str) -> str:
+    for key in keys:
+        if key in body and body.get(key) not in (None, ""):
+            return _parse_banner_tone(body.get(key))
+    return _parse_banner_tone(fallback)
+
+
 def _parse_banner_fields(body: dict):
+    from app.image_urls import strip_cache_buster
+
     title = str(body.get("title") or "").strip()
-    image_url = str(body.get("imageUrl") or body.get("image_url") or "").strip()
+    image_url = strip_cache_buster(body.get("imageUrl") or body.get("image_url"))
     if not title or not image_url:
         return None, JSONResponse(status_code=400, content={"error": "請填寫標題與圖片"})
     try:
         sort_order = int(body.get("sortOrder") if body.get("sortOrder") not in (None, "") else 0)
     except (TypeError, ValueError):
         return None, JSONResponse(status_code=400, content={"error": "排序無效"})
-    tone = _parse_banner_tone(body.get("tone"))
+    # Legacy single tone still accepted; new clients send three role colors.
+    tone_fallback = body.get("tone") if body.get("tone") not in (None, "") else "white"
+    eyebrow_color = _banner_color_from_body(
+        body, "eyebrowColor", "eyebrow_color", fallback=tone_fallback
+    )
+    title_color = _banner_color_from_body(
+        body, "titleColor", "title_color", fallback=tone_fallback
+    )
+    lead_color = _banner_color_from_body(
+        body, "leadColor", "lead_color", fallback=tone_fallback
+    )
+    # Keep tone in sync with title for older readers / data-tone attr.
+    tone = title_color
     align = str(body.get("align") or "left").strip() or "left"
     if align not in {"left", "right"}:
         align = "left"
@@ -2726,14 +2930,19 @@ def _parse_banner_fields(body: dict):
         "title": title,
         "lead": str(body.get("lead") or "").strip(),
         "image_url": image_url,
-        "image_url_mobile": str(body.get("imageUrlMobile") or body.get("image_url_mobile") or "").strip(),
-        "image_webp": str(body.get("imageWebp") or body.get("image_webp") or "").strip() or None,
+        "image_url_mobile": strip_cache_buster(
+            body.get("imageUrlMobile") or body.get("image_url_mobile")
+        ),
+        "image_webp": strip_cache_buster(body.get("imageWebp") or body.get("image_webp")) or None,
         "image_alt": str(body.get("imageAlt") or body.get("image_alt") or "").strip(),
         "cta_primary_label": str(body.get("ctaPrimaryLabel") or body.get("cta_primary_label") or "").strip(),
         "cta_primary_href": str(body.get("ctaPrimaryHref") or body.get("cta_primary_href") or "").strip(),
         "cta_secondary_label": str(body.get("ctaSecondaryLabel") or body.get("cta_secondary_label") or "").strip(),
         "cta_secondary_href": str(body.get("ctaSecondaryHref") or body.get("cta_secondary_href") or "").strip(),
         "tone": tone,
+        "eyebrow_color": eyebrow_color,
+        "title_color": title_color,
+        "lead_color": lead_color,
         "align": align,
         "sort_order": sort_order,
         "is_published": is_published,
@@ -2741,17 +2950,22 @@ def _parse_banner_fields(body: dict):
 
 
 @router.get("/banners")
-async def admin_banners_list(request: Request) -> dict:
+async def admin_banners_list(request: Request) -> Response:
     _require_admin(request)
     from app.content import count_all_banners, fetch_all_banners
 
     page, page_size, limit, offset = parse_paging_from_mapping(request.query_params)
-    with get_connection() as conn, conn.cursor() as cur:
-        total = count_all_banners(cur)
-        rows = fetch_all_banners(cur, limit=limit, offset=offset)
-    return page_response(
-        rows, page=page, page_size=page_size, total=total, items_key="banners"
-    )
+    cache_key = ("banners", page, page_size)
+
+    def build() -> dict:
+        with get_connection() as conn, conn.cursor() as cur:
+            total = count_all_banners(cur)
+            rows = fetch_all_banners(cur, limit=limit, offset=offset, slim=True)
+        return page_response(
+            rows, page=page, page_size=page_size, total=total, items_key="banners"
+        )
+
+    return _admin_cached_json(request, cache_key, build)
 
 
 @router.post("/banner-upload")
@@ -2777,20 +2991,23 @@ async def admin_banners_create(request: Request) -> JSONResponse:
     body = await request.json()
     if not isinstance(body, dict):
         body = {}
-    from app.content import serialize_banner
+    from app.content import ensure_banner_text_color_columns, serialize_banner
 
     fields, err = _parse_banner_fields(body)
     if err:
         return err
+
     with get_connection() as conn, conn.cursor() as cur:
+        ensure_banner_text_color_columns(cur)
         cur.execute(
             """
             insert into home_banners (
               eyebrow, title, lead, image_url, image_url_mobile, image_webp, image_alt,
               cta_primary_label, cta_primary_href,
               cta_secondary_label, cta_secondary_href,
-              tone, align, sort_order, is_published
-            ) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+              tone, eyebrow_color, title_color, lead_color,
+              align, sort_order, is_published
+            ) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
             returning *
             """,
             (
@@ -2806,6 +3023,9 @@ async def admin_banners_create(request: Request) -> JSONResponse:
                 fields["cta_secondary_label"],
                 fields["cta_secondary_href"],
                 fields["tone"],
+                fields["eyebrow_color"],
+                fields["title_color"],
+                fields["lead_color"],
                 fields["align"],
                 fields["sort_order"],
                 fields["is_published"],
@@ -2815,6 +3035,7 @@ async def admin_banners_create(request: Request) -> JSONResponse:
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute("select email from users where id = %s", (user_id,))
         actor = cur.fetchone()
+    _clear_content_mutation_caches()
     log_admin_action(actor["email"] if actor else None, "banner_created", {"id": row["id"]})
     return JSONResponse(content={"banner": row})
 
@@ -2825,7 +3046,7 @@ async def admin_banners_update(request: Request) -> JSONResponse:
     body = await request.json()
     if not isinstance(body, dict):
         body = {}
-    from app.content import serialize_banner
+    from app.content import ensure_banner_text_color_columns, serialize_banner
 
     bid = body.get("id")
     if not bid:
@@ -2833,14 +3054,17 @@ async def admin_banners_update(request: Request) -> JSONResponse:
     fields, err = _parse_banner_fields(body)
     if err:
         return err
+
     with get_connection() as conn, conn.cursor() as cur:
+        ensure_banner_text_color_columns(cur)
         cur.execute(
             """
             update home_banners set
               eyebrow = %s, title = %s, lead = %s, image_url = %s, image_url_mobile = %s,
               image_webp = %s, image_alt = %s, cta_primary_label = %s, cta_primary_href = %s,
               cta_secondary_label = %s, cta_secondary_href = %s,
-              tone = %s, align = %s, sort_order = %s, is_published = %s, updated_at = now()
+              tone = %s, eyebrow_color = %s, title_color = %s, lead_color = %s,
+              align = %s, sort_order = %s, is_published = %s, updated_at = now()
             where id = %s
             returning *
             """,
@@ -2857,6 +3081,9 @@ async def admin_banners_update(request: Request) -> JSONResponse:
                 fields["cta_secondary_label"],
                 fields["cta_secondary_href"],
                 fields["tone"],
+                fields["eyebrow_color"],
+                fields["title_color"],
+                fields["lead_color"],
                 fields["align"],
                 fields["sort_order"],
                 fields["is_published"],
@@ -2870,6 +3097,7 @@ async def admin_banners_update(request: Request) -> JSONResponse:
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute("select email from users where id = %s", (user_id,))
         actor = cur.fetchone()
+    _clear_content_mutation_caches()
     log_admin_action(actor["email"] if actor else None, "banner_updated", {"id": str(bid)})
     return JSONResponse(content={"banner": out})
 
@@ -2901,6 +3129,7 @@ async def admin_banner_action(request: Request) -> JSONResponse:
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute("select email from users where id = %s", (user_id,))
         actor = cur.fetchone()
+    _clear_content_mutation_caches()
     log_admin_action(actor["email"] if actor else None, f"banner_{action}", {"id": str(bid)})
     return JSONResponse(content={"ok": True})
 
@@ -2909,25 +3138,25 @@ async def admin_banner_action(request: Request) -> JSONResponse:
 
 
 @router.get("/page-images")
-async def admin_page_images_list(request: Request) -> dict:
+async def admin_page_images_list(request: Request) -> Response:
     _require_admin(request)
-    from app.content import (
-        count_all_page_images,
-        ensure_page_images_schema,
-        fetch_all_page_images,
-    )
+    from app.content import count_all_page_images, fetch_all_page_images
 
     page, page_size, limit, offset = parse_paging_from_mapping(request.query_params)
     page_key = (request.query_params.get("page_key") or "").strip() or None
-    with get_connection() as conn, conn.cursor() as cur:
-        ensure_page_images_schema(cur)
-        total = count_all_page_images(cur, page_key=page_key)
-        rows = fetch_all_page_images(
-            cur, limit=limit, offset=offset, page_key=page_key
+    cache_key = ("page-images", page, page_size, page_key or "")
+
+    def build() -> dict:
+        with get_connection() as conn, conn.cursor() as cur:
+            total = count_all_page_images(cur, page_key=page_key)
+            rows = fetch_all_page_images(
+                cur, limit=limit, offset=offset, page_key=page_key, slim=True
+            )
+        return page_response(
+            rows, page=page, page_size=page_size, total=total, items_key="pageImages"
         )
-    return page_response(
-        rows, page=page, page_size=page_size, total=total, items_key="pageImages"
-    )
+
+    return _admin_cached_json(request, cache_key, build)
 
 
 @router.get("/page-image-create-options")
@@ -2969,6 +3198,7 @@ async def admin_page_image_create(request: Request) -> JSONResponse:
     from app.controllers.web_controller import clear_page_image_cache
 
     clear_page_image_cache()
+    _clear_content_mutation_caches()
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute("select email from users where id = %s", (user_id,))
         actor = cur.fetchone()
@@ -3076,6 +3306,7 @@ async def admin_page_image_update(request: Request) -> JSONResponse:
 
     clear_page_image_cache()
     clear_site_cms_cache()
+    _clear_content_mutation_caches()
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute("select email from users where id = %s", (user_id,))
         actor = cur.fetchone()
@@ -3201,6 +3432,7 @@ async def admin_page_image_action(request: Request) -> JSONResponse:
 
     clear_page_image_cache()
     clear_site_cms_cache()
+    _clear_content_mutation_caches()
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute("select email from users where id = %s", (user_id,))
         actor = cur.fetchone()

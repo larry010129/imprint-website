@@ -102,6 +102,35 @@
     return imageUrl ? resolve(imageUrl) : categoryFallback(category);
   }
 
+  // Cache-busting for admin thumbs. The token comes from the row's updated_at so
+  // it is identical between renders and the thumb stays cacheable until the row
+  // really changes. Tables without updated_at (product_images) get no token until
+  // a caller reports a save — busting those every page load would turn every
+  // thumb into a cache miss.
+  var _saveEpoch = 0;
+
+  function bumpEpoch() {
+    _saveEpoch = Date.now();
+    return _saveEpoch;
+  }
+
+  function versionToken(updatedAt) {
+    var raw = updatedAt == null ? '' : String(updatedAt).trim();
+    if (!raw) return _saveEpoch ? String(_saveEpoch) : '';
+    var ms = Date.parse(raw);
+    return isNaN(ms) ? encodeURIComponent(raw) : String(ms);
+  }
+
+  function bust(url, updatedAt) {
+    var src = String(url || '').trim();
+    if (!src) return '';
+    if (/^(data|blob):/i.test(src)) return src;
+    if (/[?&]v=/.test(src)) return src;
+    var token = versionToken(updatedAt);
+    if (!token) return src;
+    return src + (src.indexOf('?') >= 0 ? '&' : '?') + 'v=' + token;
+  }
+
   global.AdminImageUrls = {
     resolve: resolve,
     orderFallback: orderFallback,
@@ -109,5 +138,8 @@
     productPhoto: productPhoto,
     productThumbnail: productThumbnail,
     orderPhoto: orderPhoto,
+    bust: bust,
+    versionToken: versionToken,
+    bumpEpoch: bumpEpoch,
   };
 })(window);

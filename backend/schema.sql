@@ -154,7 +154,8 @@ create table if not exists product_images (
   color text not null,
   file_path text not null,
   sort_order int not null default 0,
-  previous_file_path text -- one-deep replace/restore temp; null when none
+  previous_file_path text, -- one-deep replace/restore temp; null when none
+  updated_at timestamptz not null default now() -- cache-bust (?v=); migration 20260812140000
 );
 
 -- ── orders (core header + workflow) ──
@@ -384,6 +385,13 @@ create index if not exists testimonials_published_sort_idx
 create index if not exists faq_items_category_idx on faq_items (category_id);
 create index if not exists faq_items_published_idx on faq_items (is_published, sort_order);
 
+-- ── CMS key/value store (shared admin payloads across environments) ──
+create table if not exists cms_kv (
+  key text primary key,
+  value jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
 -- ── home hero banners ──
 create table if not exists home_banners (
   id uuid primary key default gen_random_uuid(),
@@ -398,6 +406,9 @@ create table if not exists home_banners (
   cta_secondary_label text not null default '',
   cta_secondary_href text not null default '',
   tone text not null default 'warm',
+  eyebrow_color text not null default 'white',
+  title_color text not null default 'white',
+  lead_color text not null default 'white',
   sort_order int not null default 0,
   is_published boolean not null default true,
   created_at timestamptz not null default now(),

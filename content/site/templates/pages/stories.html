@@ -1,6 +1,6 @@
 {% extends "layouts/base.html" %}
 {% block resource_hints %}
-{# Preconnect only when surviving SSR cards still resolve to Supabase (uuid uploads; seeded images normalize to local WebP). #}
+{# Preconnect when SSR cards use Supabase Storage image_url (kept absolute; not remapped to /static). #}
 {% set _ns = namespace(supa_origin='') %}
 {% for t in stories_ssr or [] %}
   {% set _u = (t.image_url or '') %}

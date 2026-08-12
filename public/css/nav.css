@@ -33,7 +33,7 @@
   display:none;
 }
 
-@media (min-width: 901px){
+@media (min-width: 1281px){
   .nav-inner > nav.site-nav-desktop.nav-menu-col{ flex-shrink:1; min-width:0; }
 }
 
@@ -41,10 +41,10 @@
 
 /* Desktop: isolated columns — logo | menu | CTAs never share the same space */
 
-@media (min-width: 901px){
+@media (min-width: 1281px){
 
   [data-site-nav-root] .site-nav-desktop{
-    display:flex;
+    display:flex !important;
     justify-content:center;
     align-items:center;
     width:100%;
@@ -338,37 +338,13 @@
 
 /* Progressive CTA reveal — phone is already in the topbar */
 
-@media (min-width: 901px) and (max-width: 1399px){
+@media (min-width: 1281px) and (max-width: 1399px){
 
   .nav-cta .btn-line,
 
   .nav-cta .btn-contact{ display:none; }
 
 }
-
-@media (min-width: 901px) and (max-width: 1199px){
-
-  .nav-cta .btn-dark{ display:none; }
-
-  .site-nav-desktop .nav-item > a{
-
-    padding:10px 6px;
-
-    font-size:14px;
-
-  }
-
-  .nav-inner.container{
-
-    column-gap:14px;
-
-  }
-
-  .nav-brand .brand-name .en{ display:none; }
-
-}
-
-
 
 /* SSR cart icon + badge (HTMX; login-gated via /htmx/nav-cart) */
 .nav-cart-link{
@@ -797,7 +773,26 @@ a.account-menu-trigger{
 
 /* Mobile drawer — migrated from frozen public/react/src.css */
 .mobile-animated-nav{ display:none; }
-@media (max-width:900px){
+@media (max-width:1280px){
+  /* Authoritative compact pair: desktop links off, trigger on. */
+  [data-site-nav-root] .site-nav-desktop{ display:none !important; }
+  [data-site-nav-root] .nav-burger.mobile-menu-toggle{ display:flex !important; }
+
+  /* The desktop grid has a third implicit row for the burger when the link
+     row is hidden.  Use an explicit compact bar so the trigger remains in
+     the header at every intermediate available width. */
+  [data-site-nav-root] .nav-inner.container{
+    display:flex;
+    align-items:center;
+    width:100%;
+    max-width:100%;
+    box-sizing:border-box;
+  }
+
+  [data-site-nav-root] .nav-brand{ flex:0 0 auto; }
+  [data-site-nav-root] .nav-cta{ margin-left:auto; }
+  [data-site-nav-root] .nav-burger.mobile-menu-toggle{ flex:0 0 44px; }
+
   /* Solid bar from first paint (was print-deferred responsive.css); backdrop-filter
      would also trap the fixed drawer inside the nav on mobile. */
   .nav{ backdrop-filter:none; background:var(--paper); }
@@ -994,13 +989,29 @@ a.account-menu-trigger{
   }
   .mobile-animated-nav__sublink:hover{ color:var(--mint-deep,#1aa8ad); }
 }
-@media (max-width:900px) and (prefers-reduced-motion:reduce){
+
+/* Keep the compact trigger visually distinct from the CTA/cart cluster. */
+@media (max-width:1280px){
+  [data-site-nav-root] .nav-burger.mobile-menu-toggle{
+    margin-left:8px;
+    border:1px solid color-mix(in srgb, var(--mint-deep,#1aa8ad) 38%, transparent);
+    border-radius:8px;
+    background:color-mix(in srgb, var(--paper,#fdfcfa) 88%, var(--mint-soft,#e7f8f8));
+  }
+
+  [data-site-nav-root] .nav-burger.mobile-menu-toggle:hover,
+  [data-site-nav-root] .nav-burger.mobile-menu-toggle:focus-visible{
+    border-color:var(--mint-deep,#1aa8ad);
+    background:var(--mint-soft,#e7f8f8);
+  }
+}
+@media (max-width:1280px) and (prefers-reduced-motion:reduce){
   .mobile-animated-nav,.mobile-animated-nav__list{ transition:none; }
 }
 
 /* Coarse pointer / touch: no hover-only dropdowns on desktop nav (≥901) */
 @media (hover:none),(pointer:coarse){
-  @media (min-width:901px){
+  @media (min-width:1281px){
     .site-nav-desktop .nav-item:hover .dropdown{
       opacity:0;
       visibility:hidden;

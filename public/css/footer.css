@@ -1,5 +1,23 @@
 /* Site footer — dark charcoal imprint (pre-FooterGlow) */
 
+/* Keep short non-home pages filled through the footer instead of leaving a
+   body-background gap below the final dark block. Home uses its own curtain. */
+body.site-layout:not(.page-home){
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+}
+
+body.site-layout:not(.page-home) > main{
+  flex:1 0 auto;
+  width:100%;
+}
+
+body.site-layout:not(.page-home) > .site-footer{
+  flex:0 0 auto;
+  margin-top:auto;
+}
+
 .site-footer{
   --sf-bg: #332D2A;
   --sf-ink: rgba(247,244,241,.8);

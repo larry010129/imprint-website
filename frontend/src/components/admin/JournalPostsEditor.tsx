@@ -93,15 +93,13 @@ export default function JournalPostsEditor({ api }: { api: JournalPostsApi }) {
       setError("請填寫標題與日期");
       return;
     }
-    // Soft: pending crop/file never wrote image_url — keep prior/empty and remount picker.
+    // A pending crop has not written image_url yet, so saving now would persist the
+    // OLD url and look like the replace silently failed. Block instead of dropping it.
     if (imagePending) {
-      showToast(
-        draft.image_url ? "尚未確認裁切，將使用原圖" : "尚未確認裁切，將使用空白圖片",
-        "warning",
-        "top-right",
-      );
-      setImagePending(false);
-      setImageFieldKey((key) => key + 1);
+      const message = "圖片尚未上傳：請先按「確認裁切並上傳」，或取消選圖後再儲存";
+      setError(message);
+      showToast(message, "warning", "top-right");
+      return;
     }
     setSaving(true);
     const payload = {

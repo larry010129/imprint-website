@@ -524,6 +524,22 @@
       cmsMediaAction: function (id, action) {
         return request('/api/admin/cms-media-action', { method: 'POST', body: { id: id, action: action } });
       },
+      /**
+       * One roundtrip for admin Content panel: active tab page + pageImageKeys + site_pages.
+       * Query: tab, page, page_size, optional page_key (page-images filter).
+       */
+      getContentBootstrap: function (opts) {
+        opts = opts || {};
+        var parts = ['tab=' + encodeURIComponent(opts.tab || 'banners')];
+        var page = opts.page != null ? opts.page : 1;
+        var size = opts.pageSize != null ? opts.pageSize : (opts.page_size != null ? opts.page_size : 10);
+        parts.push('page=' + encodeURIComponent(page));
+        parts.push('page_size=' + encodeURIComponent(size));
+        if (opts.page_key || opts.pageKey) {
+          parts.push('page_key=' + encodeURIComponent(opts.page_key || opts.pageKey));
+        }
+        return request('/api/admin/content-bootstrap?' + parts.join('&'));
+      },
       getBanners: function (opts) {
         return requestPagedList('/api/admin/banners', 'banners', opts);
       },

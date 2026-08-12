@@ -912,7 +912,7 @@ def test_product_upload_uses_nested_metal_path(monkeypatch):
     assert resp.status_code == 200
     assert calls and calls[0][0] == "products"
     assert calls[0][1].startswith(f"{folder}/white/")
-    assert calls[0][1].endswith("photo.webp")
+    assert re.fullmatch(r"photo-[0-9a-f]{8}\.webp", calls[0][1].rsplit("/", 1)[-1])
     assert calls[0][3] == ".webp"
     assert calls[0][2][:4] == b"RIFF" and calls[0][2][8:12] == b"WEBP"
     assert calls[0][4] is True

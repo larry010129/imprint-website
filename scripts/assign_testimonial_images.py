@@ -84,37 +84,8 @@ def main() -> None:
         print(cur.fetchone())
         conn.commit()
 
-    items = []
-    for t in testimonials:
-        items.append(
-            "  {\n"
-            f'    id: {int(t["sort_order"])},\n'
-            f'    name: {json.dumps(t["name"], ensure_ascii=False)},\n'
-            f'    role: {json.dumps(t["role"], ensure_ascii=False)},\n'
-            f'    category: {json.dumps(t["category"], ensure_ascii=False)},\n'
-            f'    city: {json.dumps(t["city"], ensure_ascii=False)},\n'
-            f'    text: {json.dumps(t["text"], ensure_ascii=False)},\n'
-            f'    rating: {int(t["rating"])},\n'
-            f'    image: {json.dumps(t["image_url"], ensure_ascii=False)},\n'
-            "  }"
-        )
-    out = (
-        "export type Testimonial = {\n"
-        "  id: number;\n"
-        "  name: string;\n"
-        "  role: string;\n"
-        "  text: string;\n"
-        "  rating: number;\n"
-        "  category: string;\n"
-        "  city: string;\n"
-        "  image?: string;\n"
-        "};\n\n"
-        "export const TESTIMONIALS: Testimonial[] = [\n"
-        + ",\n".join(items)
-        + "\n];\n"
-    )
-    (ROOT / "frontend/src/data/testimonials.ts").write_text(out, encoding="utf-8")
-    print("ok rings", ring_i, "necks", neck_i)
+    # Live UI reads Postgres only — do not regenerate frontend seed arrays.
+    print("ok rings", ring_i, "necks", neck_i, "(DB only; no testimonials.ts write)")
 
 
 if __name__ == "__main__":

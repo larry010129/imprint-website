@@ -1,8 +1,6 @@
-"""DATABASE_URL must be Supabase Postgres — Neon hosts warn (temporary)."""
+"""DATABASE_URL must be Supabase Postgres — Neon / other hosts rejected."""
 
 from __future__ import annotations
-
-import logging
 
 import pytest
 
@@ -29,14 +27,13 @@ def test_require_database_url_accepts_session_pooler(monkeypatch):
     assert "pooler.supabase.com" in require_database_url()
 
 
-def test_require_database_url_warns_neon(monkeypatch, caplog):
+def test_require_database_url_rejects_neon(monkeypatch):
     neon = (
         "postgresql://user:pass@ep-x-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb"
     )
     monkeypatch.setenv("DATABASE_URL", neon)
-    with caplog.at_level(logging.WARNING, logger="app.database"):
-        assert require_database_url() == neon
-    assert any("Neon" in r.message for r in caplog.records)
+    with pytest.raises(RuntimeError, match="Neon"):
+        require_database_url()
 
 
 def test_require_database_url_rejects_non_supabase_host(monkeypatch):

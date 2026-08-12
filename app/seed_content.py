@@ -13,20 +13,6 @@ log = logging.getLogger(__name__)
 _SEED_PATH = Path(__file__).resolve().parent / "data" / "content-seed.json"
 _BANNERS_SEED = Path(__file__).resolve().parent / "data" / "banners-seed.json"
 
-# Legacy homepage social-proof names (imprint-diamond.com/imprint/index).
-_LEGACY_HOMEPAGE_TESTIMONIAL_NAMES = frozenset(
-    {
-        "沈小姐",
-        "徐小姐",
-        "賴先生",
-        "朱小姐",
-        "張小姐",
-        "吳小姐",
-        "陳先生",
-        "簡小姐",
-    }
-)
-
 
 def seed_content_if_empty() -> int:
     created = 0
@@ -56,24 +42,6 @@ def _insert_testimonial(cur, entry: dict) -> None:
     )
 
 
-def _ensure_legacy_homepage_testimonials(cur, data: dict) -> int:
-    """Insert any of the 8 legacy homepage quotes missing by name."""
-    created = 0
-    for entry in data.get("testimonials") or []:
-        name = str(entry.get("name") or "").strip()
-        if name not in _LEGACY_HOMEPAGE_TESTIMONIAL_NAMES:
-            continue
-        cur.execute(
-            "select 1 from testimonials where name = %s limit 1",
-            (name,),
-        )
-        if cur.fetchone():
-            continue
-        _insert_testimonial(cur, entry)
-        created += 1
-    return created
-
-
 def _seed_faq_testimonials() -> int:
     if not _SEED_PATH.is_file():
         log.warning("content seed file missing: %s", _SEED_PATH)
@@ -100,12 +68,18 @@ def _seed_faq_testimonials() -> int:
             data = json.loads(_SEED_PATH.read_text(encoding="utf-8"))
             created = 0
 
+            # Bootstrap from JSON only when the table is empty. If rows exist,
+            # public pages must keep reading those Supabase rows (admin CMS).
             if t_count == 0:
                 for entry in data.get("testimonials") or []:
                     _insert_testimonial(cur, entry)
                     created += 1
-            else:
-                created += _ensure_legacy_homepage_testimonials(cur, data)
+
+            from app.content import remap_legacy_testimonial_categories
+
+            remapped = remap_legacy_testimonial_categories(cur)
+            if remapped:
+                log.info("remapped %s legacy testimonial categories", remapped)
 
             if f_count == 0:
                 for cat in data.get("faq_categories") or []:
@@ -153,6 +127,9 @@ def _seed_banners() -> int:
             cur.execute("select to_regclass('public.home_banners') as t")
             if not (cur.fetchone() or {}).get("t"):
                 return 0
+            from app.content import ensure_banner_text_color_columns
+
+            ensure_banner_text_color_columns(cur)
             cur.execute("select count(*)::int as count from home_banners")
             if (cur.fetchone() or {}).get("count"):
                 return 0
@@ -165,8 +142,9 @@ def _seed_banners() -> int:
                       eyebrow, title, lead, image_url, image_webp, image_alt,
                       cta_primary_label, cta_primary_href,
                       cta_secondary_label, cta_secondary_href,
-                      tone, align, sort_order, is_published
-                    ) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,true)
+                      tone, eyebrow_color, title_color, lead_color,
+                      align, sort_order, is_published
+                    ) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,true)
                     """,
                     (
                         entry.get("eyebrow") or "",
@@ -180,6 +158,9 @@ def _seed_banners() -> int:
                         entry.get("cta_secondary_label") or "",
                         entry.get("cta_secondary_href") or "",
                         entry.get("tone") or "warm",
+                        entry.get("eyebrow_color") or entry.get("tone") or "warm",
+                        entry.get("title_color") or entry.get("tone") or "warm",
+                        entry.get("lead_color") or entry.get("tone") or "warm",
                         entry.get("align") or "left",
                         int(entry.get("sort_order") or 0),
                     ),

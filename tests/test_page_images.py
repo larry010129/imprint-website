@@ -1,4 +1,5 @@
 from collections import Counter
+from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
 import pytest
@@ -663,6 +664,62 @@ def test_replace_does_not_stash_default_as_previous(monkeypatch, _page_storage_e
     assert row["image_url"] == b
     assert row["previous_image_url"] is None
     assert deleted == []
+
+
+def test_cache_buster_replaces_existing_v_without_doubling_query():
+    from app.image_urls import strip_cache_buster, with_cache_buster
+
+    stamp = datetime(2025, 8, 12, 3, 12, 44, tzinfo=timezone.utc)
+    busted = with_cache_buster("/static/images/learn-cards/faq.jpg?v=4", stamp)
+    assert busted == "/static/images/learn-cards/faq.jpg?v=1754968364"
+    assert busted.count("?") == 1
+    assert busted.count("v=") == 1
+    # Idempotent: re-busting the same row does not stack params.
+    assert with_cache_buster(busted, stamp) == busted
+    assert strip_cache_buster(busted) == "/static/images/learn-cards/faq.jpg"
+    # Naive timestamps are read as UTC so the token is deterministic.
+    assert with_cache_buster("/a.jpg", datetime(2025, 8, 12, 3, 12, 44)) == "/a.jpg?v=1754968364"
+    assert with_cache_buster("/a.jpg", None) == "/a.jpg"
+
+
+def test_cache_buster_leaves_srcset_and_other_params_alone():
+    from app.image_urls import with_cache_buster
+
+    stamp = datetime(2025, 8, 12, 3, 12, 44, tzinfo=timezone.utc)
+    # page_images.image_webp really holds srcset strings for some slots.
+    srcset = "/static/images/learn-cards/faq-400.webp 400w, /static/images/learn-cards/faq.webp 800w"
+    assert with_cache_buster(srcset, stamp) == srcset
+    assert with_cache_buster("/a.jpg?w=800", stamp) == "/a.jpg?w=800&v=1754968364"
+
+
+def test_serialize_page_image_busts_custom_url_but_not_default():
+    stamp = datetime(2025, 8, 12, 3, 12, 44, tzinfo=timezone.utc)
+    custom = _page_url("page-images/about/c.webp")
+    row = serialize_page_image(
+        _base_row(image_url=custom, image_webp=custom, updated_at=stamp)
+    )
+    assert row["display_url"] == f"{custom}?v=1754968364"
+    assert row["display_webp"] == f"{custom}?v=1754968364"
+    # Raw columns stay clean so a save round-trip cannot persist the buster.
+    assert row["image_url"] == custom
+    fallback = serialize_page_image(_base_row(updated_at=stamp))
+    assert fallback["display_url"] == "/static/images/about/default.jpg"
+    assert fallback["display_webp"] == "/static/images/about/default.webp"
+
+
+def test_page_image_payload_strips_round_tripped_buster():
+    fields, error = parse_page_image_payload(
+        {
+            "pageKey": "/",
+            "slotKey": "poem-visual",
+            "imageUrl": _page_url("page-images/home/a.webp") + "?v=1754968364",
+            "imageWebp": _page_url("page-images/home/a.webp") + "?v=1754968364",
+        }
+    )
+    assert error is None
+    assert fields
+    assert fields["image_url"] == _page_url("page-images/home/a.webp")
+    assert fields["image_webp"] == _page_url("page-images/home/a.webp")
 
 
 def test_serialize_page_image_exposes_previous_camel():
