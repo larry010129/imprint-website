@@ -2043,9 +2043,9 @@ function updateDiamondWizardChrome() {
 
 const WIZARD_GUIDE = {
   catalog: {
-    eyebrow: '線上訂製 · 三步完成',
-    title: '先選擇您要的品項',
-    desc: '戒指、項墜、耳飾、手鍊或鍊條——點選一個類別即可開始。',
+    eyebrow: 'DNA 紀念鑽石 · 六大系列',
+    title: '六大 DNA 紀念鑽石系列線上試算',
+    desc: '滿月鑽石、寵物鑽石、結髮鑽石、全家福鑽石、生命鑽石、真我鑽石，選擇系列與珠寶款式後即可設定規格並查看訂製參考價格。',
   },
   styles: {
     eyebrow: '線上訂製 · 三步完成',
