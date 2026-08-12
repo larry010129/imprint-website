@@ -2,17 +2,14 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from config.routes import ALL_PAGES
 
-_FRAGMENTS_DIR = Path(__file__).resolve().parents[1] / "content" / "site" / "fragments"
-
-
 def test_all_page_content_fragments_exist():
+    from app.controllers.web_controller import _resolve_fragment_path
+
     missing: list[str] = []
     checked = 0
     for page in ALL_PAGES:
@@ -20,8 +17,9 @@ def test_all_page_content_fragments_exist():
         if not rel:
             continue
         checked += 1
-        path = _FRAGMENTS_DIR / rel
-        if not path.is_file():
+        try:
+            _resolve_fragment_path(rel)
+        except StarletteHTTPException:
             missing.append(f"{page.route} -> {rel}")
     assert checked > 0, "expected at least one content_fragment in ALL_PAGES"
     assert not missing, "missing fragment files:\n" + "\n".join(missing)

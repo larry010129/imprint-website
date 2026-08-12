@@ -122,9 +122,37 @@ def load_youtube_latest_video() -> dict | None:
     return data
 
 
+def _resolve_fragment_path(relpath: str) -> Path:
+    """Resolve legacy fragment names and the current body-file layout."""
+    relative = Path(relpath)
+    if relative.is_absolute() or ".." in relative.parts:
+        raise StarletteHTTPException(status_code=404, detail="Not Found")
+
+    path = _FRAGMENTS_DIR / relative
+    if path.is_file():
+        return path
+
+    parts = relative.parts
+    filename = relative.name
+    stem = Path(filename).stem
+    if parts and parts[0] == "series":
+        body_name = f"series__{stem}.html"
+    elif parts and parts[0] == "jewelry_category":
+        body_name = f"jewelry__{stem}.html"
+    elif parts and parts[0] == "jewelry_style" and "-" in stem:
+        category, style = stem.split("-", 1)
+        body_name = f"jewelry__{category}__{style}.html"
+    else:
+        body_name = "__".join(parts)
+    body_path = settings.site_content_dir / "bodies" / body_name
+    if body_path.is_file():
+        return body_path
+    raise StarletteHTTPException(status_code=404, detail="Not Found")
+
+
 @lru_cache(maxsize=None)
 def _load_fragment(relpath: str) -> str:
-    path = _FRAGMENTS_DIR / relpath
+    path = _resolve_fragment_path(relpath)
     if not path.is_file():
         raise StarletteHTTPException(status_code=404, detail="Not Found")
     return path.read_text(encoding="utf-8")
