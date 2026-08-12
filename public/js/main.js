@@ -298,7 +298,8 @@
             }
             if (restartImg) {
               restartImg.classList.remove('kb-reset');
-              restartImg.style.transform = 'scale(1.09)';
+              /* Keep the first LCP frame static; animate only user-visible slide changes. */
+              restartImg.style.transform = clearNoAnim ? 'scale(1)' : 'scale(1.09)';
             }
             if (clearNoAnim) {
               hcSlides.forEach(function (s) { s.classList.remove('no-anim'); });

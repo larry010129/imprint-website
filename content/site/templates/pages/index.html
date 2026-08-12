@@ -6,8 +6,34 @@
 {% endblock %}
 {% block extra_css %}
 <style>{{ inline_css('home-ghibli-critical.css') | safe }}</style>
-<link rel="stylesheet" href="/static/css/home-ghibli.css?v=63" media="print" onload="this.media='all'">
-    <noscript><link rel="stylesheet" href="/static/css/home-ghibli.css?v=63"></noscript>
+<link rel="stylesheet" href="/static/css/home-ghibli.css?v=63" media="(min-width:901px)">
+<noscript><link rel="stylesheet" href="/static/css/home-ghibli.css?v=63"></noscript>
+<script>
+(function () {
+  var href = '/static/css/home-ghibli.css?v=63';
+  var mobile = window.matchMedia && window.matchMedia('(max-width:900px)').matches;
+  if (!mobile) return;
+  var loaded = false;
+  function loadHomeStyles() {
+    if (loaded || document.querySelector('link[data-home-ghibli-lazy]')) return;
+    loaded = true;
+    var link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = href;
+    link.setAttribute('data-home-ghibli-lazy', '');
+    document.head.appendChild(link);
+    ['pointerdown', 'keydown', 'touchstart', 'scroll'].forEach(function (event) {
+      window.removeEventListener(event, loadHomeStyles, true);
+    });
+  }
+  ['pointerdown', 'keydown', 'touchstart', 'scroll'].forEach(function (event) {
+    window.addEventListener(event, loadHomeStyles, { once: true, passive: true, capture: true });
+  });
+  function scheduleHomeStyles() { window.setTimeout(loadHomeStyles, 4000); }
+  if (document.readyState === 'complete') scheduleHomeStyles();
+  else window.addEventListener('load', scheduleHomeStyles, { once: true });
+})();
+</script>
 {% endblock %}
 {% block extra_head %}
 <style>

@@ -36,7 +36,9 @@ def test_home_sync_nav_defers_ghibli_remainder():
     nav_snippet = base[nav_link_idx : nav_link_idx + 80]
     assert 'media="print"' not in nav_snippet
     assert "is_home" in base and "nav-critical.css" in base
-    assert 'home-ghibli.css?v=' in index and 'media="print"' in index
+    assert 'home-ghibli.css?v=' in index
+    assert "data-home-ghibli-lazy" in index
+    assert "max-width:900px" in index
     # No sync stylesheet link for hero critical on home
     assert 'href="/static/css/home-ghibli-critical.css' not in index
 
@@ -113,3 +115,8 @@ def test_live_home_has_no_sync_critical_css(client):
     assert pos >= 0
     snippet = text[pos : pos + 100]
     assert 'media="print"' not in snippet, snippet
+
+
+def test_home_lcp_image_does_not_start_zoom_animation():
+    main = (ROOT / "public" / "js" / "main.js").read_text(encoding="utf-8")
+    assert "restartImg.style.transform = clearNoAnim ? 'scale(1)' : 'scale(1.09)'" in main
