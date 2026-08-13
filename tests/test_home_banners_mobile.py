@@ -26,6 +26,31 @@ def test_home_banners_honors_mobile_crop_on_memorial_slide():
     assert "localHeroMobileSrcset(stem) + ', ' + desktopSrcset" not in src
 
 
+def test_home_first_slide_matches_banner_seed():
+    """SSR slide 0 must match banners-seed so home-banners.js skips rebuild (no hero jump)."""
+    import json
+    import re
+
+    seed = json.loads((ROOT / "app" / "data" / "banners-seed.json").read_text(encoding="utf-8"))
+    html = INDEX.read_text(encoding="utf-8")
+    first = seed[0]
+    m = re.search(
+        r'<li class="hc-slide is-active".*?</li>',
+        html,
+        re.DOTALL,
+    )
+    assert m, "active hero slide missing"
+    slide = m.group(0)
+    title_m = re.search(r"<h1 class=\"gh-hero__title\"[^>]*>(.*?)</h1>", slide, re.DOTALL)
+    lead_m = re.search(r"<p class=\"gh-hero__lead\"[^>]*>(.*?)</p>", slide, re.DOTALL)
+    assert title_m and lead_m
+    title = re.sub(r"<[^>]+>", "", title_m.group(1))
+    lead = re.sub(r"<[^>]+>", "", lead_m.group(1))
+    assert " ".join(title.split()) == first["title"]
+    assert " ".join(lead.split()) == first["lead"]
+    assert "銘印鑽石｜" not in slide
+
+
 def test_home_banners_cache_bust():
     html = INDEX.read_text(encoding="utf-8")
     assert "home-banners.js?v=13" in html
@@ -131,4 +156,75 @@ def test_home_yt_gallery_autoplay_mute_has_gesture_unmute():
     assert "activateThumb(thumb, { play: true, muted: false })" in html
     assert "embedFacade(btn, { muted: false })" in html
     assert ".gh-yt-unmute{" in css
-    assert "home-ghibli.css?v=63" in html
+    assert "home-ghibli.css?v=64" in html
+
+
+def test_phone_card_images_fill_media_box():
+    """Global max-width:100% on img must not collapse card photos into a strip."""
+    base = (ROOT / "public" / "css" / "base.css").read_text(encoding="utf-8")
+    home = (ROOT / "public" / "css" / "home.css").read_text(encoding="utf-8")
+    shop = (ROOT / "public" / "css" / "shop.css").read_text(encoding="utf-8")
+    assert "img{height:auto;}" in base.replace(" ", "")
+    assert "max-width:none" in home.replace(" ", "")
+    media = shop.split(".catalog-tile__media,", 1)[1].split("}", 1)[0]
+    tile = shop.split(".catalog-tile__media img,", 1)[1].split("}", 1)[0]
+    assert "width: 100%" in media
+    assert "aspect-ratio: 1 / 1" in media
+    assert "overflow: hidden" in media
+    assert "width: 100%" in tile
+    assert "height: 100%" in tile
+    assert "object-fit: contain" in tile
+    assert "max-width: none" in tile
+    assert "padding: 0" in tile
+    assert "repeat(2, minmax(0, 1fr))" in shop
+
+
+def test_shop_catalog_tiles_square_cover_fill():
+    """Step-1/2 snaps fill a fixed 1:1 box; extra_css + cache bump for phone defer."""
+    shop = (ROOT / "public" / "css" / "shop.css").read_text(encoding="utf-8")
+    calc = (
+        ROOT / "content" / "site" / "templates" / "pages" / "shop" / "calculator.html"
+    ).read_text(encoding="utf-8")
+    js = (ROOT / "public" / "js" / "shop.js").read_text(encoding="utf-8")
+    htmx = (
+        ROOT / "content" / "site" / "templates" / "partials" / "htmx" / "shop_catalog.html"
+    ).read_text(encoding="utf-8")
+    extra = calc.split("{% block extra_css %}", 1)[1].split("{% endblock %}", 1)[0]
+    media = shop.split(".catalog-tile__media,", 1)[1].split("}", 1)[0]
+    img = shop.split(".catalog-tile__media img,", 1)[1].split("}", 1)[0]
+    type_media = shop.split("#shop-styles .type-card__media {", 1)[1].split("}", 1)[0]
+    type_img = shop.split("#shop-styles .type-card__media img,", 1)[1].split("}", 1)[0]
+    assert "aspect-ratio: 1 / 1" in media
+    assert "object-fit: contain" in img
+    assert "height: 100%" in img
+    assert "aspect-ratio: 1 / 1" in type_media
+    assert "object-fit: contain" in type_img
+    assert "catalog-tile__media" in extra
+    assert "aspect-ratio: 1 / 1" in extra
+    assert "object-fit: contain" in extra
+    assert "width: 18px" in extra
+    extra_preview = extra.split(".shop-fit .shop-girdle-engrave .cfg-engrave-preview {", 1)[1].split("}", 1)[0]
+    extra_gem = extra.split(".shop-fit .shop-girdle-engrave .cfg-engrave-gem {", 1)[1].split("}", 1)[0]
+    assert "position: relative" in extra_preview
+    assert "width: 100%" in extra_preview
+    assert "max-width: 100%" in extra_preview
+    assert "max-width: 16rem" not in extra_preview
+    assert "width: 100%" in extra_gem
+    assert "object-fit: contain" in extra_gem
+    assert "object-fit: cover" not in extra_gem
+    assert "shop.css?v=6.53" in extra
+    assert "catalog-tile__media" in js
+    assert "media.className = 'catalog-tile__media'" in js
+    assert "catalog-tile__media" in htmx
+    opt = js.split("function optimizedCategoryImageUrl(", 1)[1].split("function categoryImageUrl(", 1)[0]
+    assert "searchParams.set('resize', 'contain')" in opt
+    assert "searchParams.set('height', '320')" in opt
+    assert "searchParams.set('width', '320')" in opt
+    shop_preview = shop.split(".shop-fit .shop-girdle-engrave .cfg-engrave-preview {", 1)[1].split("}", 1)[0]
+    shop_gem = shop.split(".shop-fit .shop-girdle-engrave .cfg-engrave-gem {", 1)[1].split("}", 1)[0]
+    assert "width: 100%" in shop_preview
+    assert "max-width: 100%" in shop_preview
+    assert "max-width: 16rem" not in shop_preview
+    assert "width: 100%" in shop_gem
+    assert "object-fit: contain" in shop_gem
+    assert "max-width: 16rem" in shop

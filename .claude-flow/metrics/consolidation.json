@@ -1,19 +1,17 @@
 {
-<<<<<<< Updated upstream
-  "timestamp": "2026-08-13T06:16:53.567Z",
-=======
-  "timestamp": "2026-08-13T05:46:53.492Z",
->>>>>>> Stashed changes
+  "timestamp": "2026-08-13T10:31:25.572Z",
   "distillationEnabled": true,
-  "patternsConsolidated": 0,
-  "memoryCleaned": 0,
+  "patternsConsolidated": 2,
+  "memoryCleaned": 2,
   "duplicatesRemoved": 0,
-  "episodes": 0,
-  "episodeEmbeddings": 0,
-  "patternEmbeddings": 0,
-  "causalEdges": 0,
+  "episodes": 2,
+  "episodeEmbeddings": 2,
+  "patternEmbeddings": 2,
+  "causalEdges": 1,
   "promoted": 0,
-  "byProvenance": {},
+  "byProvenance": {
+    "proxy:structural": 2
+  },
   "namespaces": [
     "session",
     "patterns"

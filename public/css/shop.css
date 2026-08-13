@@ -191,21 +191,11 @@ body.shop-mobile-bar {
   color: var(--color-text);
   cursor: pointer;
   text-align: center;
+  min-width: 0;
   transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
 }
 
-.catalog-tile img {
-  width: 100%;
-  aspect-ratio: 1;
-  object-fit: contain;
-  object-position: center;
-  display: block;
-  background: var(--color-bg);
-  padding: 0.35rem;
-  box-sizing: border-box;
-}
-
-.catalog-tile span {
+.catalog-tile-label {
   padding: 0 12px 16px;
   font-size: 15px;
   font-weight: 500;
@@ -233,18 +223,25 @@ body.shop-mobile-bar {
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
 }
 
-#shop-styles .type-card img,
-#shop-styles .type-card .type-card__img {
+.catalog-tile__media,
+#shop-styles .type-card__media {
+  display: block;
   width: 100%;
-  aspect-ratio: 1;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  background: var(--color-bg);
+}
+
+.catalog-tile__media img,
+#shop-styles .type-card__media img,
+#shop-styles .type-card__media .type-card__img {
+  width: 100%;
+  height: 100%;
+  max-width: none;
   object-fit: contain;
   object-position: center;
   display: block;
-  max-width: 100%;
-  height: auto;
-  background: var(--color-surface, #fff);
-  padding: 0.35rem;
-  box-sizing: border-box;
+  padding: 0;
 }
 
 #shop-styles .type-card .type-name,
@@ -287,6 +284,7 @@ body.shop-mobile-bar {
   display: flex;
   flex-direction: column;
   width: 100%;
+  min-width: 0;
   padding: 0;
   border-radius: 14px;
   overflow: hidden;
@@ -327,25 +325,9 @@ body.shop-mobile-bar {
   font-weight: 600;
 }
 
-#shop-styles .type-grid.type-grid--size-xl .type-card img {
-  width: 100%;
-  aspect-ratio: 1;
-  object-fit: contain;
-  object-position: center;
-  max-height: min(42vh, 340px);
-}
-
 #shop-styles .type-grid.type-grid--size-xl .type-name {
   font-size: 1.125rem;
   padding: 1rem 1rem 1.25rem;
-}
-
-#shop-styles .type-grid.type-grid--size-lg .type-card img {
-  width: 100%;
-  aspect-ratio: 1;
-  object-fit: contain;
-  object-position: center;
-  max-height: min(36vh, 280px);
 }
 
 #shop-styles .type-grid.type-grid--size-lg .type-name {
@@ -353,36 +335,13 @@ body.shop-mobile-bar {
   padding: 0.875rem 0.75rem 1rem;
 }
 
-#shop-styles .type-grid.type-grid--size-md .type-card img {
-  width: 100%;
-  aspect-ratio: 1;
-  object-fit: contain;
-  object-position: center;
-  max-height: min(28vh, 220px);
-}
-
 #shop-styles .type-grid.type-grid--size-md .type-name {
   font-size: 0.9375rem;
-}
-
-#shop-styles .type-grid.type-grid--size-sm .type-card img {
-  width: 100%;
-  aspect-ratio: 1;
-  object-fit: contain;
-  object-position: center;
-  max-height: min(22vh, 180px);
 }
 
 #shop-styles .type-grid.type-grid--size-sm .type-name {
   font-size: 0.8125rem;
   padding: 0.625rem 0.5rem 0.75rem;
-}
-
-#shop-styles .type-grid.type-grid--size-xs .type-card img {
-  width: 100%;
-  aspect-ratio: 1;
-  object-fit: contain;
-  object-position: center;
 }
 
 #shop-styles .type-grid.type-grid--size-xs .type-name {
@@ -568,6 +527,8 @@ body.shop-mobile-bar {
 .product-thumb-btn img {
   width: 100%;
   height: 100%;
+  max-width: none;
+  min-width: 0;
   object-fit: contain;
   object-position: center;
   display: block;
@@ -2199,7 +2160,7 @@ body.dark-theme .ring-size-guide-table thead th {
   }
 
   .catalog-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
   }
 
@@ -2325,7 +2286,7 @@ body.dark-theme .ring-size-guide-table thead th {
     min-height: 44px;
   }
 
-  .catalog-tile span,
+  .catalog-tile-label,
   #shop-styles .type-card .type-name,
   #shop-styles .type-card .type-card__name {
     font-size: 15px;
@@ -3088,20 +3049,10 @@ body.app-shell:not(.dark-theme) .shop-fit {
   gap: 0;
   padding: 0;
   min-height: 0;
+  overflow: hidden;
 }
 
-.shop-fit .catalog-tile img {
-  width: 100%;
-  aspect-ratio: 1;
-  max-height: none;
-  object-fit: contain;
-  object-position: center;
-  display: block;
-  padding: 0.35rem;
-  box-sizing: border-box;
-}
-
-.shop-fit .catalog-tile span {
+.shop-fit .catalog-tile-label {
   padding: 0 12px 16px;
   font-size: 15px;
   font-weight: 500;
@@ -3134,10 +3085,30 @@ body.app-shell:not(.dark-theme) .shop-fit {
   scrollbar-width: thin;
 }
 
+.shop-fit .catalog-tile__media,
+.shop-fit #shop-styles .type-card__media {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  background: var(--color-bg);
+}
+
+.shop-fit .catalog-tile__media img,
+.shop-fit #shop-styles .type-card__media img {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: contain;
+  object-position: center;
+  padding: 0;
+}
+
 .shop-fit #shop-styles .type-card {
   display: flex;
   flex-direction: column;
   align-items: stretch;
+  min-width: 0;
   padding: 0;
   border-radius: 12px;
   overflow: hidden;
@@ -3572,7 +3543,96 @@ body.app-shell:not(.dark-theme) .shop-fit {
   align-items: stretch;
   gap: 0.75rem;
   width: 100%;
-  max-width: 22rem;
+  max-width: 100%;
+}
+
+/* The calculator does not load the shared page stylesheet. Keep the legacy
+   engraving editor treatment scoped here so its field and controls remain
+   visible on this route. */
+.shop-fit .cfg-engrave-input-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.shop-fit .cfg-engrave-input-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.shop-fit .cfg-engrave-input-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.shop-fit .cfg-engrave-action {
+  min-height: 28px;
+  padding: 4px 10px;
+  border: 1px solid #cfc4b8;
+  border-radius: 999px;
+  background: #fff;
+  color: #51463e;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+  transition: border-color 0.2s, background 0.2s, color 0.2s;
+}
+
+.shop-fit .cfg-engrave-action:hover:not(:disabled),
+.shop-fit .cfg-engrave-action:focus-visible {
+  border-color: var(--mint-deep, #3f7777);
+  background: var(--mint-soft, #eefafa);
+  color: var(--ink, #2b2320);
+}
+
+.shop-fit .cfg-engrave-action:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.shop-fit .cfg-engrave-action--clear,
+.shop-fit .cfg-engrave-action--delete {
+  color: #8a3f3f;
+}
+
+.shop-fit .cfg-engrave-input {
+  min-height: 46px;
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #cfc4b8;
+  border-radius: 6px;
+  background: #fff;
+  color: var(--ink, #2b2320);
+  outline: none;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px;
+  box-sizing: border-box;
+  font: inherit;
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  line-height: 1.6;
+}
+
+.shop-fit .cfg-engrave-input:focus {
+  border-color: var(--mint-deep, #3f7777);
+  box-shadow: 0 0 0 2px rgba(63, 119, 119, 0.12);
+}
+
+.shop-fit .cfg-engrave-input:empty::before {
+  content: attr(data-placeholder);
+  color: #8d8177;
+}
+
+.shop-fit .shop-girdle-engrave .cfg-count {
+  color: #51463e;
 }
 
 .shop-fit .shop-girdle-engrave__form {
@@ -3589,24 +3649,29 @@ body.app-shell:not(.dark-theme) .shop-fit {
   gap: 0.5rem;
 }
 
-/* Only the three pale supplied patterns need extra definition. Keep the
-   other five artworks at their original palette and preserve transparency. */
-.shop-fit .shop-girdle-engrave .cfg-emblem[data-emblem="catPaw"] img,
-.shop-fit .shop-girdle-engrave .cfg-emblem[data-emblem="dogPaw"] img,
-.shop-fit .shop-girdle-engrave .cfg-emblem[data-emblem="infinity"] img,
-.shop-fit .shop-girdle-engrave .cfg-emblem-token[data-emblem="catPaw"] img,
-.shop-fit .shop-girdle-engrave .cfg-emblem-token[data-emblem="dogPaw"] img,
-.shop-fit .shop-girdle-engrave .cfg-emblem-token[data-emblem="infinity"] img {
-  filter: brightness(0.72) contrast(1.28);
+.shop-fit .shop-girdle-engrave .cfg-emblem {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  flex: none;
 }
 
-.shop-fit .shop-girdle-engrave .cfg-emblem[data-emblem="catPaw"]:hover img,
-.shop-fit .shop-girdle-engrave .cfg-emblem[data-emblem="catPaw"]:focus-visible img,
-.shop-fit .shop-girdle-engrave .cfg-emblem[data-emblem="dogPaw"]:hover img,
-.shop-fit .shop-girdle-engrave .cfg-emblem[data-emblem="dogPaw"]:focus-visible img,
-.shop-fit .shop-girdle-engrave .cfg-emblem[data-emblem="infinity"]:hover img,
-.shop-fit .shop-girdle-engrave .cfg-emblem[data-emblem="infinity"]:focus-visible img {
-  filter: brightness(0.62) contrast(1.32);
+.shop-fit .shop-girdle-engrave .cfg-emblem img,
+.shop-fit .shop-girdle-engrave .cfg-emblem svg,
+.shop-fit .shop-girdle-engrave .cfg-emblem-token img,
+.shop-fit .shop-girdle-engrave .cfg-emblem-token svg {
+  width: 18px;
+  height: 18px;
+  max-width: 18px;
+  object-fit: contain;
+  filter: brightness(0.35) contrast(1.4);
+}
+
+.shop-fit .shop-girdle-engrave .cfg-emblem:hover img,
+.shop-fit .shop-girdle-engrave .cfg-emblem:hover svg,
+.shop-fit .shop-girdle-engrave .cfg-emblem:focus-visible img,
+.shop-fit .shop-girdle-engrave .cfg-emblem:focus-visible svg {
+  filter: brightness(0.25) contrast(1.5);
 }
 
 .shop-fit .shop-girdle-engrave .cfg-engrave-input {
@@ -3625,18 +3690,25 @@ body.app-shell:not(.dark-theme) .shop-fit {
 }
 
 .shop-fit .shop-girdle-engrave .cfg-engrave-hint {
+  font-size: 11px;
+  color: #8d8177;
   white-space: nowrap;
   margin: 0;
 }
 
 .shop-fit .shop-girdle-engrave .cfg-engrave-label {
+  font-size: 11.5px;
+  color: #8d8177;
+  letter-spacing: 0.06em;
   margin: 0.5rem 0 0.25rem;
   white-space: nowrap;
 }
 
 .shop-fit .shop-girdle-engrave__preview,
 .shop-fit .shop-girdle-engrave .cfg-engrave-preview {
+  position: relative;
   margin-top: 0;
+  margin-inline: auto;
   width: 100%;
   max-width: 100%;
   min-width: 0;
@@ -3655,11 +3727,24 @@ body.app-shell:not(.dark-theme) .shop-fit {
 }
 
 .shop-fit .shop-girdle-engrave .cfg-engrave-preview-text {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  top: 49%;
+  transform: translateY(-50%);
+  text-align: center;
   font-size: clamp(14px, 1.85vw, 18px);
   letter-spacing: 0.14em;
+  color: #243038;
   font-weight: 700;
   line-height: 1.1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   gap: 3px;
+  flex-wrap: wrap;
+  pointer-events: none;
+  text-shadow: 0 0 4px rgba(255, 255, 255, 0.9), 0 1px 2px rgba(255, 255, 255, 0.6);
 }
 
 .shop-fit .shop-girdle-engrave .cfg-engrave-preview-text .cfg-emblem-token {
@@ -4365,10 +4450,18 @@ body.app-shell:not(.dark-theme) .shop-fit {
   }
 
   .shop-fit #engraving-girdle-step,
-  .shop-fit .shop-girdle-engrave {
+  .shop-fit .shop-girdle-engrave,
+  .shop-fit .shop-girdle-engrave__preview,
+  .shop-fit .shop-girdle-engrave .cfg-engrave-preview {
     width: 100%;
     max-width: 100%;
     margin-left: 0;
+  }
+
+  .shop-fit #shop-styles .type-grid,
+  .shop-fit #shop-styles .type-grid:not(.type-grid--size-xs) {
+    overflow: visible;
+    min-height: auto;
   }
 
   .shop-fit .shop-girdle-engrave .cfg-engrave-hint {

@@ -1,27 +1,14 @@
 {
-<<<<<<< Updated upstream
-  "timestamp": "2026-08-13T06:29:53.221Z",
+  "timestamp": "2026-08-13T10:44:25.318Z",
   "mode": "local",
   "memoryUsage": {
-    "rss": 70545408,
-    "heapTotal": 24305664,
-    "heapUsed": 21915088,
-    "external": 4040915,
-    "arrayBuffers": 107741
+    "rss": 75608064,
+    "heapTotal": 24043520,
+    "heapUsed": 21744416,
+    "external": 4023617,
+    "arrayBuffers": 97735
   },
-  "uptime": 2940.9696685,
-=======
-  "timestamp": "2026-08-13T05:44:53.183Z",
-  "mode": "local",
-  "memoryUsage": {
-    "rss": 66531328,
-    "heapTotal": 24305664,
-    "heapUsed": 21551320,
-    "external": 4040876,
-    "arrayBuffers": 107742
-  },
-  "uptime": 240.9324925,
->>>>>>> Stashed changes
+  "uptime": 2943.3709998,
   "optimizations": {
     "cacheHitRate": 0.78,
     "avgResponseTime": 45

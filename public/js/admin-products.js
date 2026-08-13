@@ -226,6 +226,7 @@
   var _pageSize = 10;
   var _loaded = false;
   var _loading = false;
+  var _loadSeq = 0;
   var _slotCounter = 0;
   var LOAD_TIMEOUT_MS = 25000;
   var AUTOSAVE_MS = 1500;
@@ -847,13 +848,19 @@
   function bindShellEvents() {
     root.querySelectorAll('.ap-tab-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {
-        state.activeTab = btn.dataset.tab;
+        if (btn.classList.contains('ap-tab-btn--add')) return;
+        var nextTab = btn.dataset.tab;
+        if (!nextTab) return;
+        state.activeTab = nextTab;
         _pageIndex = 0;
         root.querySelectorAll('.ap-tab-btn').forEach(function (b) {
           var active = b.dataset.tab === state.activeTab;
           b.classList.toggle('is-active', active);
           b.setAttribute('aria-selected', active ? 'true' : 'false');
         });
+        unmountProductsTable();
+        var tableRoot = document.getElementById('apProductsTableRoot');
+        if (tableRoot) tableRoot.innerHTML = tableAreaSkeletonHtml();
         load(true, true);
         refreshCategoryPanel();
         refreshRingSizeSection();
@@ -3076,7 +3083,21 @@
           });
         });
         _slotCounter = 0;
-        host.innerHTML = imageSlotsHtml(currentImages, cat);
+        host.innerHTML = imageSlotsHtml(currentImages, catSel.value);
+        host.querySelectorAll('.ap-image-slot').forEach(function (slot) {
+          slot.setAttribute('data-category', catSel.value);
+        });
+        if (catSel.value !== 'diamond' && host.querySelector('.ap-image-slot-diamond-only')) {
+          host.innerHTML = imageSlotsHtml([], catSel.value);
+          host.querySelectorAll('.ap-image-slot').forEach(function (slot) {
+            slot.setAttribute('data-category', catSel.value);
+          });
+        } else if (catSel.value === 'diamond' && host.querySelector('.ap-image-slot-metal')) {
+          host.innerHTML = imageSlotsHtml([], catSel.value);
+          host.querySelectorAll('.ap-image-slot').forEach(function (slot) {
+            slot.setAttribute('data-category', catSel.value);
+          });
+        }
         bindImageSlots(form);
       }
       if (hint) hint.textContent = imageSectionHint(cat);
@@ -3360,26 +3381,25 @@
     });
   }
 
-  function fetchProducts() {
-    var cat = state.activeTab.replace('cat-', '');
-    return new Promise(function (resolve) {
-      var done = false;
-      var timer = setTimeout(function () {
-        if (done) return;
-        done = true;
-        resolve({ error: '載入逾時，請檢查網路後重試。', timeout: true });
-      }, LOAD_TIMEOUT_MS);
-      api.admin.getProducts({
-        page: _pageIndex + 1,
-        pageSize: _pageSize,
-        category: cat || undefined,
-      }).then(function (res) {
-        if (done) return;
-        done = true;
-        clearTimeout(timer);
-        resolve(res);
-      });
+  function fetchProducts(category) {
+    var cat = category != null && category !== ''
+      ? category
+      : state.activeTab.replace('cat-', '');
+    return api.admin.getProducts({
+      page: _pageIndex + 1,
+      pageSize: _pageSize,
+      category: cat || undefined,
     });
+  }
+
+  function showProductsLoadError(res) {
+    unmountProductsTable();
+    var retry = res.timeout
+      ? ' <button type="button" class="btn-sm" id="apRetryLoad">重試</button>'
+      : '';
+    root.innerHTML = '<p class="note warn">載入失敗：' + esc(apiError(res)) + retry + '</p>';
+    var retryBtn = document.getElementById('apRetryLoad');
+    if (retryBtn) retryBtn.addEventListener('click', function () { load(false, true); });
   }
 
   function load(silent, force) {
@@ -3395,20 +3415,39 @@
 
     if (!silent && state.view !== 'editor') showLoadingSkeleton();
 
+    var seq = ++_loadSeq;
+    var requestedCat = state.activeTab.replace('cat-', '');
     _loading = true;
-    fetchProducts().then(function (res) {
+    var settled = false;
+    var timer = setTimeout(function () {
+      if (seq !== _loadSeq) return;
+      if (settled) return;
+      settled = true;
       _loading = false;
-      if (res.error) {
-        unmountProductsTable();
-        var retry = res.timeout
-          ? ' <button type="button" class="btn-sm" id="apRetryLoad">重試</button>'
-          : '';
-        root.innerHTML = '<p class="note warn">載入失敗：' + esc(apiError(res)) + retry + '</p>';
-        var retryBtn = document.getElementById('apRetryLoad');
-        if (retryBtn) retryBtn.addEventListener('click', function () { load(false, true); });
+      showProductsLoadError({ error: '載入逾時，請檢查網路後重試。', timeout: true });
+    }, LOAD_TIMEOUT_MS);
+
+    fetchProducts(requestedCat).then(function (res) {
+      clearTimeout(timer);
+      if (seq !== _loadSeq) {
+        settled = true;
         return;
       }
-      state.products = res.products || [];
+      settled = true;
+      _loading = false;
+      if (res.error) {
+        showProductsLoadError(res);
+        return;
+      }
+      var currentCat = state.activeTab.replace('cat-', '');
+      if (requestedCat !== currentCat) {
+        load(true, true);
+        return;
+      }
+      var incoming = (res.products || []).filter(function (p) {
+        return !p.category || p.category === currentCat;
+      });
+      state.products = incoming;
       state.categoryLabels = res.categoryLabels || {};
       state.categories = res.categories || [];
       state.categoryOrder = res.categoryOrder || categoryOrderList();
@@ -3436,7 +3475,12 @@
           };
         });
       }
-      if (state.categoryOrder.indexOf(state.activeTab.replace('cat-', '')) < 0 && state.categoryOrder.length) {
+      /* Keep the clicked slug even if this payload's order list is incomplete. Never snap back to categoryOrder[0]. */
+      if (
+        currentCat !== requestedCat &&
+        state.categoryOrder.indexOf(currentCat) < 0 &&
+        state.categoryOrder.length
+      ) {
         state.activeTab = 'cat-' + state.categoryOrder[0];
         _pageIndex = 0;
         _loading = false;
@@ -3459,7 +3503,7 @@
       if (state.view === 'list') renderShell();
       return;
     }
-    load(false, false);
+    load(false, true);
   }
 
   window.AdminProductsPanel = { load: load, ensureLoaded: ensureLoaded, prefetch: prefetch };

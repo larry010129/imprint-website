@@ -152,3 +152,80 @@ def test_admin_product_update_autosave_preserves_publish_flag():
     create_body = src[create_start : update_start]
     assert 'if body.get("autosave"):' in create_body
     assert 'cleaned["isPublished"] = False' in create_body
+
+
+def test_ensure_category_catalog_does_not_complete_on_empty_incoming():
+    src = _shop_src()
+    body = src.split("async function ensureCategoryCatalog(", 1)[1].split(
+        "function applyCategoryAddonPricesFromMeta(", 1
+    )[0]
+    assert "incoming.length === 0 && total === 0" in body
+    assert "incomingCategoryProducts" in body
+    assert "|| incoming.length === 0," not in body.replace(" ", "")
+
+
+def test_render_type_cards_hides_no_matches_when_unfiltered_empty():
+    src = _shop_src()
+    body = src.split("function renderTypeCards()", 1)[1].split(
+        "function syncVariantChipActiveStates()", 1
+    )[0]
+    assert "classList.toggle('hidden', products.length > 0)" not in body
+    assert "syncCatalogFilterEmpty" in body
+    sync = src.split("function syncCatalogFilterEmpty(", 1)[1].split(
+        "function populateCatalogFilters(", 1
+    )[0]
+    assert "catalogSearchOrFiltersActive" in sync
+    assert "catalog_no_matches" in sync
+    assert "此品項暫無上架款式。" in sync
+
+
+def test_admin_products_tab_fetch_seq_guard():
+    """Tab changes must fetch category=<slug> and ignore stale getProducts results."""
+    src = ADMIN_PRODUCTS_JS.read_text(encoding="utf-8")
+    fetch_start = src.index("function fetchProducts(")
+    fetch_body = src[fetch_start : src.index("function load(", fetch_start)]
+    assert "category:" in fetch_body
+    assert "getProducts" in fetch_body
+
+    load_start = src.index("function load(")
+    load_body = src[load_start : src.index("function prefetch(", load_start)]
+    assert "var _loadSeq = 0;" in src
+    assert "var seq = ++_loadSeq;" in load_body
+    assert "if (seq !== _loadSeq) return;" in load_body
+    assert "clearTimeout(timer)" in load_body
+    assert "LOAD_TIMEOUT_MS" in load_body
+    assert "requestedCat !== currentCat" in load_body
+    assert "state.products = incoming;" in load_body
+    assert "currentCat !== requestedCat" in load_body
+
+    ensure_start = src.index("function ensureLoaded(")
+    ensure_body = src[ensure_start : src.index("window.AdminProductsPanel", ensure_start)]
+    assert "load(false, true)" in ensure_body
+
+    tab_start = src.index("root.querySelectorAll('.ap-tab-btn')")
+    tab_body = src[tab_start : src.index("var addCatBtn", tab_start)]
+    assert "ap-tab-btn--add" in tab_body
+    assert "unmountProductsTable()" in tab_body
+    assert "tableAreaSkeletonHtml()" in tab_body
+    assert "load(true, true)" in tab_body
+
+
+def test_admin_products_editor_category_rebuilds_image_slots():
+    """品項 change must rebuild slots from catSel.value — jewelry metal×diamond, diamond cut-only."""
+    src = ADMIN_PRODUCTS_JS.read_text(encoding="utf-8")
+    pair_start = src.index("function slotPairSelectHtml(")
+    pair_body = src[pair_start : src.index("function groupImagesForSlots(", pair_start)]
+    assert "category === 'diamond'" in pair_body
+    assert "ap-image-slot-diamond-only" in pair_body
+    assert "ap-image-slot-metal" in pair_body
+    assert "ap-image-slot-diamond'" in pair_body or 'ap-image-slot-diamond"' in pair_body
+
+    chrome_idx = src.index("function syncDiamondEditorChrome(cat) {")
+    change_idx = src.index("catSel?.addEventListener('change', function () {", chrome_idx)
+    change_body = src[change_idx : src.index("form.addEventListener('submit'", change_idx)]
+    assert "syncDiamondEditorChrome(cat)" in change_body
+    assert "imageSlotsHtml(currentImages, catSel.value)" in change_body
+    assert "data-category" in change_body
+    assert "ap-image-slot-diamond-only" in change_body
+    assert "ap-image-slot-metal" in change_body
+    assert "imageSlotsHtml([], catSel.value)" in change_body

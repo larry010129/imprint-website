@@ -1293,6 +1293,8 @@ function optimizedCategoryImageUrl(url) {
     if (!parsed.pathname.includes(marker)) return value;
     parsed.pathname = parsed.pathname.replace(marker, '/storage/v1/render/image/public/');
     parsed.searchParams.set('width', '320');
+    parsed.searchParams.set('height', '320');
+    parsed.searchParams.set('resize', 'contain');
     parsed.searchParams.set('quality', '60');
     parsed.searchParams.set('format', 'webp');
     return parsed.toString();
@@ -1408,6 +1410,16 @@ async function ensureProductDetail(productId, category) {
   }
 }
 
+function incomingCategoryProducts(data, category) {
+  const keyed = data?.categories?.[category];
+  if (Array.isArray(keyed) && keyed.length) return keyed;
+  const bags = data?.categories && typeof data.categories === 'object'
+    ? Object.values(data.categories)
+    : [];
+  const flat = bags.flat().filter((p) => p && p.category === category);
+  return flat.length ? flat : (Array.isArray(keyed) ? keyed : []);
+}
+
 async function ensureCategoryCatalog(category) {
   if (!category || category === 'diamond' || !shopUsesApi() || !shopApiConfigured()) return;
   const paging = catalogPaging[category];
@@ -1420,14 +1432,14 @@ async function ensureCategoryCatalog(category) {
     while (page === 1 || ((catalog[category] || []).length < total && page <= 50)) {
       const data = await fetchCatalogPage({ category, page, pageSize });
       applyCatalogMeta(data);
-      const incoming = data.categories?.[category] || [];
+      const incoming = incomingCategoryProducts(data, category);
       mergeCategoryProducts(category, incoming);
       total = Number.isFinite(Number(data.total)) ? Number(data.total) : incoming.length;
       catalogPaging[category] = {
         pageSize,
         total,
         loaded: (catalog[category] || []).length,
-        complete: (catalog[category] || []).length >= total || incoming.length === 0,
+        complete: (catalog[category] || []).length >= total || (incoming.length === 0 && total === 0),
       };
       if (catalogPaging[category].complete || !incoming.length) break;
       page += 1;
@@ -1581,10 +1593,15 @@ function renderCatalogTiles() {
     // WebP category thumbs keep their pre-WebP original as onerror fallback.
     window.ShopAssets?.attachImageFallback(img, window.ShopAssets?.categoryThumbLegacy?.(cat) || catUrl);
 
+    const media = document.createElement('span');
+    media.className = 'catalog-tile__media';
+    media.appendChild(img);
+
     const label = document.createElement('span');
+    label.className = 'catalog-tile-label';
     label.textContent = categoryLabel(cat);
 
-    btn.appendChild(img);
+    btn.appendChild(media);
     btn.appendChild(label);
     btn.addEventListener('click', () => selectCategory(cat));
     grid.appendChild(btn);
@@ -3032,6 +3049,41 @@ function populateCatalogCaratFilter({ keepSelection = true, category = state.cat
   });
 }
 
+function catalogSearchOrFiltersActive() {
+  const query = (document.getElementById('catalog-search-input')?.value || '').trim();
+  return !!(query
+    || catalogFilterValues('catalog-metal-filter').length
+    || catalogFilterValues('catalog-price-filter').length
+    || catalogFilterValues('catalog-carat-filter').length);
+}
+
+function syncCatalogFilterEmpty(hasProducts) {
+  const empty = document.getElementById('catalog-filter-empty');
+  if (!empty) return;
+  const filtersOn = catalogSearchOrFiltersActive();
+  const pagingDone = !!catalogPaging[state.category]?.complete;
+  if (hasProducts || (!filtersOn && !pagingDone)) {
+    empty.classList.add('hidden');
+    return;
+  }
+  empty.classList.remove('hidden');
+  const p = empty.querySelector('p');
+  const clearBtn = document.getElementById('catalog-filter-empty-clear');
+  if (filtersOn) {
+    if (p) {
+      p.setAttribute('data-i18n', 'catalog_no_matches');
+      p.textContent = tr('catalog_no_matches');
+    }
+    clearBtn?.classList.remove('hidden');
+    return;
+  }
+  if (p) {
+    p.removeAttribute('data-i18n');
+    p.textContent = '此品項暫無上架款式。';
+  }
+  clearBtn?.classList.add('hidden');
+}
+
 function populateCatalogFilters({ keepSelection = true, category = state.category } = {}) {
   if (!category) return;
   populateCatalogMetalFilter({ keepSelection, category });
@@ -3077,6 +3129,8 @@ function renderTypeCards() {
     card.dataset.type = styleId;
     if (state.type === styleId) card.classList.add("active");
 
+    const media = document.createElement('span');
+    media.className = 'type-card__media';
     const candidates = styleGridImageCandidates(product);
     const imgSrc = candidates[0] || '';
     if (imgSrc) {
@@ -3086,13 +3140,14 @@ function renderTypeCards() {
       img.loading = "lazy";
       img.decoding = "async";
       window.ShopAssets?.attachImageFallbackChain(img, candidates.slice(1));
-      card.appendChild(img);
+      media.appendChild(img);
     } else {
       const ph = document.createElement("span");
       ph.className = "img-placeholder is-missing";
       ph.setAttribute("aria-hidden", "true");
-      card.appendChild(ph);
+      media.appendChild(ph);
     }
+    card.appendChild(media);
 
     const name = document.createElement("span");
     name.className = "type-name";
@@ -3109,7 +3164,7 @@ function renderTypeCards() {
     grid.appendChild(card);
   });
   applyTypeGridLayout(grid, products.length);
-  document.getElementById('catalog-filter-empty')?.classList.toggle('hidden', products.length > 0);
+  syncCatalogFilterEmpty(products.length > 0);
 }
 
 function syncVariantChipActiveStates() {
@@ -5534,7 +5589,7 @@ async function selectCategory(cat, options) {
   }
 
   await ensureCategoryCatalog(cat);
-
+  populateCatalogFilters({ keepSelection: false });
   renderTypeCards();
   const titleEl = document.getElementById("shop-category-title");
   if (titleEl) titleEl.textContent = tr('cat_' + cat);
@@ -6535,6 +6590,7 @@ async function restoreShopConfig(cfg) {
   if (titleEl) titleEl.textContent = tr('cat_' + cfg.category);
 
   await ensureCategoryCatalog(cfg.category);
+  populateCatalogFilters({ keepSelection: false, category: cfg.category });
   await ensureProductDetail(typeId, cfg.category);
   ensureLiveGoldPolling();
   if (cfg.chainProductId) await ensureProductDetail(cfg.chainProductId, 'chain');

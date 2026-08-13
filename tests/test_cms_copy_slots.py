@@ -45,6 +45,21 @@ def test_apply_text_and_button_slots():
     assert "Start calc" in out
 
 
+def test_apply_text_keeps_markup_when_copy_matches():
+    html = '<h1 data-cms-text="hero-title">把最深的情感，<em>銘印成永恆</em></h1>'
+    rows = [
+        {
+            "slot_key": "hero-title",
+            "kind": "text",
+            "text_value": "把最深的情感，銘印成永恆",
+            "default_text": "把最深的情感，銘印成永恆",
+            "is_published": True,
+        }
+    ]
+    out = apply_page_copy_slots(html, "/", rows)
+    assert "<em>銘印成永恆</em>" in out
+
+
 def test_copy_slots_escape_text_and_reject_script_links():
     html = '<h1 data-cms-text="hero-title">Old</h1>'
     rows = [

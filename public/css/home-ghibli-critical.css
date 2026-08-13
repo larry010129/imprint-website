@@ -132,7 +132,7 @@
   pointer-events:none;
 }
 .page-home .hc-media img{
-  position:absolute; inset:0; width:100%; height:100%;
+  position:absolute; inset:0; width:100%; height:100%; max-width:none;
   object-fit:cover; object-position:center; transform:scale(1);
   transition:transform 8s cubic-bezier(.25,.1,.25,1);
 }

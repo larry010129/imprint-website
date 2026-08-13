@@ -342,8 +342,30 @@ def test_shop_js_non_round_shape_requires_min_carat():
     css = (ROOT / "public" / "css" / "shop.css").read_text(encoding="utf-8")
     assert ".shop-page .shop-option--disabled" in css
     assert ".diamond-carousel-item.is-disabled" in css
-    assert "shop.css?v=6.40" in (
+    assert "shop.css?v=6.53" in (
         ROOT / "content" / "site" / "templates" / "pages" / "shop" / "calculator.html"
+    ).read_text(encoding="utf-8")
+    assert "max-width: none" in css
+    assert "min-width: 0" in css
+    tile_media = css.split(".catalog-tile__media,", 1)[1].split("}", 1)[0]
+    assert "width: 100%" in tile_media
+    assert "aspect-ratio: 1 / 1" in tile_media
+    assert "overflow: hidden" in tile_media
+    tile_img = css.split(".catalog-tile__media img,", 1)[1].split("}", 1)[0]
+    assert "width: 100%" in tile_img
+    assert "height: 100%" in tile_img
+    assert "max-width: none" in tile_img
+    assert "object-fit: contain" in tile_img
+    assert "object-position: center" in tile_img
+    assert "catalog-tile__media" in src
+    assert "catalog-tile__media" in (
+        ROOT
+        / "content"
+        / "site"
+        / "templates"
+        / "partials"
+        / "htmx"
+        / "shop_catalog.html"
     ).read_text(encoding="utf-8")
     assert "shop-i18n.js?v=22" in (
         ROOT / "content" / "site" / "templates" / "pages" / "shop" / "calculator.html"

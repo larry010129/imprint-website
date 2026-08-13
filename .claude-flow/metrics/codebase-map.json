@@ -1,9 +1,5 @@
 {
-<<<<<<< Updated upstream
-  "timestamp": "2026-08-13T06:40:53.271Z",
-=======
-  "timestamp": "2026-08-13T05:55:53.201Z",
->>>>>>> Stashed changes
+  "timestamp": "2026-08-13T10:40:25.304Z",
   "projectRoot": "C:\\Users\\user\\Documents\\Diamond web\\imprint-website",
   "structure": {
     "hasPackageJson": true,
@@ -11,9 +7,5 @@
     "hasClaudeConfig": true,
     "hasClaudeFlow": true
   },
-<<<<<<< Updated upstream
-  "scannedAt": 1786603253272
-=======
-  "scannedAt": 1786600553201
->>>>>>> Stashed changes
+  "scannedAt": 1786617625305
 }
