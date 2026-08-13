@@ -122,9 +122,37 @@ def load_youtube_latest_video() -> dict | None:
     return data
 
 
+def _resolve_fragment_path(relpath: str) -> Path:
+    """Resolve legacy fragment names and the current body-file layout."""
+    relative = Path(relpath)
+    if relative.is_absolute() or ".." in relative.parts:
+        raise StarletteHTTPException(status_code=404, detail="Not Found")
+
+    path = _FRAGMENTS_DIR / relative
+    if path.is_file():
+        return path
+
+    parts = relative.parts
+    filename = relative.name
+    stem = Path(filename).stem
+    if parts and parts[0] == "series":
+        body_name = f"series__{stem}.html"
+    elif parts and parts[0] == "jewelry_category":
+        body_name = f"jewelry__{stem}.html"
+    elif parts and parts[0] == "jewelry_style" and "-" in stem:
+        category, style = stem.split("-", 1)
+        body_name = f"jewelry__{category}__{style}.html"
+    else:
+        body_name = "__".join(parts)
+    body_path = settings.site_content_dir / "bodies" / body_name
+    if body_path.is_file():
+        return body_path
+    raise StarletteHTTPException(status_code=404, detail="Not Found")
+
+
 @lru_cache(maxsize=None)
 def _load_fragment(relpath: str) -> str:
-    path = _FRAGMENTS_DIR / relpath
+    path = _resolve_fragment_path(relpath)
     if not path.is_file():
         raise StarletteHTTPException(status_code=404, detail="Not Found")
     return path.read_text(encoding="utf-8")
@@ -266,6 +294,47 @@ def _load_journal_ssr(limit: int = JOURNAL_SSR_LIMIT) -> list[dict]:
         with get_connection() as conn, conn.cursor() as cur:
             return fetch_published_journal_posts(cur, limit=limit, offset=0)
     except Exception:
+        return []
+
+
+SHOP_CATALOG_SSR_LIMIT_PER_CATEGORY = 12
+
+
+def _load_shop_catalog_ssr(
+    limit_per_category: int = SHOP_CATALOG_SSR_LIMIT_PER_CATEGORY,
+) -> list[dict]:
+    """Category -> product name/id list for a <noscript> fallback on
+    /shop/calculator/. The interactive catalog grid is entirely client-
+    rendered by shop.js fetching /api/catalog, so non-JS AI crawlers see only
+    empty skeleton tiles today; this gives them real, linkable product names."""
+    from app.catalog import fetch_catalog_rows
+    from app.database import get_connection
+    from app.product_categories import fetch_categories
+
+    try:
+        with get_connection() as conn, conn.cursor() as cur:
+            out: list[dict] = []
+            for cat_row in fetch_categories(cur):
+                slug = cat_row.get("slug")
+                if not slug:
+                    continue
+                rows = fetch_catalog_rows(
+                    cur, category=slug, include_drafts=False, limit=limit_per_category
+                )
+                products = [
+                    {"id": str(row["id"]), "name": row["name_zh"]}
+                    for row in rows
+                    if row.get("name_zh")
+                ]
+                if products:
+                    out.append({
+                        "slug": slug,
+                        "label": cat_row.get("label_zh") or slug,
+                        "products": products,
+                    })
+            return out
+    except Exception:
+        log.exception("shop calculator SSR: catalog fetch failed")
         return []
 
 
@@ -433,6 +502,7 @@ def _context(request: Request, meta: PageMeta, *, include_journal_ssr: bool = Tr
         "og_title": meta.og_title,
         "og_description": meta.og_description,
         "og_image": meta.og_image,
+        "keywords": meta.keywords,
         "breadcrumbs": meta.breadcrumbs,
         "mvc_page": meta.mvc_page,
         "extra_body_class": meta.extra_body_class,
@@ -455,6 +525,7 @@ def _context(request: Request, meta: PageMeta, *, include_journal_ssr: bool = Tr
         "faq_json_ld": "",
         "stories_ssr": [],
         "journal_ssr": [],
+        "shop_catalog_ssr": [],
     }
     if meta.content_fragment:
         context["content_html"] = _load_fragment(meta.content_fragment)
@@ -473,6 +544,8 @@ def _context(request: Request, meta: PageMeta, *, include_journal_ssr: bool = Tr
         context["engagement_rings"] = _load_engagement_rings()
     if meta.route == "/gold-price":
         context["gold_quote_bootstrap"] = _load_gold_quote_bootstrap()
+    if meta.route == "/shop/calculator/":
+        context["shop_catalog_ssr"] = _load_shop_catalog_ssr()
     # Live env read so register page picks up keys without process restart in tests.
     from app.captcha import recaptcha_site_key as _recaptcha_site_key
 

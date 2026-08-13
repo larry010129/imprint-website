@@ -1283,10 +1283,28 @@ function productImageUrl(product, metalColor, diamondColor, opts) {
   return '';
 }
 
+function optimizedCategoryImageUrl(url) {
+  const value = String(url || '').trim();
+  if (!value) return '';
+  try {
+    const parsed = new URL(value);
+    if (!/\.supabase\.co$/i.test(parsed.hostname)) return value;
+    const marker = '/storage/v1/object/public/';
+    if (!parsed.pathname.includes(marker)) return value;
+    parsed.pathname = parsed.pathname.replace(marker, '/storage/v1/render/image/public/');
+    parsed.searchParams.set('width', '320');
+    parsed.searchParams.set('quality', '60');
+    parsed.searchParams.set('format', 'webp');
+    return parsed.toString();
+  } catch (_) {
+    return value;
+  }
+}
+
 function categoryImageUrl(category) {
   const meta = window._catalogCategoryMeta?.[category];
-  if (meta?.thumbUrl) return meta.thumbUrl;
-  return window.ShopAssets?.categoryThumb(category) || '';
+  if (meta?.thumbUrl) return optimizedCategoryImageUrl(meta.thumbUrl);
+  return optimizedCategoryImageUrl(window.ShopAssets?.categoryThumb(category) || '');
 }
 
 function categoryLabel(cat) {
@@ -2025,9 +2043,9 @@ function updateDiamondWizardChrome() {
 
 const WIZARD_GUIDE = {
   catalog: {
-    eyebrow: '線上訂製 · 三步完成',
-    title: '先選擇您要的品項',
-    desc: '戒指、項墜、耳飾、手鍊或鍊條——點選一個類別即可開始。',
+    eyebrow: 'DNA 紀念鑽石 · 六大系列',
+    title: '六大 DNA 紀念鑽石系列線上試算',
+    desc: '滿月鑽石、寵物鑽石、結髮鑽石、全家福鑽石、生命鑽石、真我鑽石，選擇系列與珠寶款式後即可設定規格並查看訂製參考價格。',
   },
   styles: {
     eyebrow: '線上訂製 · 三步完成',
@@ -5562,6 +5580,12 @@ async function selectType(typeId, options) {
   document.querySelectorAll(".type-card").forEach(c =>
     c.classList.toggle("active", c.dataset.type === resolvedType));
 
+  // Reveal the configure step immediately using the already-loaded catalog
+  // (lite) product data, so the click feels instant instead of waiting on
+  // the network. Full detail (weights/gold options) streams in below and
+  // refreshes the step-3 controls once it arrives.
+  setShopView('product', opts);
+
   await ensureProductDetail(resolvedType, state.category);
   ensureLiveGoldPolling();
   const product = getSelectedProduct();
@@ -5587,7 +5611,6 @@ async function selectType(typeId, options) {
   updateEngravingSteps();
   updateDiamondSteps();
   await updateChainOptions();
-  setShopView('product', opts);
   updateSummary();
 }
 
@@ -6716,14 +6739,12 @@ async function applyInitialShopState() {
 }
 
 async function init() {
-  const bootPromise = bootShopCore();
-
   if (window.ensureShopTermsAccepted) {
     const termsOk = await window.ensureShopTermsAccepted();
     if (!termsOk) return;
   }
 
-  await bootPromise;
+  await bootShopCore();
   await applyInitialShopState();
   finishShopBoot();
 }

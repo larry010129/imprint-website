@@ -25,6 +25,7 @@ class PageMeta:
     content_fragment: str | None = None
     extra_head_blocks: list[str] = field(default_factory=list)
     robots: str | None = None
+    keywords: str | None = None
 
 
 HOME = PageMeta(
@@ -474,6 +475,7 @@ PAGE_TRACK_ORDER = PageMeta(
     extra_body_class=None,
     content_fragment=None,
     extra_head_blocks=[],
+    robots='noindex, nofollow',
 )
 
 PAGE_WHAT_IS_DNA_DIAMOND = PageMeta(
@@ -595,8 +597,8 @@ JEWELRY_ENGAGEMENT = PageMeta(
 SHOP_CALCULATOR = PageMeta(
     route='/shop/calculator/',
     template='pages/shop/calculator.html',
-    title='品項訂製｜鑽石戒台選購試算－銘印鑽石 IMPRINT DIAMOND',
-    description='線上選擇戒指、項墜、耳飾、手鍊與鍊條款式，配置克拉數、鑽石顏色、金屬成色與戒圍，即時試算參考價格並下單。',
+    title='DNA 紀念鑽石六大系列試算｜滿月、寵物、結髮、全家福、生命、真我｜銘印鑽石',
+    description='DNA 紀念鑽石線上訂製試算：滿月鑽石、寵物鑽石、結髮鑽石、全家福鑽石、生命鑽石與真我鑽石六大系列，選擇戒指、項墜、耳飾、手鍊或鍊條款式，設定克拉、鑽石顏色、金屬材質、戒圍與刻字，查看訂製參考價格，再由顧問協助確認訂單與細節。正式價格與可訂製條件以顧問確認為準，提供完整配置資訊，方便先行規劃。',
     canonical_path='shop/calculator/',
     og_title=None,
     og_description=None,
@@ -606,7 +608,6 @@ SHOP_CALCULATOR = PageMeta(
     extra_body_class=None,
     content_fragment=None,
     extra_head_blocks=[],
-    robots='noindex, follow',
 )
 
 JEWELRY_CATEGORY_BRACELETS = PageMeta(
@@ -938,6 +939,7 @@ SERIES_FAMILY = PageMeta(
     og_title='全家福鑽石｜全家人髮絲紀念鑽石－銘印鑽石',
     og_description='集合全家人髮絲凝成一顆鑽石，讓家的記憶成為可以傳承的珍藏。',
     og_image='static/images/hero/imprint-diamond-family-portrait-jewelry.jpg',
+    keywords='全家福鑽石,全家人紀念鑽石,家族紀念鑽石,家人髮絲鑽石,全家福紀念品,家族傳承鑽石,長輩生日禮物,結婚紀念禮物,家族團聚紀念,台灣全家福鑽石',
     breadcrumbs=[('首頁', '/'), ('六大系列', '/series'), ('全家福鑽石', None)],
     mvc_page=None,
     extra_body_class=None,
@@ -954,6 +956,7 @@ SERIES_FIRST_LOVE = PageMeta(
     og_title='滿月鑽石｜初生胎髮紀念鑽石－銘印鑽石',
     og_description='滿月／初生胎髮紀念鑽石：珍藏生命最初印記，台灣在地培育。',
     og_image='static/images/hero/imprint-diamond-newborn-baby-necklace.jpg',
+    keywords='滿月鑽石,初生胎髮鑽石,寶寶胎髮鑽石,胎毛紀念,新生兒紀念鑽石,剃胎毛紀念品,寶寶滿月禮,胎髮變鑽石,台灣胎毛鑽石,嬰兒紀念鑽石',
     breadcrumbs=[('首頁', '/'), ('六大系列', '/series'), ('滿月鑽石', None)],
     mvc_page=None,
     extra_body_class=None,
@@ -970,6 +973,7 @@ SERIES_HEIRLOOM = PageMeta(
     og_title='骨灰鑽石｜生命鑽石紀念訂製－銘印鑽石',
     og_description='骨灰鑽石／生命鑽石：親人毛髮或骨灰在台灣培育，樣本不送海外，可代送鑑定。',
     og_image='static/images/hero/imprint-diamond-heirloom-memorial.jpg',
+    keywords='骨灰鑽石,生命鑽石,骨灰變鑽石,寵物骨灰鑽石,紀念鑽石推薦,台灣骨灰鑽石,親人紀念鑽石,GIA鑑定紀念鑽石,骨灰鑽石價格,生命鑽石訂製',
     breadcrumbs=[('首頁', '/'), ('六大系列', '/series'), ('生命鑽石', None)],
     mvc_page=None,
     extra_body_class=None,
@@ -986,6 +990,7 @@ SERIES_LOVE = PageMeta(
     og_title='結髮鑽石｜培育鑽石婚戒訂製－銘印鑽石',
     og_description='結髮鑽石與培育鑽石婚戒：兩人髮絲共同培育，可線上試算或預約。',
     og_image='static/images/hero/imprint-diamond-wedding-couple-ring.jpg',
+    keywords='結髮鑽石,培育鑽石婚戒,結婚戒指訂製,情侶對戒,兩人髮絲鑽石,求婚戒指,婚戒推薦,DNA婚戒,培育鑽石對戒,台灣結髮鑽石',
     breadcrumbs=[('首頁', '/'), ('六大系列', '/series'), ('結髮鑽石', None)],
     mvc_page=None,
     extra_body_class=None,
@@ -1002,6 +1007,7 @@ SERIES_PET = PageMeta(
     og_title='寵物鑽石｜毛髮紀念與寵物紀念品－銘印鑽石',
     og_description='以毛孩毛髮培育專屬寵物鑽石，亦可作為可傳承的寵物紀念品；台灣在地實驗室。',
     og_image='static/images/hero/imprint-diamond-pet-memorial-cat.jpg',
+    keywords='寵物鑽石,毛孩紀念鑽石,寵物毛髮鑽石,寵物紀念品,貓咪紀念鑽石,狗狗紀念鑽石,毛孩離世紀念,寵物骨灰鑽石,DNA寵物鑽石,台灣寵物鑽石推薦',
     breadcrumbs=[('首頁', '/'), ('六大系列', '/series'), ('寵物鑽石', None)],
     mvc_page=None,
     extra_body_class=None,
@@ -1018,6 +1024,7 @@ SERIES_SIGNATURE = PageMeta(
     og_title='真我鑽石｜Signature 專屬 DNA 鑽石－銘印鑽石',
     og_description='真我鑽石（Signature）：以自己的髮絲萃煉成獨一無二的鑽石，獻給值得被自己慶祝的此刻。',
     og_image='static/images/hero/imprint-diamond-wedding-couple-ring.jpg',
+    keywords='真我鑽石,Signature鑽石,髮絲鑽石,自己的紀念鑽石,DNA紀念鑽石,客製化紀念鑽石,培育鑽石訂製,台灣DNA鑽石,送自己的禮物,頭髮變鑽石',
     breadcrumbs=[('首頁', '/'), ('六大系列', '/series'), ('真我鑽石', None)],
     mvc_page=None,
     extra_body_class=None,
