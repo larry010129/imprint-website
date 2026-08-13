@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="/css/admin-core.css?v=36">
 <link rel="stylesheet" href="/css/skeleton.css?v=1">
 <link rel="stylesheet" href="/css/admin-shell.css?v=5">
-<link rel="stylesheet" href="/css/admin-orders.css?v=11">
+<link rel="stylesheet" href="/css/admin-orders.css?v=12">
 <link rel="stylesheet" href="/css/admin-tables.css?v=30">
 <link rel="stylesheet" href="/static/react/admin-tables.css?v=39">
 <link rel="stylesheet" href="/css/cms-editor.css?v=12">
@@ -112,7 +112,7 @@
           </form>
           <a class="dash-export-btn" id="dashExportBtn" href="#">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            匯出 CSV
+            匯出 Excel
           </a>
         </div>
       </div>
@@ -260,7 +260,10 @@
       <div class="adx-orders-page">
         <header class="orders-page-head">
           <h2>訂單管理</h2>
-          <button class="btn-sm btn-primary" id="btnNewOrder" type="button">+ 新增訂單</button>
+          <div class="orders-page-actions">
+            <button class="btn-sm" id="btnExportOrdersCsv" type="button">匯出 Excel</button>
+            <button class="btn-sm btn-primary" id="btnNewOrder" type="button">+ 新增訂單</button>
+          </div>
         </header>
         <div class="orders-search">
           <input type="search" id="ordersSearch" placeholder="搜尋訂單編號、客戶、品項…" aria-label="搜尋訂單">
@@ -447,9 +450,9 @@
 <script src="/js/admin-dashboard-chart.js"></script>
 <script src="/js/admin-table-sort.js?v=1"></script>
 <script src="/js/admin-image-urls.js?v=12"></script>
-<script src="/js/admin.js?v=22"></script>
+<script src="/js/admin.js?v=23"></script>
 <script src="/js/girdle-engrave.js?v=11"></script>
-<script src="/js/admin-orders.js?v=21"></script>
+<script src="/js/admin-orders.js?v=25"></script>
 <script src="/js/order-detail.js"></script>
 <script src="/js/admin-products.js?v=64"></script>
 <script src="/js/admin-accounts.js?v=12"></script>

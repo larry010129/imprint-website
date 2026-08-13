@@ -642,6 +642,15 @@
     });
   }
 
+  document.getElementById('btnExportOrdersCsv')?.addEventListener('click', function () {
+    var q = (searchInput && searchInput.value.trim()) || _lastQuery || '';
+    var params = new URLSearchParams();
+    if (q) params.set('q', q);
+    params.set('_', String(Date.now()));
+    window.location.href = (window.IMPRINT_API_BASE || '')
+      + '/api/admin/orders/export?' + params.toString();
+  });
+
   document.getElementById('btnNewOrder')?.addEventListener('click', function () {
     if (window.AdminPanel && window.AdminPanel.openNewOrderModal) {
       window.AdminPanel.openNewOrderModal(load);

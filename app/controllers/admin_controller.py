@@ -15,11 +15,13 @@ from app.account_delete import delete_blocked_reason, hard_delete_user
 from app.admin_plugins import list_plugins, update_plugin
 from app.admin_dashboard import (
     DASHBOARD_ORDER_HARD_LIMIT,
-    build_dashboard_csv,
+    XLSX_MEDIA_TYPE,
+    build_admin_orders_xlsx,
     build_dashboard_payload,
     dashboard_fetch_bounds,
     normalize_range,
 )
+from app.dashboard_xlsx import build_dashboard_xlsx
 from app.admin_products import (
     CATEGORY_LABELS,
     append_product_image,
@@ -165,6 +167,14 @@ def _lead_counts(cur) -> tuple[int, int, int, int]:
     return new_messages, pending_quotes, active_orders, completed_orders
 
 
+def _fetch_dashboard_gold(cur) -> dict | None:
+    cur.execute(
+        "select xau_per_gram, xpt_per_gram, xag_per_gram, fetched_at "
+        "from gold_price_cache where id = 1"
+    )
+    return cur.fetchone()
+
+
 def _attach_order_images(cur, orders: list[dict]) -> None:
     attach_order_display(cur, orders)
 
@@ -225,12 +235,13 @@ async def dashboard_export(
 
     with get_connection() as conn, conn.cursor() as cur:
         orders = _fetch_orders(cur, since=since, until=until)
+        gold = _fetch_dashboard_gold(cur)
 
-    csv_body, slug = build_dashboard_csv(orders, cfg)
-    filename = f"orders-{slug}.csv"
+    xlsx_body, slug = build_dashboard_xlsx(orders, cfg, gold=gold)
+    filename = f"dashboard-{slug}.xlsx"
     return Response(
-        content=csv_body,
-        media_type="text/csv; charset=utf-8",
+        content=xlsx_body,
+        media_type=XLSX_MEDIA_TYPE,
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
@@ -285,6 +296,55 @@ async def leads_mark_done(request: Request) -> JSONResponse:
     return JSONResponse(content={"ok": True})
 
 
+def _admin_orders_search_from() -> str:
+    return """
+    from orders o
+    left join order_items oi on oi.order_id = o.id
+    left join order_contacts oc on oc.order_id = o.id
+    where o.order_number ilike %s
+       or o.status ilike %s
+       or o.summary_zh ilike %s
+       or oc.customer_name ilike %s
+       or oc.customer_phone ilike %s
+       or oi.summary_zh ilike %s
+    """
+
+
+def _admin_order_like_params(search: str) -> tuple:
+    like = f"%{search}%"
+    return (like, like, like, like, like, like)
+
+
+def _fetch_admin_orders(cur, search: str, *, limit: int, offset: int = 0) -> list[dict]:
+    q = (search or "").strip()
+    if q:
+        cur.execute(
+            "select distinct o.* "
+            + _admin_orders_search_from()
+            + " order by o.created_at desc limit %s offset %s",
+            (*_admin_order_like_params(q), limit, offset),
+        )
+    else:
+        cur.execute(
+            "select * from orders order by created_at desc limit %s offset %s",
+            (limit, offset),
+        )
+    return list(cur.fetchall())
+
+
+def _count_admin_orders(cur, search: str) -> int:
+    q = (search or "").strip()
+    if not q:
+        return sql_count_total(cur, "select count(*)::int from orders")
+    return sql_count_total(
+        cur,
+        "select count(*)::int from (select distinct o.id "
+        + _admin_orders_search_from()
+        + ") t",
+        _admin_order_like_params(q),
+    )
+
+
 @router.get("/orders")
 async def orders_list(request: Request, q: str | None = Query(None)) -> dict:
     _require_admin(request)
@@ -292,56 +352,43 @@ async def orders_list(request: Request, q: str | None = Query(None)) -> dict:
     page, page_size, limit, offset = parse_paging_from_mapping(request.query_params)
 
     with get_connection() as conn, conn.cursor() as cur:
-        if search:
-            like = f"%{search}%"
-            like_params = (like, like, like, like, like, like)
-            total = sql_count_total(
-                cur,
-                """
-                select count(*)::int from (
-                  select distinct o.id
-                  from orders o
-                  left join order_items oi on oi.order_id = o.id
-                  left join order_contacts oc on oc.order_id = o.id
-                  where o.order_number ilike %s
-                     or o.status ilike %s
-                     or o.summary_zh ilike %s
-                     or oc.customer_name ilike %s
-                     or oc.customer_phone ilike %s
-                     or oi.summary_zh ilike %s
-                ) t
-                """,
-                like_params,
-            )
-            cur.execute(
-                """
-                select distinct o.*
-                from orders o
-                left join order_items oi on oi.order_id = o.id
-                left join order_contacts oc on oc.order_id = o.id
-                where o.order_number ilike %s
-                   or o.status ilike %s
-                   or o.summary_zh ilike %s
-                   or oc.customer_name ilike %s
-                   or oc.customer_phone ilike %s
-                   or oi.summary_zh ilike %s
-                order by o.created_at desc
-                limit %s offset %s
-                """,
-                (*like_params, limit, offset),
-            )
-        else:
-            total = sql_count_total(cur, "select count(*)::int from orders")
-            cur.execute(
-                "select * from orders order by created_at desc limit %s offset %s",
-                (limit, offset),
-            )
-        orders = cur.fetchall()
+        total = _count_admin_orders(cur, search)
+        orders = _fetch_admin_orders(cur, search, limit=limit, offset=offset)
         attach_order_display(cur, orders)
 
     return page_response(
         orders, page=page, page_size=page_size, total=total, items_key="orders"
     )
+
+
+@router.get("/orders/export")
+async def orders_export(request: Request, q: str | None = Query(None)) -> Response:
+    """Canonical download: GET /api/admin/orders/export (no file extension)."""
+    _require_admin(request)
+    search = (q or "").strip()
+    with get_connection() as conn, conn.cursor() as cur:
+        orders = _fetch_admin_orders(
+            cur, search, limit=DASHBOARD_ORDER_HARD_LIMIT, offset=0
+        )
+        attach_order_display(cur, orders)
+    today = datetime.now(timezone(timedelta(hours=8))).strftime("%Y-%m-%d")
+    return Response(
+        content=build_admin_orders_xlsx(orders),
+        media_type=XLSX_MEDIA_TYPE,
+        headers={
+            "Content-Disposition": f'attachment; filename="orders-{today}.xlsx"',
+        },
+    )
+
+
+@router.get("/orders/export.csv")
+async def orders_export_csv(request: Request, q: str | None = Query(None)) -> Response:
+    return await orders_export(request, q)
+
+
+@router.get("/orders/export.xlsx")
+async def orders_export_xlsx(request: Request, q: str | None = Query(None)) -> Response:
+    return await orders_export(request, q)
 
 
 @router.post("/orders")

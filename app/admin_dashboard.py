@@ -1,13 +1,14 @@
-"""Admin dashboard aggregates — day/week/month ranges and CSV export."""
+"""Admin dashboard aggregates — day/week/month ranges and Excel export."""
 
 from __future__ import annotations
 
-import csv
 import io
 import re
 from datetime import date, datetime, time, timedelta, timezone
 
-from app.orders import ORDER_STATUS_LABELS_ZH as STATUS_LABELS_ZH
+from openpyxl import Workbook
+
+from app.orders import order_status_label
 
 GRANULARITIES = ("day", "week", "month")
 MAX_DAY_SPAN = 90
@@ -343,30 +344,126 @@ def _csv_safe(value) -> str:
     return text
 
 
-def build_dashboard_csv(orders: list[dict], cfg: dict) -> tuple[str, str]:
-    output = io.StringIO()
-    writer = csv.writer(output)
-    writer.writerow(["訂單編號", "日期", "客戶", "商品", "狀態", "含稅總計"])
+ADMIN_ORDERS_CSV_HEADERS = (
+    "訂單編號",
+    "日期",
+    "狀態",
+    "客戶姓名",
+    "電子郵件",
+    "電話",
+    "品項",
+    "訂金",
+    "總計",
+    "收件地址",
+    "取消原因",
+)
 
-    for order in sorted(orders, key=lambda o: o.get("created_at") or datetime.min):
-        if not _order_in_period(order, cfg):
-            continue
-        created_at = order.get("created_at")
-        if created_at:
-            local = created_at + timedelta(hours=8) if created_at.tzinfo else created_at
-            date_str = local.strftime("%Y-%m-%d %H:%M")
-        else:
-            date_str = ""
-        product = (order.get("product_type") or order.get("category") or "").strip() or "-"
-        status = STATUS_LABELS_ZH.get(order.get("status") or "", order.get("status") or "")
-        writer.writerow([
-            _csv_safe(order.get("order_number") or ""),
-            date_str,
-            _csv_safe(order.get("customer_name") or ""),
-            _csv_safe(product),
-            _csv_safe(status),
-            round(float(order.get("total_price") or 0)),
-        ])
 
-    slug = cfg["period"] or f"{cfg['start']}_{cfg['end']}" or "all"
-    return "\ufeff" + output.getvalue(), slug
+XLSX_MEDIA_TYPE = (
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+)
+_XLSX_COL_FORMATS = (
+    "@",
+    "yyyy-mm-dd hh:mm",
+    "@",
+    "@",
+    "@",
+    "@",
+    "@",
+    "#,##0",
+    "#,##0",
+    "@",
+    "@",
+)
+
+
+def _xlsx_local_dt(value) -> datetime | None:
+    if not value:
+        return None
+    dt = value
+    if isinstance(value, str):
+        raw = value.strip()
+        if not raw:
+            return None
+        try:
+            dt = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+    if not isinstance(dt, datetime):
+        return None
+    local = dt.astimezone(_TZ_TAIPEI) if dt.tzinfo else dt
+    return local.replace(tzinfo=None, second=0, microsecond=0)
+
+
+def _csv_shipping(order: dict) -> str:
+    parts = [
+        order.get("shipping_postal"),
+        order.get("shipping_city"),
+        order.get("shipping_address"),
+    ]
+    return " ".join(str(p).strip() for p in parts if p)
+
+
+def _csv_items(order: dict) -> str:
+    return (
+        order.get("summary")
+        or order.get("summary_zh")
+        or order.get("product_name")
+        or order.get("product_type")
+        or ""
+    )
+
+
+def _csv_money(value):
+    if value is None or value == "":
+        return None
+    return round(float(value))
+
+
+def _csv_deposit(order: dict):
+    total = order.get("total_price")
+    if total is None or total == "":
+        return None
+    return round(float(total) * 0.5)
+
+
+def _csv_status(order: dict) -> str:
+    label = order.get("status_label")
+    if label:
+        return str(label)
+    return order_status_label(order.get("status"), order.get("fulfillment_method"))
+
+
+def _admin_order_xlsx_values(order: dict) -> list:
+    phone = str(order.get("customer_phone") or "").strip()
+    return [
+        _csv_safe(str(order.get("order_number") or "").strip()),
+        _xlsx_local_dt(order.get("created_at")),
+        _csv_safe(_csv_status(order)),
+        _csv_safe(order.get("customer_name") or ""),
+        _csv_safe(order.get("customer_email") or ""),
+        _csv_safe(phone),
+        _csv_safe(_csv_items(order)),
+        _csv_deposit(order),
+        _csv_money(order.get("total_price")),
+        _csv_safe(_csv_shipping(order)),
+        _csv_safe(order.get("cancel_reason") or ""),
+    ]
+
+
+def _xlsx_apply_formats(ws, row_idx: int) -> None:
+    for col, fmt in enumerate(_XLSX_COL_FORMATS, 1):
+        ws.cell(row=row_idx, column=col).number_format = fmt
+
+
+def build_admin_orders_xlsx(orders: list[dict]) -> bytes:
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "訂單"
+    ws.append(list(ADMIN_ORDERS_CSV_HEADERS))
+    for order in orders:
+        ws.append(_admin_order_xlsx_values(order))
+        _xlsx_apply_formats(ws, ws.max_row)
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()

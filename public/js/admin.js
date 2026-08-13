@@ -188,6 +188,15 @@
       var exportBtn = document.getElementById('dashExportBtn');
       if (exportBtn) {
         exportBtn.href = api.admin.dashboardExportUrl(dashboardRequestParams());
+        if (!exportBtn.dataset.bound) {
+          exportBtn.dataset.bound = '1';
+          exportBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            var url = api.admin.dashboardExportUrl(dashboardRequestParams());
+            var sep = url.indexOf('?') >= 0 ? '&' : '?';
+            window.location.href = url + sep + '_=' + Date.now();
+          });
+        }
       }
     }
 

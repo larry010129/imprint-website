@@ -3212,16 +3212,17 @@ function updateColorStep(goldOverride) {
   if (!step) return;
   const gold = goldOverride ?? state.gold;
   const show = gold && needsColorSelection(gold, product);
+  const collapse = !show && (isDiamondOnlyCategory() || isColorLockedChainProduct(product));
   updateColorStepLabel('color-step-label', gold);
-  step.classList.toggle('hidden', !show);
-  // Chain never picks color — collapse the 2-col slot (visibility:hidden would leave a hole)
-  step.classList.toggle('hidden-collapse', !show && isColorLockedChainProduct(product));
+  step.classList.remove('hidden');
+  step.classList.toggle('hidden-collapse', collapse);
+  step.classList.toggle('is-placeholder', !show && !collapse);
+  step.setAttribute('aria-hidden', show ? 'false' : 'true');
   if (!show) {
     if (gold) state.color = enforceMetalColor(gold, state.color, product);
     if (row) row.innerHTML = '';
     return;
   }
-  step.classList.remove('hidden-collapse');
   state.color = enforceMetalColor(gold, state.color, product);
   renderColorButtons('color-btn-row', gold, product, state.color, selectColor);
 }

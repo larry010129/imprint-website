@@ -3242,7 +3242,7 @@ body.app-shell:not(.dark-theme) .shop-fit {
 
 .shop-fit .product-options-section {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   column-gap: 0.875rem;
   row-gap: 0.375rem;
   overflow: visible;
@@ -3276,19 +3276,20 @@ body.app-shell:not(.dark-theme) .shop-fit {
   display: none;
 }
 
-/* Keep metal+color option groups in the same compact three-column grid.
-   Color spans the remaining two columns so 3×4rem chips fit one line
-   (uses the blank third column that was left empty by auto-placement). */
-.shop-fit #metal-step {
+/* Stable 2×2: material | color-slot / size | engrave.
+   Color stays in the grid when empty so size/engrave never jump. */
+.shop-fit #metal-step,
+.shop-fit #ringsize-step {
   grid-column: 1 / 2;
 }
 
-.shop-fit #color-step {
+.shop-fit #color-step,
+.shop-fit #engraving-band-step {
   grid-column: 2 / -1;
   min-width: 0;
 }
 
-.shop-fit #color-step.hidden {
+.shop-fit #color-step.is-placeholder {
   visibility: hidden;
   pointer-events: none;
 }
@@ -3341,10 +3342,11 @@ body.app-shell:not(.dark-theme) .shop-fit {
 }
 
 /* Metal color: always one horizontal line (1/2/3 chips) — never wrap.
-   Do not clip; column span 2 holds 3×4rem + gaps. */
+   min-height holds the empty 2×2 slot so size/engrave do not jump. */
 .shop-fit #color-btn-row {
   flex-wrap: nowrap;
   overflow-x: visible;
+  min-height: 3.25rem;
 }
 
 /* Shape chips stay on one line. */
@@ -4078,6 +4080,41 @@ body.app-shell:not(.dark-theme) .shop-fit {
   box-shadow: inset 0 -3px 0 var(--shop-cyan);
 }
 
+/* Material + metal-color: keep outer size; inset selected fill/ring
+   2px off the clip edge so highlight does not sit flush on the border. */
+.shop-fit #metal-btn-row .metal-btn.active,
+.shop-fit #metal-btn-row .variant-chip.active,
+.shop-fit #color-btn-row .color-btn.active,
+.shop-fit .variant-chips--colors .color-btn.active {
+  border-color: var(--color-border);
+  background: var(--shop-cyan-dim);
+  box-shadow:
+    inset 0 0 0 2px var(--color-surface),
+    inset 0 0 0 4px var(--shop-cyan);
+}
+
+.shop-fit #metal-btn-row .metal-btn.active:hover:not(:disabled):not(.is-disabled),
+.shop-fit #metal-btn-row .variant-chip.active:hover:not(:disabled):not(.is-disabled),
+.shop-fit #color-btn-row .color-btn.active:hover:not(:disabled):not(.is-disabled),
+.shop-fit .variant-chips--colors .color-btn.active:hover:not(:disabled):not(.is-disabled) {
+  border-color: var(--color-border);
+  background: var(--shop-cyan-dim);
+  box-shadow:
+    inset 0 0 0 2px var(--color-surface),
+    inset 0 0 0 4px var(--shop-cyan),
+    0 0 0 3px color-mix(in srgb, var(--shop-cyan) 30%, transparent);
+}
+
+.shop-fit #metal-btn-row .metal-btn.active:focus-visible,
+.shop-fit #metal-btn-row .variant-chip.active:focus-visible,
+.shop-fit #color-btn-row .color-btn.active:focus-visible,
+.shop-fit .variant-chips--colors .color-btn.active:focus-visible {
+  box-shadow:
+    inset 0 0 0 2px var(--color-surface),
+    inset 0 0 0 4px var(--shop-cyan),
+    0 0 0 4px color-mix(in srgb, var(--shop-cyan) 25%, transparent);
+}
+
 /* Segmented buttons: 不含鍊 | 含鍊 (when admin opens both sell modes) */
 .shop-fit .pendant-chain-seg {
   display: inline-flex;
@@ -4450,7 +4487,9 @@ body.app-shell:not(.dark-theme) .shop-fit {
   .shop-fit #metal-step,
   .shop-fit #color-step,
   .shop-fit #carat-step,
-  .shop-fit #fancy-diamond-step {
+  .shop-fit #fancy-diamond-step,
+  .shop-fit #ringsize-step,
+  .shop-fit #engraving-band-step {
     grid-column: 1 / -1;
   }
 
@@ -4464,10 +4503,6 @@ body.app-shell:not(.dark-theme) .shop-fit {
     flex: 0 1 auto;
     width: auto;
     min-width: 0;
-  }
-
-  .shop-fit #color-step.hidden {
-    display: none;
   }
 
   .shop-fit .chain-length-guide-inline__layout,

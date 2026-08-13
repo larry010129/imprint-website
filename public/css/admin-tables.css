@@ -1036,6 +1036,10 @@
     align-items: stretch;
   }
 
+  .orders-page-actions {
+    justify-content: flex-start;
+  }
+
   .orders-search input {
     width: 100%;
     min-height: var(--tap-target-min, 44px);

@@ -25,6 +25,13 @@
   color: var(--color-text);
 }
 
+.orders-page-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .orders-search {
   margin-bottom: 14px;
 }

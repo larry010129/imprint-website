@@ -245,10 +245,10 @@ def test_shop_js_fancy_carat_dropdown_intersects_admin_min():
     assert "stockFancyDiamondColors" in (
         ROOT / "public" / "js" / "shop-assets.js"
     ).read_text(encoding="utf-8")
-    assert "shop.js?v=158" in (
+    assert "shop.js?v=164" in (
         ROOT / "content" / "site" / "templates" / "pages" / "shop" / "calculator.html"
     ).read_text(encoding="utf-8")
-    assert "shop.js?v=158" in (
+    assert "shop.js?v=164" in (
         ROOT / "content" / "site" / "page-registry.json"
     ).read_text(encoding="utf-8")
     assert "function setShopOptionDisabled" in src
@@ -340,9 +340,12 @@ def test_shop_js_non_round_shape_requires_min_carat():
     i18n = (ROOT / "public" / "js" / "shop-i18n.js").read_text(encoding="utf-8")
     assert "diamond_shape_min_carat_blocked" in i18n
     css = (ROOT / "public" / "css" / "shop.css").read_text(encoding="utf-8")
+    assert "#metal-btn-row .metal-btn.active" in css
+    assert "inset 0 0 0 2px var(--color-surface)" in css
+    assert "inset 0 0 0 4px var(--shop-cyan)" in css
     assert ".shop-page .shop-option--disabled" in css
     assert ".diamond-carousel-item.is-disabled" in css
-    assert "shop.css?v=6.54" in (
+    assert "shop.css?v=6.56" in (
         ROOT / "content" / "site" / "templates" / "pages" / "shop" / "calculator.html"
     ).read_text(encoding="utf-8")
     assert "max-width: none" in css
@@ -1408,3 +1411,26 @@ def test_validate_product_variant_accepts_configured_combo(monkeypatch):
         fake_get_product_variant,
     )
     assert _validate_product_variant(_VariantCursor(), body) is None
+
+
+def test_ring_configurator_reserves_color_slot_in_2x2_grid():
+    """Metal | color / size | engrave stay put when color tiles are absent."""
+    css = (ROOT / "public" / "css" / "shop.css").read_text(encoding="utf-8")
+    js = (ROOT / "public" / "js" / "shop.js").read_text(encoding="utf-8")
+    calc = (
+        ROOT / "content" / "site" / "templates" / "pages" / "shop" / "calculator.html"
+    ).read_text(encoding="utf-8")
+    options = css.split(".shop-fit .product-options-section {", 1)[1].split("}", 1)[0]
+    assert "repeat(2, minmax(0, 1fr))" in options
+    assert "repeat(3, minmax(0, 1fr))" not in options
+    placeholder = css.split(".shop-fit #color-step.is-placeholder {", 1)[1].split("}", 1)[0]
+    assert "visibility: hidden" in placeholder
+    assert "display: none" not in placeholder
+    color_row = css.split(".shop-fit #color-btn-row {", 1)[1].split("}", 1)[0]
+    assert "min-height: 3.25rem" in color_row
+    assert "id=\"color-step\"" in calc
+    assert "is-placeholder" in calc.split('id="color-step"', 1)[0][-80:]
+    color_fn = js.split("function updateColorStep(", 1)[1].split("function listAdminProductCaratOptions", 1)[0]
+    assert "classList.toggle('hidden', !show)" not in color_fn
+    assert "classList.toggle('is-placeholder', !show && !collapse)" in color_fn
+    assert "hidden-collapse" in color_fn

@@ -33,7 +33,9 @@ def test_fetch_orders_requires_bounds():
 
 
 def test_admin_order_search_skips_config_json_cast():
-    src = inspect.getsource(ac.orders_list)
+    src = inspect.getsource(ac._admin_orders_search_from) + inspect.getsource(
+        ac._fetch_admin_orders
+    )
     assert "config_json::text" not in src
     assert "oi.summary_zh ilike" in src
     assert "o.order_number ilike" in src
