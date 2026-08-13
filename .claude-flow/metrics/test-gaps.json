@@ -1,5 +1,9 @@
 {
+<<<<<<< Updated upstream
   "timestamp": "2026-08-13T06:28:53.225Z",
+=======
+  "timestamp": "2026-08-13T05:48:53.182Z",
+>>>>>>> Stashed changes
   "mode": "local",
   "hasTestDir": true,
   "estimatedCoverage": "unknown",

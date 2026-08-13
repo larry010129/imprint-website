@@ -10,7 +10,7 @@
 
 User-agent: *
 Allow: /
-Disallow: /admin.html
+Disallow: /admin
 Disallow: /quote-sheet
 Disallow: /shop/quote-sheet
 Disallow: /s/

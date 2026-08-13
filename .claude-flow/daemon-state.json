@@ -3,6 +3,7 @@
   "startedAt": "2026-08-13T05:40:53.162Z",
   "workers": {
     "map": {
+<<<<<<< Updated upstream
       "runCount": 464,
       "successCount": 459,
       "failureCount": 5,
@@ -50,6 +51,55 @@
       "lastRun": "2026-08-13T06:28:53.226Z",
       "lastStartedAt": "2026-08-13T06:28:53.221Z",
       "nextRun": "2026-08-13T06:48:53.230Z",
+=======
+      "runCount": 461,
+      "successCount": 456,
+      "failureCount": 5,
+      "averageDurationMs": 24.82420728579682,
+      "lastRun": "2026-08-13T05:55:53.202Z",
+      "lastStartedAt": "2026-08-13T05:55:53.196Z",
+      "nextRun": "2026-08-13T05:55:53.181Z",
+      "isRunning": false
+    },
+    "audit": {
+      "runCount": 680,
+      "successCount": 679,
+      "failureCount": 1,
+      "averageDurationMs": 13.95447945845003,
+      "lastRun": "2026-08-13T05:52:53.198Z",
+      "lastStartedAt": "2026-08-13T05:52:53.193Z",
+      "nextRun": "2026-08-13T06:02:53.202Z",
+      "isRunning": false
+    },
+    "optimize": {
+      "runCount": 453,
+      "successCount": 451,
+      "failureCount": 2,
+      "averageDurationMs": 10.07777706288592,
+      "lastRun": "2026-08-13T05:44:53.183Z",
+      "lastStartedAt": "2026-08-13T05:44:53.177Z",
+      "nextRun": "2026-08-13T05:59:53.188Z",
+      "isRunning": false
+    },
+    "consolidate": {
+      "runCount": 229,
+      "successCount": 229,
+      "failureCount": 0,
+      "averageDurationMs": 59.83406113537118,
+      "lastRun": "2026-08-13T05:46:53.492Z",
+      "lastStartedAt": "2026-08-13T05:46:53.166Z",
+      "nextRun": "2026-08-13T06:16:53.497Z",
+      "isRunning": false
+    },
+    "testgaps": {
+      "runCount": 338,
+      "successCount": 338,
+      "failureCount": 0,
+      "averageDurationMs": 22.760355029585806,
+      "lastRun": "2026-08-13T05:48:53.183Z",
+      "lastStartedAt": "2026-08-13T05:48:53.177Z",
+      "nextRun": "2026-08-13T06:08:53.187Z",
+>>>>>>> Stashed changes
       "isRunning": false
     },
     "backup": {
@@ -175,5 +225,9 @@
       }
     ]
   },
+<<<<<<< Updated upstream
   "savedAt": "2026-08-13T06:42:53.297Z"
+=======
+  "savedAt": "2026-08-13T05:55:53.202Z"
+>>>>>>> Stashed changes
 }
