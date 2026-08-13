@@ -31,10 +31,10 @@
 
 /* ---------- 手機版 ---------- */
 @media (max-width: 1024px){
-  .series-grid{ grid-template-columns:repeat(3,1fr); }
+  .series-grid{ grid-template-columns:repeat(3, minmax(0, 1fr)); }
   .series-grid .series-card:nth-child(4),
   .series-grid .series-card:nth-child(5){ grid-column:span 1; }
-  .shop-grid{ grid-template-columns:repeat(2,1fr); }
+  .shop-grid{ grid-template-columns:repeat(2, minmax(0, 1fr)); }
   .process-timeline{ grid-template-columns:repeat(3,1fr); gap:40px 0; }
   .process-timeline::before{ display:none; }
   .footer-grid{ grid-template-columns:1fr 1fr; }
@@ -117,7 +117,7 @@
   .st-arrow svg{ width:15px; height:15px; }
   .st-slide{ width:min(420px, 82vw); margin:0 10px; }
   .about-grid, .pricing-inner{ grid-template-columns:1fr; gap:46px; }
-  .series-grid{ grid-template-columns:repeat(2,1fr); }
+  .series-grid{ grid-template-columns:repeat(2, minmax(0, 1fr)); }
   .stories-grid{ grid-template-columns:1fr; }
   .series-head{ flex-direction:column; align-items:flex-start; }
   .process-timeline{ grid-template-columns:repeat(2,1fr); }

@@ -38,7 +38,6 @@ from app.admin_products import (
     is_auto_stock_product_image,
     normalize_variant_row_for_admin,
     publish_readiness,
-    purge_auto_stock_product_images,
     replace_product_image,
     resolve_product_folder,
     restore_product_image,
@@ -50,7 +49,6 @@ from app.admin_products import (
 )
 from app.memorial_diamonds import (
     clear_style_tombstone,
-    ensure_memorial_diamond_products,
     record_style_tombstone,
 )
 from app.chain_catalog import chain_catalog_for_admin
@@ -950,13 +948,6 @@ def _products_with_children(
     product_ids: list | None = None,
     category: str | None = None,
 ) -> list[dict]:
-    ensure_product_side_stone_total_column(cur)
-    ensure_product_ear_clasp_price_column(cur)
-    ensure_product_variant_addon_price_column(cur)
-    ensure_product_style_key_column(cur)
-    ensure_product_ring_size_config_column(cur)
-    ensure_memorial_diamond_products(cur)
-
     if product_ids is not None:
         ids = list(product_ids)
         if not ids:
@@ -1023,11 +1014,9 @@ async def products_list(request: Request) -> dict:
     _require_admin(request)
     page, page_size, limit, offset = parse_paging_from_mapping(request.query_params)
     category = (request.query_params.get("category") or "").strip() or None
-    try:
-        with get_transaction() as conn, conn.cursor() as cur:
-            purge_auto_stock_product_images(cur)
-    except Exception:
-        pass
+    # Startup/seed maintenance owns schema checks, memorial-diamond seeding,
+    # and removal of auto-stock image rows. Keep this list endpoint read-only
+    # so the 商品上架 page is not blocked by repeated write-heavy maintenance.
     with get_connection() as conn, conn.cursor() as cur:
         if category:
             total = sql_count_total(

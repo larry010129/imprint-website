@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from datetime import datetime
-from html import escape
+from html import escape, unescape
 from typing import Any
 
 from app.cms_boundary import assert_content_page_key, is_reserved_page_key
@@ -25,6 +25,11 @@ _BUTTON_RE = re.compile(
     re.IGNORECASE | re.DOTALL,
 )
 _HREF_RE = re.compile(r"""\bhref\s*=\s*(['"])(.*?)\1""", re.IGNORECASE)
+_TAG_RE = re.compile(r"<[^>]+>")
+
+
+def _plain_copy_text(fragment: str) -> str:
+    return re.sub(r"\s+", "", unescape(_TAG_RE.sub("", fragment or "")))
 
 
 def ensure_page_copy_slots_schema(cur) -> None:
@@ -244,6 +249,10 @@ def apply_page_copy_slots(html: str, route: str, rows: list[dict]) -> str:
             return match.group(0)
         text = effective_copy_text(row)
         if not text:
+            return match.group(0)
+        # Same words as template — keep <em>/<span> so home hero first paint
+        # matches banners JS (no innerHTML swap).
+        if _plain_copy_text(match.group("body")) == _plain_copy_text(text):
             return match.group(0)
         open_tag = f"<{match.group('tag')}{match.group('pre')}data-cms-text=\"{slot}\"{match.group('post')}>"
         # Preserve simple <br> in titles when default had them — plain text only for CMS value.

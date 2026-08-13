@@ -148,4 +148,4 @@ def test_admin_js_wires_manual_price_for_variant_categories():
     assert "category === 'chain'" in src
     assert "variantManualPriceDisplayValue(variant)" in src
     html = ADMIN_HTML.read_text(encoding="utf-8")
-    assert "admin-products.js?v=62" in html
+    assert "admin-products.js?v=64" in html

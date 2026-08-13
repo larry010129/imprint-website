@@ -191,7 +191,11 @@
 .series-media svg{ width:56%; transition:transform .6s var(--ease); }
 .series-card:hover .series-media svg{ transform:scale(1.1) rotate(-3deg); }
 .series-media picture{ position:absolute; inset:0; display:block; }
-.series-media picture img{ width:100%; height:100%; object-fit:cover; }
+.series-media picture img,
+.series-media img{
+  width:100%; height:100%; max-width:none; min-width:0;
+  object-fit:cover; object-position:center;
+}
 .sm-1{ background:linear-gradient(160deg,#FFF7F0,#FCEEE4); }
 .sm-2{ background:linear-gradient(160deg,#F0FAF6,#E1F4EC); }
 .sm-3{ background:linear-gradient(160deg,#FFF3F3,#FBE7E9); }
