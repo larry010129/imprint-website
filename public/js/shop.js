@@ -1293,11 +1293,8 @@ function optimizedCategoryImageUrl(url) {
     if (!parsed.pathname.includes(marker)) return value;
     parsed.pathname = parsed.pathname.replace(marker, '/storage/v1/render/image/public/');
     parsed.searchParams.set('width', '320');
-<<<<<<< HEAD
-=======
     parsed.searchParams.set('height', '320');
     parsed.searchParams.set('resize', 'contain');
->>>>>>> 817c3c0e62659d128dda0e67fe4293712bfa025d
     parsed.searchParams.set('quality', '60');
     parsed.searchParams.set('format', 'webp');
     return parsed.toString();
