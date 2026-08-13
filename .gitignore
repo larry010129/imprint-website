@@ -83,3 +83,4 @@ scripts/_inspect-out/
 # TypeScript incremental build cache
 *.tsbuildinfo
 frontend/node_modules/.tmp/
+.venv/ 
