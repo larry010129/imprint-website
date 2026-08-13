@@ -475,6 +475,7 @@ PAGE_TRACK_ORDER = PageMeta(
     extra_body_class=None,
     content_fragment=None,
     extra_head_blocks=[],
+    robots='noindex, nofollow',
 )
 
 PAGE_WHAT_IS_DNA_DIAMOND = PageMeta(

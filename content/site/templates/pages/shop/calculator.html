@@ -106,6 +106,24 @@
         <div class="catalog-filter-empty hidden" id="catalog-empty">
           <p data-i18n="catalog_empty">目前沒有上架商品。</p>
         </div>
+        {% if shop_catalog_ssr %}
+        {# The interactive grid above is populated entirely by shop.js after
+           it fetches /api/catalog — invisible to crawlers that don't run JS.
+           This mirrors the same (already-published) product names/links so
+           they stay citable without JavaScript. #}
+        <noscript>
+          <nav aria-label="鑽石飾品分類與款式列表">
+            {% for cat in shop_catalog_ssr %}
+            <h3>{{ cat.label }}</h3>
+            <ul>
+              {% for p in cat.products %}
+              <li><a href="/shop/calculator/?category={{ cat.slug }}&amp;type={{ p.id }}">{{ p.name }}</a></li>
+              {% endfor %}
+            </ul>
+            {% endfor %}
+          </nav>
+        </noscript>
+        {% endif %}
       </section>
 
       <section id="shop-styles" class="shop-section shop-section--focus hidden">
