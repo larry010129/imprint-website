@@ -45,6 +45,7 @@
   .shop-terms-actions { display: flex; gap: 8px; margin-top: 10px; }
   .shop-terms-btn { min-height: 40px; padding: 8px 16px; border: 1px solid #9cbcaf; border-radius: 4px; background: #fff; color: #17231f; }
   .shop-terms-btn--primary { background: #17231f; color: #fff; }
+  .hidden { display: none !important; }
   .catalog-tile__media,
   #shop-styles .type-card__media {
     display: block;
@@ -90,11 +91,28 @@
     width: 100%;
     max-width: 100%;
   }
+  .shop-fit .cfg-emblem-token {
+    display: inline-flex;
+    width: 16px;
+    height: 16px;
+    flex: none;
+    overflow: hidden;
+  }
+  .shop-fit .cfg-emblem-token img,
+  .shop-fit .cfg-emblem-token svg {
+    width: 16px;
+    height: 16px;
+    max-width: 16px;
+    max-height: 16px;
+    object-fit: contain;
+    display: block;
+  }
   .shop-fit .shop-girdle-engrave .cfg-engrave-preview {
     position: relative;
     width: 100%;
     max-width: 100%;
     margin-inline: auto;
+    overflow: hidden;
   }
   .shop-fit .shop-girdle-engrave .cfg-engrave-gem {
     width: 100%;
@@ -121,10 +139,17 @@
     pointer-events: none;
     text-shadow: 0 0 4px rgba(255, 255, 255, 0.9), 0 1px 2px rgba(255, 255, 255, 0.6);
   }
+  .shop-fit .shop-girdle-engrave .cfg-engrave-preview-text .cfg-emblem-token,
+  .shop-fit .shop-girdle-engrave .cfg-engrave-preview-text .cfg-emblem-token img,
+  .shop-fit .shop-girdle-engrave .cfg-engrave-preview-text .cfg-emblem-token svg {
+    width: 16px;
+    height: 16px;
+    max-width: 16px;
+  }
 </style>
-<link rel="stylesheet" href="/static/css/shop.css?v=6.53" media="screen and (min-width: 768px)">
-<link rel="stylesheet" href="/static/css/shop.css?v=6.53" media="print" onload="this.media='screen and (max-width: 767px)'">
-<noscript><link rel="stylesheet" href="/static/css/shop.css?v=6.53"></noscript>
+<link rel="stylesheet" href="/static/css/shop.css?v=6.54" media="screen and (min-width: 768px)">
+<link rel="stylesheet" href="/static/css/shop.css?v=6.54" media="print" onload="this.media='screen and (max-width: 767px)'">
+<noscript><link rel="stylesheet" href="/static/css/shop.css?v=6.54"></noscript>
 <link rel="stylesheet" href="/static/css/shop-wizard.css?v=25" media="screen and (min-width: 768px)">
 <link rel="stylesheet" href="/static/css/shop-wizard.css?v=25" media="print" onload="this.media='screen and (max-width: 767px)'">
 <noscript><link rel="stylesheet" href="/static/css/shop-wizard.css?v=25"></noscript>
@@ -976,5 +1001,5 @@
 <script src="/static/js/shop-i18n.js?v=22" defer></script>
 <script src="/static/js/shop-terms.js?v=5" defer></script>
 <script src="/static/js/catalog-multi-filter.js?v=1" defer></script>
-<script src="/static/js/shop.js?v=162" defer></script>
+<script src="/static/js/shop.js?v=163" defer></script>
 {% endblock %}

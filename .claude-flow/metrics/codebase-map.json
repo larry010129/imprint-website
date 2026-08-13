@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-08-13T10:40:25.304Z",
+  "timestamp": "2026-08-13T11:25:25.381Z",
   "projectRoot": "C:\\Users\\user\\Documents\\Diamond web\\imprint-website",
   "structure": {
     "hasPackageJson": true,
@@ -7,5 +7,5 @@
     "hasClaudeConfig": true,
     "hasClaudeFlow": true
   },
-  "scannedAt": 1786617625305
+  "scannedAt": 1786620325382
 }

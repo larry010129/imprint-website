@@ -208,11 +208,12 @@ def test_shop_catalog_tiles_square_cover_fill():
     assert "position: relative" in extra_preview
     assert "width: 100%" in extra_preview
     assert "max-width: 100%" in extra_preview
+    assert "overflow: hidden" in extra_preview
     assert "max-width: 16rem" not in extra_preview
     assert "width: 100%" in extra_gem
     assert "object-fit: contain" in extra_gem
     assert "object-fit: cover" not in extra_gem
-    assert "shop.css?v=6.53" in extra
+    assert "shop.css?v=6.54" in extra
     assert "catalog-tile__media" in js
     assert "media.className = 'catalog-tile__media'" in js
     assert "catalog-tile__media" in htmx
@@ -224,6 +225,7 @@ def test_shop_catalog_tiles_square_cover_fill():
     shop_gem = shop.split(".shop-fit .shop-girdle-engrave .cfg-engrave-gem {", 1)[1].split("}", 1)[0]
     assert "width: 100%" in shop_preview
     assert "max-width: 100%" in shop_preview
+    assert "overflow: hidden" in shop_preview
     assert "max-width: 16rem" not in shop_preview
     assert "width: 100%" in shop_gem
     assert "object-fit: contain" in shop_gem

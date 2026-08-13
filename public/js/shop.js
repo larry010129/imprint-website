@@ -2292,13 +2292,7 @@ function updateConfigChips() {
   if (state.engravingGirdle) {
     const span = document.createElement('span');
     span.className = 'config-chip config-chip--engrave';
-    const label = tr('step_engraving_girdle') + ': ';
-    if (window.GirdleEngrave && window.GirdleEngrave.toDisplayHtml) {
-      span.innerHTML = label.replace(/&/g, '&amp;').replace(/</g, '&lt;') +
-        window.GirdleEngrave.toDisplayHtml(state.engravingGirdle);
-    } else {
-      span.textContent = label + state.engravingGirdle;
-    }
+    span.textContent = tr('step_engraving_girdle') + ': ' + state.engravingGirdle;
     container.appendChild(span);
   }
 }
@@ -4685,6 +4679,10 @@ function updateEngravingSteps() {
   bandStep?.classList.toggle('hidden', !hasBand);
   remarkStep?.classList.toggle('hidden', !hasRemark);
   girdleStep?.classList.toggle('hidden', !hasGirdle);
+  if (!hasGirdle) {
+    const preview = document.getElementById('shop-girdle-engrave-preview');
+    if (preview) preview.innerHTML = '';
+  }
   if (!hasBand) state.engravingBand = '';
   if (!hasRemark) state.engravingRemark = '';
   if (!hasGirdle) state.engravingGirdle = '';
@@ -5801,7 +5799,7 @@ function loadGirdleEngrave() {
   if (girdleEngraveLoadPromise) return girdleEngraveLoadPromise;
   girdleEngraveLoadPromise = new Promise((resolve, reject) => {
     const script = document.createElement('script');
-    script.src = '/static/js/girdle-engrave.js?v=24';
+    script.src = '/static/js/girdle-engrave.js?v=25';
     script.async = true;
     script.onload = () => resolve(window.GirdleEngrave);
     script.onerror = () => reject(new Error('girdle engraving script failed to load'));

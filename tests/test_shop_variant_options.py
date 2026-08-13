@@ -342,7 +342,7 @@ def test_shop_js_non_round_shape_requires_min_carat():
     css = (ROOT / "public" / "css" / "shop.css").read_text(encoding="utf-8")
     assert ".shop-page .shop-option--disabled" in css
     assert ".diamond-carousel-item.is-disabled" in css
-    assert "shop.css?v=6.53" in (
+    assert "shop.css?v=6.54" in (
         ROOT / "content" / "site" / "templates" / "pages" / "shop" / "calculator.html"
     ).read_text(encoding="utf-8")
     assert "max-width: none" in css

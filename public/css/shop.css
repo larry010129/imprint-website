@@ -3704,6 +3704,24 @@ body.app-shell:not(.dark-theme) .shop-fit {
   white-space: nowrap;
 }
 
+.shop-fit .cfg-emblem-token {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  flex: none;
+  overflow: hidden;
+}
+
+.shop-fit .cfg-emblem-token img,
+.shop-fit .cfg-emblem-token svg {
+  width: 16px;
+  height: 16px;
+  max-width: 16px;
+  max-height: 16px;
+  object-fit: contain;
+  display: block;
+}
+
 .shop-fit .shop-girdle-engrave__preview,
 .shop-fit .shop-girdle-engrave .cfg-engrave-preview {
   position: relative;
@@ -3712,6 +3730,7 @@ body.app-shell:not(.dark-theme) .shop-fit {
   width: 100%;
   max-width: 100%;
   min-width: 0;
+  overflow: hidden;
 }
 
 .shop-fit .shop-girdle-engrave .cfg-engrave-gem-picture {
@@ -3750,6 +3769,14 @@ body.app-shell:not(.dark-theme) .shop-fit {
 .shop-fit .shop-girdle-engrave .cfg-engrave-preview-text .cfg-emblem-token {
   width: 16px;
   height: 16px;
+}
+
+.shop-fit .shop-girdle-engrave .cfg-engrave-preview-text .cfg-emblem-token img,
+.shop-fit .shop-girdle-engrave .cfg-engrave-preview-text .cfg-emblem-token svg {
+  width: 16px;
+  height: 16px;
+  max-width: 16px;
+  max-height: 16px;
 }
 
 .shop-fit .ring-size-select,
