@@ -474,6 +474,24 @@
     return String(row.page_key) + '\u001f' + String(row.slot_key);
   }
 
+  /** Display-only. Signature series tab is 真我鑽石. Brand 銘印鑽石 is not a page_key. */
+  function pageImageTabLabel(pageKey, label) {
+    var key = String(pageKey || '').trim();
+    if (key === '/series/signature/' || key === '/series/signature') {
+      return '真我鑽石';
+    }
+    return label || pageKey;
+  }
+
+  /** Save/replace must send route + kebab slot, never 銘印鑽石 / 真我鑽石 / 主視覺. */
+  function pageImageSaveKeys(row) {
+    var pageKey = String((row && row.page_key) || '').trim();
+    var slotKey = String((row && row.slot_key) || '').trim();
+    if (!pageKey || pageKey.charAt(0) !== '/' || pageKey.indexOf('?') >= 0) return null;
+    if (!/^[a-z0-9][a-z0-9-]{0,63}$/.test(slotKey)) return null;
+    return { page_key: pageKey, slot_key: slotKey };
+  }
+
   function findPageImage(id) {
     for (var i = 0; i < _pageImages.length; i++) {
       if (pageImageId(_pageImages[i]) === String(id)) return _pageImages[i];
@@ -487,7 +505,7 @@
     return _pageImages.reduce(function (pages, row) {
       if (!seen[row.page_key]) {
         seen[row.page_key] = true;
-        pages.push({ value: row.page_key, label: row.label || row.page_key });
+        pages.push({ value: row.page_key, label: pageImageTabLabel(row.page_key, row.label) });
       }
       return pages;
     }, []);
@@ -501,7 +519,7 @@
       seen[row.page_key] = true;
       _pageImagePageOptions.push({
         value: row.page_key,
-        label: row.label || row.page_key,
+        label: pageImageTabLabel(row.page_key, row.label),
       });
     });
   }
@@ -696,8 +714,11 @@
       uploadPageImage: function (file, pageKey) {
         return api.admin.uploadPageImage(file, pageKey || undefined);
       },
-      getPageImages: function () { return api.admin.getPageImages(); },
+      getPageImages: function (opts) { return api.admin.getPageImages(opts); },
       updatePageImage: function (fields) { return api.admin.updatePageImage(fields); },
+      pageImageAction: function (pageKey, slotKey, action) {
+        return api.admin.pageImageAction(pageKey, slotKey, action);
+      },
       syncSectionPageImage: function (fields) {
         return api.admin.syncCmsSectionPageImage({
           sectionId: fields.sectionId,
@@ -737,6 +758,9 @@
     window.AdminTables.renderCmsPagesPanel(document.getElementById('cmsPagesMount'), {
       api: cmsApiBridge(),
       initialSitePages: _sitePages.slice(),
+      pageImageKeys: pageImagePages().map(function (p) {
+        return { page_key: p.value, label: p.label };
+      }),
     });
   }
 
@@ -971,8 +995,10 @@
         if (_tab === 'page-images') {
           var pageImage = findPageImage(id);
           if (!pageImage) return;
+          var actionKeys = pageImageSaveKeys(pageImage);
+          if (!actionKeys) return;
           if (action === 'reset' && !confirm('還原此圖片為預設值？')) return;
-          api.admin.pageImageAction(pageImage.page_key, pageImage.slot_key, action).then(function (res) {
+          api.admin.pageImageAction(actionKeys.page_key, actionKeys.slot_key, action).then(function (res) {
             if (res.error) {
               alert(res.error.message || res.error);
               return;
@@ -1005,6 +1031,11 @@
       alert('頁面元件尚未載入，請重新整理後再試。');
       return;
     }
+    var keys = pageImageSaveKeys(row);
+    if (!keys) {
+      alert('頁面圖片鍵值無效，請重新整理後再試。');
+      return;
+    }
     var mount = document.createElement('div');
     mount.id = 'acPageImageModalMount';
     document.body.appendChild(mount);
@@ -1018,10 +1049,10 @@
 
     window.AdminTables.renderPageImageEditModal(mount, {
       row: {
-        page_key: row.page_key,
-        slot_key: row.slot_key,
+        page_key: keys.page_key,
+        slot_key: keys.slot_key,
         slot_label: row.slot_label,
-        label: row.label,
+        label: pageImageTabLabel(keys.page_key, row.label),
         target_w: row.target_w,
         target_h: row.target_h,
         is_published: !!row.is_published,
@@ -1041,13 +1072,20 @@
         reloadActiveTab();
       },
       uploadImage: function (file) {
-        return api.admin.uploadPageImage(file, row.page_key);
+        return api.admin.uploadPageImage(file, keys.page_key);
       },
       updatePageImage: function (fields) {
-        return api.admin.updatePageImage(fields);
+        return api.admin.updatePageImage({
+          pageKey: keys.page_key,
+          slotKey: keys.slot_key,
+          imageUrl: fields.imageUrl,
+          imageWebp: fields.imageWebp,
+          imageAlt: fields.imageAlt,
+          isPublished: fields.isPublished,
+        });
       },
-      pageImageAction: function (pageKey, slotKey, action) {
-        return api.admin.pageImageAction(pageKey, slotKey, action);
+      pageImageAction: function (_pageKey, _slotKey, action) {
+        return api.admin.pageImageAction(keys.page_key, keys.slot_key, action);
       },
     });
   }
