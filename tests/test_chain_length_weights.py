@@ -133,6 +133,7 @@ def test_parse_empty_length_weights_is_unset():
     for raw in (None, "", {}, {"1.5mm": {"36": 0, "46": 0}}):
         errors: list[str] = []
         assert _parse_length_weights(raw, errors=errors) is None
+        assert errors == []
 
 
 def test_validate_chain_empty_length_weights_persists_none():

@@ -12,6 +12,7 @@ from psycopg.types.json import Jsonb
 from app.chain_catalog import (
     DEFAULT_NECKLACE_TYPE,
     VALID_NECKLACE_TYPES,
+    is_unset_length_weights,
     necklace_type_length_weights,
 )
 from app.image_urls import (
@@ -297,12 +298,12 @@ def should_skip_published_autosave_write(autosave: Any, is_published: Any) -> bo
 
 def _parse_length_weights(raw: Any, *, errors: list[str]) -> dict[str, dict[str, float]] | None:
     # empty / {} / all-zero → unset (NULL). Non-empty table is exclusive override.
-    if raw in (None, ""):
-        return None
     if not isinstance(raw, dict):
+        if raw in (None, ""):
+            return None
         errors.append("invalid chain length weights")
         return None
-    if raw == {}:
+    if is_unset_length_weights(raw):
         return None
     cleaned: dict[str, dict[str, float]] = {}
     for thickness, lengths in raw.items():
