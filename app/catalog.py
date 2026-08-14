@@ -69,7 +69,12 @@ from app.image_urls import (
     static_url_exists,
     with_cache_buster,
 )
-from app.memorial_diamonds import DIAMOND_CARATS, normalize_style_key
+from app.memorial_diamonds import (
+    DIAMOND_CARATS,
+    merge_memorial_diamond_catalog,
+    normalize_style_key,
+)
+from app.product_categories import build_category_meta_from_rows, fetch_categories
 from app.pricing_overrides import canonical_carat
 from app.storage import (
     object_path_from_public_url,
@@ -681,6 +686,90 @@ def list_catalog_category_slugs(
         if slug:
             out.append(str(slug))
     return out
+
+
+_NAV_DIAMOND_COLUMNS = (
+    "id, category, name_zh, name_en, style_key, default_color, "
+    "description_zh, description_en, allows_engraving, allows_fancy_shapes, "
+    "allows_pendant_only, allows_with_chain, sort_order, is_published"
+)
+
+
+def _nav_tombstone_style_keys(cur) -> set[str]:
+    """Read-only tombstones. Missing relation → empty set. No CREATE TABLE."""
+    from psycopg import errors as pg_errors
+
+    try:
+        cur.execute("SELECT style_key FROM memorial_diamond_style_tombstones")
+        keys: set[str] = set()
+        for row in cur.fetchall():
+            raw = row["style_key"] if isinstance(row, dict) else row[0]
+            if raw:
+                keys.add(str(raw))
+        return keys
+    except pg_errors.UndefinedTable:
+        return set()
+
+
+def fetch_shop_nav_catalog(cur) -> dict:
+    """Shop step-1 nav: category keys + memorial diamond list. No jewelry merge."""
+    category_rows = fetch_categories(cur)
+    cat_order = [row["slug"] for row in category_rows if row.get("slug")]
+    cat_meta = build_category_meta_from_rows(category_rows)
+
+    cur.execute("SELECT DISTINCT category FROM products WHERE is_published = true")
+    published_slugs: list[str] = []
+    for row in cur.fetchall():
+        slug = row["category"] if isinstance(row, dict) else row[0]
+        if slug:
+            published_slugs.append(str(slug))
+
+    cur.execute(
+        f"SELECT {_NAV_DIAMOND_COLUMNS} FROM products "
+        "WHERE is_published = true AND category = 'diamond' "
+        "ORDER BY sort_order, created_at"
+    )
+    diamond_rows = cur.fetchall()
+    product_ids = [row["id"] for row in diamond_rows]
+
+    images_by_product: dict = {}
+    if product_ids:
+        cur.execute(
+            "SELECT product_id, color, file_path, sort_order, updated_at "
+            "FROM product_images WHERE product_id = ANY(%s) ORDER BY sort_order",
+            (product_ids,),
+        )
+        for image in cur.fetchall():
+            images_by_product.setdefault(image["product_id"], []).append(image)
+
+    diamond_lite = [
+        build_catalog_product_lite(row, [], images_by_product.get(row["id"], []))
+        for row in diamond_rows
+    ]
+    merged_diamond = merge_memorial_diamond_catalog(
+        diamond_lite,
+        excluded_style_keys=_nav_tombstone_style_keys(cur),
+    )
+
+    categories: dict[str, list] = {}
+    for slug in cat_order:
+        categories[slug] = []
+    for slug in published_slugs:
+        categories.setdefault(slug, [])
+    categories["diamond"] = merged_diamond
+
+    order = [c for c in cat_order if c in categories]
+    order.extend(c for c in categories if c not in order)
+    if "diamond" not in order:
+        order = ["diamond"] + order
+    else:
+        order = ["diamond"] + [c for c in order if c != "diamond"]
+
+    return {
+        "categoryOrder": order,
+        "categoryMeta": cat_meta,
+        "categories": categories,
+    }
 
 
 def normalize_catalog_detail(detail: str | None) -> str:

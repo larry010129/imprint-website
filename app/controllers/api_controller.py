@@ -31,6 +31,7 @@ from app.catalog import (
     count_catalog_rows,
     fetch_catalog_rows,
     fetch_product_row,
+    fetch_shop_nav_catalog,
     get_public_catalog_cache,
     list_catalog_category_slugs,
     load_product_children,
@@ -347,7 +348,26 @@ def catalog(
     detail: str = Query("lite"),
     page: int | None = Query(None),
     page_size: int | None = Query(None),
+    nav: int = Query(0),
 ) -> JSONResponse:
+    if nav:
+        # Shop step 1: category keys + diamond list. No jewelry children merge.
+        cache_key = ("__nav__",)
+        cached_payload = get_public_catalog_cache(cache_key)
+        if cached_payload is not None:
+            return JSONResponse(
+                content=cached_payload,
+                headers={"Cache-Control": "public, max-age=60"},
+            )
+        with get_connection() as conn, conn.cursor() as cur:
+            payload = fetch_shop_nav_catalog(cur)
+        encoded_payload = jsonable_encoder(payload)
+        set_public_catalog_cache(cache_key, encoded_payload)
+        return JSONResponse(
+            content=encoded_payload,
+            headers={"Cache-Control": "public, max-age=60"},
+        )
+
     include_drafts = False
     if preview:
         user_id = get_user_id(request)

@@ -257,6 +257,20 @@ def test_collect_form_saves_null_not_empty_length_weights():
     assert "collectChainLengthWeights(form)" in collect
 
 
+def test_load_catalog_boot_uses_nav_flag():
+    """Step-1 boot hits GET /api/catalog?nav=1, not page=1&pageSize=1."""
+    src = _shop_src()
+    start = src.index("async function loadCatalog()")
+    body = src[start : src.index("function renderCatalogTiles()", start)]
+    assert "fetchCatalogPage({ nav: 1 })" in body
+    assert "fetchCatalogPage({ page: 1, pageSize: 1 })" not in body
+    fetch_start = src.index("async function fetchCatalogPage(")
+    fetch_body = src[fetch_start : src.index("function applyCatalogMeta(", fetch_start)]
+    assert "params.set('nav', '1')" in fetch_body
+    ensure = src[src.index("async function ensureCategoryCatalog(") : src.index("function applyCategoryAddonPricesFromMeta(")]
+    assert "fetchCatalogPage({ category, page, pageSize })" in ensure
+
+
 def test_load_catalog_not_empty_when_api_total_positive():
     """HIGH 4: /api/catalog total > 0 must not show catalog_empty."""
     src = _shop_src()
