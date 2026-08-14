@@ -12,12 +12,20 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 {% set is_series_overview = extra_body_class and 'page-series' in extra_body_class %}
 {% set _cp = canonical_path or '' %}
 {% set is_shop_calculator = _cp == 'shop/calculator/' %}
-{# home.css = legacy home/jewelry chrome + the shared .faq--teaser skin. Skip on home,
-   series OVERVIEW (own CSS / ghibli) + PSI lanes. Series DETAIL keeps it: its FAQ
-   teaser (.faq/.faq-list/.faq-q/.faq-a-inner/.faq-more) is styled only by home.css. #}
+{% set _path_parts = _cp.split('/') | reject('equalto', '') | list %}
+{# jewelry/rings/classic-solitaire/ = style PDP (pages.css). Category hubs keep home.css. #}
+{% set is_jewelry_style = _cp.startswith('jewelry/') and _path_parts|length >= 3 %}
+{# home.css = legacy jewelry chrome + series-detail FAQ teaser. Skip on public
+   pages that use pages.css / own sheets only. Series DETAIL keeps it. #}
 {% set skip_home_css = is_home
   or is_series_overview
-  or _cp in ['about', 'stories', 'journal', 'gold-price', 'shop/calculator/'] %}
+  or is_jewelry_style
+  or _cp.startswith('journal')
+  or _cp in [
+    'about', 'stories', 'gold-price', 'shop/calculator/',
+    'what-is-dna-diamond', 'diamond-4c', 'lab-grown-diamond', 'diamond-comparison',
+    'faq', 'contact', 'price', 'privacy', 'terms', 'return-policy'
+  ] %}
 {# pages.css defer only when page ships above-fold CSS (stories/journal/gold-price still need it) #}
 {% set defer_pages_css = is_series_overview or _cp == 'about' %}
 <meta charset="utf-8">

@@ -17,19 +17,11 @@
     "layout": "site",
     "main_class": "",
     "extra_css": [
-      "/static/css/home-ghibli.css?v=48"
+      "/static/css/home-ghibli.css?v=64"
     ],
     "extra_scripts": [
       {
-        "inline": "\n  const root = document.querySelector(\"[data-faq-root]\");\n  let requested = false;\n  const ensureStylesheet = () => {\n    if (document.querySelector('link[href^=\"/static/react/faq.css\"]')) return;\n    const link = document.createElement(\"link\");\n    link.rel = \"stylesheet\";\n    link.href = \"/static/react/faq.css?v=5\";\n    document.head.append(link);\n  };\n  const load = () => {\n    if (requested) return;\n    requested = true;\n    ensureStylesheet();\n    void import(\"/static/react/faq.js?v=10\");\n  };\n  if (root) {\n    const nearViewport = root.getBoundingClientRect().top <= window.innerHeight + 800;\n    if (nearViewport || !(\"IntersectionObserver\" in window)) {\n      load();\n    } else {\n      const observer = new IntersectionObserver((entries) => {\n        if (!entries.some((entry) => entry.isIntersecting)) return;\n        observer.disconnect();\n        load();\n      }, { rootMargin: \"800px 0px\" });\n      observer.observe(root);\n    }\n  }\n",
-        "type": "module"
-      },
-      {
-        "inline": "\n  const roots = document.querySelectorAll(\"[data-stories-root], [data-home-wall]\");\n  let requested = false;\n  const ensureStylesheet = () => {\n    if (document.querySelector('link[href^=\"/static/react/stories.css\"]')) return;\n    const link = document.createElement(\"link\");\n    link.rel = \"stylesheet\";\n    link.href = \"/static/react/stories.css?v=36\";\n    document.head.append(link);\n  };\n  const load = () => {\n    if (requested) return;\n    requested = true;\n    ensureStylesheet();\n    void import(\"/static/react/stories.js?v=37\");\n  };\n  if (roots.length) {\n    const nearViewport = Array.from(roots).some(\n      (root) => root.getBoundingClientRect().top <= window.innerHeight + 800,\n    );\n    if (nearViewport || !(\"IntersectionObserver\" in window)) {\n      load();\n    } else {\n      const observer = new IntersectionObserver((entries) => {\n        if (!entries.some((entry) => entry.isIntersecting)) return;\n        observer.disconnect();\n        load();\n      }, { rootMargin: \"800px 0px\" });\n      roots.forEach((root) => observer.observe(root));\n    }\n  }\n",
-        "type": "module"
-      },
-      {
-        "src": "/static/js/home-banners.js?v=8",
+        "src": "/static/js/home-banners.js?v=13",
         "defer": true
       }
     ],
@@ -185,13 +177,16 @@
     "main_class": "",
     "extra_css": [
       "/static/css/member-app.css?v=8",
-      "/static/react/checkout.css?v=7",
-      "/static/css/checkout-page.css?v=15"
+      "/static/css/checkout-page.css?v=17"
     ],
     "extra_scripts": [
       {
-        "src": "/static/react/checkout.js?v=14",
-        "type": "module"
+        "src": "/static/js/taiwan-admin-divisions.js?v=2",
+        "defer": true
+      },
+      {
+        "src": "/static/js/checkout-address.js?v=3",
+        "defer": true
       }
     ],
     "head_extras": []
@@ -274,15 +269,8 @@
     "body_key": "faq_html",
     "layout": "site",
     "main_class": "",
-    "extra_css": [
-      "/static/react/faq.css?v=5"
-    ],
-    "extra_scripts": [
-      {
-        "inline": "\n  const root = document.querySelector(\"[data-faq-root]\");\n  let requested = false;\n  const ensureStylesheet = () => {\n    if (document.querySelector('link[href^=\"/static/react/faq.css\"]')) return;\n    const link = document.createElement(\"link\");\n    link.rel = \"stylesheet\";\n    link.href = \"/static/react/faq.css?v=5\";\n    document.head.append(link);\n  };\n  const load = () => {\n    if (requested) return;\n    requested = true;\n    ensureStylesheet();\n    void import(\"/static/react/faq.js?v=10\");\n  };\n  if (root) {\n    const nearViewport = root.getBoundingClientRect().top <= window.innerHeight + 800;\n    if (nearViewport || !(\"IntersectionObserver\" in window)) {\n      load();\n    } else {\n      const observer = new IntersectionObserver((entries) => {\n        if (!entries.some((entry) => entry.isIntersecting)) return;\n        observer.disconnect();\n        load();\n      }, { rootMargin: \"800px 0px\" });\n      observer.observe(root);\n    }\n  }\n",
-        "type": "module"
-      }
-    ],
+    "extra_css": [],
+    "extra_scripts": [],
     "head_extras": []
   },
   {
@@ -423,19 +411,11 @@
     "layout": "auth",
     "main_class": "auth-main",
     "extra_css": [
-      "/static/css/auth.css?v=12",
-      "/static/react/auth.css?v=1"
+      "/static/css/auth.css?v=12"
     ],
     "extra_scripts": [
       {
-        "src": "/static/js/api-client.js"
-      },
-      {
-        "src": "/static/js/auth-shell.js"
-      },
-      {
-        "src": "/static/react/auth.js?v=5",
-        "type": "module"
+        "src": "/static/js/auth-shell.js?v=2"
       }
     ],
     "head_extras": [],
@@ -654,25 +634,10 @@
     ],
     "extra_scripts": [
       {
-        "src": "/static/js/api-client.js"
-      },
-      {
-        "src": "/static/js/auth-shell.js"
+        "src": "/static/js/auth-shell.js?v=8"
       },
       {
         "src": "/static/js/register-terms.js?v=1"
-      },
-      {
-        "src": "/static/js/mvc/core.js"
-      },
-      {
-        "src": "/static/js/mvc/models/register-model.js"
-      },
-      {
-        "src": "/static/js/mvc/views/register-view.js?v=2"
-      },
-      {
-        "src": "/static/js/mvc/controllers/register-controller.js?v=3"
       }
     ],
     "head_extras": [],
@@ -747,15 +712,8 @@
     "body_key": "stories_html",
     "layout": "site",
     "main_class": "",
-    "extra_css": [
-      "/static/react/stories.css?v=36"
-    ],
-    "extra_scripts": [
-      {
-        "inline": "\n  const roots = document.querySelectorAll(\"[data-stories-root], [data-home-wall]\");\n  let requested = false;\n  const ensureStylesheet = () => {\n    if (document.querySelector('link[href^=\"/static/react/stories.css\"]')) return;\n    const link = document.createElement(\"link\");\n    link.rel = \"stylesheet\";\n    link.href = \"/static/react/stories.css?v=36\";\n    document.head.append(link);\n  };\n  const load = () => {\n    if (requested) return;\n    requested = true;\n    ensureStylesheet();\n    void import(\"/static/react/stories.js?v=37\");\n  };\n  if (roots.length) {\n    const nearViewport = Array.from(roots).some(\n      (root) => root.getBoundingClientRect().top <= window.innerHeight + 800,\n    );\n    if (nearViewport || !(\"IntersectionObserver\" in window)) {\n      load();\n    } else {\n      const observer = new IntersectionObserver((entries) => {\n        if (!entries.some((entry) => entry.isIntersecting)) return;\n        observer.disconnect();\n        load();\n      }, { rootMargin: \"800px 0px\" });\n      roots.forEach((root) => observer.observe(root));\n    }\n  }\n",
-        "type": "module"
-      }
-    ],
+    "extra_css": [],
+    "extra_scripts": [],
     "head_extras": []
   },
   {
@@ -854,15 +812,8 @@
     "body_key": "what-is-dna-diamond_html",
     "layout": "site",
     "main_class": "",
-    "extra_css": [
-      "/static/react/dna-diamond.css?v=27"
-    ],
-    "extra_scripts": [
-      {
-        "src": "/static/react/dna-diamond.js?v=27",
-        "type": "module"
-      }
-    ],
+    "extra_css": [],
+    "extra_scripts": [],
     "head_extras": []
   },
   {
@@ -892,8 +843,7 @@
     "layout": "site",
     "main_class": "",
     "extra_css": [
-      "/static/css/home-ghibli.css?v=48",
-      "/static/css/series-overview.css?v=2"
+      "/static/css/series-overview.css?v=4"
     ],
     "extra_scripts": [],
     "head_extras": []
@@ -927,16 +877,8 @@
     "extra_css": [],
     "extra_scripts": [
       {
-        "src": "/static/js/pdgallery.js?v=1.1"
-      },
-      {
-        "src": "/static/js/pricing-config.js?v=1.2"
-      },
-      {
-        "src": "/static/js/girdle-engrave.js?v=12"
-      },
-      {
-        "src": "/static/js/configurator.js?v=1.3"
+        "src": "/static/js/ringflip.js?v=1",
+        "defer": true
       }
     ],
     "head_extras": []
