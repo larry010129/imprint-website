@@ -1519,8 +1519,8 @@ def fetch_page_images(cur, page_key: str) -> list[dict]:
     return []
 
 
-def fetch_page_image(cur, page_key: str, slot_key: str = "hero") -> dict | None:
-    """Backward-compatible single-slot lookup."""
+def get_page_image_row(cur, page_key: str, slot_key: str = "hero") -> dict | None:
+    """Raw page_images row via page_key_aliases (slash / *.html)."""
     from app.cms_boundary import page_key_aliases
 
     for key in page_key_aliases(page_key):
@@ -1530,8 +1530,14 @@ def fetch_page_image(cur, page_key: str, slot_key: str = "hero") -> dict | None:
         )
         row = cur.fetchone()
         if row:
-            return serialize_page_image(row)
+            return row
     return None
+
+
+def fetch_page_image(cur, page_key: str, slot_key: str = "hero") -> dict | None:
+    """Backward-compatible single-slot lookup."""
+    row = get_page_image_row(cur, page_key, slot_key)
+    return serialize_page_image(row) if row else None
 
 
 def parse_page_image_payload(body: dict | None) -> tuple[dict | None, str | None]:
@@ -1605,26 +1611,42 @@ def fetch_missing_page_image_slots(cur) -> list[dict]:
     return missing
 
 
+def _page_image_registry_entry(page_key: str, slot_key: str) -> dict | None:
+    """Seed row, or SlotSpec fallback, matching page_key_aliases."""
+    from app.cms_boundary import page_key_aliases
+    from app.page_image_slots import build_page_image_seed, page_image_slot_specs
+
+    aliases = set(page_key_aliases(page_key))
+    for row in build_page_image_seed():
+        if row["page_key"] in aliases and row["slot_key"] == slot_key:
+            return row
+    for order, spec in enumerate(page_image_slot_specs(), 1):
+        if spec.page_key in aliases and spec.slot_key == slot_key:
+            return {
+                "page_key": spec.page_key,
+                "slot_key": spec.slot_key,
+                "label": spec.page_label,
+                "slot_label": spec.slot_label,
+                "group_key": spec.group_key,
+                "image_url": spec.default_url or "",
+                "image_webp": spec.default_webp or None,
+                "image_alt": spec.image_alt or "",
+                "default_image_url": spec.default_url or "",
+                "default_image_webp": spec.default_webp or None,
+                "target_w": spec.target_w,
+                "target_h": spec.target_h,
+                "sort_order": order,
+            }
+    return None
+
+
 def create_page_image_from_registry(
     cur, page_key: str, slot_key: str
 ) -> tuple[dict | None, str | None]:
-    from app.page_image_slots import build_page_image_seed
-
-    entry = next(
-        (
-            row
-            for row in build_page_image_seed()
-            if row["page_key"] == page_key and row["slot_key"] == slot_key
-        ),
-        None,
-    )
+    entry = _page_image_registry_entry(page_key, slot_key)
     if not entry or not _is_content_page_image_row(entry):
         return None, "找不到此頁面圖片區塊"
-    cur.execute(
-        "select page_key from page_images where page_key = %s and slot_key = %s",
-        (page_key, slot_key),
-    )
-    if cur.fetchone():
+    if get_page_image_row(cur, page_key, slot_key):
         return None, "此區塊已存在"
     cur.execute(
         """
@@ -1653,6 +1675,25 @@ def create_page_image_from_registry(
         ),
     )
     return serialize_page_image(cur.fetchone()), None
+
+
+def ensure_page_image_row(
+    cur, page_key: str, slot_key: str
+) -> tuple[dict | None, str | None]:
+    """Alias lookup; create from registry when the slot is valid but unseeded."""
+    existing = get_page_image_row(cur, page_key, slot_key)
+    if existing:
+        return existing, None
+    _created, err = create_page_image_from_registry(cur, page_key, slot_key)
+    if err == "此區塊已存在":
+        existing = get_page_image_row(cur, page_key, slot_key)
+        return (existing, None) if existing else (None, "找不到頁面圖片設定")
+    if err:
+        return None, "找不到頁面圖片設定" if err == "找不到此頁面圖片區塊" else err
+    existing = get_page_image_row(cur, page_key, slot_key)
+    if not existing:
+        return None, "找不到頁面圖片設定"
+    return existing, None
 
 
 def apply_page_image_to_html(html: str, row: dict | None) -> str:

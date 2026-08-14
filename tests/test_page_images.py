@@ -6,8 +6,11 @@ import pytest
 
 from app.content import (
     apply_page_image_replace_stack,
+    create_page_image_from_registry,
     delete_page_image_urls_if_unreferenced,
     effective_page_image_url,
+    ensure_page_image_row,
+    get_page_image_row,
     parse_page_image_payload,
     reset_page_image_row,
     restore_page_image_row,
@@ -258,9 +261,13 @@ def test_create_page_image_from_registry_inserts_missing_slot():
             self.last = query
             if "select page_key, slot_key from page_images" in query:
                 self._fetchall = [{"page_key": k, "slot_key": s} for (k, s) in self.rows]
-            elif "select page_key from page_images where" in query:
+            elif "select * from page_images where" in query or (
+                "select page_key from page_images where" in query
+            ):
                 pk, sk = params
-                self._fetchone = {"page_key": pk} if (pk, sk) in self.rows else None
+                self._fetchone = self.rows.get((pk, sk)) or (
+                    {"page_key": pk} if (pk, sk) in self.rows else None
+                )
             elif query.strip().startswith("insert into page_images"):
                 pk, sk = params[0], params[1]
                 row = {
@@ -302,6 +309,121 @@ def test_create_page_image_from_registry_inserts_missing_slot():
     again, dup_error = create_page_image_from_registry(cur, target["page_key"], target["slot_key"])
     assert again is None
     assert dup_error == "此區塊已存在"
+
+
+def test_signature_tab_label_is_true_self_not_brand():
+    specs = [s for s in page_image_slot_specs() if s.page_key == "/series/signature/"]
+    assert {s.slot_key for s in specs} == {"hero", "intro"}
+    assert all(s.page_label == "真我鑽石" for s in specs)
+    assert all(s.allow_empty for s in specs)
+    assert all(s.slot_label in {"主視覺", "介紹圖"} for s in specs)
+
+
+def test_payload_normalizes_signature_trailing_slash():
+    """Admin save sends /series/signature/; normpath drops the slash."""
+    fields, error = parse_page_image_payload(
+        {
+            "pageKey": "/series/signature/",
+            "slotKey": "hero",
+            "imageUrl": "/static/new.jpg",
+        }
+    )
+    assert error is None
+    assert fields
+    assert fields["page_key"] == "/series/signature"
+    assert fields["slot_key"] == "hero"
+
+
+def test_get_page_image_row_resolves_slash_alias():
+    """DB/registry key is /series/signature/; UPDATE looks up /series/signature."""
+
+    class FakeCursor:
+        def __init__(self):
+            self.rows = {}
+            self.queries = []
+
+        def execute(self, query, params=None):
+            self.queries.append((query, params))
+            if "select * from page_images where" in query:
+                pk, sk = params
+                self._fetchone = self.rows.get((pk, sk))
+            else:
+                self._fetchone = None
+
+        def fetchone(self):
+            return getattr(self, "_fetchone", None)
+
+    cur = FakeCursor()
+    stored = {
+        "page_key": "/series/signature/",
+        "slot_key": "hero",
+        "label": "真我鑽石",
+        "slot_label": "主視覺",
+        "image_url": "/static/old.jpg",
+    }
+    cur.rows[("/series/signature/", "hero")] = stored
+    row = get_page_image_row(cur, "/series/signature", "hero")
+    assert row is stored
+    assert row["page_key"] == "/series/signature/"
+    assert get_page_image_row(cur, "/series/signature/", "hero") is stored
+    assert get_page_image_row(cur, "/series/signature.html", "hero") is stored
+
+
+def test_ensure_page_image_row_upserts_unseeded_signature_hero():
+    """Valid 主視覺 in registry must insert, not 404, when the row was never seeded."""
+
+    class FakeCursor:
+        def __init__(self):
+            self.rows = {}
+            self.last = None
+
+        def execute(self, query, params=None):
+            self.last = query
+            if "select * from page_images where" in query:
+                pk, sk = params
+                self._fetchone = self.rows.get((pk, sk))
+            elif query.strip().startswith("insert into page_images"):
+                pk, sk = params[0], params[1]
+                row = {
+                    "page_key": pk,
+                    "slot_key": sk,
+                    "label": params[2],
+                    "slot_label": params[3],
+                    "group_key": params[4],
+                    "image_url": params[5],
+                    "image_webp": params[6],
+                    "image_alt": params[7],
+                    "default_image_url": params[8],
+                    "default_image_webp": params[9],
+                    "target_w": params[10],
+                    "target_h": params[11],
+                    "sort_order": params[12],
+                    "is_published": True,
+                }
+                self.rows[(pk, sk)] = row
+                self._fetchone = row
+            else:
+                self._fetchone = None
+
+        def fetchone(self):
+            return getattr(self, "_fetchone", None)
+
+    cur = FakeCursor()
+    row, err = ensure_page_image_row(cur, "/series/signature", "hero")
+    assert err is None
+    assert row is not None
+    assert row["page_key"] == "/series/signature/"
+    assert row["slot_key"] == "hero"
+    assert row["slot_label"] == "主視覺"
+    assert row["label"] == "真我鑽石"
+
+    created, dup = create_page_image_from_registry(cur, "/series/signature/", "hero")
+    assert created is None
+    assert dup == "此區塊已存在"
+
+    again, again_err = ensure_page_image_row(cur, "/series/signature/", "hero")
+    assert again_err is None
+    assert again["page_key"] == "/series/signature/"
 
 
 def test_dna_template_marks_cms_slots():

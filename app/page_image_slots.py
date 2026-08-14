@@ -200,11 +200,34 @@ def _series_detail_specs() -> list[SlotSpec]:
     for key, (label, _asset) in _SERIES.items():
         template = f"fragments/series/{key}.html"
         route = f"/series/{key}/"
+        # Signature hero/intro must seed even when the archived fragment is
+        # missing (body fallback can also miss). Live save cannot 404 a valid 主視覺.
+        allow_empty = key == "signature"
         specs.append(
-            _slot(route, label, "hero", "主視覺", "series", template, (0,), (2400, 1165))
+            _slot(
+                route,
+                label,
+                "hero",
+                "主視覺",
+                "series",
+                template,
+                (0,),
+                (2400, 1165),
+                allow_empty=allow_empty,
+            )
         )
         specs.append(
-            _slot(route, label, "intro", "介紹圖", "series", template, (1,), (2400, 1165))
+            _slot(
+                route,
+                label,
+                "intro",
+                "介紹圖",
+                "series",
+                template,
+                (1,),
+                (2400, 1165),
+                allow_empty=allow_empty,
+            )
         )
     return specs
 

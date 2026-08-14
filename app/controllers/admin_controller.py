@@ -3307,6 +3307,7 @@ async def admin_page_image_update(request: Request) -> JSONResponse:
         body = {}
     from app.content import (
         apply_page_image_replace_stack,
+        ensure_page_image_row,
         parse_page_image_payload,
         serialize_page_image,
     )
@@ -3319,13 +3320,12 @@ async def admin_page_image_update(request: Request) -> JSONResponse:
     slot_key = fields["slot_key"]
     webp_provided = "image_webp" in fields
     with get_transaction() as conn, conn.cursor() as cur:
-        cur.execute(
-            "select * from page_images where page_key = %s and slot_key = %s",
-            (page_key, slot_key),
-        )
-        existing = cur.fetchone()
-        if not existing:
-            return JSONResponse(status_code=404, content={"error": "找不到頁面圖片設定"})
+        existing, lookup_err = ensure_page_image_row(cur, page_key, slot_key)
+        if lookup_err or not existing:
+            return JSONResponse(
+                status_code=404, content={"error": lookup_err or "找不到頁面圖片設定"}
+            )
+        resolved_key = existing["page_key"]
         row = apply_page_image_replace_stack(
             cur,
             existing,
@@ -3342,7 +3342,7 @@ async def admin_page_image_update(request: Request) -> JSONResponse:
             published = bool(row.get("is_published")) if row else fields["is_published"]
             update_section_from_page_image(
                 cur,
-                page_key=page_key,
+                page_key=resolved_key,
                 slot_key=slot_key,
                 image_url=(row.get("image_url") if row else fields["image_url"])
                 if published
@@ -3354,7 +3354,7 @@ async def admin_page_image_update(request: Request) -> JSONResponse:
             )
             cur.execute(
                 "select * from page_images where page_key = %s and slot_key = %s",
-                (page_key, slot_key),
+                (resolved_key, slot_key),
             )
             row = cur.fetchone()
         row = serialize_page_image(row)
@@ -3390,19 +3390,17 @@ async def admin_page_image_action(request: Request) -> JSONResponse:
     ):
         return JSONResponse(status_code=400, content={"error": "invalid page_key/slot_key/action"})
     from app.content import (
+        get_page_image_row,
         reset_page_image_row,
         restore_page_image_row,
         serialize_page_image,
     )
 
     with get_transaction() as conn, conn.cursor() as cur:
-        cur.execute(
-            "select * from page_images where page_key = %s and slot_key = %s",
-            (page_key, slot_key),
-        )
-        existing = cur.fetchone()
+        existing = get_page_image_row(cur, page_key, slot_key)
         if not existing:
             return JSONResponse(status_code=404, content={"error": "找不到頁面圖片設定"})
+        resolved_key = existing["page_key"]
         if action == "restore":
             row, restore_err = restore_page_image_row(cur, existing)
             if restore_err:
@@ -3412,7 +3410,7 @@ async def admin_page_image_action(request: Request) -> JSONResponse:
 
                 update_section_from_page_image(
                     cur,
-                    page_key=page_key,
+                    page_key=resolved_key,
                     slot_key=slot_key,
                     image_url=row.get("image_url") or "",
                     image_alt=row.get("image_alt") or "",
@@ -3420,7 +3418,7 @@ async def admin_page_image_action(request: Request) -> JSONResponse:
                 )
                 cur.execute(
                     "select * from page_images where page_key = %s and slot_key = %s",
-                    (page_key, slot_key),
+                    (resolved_key, slot_key),
                 )
                 row = cur.fetchone()
         elif action == "reset":
@@ -3431,7 +3429,7 @@ async def admin_page_image_action(request: Request) -> JSONResponse:
                 # CMS defaults are usually empty — clear section props after GC.
                 update_section_from_page_image(
                     cur,
-                    page_key=page_key,
+                    page_key=resolved_key,
                     slot_key=slot_key,
                     image_url=row.get("image_url") or "",
                     image_alt=row.get("image_alt") or "",
@@ -3439,7 +3437,7 @@ async def admin_page_image_action(request: Request) -> JSONResponse:
                 )
                 cur.execute(
                     "select * from page_images where page_key = %s and slot_key = %s",
-                    (page_key, slot_key),
+                    (resolved_key, slot_key),
                 )
                 row = cur.fetchone()
         elif existing.get("group_key") == "cms-section":
@@ -3448,7 +3446,7 @@ async def admin_page_image_action(request: Request) -> JSONResponse:
             keep_image = action == "publish"
             update_section_from_page_image(
                 cur,
-                page_key=page_key,
+                page_key=resolved_key,
                 slot_key=slot_key,
                 image_url=existing.get("image_url") if keep_image else "",
                 image_alt=existing.get("image_alt") or "",
@@ -3456,7 +3454,7 @@ async def admin_page_image_action(request: Request) -> JSONResponse:
             )
             cur.execute(
                 "select * from page_images where page_key = %s and slot_key = %s",
-                (page_key, slot_key),
+                (resolved_key, slot_key),
             )
             row = cur.fetchone()
         elif action == "publish":
@@ -3467,7 +3465,7 @@ async def admin_page_image_action(request: Request) -> JSONResponse:
                 where page_key = %s and slot_key = %s
                 returning *
                 """,
-                (page_key, slot_key),
+                (resolved_key, slot_key),
             )
             row = cur.fetchone()
         else:
@@ -3478,7 +3476,7 @@ async def admin_page_image_action(request: Request) -> JSONResponse:
                 where page_key = %s and slot_key = %s
                 returning *
                 """,
-                (page_key, slot_key),
+                (resolved_key, slot_key),
             )
             row = cur.fetchone()
         if not row:

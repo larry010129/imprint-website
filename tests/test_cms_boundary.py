@@ -2,6 +2,8 @@ from app.cms_boundary import (
     assert_content_page_key,
     is_reserved_cms_slug,
     is_reserved_page_key,
+    normalize_page_key,
+    page_key_aliases,
     validate_cms_slug,
 )
 from app.cms_pages import (
@@ -22,6 +24,24 @@ def test_reserved_cms_slugs_blocked():
     slug, err = validate_cms_slug("brand-story")
     assert slug == "brand-story"
     assert err is None
+
+
+def test_page_key_aliases_include_trailing_slash_and_html():
+    """UPDATE normalizes /series/signature/ → /series/signature; DB keeps slash."""
+    assert normalize_page_key("/series/signature/") == "/series/signature"
+    slash = page_key_aliases("/series/signature/")
+    stripped = page_key_aliases("/series/signature")
+    html = page_key_aliases("/series/signature.html")
+    assert "/series/signature/" in slash
+    assert "/series/signature" in slash
+    assert "/series/signature.html" in slash
+    assert "/series/signature/" in stripped
+    assert "/series/signature" in stripped
+    assert "/series/signature.html" in stripped
+    assert "/series/signature/" in html
+    assert page_key_aliases("/") == ("/",)
+    assert page_key_aliases("/about")[0] == "/about"
+    assert "/about.html" in page_key_aliases("/about")
 
 
 def test_reserved_page_keys_block_shop_jewelry_price():
