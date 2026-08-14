@@ -175,14 +175,6 @@ function buildTourSteps(isMobile: boolean): TourStep[] {
   ];
 }
 
-function readTourCompleted(): boolean {
-  try {
-    return localStorage.getItem(STORAGE_KEY) === "1";
-  } catch {
-    return false;
-  }
-}
-
 function markTourCompleted() {
   try {
     localStorage.setItem(STORAGE_KEY, "1");
@@ -326,11 +318,9 @@ export default function ShopTour() {
   const [showWelcome, setShowWelcome] = useState(false);
   const [tourPending, setTourPending] = useState(false);
   const [ready, setReady] = useState(false);
-  const completed = readTourCompleted();
+  const [session, setSession] = useState(0);
 
   useEffect(() => {
-    if (completed) return;
-
     let attempts = 0;
     const poll = () => {
       attempts += 1;
@@ -349,13 +339,24 @@ export default function ShopTour() {
     }, 250);
 
     return () => window.clearInterval(id);
-  }, [completed]);
+  }, []);
 
-  if (completed || !ready) return null;
+  useEffect(() => {
+    const onStart = () => {
+      setSession((n) => n + 1);
+      setShowWelcome(true);
+      setTourPending(false);
+    };
+    window.addEventListener("imprint-shop-tour-start", onStart);
+    return () => window.removeEventListener("imprint-shop-tour-start", onStart);
+  }, []);
+
+  if (!ready) return null;
 
   return (
     <TourProvider
-      isTourCompleted={completed}
+      key={session}
+      isTourCompleted={false}
       tooltipMode="fixed-bottom"
       onComplete={() => {
         markTourCompleted();

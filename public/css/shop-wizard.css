@@ -114,6 +114,29 @@
   line-height: 1.8;
 }
 
+.shop-wizard-guide {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.shop-tour-start {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 12px auto 0;
+  padding: 8px 12px;
+  min-height: 44px;
+  border: 0;
+  background: none;
+  color: var(--mint-deep, #3a8f8f);
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
 .shop-breadcrumb--compact {
   margin-bottom: 16px;
   font-size: 12px;

@@ -73,7 +73,10 @@ def test_shop_third_party_and_quote_work_is_deferred_and_deduplicated():
     assert "/static/css/shop-tour.css" not in (
         ROOT / "content" / "site" / "templates" / "partials" / "shop-tour-react-css.html"
     ).read_text(encoding="utf-8")
-    assert "import(\"/static/react/shop-tour.js?v=17\")" in tour
+    assert "import(\"/static/react/shop-tour.js?v=18\")" in tour
+    assert "pointerdown" not in tour
+    assert "keydown" not in tour
+    assert "data-shop-tour-start" in tour
     assert "requestIdleCallback" not in tour
     assert "shopRequestInflight" in shop
     assert "quoteCache" in shop

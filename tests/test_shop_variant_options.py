@@ -256,10 +256,10 @@ def test_shop_js_fancy_carat_dropdown_intersects_admin_min():
     assert "stockFancyDiamondColors" in (
         ROOT / "public" / "js" / "shop-assets.js"
     ).read_text(encoding="utf-8")
-    assert "shop.js?v=166" in (
+    assert "shop.js?v=167" in (
         ROOT / "content" / "site" / "templates" / "pages" / "shop" / "calculator.html"
     ).read_text(encoding="utf-8")
-    assert "shop.js?v=166" in (
+    assert "shop.js?v=167" in (
         ROOT / "content" / "site" / "page-registry.json"
     ).read_text(encoding="utf-8")
     assert "function setShopOptionDisabled" in src
@@ -381,7 +381,7 @@ def test_shop_js_non_round_shape_requires_min_carat():
         / "htmx"
         / "shop_catalog.html"
     ).read_text(encoding="utf-8")
-    assert "shop-i18n.js?v=23" in (
+    assert "shop-i18n.js?v=24" in (
         ROOT / "content" / "site" / "templates" / "pages" / "shop" / "calculator.html"
     ).read_text(encoding="utf-8")
     assert "diamond_shape_round_only" in i18n

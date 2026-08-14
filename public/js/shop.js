@@ -3518,6 +3518,63 @@ function diamondAssetUrl(relativePath) {
   return `/static/images/${relativePath}?v=23`;
 }
 
+/** Prefer sibling .webp when Ren lands; PNG stays fallback. Formula unchanged. */
+function diamondShapeWebpUrl(pngUrl) {
+  if (!pngUrl || typeof pngUrl !== 'string') return '';
+  return pngUrl.replace(/\.png(\?[^#]*)?$/i, '.webp$1');
+}
+
+function assignDiamondShapeImg(img, pngUrl) {
+  if (!img || !pngUrl) return;
+  if (img.dataset.srcApplied === pngUrl && img.getAttribute('src')) return;
+  img.dataset.srcApplied = pngUrl;
+  const webp = diamondShapeWebpUrl(pngUrl);
+  if (webp && webp !== pngUrl) {
+    img.onerror = () => {
+      img.onerror = null;
+      img.src = pngUrl;
+    };
+    img.src = webp;
+  } else {
+    img.src = pngUrl;
+  }
+}
+
+let diamondShapeImgObserver = null;
+
+function ensureDiamondShapeImgObserver() {
+  if (diamondShapeImgObserver || typeof IntersectionObserver === 'undefined') {
+    return diamondShapeImgObserver;
+  }
+  const root = document.getElementById('diamond-shape-other-popover');
+  diamondShapeImgObserver = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (!entry.isIntersecting) return;
+      const img = entry.target;
+      const pngUrl = img.dataset.src;
+      if (pngUrl) assignDiamondShapeImg(img, pngUrl);
+      diamondShapeImgObserver.unobserve(img);
+    });
+  }, { root: root || null, rootMargin: '80px', threshold: 0.01 });
+  return diamondShapeImgObserver;
+}
+
+function hydrateVisibleDiamondShapeImgs() {
+  const listbox = document.getElementById('diamond-shape-other-listbox');
+  if (!listbox) return;
+  const imgs = listbox.querySelectorAll('img[data-src]');
+  const selected = listbox.querySelector(
+    '.diamond-shape-picker__option[aria-selected="true"] img[data-src]'
+  );
+  if (selected) assignDiamondShapeImg(selected, selected.dataset.src);
+  const io = ensureDiamondShapeImgObserver();
+  imgs.forEach((img) => {
+    if (img.getAttribute('src')) return;
+    if (io) io.observe(img);
+    else assignDiamondShapeImg(img, img.dataset.src);
+  });
+}
+
 function diamondMatrixImagePath(shapeId, colorId) {
   const shape = shapeId || 'round';
   const color = colorId || 'white';
@@ -3901,6 +3958,8 @@ function setDiamondShapePickerOpen(open, { focus = null, restoreFocus = false } 
     return;
   }
 
+  hydrateVisibleDiamondShapeImgs();
+
   requestAnimationFrame(() => {
     const options = diamondShapePickerOptions();
     if (!options.length) return;
@@ -4066,7 +4125,7 @@ function syncDiamondShapeOtherDropdown() {
     trigger.classList.add('diamond-shape-picker__trigger--placeholder');
   } else if (selected) {
     if (avatar) avatar.hidden = false;
-    image.src = memorialDiamondShapeImageUrl(selected.id, selectedDiamondColorId());
+    assignDiamondShapeImg(image, memorialDiamondShapeImageUrl(selected.id, selectedDiamondColorId()));
     image.alt = '';
     value.textContent = diamondMetaLabel(selected);
     meta.textContent = diamondShapePickerMeta(selected);
@@ -4095,10 +4154,12 @@ function syncDiamondShapeOtherDropdown() {
     optionAvatar.className = 'diamond-shape-picker__avatar';
     optionAvatar.setAttribute('aria-hidden', 'true');
     const avatarImage = document.createElement('img');
-    avatarImage.src = memorialDiamondShapeImageUrl(shape.id, selectedDiamondColorId());
     avatarImage.alt = '';
-    avatarImage.loading = 'lazy';
     avatarImage.decoding = 'async';
+    avatarImage.dataset.src = memorialDiamondShapeImageUrl(shape.id, selectedDiamondColorId());
+    if (isSelected && !locked) {
+      assignDiamondShapeImg(avatarImage, avatarImage.dataset.src);
+    }
     optionAvatar.appendChild(avatarImage);
 
     const text = document.createElement('span');
@@ -4134,6 +4195,8 @@ function syncDiamondShapeOtherDropdown() {
     option.appendChild(check);
     optionsRoot.appendChild(option);
   });
+  const popover = document.getElementById('diamond-shape-other-popover');
+  if (popover && !popover.hidden) hydrateVisibleDiamondShapeImgs();
 }
 
 function selectDiamondShape(shapeId) {
