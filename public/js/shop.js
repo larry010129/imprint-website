@@ -2583,7 +2583,9 @@ function styleGridImageCandidates(product) {
     if (product?.thumbUrl && isUsableCatalogImageUrl(product.thumbUrl)) add(product.thumbUrl);
     for (const url of orderedCatalogImageUrls(product)) add(url);
     const color = memorialDiamondColorFromProduct(product) || 'white';
+    add(diamondMatrixImageUrl('round', color, true));
     add(diamondMatrixImageUrl('round', color));
+    add(diamondAssetUrl(`diamonds/matrix/round-${color}.png`));
     return out;
   }
 
@@ -3346,7 +3348,7 @@ function isMemorialDiamondProduct(product) {
 }
 
 /**
- * Fancy colors with bundled matrix PNGs under public/images/diamonds/matrix/.
+ * Fancy colors with bundled matrix stills under public/images/diamonds/matrix/.
  * Memorial preview uses these — not shop-product letter SKUs / lifestyle heroes.
  */
 function matrixFancyDiamondColors() {
@@ -3383,7 +3385,7 @@ function designedFancyDiamondColors(product) {
  * Show 黃鑽/藍鑽/粉鑽 only when BOTH:
  *   1) product has at least one admin carat ≥ fancyMinCarat (0.3), AND
  *   2) that color has a catalog image slot OR letter-SKU stock PNG
- *      (memorial: bundled matrix PNG under diamonds/matrix/).
+ *      (memorial: bundled matrix still under diamonds/matrix/).
  * Do not unlock all fancy colors from carat alone. White always separate.
  * Bracelet/chain: stock remaps fancy→white — no stock fancy offered.
  */
@@ -3515,29 +3517,49 @@ function diamondMetaLabel(item) {
 
 function diamondAssetUrl(relativePath) {
   if (!relativePath) return '';
-  return `/static/images/${relativePath}?v=23`;
+  return `/static/images/${relativePath}?v=24`;
 }
 
-/** Prefer sibling .webp when Ren lands; PNG stays fallback. Formula unchanged. */
-function diamondShapeWebpUrl(pngUrl) {
-  if (!pngUrl || typeof pngUrl !== 'string') return '';
-  return pngUrl.replace(/\.png(\?[^#]*)?$/i, '.webp$1');
+function isBundledMatrixUrl(url) {
+  return typeof url === 'string'
+    && /\/diamonds\/matrix\/[a-z0-9]+-[a-z0-9]+(-320)?\.(webp|png)(?:\?|$)/i.test(url);
 }
 
-function assignDiamondShapeImg(img, pngUrl) {
-  if (!img || !pngUrl) return;
-  if (img.dataset.srcApplied === pngUrl && img.getAttribute('src')) return;
-  img.dataset.srcApplied = pngUrl;
-  const webp = diamondShapeWebpUrl(pngUrl);
-  if (webp && webp !== pngUrl) {
-    img.onerror = () => {
+function matrixFallbackUrls(url, thumb) {
+  if (!url) return [];
+  if (!isBundledMatrixUrl(url)) return [url];
+  const fullWebp = url.replace(/-320\.webp(\?[^#]*)?$/i, '.webp$1');
+  const png = fullWebp.replace(/\.webp(\?[^#]*)?$/i, '.png$1');
+  const thumbWebp = fullWebp.replace(/\.webp(\?[^#]*)?$/i, '-320.webp$1');
+  const out = [];
+  const add = (next) => {
+    if (next && !out.includes(next)) out.push(next);
+  };
+  if (thumb) add(thumbWebp);
+  add(fullWebp);
+  add(png);
+  return out;
+}
+
+function assignDiamondShapeImg(img, url, opts) {
+  if (!img || !url) return;
+  const thumb = !!(opts && opts.thumb);
+  const key = `${url}|${thumb ? '1' : '0'}`;
+  if (img.dataset.srcApplied === key && img.getAttribute('src')) return;
+  img.dataset.srcApplied = key;
+  const chain = matrixFallbackUrls(url, thumb);
+  let i = 0;
+  const next = () => {
+    if (i >= chain.length) {
       img.onerror = null;
-      img.src = pngUrl;
-    };
-    img.src = webp;
-  } else {
-    img.src = pngUrl;
-  }
+      return;
+    }
+    const src = chain[i];
+    i += 1;
+    img.onerror = i < chain.length ? next : null;
+    img.src = src;
+  };
+  next();
 }
 
 let diamondShapeImgObserver = null;
@@ -3551,8 +3573,8 @@ function ensureDiamondShapeImgObserver() {
     entries.forEach((entry) => {
       if (!entry.isIntersecting) return;
       const img = entry.target;
-      const pngUrl = img.dataset.src;
-      if (pngUrl) assignDiamondShapeImg(img, pngUrl);
+      const src = img.dataset.src;
+      if (src) assignDiamondShapeImg(img, src, { thumb: true });
       diamondShapeImgObserver.unobserve(img);
     });
   }, { root: root || null, rootMargin: '80px', threshold: 0.01 });
@@ -3566,26 +3588,27 @@ function hydrateVisibleDiamondShapeImgs() {
   const selected = listbox.querySelector(
     '.diamond-shape-picker__option[aria-selected="true"] img[data-src]'
   );
-  if (selected) assignDiamondShapeImg(selected, selected.dataset.src);
+  if (selected) assignDiamondShapeImg(selected, selected.dataset.src, { thumb: true });
   const io = ensureDiamondShapeImgObserver();
   imgs.forEach((img) => {
     if (img.getAttribute('src')) return;
     if (io) io.observe(img);
-    else assignDiamondShapeImg(img, img.dataset.src);
+    else assignDiamondShapeImg(img, img.dataset.src, { thumb: true });
   });
 }
 
-function diamondMatrixImagePath(shapeId, colorId) {
+function diamondMatrixImagePath(shapeId, colorId, thumb) {
   const shape = shapeId || 'round';
   const color = colorId || 'white';
-  return `diamonds/matrix/${shape}-${color}.png`;
+  const size = thumb ? '-320' : '';
+  return `diamonds/matrix/${shape}-${color}${size}.webp`;
 }
 
-function diamondMatrixImageUrl(shapeId, colorId) {
-  return diamondAssetUrl(diamondMatrixImagePath(shapeId, colorId));
+function diamondMatrixImageUrl(shapeId, colorId, thumb) {
+  return diamondAssetUrl(diamondMatrixImagePath(shapeId, colorId, thumb));
 }
 
-/** Prefer admin shape image on selected color product; else bundled matrix PNG. */
+/** Prefer admin shape image on selected color product; else bundled matrix webp. */
 function memorialDiamondShapeImageUrl(shapeId, colorId) {
   const shape = shapeId || 'round';
   const product = getSelectedProduct();
@@ -4158,7 +4181,7 @@ function syncDiamondShapeOtherDropdown() {
     avatarImage.decoding = 'async';
     avatarImage.dataset.src = memorialDiamondShapeImageUrl(shape.id, selectedDiamondColorId());
     if (isSelected && !locked) {
-      assignDiamondShapeImg(avatarImage, avatarImage.dataset.src);
+      assignDiamondShapeImg(avatarImage, avatarImage.dataset.src, { thumb: true });
     }
     optionAvatar.appendChild(avatarImage);
 
@@ -5266,11 +5289,9 @@ function updateLargeImage(layer) {
       || memorialDiamondShapeImageUrl(resolvedDiamondShape(), selectedDiamondColorId());
     if (img) {
       img.style.visibility = '';
-      img.onerror = null;
-      if (img.getAttribute('src') === nextSrc && nextSrc) {
-        img.removeAttribute('src');
-      }
-      img.src = nextSrc;
+      delete img.dataset.srcApplied;
+      if (nextSrc) assignDiamondShapeImg(img, nextSrc);
+      else img.removeAttribute('src');
       if (zoomBtn) zoomBtn.hidden = !(img.src && !img.src.endsWith('/'));
     }
     renderProductThumbnails(images);
@@ -5896,7 +5917,7 @@ function loadGirdleEngrave() {
   if (girdleEngraveLoadPromise) return girdleEngraveLoadPromise;
   girdleEngraveLoadPromise = new Promise((resolve, reject) => {
     const script = document.createElement('script');
-    script.src = '/static/js/girdle-engrave.js?v=26';
+    script.src = '/static/js/girdle-engrave.js?v=27';
     script.async = true;
     script.onload = () => resolve(window.GirdleEngrave);
     script.onerror = () => reject(new Error('girdle engraving script failed to load'));

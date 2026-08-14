@@ -479,7 +479,7 @@
   var GIRDLE_ZOOM_BASE = '/static/images/shop/girdle/girdle-zoom';
   var GIRDLE_ZOOM_VERSION = '7';
   var GIRDLE_MATRIX_BASE = '/static/images/diamonds/girdle-matrix';
-  var GIRDLE_MATRIX_VERSION = '7';
+  var GIRDLE_MATRIX_VERSION = '8';
   var GIRDLE_PREVIEW_BY_COLOR = {
     white: GIRDLE_ZOOM_BASE + '-white.jpg?v=' + GIRDLE_ZOOM_VERSION,
     yellow: GIRDLE_ZOOM_BASE + '-yellow.jpg?v=' + GIRDLE_ZOOM_VERSION,
@@ -496,7 +496,22 @@
   function girdleMatrixSrc(shapeId, colorId) {
     var shape = shapeId || 'round';
     var color = colorId && GIRDLE_PREVIEW_BY_COLOR[colorId] ? colorId : 'white';
+    return GIRDLE_MATRIX_BASE + '/' + shape + '-' + color + '.webp?v=' + GIRDLE_MATRIX_VERSION;
+  }
+
+  function girdleMatrixPngSrc(shapeId, colorId) {
+    var shape = shapeId || 'round';
+    var color = colorId && GIRDLE_PREVIEW_BY_COLOR[colorId] ? colorId : 'white';
     return GIRDLE_MATRIX_BASE + '/' + shape + '-' + color + '.png?v=' + GIRDLE_MATRIX_VERSION;
+  }
+
+  function assignGirdleMatrixImg(img, shapeId, colorId) {
+    if (!img) return;
+    img.onerror = function () {
+      img.onerror = null;
+      img.src = girdleMatrixPngSrc(shapeId, colorId);
+    };
+    img.src = girdleMatrixSrc(shapeId, colorId);
   }
 
   function girdlePreviewSrc(colorId) {
@@ -817,6 +832,8 @@
     PREVIEW_BY_COLOR: GIRDLE_PREVIEW_BY_COLOR,
     PREVIEW_WEBP_BY_COLOR: GIRDLE_PREVIEW_WEBP_BY_COLOR,
     matrixSrc: girdleMatrixSrc,
+    matrixPngSrc: girdleMatrixPngSrc,
+    assignMatrixImg: assignGirdleMatrixImg,
     previewSrc: girdlePreviewSrc,
     init: init,
     readable: readable,
