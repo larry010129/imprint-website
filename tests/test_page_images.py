@@ -156,21 +156,27 @@ def test_page_image_storage_folders_cover_admin_tabs():
     assert PAGE_IMAGE_STORAGE_FOLDERS["/series/heirloom/"] == "life-diamond"
     assert PAGE_IMAGE_STORAGE_FOLDERS["/series/signature/"] == "signature-diamond"
     assert PAGE_IMAGE_STORAGE_FOLDERS["/what-is-dna-diamond"] == "dna-diamond"
+    assert PAGE_IMAGE_STORAGE_FOLDERS["/privacy"] == "privacy"
+    assert PAGE_IMAGE_STORAGE_FOLDERS["/return-policy"] == "return-policy"
     assert page_image_storage_folder(None) == "_pending"
     assert page_image_storage_folder("/series/pet") == "pet-diamond"
     assert page_image_storage_folder("/series/signature/") == "signature-diamond"
+    assert page_image_storage_folder("/privacy") == "privacy"
+    assert page_image_storage_folder("/return-policy") == "return-policy"
 
 
 def test_inventory_excludes_empty_calculator_and_jewelry_slots():
     rows = build_page_image_seed()
     counts = Counter(row["page_key"] for row in rows)
     by_slot = {row["slot_key"]: row for row in rows if row["page_key"] == "/what-is-dna-diamond"}
-    assert len(rows) == 50
-    assert len(counts) == 11
+    assert len(rows) == 52
+    assert len(counts) == 13
     assert counts["/journal"] == 1
     assert counts["/about"] == 3
     assert counts["/what-is-dna-diamond"] == 14
     assert counts["/series/signature/"] == 2
+    assert counts["/privacy"] == 1
+    assert counts["/return-policy"] == 1
     assert "/shop/calculator/" not in counts
     assert not any(key.startswith("/jewelry") for key in counts)
     assert "intro" in by_slot
@@ -186,6 +192,47 @@ def test_inventory_excludes_empty_calculator_and_jewelry_slots():
     empty_slots = {"lab-photo", "usp-lab-photo", "hero"}
     assert all(row["default_image_url"] or row["slot_key"] in empty_slots for row in rows)
     assert all(not str(row["default_image_url"]).startswith("{{") for row in rows)
+
+
+def test_signature_series_page_label_is_true_self_not_brand():
+    """Admin 頁面圖片 / series-overview use 真我鑽石; brand 銘印鑽石 stays elsewhere."""
+    specs = page_image_slot_specs()
+    signature = [spec for spec in specs if spec.page_key == "/series/signature/"]
+    assert signature
+    assert all(spec.page_label == "真我鑽石" for spec in signature)
+    overview = next(spec for spec in specs if spec.page_key == "/series" and spec.slot_key == "signature")
+    assert overview.slot_label == "系列・真我鑽石"
+    home = next(spec for spec in specs if spec.page_key == "/" and spec.slot_key == "series-signature")
+    assert home.slot_label == "系列卡・真我鑽石"
+    assert all(spec.page_label != "銘印鑽石" for spec in signature)
+    about = next(spec for spec in specs if spec.page_key == "/about" and spec.slot_key == "cinema")
+    assert "銘印鑽石" in about.image_alt
+
+
+def test_legal_pages_with_hero_binding_have_empty_slots():
+    rows = {row["page_key"]: row for row in build_page_image_seed() if row["page_key"] in {"/privacy", "/return-policy"}}
+    assert rows["/privacy"]["slot_key"] == "hero"
+    assert rows["/privacy"]["label"] == "隱私權政策"
+    assert rows["/privacy"]["slot_label"] == "頁首圖片"
+    assert rows["/privacy"]["default_image_url"] == ""
+    assert rows["/return-policy"]["slot_key"] == "hero"
+    assert rows["/return-policy"]["label"] == "退換貨政策"
+    assert rows["/return-policy"]["default_image_url"] == ""
+
+
+def test_copy_pages_without_content_images_have_no_slots():
+    """Audit: text-only / chrome-only 內容 pages must not invent 頁面圖片 slots."""
+    page_keys = {spec.page_key for spec in page_image_slot_specs()}
+    for route in (
+        "/diamond-4c",
+        "/lab-grown-diamond",
+        "/diamond-comparison",
+        "/contact",
+        "/faq",
+        "/stories",
+        "/terms",
+    ):
+        assert route not in page_keys
 
 
 def test_payload_requires_valid_slot_key():
