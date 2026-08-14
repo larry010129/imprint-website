@@ -97,6 +97,18 @@ frontend/.claude-flow/
 CLAUDE.local.md
 .mcp.json
 
+# Higgsfield / image-gen runtime (scripts recreate these)
+scripts/_hf_upload/
+scripts/_hf_*.json
+scripts/_upload_batch*
+scripts/_record_batch*
+scripts/_batch-download.json
+scripts/tmp-download-batch.json
+scripts/higgsfield-job-log.txt
+scripts/*-progress.json
+scripts/pendant-combo-media-cache.json
+scripts/diamond-girdle-matrix-downloads*.json
+
 # Dev artifacts
 scripts/_inspect-out/
 
