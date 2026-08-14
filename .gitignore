@@ -49,10 +49,26 @@ Desktop.ini
 
 # Logs & temp
 *.log
+*.log.err
 logs/
 tmp/
 temp/
 .cache/
+scripts/_tmp*
+scripts/_tmp_*
+*_uvicorn_probe.log.err
+
+# Image generation leftovers (never serve)
+public/**/_tmp_*/
+public/**/_bak_*/
+public/**/_gen_ref*
+*.bak.png
+
+# Agent DBs / local vector stores (never deploy)
+ruvector.db
+*.rvf
+*.rvf.lock
+.ruvector/
 
 # Ruflo / Claude Flow — local runtime (config.yaml + CAPABILITIES.md may stay tracked)
 .claude-flow/data/
@@ -65,9 +81,13 @@ temp/
 .claude-flow/security/
 .claude-flow/learning/
 .claude-flow/workflows/
+.claude-flow/policy/
 .claude-flow/daemon-state.json
 .claude-flow/daemon.pid
 .claude-flow/harness-active-policy.json
+.claude-flow/memory-package.json
+.claude-flow/routing-outcomes.json
+frontend/.claude-flow/
 
 # Swarm memory (local SQLite); keep schema if present
 .swarm/
@@ -76,6 +96,18 @@ temp/
 # Local Claude / MCP overrides
 CLAUDE.local.md
 .mcp.json
+
+# Higgsfield / image-gen runtime (scripts recreate these)
+scripts/_hf_upload/
+scripts/_hf_*.json
+scripts/_upload_batch*
+scripts/_record_batch*
+scripts/_batch-download.json
+scripts/tmp-download-batch.json
+scripts/higgsfield-job-log.txt
+scripts/*-progress.json
+scripts/pendant-combo-media-cache.json
+scripts/diamond-girdle-matrix-downloads*.json
 
 # Dev artifacts
 scripts/_inspect-out/
