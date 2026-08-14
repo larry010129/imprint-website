@@ -51,6 +51,17 @@ def test_build_catalog_product_limits_golds_and_carats_to_variants():
     assert set(entry["weights"]["18k"]) == {"0.5"}
 
 
+def test_build_chain_catalog_keeps_custom_thickness_and_length_table():
+    product = _generic_product("chain-custom", category="chain")
+    product["length_weights"] = {"1.2mm": {"36": 0.021, "46": 0.027}}
+    variants = [{"gold": "18k", "carat": "1.2mm", "weight_chin": 0.027}]
+
+    entry = build_catalog_product(product, variants, [])
+
+    assert entry["carats"] == ["1.2mm"]
+    assert entry["lengthWeights"] == product["length_weights"]
+
+
 def _generic_product(product_id="prod-generic", category="pendant"):
     return {
         "id": product_id,
@@ -245,10 +256,10 @@ def test_shop_js_fancy_carat_dropdown_intersects_admin_min():
     assert "stockFancyDiamondColors" in (
         ROOT / "public" / "js" / "shop-assets.js"
     ).read_text(encoding="utf-8")
-    assert "shop.js?v=164" in (
+    assert "shop.js?v=165" in (
         ROOT / "content" / "site" / "templates" / "pages" / "shop" / "calculator.html"
     ).read_text(encoding="utf-8")
-    assert "shop.js?v=164" in (
+    assert "shop.js?v=165" in (
         ROOT / "content" / "site" / "page-registry.json"
     ).read_text(encoding="utf-8")
     assert "function setShopOptionDisabled" in src
@@ -345,7 +356,7 @@ def test_shop_js_non_round_shape_requires_min_carat():
     assert "inset 0 0 0 4px var(--shop-cyan)" in css
     assert ".shop-page .shop-option--disabled" in css
     assert ".diamond-carousel-item.is-disabled" in css
-    assert "shop.css?v=6.56" in (
+    assert "shop.css?v=6.62" in (
         ROOT / "content" / "site" / "templates" / "pages" / "shop" / "calculator.html"
     ).read_text(encoding="utf-8")
     assert "max-width: none" in css

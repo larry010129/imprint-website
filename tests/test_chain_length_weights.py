@@ -43,6 +43,20 @@ def test_validate_chain_length_weights_round_trip():
     assert cleaned["variants"][0]["weightChin"] == 0.033
 
 
+def test_validate_chain_accepts_custom_thickness_and_syncs_shop_weight_key():
+    body = _chain_publish_body(
+        isPublished=False,
+        images=[],
+        variants=[{"gold": "18k", "carat": "1.2mm"}],
+        lengthWeights={"1.2mm": {"36": 0.021, "46": 0.027}},
+    )
+    cleaned, err = validate_product_fields(body)
+    assert err is None
+    assert cleaned["variants"][0]["carat"] == "1.2mm"
+    assert cleaned["variants"][0]["weightChin"] == 0.027
+    assert set(cleaned["lengthWeights"]) == {"1.2mm"}
+
+
 def test_validate_chain_omits_variant_wax_syncs_from_length_table():
     """款式選項 no longer sends 46cm wax — backend syncs weightChin from 長度蠟重."""
     body = _chain_publish_body(isPublished=False, images=[])

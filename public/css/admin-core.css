@@ -553,6 +553,9 @@ button:not(.btn-sm):not(.ap-tab-btn):not(.nav-toggle):not(.side-backdrop):not([d
 .ap-variant-row input,.ap-variant-row select{
   width:100%;min-width:0;padding:6px 7px;border:1px solid #DDD5CC;border-radius:5px;font-size:13px;box-sizing:border-box;
 }
+.ap-thickness-input{display:flex;align-items:center;min-width:0;border:1px solid #DDD5CC;border-radius:5px;background:#fff;padding-right:7px;color:var(--ink-soft);}
+.ap-thickness-input input{border:0!important;padding-right:2px!important;background:transparent;}
+.ap-thickness-input input:focus{outline:0;}
 /* Narrow: wrap fields to 2–3 rows instead of inner H-scroll. */
 @media (max-width:720px){
   .ap-variant-block:not(.ap-variant-block--chain) .ap-variant-head,
@@ -572,6 +575,7 @@ button:not(.btn-sm):not(.ap-tab-btn):not(.nav-toggle):not(.side-backdrop):not([d
 .ap-chain-length-weights{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin:0 0 12px;}
 .ap-chain-thickness-block{border:1px solid #EDE7E0;border-radius:10px;padding:10px 12px;background:#FBFAF8;}
 .ap-chain-thickness-title{margin:0 0 8px;font-size:12px;letter-spacing:.06em;color:var(--ink);}
+.ap-chain-thickness-title input{width:64px;margin-left:4px;padding:3px 5px;border:1px solid #DDD5CC;border-radius:4px;font:inherit;letter-spacing:normal;}
 .ap-chain-length-head,.ap-chain-length-row{display:grid;grid-template-columns:72px 1fr;gap:8px;align-items:center;margin-bottom:6px;}
 .ap-chain-length-head{font-size:11px;color:var(--ink-faint);}
 .ap-chain-length-row input{width:100%;padding:6px 8px;border:1px solid #DDD5CC;border-radius:5px;font-size:13px;box-sizing:border-box;}

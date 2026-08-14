@@ -33,14 +33,60 @@ def test_girdle_preview_wrap_clips_overlay():
     extra = CALC.read_text(encoding="utf-8").split("{% block extra_css %}", 1)[1].split("{% endblock %}", 1)[0]
     extra_wrap = extra.split(".shop-fit .shop-girdle-engrave .cfg-engrave-preview {", 1)[1].split("}", 1)[0]
     assert "overflow: hidden" in extra_wrap
-    assert "shop.css?v=6.56" in extra
+    assert "shop.css?v=6.62" in extra
+
+
+def test_girdle_input_tokens_have_horizontal_gap():
+    css = SHOP_CSS.read_text(encoding="utf-8")
+    extra = CALC.read_text(encoding="utf-8").split("{% block extra_css %}", 1)[1].split("{% endblock %}", 1)[0]
+    shop_input = css.split(".shop-fit .shop-girdle-engrave .cfg-engrave-input {", 1)[1].split("}", 1)[0]
+    extra_input = extra.split(".shop-fit .shop-girdle-engrave .cfg-engrave-input {", 1)[1].split("}", 1)[0]
+    shop_token = css.split(
+        ".shop-fit .shop-girdle-engrave .cfg-engrave-input .cfg-emblem-token {", 1
+    )[1].split("}", 1)[0]
+    extra_token = extra.split(
+        ".shop-fit .shop-girdle-engrave .cfg-engrave-input .cfg-emblem-token {", 1
+    )[1].split("}", 1)[0]
+    assert "gap: 4px" in shop_input
+    assert "gap: 4px" in extra_input
+    assert "margin-inline: 2px" in shop_token
+    assert "margin-inline: 2px" in extra_token
+    assert "overflow: visible" in shop_token
+    assert "overflow: visible" in extra_token
+
+
+def test_girdle_preview_tokens_have_horizontal_gap():
+    css = SHOP_CSS.read_text(encoding="utf-8")
+    extra = CALC.read_text(encoding="utf-8").split("{% block extra_css %}", 1)[1].split("{% endblock %}", 1)[0]
+    shop_text = css.split(
+        ".shop-fit .shop-girdle-engrave .cfg-engrave-preview-text {", 1
+    )[1].split("}", 1)[0]
+    extra_text = extra.split(
+        ".shop-fit .shop-girdle-engrave .cfg-engrave-preview-text {", 1
+    )[1].split("}", 1)[0]
+    shop_token = css.split(
+        ".shop-fit .shop-girdle-engrave .cfg-engrave-preview-text .cfg-emblem-token {", 1
+    )[1].split("}", 1)[0]
+    extra_token = extra.split(
+        ".shop-fit .shop-girdle-engrave .cfg-engrave-preview-text .cfg-emblem-token {", 1
+    )[1].split("}", 1)[0]
+    assert "display: flex" in shop_text
+    assert "display: flex" in extra_text
+    assert "gap: 4px" in shop_text
+    assert "gap: 4px" in extra_text
+    assert "position: absolute" in shop_text
+    assert "position: absolute" in extra_text
+    assert "margin-inline" not in shop_token
+    assert "margin-inline" not in extra_token
+    assert "width: 18px" in shop_token
+    assert "width: 18px" in extra_token
 
 
 def test_emblem_imgs_have_intrinsic_size_fallback():
     src = GIRDLE_JS.read_text(encoding="utf-8")
     assert 'width="18" height="18"' in src
     shop = SHOP_JS.read_text(encoding="utf-8")
-    assert "girdle-engrave.js?v=25" in shop
+    assert "girdle-engrave.js?v=26" in shop
     hidden_clear = shop.split("function updateEngravingSteps()", 1)[1].split("function closeAllShopDropdowns", 1)[0]
     assert "shop-girdle-engrave-preview" in hidden_clear
     assert "preview.innerHTML = ''" in hidden_clear

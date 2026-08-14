@@ -1685,7 +1685,6 @@ function isDiamondOnlyCategory(category = state.category) {
 }
 
 let shopView = 'catalog';
-const DEFAULT_ATTACHED_CHAIN_THICKNESS = '1.0mm';
 const BRACELET_LENGTH_OPTIONS_CM = [15, 16, 17, 18, 19, 20, 21];
 const BRACELET_REFERENCE_LENGTH_CM = 18;
 
@@ -1731,11 +1730,9 @@ function chainConfiguredThicknesses(product) {
 
 function syncChainThicknessState(options) {
   if (state.chainThickness && options.includes(state.chainThickness)) return;
-  if (options.includes(DEFAULT_ATTACHED_CHAIN_THICKNESS)) {
-    state.chainThickness = DEFAULT_ATTACHED_CHAIN_THICKNESS;
-  } else {
-    state.chainThickness = options.length ? options[0] : null;
-  }
+  // Keep the selector on its placeholder until the customer explicitly
+  // chooses a thickness; do not silently select the first/default option.
+  state.chainThickness = null;
 }
 
 function syncChainLengthState(options, stateKey) {
@@ -5800,7 +5797,7 @@ function loadGirdleEngrave() {
   if (girdleEngraveLoadPromise) return girdleEngraveLoadPromise;
   girdleEngraveLoadPromise = new Promise((resolve, reject) => {
     const script = document.createElement('script');
-    script.src = '/static/js/girdle-engrave.js?v=25';
+    script.src = '/static/js/girdle-engrave.js?v=26';
     script.async = true;
     script.onload = () => resolve(window.GirdleEngrave);
     script.onerror = () => reject(new Error('girdle engraving script failed to load'));

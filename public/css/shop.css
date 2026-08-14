@@ -3666,15 +3666,26 @@ body.app-shell:not(.dark-theme) .shop-fit {
   height: 18px;
   max-width: 18px;
   object-fit: contain;
-  filter: brightness(0.35) contrast(1.4);
 }
 
-.shop-fit .shop-girdle-engrave .cfg-emblem:hover img,
-.shop-fit .shop-girdle-engrave .cfg-emblem:hover svg,
-.shop-fit .shop-girdle-engrave .cfg-emblem:focus-visible img,
-.shop-fit .shop-girdle-engrave .cfg-emblem:focus-visible svg {
-  filter: brightness(0.25) contrast(1.5);
+.shop-fit #engraving-girdle-step .cfg-emblem img,
+.shop-fit #engraving-girdle-step .cfg-emblem svg,
+.shop-fit #engraving-girdle-step .cfg-emblem-token img,
+.shop-fit #engraving-girdle-step .cfg-emblem-token svg,
+.shop-fit .shop-girdle-engrave .cfg-emblem img,
+.shop-fit .shop-girdle-engrave .cfg-emblem svg,
+.shop-fit .shop-girdle-engrave .cfg-emblem-token img,
+.shop-fit .shop-girdle-engrave .cfg-emblem-token svg {
+  filter: brightness(0.22) contrast(1.5);
 }
+
+.shop-fit #engraving-girdle-step .cfg-emblem:hover img,
+.shop-fit #engraving-girdle-step .cfg-emblem:hover svg,
+.shop-fit .shop-girdle-engrave .cfg-emblem:hover img,
+.shop-fit .shop-girdle-engrave .cfg-emblem:hover svg {
+  filter: brightness(0.12) contrast(1.6);
+}
+
 
 .shop-fit .shop-girdle-engrave .cfg-engrave-input {
   min-height: 2.5rem;
@@ -3683,6 +3694,23 @@ body.app-shell:not(.dark-theme) .shop-fit {
   line-height: 1.35;
   width: 100%;
   box-sizing: border-box;
+  gap: 4px;
+}
+
+.shop-fit .shop-girdle-engrave .cfg-engrave-input .cfg-emblem-token {
+  width: 20px;
+  height: 20px;
+  margin-inline: 2px;
+  overflow: visible;
+}
+
+.shop-fit .shop-girdle-engrave .cfg-engrave-input .cfg-emblem-token img,
+.shop-fit .shop-girdle-engrave .cfg-engrave-input .cfg-emblem-token svg {
+  width: 20px;
+  height: 20px;
+  max-width: 20px;
+  max-height: 20px;
+  margin-inline: 2px;
 }
 
 .shop-fit .shop-girdle-engrave .cfg-count {
@@ -3762,23 +3790,24 @@ body.app-shell:not(.dark-theme) .shop-fit {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 3px;
+  gap: 4px;
   flex-wrap: wrap;
   pointer-events: none;
   text-shadow: 0 0 4px rgba(255, 255, 255, 0.9), 0 1px 2px rgba(255, 255, 255, 0.6);
 }
 
 .shop-fit .shop-girdle-engrave .cfg-engrave-preview-text .cfg-emblem-token {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
 }
 
 .shop-fit .shop-girdle-engrave .cfg-engrave-preview-text .cfg-emblem-token img,
 .shop-fit .shop-girdle-engrave .cfg-engrave-preview-text .cfg-emblem-token svg {
-  width: 16px;
-  height: 16px;
-  max-width: 16px;
-  max-height: 16px;
+  width: 18px;
+  height: 18px;
+  max-width: 18px;
+  max-height: 18px;
+  object-fit: contain;
 }
 
 .shop-fit .ring-size-select,

@@ -50,7 +50,16 @@ VALID_CARATS = {
     "0.1", "0.2", "0.3", "0.5", "0.6", "0.7", "0.8", "0.9", "1.0",
     "1.5", "2.0", "3.0",
 }
-VALID_CARATS_CHAIN = {"1.0mm", "1.5mm", "2.0mm", "2.5mm", "3.0mm"}
+CHAIN_THICKNESS_RE = re.compile(r"^(?:0|[1-9]\d{0,2})(?:\.\d{1,4})?mm$", re.I)
+
+
+def _is_valid_chain_thickness(value: str) -> bool:
+    if not CHAIN_THICKNESS_RE.fullmatch(value):
+        return False
+    try:
+        return float(value[:-2]) > 0
+    except ValueError:
+        return False
 VALID_CHAIN_LENGTHS_CM = {36, 41, 46, 51, 61, 76, 80}
 VALID_GOLDS = {"9k", "14k", "18k", "pt950", "s925"}
 VALID_COLORS = {"white", "yellow", "rose"}
@@ -290,7 +299,7 @@ def _parse_length_weights(raw: Any, *, errors: list[str]) -> dict[str, dict[str,
     cleaned: dict[str, dict[str, float]] = {}
     for thickness, lengths in raw.items():
         thick = str(thickness or "").strip()
-        if thick not in VALID_CARATS_CHAIN:
+        if not _is_valid_chain_thickness(thick):
             errors.append(f"invalid chain thickness in length weights: {thick or '(empty)'}")
             continue
         if not isinstance(lengths, dict):
@@ -560,7 +569,7 @@ def validate_product_fields(body: dict | None, *, valid_categories: set[str] | N
             return None, _format_product_errors(errors)
         return cleaned, None
 
-    valid_carats = VALID_CARATS_CHAIN if category == "chain" else VALID_CARATS
+    valid_carats = VALID_CARATS
     variants: list[dict] = []
     seen_keys: set[str] = set()
     for variant in body.get("variants") or []:
@@ -572,7 +581,12 @@ def validate_product_fields(body: dict | None, *, valid_categories: set[str] | N
         if gold not in VALID_GOLDS:
             errors.append(f"invalid variant metal: {gold or '(empty)'}")
             continue
-        if carat not in valid_carats:
+        valid_thickness = (
+            _is_valid_chain_thickness(carat)
+            if category == "chain"
+            else carat in valid_carats
+        )
+        if not valid_thickness:
             errors.append(f"invalid variant carat: {carat or '(empty)'}")
             continue
         # Chain wax lives in length_weights grid; variant weightChin is synced from 46cm.
