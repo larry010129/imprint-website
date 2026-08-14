@@ -309,3 +309,161 @@ def test_api_catalog_product_detail_200_and_404(client):
 
     missing = client.get(f"/api/catalog/product/{uuid4()}")
     assert missing.status_code == 404
+
+
+def _nav_category_rows():
+    return [
+        {"slug": "diamond", "label_zh": "紀念鑽石", "label_en": "Memorial diamond", "thumbUrl": None, "addonPrice": 0},
+        {"slug": "pendant", "label_zh": "項墜", "label_en": "Pendant", "thumbUrl": None, "addonPrice": 0},
+        {"slug": "ring", "label_zh": "戒指", "label_en": "Ring", "thumbUrl": None, "addonPrice": 0},
+        {"slug": "earring", "label_zh": "耳環", "label_en": "Earring", "thumbUrl": None, "addonPrice": 0},
+        {"slug": "bracelet", "label_zh": "手鍊", "label_en": "Bracelet", "thumbUrl": None, "addonPrice": 0},
+        {"slug": "chain", "label_zh": "鏈條", "label_en": "Chain", "thumbUrl": None, "addonPrice": 0},
+    ]
+
+
+class _NavCursor:
+    def __init__(self, *, tombstones_missing=False, diamond_rows=None, image_rows=None, slugs=None):
+        self.statements: list[str] = []
+        self.tombstones_missing = tombstones_missing
+        self.diamond_rows = diamond_rows or []
+        self.image_rows = image_rows or []
+        self.slugs = slugs or ["pendant", "ring", "diamond"]
+        self._result: list = []
+
+    def execute(self, sql, params=None):
+        text = " ".join(str(sql).split())
+        self.statements.append(text)
+        lowered = text.lower()
+        if "memorial_diamond_style_tombstones" in lowered:
+            if self.tombstones_missing:
+                from psycopg.errors import UndefinedTable
+
+                raise UndefinedTable("relation memorial_diamond_style_tombstones does not exist")
+            self._result = []
+            return
+        if "distinct category" in lowered:
+            self._result = [{"category": slug} for slug in self.slugs]
+            return
+        if "from products" in lowered and "category = 'diamond'" in lowered:
+            assert "select *" not in lowered
+            self._result = self.diamond_rows
+            return
+        if "from product_images" in lowered:
+            self._result = self.image_rows
+            return
+        raise AssertionError(f"unexpected nav SQL: {text}")
+
+    def fetchall(self):
+        return list(self._result)
+
+
+def _assert_nav_sql_allowlist(statements: list[str]) -> None:
+    joined = " ".join(statements).lower()
+    assert "product_variants" not in joined
+    assert "create table" not in joined
+    assert "alter table" not in joined
+    assert "count(" not in joined
+    assert "select *" not in joined
+
+
+def test_fetch_shop_nav_catalog_shape_and_queries(monkeypatch):
+    from app.catalog import fetch_shop_nav_catalog
+
+    monkeypatch.setattr("app.catalog.fetch_categories", lambda cur: _nav_category_rows())
+    diamond = {
+        "id": "d1",
+        "category": "diamond",
+        "name_zh": "白",
+        "name_en": "White",
+        "style_key": "diamond-white",
+        "default_color": "white",
+        "description_zh": None,
+        "description_en": None,
+        "allows_engraving": True,
+        "allows_fancy_shapes": True,
+        "allows_pendant_only": True,
+        "allows_with_chain": True,
+        "sort_order": 0,
+        "is_published": True,
+    }
+    cur = _NavCursor(
+        diamond_rows=[diamond],
+        image_rows=[
+            {
+                "product_id": "d1",
+                "color": "round",
+                "file_path": SUPABASE_PRODUCT,
+                "sort_order": 0,
+                "updated_at": None,
+            }
+        ],
+    )
+    payload = fetch_shop_nav_catalog(cur)
+    _assert_nav_sql_allowlist(cur.statements)
+    assert set(payload) == {"categoryOrder", "categoryMeta", "categories"}
+    assert payload["categoryOrder"][0] == "diamond"
+    assert payload["categories"]["pendant"] == []
+    assert payload["categories"]["ring"] == []
+    assert payload["categories"]["earring"] == []
+    assert payload["categories"]["bracelet"] == []
+    assert payload["categories"]["chain"] == []
+    diamonds = payload["categories"]["diamond"]
+    assert diamonds
+    assert all(p.get("golds") == [] for p in diamonds)
+    assert any(p.get("styleKey") == "diamond-white" for p in diamonds)
+
+
+def test_fetch_shop_nav_catalog_missing_tombstones_is_empty(monkeypatch):
+    from app.catalog import fetch_shop_nav_catalog
+
+    monkeypatch.setattr("app.catalog.fetch_categories", lambda cur: _nav_category_rows())
+    cur = _NavCursor(tombstones_missing=True)
+    payload = fetch_shop_nav_catalog(cur)
+    _assert_nav_sql_allowlist(cur.statements)
+    assert payload["categories"]["diamond"]
+    assert payload["categories"]["pendant"] == []
+
+
+def test_api_catalog_nav_skips_jewelry_children(client):
+    resp = client.get("/api/catalog", params={"nav": 1})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert set(data) == {"categoryOrder", "categoryMeta", "categories"}
+    assert data["categoryOrder"][0] == "diamond"
+    cats = data["categories"]
+    assert isinstance(cats.get("diamond"), list)
+    for slug, products in cats.items():
+        if slug == "diamond":
+            continue
+        assert products == []
+    for product in cats.get("diamond") or []:
+        assert product.get("golds") == []
+        assert product.get("styleKey") or product.get("id")
+
+
+def test_api_catalog_without_nav_keeps_live_rows(client):
+    nav = client.get("/api/catalog", params={"nav": 1})
+    full = client.get("/api/catalog")
+    assert nav.status_code == 200
+    assert full.status_code == 200
+    nav_body = nav.json()
+    full_body = full.json()
+    assert "total" in full_body
+    assert "page" in full_body
+    jewelry_nav = [
+        product
+        for slug, products in (nav_body.get("categories") or {}).items()
+        if slug != "diamond"
+        for product in (products or [])
+    ]
+    jewelry_full = [
+        product
+        for slug, products in (full_body.get("categories") or {}).items()
+        if slug != "diamond"
+        for product in (products or [])
+    ]
+    assert jewelry_nav == []
+    if not jewelry_full:
+        pytest.skip("no published jewelry products in DB")
+    assert any(product.get("golds") or product.get("thumbUrl") for product in jewelry_full)

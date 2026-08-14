@@ -578,12 +578,15 @@ function mergeCategoryProducts(category, incoming) {
   return list;
 }
 
-async function fetchCatalogPage({ category, page, pageSize } = {}) {
-  const params = new URLSearchParams({
-    page: String(page || 1),
-    page_size: String(pageSize || CATALOG_PAGE_SIZE),
-  });
-  if (category) params.set('category', category);
+async function fetchCatalogPage({ category, page, pageSize, nav } = {}) {
+  const params = new URLSearchParams();
+  if (nav) {
+    params.set('nav', '1');
+  } else {
+    params.set('page', String(page || 1));
+    params.set('page_size', String(pageSize || CATALOG_PAGE_SIZE));
+    if (category) params.set('category', category);
+  }
   if (window.shopConfig?.preview) params.set('preview', '1');
   const { res, data } = await shopApiFetch(`/api/catalog?${params.toString()}`);
   if (!res.ok) throw new Error(`API ${res.status}`);
@@ -1492,8 +1495,8 @@ async function loadCatalog() {
       return;
     }
     if (!shopApiConfigured()) throw new Error('API_NOT_CONFIGURED');
-    // Boot: paged meta + available category keys (empty arrays OK). Styles load per category.
-    const data = await fetchCatalogPage({ page: 1, pageSize: 1 });
+    // Boot: nav keys + diamond list. Jewelry styles load after the user picks a category.
+    const data = await fetchCatalogPage({ nav: 1 });
     catalog = data.categories || {};
     applyCatalogMeta(data);
     catalogPublishedTotal = Number(data.total) || 0;
