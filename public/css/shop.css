@@ -46,7 +46,12 @@
   padding-left: 0;
 }
 
+/* Clearance for the fixed buy bar must live on main. Body padding
+   sits after the footer and leaves a white band under the legal bar. */
 body.shop-mobile-bar {
+  padding-bottom: 0;
+}
+body.shop-mobile-bar > main {
   padding-bottom: 80px;
 }
 
@@ -4589,7 +4594,7 @@ body.app-shell:not(.dark-theme) .shop-fit {
     padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   }
 
-  body.shop-mobile-bar {
+  body.shop-mobile-bar > main {
     padding-bottom: calc(
       var(--shop-mobile-buy-bar-height, calc(80px + env(safe-area-inset-bottom, 0px)))
       + 12px
@@ -4628,7 +4633,7 @@ body.app-shell:not(.dark-theme) .shop-fit {
     display: none;
   }
 
-  body.shop-mobile-bar {
+  body.shop-mobile-bar > main {
     padding-bottom: calc(
       var(--shop-mobile-buy-bar-height, calc(80px + env(safe-area-inset-bottom, 0px)))
       + 12px

@@ -356,7 +356,7 @@ def test_shop_js_non_round_shape_requires_min_carat():
     assert "inset 0 0 0 4px var(--shop-cyan)" in css
     assert ".shop-page .shop-option--disabled" in css
     assert ".diamond-carousel-item.is-disabled" in css
-    assert "shop.css?v=6.63" in (
+    assert "shop.css?v=6.64" in (
         ROOT / "content" / "site" / "templates" / "pages" / "shop" / "calculator.html"
     ).read_text(encoding="utf-8")
     assert "max-width: none" in css

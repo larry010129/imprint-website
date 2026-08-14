@@ -124,8 +124,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
 <main{% if is_home %} class="site-main--curtain"{% endif %}{% block main_class %}{% endblock %}>
 {% block content %}{% endblock %}
+{% if not is_shop_calculator %}
 {% set cms_anchor = 'end' %}
 {% include "partials/cms/site_section_stack.html" %}
+{% endif %}
 </main>
 
 {% include "partials/footer.html" %}

@@ -222,6 +222,10 @@ def test_calculator_page_shop_js_wizard(client):
     assert "/static/js/shop-pricing-local.js" in resp.text
     assert "shop-htmx-root" not in resp.text
     assert "htmx/shop/step/" not in resp.text
+    assert "cms-site-stack" not in resp.text
+    assert 'data-cms-anchor="end"' not in resp.text
+    assert 'class="site-footer"' in resp.text
+    assert resp.text.find("</main>") < resp.text.find('class="site-footer"')
 
 
 def test_htmx_shop_catalog_step(client):

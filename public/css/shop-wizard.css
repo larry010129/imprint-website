@@ -5,6 +5,12 @@
   padding-bottom: 48px;
 }
 
+/* Shop must not render the shared CMS "end" host — leftover empty
+   stack + min-height leaves a white band under the legal footer. */
+.shop-calculator-page > .cms-site-stack[data-cms-anchor="end"] {
+  display: none;
+}
+
 .shop-calculator-wrap {
   max-width: 1100px;
 }
