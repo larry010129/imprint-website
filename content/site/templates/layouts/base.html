@@ -13,7 +13,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 {% set _cp = canonical_path or '' %}
 {% set is_shop_calculator = _cp == 'shop/calculator/' %}
 {% set _path_parts = _cp.split('/') | reject('equalto', '') | list %}
-{# jewelry/rings/classic-solitaire/ = style PDP (pages.css blocking). #}
+{# jewelry/rings/classic-solitaire/ etc. 301 to calculator. #}
 {% set is_jewelry_style = _cp.startswith('jewelry/') and _path_parts|length >= 3 %}
 {# /jewelry/ + /jewelry/rings/ + /jewelry/engagement/ = hubs (not style PDP). #}
 {% set is_jewelry_hub = _cp == 'jewelry/' or (_cp.startswith('jewelry/') and _path_parts|length < 3) %}

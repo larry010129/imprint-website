@@ -108,4 +108,4 @@ def test_resolve_uses_product_and_shop_link(tmp_path: Path):
     assert cards[0]["name_zh"] == "測試戒指"
     assert cards[0]["image_url"] == "https://cdn.example.com/ring.jpg"
     assert cards[0]["href"] == shop_step2_url("ring", pid)
-    assert cards[1]["href"].startswith("/jewelry/rings/")
+    assert cards[1]["href"] == "/shop/calculator/"

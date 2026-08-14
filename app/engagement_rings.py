@@ -20,28 +20,28 @@ FALLBACK_CARDS: tuple[dict[str, str], ...] = (
         "name_zh": "經典單鑽戒指",
         "description": "凸顯主石光芒，常見求婚首選。",
         "image_url": "",
-        "href": "/jewelry/rings/classic-solitaire/",
+        "href": "/shop/calculator/",
     },
     {
         "name_en": "PAVE HALO",
         "name_zh": "華麗排鑽戒指",
         "description": "主石外圈排鑽，儀式感更足。",
         "image_url": "",
-        "href": "/jewelry/rings/pave-halo/",
+        "href": "/shop/calculator/",
     },
     {
         "name_en": "VINTAGE VINE",
         "name_zh": "復古藤蔓戒指",
         "description": "線條溫柔，適合重視故事感的訂製。",
         "image_url": "",
-        "href": "/jewelry/rings/vintage-vine/",
+        "href": "/shop/calculator/",
     },
     {
         "name_en": "MODERN BAND",
         "name_zh": "極簡線戒",
         "description": "簡潔日常，也適合作為對戒搭配。",
         "image_url": "",
-        "href": "/jewelry/rings/modern-band/",
+        "href": "/shop/calculator/",
     },
 )
 

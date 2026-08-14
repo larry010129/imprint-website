@@ -17,7 +17,14 @@ from fastapi.templating import Jinja2Templates
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.responses import Response
 
-from config.routes import ALL_PAGES, PAGE_404, STANDALONE_PAGES, STANDALONE_SHARE_SUMMARY, PageMeta
+from config.routes import (
+    ALL_PAGES,
+    JEWELRY_STYLE_REDIRECTS,
+    PAGE_404,
+    STANDALONE_PAGES,
+    STANDALONE_SHARE_SUMMARY,
+    PageMeta,
+)
 from config.settings import settings
 from app.youtube_channel import fetch_latest_channel_video, resolve_channel_id
 
@@ -623,6 +630,15 @@ def register_pages(app: FastAPI) -> None:
         app.add_api_route(
             legacy,
             _make_html_redirect(clean),
+            methods=["GET", "HEAD"],
+            include_in_schema=False,
+        )
+
+    # Retired jewelry style PDPs → live shop catalog.
+    for retired, target in JEWELRY_STYLE_REDIRECTS.items():
+        app.add_api_route(
+            retired,
+            _make_html_redirect(target),
             methods=["GET", "HEAD"],
             include_in_schema=False,
         )
