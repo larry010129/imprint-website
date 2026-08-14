@@ -27,6 +27,8 @@ PAGE_IMAGE_STORAGE_FOLDERS: dict[str, str] = {
     "/series/heirloom/": "life-diamond",  # 生命鑽石
     "/series/signature/": "signature-diamond",  # 真我鑽石 Signature
     "/what-is-dna-diamond": "dna-diamond",  # DNA 鑽石的誕生
+    "/privacy": "privacy",  # 隱私權政策
+    "/return-policy": "return-policy",  # 退換貨政策
 }
 PAGE_IMAGE_PENDING_FOLDER = "_pending"
 _FOLDER_ASCII = re.compile(r"^[a-z0-9][a-z0-9._-]{0,78}$")
@@ -57,7 +59,7 @@ _SERIES = {
     "love": ("結髮鑽石", "imprint-diamond-wedding-couple-ring"),
     "family": ("全家福鑽石", "imprint-diamond-family-portrait-jewelry"),
     "heirloom": ("生命鑽石", "imprint-diamond-heirloom-memorial"),
-    "signature": ("銘印鑽石", "imprint-diamond-wedding-couple-ring"),
+    "signature": ("真我鑽石", "imprint-diamond-wedding-couple-ring"),
 }
 _HERO_STEM_MAX_W = {
     "imprint-diamond-newborn-baby-necklace": 2400,
@@ -270,6 +272,29 @@ def _journal_specs() -> list[SlotSpec]:
     ]
 
 
+def _empty_hero_specs(
+    route: str,
+    page: str,
+    template: str,
+    alt: str,
+) -> list[SlotSpec]:
+    """Optional page-hero photo already bound via Jinja ``page_image``."""
+    return [
+        _slot(
+            route,
+            page,
+            "hero",
+            "頁首圖片",
+            "brand",
+            template,
+            (),
+            (2400, 900),
+            image_alt=alt,
+            allow_empty=True,
+        )
+    ]
+
+
 def page_image_slot_specs() -> tuple[SlotSpec, ...]:
     """Return content-page image slots only.
 
@@ -283,6 +308,18 @@ def page_image_slot_specs() -> tuple[SlotSpec, ...]:
         + _series_detail_specs()
         + _dna_specs()
         + _journal_specs()
+        + _empty_hero_specs(
+            "/privacy",
+            "隱私權政策",
+            "pages/privacy.html",
+            "隱私權政策頁主圖",
+        )
+        + _empty_hero_specs(
+            "/return-policy",
+            "退換貨政策",
+            "pages/return-policy.html",
+            "退換貨政策頁主圖",
+        )
     )
     return tuple(specs)
 
