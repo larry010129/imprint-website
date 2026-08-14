@@ -33,7 +33,7 @@ def test_girdle_preview_wrap_clips_overlay():
     extra = CALC.read_text(encoding="utf-8").split("{% block extra_css %}", 1)[1].split("{% endblock %}", 1)[0]
     extra_wrap = extra.split(".shop-fit .shop-girdle-engrave .cfg-engrave-preview {", 1)[1].split("}", 1)[0]
     assert "overflow: hidden" in extra_wrap
-    assert "shop.css?v=6.62" in extra
+    assert "shop.css?v=6.63" in extra
 
 
 def test_girdle_input_tokens_have_horizontal_gap():

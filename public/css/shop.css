@@ -3668,25 +3668,6 @@ body.app-shell:not(.dark-theme) .shop-fit {
   object-fit: contain;
 }
 
-.shop-fit #engraving-girdle-step .cfg-emblem img,
-.shop-fit #engraving-girdle-step .cfg-emblem svg,
-.shop-fit #engraving-girdle-step .cfg-emblem-token img,
-.shop-fit #engraving-girdle-step .cfg-emblem-token svg,
-.shop-fit .shop-girdle-engrave .cfg-emblem img,
-.shop-fit .shop-girdle-engrave .cfg-emblem svg,
-.shop-fit .shop-girdle-engrave .cfg-emblem-token img,
-.shop-fit .shop-girdle-engrave .cfg-emblem-token svg {
-  filter: brightness(0.22) contrast(1.5);
-}
-
-.shop-fit #engraving-girdle-step .cfg-emblem:hover img,
-.shop-fit #engraving-girdle-step .cfg-emblem:hover svg,
-.shop-fit .shop-girdle-engrave .cfg-emblem:hover img,
-.shop-fit .shop-girdle-engrave .cfg-emblem:hover svg {
-  filter: brightness(0.12) contrast(1.6);
-}
-
-
 .shop-fit .shop-girdle-engrave .cfg-engrave-input {
   min-height: 2.5rem;
   padding: 0.5rem 0.75rem;

@@ -959,7 +959,7 @@
     "layout": "site",
     "main_class": "main-content shop-calculator-page",
     "extra_css": [
-      "/static/css/shop.css?v=6.62",
+      "/static/css/shop.css?v=6.63",
       "/static/css/shop-wizard.css?v=24",
       "/static/css/shop-tour.css?v=7",
       "/static/react/shop-tour.css?v=17"
