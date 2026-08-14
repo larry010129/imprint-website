@@ -112,16 +112,35 @@ def normalize_page_key(raw: str) -> str | None:
 
 
 def page_key_aliases(page_key: str) -> tuple[str, ...]:
-    """Current key plus legacy `*.html` form for pre-extensionless CMS rows."""
+    """Current key plus trailing-slash and legacy `*.html` CMS forms.
+
+    ``normalize_page_key`` uses posix ``normpath``, which strips a trailing
+    slash. Registry / seed rows for series pages keep it (``/series/signature/``).
+    Fetch and UPDATE must try both, plus the pre-extensionless ``*.html`` key.
+    """
     key = str(page_key or "").strip()
     if not key:
         return ()
+    aliases: list[str] = [key]
     if key.endswith(".html"):
         clean = key[: -len(".html")]
-        return (key, clean) if clean and clean != key else (key,)
-    if key != "/" and not key.endswith("/"):
-        return (key, f"{key}.html")
-    return (key,)
+        if clean and clean != key:
+            aliases.append(clean)
+            if clean != "/" and not clean.endswith("/"):
+                aliases.append(f"{clean}/")
+        return tuple(aliases)
+    if key == "/":
+        return (key,)
+    if key.endswith("/"):
+        stripped = key.rstrip("/") or "/"
+        if stripped != key:
+            aliases.append(stripped)
+        if stripped != "/":
+            aliases.append(f"{stripped}.html")
+        return tuple(aliases)
+    aliases.append(f"{key}.html")
+    aliases.append(f"{key}/")
+    return tuple(aliases)
 
 
 def is_reserved_page_key(page_key: str) -> bool:
