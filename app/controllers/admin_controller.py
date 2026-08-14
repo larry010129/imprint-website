@@ -46,6 +46,7 @@ from app.admin_products import (
     save_product_children,
     serialize_product_image,
     serialize_product_row,
+    should_skip_published_autosave_write,
     valid_image_color,
     validate_product_fields,
 )
@@ -1151,7 +1152,7 @@ async def products_create(request: Request) -> JSONResponse:
                 cleaned["allowsFancyShapes"],
                 cleaned["allowsPendantOnly"],
                 cleaned["allowsWithChain"],
-                as_jsonb(cleaned.get("lengthWeights")),
+                as_jsonb(cleaned.get("lengthWeights") or None),
                 cleaned.get("chainType"),
                 cleaned.get("styleKey"),
                 as_jsonb(cleaned.get("ringSizeConfig")),
@@ -1173,15 +1174,27 @@ async def products_create(request: Request) -> JSONResponse:
 async def product_update(request: Request) -> JSONResponse:
     _require_admin(request)
     body = await request.json()
-    if body.get("autosave"):
-        # Do not run publish-only validation while the Admin editor is typing.
-        body["isPublished"] = False
     product_id = body.get("id")
     if not product_id:
         return JSONResponse(status_code=400, content={"error": "missing id"})
 
     with get_connection() as conn, conn.cursor() as cur:
         allowed = valid_category_slugs(cur)
+        cur.execute("select * from products where id = %s", (product_id,))
+        existing_row = cur.fetchone()
+        if not existing_row:
+            return JSONResponse(status_code=404, content={"error": "product not found"})
+        # Published autosave must not validate-as-draft then write that payload.
+        # Create-path / unpublished autosave still uses draft rules below.
+        if should_skip_published_autosave_write(
+            body.get("autosave"), existing_row["is_published"]
+        ):
+            product = _product_with_children(cur, serialize_product_row(existing_row))
+            return JSONResponse(content={"product": product})
+
+    if body.get("autosave"):
+        # Do not run publish-only validation while the Admin editor is typing.
+        body["isPublished"] = False
     cleaned, error = validate_product_fields(body, valid_categories=allowed)
     if error:
         return JSONResponse(status_code=400, content={"error": error})
@@ -1238,7 +1251,7 @@ async def product_update(request: Request) -> JSONResponse:
                 cleaned["allowsFancyShapes"],
                 cleaned["allowsPendantOnly"],
                 cleaned["allowsWithChain"],
-                as_jsonb(cleaned.get("lengthWeights")),
+                as_jsonb(cleaned.get("lengthWeights") or None),
                 cleaned.get("chainType"),
                 cleaned.get("styleKey"),
                 as_jsonb(cleaned.get("ringSizeConfig")),

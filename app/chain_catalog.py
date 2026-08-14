@@ -49,6 +49,22 @@ def necklace_type_thicknesses(chain_type: str | None) -> list[str]:
     return list(entry.get("thicknesses") or [])
 
 
+def is_unset_length_weights(raw: Any) -> bool:
+    """Empty / {} / all-zero admin wax table is unset — use the type Excel table."""
+    if raw in (None, "") or not isinstance(raw, dict) or not raw:
+        return True
+    for lengths in raw.values():
+        if not isinstance(lengths, dict):
+            continue
+        for wax_val in lengths.values():
+            try:
+                if float(wax_val) > 0:
+                    return False
+            except (TypeError, ValueError):
+                continue
+    return True
+
+
 def necklace_type_length_weights(chain_type: str | None) -> dict[str, dict[str, float]]:
     entry = NECKLACE_TYPES.get(chain_type or DEFAULT_NECKLACE_TYPE, {})
     raw = entry.get("lengthWeights") or {}

@@ -7,8 +7,15 @@ from unittest.mock import MagicMock
 
 from psycopg.types.json import Jsonb
 
-from app.admin_products import as_jsonb, save_product_children, validate_product_fields
-from app.pricing import _chain_wax_from_length_weights, _lookup_weight
+from app.admin_products import (
+    _parse_length_weights,
+    as_jsonb,
+    save_product_children,
+    validate_product_fields,
+)
+from app.catalog import build_catalog_product
+from app.chain_catalog import necklace_type_length_weights
+from app.pricing import _chain_wax_from_length_weights, _lookup_weight, _product_length_weights
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -122,13 +129,83 @@ def test_save_product_children_adapts_length_weights_as_jsonb():
             assert not isinstance(param, (dict, list)), param
 
 
-def test_validate_chain_publish_uses_excel_type_table_when_length_weights_empty():
-    body = _chain_publish_body(lengthWeights=None, chainType="douyuan", images=[])
-    body["isPublished"] = False
-    cleaned, err = validate_product_fields(body)
+def test_parse_empty_length_weights_is_unset():
+    for raw in (None, "", {}, {"1.5mm": {"36": 0, "46": 0}}):
+        errors: list[str] = []
+        assert _parse_length_weights(raw, errors=errors) is None
+
+
+def test_validate_chain_empty_length_weights_persists_none():
+    """Empty / {} admin grid stays unset; 46cm wax still syncs from type table."""
+    for empty in (None, {}, {"1.5mm": {"36": 0, "46": 0}}):
+        body = _chain_publish_body(lengthWeights=empty, chainType="douyuan", images=[])
+        body["isPublished"] = False
+        cleaned, err = validate_product_fields(body)
+        assert err is None
+        assert cleaned["lengthWeights"] is None
+        assert cleaned["variants"][0]["weightChin"] == 0.033
+
+
+def test_save_product_children_persists_null_for_empty_length_weights():
+    cleaned, err = validate_product_fields(
+        _chain_publish_body(
+            isPublished=False, images=[], chainType="douyuan", lengthWeights={}
+        )
+    )
     assert err is None
-    assert cleaned["lengthWeights"]["1.5mm"]["46"] == 0.033
-    assert cleaned["lengthWeights"]["1.0mm"]["36"] == 0.014
+    assert cleaned["lengthWeights"] is None
+    cur = MagicMock()
+    cur.fetchall.return_value = []
+    cur.fetchone.return_value = None
+    save_product_children(cur, "product-uuid", cleaned)
+    update_calls = [
+        call
+        for call in cur.execute.call_args_list
+        if call.args and "length_weights" in str(call.args[0])
+    ]
+    assert update_calls
+    assert update_calls[0].args[1][0] is None
+
+
+def test_catalog_empty_length_weights_falls_back_to_type_table():
+    excel = necklace_type_length_weights("douyuan")
+    for stored in (None, {}, {"1.5mm": {"36": 0, "46": 0}}):
+        product = {
+            "id": "chain-empty-wax",
+            "category": "chain",
+            "name_zh": "空蠟重鍊",
+            "name_en": "Empty Wax Chain",
+            "description_zh": None,
+            "description_en": None,
+            "default_color": "white",
+            "sort_order": 0,
+            "is_published": True,
+            "allows_engraving": True,
+            "allows_fancy_shapes": True,
+            "allows_pendant_only": True,
+            "allows_with_chain": True,
+            "length_weights": stored,
+            "chain_type": "douyuan",
+        }
+        entry = build_catalog_product(
+            product,
+            [{"gold": "18k", "carat": "1.5mm", "weight_chin": 0.033}],
+            [],
+        )
+        assert entry["lengthWeights"] == excel
+        assert entry["lengthWeights"]["1.5mm"]["46"] == 0.033
+        assert "1.0mm" in entry["lengthWeights"]
+
+
+def test_product_length_weights_treats_empty_as_unset():
+    for stored in (None, {}, {"1.5mm": {"36": 0}}):
+        cur = MagicMock()
+        cur.fetchone.return_value = {"length_weights": stored}
+        assert _product_length_weights(cur, "chain-uuid") is None
+
+    cur = MagicMock()
+    cur.fetchone.return_value = {"length_weights": ADMIN_CHAIN_LENGTHS}
+    assert _product_length_weights(cur, "chain-uuid") == ADMIN_CHAIN_LENGTHS
 
 
 def test_chain_wax_from_length_weights_prefers_admin():

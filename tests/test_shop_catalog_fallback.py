@@ -141,15 +141,24 @@ def test_admin_product_update_autosave_preserves_publish_flag():
     """Server-side guard: autosave requests cannot flip is_published."""
     from pathlib import Path
 
+    from app.admin_products import should_skip_published_autosave_write
+
+    assert should_skip_published_autosave_write(True, True) is True
+    assert should_skip_published_autosave_write(True, False) is False
+    assert should_skip_published_autosave_write(False, True) is False
+    assert should_skip_published_autosave_write(False, False) is False
+
     src = Path(__file__).resolve().parents[1].joinpath(
         "app", "controllers", "admin_controller.py"
     ).read_text(encoding="utf-8")
     update_start = src.index("@router.post(\"/product-update\")")
     update_body = src[update_start : src.index("@router.post(\"/product-action\")", update_start)]
+    assert "should_skip_published_autosave_write" in update_body
     assert 'if body.get("autosave"):' in update_body
     assert 'cleaned["isPublished"] = bool(existing["is_published"])' in update_body
     create_start = src.index("@router.post(\"/products\")")
     create_body = src[create_start : update_start]
+    assert "should_skip_published_autosave_write" not in create_body
     assert 'if body.get("autosave"):' in create_body
     assert 'cleaned["isPublished"] = False' in create_body
 

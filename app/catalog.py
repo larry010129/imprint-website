@@ -57,7 +57,11 @@ from app.admin_products import (
     is_dead_catalog_placeholder,
     is_pending_product_image,
 )
-from app.chain_catalog import DEFAULT_NECKLACE_TYPE, necklace_type_length_weights
+from app.chain_catalog import (
+    DEFAULT_NECKLACE_TYPE,
+    is_unset_length_weights,
+    necklace_type_length_weights,
+)
 from app.image_urls import (
     _is_raster_url,
     is_uuid,
@@ -595,11 +599,11 @@ def _normalize_ring_config_dict(raw: dict) -> dict | None:
 
 
 def _effective_chain_length_weights(product: dict) -> dict:
-    """Admin overrides win; otherwise Excel/type table (O字鍊 etc.)."""
+    """Non-empty admin table is exclusive override; empty/{} / all-zero → type table."""
     if product.get("category") != "chain":
         return product.get("length_weights") or {}
     lw = product.get("length_weights")
-    if isinstance(lw, dict):
+    if not is_unset_length_weights(lw):
         return lw
     return necklace_type_length_weights(product.get("chain_type") or DEFAULT_NECKLACE_TYPE)
 

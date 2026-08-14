@@ -290,14 +290,20 @@ def _parse_ring_size_config(raw: Any, *, errors: list[str]) -> dict[str, Any] | 
     }
 
 
+def should_skip_published_autosave_write(autosave: Any, is_published: Any) -> bool:
+    """Autosave on a live row must not write a draft-validated payload."""
+    return bool(autosave) and bool(is_published)
+
+
 def _parse_length_weights(raw: Any, *, errors: list[str]) -> dict[str, dict[str, float]] | None:
+    # empty / {} / all-zero → unset (NULL). Non-empty table is exclusive override.
     if raw in (None, ""):
         return None
     if not isinstance(raw, dict):
         errors.append("invalid chain length weights")
         return None
     if raw == {}:
-        return {}
+        return None
     cleaned: dict[str, dict[str, float]] = {}
     for thickness, lengths in raw.items():
         thick = str(thickness or "").strip()
@@ -712,10 +718,13 @@ def validate_product_fields(body: dict | None, *, valid_categories: set[str] | N
         cleaned["chainType"] = chain_type
 
         length_weights = _parse_length_weights(body.get("lengthWeights"), errors=errors)
-        # Empty admin grid → Excel/type standard table (O字鍊). No per-SKU edit needed.
-        if length_weights is None and chain_type:
-            length_weights = necklace_type_length_weights(chain_type)
-        _sync_chain_variant_reference_weights(variants, length_weights)
+        # Empty admin grid persists NULL; catalog/pricing fall back to type table.
+        # Sync 46cm variant wax from the override or the type table — do not
+        # copy the Excel snapshot into lengthWeights (that would become an override).
+        sync_table = length_weights
+        if sync_table is None and chain_type:
+            sync_table = necklace_type_length_weights(chain_type)
+        _sync_chain_variant_reference_weights(variants, sync_table)
         if is_published and variants:
             if not chain_type:
                 errors.append("chain type is required")
@@ -1238,7 +1247,7 @@ def save_product_children(cur, product_id: str, cleaned: dict) -> None:
         where id = %s
         """,
         (
-            as_jsonb(cleaned.get("lengthWeights")),
+            as_jsonb(cleaned.get("lengthWeights") or None),
             cleaned.get("chainType"),
             as_jsonb(cleaned.get("ringSizeConfig")),
             product_id,

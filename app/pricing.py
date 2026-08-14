@@ -13,7 +13,11 @@ from typing import Any
 
 from app.admin_products import RING_SIZE_MIN
 from app.catalog import resolve_product_id
-from app.chain_catalog import DEFAULT_NECKLACE_TYPE, necklace_type_length_weights
+from app.chain_catalog import (
+    DEFAULT_NECKLACE_TYPE,
+    is_unset_length_weights,
+    necklace_type_length_weights,
+)
 from app.pricing_overrides import (
     _merge_multi,
     _merge_table,
@@ -436,7 +440,8 @@ def _product_length_weights(cur, product_id: str) -> dict | None:
     if not row:
         return None
     lw = row.get("length_weights")
-    return lw if isinstance(lw, dict) and lw else None
+    # {} / all-zero is unset (same as NULL) — fall back to necklace type table.
+    return None if is_unset_length_weights(lw) else lw
 
 
 def _chain_wax_from_type_catalog(
