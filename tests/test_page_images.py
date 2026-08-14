@@ -507,6 +507,59 @@ def test_page_image_loader_reuses_per_route_cache(monkeypatch):
     web_controller.clear_page_image_cache()
 
 
+def test_shop_calculator_context_skips_page_images_and_catalog_ssr(monkeypatch):
+    """Shop HTML must not pay page_images aliases or per-category catalog SSR."""
+    from starlette.requests import Request
+
+    from config.routes import PAGE_PRIVACY, SHOP_CALCULATOR
+
+    image_calls: list[str] = []
+    catalog_calls: list[str] = []
+
+    def fake_page_images(route):
+        image_calls.append(route)
+        return [{"slot_key": "hero", "display_url": "/x.jpg", "display_webp": None}]
+
+    def boom_catalog(*_a, **_k):
+        catalog_calls.append("fetch_catalog_rows")
+        raise AssertionError("shop HTML must not fetch catalog rows")
+
+    def boom_categories(*_a, **_k):
+        catalog_calls.append("fetch_categories")
+        raise AssertionError("shop HTML must not fetch categories")
+
+    monkeypatch.setattr(web_controller, "_load_page_images", fake_page_images)
+    monkeypatch.setattr(web_controller, "_load_page_copy_slots", lambda _route: [])
+    monkeypatch.setattr("app.catalog.fetch_catalog_rows", boom_catalog)
+    monkeypatch.setattr("app.product_categories.fetch_categories", boom_categories)
+
+    request = Request(
+        {
+            "type": "http",
+            "asgi": {"version": "3.0"},
+            "http_version": "1.1",
+            "method": "GET",
+            "scheme": "http",
+            "path": "/shop/calculator/",
+            "raw_path": b"/shop/calculator/",
+            "query_string": b"",
+            "headers": [],
+            "client": ("127.0.0.1", 0),
+            "server": ("127.0.0.1", 8080),
+        }
+    )
+    shop_ctx = web_controller._context(request, SHOP_CALCULATOR)
+    assert shop_ctx["shop_catalog_ssr"] == []
+    assert shop_ctx["page_images"] == []
+    assert shop_ctx["page_image"] is None
+    assert image_calls == []
+    assert catalog_calls == []
+
+    privacy_ctx = web_controller._context(request, PAGE_PRIVACY)
+    assert image_calls == ["/privacy"]
+    assert privacy_ctx["page_images"][0]["slot_key"] == "hero"
+
+
 def test_delete_page_image_urls_unreferenced_calls_delete(
     monkeypatch, _page_storage_env
 ):

@@ -297,47 +297,6 @@ def _load_journal_ssr(limit: int = JOURNAL_SSR_LIMIT) -> list[dict]:
         return []
 
 
-SHOP_CATALOG_SSR_LIMIT_PER_CATEGORY = 12
-
-
-def _load_shop_catalog_ssr(
-    limit_per_category: int = SHOP_CATALOG_SSR_LIMIT_PER_CATEGORY,
-) -> list[dict]:
-    """Category -> product name/id list for a <noscript> fallback on
-    /shop/calculator/. The interactive catalog grid is entirely client-
-    rendered by shop.js fetching /api/catalog, so non-JS AI crawlers see only
-    empty skeleton tiles today; this gives them real, linkable product names."""
-    from app.catalog import fetch_catalog_rows
-    from app.database import get_connection
-    from app.product_categories import fetch_categories
-
-    try:
-        with get_connection() as conn, conn.cursor() as cur:
-            out: list[dict] = []
-            for cat_row in fetch_categories(cur):
-                slug = cat_row.get("slug")
-                if not slug:
-                    continue
-                rows = fetch_catalog_rows(
-                    cur, category=slug, include_drafts=False, limit=limit_per_category
-                )
-                products = [
-                    {"id": str(row["id"]), "name": row["name_zh"]}
-                    for row in rows
-                    if row.get("name_zh")
-                ]
-                if products:
-                    out.append({
-                        "slug": slug,
-                        "label": cat_row.get("label_zh") or slug,
-                        "products": products,
-                    })
-            return out
-    except Exception:
-        log.exception("shop calculator SSR: catalog fetch failed")
-        return []
-
-
 def _editable_site_routes() -> set[str]:
     from app.cms_copy_slot_specs import EDITABLE_SITE_PAGES
 
@@ -485,7 +444,10 @@ def _build_canonical_url(canonical_path: str | None, *, omit: bool = False) -> s
 
 
 def _context(request: Request, meta: PageMeta, *, include_journal_ssr: bool = True) -> dict:
-    page_images = _load_page_images(meta.route)
+    # /shop/calculator/ has no image slots; catalog SSR is not free (per-category
+    # fetch_catalog_rows) and JS already boots via /api/catalog + shop.js.
+    is_shop_calculator = meta.route == "/shop/calculator/"
+    page_images = [] if is_shop_calculator else _load_page_images(meta.route)
     page_image = _load_page_image(meta.route, page_images)
     page_copy_slots = _load_page_copy_slots(meta.route)
     lcp_image = None
@@ -544,8 +506,6 @@ def _context(request: Request, meta: PageMeta, *, include_journal_ssr: bool = Tr
         context["engagement_rings"] = _load_engagement_rings()
     if meta.route == "/gold-price":
         context["gold_quote_bootstrap"] = _load_gold_quote_bootstrap()
-    if meta.route == "/shop/calculator/":
-        context["shop_catalog_ssr"] = _load_shop_catalog_ssr()
     # Live env read so register page picks up keys without process restart in tests.
     from app.captcha import recaptcha_site_key as _recaptcha_site_key
 
