@@ -3515,7 +3515,7 @@ function diamondMetaLabel(item) {
 
 function diamondAssetUrl(relativePath) {
   if (!relativePath) return '';
-  return `/static/images/${relativePath}?v=22`;
+  return `/static/images/${relativePath}?v=23`;
 }
 
 function diamondMatrixImagePath(shapeId, colorId) {
