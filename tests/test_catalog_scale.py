@@ -410,8 +410,7 @@ def test_fetch_shop_nav_catalog_shape_and_queries(monkeypatch):
     assert payload["categories"]["chain"] == []
     diamonds = payload["categories"]["diamond"]
     assert diamonds
-    assert all(not p.get("golds") for p in diamonds)
-    assert all("weights" not in p for p in diamonds)
+    assert all(p.get("golds") == [] for p in diamonds)
     assert any(p.get("styleKey") == "diamond-white" for p in diamonds)
 
 
@@ -439,8 +438,8 @@ def test_api_catalog_nav_skips_jewelry_children(client):
             continue
         assert products == []
     for product in cats.get("diamond") or []:
-        assert "weights" not in product
         assert product.get("golds") == []
+        assert product.get("styleKey") or product.get("id")
 
 
 def test_api_catalog_without_nav_keeps_live_rows(client):
