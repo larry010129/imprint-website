@@ -442,3 +442,49 @@ console.log(JSON.stringify(pricing.computeOrderPricing(payload, catalog)));
     )
     quote = json.loads(result.stdout)
     assert quote["ready"] is True
+
+
+def test_shop_js_treats_empty_length_weights_as_unset():
+    """HIGH 3: empty / {} / all-zero admin wax falls back to Excel/type table."""
+    src = (ROOT / "public" / "js" / "shop.js").read_text(encoding="utf-8")
+    assert "function lengthWeightsHasRealWax(" in src
+    assert "if (lengthWeightsHasRealWax(admin))" in src
+    assert (
+        "if (product?.lengthWeights && typeof product.lengthWeights === 'object') return [];"
+        not in src
+    )
+    pricing = (ROOT / "public" / "js" / "shop-pricing-local.js").read_text(encoding="utf-8")
+    assert "function lengthTableHasWeights(" in pricing
+    assert "!lengthTableHasWeights(byThick)" in pricing
+    assert (
+        "wax == null && !(product.lengthWeights && typeof product.lengthWeights === 'object')"
+        not in pricing
+    )
+
+
+def test_browser_quote_uses_excel_when_admin_wax_all_zero():
+    script = """
+global.window = {};
+require('./public/js/shop-pricing-local.js');
+const pricing = window.ShopPricingLocal;
+pricing.setLiveGoldRates({'18k': 1});
+const product = {
+  id: 'chain-admin',
+  chainType: 'douyuan',
+  weights: {'18k': {'1.5mm': 0.033}},
+  lengthWeights: {'1.5mm': {'36': 0, '46': 0}},
+  manualPrices: {},
+};
+const catalog = {chain: [product]};
+const payload = {category: 'chain', type: 'chain-admin', gold: '18k', carat: '1.5mm', lengthCm: 41};
+console.log(JSON.stringify(pricing.computeOrderPricing(payload, catalog)));
+"""
+    result = subprocess.run(
+        ["node", "-e", script],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    quote = json.loads(result.stdout)
+    assert quote["ready"] is True

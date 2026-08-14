@@ -303,6 +303,14 @@
     return keys;
   }
 
+  function lengthTableHasWeights(table) {
+    return !!(
+      table &&
+      typeof table === 'object' &&
+      Object.keys(table).some(function (k) { return Number(table[k]) > 0; })
+    );
+  }
+
   function chainWaxChin(thickness, lengthCm) {
     var length = parseInt(lengthCm, 10);
     var table = CHAIN_WAX_WEIGHT_CHIN[thickness];
@@ -321,9 +329,11 @@
     gold = normalizeGold(gold);
     var wax = null;
     if (category === 'chain') {
-      wax = product.lengthWeights && product.lengthWeights[carat]
-        && product.lengthWeights[carat][String(lengthCm)];
-      if (wax == null && !(product.lengthWeights && typeof product.lengthWeights === 'object')) {
+      var byThick = product.lengthWeights && product.lengthWeights[carat];
+      wax = byThick && byThick[String(lengthCm)];
+      // Empty / {} / all-zero / missing thickness → Excel/type catalog.
+      // Skip fallback only when this thickness already has real admin wax.
+      if (wax == null && !lengthTableHasWeights(byThick)) {
         wax = chainWaxFromTypeCatalog(product.chainType || 'douyuan', carat, lengthCm);
       }
     } else {

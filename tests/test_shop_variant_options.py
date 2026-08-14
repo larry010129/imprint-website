@@ -256,10 +256,10 @@ def test_shop_js_fancy_carat_dropdown_intersects_admin_min():
     assert "stockFancyDiamondColors" in (
         ROOT / "public" / "js" / "shop-assets.js"
     ).read_text(encoding="utf-8")
-    assert "shop.js?v=165" in (
+    assert "shop.js?v=166" in (
         ROOT / "content" / "site" / "templates" / "pages" / "shop" / "calculator.html"
     ).read_text(encoding="utf-8")
-    assert "shop.js?v=165" in (
+    assert "shop.js?v=166" in (
         ROOT / "content" / "site" / "page-registry.json"
     ).read_text(encoding="utf-8")
     assert "function setShopOptionDisabled" in src
@@ -356,7 +356,7 @@ def test_shop_js_non_round_shape_requires_min_carat():
     assert "inset 0 0 0 4px var(--shop-cyan)" in css
     assert ".shop-page .shop-option--disabled" in css
     assert ".diamond-carousel-item.is-disabled" in css
-    assert "shop.css?v=6.62" in (
+    assert "shop.css?v=6.63" in (
         ROOT / "content" / "site" / "templates" / "pages" / "shop" / "calculator.html"
     ).read_text(encoding="utf-8")
     assert "max-width: none" in css
@@ -381,7 +381,7 @@ def test_shop_js_non_round_shape_requires_min_carat():
         / "htmx"
         / "shop_catalog.html"
     ).read_text(encoding="utf-8")
-    assert "shop-i18n.js?v=22" in (
+    assert "shop-i18n.js?v=23" in (
         ROOT / "content" / "site" / "templates" / "pages" / "shop" / "calculator.html"
     ).read_text(encoding="utf-8")
     assert "diamond_shape_round_only" in i18n

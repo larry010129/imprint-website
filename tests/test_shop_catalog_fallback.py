@@ -238,3 +238,52 @@ def test_admin_products_editor_category_rebuilds_image_slots():
     assert "ap-image-slot-diamond-only" in change_body
     assert "ap-image-slot-metal" in change_body
     assert "imageSlotsHtml([], catSel.value)" in change_body
+
+
+def test_sync_chain_variant_thickness_guards_non_chain():
+    """HIGH 2: never rewrite ring/pendant/earring/bracelet carat selects."""
+    src = ADMIN_PRODUCTS_JS.read_text(encoding="utf-8")
+    start = src.index("function syncChainVariantThicknessOptions(")
+    body = src[start : src.index("function productsInCategory(", start)]
+    assert "category !== 'chain'" in body
+    assert "return;" in body.split("category !== 'chain'")[1][:80]
+
+
+def test_collect_form_saves_null_not_empty_length_weights():
+    """HIGH 3: empty wax grid is unset (null), not {}."""
+    src = ADMIN_PRODUCTS_JS.read_text(encoding="utf-8")
+    collect = src[src.index("function collectForm(") : src.index("function validateProductPayload(")]
+    assert "collectChainLengthWeights(form) || {}" not in collect
+    assert "collectChainLengthWeights(form)" in collect
+
+
+def test_load_catalog_not_empty_when_api_total_positive():
+    """HIGH 4: /api/catalog total > 0 must not show catalog_empty."""
+    src = _shop_src()
+    start = src.index("async function loadCatalog()")
+    body = src[start : src.index("function renderCatalogTiles()", start)]
+    assert "catalogPublishedTotal" in body
+    assert "categoryOrder" in body
+    assert "catalogPublishedTotal <= 0" in body
+    render = src[src.index("function renderCatalogTiles()") : src.index("function lookupWeight(", src.index("function renderCatalogTiles()"))]
+    assert "catalogPublishedTotal <= 0" in render
+    assert "showEmpty" in render
+
+
+def test_price_hint_quiet_until_quote_fails():
+    """HIGH 4: first paint is 選擇規格後顯示估價 until a real failed quote."""
+    src = _shop_src()
+    hint = src[src.index("function updatePriceHint(") : src.index("function updateCtaState(")]
+    assert "lastQuoteFailed" in hint
+    assert "shop_price_unavailable" in hint
+    assert "shop_complete_options" in hint
+    refresh = src[src.index("async function refreshQuotePrices()") : src.index("function updateRingSizeStep(")]
+    assert "lastQuoteFailed = isReadyToSubmit()" in refresh
+    i18n = (ROOT / "public" / "js" / "shop-i18n.js").read_text(encoding="utf-8")
+    assert "選擇規格後顯示估價" in i18n
+    calc = (
+        ROOT / "content" / "site" / "templates" / "pages" / "shop" / "calculator.html"
+    ).read_text(encoding="utf-8")
+    assert "選擇規格後顯示估價" in calc
+    assert 'id="catalog-empty" hidden' in calc or 'id="catalog-empty" hidden>' in calc
+    assert 'data-i18n="catalog_empty">目前沒有上架商品。' not in calc

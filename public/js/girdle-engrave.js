@@ -21,7 +21,7 @@
 
   Object.keys(EMBLEMS).forEach(function (name) {
     var def = EMBLEMS[name];
-    def.svg = '<img src="' + EMBLEM_BASE + def.image + '?v=2" alt="" width="18" height="18" aria-hidden="true">';
+    def.svg = '<img src="' + EMBLEM_BASE + def.image + '?v=3" alt="" width="18" height="18" aria-hidden="true">';
   });
 
   // Keep old stored labels and button IDs readable after the pattern refresh.

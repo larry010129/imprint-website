@@ -700,6 +700,10 @@
 
   function syncChainVariantThicknessOptions(form) {
     if (!form) return;
+    var category = (form.querySelector('#apCategory') || {}).value
+      || (form.elements && form.elements.category && form.elements.category.value)
+      || '';
+    if (category !== 'chain') return;
     var options = [];
     form.querySelectorAll('#apChainLengthWeights .ap-chain-thickness-block').forEach(function (block) {
       var thick = String(block.dataset.thickness || '').trim();
@@ -3445,7 +3449,7 @@
       allowsWithChain: allowsWithChain,
       isPublished: !isSaveForLater(form),
       variants: variants,
-      lengthWeights: category === 'chain' ? (collectChainLengthWeights(form) || {}) : null,
+      lengthWeights: category === 'chain' ? collectChainLengthWeights(form) : null,
       chainType: category === 'chain' ? getFormChainType(form) : null,
       images: images,
     };
