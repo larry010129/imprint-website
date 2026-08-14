@@ -605,6 +605,19 @@ def register_pages(app: FastAPI) -> None:
         """Render / load-balancer health — must not 404 or the API service is SIGTERM'd."""
         return JSONResponse({"ok": True, "service": "imprint-api"})
 
+    def _shop_index_redirect(request: Request) -> RedirectResponse:
+        query = request.url.query
+        location = f"/shop/calculator/?{query}" if query else "/shop/calculator/"
+        return RedirectResponse(url=location, status_code=302)
+
+    for shop_index in ("/shop", "/shop/"):
+        app.add_api_route(
+            shop_index,
+            _shop_index_redirect,
+            methods=["GET", "HEAD"],
+            include_in_schema=False,
+        )
+
     # 301 old *.html public page URLs → extensionless (query string preserved).
     for legacy, clean in _legacy_html_redirects().items():
         app.add_api_route(

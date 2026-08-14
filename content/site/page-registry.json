@@ -902,13 +902,13 @@
     "main_class": "main-content shop-calculator-page",
     "extra_css": [
       "/static/css/shop.css?v=6.64",
-      "/static/css/shop-wizard.css?v=26",
+      "/static/css/shop-wizard.css?v=27",
       "/static/css/shop-tour.css?v=7",
-      "/static/react/shop-tour.css?v=17"
+      "/static/react/shop-tour.css?v=18"
     ],
     "extra_scripts": [
       {
-        "inline": "\n  let shouldLoad = true;\n  try {\n    shouldLoad = localStorage.getItem(\"imprint_shop_tour_v2\") !== \"1\";\n  } catch {\n    shouldLoad = true;\n  }\n  if (shouldLoad) void import(\"/static/react/shop-tour.js?v=17\");\n",
+        "inline": "\n  /* Tour JS/CSS bind to [data-shop-tour-start] only. See shop-tour-react-js.html */\n",
         "type": "module"
       },
       {
@@ -927,7 +927,7 @@
         "src": "/static/js/shop-pricing-local.js?v=26"
       },
       {
-        "src": "/static/js/shop-i18n.js?v=23"
+        "src": "/static/js/shop-i18n.js?v=24"
       },
       {
         "src": "/static/js/girdle-engrave.js?v=27"
@@ -936,7 +936,7 @@
         "src": "/static/js/shop-terms.js?v=4"
       },
       {
-        "src": "/static/js/shop.js?v=166"
+        "src": "/static/js/shop.js?v=168"
       }
     ],
     "head_extras": []
