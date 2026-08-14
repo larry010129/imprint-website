@@ -340,24 +340,34 @@ function necklaceTypeLengthWeights(chainType) {
   return table ? structuredClone(table) : {};
 }
 
+function lengthWeightsHasRealWax(lw) {
+  if (!lw || typeof lw !== 'object') return false;
+  return Object.keys(lw).some((thick) => {
+    const table = lw[thick];
+    return !!(
+      table &&
+      typeof table === 'object' &&
+      Object.keys(table).some((k) => Number(table[k]) > 0)
+    );
+  });
+}
+
 function effectiveChainLengthWeights(product) {
   const admin = product?.lengthWeights;
-  if (admin && typeof admin === 'object') {
-    return admin;
-  }
-  // Excel/type defaults for chain SKUs and pendant 含鍊 attached-chain lookup.
-  // Do not gate on state.category — pendant flow looks up chain products while
-  // category stays 'pendant', and missing chainType must still show 1.0–3.0mm.
+  if (lengthWeightsHasRealWax(admin)) return admin;
+  // Empty / {} / all-zero = unset. Excel/type defaults for chain SKUs and
+  // pendant 含鍊 attached-chain lookup. Do not gate on state.category —
+  // pendant flow looks up chain products while category stays 'pendant'.
   return necklaceTypeLengthWeights(product?.chainType || 'douyuan');
 }
 
 function mergeProductWeights(product, staticProduct, category) {
   if (category === 'chain') {
     const adminLengths = product.lengthWeights;
-    if (adminLengths && typeof adminLengths === 'object') {
+    if (lengthWeightsHasRealWax(adminLengths)) {
       product.lengthWeights = structuredClone(adminLengths);
     } else {
-      // Excel / 項鍊類型標準表 — no per-product edit required.
+      // Excel / 項鍊類型標準表 — empty admin table is unset, not the only table.
       product.lengthWeights = structuredClone(
         necklaceTypeLengthWeights(product.chainType || 'douyuan')
       );
@@ -481,6 +491,7 @@ const CATEGORY_DISPLAY_ORDER = ['diamond', 'pendant', 'ring', 'earring', 'bracel
 //    CATEGORY_STYLES / STYLE_NAMES / CATEGORY_METALS / WEIGHT_TABLE. ───────
 let catalog = {};          // { category: [ {id, nameZh, nameEn, defaultColor, golds, carats, colors, images, weights, manualPrices}, ... ] }
 let catalogLoaded = false;
+let catalogPublishedTotal = 0;
 /** Per-category paging: { pageSize, total, loaded, complete } */
 const catalogPaging = {};
 const CATALOG_PAGE_SIZE = 20;
@@ -1335,7 +1346,9 @@ function applyStaticCatalogFallback() {
 function renderCatalogSkeleton(count) {
   const grid = document.getElementById('catalog-grid');
   if (!grid || grid.querySelector('.cat-btn')) return;
-  document.getElementById('catalog-empty')?.classList.add('hidden');
+  const emptyBoot = document.getElementById('catalog-empty');
+  emptyBoot?.classList.add('hidden');
+  if (emptyBoot) emptyBoot.hidden = true;
   const n = count || 5;
   grid.classList.add('is-loading');
   grid.setAttribute('aria-busy', 'true');
@@ -1483,6 +1496,11 @@ async function loadCatalog() {
     const data = await fetchCatalogPage({ page: 1, pageSize: 1 });
     catalog = data.categories || {};
     applyCatalogMeta(data);
+    catalogPublishedTotal = Number(data.total) || 0;
+    // Seed published category keys from order even if this page has no rows.
+    (data.categoryOrder || []).forEach((cat) => {
+      if (!Array.isArray(catalog[cat])) catalog[cat] = [];
+    });
     // Mark first-page crumbs incomplete so ensureCategoryCatalog refetches full category.
     Object.keys(catalog).forEach((cat) => {
       if (cat === 'diamond') {
@@ -1506,7 +1524,12 @@ async function loadCatalog() {
     }
     catalogLoaded = true;
     if (errEl) errEl.remove();
-    if (!catalogCategories().length) {
+    if (!catalogCategories().length && catalogPublishedTotal > 0) {
+      CATEGORY_DISPLAY_ORDER.forEach((cat) => {
+        if (!Array.isArray(catalog[cat])) catalog[cat] = [];
+      });
+    }
+    if (!catalogCategories().length && catalogPublishedTotal <= 0) {
       throw new Error('CATALOG_EMPTY');
     }
     requestAnimationFrame(() => renderCatalogTiles());
@@ -1518,6 +1541,7 @@ async function loadCatalog() {
     }
     catalogLoaded = false;
     catalog = {};
+    catalogPublishedTotal = 0;
     window._catalogCategoryOrder = null;
     console.error('failed to load catalog', err);
     if (err?.message === 'CATALOG_EMPTY') {
@@ -1562,11 +1586,20 @@ function renderCatalogTiles() {
 
   if (!catalogLoaded) {
     empty?.classList.add('hidden');
+    if (empty) empty.hidden = true;
     return;
   }
 
   const cats = catalogCategories();
-  empty?.classList.toggle('hidden', cats.length > 0);
+  const showEmpty = !cats.length && catalogPublishedTotal <= 0;
+  empty?.classList.toggle('hidden', !showEmpty);
+  if (empty) {
+    empty.hidden = !showEmpty;
+    const emptyCopy = empty.querySelector('p');
+    if (showEmpty && emptyCopy && !emptyCopy.textContent) {
+      emptyCopy.textContent = tr('catalog_empty');
+    }
+  }
   grid.innerHTML = '';
   if (!cats.length) {
     grid.classList.remove('is-loading');
@@ -1647,6 +1680,7 @@ let pricesLoaded = false;
 let quoteTimer = null;
 let quoteRequestId = 0;
 let lastQuoteTotal = null;
+let lastQuoteFailed = false;
 let quoteRefreshPending = false;
 let activeQuoteController = null;
 const quoteCache = new Map();
@@ -1701,9 +1735,7 @@ function chainLengthOptionsCm(product, thickness) {
   if (!thickness) return [];
   let table = effectiveChainLengthWeights(product)?.[thickness];
   if (!lengthTableHasWeights(table)) {
-    if (product?.lengthWeights && typeof product.lengthWeights === 'object') return [];
-    // Admin table missing this thickness / all-zero wax → Excel/type standard,
-    // same fallback chainConfiguredThicknesses uses.
+    // Skip Excel fallback only when this thickness already has real admin wax.
     table = necklaceTypeLengthWeights(product?.chainType || 'douyuan')[thickness];
   }
   if (!table || typeof table !== 'object') return [];
@@ -1723,8 +1755,6 @@ function thicknessesFromLengthWeights(lw) {
 function chainConfiguredThicknesses(product) {
   const fromProduct = thicknessesFromLengthWeights(effectiveChainLengthWeights(product));
   if (fromProduct.length) return fromProduct;
-  if (product?.lengthWeights && typeof product.lengthWeights === 'object') return [];
-  // Admin table present but all-zero / unusable → Excel thicknesses.
   return thicknessesFromLengthWeights(
     necklaceTypeLengthWeights(product?.chainType || 'douyuan'),
   );
@@ -2440,8 +2470,9 @@ function updatePriceHint(total) {
   if (total == null && quoteRefreshPending && lastQuoteTotal != null) {
     hint.hidden = true;
   } else if (!optionsReady) {
+    lastQuoteFailed = false;
     hint.textContent = tr('shop_complete_options');
-  } else if (total == null) {
+  } else if (lastQuoteFailed && total == null) {
     hint.textContent = tr('shop_price_unavailable');
   } else {
     hint.textContent = tr('shop_complete_options');
@@ -4560,6 +4591,7 @@ async function refreshQuotePrices() {
     if (mobileTotal) mobileTotal.textContent = '—';
     updateCompareAtDisplay(null, null);
     lastQuoteTotal = null;
+    lastQuoteFailed = isReadyToSubmit();
     updatePriceHint(null);
     updateCtaState(null);
     return;
@@ -4612,6 +4644,7 @@ async function refreshQuotePrices() {
 
   const total = quote.total;
   const roundedTotal = total != null ? Math.round(total) : null;
+  lastQuoteFailed = false;
   if (roundedTotal != null) lastQuoteTotal = roundedTotal;
   if (totalEl) animateShopTotal(totalEl, roundedTotal != null ? roundedTotal : NaN);
   if (mobileTotal) {

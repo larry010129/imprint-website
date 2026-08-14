@@ -238,8 +238,8 @@
           <div class="catalog-tile catalog-tile--skeleton" aria-hidden="true"><span class="catalog-tile-skeleton-img"></span><span class="catalog-tile-skeleton-label"></span></div>
           <div class="catalog-tile catalog-tile--skeleton" aria-hidden="true"><span class="catalog-tile-skeleton-img"></span><span class="catalog-tile-skeleton-label"></span></div>
         </div>
-        <div class="catalog-filter-empty hidden" id="catalog-empty">
-          <p data-i18n="catalog_empty">目前沒有上架商品。</p>
+        <div class="catalog-filter-empty hidden" id="catalog-empty" hidden>
+          <p data-i18n="catalog_empty"></p>
         </div>
         {% if shop_catalog_ssr %}
         {# The interactive grid above is populated entirely by shop.js after
@@ -606,7 +606,7 @@
         <s class="hero-price-compare" id="sum-total-compare" hidden></s>
         </div>
       </div>
-      <p class="hero-price-hint" id="price-hint" data-i18n="shop_complete_options">請完成選項以查看價格</p>
+      <p class="hero-price-hint" id="price-hint" data-i18n="shop_complete_options">選擇規格後顯示估價</p>
       <p class="hero-price-disclaimer" data-i18n="shop_price_estimate_notice">價格為預估價；鑽石價格為牌價。實際金額可能因市場浮動有 ±10%。</p>
 
       <details class="price-breakdown-details" id="price-breakdown-details" open>
@@ -1032,8 +1032,8 @@
   }, window.shopConfig || {});
 </script>
 <script src="/static/js/shop-assets.js?v=16" defer></script>
-<script src="/static/js/shop-i18n.js?v=22" defer></script>
+<script src="/static/js/shop-i18n.js?v=23" defer></script>
 <script src="/static/js/shop-terms.js?v=5" defer></script>
 <script src="/static/js/catalog-multi-filter.js?v=1" defer></script>
-<script src="/static/js/shop.js?v=165" defer></script>
+<script src="/static/js/shop.js?v=166" defer></script>
 {% endblock %}
