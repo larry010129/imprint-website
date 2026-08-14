@@ -1,6 +1,13 @@
 <!DOCTYPE html>
 <html lang="zh-Hant-TW">
 <head>
+<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-KD4FZ458');</script>
+<!-- End Google Tag Manager -->
 {% set is_home = extra_body_class and 'page-home' in extra_body_class %}
 {% set is_series_overview = extra_body_class and 'page-series' in extra_body_class %}
 {% set _cp = canonical_path or '' %}
@@ -13,33 +20,6 @@
   or _cp in ['about', 'stories', 'journal', 'gold-price', 'shop/calculator/'] %}
 {# pages.css defer only when page ships above-fold CSS (stories/journal/gold-price still need it) #}
 {% set defer_pages_css = is_series_overview or _cp == 'about' %}
-<!-- Google tag (gtag.js) ??hard delay on home (rIC can fire during PSI idle) -->
-<script>
-(function () {
-  var gtagMinDelayMs = {{ 14000 if is_home or is_shop_calculator else 4000 }};
-  function injectGtag() {
-    if (window.__gtagInjected) return;
-    window.__gtagInjected = true;
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    window.gtag = gtag;
-    gtag('js', new Date());
-    gtag('config', 'G-J5QPK34V89');
-    var s = document.createElement('script');
-    s.async = true;
-    s.src = 'https://www.googletagmanager.com/gtag/js?id=G-J5QPK34V89';
-    document.head.appendChild(s);
-  }
-  function scheduleGtag() {
-    setTimeout(injectGtag, gtagMinDelayMs);
-  }
-  if (document.readyState === 'complete') {
-    scheduleGtag();
-  } else {
-    window.addEventListener('load', scheduleGtag);
-  }
-})();
-</script>
 <meta charset="utf-8">
 <script>window.imgFallback=function(img){var s=img.dataset.fbStep?parseInt(img.dataset.fbStep,10):0;var e=["jpg","png","jpeg"];var pic=img.parentElement&&img.parentElement.tagName==="PICTURE"?img.parentElement:null;if(s<e.length-1){s++;img.dataset.fbStep=String(s);if(pic){var srcs=pic.querySelectorAll("source");for(var i=0;i<srcs.length;i++){srcs[i].remove();}}img.src=img.src.replace(/\.(jpg|jpeg|png)(\?.*)?$/i,"."+e[s]+"$2");}else{(pic||img).remove();}};</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -132,6 +112,10 @@
 {% block extra_head %}{% endblock %}
 </head>
 <body class="site-layout{% if extra_body_class %} {{ extra_body_class }}{% endif %}"{% if mvc_page %} data-mvc="{{ mvc_page }}"{% endif %}>
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KD4FZ458"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
 {# data-site-nav-root: nav.css scopes mobile drawer + hero nav here (was React SiteChrome / frozen src.css). #}
 <div class="site-chrome" data-site-nav-root>
 {% include "partials/topbar.html" %}

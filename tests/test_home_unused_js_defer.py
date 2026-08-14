@@ -31,8 +31,10 @@ def test_home_defers_htmx_gtag_and_extras(client):
     assert "HTMX_FALLBACK_MS = 12000" in html
     assert "/static/js/htmx.min.js" in html
 
-    assert "gtagMinDelayMs" in html
-    assert "14000" in html
+    assert "GTM-KD4FZ458" in html
+    assert "G-J5QPK34V89" not in html
+    assert "gtagMinDelayMs" not in html
+    assert "gtag/js" not in html
 
     assert "HOME_EXTRAS_MS = 10000" in html
     assert "home-wall.js?v=4" in html

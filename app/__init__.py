@@ -29,7 +29,7 @@ log = logging.getLogger(__name__)
 
 # blob: required for admin/CMS crop UI (URL.createObjectURL local previews).
 # img-src: self + data/blob + known hosts (Supabase media, Botpress, Google).
-# googletagmanager / google-analytics: GA4 gtag (G-J5QPK34V89) in base layout.
+# googletagmanager / google-analytics: GTM (GTM-KD4FZ458) in public layouts.
 HTML_CONTENT_SECURITY_POLICY = (
     "default-src 'self'; "
     "script-src 'self' 'unsafe-inline' https://cdn.botpress.cloud "
@@ -54,7 +54,7 @@ HTML_CONTENT_SECURITY_POLICY = (
     # 'self' required for CMS page-builder preview iframe (/p/{slug}?preview=1)
     # www.google.com / recaptcha.google.com required for reCAPTCHA v2 checkbox
     "frame-src 'self' https://www.google.com https://recaptcha.google.com "
-    "https://accounts.google.com "
+    "https://accounts.google.com https://www.googletagmanager.com "
     "https://www.youtube.com https://www.youtube-nocookie.com "
     "https://*.botpress.cloud; "
     "form-action 'self'; "
