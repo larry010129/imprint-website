@@ -220,10 +220,13 @@ def test_calculator_page_shop_js_wizard(client):
     assert "/static/js/shop.js" in resp.text
     assert "/static/js/shop-i18n.js" in resp.text
     assert "/static/js/shop-pricing-local.js" in resp.text
+    assert "GTM-KD4FZ458" in resp.text
     assert "shop-htmx-root" not in resp.text
     assert "htmx/shop/step/" not in resp.text
     assert "cms-site-stack" not in resp.text
     assert 'data-cms-anchor="end"' not in resp.text
+    assert "鑽石飾品分類與款式列表" not in resp.text
+    assert 'id="catalog-grid"' in resp.text
     assert 'class="site-footer"' in resp.text
     assert resp.text.find("</main>") < resp.text.find('class="site-footer"')
 
