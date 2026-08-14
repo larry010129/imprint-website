@@ -21,6 +21,7 @@ import {
   resolveAspectRatio,
   type CropPercent,
 } from "@/lib/crop-image";
+import { pageImageSaveKeys } from "@/lib/page-image-save-keys";
 import { cn } from "@/lib/utils";
 
 export type PageImageEditRow = {
@@ -203,9 +204,14 @@ export default function PageImageEditModal({
         setImageWebp(nextWebp);
       }
 
+      const keys = pageImageSaveKeys(row);
+      if (!keys) {
+        setValidationError("頁面圖片鍵值無效");
+        return;
+      }
       const updateRes = await updatePageImage({
-        pageKey: row.page_key,
-        slotKey: row.slot_key,
+        pageKey: keys.pageKey,
+        slotKey: keys.slotKey,
         imageUrl: nextUrl,
         imageWebp: nextWebp,
         imageAlt: row.image_alt || "",
@@ -246,7 +252,12 @@ export default function PageImageEditModal({
     setSaving(true);
     setValidationError("");
     try {
-      const res = await pageImageAction(row.page_key, row.slot_key, "restore");
+      const keys = pageImageSaveKeys(row);
+      if (!keys) {
+        setValidationError("頁面圖片鍵值無效");
+        return;
+      }
+      const res = await pageImageAction(keys.pageKey, keys.slotKey, "restore");
       if (res.error) {
         setValidationError(resolveError(res.error));
         return;

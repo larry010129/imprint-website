@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import ExistingSitePageEditor, {
   type ExistingSitePageEditorProps,
+  type PageImageKey,
   type SitePage,
 } from "@/components/admin/ExistingSitePageEditor";
 import { ToastProvider, useToast } from "@/components/ui/toast-1";
@@ -9,6 +10,7 @@ import { ToastProvider, useToast } from "@/components/ui/toast-1";
 export type CmsPagesPanelProps = {
   /** Prefer bootstrap/site_pages constants — never unpaged listCmsPages walk. */
   initialSitePages?: SitePage[];
+  pageImageKeys?: PageImageKey[];
   api: ExistingSitePageEditorProps["api"] & {
     listPages: () => Promise<{
       site_pages?: SitePage[];
@@ -17,7 +19,7 @@ export type CmsPagesPanelProps = {
   };
 };
 
-function CmsPagesPanelInner({ api, initialSitePages }: CmsPagesPanelProps) {
+function CmsPagesPanelInner({ api, initialSitePages, pageImageKeys }: CmsPagesPanelProps) {
   const { showToast } = useToast();
   const [sitePages, setSitePages] = useState<SitePage[]>(() => initialSitePages || []);
   const [editingSiteRoute, setEditingSiteRoute] = useState<string | null>(null);
@@ -44,6 +46,7 @@ function CmsPagesPanelInner({ api, initialSitePages }: CmsPagesPanelProps) {
     return (
       <ExistingSitePageEditor
         page={editingSitePage}
+        pageImageKeys={pageImageKeys}
         api={api}
         onBack={() => setEditingSiteRoute(null)}
       />

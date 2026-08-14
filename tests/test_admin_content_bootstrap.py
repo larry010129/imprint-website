@@ -227,8 +227,29 @@ def test_testimonial_replacement_handoff_keeps_latest_uploaded_url():
     assert "function testimonialImageUrl(value)" in admin_js
     assert "if (form) form.dataset.imageUrl = nextUrl" in admin_js
     assert "form.dataset.imageUrl || ''" in admin_js
-    assert "/js/admin-content.js?v=49" in admin_shell
-    assert "/js/admin-content.js?v=49" in admin_shell_legacy
+    assert "/js/admin-content.js?v=50" in admin_shell
+    assert "/js/admin-content.js?v=50" in admin_shell_legacy
+
+
+def test_page_image_save_keys_are_route_and_kebab_not_labels():
+    admin_js = open("public/js/admin-content.js", encoding="utf-8").read()
+    modal = open("frontend/src/components/admin/PageImageEditModal.tsx", encoding="utf-8").read()
+    keys_lib = open("frontend/src/lib/page-image-save-keys.ts", encoding="utf-8").read()
+
+    assert "function pageImageSaveKeys(row)" in admin_js
+    assert "pageKey: keys.page_key" in admin_js
+    assert "slotKey: keys.slot_key" in admin_js
+    assert "function pageImageTabLabel(pageKey, label)" in admin_js
+    assert "return '真我鑽石'" in admin_js
+    assert "'真我鑽石': '銘印鑽石'" not in admin_js
+    assert '"真我鑽石": "銘印鑽石"' not in admin_js
+    assert "銘印鑽石｜首頁圖片與內容管理" in admin_js
+
+    assert "pageImageSaveKeys(row)" in modal
+    assert "pageKey: keys.pageKey" in modal
+    assert "slotKey: keys.slotKey" in modal
+    assert "pageKey.startsWith(\"/\")" in keys_lib
+    assert "SLOT_RE" in keys_lib
 
 
 def test_testimonial_replacement_payload_preserves_each_saved_url():

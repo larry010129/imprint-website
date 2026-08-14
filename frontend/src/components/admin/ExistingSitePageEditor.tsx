@@ -12,6 +12,10 @@ import {
   type CmsSection,
   type CmsSectionType,
 } from "@/components/admin/cmsSectionMeta";
+import SitePageImageEditor, {
+  type SitePageImageEditorApi,
+} from "@/components/admin/SitePageImageEditor";
+import { pageHasImageSlots, routeMatches } from "@/lib/page-image-save-keys";
 import { useToast } from "@/components/ui/toast-1";
 
 export type SitePage = {
@@ -32,8 +36,11 @@ export type CopySlot = {
   is_published: boolean;
 };
 
+export type PageImageKey = { page_key: string; label?: string };
+
 export type ExistingSitePageEditorProps = {
   page: SitePage;
+  pageImageKeys?: PageImageKey[];
   api: {
     getCopySlots: (pageKey?: string) => Promise<{
       slots?: CopySlot[];
@@ -54,7 +61,8 @@ export type ExistingSitePageEditorProps = {
       error?: string;
     }>;
   } & JournalPostsApi &
-    EngagementRingsApi;
+    EngagementRingsApi &
+    Partial<SitePageImageEditorApi>;
   onBack: () => void;
 };
 
@@ -101,14 +109,6 @@ function cloneSection(section: CmsSection): CmsSection {
 
 function cloneSlot(slot: CopySlot): CopySlot {
   return { ...slot };
-}
-
-function routeMatches(left: string, right: string): boolean {
-  const normalize = (value: string) => {
-    const clean = String(value || "").trim().replace(/\/$/, "");
-    return clean.endsWith(".html") ? clean.slice(0, -5) : clean;
-  };
-  return normalize(left) === normalize(right);
 }
 
 function sectionLabel(section: CmsSection, index: number): string {
@@ -278,6 +278,7 @@ function updateCtaField(
 
 export default function ExistingSitePageEditor({
   page,
+  pageImageKeys = [],
   api,
   onBack,
 }: ExistingSitePageEditorProps) {
@@ -400,6 +401,14 @@ export default function ExistingSitePageEditor({
     state === "saving" ? "儲存中…" : state === "saved" ? "已儲存" : state === "error" ? "儲存失敗" : "";
   const isJournal = page.route === "/journal";
   const isEngagement = page.route === "/jewelry/engagement/";
+  const hasImageSlots = pageHasImageSlots(page.route, pageImageKeys);
+  const imageApi =
+    hasImageSlots &&
+    typeof api.getPageImages === "function" &&
+    typeof api.updatePageImage === "function" &&
+    typeof api.uploadPageImage === "function"
+      ? (api as SitePageImageEditorApi)
+      : null;
 
   return (
     <div className="cms-editor cms-site-editor cms-fixed-content-editor">
@@ -409,9 +418,12 @@ export default function ExistingSitePageEditor({
         <span className="cms-editor__site-route">{page.route}</span>
       </div>
       <p className="cms-inline-instruction">
-        這裡只編輯文字、按鈕名稱與頁面連結。頁面版型、圖片與區塊順序由系統固定。
+        {hasImageSlots
+          ? "這裡編輯文字、按鈕，以及此頁的頁面圖片（上傳／更換）。"
+          : "這裡只編輯文字、按鈕名稱與頁面連結。頁面版型、圖片與區塊順序由系統固定。"}
       </p>
 
+      {imageApi ? <SitePageImageEditor pageKey={page.route} api={imageApi} /> : null}
       {isJournal ? <JournalPostsEditor api={api} /> : <>
         {loading ? <p className="cms-hint">載入內容中…</p> : null}
         {loadError ? <p className="cms-msg cms-msg--error">{loadError}</p> : null}
