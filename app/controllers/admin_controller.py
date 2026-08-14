@@ -1105,6 +1105,10 @@ async def products_list(request: Request) -> dict:
 async def products_create(request: Request) -> JSONResponse:
     user_id = _require_admin(request)
     body = await request.json()
+    if body.get("autosave"):
+        # Autosave may contain a temporarily incomplete editor state. Validate
+        # it as a draft; create/update handlers still preserve visibility.
+        body["isPublished"] = False
     with get_connection() as conn, conn.cursor() as cur:
         allowed = valid_category_slugs(cur)
     cleaned, error = validate_product_fields(body, valid_categories=allowed)
@@ -1169,6 +1173,9 @@ async def products_create(request: Request) -> JSONResponse:
 async def product_update(request: Request) -> JSONResponse:
     _require_admin(request)
     body = await request.json()
+    if body.get("autosave"):
+        # Do not run publish-only validation while the Admin editor is typing.
+        body["isPublished"] = False
     product_id = body.get("id")
     if not product_id:
         return JSONResponse(status_code=400, content={"error": "missing id"})

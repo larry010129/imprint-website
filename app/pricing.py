@@ -459,6 +459,8 @@ def _resolve_chain_wax(
     admin_wax = _chain_wax_from_length_weights(lw, carat, length_cm)
     if admin_wax is not None:
         return admin_wax
+    if isinstance(lw, dict):
+        raise ValueError("unsupported chain thickness or length")
     chain_type = _product_chain_type(cur, pid) or DEFAULT_NECKLACE_TYPE
     type_wax = _chain_wax_from_type_catalog(chain_type, carat, length_cm)
     if type_wax is not None:

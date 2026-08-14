@@ -698,6 +698,32 @@
     return values;
   }
 
+  function syncChainVariantThicknessOptions(form) {
+    if (!form) return;
+    var options = [];
+    form.querySelectorAll('#apChainLengthWeights .ap-chain-thickness-block').forEach(function (block) {
+      var thick = String(block.dataset.thickness || '').trim();
+      if (thick && options.indexOf(thick) < 0) options.push(thick);
+    });
+    if (!options.length) options = chainTypeThicknesses(getFormChainType(form)).slice();
+    form.querySelectorAll('#apVariantGrid [name="carat"]').forEach(function (control) {
+      var current = control.tagName === 'SELECT' ? control.value : chainThicknessKey(control.value);
+      var select = control;
+      if (control.tagName !== 'SELECT') {
+        select = document.createElement('select');
+        select.name = 'carat';
+        var legacyUnit = control.closest('.ap-thickness-input');
+        if (legacyUnit) legacyUnit.replaceWith(select);
+        else control.replaceWith(select);
+      }
+      var values = options.slice();
+      select.innerHTML = values.map(function (thick) {
+        return '<option value="' + esc(thick) + '">' + esc(thick) + '</option>';
+      }).join('');
+      select.value = values.indexOf(current) >= 0 ? current : '';
+    });
+  }
+
   function productsInCategory(cat) {
     return state.products.filter(function (p) { return p.category === cat; });
   }
@@ -1547,8 +1573,33 @@
     );
   }
 
+  function chainLengthWeightBlockHtml(thick, lengthWeights) {
+    var lengths = chainLengthsCm();
+    var rows = lengths.map(function (len) {
+      var val = chainLengthWaxValue(lengthWeights, thick, len);
+      return (
+        '<div class="ap-chain-length-row" data-thickness="' + esc(thick) + '" data-length="' + len + '">' +
+          '<span class="ap-chain-length-label">' + len + ' cm</span>' +
+          '<input type="number" name="chainLengthWax" step="0.0001" min="0.0001" ' +
+            'data-thickness="' + esc(thick) + '" data-length="' + len + '" ' +
+            'placeholder="蠟重" value="' + esc(val) + '">' +
+        '</div>'
+      );
+    }).join('');
+    return (
+      '<div class="ap-chain-thickness-block" data-thickness="' + esc(thick) + '">' +
+        '<h5 class="ap-chain-thickness-title">厚度</h5>' +
+        '<div class="ap-chain-length-head"><span>長度</span><span>蠟重（錢）</span></div>' +
+        '<div class="ap-chain-length-grid">' + rows + '</div>' +
+      '</div>'
+    );
+  }
+
   function chainLengthWeightsGridInnerHtml(lengthWeights, chainType, extraThicknesses) {
-    var thicknesses = chainTypeThicknesses(chainType).slice();
+    var configuredThicknesses = Object.keys(lengthWeights || {});
+    var thicknesses = configuredThicknesses.length
+      ? configuredThicknesses.slice()
+      : chainTypeThicknesses(chainType).slice();
     (extraThicknesses || []).forEach(function (thick) {
       thick = String(thick || '').trim();
       if (thick && thicknesses.indexOf(thick) < 0) thicknesses.push(thick);
@@ -1591,6 +1642,7 @@
         chainLengthWeightsGridInnerHtml(lengthWeights, chainType,
           (variants || []).map(function (variant) { return variant && variant.carat; })) +
       '</div>' +
+      '<button type="button" class="btn-sm" id="apAddChainThickness">+ 新增厚度表</button> ' +
       '<button type="button" class="btn-sm" id="apFillChainLengthDefaults">重填標準蠟重表</button>'
     );
   }
@@ -1643,16 +1695,79 @@
       input.maxLength = 16;
       input.inputMode = 'decimal';
       input.required = true;
+      input.dataset.previousThickness = block.dataset.thickness || '';
       title.textContent = '厚度 ';
       title.appendChild(input);
       title.appendChild(document.createTextNode(' mm'));
+      var remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'ap-remove-chain-thickness';
+      remove.textContent = '刪除';
+      remove.title = '刪除此厚度表';
+      title.appendChild(remove);
       title.dataset.editable = '1';
       input.addEventListener('input', function () {
+        if (input.dataset.previousThickness == null) {
+          input.dataset.previousThickness = block.dataset.thickness || '';
+        }
         var thickness = chainThicknessKey(input.value);
         block.dataset.thickness = thickness;
         block.querySelectorAll('[data-thickness]').forEach(function (el) {
           el.dataset.thickness = thickness;
         });
+        form.querySelectorAll('#apVariantGrid [name="carat"]').forEach(function (select) {
+          if (select.value !== input.dataset.previousThickness &&
+              select.dataset.tableThickness !== input.dataset.previousThickness) return;
+          if (!Array.from(select.options).some(function (option) { return option.value === thickness; })) {
+            select.appendChild(new Option(thickness, thickness));
+          }
+          select.value = thickness;
+          select.dataset.tableThickness = thickness;
+        });
+      });
+      input.addEventListener('change', function () {
+        var previous = input.dataset.previousThickness || '';
+        var next = block.dataset.thickness || '';
+        var duplicate = Array.from(host.querySelectorAll('.ap-chain-thickness-block')).some(function (other) {
+          return other !== block && other.dataset.thickness === next;
+        });
+        if (duplicate) {
+          input.value = chainThicknessDisplay(previous);
+          block.dataset.thickness = previous;
+          block.querySelectorAll('[data-thickness]').forEach(function (el) {
+            el.dataset.thickness = previous;
+          });
+          form.querySelectorAll('#apVariantGrid [name="carat"]').forEach(function (select) {
+            if (select.value === next || select.dataset.tableThickness === next) {
+              select.value = previous;
+              select.dataset.tableThickness = previous;
+            }
+          });
+          delete input.dataset.previousThickness;
+          syncChainVariantThicknessOptions(form);
+          return;
+        }
+        if (previous && next && previous !== next) {
+          form.querySelectorAll('#apVariantGrid [name="carat"]').forEach(function (select) {
+            if (select.value !== previous && select.dataset.tableThickness !== previous) return;
+            if (!Array.from(select.options).some(function (option) { return option.value === next; })) {
+              select.appendChild(new Option(next, next));
+            }
+            select.value = next;
+            select.dataset.tableThickness = next;
+          });
+        }
+        delete input.dataset.previousThickness;
+        syncChainVariantThicknessOptions(form);
+      });
+      remove.addEventListener('click', function () {
+        var removedThickness = block.dataset.thickness || '';
+        form.querySelectorAll('#apVariantGrid .ap-variant-row').forEach(function (row) {
+          var select = row.querySelector('[name="carat"]');
+          if (select && select.value === removedThickness) row.remove();
+        });
+        block.remove();
+        syncChainVariantThicknessOptions(form);
       });
     });
   }
@@ -1669,6 +1784,7 @@
       );
     }
     rebindChainLengthGrid(form);
+    syncChainVariantThicknessOptions(form);
   }
 
   function toggleChainLengthSection(form, category) {
@@ -1749,7 +1865,7 @@
   function generateAllChainVariantRows(grid, form) {
     if (!grid) return 0;
     var chainType = getFormChainType(form);
-    var thicknesses = chainTypeThicknesses(chainType);
+    var thicknesses = chainThicknessesForForm(form, chainType, {});
     var existing = existingVariantComboKeys(grid);
     var html = [];
     GOLDS.forEach(function (gold) {
@@ -2920,6 +3036,7 @@
               '<h4 class="ap-section-title">款式選項</h4>' +
               '<div class="ap-variant-block' +
                 (category === 'chain' ? ' ap-variant-block--chain' : '') +
+                (['ring', 'pendant', 'earring'].indexOf(category) >= 0 ? ' ap-variant-block--no-carat' : '') +
                 (category === 'earring' ? ' ap-variant-block--earring' : '') +
               '">' +
                 variantHeadHtml(category) +
@@ -2985,17 +3102,31 @@
     document.getElementById('apAddVariant')?.addEventListener('click', function () {
       grid.insertAdjacentHTML('beforeend', variantRowHtml(null, catSel.value, getFormChainType(form)));
       bindRemoveRows();
+      syncChainVariantThicknessOptions(form);
     });
 
     document.getElementById('apGenerateAllChainVariants')?.addEventListener('click', function () {
       if (catSel.value !== 'chain') return;
       var added = generateAllChainVariantRows(grid, form);
       bindRemoveRows();
+      syncChainVariantThicknessOptions(form);
       if (!added) alert('全部金屬 × 厚度組合已存在，無需再產生');
     });
 
     document.getElementById('apFillChainLengthDefaults')?.addEventListener('click', function () {
       fillChainLengthDefaults(form);
+    });
+
+    document.getElementById('apAddChainThickness')?.addEventListener('click', function () {
+      var host = form.querySelector('#apChainLengthWeights');
+      if (!host || catSel.value !== 'chain') return;
+      host.insertAdjacentHTML('beforeend', chainLengthWeightBlockHtml('', {}));
+      delete host.dataset.bound;
+      rebindChainLengthGrid(form);
+      syncChainVariantThicknessOptions(form);
+      var blocks = host.querySelectorAll('.ap-chain-thickness-block');
+      var last = blocks[blocks.length - 1];
+      last?.querySelector('[name="chainThickness"]')?.focus();
     });
 
     rebindChainLengthGrid(form);
@@ -3018,6 +3149,7 @@
       });
     }
     bindRemoveRows();
+    syncChainVariantThicknessOptions(form);
 
     if (!grid.dataset.metalWeightBound) {
       grid.dataset.metalWeightBound = '1';
@@ -3313,7 +3445,7 @@
       allowsWithChain: allowsWithChain,
       isPublished: !isSaveForLater(form),
       variants: variants,
-      lengthWeights: category === 'chain' ? collectChainLengthWeights(form) : null,
+      lengthWeights: category === 'chain' ? (collectChainLengthWeights(form) || {}) : null,
       chainType: category === 'chain' ? getFormChainType(form) : null,
       images: images,
     };

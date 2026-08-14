@@ -599,7 +599,7 @@ def _effective_chain_length_weights(product: dict) -> dict:
     if product.get("category") != "chain":
         return product.get("length_weights") or {}
     lw = product.get("length_weights")
-    if isinstance(lw, dict) and lw:
+    if isinstance(lw, dict):
         return lw
     return necklace_type_length_weights(product.get("chain_type") or DEFAULT_NECKLACE_TYPE)
 

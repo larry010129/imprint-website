@@ -342,7 +342,7 @@ function necklaceTypeLengthWeights(chainType) {
 
 function effectiveChainLengthWeights(product) {
   const admin = product?.lengthWeights;
-  if (admin && typeof admin === 'object' && Object.keys(admin).length > 0) {
+  if (admin && typeof admin === 'object') {
     return admin;
   }
   // Excel/type defaults for chain SKUs and pendant 含鍊 attached-chain lookup.
@@ -354,7 +354,7 @@ function effectiveChainLengthWeights(product) {
 function mergeProductWeights(product, staticProduct, category) {
   if (category === 'chain') {
     const adminLengths = product.lengthWeights;
-    if (adminLengths && Object.keys(adminLengths).length > 0) {
+    if (adminLengths && typeof adminLengths === 'object') {
       product.lengthWeights = structuredClone(adminLengths);
     } else {
       // Excel / 項鍊類型標準表 — no per-product edit required.
@@ -1701,6 +1701,7 @@ function chainLengthOptionsCm(product, thickness) {
   if (!thickness) return [];
   let table = effectiveChainLengthWeights(product)?.[thickness];
   if (!lengthTableHasWeights(table)) {
+    if (product?.lengthWeights && typeof product.lengthWeights === 'object') return [];
     // Admin table missing this thickness / all-zero wax → Excel/type standard,
     // same fallback chainConfiguredThicknesses uses.
     table = necklaceTypeLengthWeights(product?.chainType || 'douyuan')[thickness];
@@ -1722,6 +1723,7 @@ function thicknessesFromLengthWeights(lw) {
 function chainConfiguredThicknesses(product) {
   const fromProduct = thicknessesFromLengthWeights(effectiveChainLengthWeights(product));
   if (fromProduct.length) return fromProduct;
+  if (product?.lengthWeights && typeof product.lengthWeights === 'object') return [];
   // Admin table present but all-zero / unusable → Excel thicknesses.
   return thicknessesFromLengthWeights(
     necklaceTypeLengthWeights(product?.chainType || 'douyuan'),
@@ -3389,7 +3391,7 @@ function ensureChainCaratDefault() {
   if (!carats.length) return;
   const current = state.carat != null ? String(state.carat) : '';
   if (!current || !carats.includes(current)) {
-    state.carat = carats[0];
+    state.carat = null;
   }
 }
 
@@ -5644,7 +5646,8 @@ async function selectType(typeId, options) {
 
   // Default carat = smallest admin option before metal is chosen.
   const initialCarats = listProductCaratOptions(product, null);
-  if (initialCarats.length) state.carat = initialCarats[0];
+  if (state.category === 'chain') state.carat = null;
+  else if (initialCarats.length) state.carat = initialCarats[0];
   updateCaratButtons();
   updateMetalButtons();
   document.querySelectorAll("#metal-btn-row .metal-btn, #color-btn-row .color-btn").forEach(b => b.classList.remove("active"));

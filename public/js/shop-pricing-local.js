@@ -323,7 +323,7 @@
     if (category === 'chain') {
       wax = product.lengthWeights && product.lengthWeights[carat]
         && product.lengthWeights[carat][String(lengthCm)];
-      if (wax == null) {
+      if (wax == null && !(product.lengthWeights && typeof product.lengthWeights === 'object')) {
         wax = chainWaxFromTypeCatalog(product.chainType || 'douyuan', carat, lengthCm);
       }
     } else {

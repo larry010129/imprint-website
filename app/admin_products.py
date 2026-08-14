@@ -291,11 +291,13 @@ def _parse_ring_size_config(raw: Any, *, errors: list[str]) -> dict[str, Any] | 
 
 
 def _parse_length_weights(raw: Any, *, errors: list[str]) -> dict[str, dict[str, float]] | None:
-    if raw in (None, "", {}):
+    if raw in (None, ""):
         return None
     if not isinstance(raw, dict):
         errors.append("invalid chain length weights")
         return None
+    if raw == {}:
+        return {}
     cleaned: dict[str, dict[str, float]] = {}
     for thickness, lengths in raw.items():
         thick = str(thickness or "").strip()
@@ -711,7 +713,7 @@ def validate_product_fields(body: dict | None, *, valid_categories: set[str] | N
 
         length_weights = _parse_length_weights(body.get("lengthWeights"), errors=errors)
         # Empty admin grid → Excel/type standard table (O字鍊). No per-SKU edit needed.
-        if not length_weights and chain_type:
+        if length_weights is None and chain_type:
             length_weights = necklace_type_length_weights(chain_type)
         _sync_chain_variant_reference_weights(variants, length_weights)
         if is_published and variants:
