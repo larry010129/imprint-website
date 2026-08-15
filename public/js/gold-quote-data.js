@@ -5,9 +5,9 @@ window.__GOLD_QUOTE_BOOTSTRAP__ = {
     "sell": 4672.0,
     "sellPerChin": 17520.0,
     "source": "allbeauty",
-    "bot_posted_at": "2026-08-15 09:09:59",
-    "fetched_at": "2026-08-15T01:12:03.999321+00:00",
-    "fetched_at_display": "2026/08/15 09:12:03",
+    "bot_posted_at": "2026-08-15 10:51:00",
+    "fetched_at": "2026-08-15T02:51:25.508264+00:00",
+    "fetched_at_display": "2026/08/15 10:51:25",
     "is_stale": false,
     "source_url": "https://www.allbeauty.com.tw/m/"
   },
