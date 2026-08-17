@@ -480,7 +480,7 @@
   var GIRDLE_ZOOM_VERSION = '7';
   var GIRDLE_MATRIX_VERSION = '9';
 
-  /** Rex injects window.IMPRINT_DIAMOND_MEDIA_BASE. Empty / whitespace → /static/images/. */
+  /** Injected base already ends at .../shop-media/site-images. Join `{base}/diamonds/...` only. */
   function imprintDiamondMediaBase() {
     var raw = (typeof window !== 'undefined' && window.IMPRINT_DIAMOND_MEDIA_BASE) || '';
     return String(raw).trim().replace(/\/+$/, '');

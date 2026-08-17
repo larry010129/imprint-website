@@ -1485,6 +1485,11 @@ console.log(JSON.stringify(sandbox.results));
         "https://example.supabase.co/storage/v1/object/public/shop-media/"
         "site-images/diamonds/matrix/round-white.webp?v=25"
     )
+    # JS must not invent another prefix — Rex already ends the base at site-images.
+    shop_src = (ROOT / "public" / "js" / "shop.js").read_text(encoding="utf-8")
+    helper = shop_src.split("function diamondAssetUrl", 1)[1].split("function isBundledMatrixUrl", 1)[0]
+    assert "site-images" not in helper
+    assert "shop-media" not in helper
 
 
 def test_girdle_and_catalog_cluster_use_imprint_media_base():
@@ -1537,3 +1542,9 @@ console.log(JSON.stringify({
         "https://example.supabase.co/storage/v1/object/public/shop-media/"
         "site-images/diamonds/girdle-matrix/round-white.png?v=9"
     )
+    assets = (ROOT / "public" / "js" / "shop-assets.js").read_text(encoding="utf-8")
+    girdle = (ROOT / "public" / "js" / "girdle-engrave.js").read_text(encoding="utf-8")
+    media_url = assets.split("function diamondMediaUrl", 1)[1].split("function thumbUrl", 1)[0]
+    matrix_base = girdle.split("function girdleMatrixBase", 1)[1].split("var GIRDLE_PREVIEW_BY_COLOR", 1)[0]
+    assert "site-images" not in media_url and "shop-media" not in media_url
+    assert "site-images" not in matrix_base and "shop-media" not in matrix_base

@@ -3518,7 +3518,11 @@ function diamondMetaLabel(item) {
   return shopLang() === 'en' ? (item.labelEn || item.labelZh) : item.labelZh;
 }
 
-/** Rex injects window.IMPRINT_DIAMOND_MEDIA_BASE. Empty / whitespace → /static/images/. */
+/** Rex injects window.IMPRINT_DIAMOND_MEDIA_BASE =
+ *  `{SUPABASE_URL}/storage/v1/object/public/shop-media/site-images` (no trailing slash).
+ *  Join `{base}/{rel}` only — do not append site-images or shop-media here.
+ *  Empty / whitespace → `/static/images/`.
+ */
 function imprintDiamondMediaBase() {
   const raw = typeof window !== 'undefined' ? window.IMPRINT_DIAMOND_MEDIA_BASE : '';
   return String(raw || '').trim().replace(/\/+$/, '');

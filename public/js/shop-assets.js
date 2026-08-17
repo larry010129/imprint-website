@@ -98,7 +98,7 @@
     chain: 'thumbs/chain/A.jpg',
   };
 
-  /** Rex injects window.IMPRINT_DIAMOND_MEDIA_BASE. Empty / whitespace → /static/images/. */
+  /** Injected base already ends at .../shop-media/site-images. Join `{base}/{rel}` only. */
   function imprintDiamondMediaBase() {
     var raw = String(global.IMPRINT_DIAMOND_MEDIA_BASE || '').trim();
     return raw.replace(/\/+$/, '');
