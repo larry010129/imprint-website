@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 import pytest
 
 from app import gold_scrape_job as job
+
+_ROOT = Path(__file__).resolve().parents[1]
 
 
 @pytest.fixture(autouse=True)
@@ -53,6 +56,46 @@ def test_scrape_on_startup_enabled(
 ) -> None:
     monkeypatch.setenv("GOLD_SCRAPE_ON_STARTUP", raw)
     assert job.scrape_on_startup_enabled() is expected
+
+
+def test_scrape_on_startup_default_on(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("GOLD_SCRAPE_ON_STARTUP", raising=False)
+    assert job.scrape_on_startup_enabled() is True
+
+
+def test_render_skips_startup_scrape_and_raises_gunicorn_timeout() -> None:
+    start = (_ROOT / "scripts" / "render-start.sh").read_text(encoding="utf-8")
+    assert "--timeout 120" in start
+    assert '0.0.0.0:${PORT:-8080}' in start
+    yaml = (_ROOT / "render.yaml").read_text(encoding="utf-8")
+    idx = yaml.index("key: GOLD_SCRAPE_ON_STARTUP")
+    assert 'value: "0"' in yaml[idx : idx + 80]
+
+
+def test_gold_scrape_loop_skips_startup_when_disabled(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("GOLD_SCRAPE_ON_STARTUP", "0")
+    monkeypatch.setenv("GOLD_SCRAPE_INTERVAL_SEC", "100")
+    sleeps: list[float] = []
+
+    async def fake_sleep(sec: float) -> None:
+        sleeps.append(sec)
+        raise asyncio.CancelledError
+
+    scrape = AsyncMock()
+
+    async def run() -> None:
+        with (
+            patch.object(job, "scrape_and_persist_gold", scrape),
+            patch.object(asyncio, "sleep", fake_sleep),
+        ):
+            with pytest.raises(asyncio.CancelledError):
+                await job.gold_scrape_loop()
+
+    asyncio.run(run())
+    assert sleeps == [100]
+    scrape.assert_not_awaited()
 
 
 def test_scrape_and_persist_throttles_within_min_interval() -> None:

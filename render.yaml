@@ -20,6 +20,10 @@ services:
         value: "3.12.8"
       - key: NO_OPEN
         value: "1"
+      # Skip live Allbeauty scrape on boot. Interval loop + /api/gold-refresh
+      # still update gold_price_cache; first request uses the existing row.
+      - key: GOLD_SCRAPE_ON_STARTUP
+        value: "0"
       # --- Persistence (required — must match local .env targets) ---
       - key: DATABASE_URL
         sync: false

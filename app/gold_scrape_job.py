@@ -128,7 +128,11 @@ def _log_scrape_failure(when: str, exc: BaseException) -> None:
 
 
 async def gold_scrape_loop() -> None:
-    """Startup scrape (optional) then every GOLD_SCRAPE_INTERVAL_SEC."""
+    """Optional startup scrape, then every GOLD_SCRAPE_INTERVAL_SEC.
+
+    Lifespan must create_task this after schema work and not await it before
+    yield. Render sets GOLD_SCRAPE_ON_STARTUP=0 so boot uses gold_price_cache.
+    """
     interval = scrape_interval_sec()
     if scrape_on_startup_enabled():
         await asyncio.sleep(_STARTUP_DELAY_SEC)
