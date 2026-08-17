@@ -217,6 +217,15 @@ body.site-layout:not(.page-home) > .site-footer{
 @media (min-width:1100px){
   .site-footer__contact{ grid-column:span 1; }
 }
+.site-footer__contact address{
+  display:inline;
+  margin:0;
+  font-style:inherit;
+}
+.site-footer__addr{
+  display:inline-block;
+  white-space:nowrap;
+}
 
 .site-footer__contact-note{
   margin:.5rem 0 0;
