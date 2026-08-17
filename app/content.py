@@ -1190,6 +1190,9 @@ def reset_page_image_row(cur, existing: dict) -> dict:
     )
     row = cur.fetchone()
     delete_page_image_urls_if_unreferenced(cur, gc)
+    from app.page_image_slots import sync_paired_series_image
+
+    sync_paired_series_image(cur, page_key, slot_key, default_url, default_webp)
     return row
 
 
@@ -1226,6 +1229,8 @@ def restore_page_image_row(cur, existing: dict) -> tuple[dict | None, str | None
     if current_webp and current_webp != prev_webp and current_webp != default_webp:
         gc.append(current_webp)
     delete_page_image_urls_if_unreferenced(cur, gc)
+    from app.page_image_slots import sync_paired_series_image
+    sync_paired_series_image(cur, page_key, slot_key, prev_url, prev_webp)
     return row, None
 
 
@@ -1287,6 +1292,8 @@ def apply_page_image_replace_stack(
         row = cur.fetchone()
         if old_webp and old_webp != webp and old_webp != default_webp:
             delete_page_image_urls_if_unreferenced(cur, [old_webp])
+        from app.page_image_slots import sync_paired_series_image
+        sync_paired_series_image(cur, page_key, slot_key, url, webp)
         return row
 
     # A→B: previous=A; B→C: GC A, previous=B. Never stash defaults as previous.
@@ -1334,6 +1341,9 @@ def apply_page_image_replace_stack(
         and u != default_webp
     ]
     delete_page_image_urls_if_unreferenced(cur, gc)
+    from app.page_image_slots import sync_paired_series_image
+
+    sync_paired_series_image(cur, page_key, slot_key, url, webp)
     return row
 
 

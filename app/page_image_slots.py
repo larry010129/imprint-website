@@ -531,22 +531,56 @@ def _prefer_local_home_asset(slot_key: str, url: str, webp: str) -> tuple[str, s
     return url, webp
 
 
-_SIGNATURE_DEFAULT_STEM = "imprint-diamond-wedding-couple-ring"
+def _series_key_from_home_slot(slot_key: str) -> str | None:
+    raw = str(slot_key or "")
+    if not raw.startswith("series-"):
+        return None
+    key = raw[len("series-") :]
+    return key if key in _SERIES else None
 
 
-def _is_signature_default_asset(url: str, webp: str) -> bool:
+def paired_series_slot(page_key: str, slot_key: str) -> tuple[str, str] | None:
+    """Home series-* card <-> series page 主視覺."""
+    home_key = _series_key_from_home_slot(slot_key)
+    if page_key == "/" and home_key:
+        return f"/series/{home_key}/", "hero"
+    if str(slot_key or "") == "hero":
+        for key in _SERIES:
+            if page_key == f"/series/{key}/":
+                return "/", f"series-{key}"
+    return None
+
+
+def sync_paired_series_image(cur, page_key: str, slot_key: str, image_url: str, image_webp: str | None) -> None:
+    """Copy a 主視覺/home-card upload onto its twin so the two cannot drift."""
+    pair = paired_series_slot(page_key, slot_key)
+    if not pair:
+        return
+    twin_page, twin_slot = pair
+    cur.execute(
+        """
+        update page_images
+        set image_url = %s, image_webp = %s, updated_at = now()
+        where page_key = %s and slot_key = %s
+        """,
+        (image_url, image_webp, twin_page, twin_slot),
+    )
+
+
+def _is_series_default_asset(series_key: str, url: str, webp: str) -> bool:
     if _is_remote_asset(url) or _is_remote_asset(webp):
         return False
-    stem = _hero_stem(webp or url)
     if not (url or webp):
         return True
-    return stem == _SIGNATURE_DEFAULT_STEM
+    default_stem = _SERIES[series_key][1]
+    return _hero_stem(webp or url) == default_stem
 
 
-def _series_signature_admin_urls(url: str, webp: str) -> tuple[str, str]:
-    """Landing 真我鑽石 card: use 首頁 slot, else the series-page 主視覺."""
-    if not _is_signature_default_asset(url, webp):
-        return url, webp or url
+def _home_series_admin_urls(slot_key: str, url: str, webp: str) -> tuple[str, str]:
+    """Homepage series card: series 主視覺 wins over a leftover home-slot file."""
+    series_key = _series_key_from_home_slot(slot_key)
+    if not series_key:
+        return url, webp
     try:
         from app.content import (
             effective_page_image_url,
@@ -554,15 +588,20 @@ def _series_signature_admin_urls(url: str, webp: str) -> tuple[str, str]:
             fetch_page_image,
         )
         from app.database import get_connection
+        from app.image_urls import with_cache_buster
 
         with get_connection() as conn, conn.cursor() as cur:
-            row = fetch_page_image(cur, "/series/signature/", "hero")
+            row = fetch_page_image(cur, f"/series/{series_key}/", "hero")
         if not row:
             return url, webp
         hero = effective_page_image_url(row)
         hero_webp = effective_page_image_webp(row)
-        if hero and not _is_signature_default_asset(hero, hero_webp):
-            return hero, hero_webp or hero
+        if hero and not _is_series_default_asset(series_key, hero, hero_webp):
+            stamp = row.get("updated_at")
+            return (
+                with_cache_buster(hero, stamp),
+                with_cache_buster(hero_webp or hero, stamp),
+            )
     except Exception:
         pass
     return url, webp
@@ -647,7 +686,8 @@ def _replace_indexed(html: str, indexes: tuple[int, ...], url: str, webp: str) -
                 r"<(?:source|img)\b[^>]*>",
                 lambda match: (
                     ""
-                    if match.group().lower().startswith("<source") and not webp
+                    if match.group().lower().startswith("<source")
+                    and (not webp or not _looks_like_srcset(webp))
                     else _replace_tag_url(match.group(), url, webp)
                 ),
                 html[start:end],
@@ -688,8 +728,8 @@ def apply_page_image_slots(html: str, route: str, rows: list[dict]) -> str:
         )
         if route == "/":
             url, webp = _prefer_local_home_asset(spec.slot_key, url, webp)
-            if spec.slot_key == "series-signature":
-                url, webp = _series_signature_admin_urls(url, webp)
+            if _series_key_from_home_slot(spec.slot_key):
+                url, webp = _home_series_admin_urls(spec.slot_key, url, webp)
         elif route == "/series":
             url, webp = _prefer_local_series_asset(url, webp)
         marked = _replace_marked(html, spec.slot_key, url, webp)
