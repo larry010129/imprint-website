@@ -133,20 +133,35 @@ def _rewrite_query(url: str, extra: tuple[str, str] | None) -> str:
     return urlunsplit(parts._replace(query=urlencode(query)))
 
 
+def _bust_srcset_urls(srcset: str, stamp: str) -> str:
+    """Pin ``?v=`` on each URL in a srcset; keep width/density descriptors."""
+    parts: list[str] = []
+    for item in srcset.split(","):
+        piece = item.strip()
+        if not piece:
+            continue
+        bits = piece.split()
+        raw = bits[0]
+        if raw and not raw.startswith("data:"):
+            bits[0] = _rewrite_query(raw, (CACHE_BUST_PARAM, stamp))
+        parts.append(" ".join(bits))
+    return ", ".join(parts)
+
+
 def with_cache_buster(url: str | None, updated_at: Any) -> str:
     """Pin ``?v=<updated_at epoch>`` so a replaced image cannot serve stale bytes.
 
     Keyed on the row timestamp rather than the clock, so the URL is stable
     between renders and stays cacheable until the content actually changes.
-    An existing ``v`` is replaced, never appended twice.
+    An existing ``v`` is replaced, never appended twice. Srcset lists get the
+    same token on every URL so leftover responsive variants cannot stay stale.
     """
     value = str(url or "").strip()
     stamp = cache_bust_stamp(updated_at)
     if not value or not stamp or value.startswith("data:"):
         return value
-    # Comma/space means a srcset or descriptor list, not a single URL.
     if "," in value or any(char.isspace() for char in value):
-        return value
+        return _bust_srcset_urls(value, stamp)
     return _rewrite_query(value, (CACHE_BUST_PARAM, stamp))
 
 

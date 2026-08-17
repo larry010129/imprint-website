@@ -48,6 +48,17 @@ def test_effective_url_falls_back_to_default():
     assert effective_page_image_url(row) == "/static/a.jpg"
 
 
+def test_base_layout_unregisters_service_worker():
+    from pathlib import Path
+
+    html = (
+        Path(__file__).resolve().parents[1] / "content/site/templates/layouts/base.html"
+    ).read_text(encoding="utf-8")
+    assert "serviceWorker" in html
+    assert "unregister" in html
+    assert "navigator.serviceWorker.register" not in html
+
+
 def test_home_slot_rewrite_does_not_touch_carousel_duplicate():
     html = (
         '<img src="/static/images/hero/imprint-diamond-family-memorial.jpg">'
@@ -85,23 +96,31 @@ def test_home_prefers_local_sky_over_supabase():
     assert 'loading="lazy"' in out
 
 
-def test_home_series_slot_remaps_supabase_to_local_srcset():
+def test_home_series_slot_does_not_remap_remote_to_local_srcset():
     html = (
         '<picture><source type="image/webp" '
         'srcset="/static/images/hero/imprint-diamond-family-portrait-jewelry-800w.webp 800w">'
         '<img data-cms-slot="series-family" '
         'src="/static/images/hero/imprint-diamond-family-portrait-jewelry-800w.webp"></picture>'
     )
+    remote = (
+        "https://xxx.supabase.co/storage/v1/object/public/cms/"
+        "imprint-diamond-family-portrait-jewelry.jpg"
+    )
+    remote_webp = (
+        "https://xxx.supabase.co/storage/v1/object/public/cms/"
+        "imprint-diamond-family-portrait-jewelry.webp"
+    )
     row = {
         "slot_key": "series-family",
-        "display_url": "https://xxx.supabase.co/storage/v1/object/public/cms/imprint-diamond-family-portrait-jewelry.jpg",
-        "display_webp": "https://xxx.supabase.co/storage/v1/object/public/cms/imprint-diamond-family-portrait-jewelry.webp",
+        "display_url": remote,
+        "display_webp": remote_webp,
         "is_published": True,
     }
     out = apply_page_image_slots(html, "/", [row])
-    assert "supabase.co" not in out
-    assert "/static/images/hero/imprint-diamond-family-portrait-jewelry-800w.webp 800w" in out
-    assert "/static/images/hero/imprint-diamond-family-portrait-jewelry-1200w.webp 1200w" in out
+    assert remote in out
+    assert "/static/images/hero/imprint-diamond-family-portrait-jewelry-800w.webp" not in out
+    assert "/static/images/hero/imprint-diamond-family-portrait-jewelry-1200w.webp" not in out
 
 
 def test_home_series_custom_upload_replaces_stale_local_srcset():
@@ -129,6 +148,112 @@ def test_home_series_custom_upload_replaces_stale_local_srcset():
     assert "imprint-diamond-wedding-couple-ring" not in out
     assert f'src="{custom}"' in out
     assert f'srcset="{custom}"' in out
+    assert "<source" not in out.lower()
+
+
+def test_home_series_love_custom_upload_drops_wedding_couple_srcset():
+    html = (
+        '<picture><source type="image/webp" '
+        'srcset="/static/images/hero/imprint-diamond-wedding-couple-ring-800w.webp 800w, '
+        '/static/images/hero/imprint-diamond-wedding-couple-ring-1200w.webp 1200w">'
+        '<img data-cms-slot="series-love" '
+        'src="/static/images/hero/imprint-diamond-wedding-couple-ring-800w.webp" '
+        'srcset="/static/images/hero/imprint-diamond-wedding-couple-ring-800w.webp 800w"></picture>'
+    )
+    custom = (
+        "https://xxx.supabase.co/storage/v1/object/public/shop-media/"
+        "page-images/home/image-love-swap.webp"
+    )
+    stamp = datetime(2026, 8, 17, 6, 0, 0, tzinfo=timezone.utc)
+    row = {
+        "slot_key": "series-love",
+        "display_url": custom,
+        "display_webp": (
+            "https://xxx.supabase.co/storage/v1/object/public/shop-media/"
+            "site-images/hero/imprint-diamond-wedding-couple-ring.webp"
+        ),
+        "updated_at": stamp,
+        "is_published": True,
+    }
+    out = apply_page_image_slots(html, "/", [row])
+    assert f"{custom}?v=1786946400" in out
+    assert "imprint-diamond-wedding-couple-ring" not in out
+    assert "<source" not in out.lower()
+
+
+def test_series_overview_custom_upload_does_not_keep_local_srcset():
+    html = (
+        '<picture><source srcset="/static/images/hero/imprint-diamond-pet-memorial-cat.webp">'
+        '<img src="/static/images/hero/imprint-diamond-pet-memorial-cat.jpg" '
+        'data-cms-slot="pet"></picture>'
+    )
+    custom = (
+        "https://xxx.supabase.co/storage/v1/object/public/shop-media/"
+        "page-images/series-overview/pet-new.webp"
+    )
+    row = {
+        "slot_key": "pet",
+        "display_url": custom,
+        "display_webp": custom,
+        "is_published": True,
+    }
+    out = apply_page_image_slots(html, "/series", [row])
+    assert custom in out
+    assert "imprint-diamond-pet-memorial-cat" not in out
+    assert "-400w.webp" not in out
+    assert "/static/images/hero/" not in out
+
+
+def test_stock_remote_series_hero_does_not_override_custom_home_card(monkeypatch):
+    stock = (
+        "https://xxx.supabase.co/storage/v1/object/public/shop-media/"
+        "site-images/hero/imprint-diamond-newborn-baby-necklace.jpg"
+    )
+    custom = (
+        "https://xxx.supabase.co/storage/v1/object/public/shop-media/"
+        "page-images/home/moon-swap.webp"
+    )
+
+    class _Conn:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return None
+
+        def cursor(self):
+            return self
+
+    monkeypatch.setattr("app.database.get_connection", lambda: _Conn())
+    monkeypatch.setattr(
+        "app.content.fetch_page_image",
+        lambda *_a, **_k: {
+            "image_url": stock,
+            "image_webp": stock.replace(".jpg", ".webp"),
+            "default_image_url": "/static/images/hero/imprint-diamond-newborn-baby-necklace.jpg",
+            "is_published": True,
+            "updated_at": datetime(2025, 1, 1, tzinfo=timezone.utc),
+        },
+    )
+    html = (
+        '<img data-cms-slot="series-first-love" '
+        'src="/static/images/hero/imprint-diamond-newborn-baby-necklace-800w.webp" '
+        'srcset="/static/images/hero/imprint-diamond-newborn-baby-necklace-800w.webp 800w">'
+    )
+    out = apply_page_image_slots(
+        html,
+        "/",
+        [
+            {
+                "slot_key": "series-first-love",
+                "display_url": custom,
+                "display_webp": custom,
+                "is_published": True,
+            }
+        ],
+    )
+    assert custom in out
+    assert "imprint-diamond-newborn-baby-necklace" not in out
 
 
 def test_home_dna_cta_prefers_local_webp():
@@ -924,18 +1049,21 @@ def test_cache_buster_replaces_existing_v_without_doubling_query():
     assert with_cache_buster("/a.jpg", None) == "/a.jpg"
 
 
-def test_cache_buster_leaves_srcset_and_other_params_alone():
+def test_cache_buster_pins_srcset_urls_and_keeps_other_params():
     from app.image_urls import with_cache_buster
 
     stamp = datetime(2025, 8, 12, 3, 12, 44, tzinfo=timezone.utc)
-    # page_images.image_webp really holds srcset strings for some slots.
     srcset = "/static/images/learn-cards/faq-400.webp 400w, /static/images/learn-cards/faq.webp 800w"
-    assert with_cache_buster(srcset, stamp) == srcset
+    assert with_cache_buster(srcset, stamp) == (
+        "/static/images/learn-cards/faq-400.webp?v=1754968364 400w, "
+        "/static/images/learn-cards/faq.webp?v=1754968364 800w"
+    )
     assert with_cache_buster("/a.jpg?w=800", stamp) == "/a.jpg?w=800&v=1754968364"
 
 
-def test_serialize_page_image_busts_custom_url_but_not_default():
+def test_serialize_page_image_busts_custom_and_default_from_updated_at():
     stamp = datetime(2025, 8, 12, 3, 12, 44, tzinfo=timezone.utc)
+    later = datetime(2026, 8, 17, 6, 0, 0, tzinfo=timezone.utc)
     custom = _page_url("page-images/about/c.webp")
     row = serialize_page_image(
         _base_row(image_url=custom, image_webp=custom, updated_at=stamp)
@@ -945,8 +1073,11 @@ def test_serialize_page_image_busts_custom_url_but_not_default():
     # Raw columns stay clean so a save round-trip cannot persist the buster.
     assert row["image_url"] == custom
     fallback = serialize_page_image(_base_row(updated_at=stamp))
-    assert fallback["display_url"] == "/static/images/about/default.jpg"
-    assert fallback["display_webp"] == "/static/images/about/default.webp"
+    assert fallback["display_url"] == "/static/images/about/default.jpg?v=1754968364"
+    assert fallback["display_webp"] == "/static/images/about/default.webp?v=1754968364"
+    refreshed = serialize_page_image(_base_row(updated_at=later))
+    assert refreshed["display_url"] == "/static/images/about/default.jpg?v=1786946400"
+    assert refreshed["display_url"] != fallback["display_url"]
 
 
 def test_page_image_payload_strips_round_tripped_buster():

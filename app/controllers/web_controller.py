@@ -561,7 +561,7 @@ def _make_handler(meta: PageMeta, status_code: int = 200):
     async def handler(request: Request) -> HTMLResponse:
         from app.auth import get_user_id, is_admin
         from app.cms_copy_slots import apply_page_copy_slots
-        from app.page_image_slots import apply_page_image_slots
+        from app.page_image_slots import apply_page_image_slots, page_image_slot_specs
 
         site_edit = (
             str(request.query_params.get("cms_edit") or "").lower() in {"1", "true", "yes"}
@@ -595,6 +595,12 @@ def _make_handler(meta: PageMeta, status_code: int = 200):
             )
             html = html.replace("</body>", f"{edit_boot}</body>", 1)
             response.headers["Cache-Control"] = "no-store"
+        elif context.get("page_images") or any(
+            spec.page_key == meta.route for spec in page_image_slot_specs()
+        ):
+            # CMS slots can swap in place; HTML must revalidate. Static CSS/JS
+            # and catalog stills keep their own long-cache policy.
+            response.headers["Cache-Control"] = "no-cache, must-revalidate"
         response.body = html.encode(response.charset)
         response.headers["content-length"] = str(len(response.body))
         return response

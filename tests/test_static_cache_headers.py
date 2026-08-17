@@ -64,6 +64,17 @@ def test_html_not_long_cached_by_static_middleware(render_client):
     assert "max-age=2592000" not in cc
 
 
+def test_cms_html_revalidates_without_disabling_static_cache(render_client):
+    html = render_client.get("/")
+    assert html.status_code == 200
+    cc = (html.headers.get("Cache-Control") or "").lower()
+    assert "no-cache" in cc
+    assert "must-revalidate" in cc
+    assert "no-store" not in cc
+    css = render_client.get("/static/css/nav.css", params={"v": "4.12"})
+    assert css.headers.get("Cache-Control") == "public, max-age=31536000, immutable"
+
+
 def test_local_dev_static_is_no_store(local_client):
     resp = local_client.get("/static/css/nav.css", params={"v": "4.12"})
     assert resp.status_code == 200

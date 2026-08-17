@@ -568,8 +568,7 @@ def sync_paired_series_image(cur, page_key: str, slot_key: str, image_url: str, 
 
 
 def _is_series_default_asset(series_key: str, url: str, webp: str) -> bool:
-    if _is_remote_asset(url) or _is_remote_asset(webp):
-        return False
+    """True for empty or the series' stock hero stem (local or site-images copy)."""
     if not (url or webp):
         return True
     default_stem = _SERIES[series_key][1]
@@ -607,12 +606,29 @@ def _home_series_admin_urls(slot_key: str, url: str, webp: str) -> tuple[str, st
     return url, webp
 
 
-def _prefer_local_series_asset(url: str, webp: str) -> tuple[str, str]:
-    """Series overview: known hero stems ship local responsive srcset (PSI srcset save).
+def _is_stock_hero_asset(url: str) -> bool:
+    return bool(url) and _hero_stem(url) in _HERO_STEM_MAX_W
 
-    Same-content remotes (e.g. Supabase copies of hero assets) resolve to local
-    400/800/960/1200w variants; genuinely different custom uploads pass through.
+
+def _drop_stale_stock_srcset(url: str, webp: str) -> tuple[str, str]:
+    """Custom/admin URL must not keep leftover stock-hero webp or srcset."""
+    if not url or _looks_like_srcset(url):
+        return url, webp
+    if webp and _looks_like_srcset(webp) and not _is_stock_hero_asset(url):
+        return url, url
+    if webp and _is_stock_hero_asset(webp) and not _is_stock_hero_asset(url):
+        return url, url
+    return url, webp
+
+
+def _prefer_local_series_asset(url: str, webp: str) -> tuple[str, str]:
+    """Series overview: local stock stems may keep responsive srcset.
+
+    Remote/admin uploads pass through. Never re-attach /static/images/hero
+    srcset onto a CMS swap — browser would keep painting the old files.
     """
+    if _is_remote_asset(url) or _is_remote_asset(webp):
+        return url, webp or url
     stem = _hero_stem(webp or url)
     if stem in _HERO_STEM_MAX_W:
         return url, _hero_responsive_srcset(stem)
@@ -674,6 +690,17 @@ def _replace_tag_url(tag: str, url: str, webp: str = "") -> str:
     return tag
 
 
+def _replace_picture_child(tag: str, url: str, webp: str) -> str:
+    if tag.lower().startswith("<source"):
+        existing = _attribute(tag, "srcset") or _attribute(tag, "data-srcset")
+        # Drop leftover responsive hero srcset when the slot is now a single file.
+        if existing and _looks_like_srcset(existing) and not _looks_like_srcset(webp):
+            return ""
+        if not webp and not url:
+            return ""
+    return _replace_tag_url(tag, url, webp)
+
+
 def _replace_indexed(html: str, indexes: tuple[int, ...], url: str, webp: str) -> str:
     images = list(_IMG_RE.finditer(html))
     for index in sorted(indexes, reverse=True):
@@ -684,12 +711,7 @@ def _replace_indexed(html: str, indexes: tuple[int, ...], url: str, webp: str) -
             end += len("</picture>")
             block = re.sub(
                 r"<(?:source|img)\b[^>]*>",
-                lambda match: (
-                    ""
-                    if match.group().lower().startswith("<source")
-                    and (not webp or not _looks_like_srcset(webp))
-                    else _replace_tag_url(match.group(), url, webp)
-                ),
+                lambda match: _replace_picture_child(match.group(), url, webp),
                 html[start:end],
                 flags=re.IGNORECASE,
             )
@@ -732,6 +754,12 @@ def apply_page_image_slots(html: str, route: str, rows: list[dict]) -> str:
                 url, webp = _home_series_admin_urls(spec.slot_key, url, webp)
         elif route == "/series":
             url, webp = _prefer_local_series_asset(url, webp)
+        url, webp = _drop_stale_stock_srcset(url, webp)
+        from app.image_urls import with_cache_buster
+
+        stamp = row.get("updated_at")
+        url = with_cache_buster(url, stamp)
+        webp = with_cache_buster(webp, stamp)
         marked = _replace_marked(html, spec.slot_key, url, webp)
         if marked is not None:
             html = marked

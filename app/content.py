@@ -1376,26 +1376,17 @@ def serialize_page_image(row: dict) -> dict:
     for key in ("target_w", "target_h", "sort_order"):
         if out.get(key) is not None:
             out[key] = int(out[key])
-    # Defaults ship with the deploy; only admin-set URLs need the ?v= buster.
+    # Always pin ?v= to updated_at — same-path replace/reset must bust too.
     stamp = out.get("updated_at")
     display_url = effective_page_image_url(out)
     display_webp = effective_page_image_webp(out)
     default_url = str(out.get("default_image_url") or "").strip()
-    default_webp = str(out.get("default_image_webp") or "").strip()
     raw_image_url = str(out.get("image_url") or "").strip()
-    out["display_url"] = (
-        display_url if display_url == default_url else with_cache_buster(display_url, stamp)
-    )
-    out["display_webp"] = (
-        display_webp if display_webp == default_webp else with_cache_buster(display_webp, stamp)
-    )
+    out["display_url"] = with_cache_buster(display_url, stamp)
+    out["display_webp"] = with_cache_buster(display_webp, stamp)
     # Admin thumbs ignore publish: show uploaded asset even when unpublished.
     admin_src = raw_image_url or display_url or default_url
-    out["admin_preview_url"] = (
-        admin_src
-        if (not admin_src or admin_src == default_url)
-        else with_cache_buster(admin_src, stamp)
-    )
+    out["admin_preview_url"] = with_cache_buster(admin_src, stamp)
     prev_url = _page_img_str(out.get("previous_image_url")) or None
     prev_webp = _page_img_str(out.get("previous_image_webp")) or None
     out["previous_image_url"] = prev_url

@@ -34,6 +34,14 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 {% set defer_pages_css = is_series_overview or is_series_detail or is_jewelry_hub
   or _cp in ['about', 'stories', 'faq'] %}
 <meta charset="utf-8">
+<script>
+(function () {
+  if (!("serviceWorker" in navigator)) return;
+  navigator.serviceWorker.getRegistrations().then(function (regs) {
+    regs.forEach(function (reg) { reg.unregister(); });
+  });
+})();
+</script>
 {% set _sm = shop_media_config() %}
 <script>
 window.IMPRINT_DIAMOND_MEDIA_BASE = {{ diamond_media_base()|tojson }};
