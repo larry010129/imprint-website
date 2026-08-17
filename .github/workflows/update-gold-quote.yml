@@ -29,8 +29,8 @@ jobs:
       - name: Install Python deps
         run: pip install -r requirements.txt
 
-      # Writes quote files in this runner workspace only. Do not git add/commit/push.
-      # Do not add continue-on-error — a failed fetch must not POST checkout bootstrap JSON.
+      # Writes quote files in this runner workspace only. Do not commit them.
+      # Failed fetch must fail the job so checkout bootstrap JSON is never POSTed.
       - name: Fetch latest Allbeauty gold quote
         run: python scripts/fetch_gold_quote.py
 

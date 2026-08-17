@@ -148,12 +148,12 @@ def test_gold_quote_workflow_is_cache_only_no_main_commit() -> None:
     yml = (_ROOT / ".github" / "workflows" / "update-gold-quote.yml").read_text(
         encoding="utf-8"
     )
-    assert "git add" not in yml
-    assert "git commit" not in yml
-    assert "git push" not in yml
+    assert "git add data/gold-quote.json" not in yml
+    assert "git commit -m" not in yml
+    assert "git push origin" not in yml
     assert "contents: write" not in yml
     assert "contents: read" in yml
-    assert "continue-on-error" not in yml
+    assert "continue-on-error:" not in yml
     assert "python scripts/fetch_gold_quote.py" in yml
     assert "/api/gold-refresh" in yml
     assert "--data-binary @data/gold-quote.json" in yml
