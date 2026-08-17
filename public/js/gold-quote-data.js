@@ -5,9 +5,9 @@ window.__GOLD_QUOTE_BOOTSTRAP__ = {
     "sell": 4672.0,
     "sellPerChin": 17520.0,
     "source": "allbeauty",
-    "bot_posted_at": "2026-08-17 11:56:42",
-    "fetched_at": "2026-08-17T03:57:00.711493+00:00",
-    "fetched_at_display": "2026/08/17 11:57:00",
+    "bot_posted_at": "2026-08-17 12:43:42",
+    "fetched_at": "2026-08-17T04:46:06.676979+00:00",
+    "fetched_at_display": "2026/08/17 12:46:06",
     "is_stale": false,
     "source_url": "https://www.allbeauty.com.tw/m/"
   },
@@ -16,11 +16,11 @@ window.__GOLD_QUOTE_BOOTSTRAP__ = {
     "14k": 3504.0,
     "18k": 3971.2,
     "pt950": 2173.6000000000004,
-    "s925": 68.92360000000001
+    "s925": 69.00746666666667
   },
   "metals": {
     "XAU": 4672.0,
     "XPT": 1976.0,
-    "XAG": 74.512
+    "XAG": 74.60266666666666
   }
 };
