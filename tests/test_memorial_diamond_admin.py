@@ -85,6 +85,7 @@ def _load_admin_products():
     sys.modules["app.pricing_overrides"] = po
 
     st = types.ModuleType("app.storage")
+    st.diamond_media_base = lambda: ""
     st.delete_by_url = lambda *_a, **_k: False
     st.is_pending_product_object_key = lambda *_a, **_k: False
     st.is_supabase_storage_url = lambda *_a, **_k: False

@@ -52,13 +52,17 @@ _SLUG_RE = re.compile(r"[^a-z0-9]+")
 
 def matrix_shape_image_url(shape: str, color: str) -> str:
     """Bundled matrix PNG for shape × color."""
+    from app.storage import diamond_media_base
+
     shape_id = str(shape or "round").strip().lower()
     if not is_allowed_shape_id(shape_id):
         shape_id = "round"
     color_id = str(color or "white").strip().lower()
     if color_id not in VALID_DIAMOND_COLORS:
         color_id = "white"
-    return f"/static/images/diamonds/matrix/{shape_id}-{color_id}.png"
+    base = diamond_media_base()
+    prefix = f"{base}/diamonds/matrix" if base else "/static/images/diamonds/matrix"
+    return f"{prefix}/{shape_id}-{color_id}.png"
 
 
 def default_shape_images(color: str) -> dict[str, list[str]]:

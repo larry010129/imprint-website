@@ -549,15 +549,20 @@ def test_shop_calculator_context_skips_page_images_and_catalog_ssr(monkeypatch):
         }
     )
     shop_ctx = web_controller._context(request, SHOP_CALCULATOR)
+    from app.storage import diamond_media_base
+
     assert shop_ctx["shop_catalog_ssr"] == []
     assert shop_ctx["page_images"] == []
     assert shop_ctx["page_image"] is None
+    assert shop_ctx["diamond_media_base"] == diamond_media_base()
+    assert not str(shop_ctx["diamond_media_base"]).endswith("/")
     assert image_calls == []
     assert catalog_calls == []
 
     privacy_ctx = web_controller._context(request, PAGE_PRIVACY)
     assert image_calls == ["/privacy"]
     assert privacy_ctx["page_images"][0]["slot_key"] == "hero"
+    assert "diamond_media_base" not in privacy_ctx
 
 
 def test_delete_page_image_urls_unreferenced_calls_delete(

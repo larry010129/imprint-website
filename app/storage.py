@@ -149,6 +149,15 @@ def public_url_for_object(object_path: str, *, bucket: str | None = None) -> str
     return f"{base}/storage/v1/object/public/{b}/{path}"
 
 
+def diamond_media_base() -> str:
+    """Public site-images prefix for shop diamond stills. No secrets."""
+    base = (settings.supabase_url or "").rstrip("/")
+    bucket = (settings.supabase_storage_bucket or "shop-media").strip() or "shop-media"
+    if not base:
+        return ""
+    return f"{base}/storage/v1/object/public/{bucket}/site-images"
+
+
 def is_supabase_storage_url(url: str | None) -> bool:
     if not url:
         return False

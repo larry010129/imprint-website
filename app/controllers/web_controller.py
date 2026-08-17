@@ -496,6 +496,10 @@ def _context(request: Request, meta: PageMeta, *, include_journal_ssr: bool = Tr
         "journal_ssr": [],
         "shop_catalog_ssr": [],
     }
+    if is_shop_calculator:
+        from app.storage import diamond_media_base
+
+        context["diamond_media_base"] = diamond_media_base()
     if meta.content_fragment:
         context["content_html"] = _load_fragment(meta.content_fragment)
     if meta.route == "/faq":

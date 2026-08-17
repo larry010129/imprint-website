@@ -8,7 +8,11 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qsl, unquote, urlencode, urlsplit, urlunsplit
 
-from app.storage import is_supabase_storage_url, prefer_category_scoped_product_url
+from app.storage import (
+    diamond_media_base,
+    is_supabase_storage_url,
+    prefer_category_scoped_product_url,
+)
 
 # Query key for cache-busting. `?v=` is the repo convention: the static
 # middleware in app/__init__.py grants 1y+immutable to query-bearing URLs.
@@ -422,19 +426,21 @@ def diamond_matrix_image_url(
     shape: str | None = None,
     diamond_color: str | None = None,
 ) -> str:
-    """Loose memorial-diamond preview from public/images/diamonds/matrix/."""
+    """Loose memorial-diamond preview from site-images/diamonds/matrix/."""
     shape_id = (shape or "round").strip().lower()
     color_id = _resolve_diamond(diamond_color)
     # Prefer requested cut; unknown custom ids still resolve if asset exists.
     candidates = [shape_id]
     if shape_id not in _DIAMOND_MATRIX_SHAPES and shape_id != "round":
         candidates.append("round")
+    base = diamond_media_base()
+    prefix = f"{base}/diamonds/matrix" if base else "/static/images/diamonds/matrix"
     for sid in candidates:
-        url = f"/static/images/diamonds/matrix/{sid}-{color_id}.png"
-        if static_url_exists(url):
+        url = f"{prefix}/{sid}-{color_id}.png"
+        if base or static_url_exists(url):
             return url
         if color_id != "white":
-            white = f"/static/images/diamonds/matrix/{sid}-white.png"
+            white = f"{prefix}/{sid}-white.png"
             if static_url_exists(white):
                 return white
     return ""
