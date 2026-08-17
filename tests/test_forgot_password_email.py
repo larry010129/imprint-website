@@ -103,10 +103,31 @@ def test_request_reset_parses_email_then_subjects_limit_without_totp_gate():
     json_src = (root / "app" / "controllers" / "auth_controller.py").read_text(encoding="utf-8")
     htmx_fn = htmx.split("async def auth_request_reset", 1)[1].split("async def ", 1)[0]
     json_fn = json_src.split("async def request_password_reset", 1)[1].split("async def ", 1)[0]
+    invalidate = (
+        "update password_reset_tokens set used_at = now() "
+        "where user_id = %s and used_at is null"
+    )
     for src in (htmx_fn, json_fn):
         assert src.index("strip().lower()") < src.index("enforce_rate_limit")
         assert "subject=email or None" in src
         assert "totp_enabled" not in src
+        assert "get_transaction()" in src
+        assert src.index(invalidate) < src.index(
+            "insert into password_reset_tokens (token, user_id, expires_at)"
+        )
+
+
+def test_consume_reset_keeps_used_at_check():
+    root = Path(__file__).resolve().parents[1]
+    htmx = (root / "app" / "controllers" / "htmx_auth.py").read_text(encoding="utf-8")
+    json_src = (root / "app" / "controllers" / "auth_controller.py").read_text(encoding="utf-8")
+    htmx_fn = htmx.split("async def auth_reset_password", 1)[1]
+    json_fn = json_src.split("async def reset_password", 1)[1].split("async def ", 1)[0]
+    for src in (htmx_fn, json_fn):
+        assert 'row["used_at"] is not None' in src
+        assert "update password_reset_tokens set used_at" in src
+        assert "where token = %s" in src
+        assert "and used_at is null" not in src
 
 
 def test_forgot_password_page_does_not_name_resend():
@@ -423,6 +444,111 @@ def test_request_reset_empty_email_omits_subject_key(client):
             "select lockout_key from login_lockouts where lockout_key like 'pwreset:acct:%'"
         )
         assert cur.fetchall() == []
+
+
+def _raw_token_from_reset_url(url: str) -> str:
+    return url.split("token=", 1)[1]
+
+
+def _unused_token_hashes(user_id: str) -> list[str]:
+    from app.database import get_connection
+
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            select token from password_reset_tokens
+            where user_id = %s and used_at is null
+            order by expires_at
+            """,
+            (user_id,),
+        )
+        return [row["token"] for row in cur.fetchall()]
+
+
+def _request_htmx_reset_token(client, email: str) -> str:
+    with patch("app.mail.send_password_reset_email", return_value=True) as send:
+        resp = client.post(
+            "/htmx/auth/request-reset",
+            headers={"HX-Request": "true"},
+            data={"email": email},
+        )
+    assert resp.status_code == 200
+    assert "若此 Email 已註冊" in resp.text
+    send.assert_called_once()
+    return _raw_token_from_reset_url(send.call_args.kwargs["reset_url"])
+
+
+def _request_json_reset_token(client, email: str) -> str:
+    with patch("app.mail.send_password_reset_email", return_value=True) as send:
+        resp = client.post("/api/auth/request-password-reset", json={"email": email})
+    assert resp.status_code == 200
+    assert resp.json() == {"ok": True}
+    send.assert_called_once()
+    return _raw_token_from_reset_url(send.call_args.kwargs["reset_url"])
+
+
+@pytest.mark.skipif(not os.environ.get("DATABASE_URL"), reason="DATABASE_URL not set")
+def test_htmx_second_request_reset_invalidates_prior_unused_token(client):
+    import hashlib
+
+    user_id, email = _insert_reset_user()
+    try:
+        first = _request_htmx_reset_token(client, email)
+        second = _request_htmx_reset_token(client, email)
+        first_hash = hashlib.sha256(first.encode("utf-8")).hexdigest()
+        second_hash = hashlib.sha256(second.encode("utf-8")).hexdigest()
+        unused = _unused_token_hashes(user_id)
+        assert unused == [second_hash]
+        assert first_hash not in unused
+
+        reuse = client.post(
+            "/htmx/auth/reset-password",
+            headers={"HX-Request": "true"},
+            data={"token": first, "password": "newpass12"},
+        )
+        assert reuse.status_code == 400
+        assert "無效或已過期" in reuse.text
+
+        ok = client.post(
+            "/htmx/auth/reset-password",
+            headers={"HX-Request": "true"},
+            data={"token": second, "password": "newpass12"},
+        )
+        assert ok.status_code == 200
+        assert ok.headers.get("HX-Redirect") == "/login"
+    finally:
+        _delete_reset_user(user_id)
+
+
+@pytest.mark.skipif(not os.environ.get("DATABASE_URL"), reason="DATABASE_URL not set")
+def test_json_second_request_reset_invalidates_prior_unused_token(client):
+    import hashlib
+
+    user_id, email = _insert_reset_user()
+    try:
+        first = _request_json_reset_token(client, email)
+        second = _request_json_reset_token(client, email)
+        first_hash = hashlib.sha256(first.encode("utf-8")).hexdigest()
+        second_hash = hashlib.sha256(second.encode("utf-8")).hexdigest()
+        unused = _unused_token_hashes(user_id)
+        assert unused == [second_hash]
+        assert first_hash not in unused
+
+        reuse = client.post(
+            "/api/auth/reset-password",
+            json={"token": first, "newPassword": "newpass12"},
+        )
+        assert reuse.status_code == 400
+        assert reuse.json()["error"] == "重設連結無效或已過期，請重新申請"
+
+        ok = client.post(
+            "/api/auth/reset-password",
+            json={"token": second, "newPassword": "newpass12"},
+        )
+        assert ok.status_code == 200
+        assert ok.json() == {"ok": True}
+    finally:
+        _delete_reset_user(user_id)
 
 
 @pytest.mark.skipif(not os.environ.get("DATABASE_URL"), reason="DATABASE_URL not set")

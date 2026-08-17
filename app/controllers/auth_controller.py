@@ -71,7 +71,7 @@ from app.auth_totp_service import (
     verify_step_up_password,
     verify_totp_for_pwreset,
 )
-from app.database import get_connection
+from app.database import get_connection, get_transaction
 from app.google_people import (
     fetch_people_profile,
     merge_into_profile,
@@ -496,7 +496,11 @@ async def request_password_reset(request: Request) -> JSONResponse:
 
     raw_token = secrets.token_urlsafe(32)
     expires = datetime.now(timezone.utc) + timedelta(hours=RESET_TOKEN_TTL_HOURS)
-    with get_connection() as conn, conn.cursor() as cur:
+    with get_transaction() as conn, conn.cursor() as cur:
+        cur.execute(
+            "update password_reset_tokens set used_at = now() where user_id = %s and used_at is null",
+            (user["id"],),
+        )
         cur.execute(
             "insert into password_reset_tokens (token, user_id, expires_at) values (%s, %s, %s)",
             (_hash_reset_token(raw_token), user["id"], expires),
@@ -525,7 +529,7 @@ async def reset_password(request: Request) -> JSONResponse:
 
     token_hash = _hash_reset_token(token)
     now = datetime.now(timezone.utc)
-    with get_connection() as conn, conn.cursor() as cur:
+    with get_transaction() as conn, conn.cursor() as cur:
         cur.execute(
             "select token, user_id, expires_at, used_at from password_reset_tokens where token = %s",
             (token_hash,),

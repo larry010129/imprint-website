@@ -51,7 +51,7 @@ from app.auth_totp_service import (
 )
 from app.captcha import recaptcha_error_or_none
 from app.controllers.htmx_common import form_bool, html, hx_redirect
-from app.database import get_connection
+from app.database import get_connection, get_transaction
 from app.membership_referral import apply_friend_referral, ensure_referral_code
 from config.settings import settings
 
@@ -385,7 +385,11 @@ async def auth_request_reset(request: Request) -> HTMLResponse:
         raw = secrets.token_urlsafe(32)
         token_hash = hashlib.sha256(raw.encode("utf-8")).hexdigest()
         expires = datetime.now(timezone.utc) + timedelta(hours=1)
-        with get_connection() as conn, conn.cursor() as cur:
+        with get_transaction() as conn, conn.cursor() as cur:
+            cur.execute(
+                "update password_reset_tokens set used_at = now() where user_id = %s and used_at is null",
+                (user["id"],),
+            )
             cur.execute(
                 "insert into password_reset_tokens (token, user_id, expires_at) values (%s, %s, %s)",
                 (token_hash, user["id"], expires),
@@ -418,7 +422,7 @@ async def auth_reset_password(request: Request) -> Response:
 
     token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
     now = datetime.now(timezone.utc)
-    with get_connection() as conn, conn.cursor() as cur:
+    with get_transaction() as conn, conn.cursor() as cur:
         cur.execute(
             "select token, user_id, expires_at, used_at from password_reset_tokens where token = %s",
             (token_hash,),
