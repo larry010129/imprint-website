@@ -1012,9 +1012,12 @@
     preview: {% if q_preview %}true{% else %}false{% endif %},
   }, window.shopConfig || {});
 </script>
-<script src="/static/js/shop-assets.js?v=16" defer></script>
+<script>
+  window.IMPRINT_DIAMOND_MEDIA_BASE = {{ diamond_media_base|default('')|tojson }};
+</script>
+<script src="/static/js/shop-assets.js?v=17" defer></script>
 <script src="/static/js/shop-i18n.js?v=24" defer></script>
 <script src="/static/js/shop-terms.js?v=5" defer></script>
 <script src="/static/js/catalog-multi-filter.js?v=1" defer></script>
-<script src="/static/js/shop.js?v=168" defer></script>
+<script src="/static/js/shop.js?v=169" defer></script>
 {% endblock %}

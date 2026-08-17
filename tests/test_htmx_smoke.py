@@ -218,6 +218,7 @@ def test_calculator_page_shop_js_wizard(client):
     assert "text/html" in resp.headers.get("content-type", "")
     assert 'id="shop-page"' in resp.text
     assert "/static/js/shop.js" in resp.text
+    assert "window.IMPRINT_DIAMOND_MEDIA_BASE" in resp.text
     assert "/static/js/shop-i18n.js" in resp.text
     assert "/static/js/shop-pricing-local.js" in resp.text
     assert "GTM-KD4FZ458" in resp.text

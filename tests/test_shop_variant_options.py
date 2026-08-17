@@ -256,10 +256,10 @@ def test_shop_js_fancy_carat_dropdown_intersects_admin_min():
     assert "stockFancyDiamondColors" in (
         ROOT / "public" / "js" / "shop-assets.js"
     ).read_text(encoding="utf-8")
-    assert "shop.js?v=168" in (
+    assert "shop.js?v=169" in (
         ROOT / "content" / "site" / "templates" / "pages" / "shop" / "calculator.html"
     ).read_text(encoding="utf-8")
-    assert "shop.js?v=168" in (
+    assert "shop.js?v=169" in (
         ROOT / "content" / "site" / "page-registry.json"
     ).read_text(encoding="utf-8")
     assert "function setShopOptionDisabled" in src
@@ -282,7 +282,7 @@ def test_shop_js_fancy_carat_dropdown_intersects_admin_min():
         "// Full catalog: 預設顏色 slots first; lite uses server thumbUrl (same priority)."
         in src
     )
-    assert "shop-assets.js?v=16" in (
+    assert "shop-assets.js?v=17" in (
         ROOT / "content" / "site" / "templates" / "pages" / "shop" / "calculator.html"
     ).read_text(encoding="utf-8")
     # Fancy preview must not reuse metal-only / white-stone catalog slots.
@@ -1445,3 +1445,95 @@ def test_ring_configurator_reserves_color_slot_in_2x2_grid():
     assert "classList.toggle('hidden', !show)" not in color_fn
     assert "classList.toggle('is-placeholder', !show && !collapse)" in color_fn
     assert "hidden-collapse" in color_fn
+
+
+def test_calculator_emits_imprint_diamond_media_base_before_shop_js():
+    calc = (
+        ROOT / "content" / "site" / "templates" / "pages" / "shop" / "calculator.html"
+    ).read_text(encoding="utf-8")
+    inject = 'window.IMPRINT_DIAMOND_MEDIA_BASE = {{ diamond_media_base|default(\'\')|tojson }};'
+    assert inject in calc
+    assert calc.index("IMPRINT_DIAMOND_MEDIA_BASE") < calc.index("shop-assets.js")
+    assert calc.index("IMPRINT_DIAMOND_MEDIA_BASE") < calc.index("shop.js?v=169")
+
+
+def test_diamond_asset_url_uses_imprint_media_base():
+    import json
+    import subprocess
+
+    script = r"""
+const fs = require('fs');
+const vm = require('vm');
+const shop = fs.readFileSync('public/js/shop.js', 'utf8');
+const start = shop.indexOf('function imprintDiamondMediaBase()');
+const end = shop.indexOf('function isBundledMatrixUrl(');
+if (start < 0 || end < 0) throw new Error('helpers not found');
+const sandbox = { window: {}, results: {} };
+vm.runInNewContext(shop.slice(start, end) + `
+  results.empty = diamondAssetUrl('diamonds/matrix/round-white.webp');
+  window.IMPRINT_DIAMOND_MEDIA_BASE = '  https://example.supabase.co/storage/v1/object/public/shop-media/site-images/  ';
+  results.base = diamondAssetUrl('diamonds/matrix/round-white.webp');
+  results.blank = (window.IMPRINT_DIAMOND_MEDIA_BASE = '', diamondAssetUrl('diamonds/matrix/round-white.webp'));
+`, sandbox);
+console.log(JSON.stringify(sandbox.results));
+"""
+    out = subprocess.check_output(["node", "-e", script], cwd=ROOT, text=True)
+    results = json.loads(out)
+    assert results["empty"] == "/static/images/diamonds/matrix/round-white.webp?v=25"
+    assert results["blank"] == "/static/images/diamonds/matrix/round-white.webp?v=25"
+    assert results["base"] == (
+        "https://example.supabase.co/storage/v1/object/public/shop-media/"
+        "site-images/diamonds/matrix/round-white.webp?v=25"
+    )
+
+
+def test_girdle_and_catalog_cluster_use_imprint_media_base():
+    import json
+    import subprocess
+
+    script = r"""
+const fs = require('fs');
+const vm = require('vm');
+const assetsSrc = fs.readFileSync('public/js/shop-assets.js', 'utf8');
+const girdleSrc = fs.readFileSync('public/js/girdle-engrave.js', 'utf8');
+const sandbox = { window: {}, document: { createElement() { return {}; } }, console };
+sandbox.global = sandbox.window;
+vm.runInNewContext(assetsSrc, sandbox);
+vm.runInNewContext(girdleSrc, sandbox);
+const emptyCluster = sandbox.window.ShopAssets.categoryThumb('diamond');
+const emptyLegacy = sandbox.window.ShopAssets.categoryThumbLegacy('diamond');
+const emptyGirdle = sandbox.window.GirdleEngrave.matrixSrc('round', 'white');
+const emptyPng = sandbox.window.GirdleEngrave.matrixPngSrc('round', 'white');
+sandbox.window.IMPRINT_DIAMOND_MEDIA_BASE =
+  'https://example.supabase.co/storage/v1/object/public/shop-media/site-images/';
+const baseCluster = sandbox.window.ShopAssets.categoryThumb('diamond');
+const baseLegacy = sandbox.window.ShopAssets.categoryThumbLegacy('diamond');
+const baseGirdle = sandbox.window.GirdleEngrave.matrixSrc('round', 'white');
+const basePng = sandbox.window.GirdleEngrave.matrixPngSrc('round', 'white');
+console.log(JSON.stringify({
+  emptyCluster, emptyLegacy, baseCluster, baseLegacy,
+  emptyGirdle, emptyPng, baseGirdle, basePng
+}));
+"""
+    out = subprocess.check_output(["node", "-e", script], cwd=ROOT, text=True)
+    results = json.loads(out)
+    assert results["emptyCluster"] == "/static/images/diamonds/colors/catalog-cluster.webp"
+    assert results["emptyLegacy"] == "/static/images/diamonds/colors/catalog-cluster.png"
+    assert results["baseCluster"] == (
+        "https://example.supabase.co/storage/v1/object/public/shop-media/"
+        "site-images/diamonds/colors/catalog-cluster.webp"
+    )
+    assert results["baseLegacy"] == (
+        "https://example.supabase.co/storage/v1/object/public/shop-media/"
+        "site-images/diamonds/colors/catalog-cluster.png"
+    )
+    assert results["emptyGirdle"] == "/static/images/diamonds/girdle-matrix/round-white.webp?v=9"
+    assert results["emptyPng"] == "/static/images/diamonds/girdle-matrix/round-white.png?v=9"
+    assert results["baseGirdle"] == (
+        "https://example.supabase.co/storage/v1/object/public/shop-media/"
+        "site-images/diamonds/girdle-matrix/round-white.webp?v=9"
+    )
+    assert results["basePng"] == (
+        "https://example.supabase.co/storage/v1/object/public/shop-media/"
+        "site-images/diamonds/girdle-matrix/round-white.png?v=9"
+    )

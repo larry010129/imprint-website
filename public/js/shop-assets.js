@@ -80,7 +80,7 @@
   };
 
   var CATEGORY_THUMB = {
-    diamond: '/static/images/diamonds/colors/catalog-cluster.webp',
+    diamond: 'diamonds/colors/catalog-cluster.webp',
     pendant: 'thumbs/pendant/A.webp',
     ring: 'thumbs/ring/A.webp',
     earring: 'thumbs/earring/A.webp',
@@ -90,13 +90,26 @@
 
   /* Pre-WebP originals, kept on disk as onerror fallback for categoryThumb. */
   var CATEGORY_THUMB_LEGACY = {
-    diamond: '/static/images/diamonds/colors/catalog-cluster.png',
+    diamond: 'diamonds/colors/catalog-cluster.png',
     pendant: 'thumbs/pendant/A.jpg',
     ring: 'thumbs/ring/A.jpg',
     earring: 'thumbs/earring/A.jpg',
     bracelet: 'thumbs/bracelet/A.jpg',
     chain: 'thumbs/chain/A.jpg',
   };
+
+  /** Rex injects window.IMPRINT_DIAMOND_MEDIA_BASE. Empty / whitespace → /static/images/. */
+  function imprintDiamondMediaBase() {
+    var raw = String(global.IMPRINT_DIAMOND_MEDIA_BASE || '').trim();
+    return raw.replace(/\/+$/, '');
+  }
+
+  function diamondMediaUrl(rel) {
+    var path = String(rel || '').replace(/^\/+/, '');
+    var base = imprintDiamondMediaBase();
+    if (base) return base + '/' + path;
+    return '/static/images/' + path;
+  }
 
   function thumbUrl(rel) {
     if (!rel) return '';
@@ -105,10 +118,12 @@
   }
 
   function categoryThumb(category) {
+    if (category === 'diamond') return diamondMediaUrl(CATEGORY_THUMB.diamond);
     return thumbUrl(CATEGORY_THUMB[category]);
   }
 
   function categoryThumbLegacy(category) {
+    if (category === 'diamond') return diamondMediaUrl(CATEGORY_THUMB_LEGACY.diamond);
     return thumbUrl(CATEGORY_THUMB_LEGACY[category]);
   }
 
