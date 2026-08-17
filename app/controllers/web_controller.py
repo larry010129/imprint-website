@@ -608,6 +608,10 @@ def _make_handler(meta: PageMeta, status_code: int = 200):
             response.headers["Cache-Control"] = "no-cache, must-revalidate"
         response.body = html.encode(response.charset)
         response.headers["content-length"] = str(len(response.body))
+        if meta.route == "/reset-password":
+            # Token lives in ?token= — must assign, not setdefault, so the
+            # global strict-origin-when-cross-origin middleware cannot win.
+            response.headers["Referrer-Policy"] = "no-referrer"
         return response
 
     return handler
