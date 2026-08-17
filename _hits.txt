@@ -1,0 +1,68 @@
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\bodies\about.html:95:<a href="https://www.youtube.com/@imprintdiamond" rel="noopener" target="_blank">前往 YouTube 頻道 →</a>
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\bodies\contact.html:7:<li><span class="k">門市</span><span class="v"><a href="https://maps.app.goo.gl/3Fed2YEpWa8LxQoy9" rel="noopener noreferrer" target="_blank">新北市三重區福德南路 43 號 1 樓（預約制，請先聯繫再蒞臨）</a></spa
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\bodies\contact.html:9:<li><span class="k">LINE</span><span class="v"><a href="https://lin.ee/ktVBtmx" rel="noopener" target="_blank">@imprintdiamond 官方帳號</a></span></li>
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\bodies\faq.html:222:<div class="faq-a-inner">線上客製試算｜前往 <a href="/shop/calculator/">客製試算頁</a>，依步驟選擇品項、款式、金屬與鑽石規格，系統即時試算價格；確認後可加入購物車並送出訂單，我們會與您聯繫確認樣本與細節。預約顧問｜也可透過官方 LINE 預約，由專屬顧問一對一討論需求、確認樣本份量與報價。門市：新北市
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\bodies\home.html:322:<div class="faq-item"><details><summary class="faq-q">如何開始訂製？</summary><div class="faq-a-inner">線上客製試算｜前往 <a href="/shop/calculator/">客製試算頁</a>，依步驟選擇品項、款式、金屬與鑽石規格，系統即時試算價格；確認後可加入購物
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\bodies\series__love.html:56:<div class="faq-item"><details><summary class="faq-q">可以預約看款嗎？</summary><div class="faq-a-inner">可以。門市在新北市三重區福德南路 43 號 1 樓（預約制），也可先 LINE 預約，或至<a href="/contact">聯絡我們</a>留言。</div></
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\partials\social-fab.html:38:      href="https://www.instagram.com/imprintdiamond1688/"
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\layouts\base.html:68:<meta property="og:image" content="https://www.imprintdiamond.com/{{ og_image or 'static/images/hero/imprint-diamond-family-memorial.jpg' }}">
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\layouts\base.html:70:<meta name="twitter:image" content="https://www.imprintdiamond.com/{{ og_image or 'static/images/hero/imprint-diamond-family-memorial.jpg' }}">
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\layouts\base.html:117:{"@context":"https://schema.org","@type":"Organization","@id":"https://www.imprintdiamond.com/#organization","name":"銘印鑽石 IMPRINT DIAMOND","alternateName":["銘印鑽石","IMPRINT DIAMOND"
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\layouts\base.html:122:{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{% for name, url in breadcrumbs %}{"@type":"ListItem","position":{{ loop.index }},"name":"{{ name }}"{%
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\pages\about.html:180:            <a href="{{ youtube_latest_video.channel_url or 'https://www.youtube.com/@imprintdiamond' }}" target="_blank" rel="noopener">前往 YouTube 頻道 →</a>
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\pages\contact.html:7:  "@id": "https://www.imprintdiamond.com/#store",
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\pages\contact.html:11:  "url": "https://www.imprintdiamond.com/contact",
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\pages\contact.html:13:  "image": "https://www.imprintdiamond.com/static/images/hero/imprint-diamond-family-memorial.jpg",
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\pages\contact.html:14:  "description": "銘印鑽石三重門市（預約制）：新北市三重區福德南路 43 號 1 樓。DNA 紀念鑽石訂製、結髮鑽石與婚戒諮詢。",
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\pages\contact.html:17:    "streetAddress": "福德南路43號1樓",
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\pages\contact.html:24:    "@id": "https://www.imprintdiamond.com/#organization"
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\pages\contact.html:40:        銘印鑽石（IMPRINT DIAMOND／心之銘印鑽石有限公司）門市位於新北市三重區福德南路 43 號 1 樓，採預約制；電話 <a href="tel:+886229770268">02-2977-0268</a>。歡迎預約來店，親眼見證鑽石生長：可先到<a href="/shop/calculator/">線上客製試算</a>，或了解<a
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\pages\contact.html:44:        <li><span class="k" data-cms-text="info-k-address">門市</span><span class="v"><a href="https://maps.app.goo.gl/3Fed2YEpWa8LxQoy9" target="_blank" rel="noopener noreferrer" da
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\pages\contact.html:47:        <li><span class="k" data-cms-text="info-k-line">LINE</span><span class="v"><a href="https://lin.ee/ktVBtmx" target="_blank" rel="noopener" data-cms-button="info-line">@impr
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\pages\diamond-4c.html:7:  "@id": "https://www.imprintdiamond.com/diamond-4c#webpage",
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\pages\diamond-4c.html:8:  "url": "https://www.imprintdiamond.com/diamond-4c",
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\pages\diamond-4c.html:12:  "isPartOf": { "@id": "https://www.imprintdiamond.com/#website" },
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\pages\diamond-4c.html:13:  "author": { "@id": "https://www.imprintdiamond.com/#organization" },
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\pages\diamond-4c.html:14:  "publisher": { "@id": "https://www.imprintdiamond.com/#organization" }
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\pages\diamond-comparison.html:7:  "@id": "https://www.imprintdiamond.com/diamond-comparison#webpage",
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\pages\diamond-comparison.html:8:  "url": "https://www.imprintdiamond.com/diamond-comparison",
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\pages\diamond-comparison.html:12:  "isPartOf": { "@id": "https://www.imprintdiamond.com/#website" },
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\pages\diamond-comparison.html:13:  "author": { "@id": "https://www.imprintdiamond.com/#organization" },
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\pages\diamond-comparison.html:14:  "publisher": { "@id": "https://www.imprintdiamond.com/#organization" }
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\pages\index.html:79:  "@id": "https://www.imprintdiamond.com/#store",
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\pages\index.html:83:  "url": "https://www.imprintdiamond.com/",
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\pages\index.html:85:  "image": "https://www.imprintdiamond.com/static/images/hero/imprint-diamond-family-memorial.jpg",
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\pages\index.html:90:    "streetAddress": "福德南路43號1樓",
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\pages\index.html:97:    "@id": "https://www.imprintdiamond.com/#organization"
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\pages\index.html:111:  "@id": "https://www.imprintdiamond.com/#website",
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\pages\index.html:114:  "url": "https://www.imprintdiamond.com/",
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\pages\index.html:117:    "@id": "https://www.imprintdiamond.com/#organization"
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\pages\index.html:155:        "text": "線上客製試算｜前往客製試算頁，依步驟選擇品項、款式、金屬與鑽石規格，系統即時試算價格；確認後可加入購物車並送出訂單。預約顧問｜也可透過官方 LINE 預約。門市：新北市三重區福德南路 43 號 1 樓（預約制）。"
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\pages\index.html:612:    <div class="faq-item"><details><summary class="faq-q">如何開始訂製？</summary><div class="faq-a-inner">線上客製試算｜前往 <a href="/shop/calculator/">客製試算頁</a>，依步驟選擇品項、款式、金屬與鑽石規格，系統即時試算價格；確認後可
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\pages\lab-grown-diamond.html:7:  "@id": "https://www.imprintdiamond.com/lab-grown-diamond#webpage",
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\pages\lab-grown-diamond.html:8:  "url": "https://www.imprintdiamond.com/lab-grown-diamond",
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\pages\lab-grown-diamond.html:12:  "isPartOf": { "@id": "https://www.imprintdiamond.com/#website" },
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\pages\lab-grown-diamond.html:13:  "author": { "@id": "https://www.imprintdiamond.com/#organization" },
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\pages\lab-grown-diamond.html:14:  "publisher": { "@id": "https://www.imprintdiamond.com/#organization" }
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\pages\stories.html:16:{"@context":"https://schema.org","@type":"CollectionPage","name":"客戶見證","url":"https://www.imprintdiamond.com/stories"}
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\pages\what-is-dna-diamond.html:7:  "@id": "https://www.imprintdiamond.com/what-is-dna-diamond#webpage",
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\pages\what-is-dna-diamond.html:8:  "url": "https://www.imprintdiamond.com/what-is-dna-diamond",
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\pages\what-is-dna-diamond.html:12:  "isPartOf": { "@id": "https://www.imprintdiamond.com/#website" },
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\pages\what-is-dna-diamond.html:13:  "author": { "@id": "https://www.imprintdiamond.com/#organization" },
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\pages\what-is-dna-diamond.html:14:  "publisher": { "@id": "https://www.imprintdiamond.com/#organization" }
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\pages\jewelry\engagement.html:7:  "@id": "https://www.imprintdiamond.com/jewelry/engagement/#webpage",
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\pages\jewelry\engagement.html:8:  "url": "https://www.imprintdiamond.com/jewelry/engagement/",
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\pages\jewelry\engagement.html:12:  "isPartOf": { "@id": "https://www.imprintdiamond.com/#website" },
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\pages\jewelry\engagement.html:13:  "author": { "@id": "https://www.imprintdiamond.com/#organization" },
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\pages\jewelry\engagement.html:14:  "publisher": { "@id": "https://www.imprintdiamond.com/#organization" }
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\partials\footer.html:109:          <a href="https://www.youtube.com/@imprintdiamond" aria-label="YouTube" target="_blank" rel="noopener noreferrer">
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\partials\footer.html:233:              href="https://www.youtube.com/@imprintdiamond"
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\partials\footer.html:327:              <address><span class="site-footer__addr">新北市三重區福德南路 43 號 1 樓（預約制）</span></address>
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\partials\footer.html:343:              @imprintdiamond 官方帳號
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\partials\footer.html:353:          <a href="/contact">查看完整聯絡資訊與地圖 →</a>
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\partials\social-fab.html:38:      href="https://www.instagram.com/imprintdiamond1688/"
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\partials\htmx\checkout_panel.html:106:              placeholder="例：福德南路43號">
+C:\Users\user\Documents\Diamond web\imprint-website\content\site\templates\partials\htmx\checkout_panel.html:119:              <span class="checkout-option-desc">新北市三重區福德南路 43 號 1 樓（預約制）</span>
+C:\Users\user\Documents\Diamond web\imprint-website\public\js\botpress-init.js:10:      title: "sales1@imprintdiamond.com",
+C:\Users\user\Documents\Diamond web\imprint-website\public\js\botpress-init.js:11:      link: "sales1@imprintdiamond.com"
+C:\Users\user\Documents\Diamond web\imprint-website\public\js\shop-quote-render.js:239:      + '<p class="quote-sheet-footnote">銘印鑽石 · imprintdiamond.com</p>'
