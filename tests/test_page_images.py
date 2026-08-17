@@ -21,6 +21,7 @@ from app.page_image_slots import (
     PAGE_IMAGE_STORAGE_FOLDERS,
     apply_page_image_slots,
     build_page_image_seed,
+    overlay_series_overview_heroes,
     page_image_slot_specs,
     page_image_storage_folder,
     paired_series_slot,
@@ -231,32 +232,25 @@ def _overview_couple_html() -> str:
     )
 
 
+def _hero_row(hero_url: str, stamp, *, default_url: str = "") -> dict:
+    return {
+        "slot_key": "hero",
+        "image_url": hero_url,
+        "image_webp": hero_url,
+        "default_image_url": default_url
+        or "/static/images/hero/imprint-diamond-wedding-couple-ring.jpg",
+        "is_published": True,
+        "updated_at": stamp,
+    }
+
+
 def _mock_series_hero(monkeypatch, hero_url: str, stamp, series_key: str = "signature"):
-    class _Conn:
-        def __enter__(self):
-            return self
+    def _load(route: str):
+        if str(route or "").rstrip("/") == f"/series/{series_key}":
+            return [_hero_row(hero_url, stamp)]
+        return []
 
-        def __exit__(self, *_args):
-            return None
-
-        def cursor(self):
-            return self
-
-    monkeypatch.setattr("app.database.get_connection", lambda: _Conn())
-    monkeypatch.setattr(
-        "app.content.fetch_page_image",
-        lambda *_a, **_k: {
-            "image_url": hero_url,
-            "image_webp": hero_url,
-            "default_image_url": (
-                "/static/images/hero/imprint-diamond-wedding-couple-ring.jpg"
-            ),
-            "is_published": True,
-            "updated_at": stamp,
-        }
-        if _a[1] == f"/series/{series_key}/"
-        else None,
-    )
+    monkeypatch.setattr("app.controllers.web_controller._load_page_images", _load)
 
 
 def test_series_overview_signature_uses_custom_hero_not_wedding_couple(monkeypatch):
@@ -307,6 +301,166 @@ def test_series_overview_signature_uses_custom_hero_not_wedding_couple(monkeypat
     )
     assert f"{custom}?v=1786951738" in out_later
     assert f"{custom}?v=1786948138" not in out_later
+
+
+def test_series_overview_leftover_custom_file_loses_to_hero(monkeypatch):
+    """Pia FAIL: leftover series-overview/image-48969e must not beat 主視覺 a336f21."""
+    hero = (
+        "https://xxx.supabase.co/storage/v1/object/public/shop-media/"
+        "page-images/home/image-a336f21da638457fa0278afc9d382711.webp"
+    )
+    leftover = (
+        "https://xxx.supabase.co/storage/v1/object/public/shop-media/"
+        "page-images/series-overview/image-48969e1647c04452ac8e09a3ac3e4cfe.webp"
+    )
+    stamp = datetime(2026, 8, 17, 6, 40, 39, tzinfo=timezone.utc)
+    leftover_stamp = datetime(2026, 8, 17, 6, 51, 54, tzinfo=timezone.utc)
+    _mock_series_hero(monkeypatch, hero, stamp)
+    row = {
+        "slot_key": "signature",
+        "display_url": leftover,
+        "display_webp": leftover,
+        "updated_at": leftover_stamp,
+        "is_published": True,
+    }
+    for route in ("/series", "/series/"):
+        out = apply_page_image_slots(_overview_couple_html(), route, [row])
+        assert f"{hero}?v=1786948839" in out
+        assert "48969e1647c04452ac8e09a3ac3e4cfe" not in out
+        signature_blocks = [
+            block
+            for block in out.split("<picture>")
+            if 'data-cms-slot="signature"' in block
+        ]
+        assert len(signature_blocks) == 2
+        for block in signature_blocks:
+            assert f"{hero}?v=1786948839" in block
+            assert f'src="{hero}?v=1786948839"' in block
+            assert "<source" not in block.lower()
+        love_block = next(
+            block for block in out.split("<picture>") if 'data-cms-slot="love"' in block
+        )
+        assert "imprint-diamond-wedding-couple-ring" in love_block
+        assert hero not in love_block
+
+
+def test_series_overview_hero_wins_when_get_connection_raises(monkeypatch):
+    hero = (
+        "https://xxx.supabase.co/storage/v1/object/public/shop-media/"
+        "page-images/home/image-a336f21da638457fa0278afc9d382711.webp"
+    )
+    leftover = (
+        "https://xxx.supabase.co/storage/v1/object/public/shop-media/"
+        "page-images/series-overview/image-48969e1647c04452ac8e09a3ac3e4cfe.webp"
+    )
+    stamp = datetime(2026, 8, 17, 6, 40, 39, tzinfo=timezone.utc)
+
+    def _boom():
+        raise RuntimeError("nested get_connection")
+
+    monkeypatch.setattr("app.database.get_connection", _boom)
+    _mock_series_hero(monkeypatch, hero, stamp)
+    out = apply_page_image_slots(
+        _overview_couple_html(),
+        "/series",
+        [
+            {
+                "slot_key": "signature",
+                "display_url": leftover,
+                "display_webp": leftover,
+                "is_published": True,
+            }
+        ],
+    )
+    assert f"{hero}?v=1786948839" in out
+    assert "48969e1647c04452ac8e09a3ac3e4cfe" not in out
+
+
+def test_series_hero_lookup_does_not_swallow(monkeypatch):
+    import inspect
+
+    from app import page_image_slots
+
+    src = inspect.getsource(page_image_slots._series_page_hero_admin_urls)
+    assert "except Exception" not in src
+    src_row = inspect.getsource(page_image_slots._series_page_hero_row)
+    assert "except Exception" not in src_row
+
+    def _boom(_route: str):
+        raise RuntimeError("hero lookup failed")
+
+    monkeypatch.setattr("app.controllers.web_controller._load_page_images", _boom)
+    with pytest.raises(RuntimeError, match="hero lookup failed"):
+        apply_page_image_slots(
+            _overview_couple_html(),
+            "/series",
+            [
+                {
+                    "slot_key": "signature",
+                    "display_url": (
+                        "https://xxx.supabase.co/storage/v1/object/public/shop-media/"
+                        "page-images/series-overview/image-48969e1647c04452ac8e09a3ac3e4cfe.webp"
+                    ),
+                    "display_webp": (
+                        "https://xxx.supabase.co/storage/v1/object/public/shop-media/"
+                        "page-images/series-overview/image-48969e1647c04452ac8e09a3ac3e4cfe.webp"
+                    ),
+                    "is_published": True,
+                }
+            ],
+        )
+
+
+def test_overlay_series_overview_heroes_replaces_leftover_custom(monkeypatch):
+    hero = (
+        "https://xxx.supabase.co/storage/v1/object/public/shop-media/"
+        "page-images/home/image-a336f21da638457fa0278afc9d382711.webp"
+    )
+    leftover = (
+        "https://xxx.supabase.co/storage/v1/object/public/shop-media/"
+        "page-images/series-overview/image-48969e1647c04452ac8e09a3ac3e4cfe.webp"
+    )
+    stamp = datetime(2026, 8, 17, 6, 40, 39, tzinfo=timezone.utc)
+    rows = [
+        {
+            "slot_key": "signature",
+            "display_url": leftover,
+            "display_webp": leftover,
+            "image_url": leftover,
+            "updated_at": datetime(2026, 8, 17, 6, 51, 54, tzinfo=timezone.utc),
+        },
+        {
+            "slot_key": "love",
+            "display_url": (
+                "/static/images/hero/imprint-diamond-wedding-couple-ring.jpg"
+            ),
+            "display_webp": (
+                "/static/images/hero/imprint-diamond-wedding-couple-ring.webp"
+            ),
+        },
+    ]
+
+    def _fetch(_cur, page_key, slot_key="hero"):
+        if page_key == "/series/signature/" and slot_key == "hero":
+            return _hero_row(hero, stamp)
+        if page_key == "/series/love/" and slot_key == "hero":
+            return {
+                "slot_key": "hero",
+                "image_url": (
+                    "/static/images/hero/imprint-diamond-wedding-couple-ring.jpg"
+                ),
+                "image_webp": (
+                    "/static/images/hero/imprint-diamond-wedding-couple-ring.webp"
+                ),
+                "is_published": True,
+            }
+        return None
+
+    monkeypatch.setattr("app.content.fetch_page_image", _fetch)
+    overlay_series_overview_heroes(object(), rows)
+    assert rows[0]["display_url"] == f"{hero}?v=1786948839"
+    assert "48969e1647c04452ac8e09a3ac3e4cfe" not in rows[0]["display_url"]
+    assert "imprint-diamond-wedding-couple-ring" in rows[1]["display_url"]
 
 
 def test_series_overview_other_series_follow_custom_hero(monkeypatch):
@@ -453,26 +607,11 @@ def test_stock_remote_series_hero_does_not_override_custom_home_card(monkeypatch
         "page-images/home/moon-swap.webp"
     )
 
-    class _Conn:
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *_args):
-            return None
-
-        def cursor(self):
-            return self
-
-    monkeypatch.setattr("app.database.get_connection", lambda: _Conn())
-    monkeypatch.setattr(
-        "app.content.fetch_page_image",
-        lambda *_a, **_k: {
-            "image_url": stock,
-            "image_webp": stock.replace(".jpg", ".webp"),
-            "default_image_url": "/static/images/hero/imprint-diamond-newborn-baby-necklace.jpg",
-            "is_published": True,
-            "updated_at": datetime(2025, 1, 1, tzinfo=timezone.utc),
-        },
+    _mock_series_hero(
+        monkeypatch,
+        stock,
+        datetime(2025, 1, 1, tzinfo=timezone.utc),
+        series_key="first-love",
     )
     html = (
         '<img data-cms-slot="series-first-love" '
