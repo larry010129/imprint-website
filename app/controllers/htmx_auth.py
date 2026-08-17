@@ -17,7 +17,6 @@ from app.auth import (
     REGISTER_LOCKOUT_SECONDS,
     REGISTER_MAX_ATTEMPTS,
     TOTP_VERIFY_LOCKOUT_SECONDS,
-    bump_token_version,
     check_login_lockout,
     check_register_lockout,
     check_totp_verify_lockout,
@@ -382,25 +381,28 @@ async def auth_request_reset(request: Request) -> HTMLResponse:
         )
         user = cur.fetchone()
     if user:
-        raw = secrets.token_urlsafe(32)
-        token_hash = hashlib.sha256(raw.encode("utf-8")).hexdigest()
-        expires = datetime.now(timezone.utc) + timedelta(hours=1)
-        with get_transaction() as conn, conn.cursor() as cur:
-            cur.execute(
-                "update password_reset_tokens set used_at = now() where user_id = %s and used_at is null",
-                (user["id"],),
-            )
-            cur.execute(
-                "insert into password_reset_tokens (token, user_id, expires_at) values (%s, %s, %s)",
-                (token_hash, user["id"], expires),
-            )
-        reset_url = f"{settings.public_base_url}/reset-password?token={raw}"
-        try:
-            from app.mail import send_password_reset_email
+        if not settings.reset_mail_base_ok():
+            log.error("skip password-reset insert+mail: unsafe public_base_url on Render")
+        else:
+            raw = secrets.token_urlsafe(32)
+            token_hash = hashlib.sha256(raw.encode("utf-8")).hexdigest()
+            expires = datetime.now(timezone.utc) + timedelta(hours=1)
+            with get_transaction() as conn, conn.cursor() as cur:
+                cur.execute(
+                    "update password_reset_tokens set used_at = now() where user_id = %s and used_at is null",
+                    (user["id"],),
+                )
+                cur.execute(
+                    "insert into password_reset_tokens (token, user_id, expires_at) values (%s, %s, %s)",
+                    (token_hash, user["id"], expires),
+                )
+            reset_url = f"{settings.public_base_url}/reset-password?token={raw}"
+            try:
+                from app.mail import send_password_reset_email
 
-            send_password_reset_email(to=user["email"], reset_url=reset_url)
-        except Exception:
-            log.exception("htmx password reset email failed")
+                send_password_reset_email(to=user["email"], reset_url=reset_url)
+            except Exception:
+                log.exception("htmx password reset email failed")
     resp = html(
         request,
         "auth_success.html",
@@ -433,12 +435,16 @@ async def auth_reset_password(request: Request) -> Response:
                 request, "auth_error.html", {"error": "重設連結無效或已過期，請重新申請。"}, 400
             )
         cur.execute(
-            "update users set password_hash = %s where id = %s",
+            """
+            update users
+               set password_hash = %s,
+                   token_version = token_version + 1
+             where id = %s
+            """,
             (hash_password(new_password), row["user_id"]),
         )
         cur.execute(
-            "update password_reset_tokens set used_at = %s where token = %s",
-            (now, token_hash),
+            "update password_reset_tokens set used_at = now() where user_id = %s and used_at is null",
+            (row["user_id"],),
         )
-    bump_token_version(str(row["user_id"]))
     return hx_redirect("/login")

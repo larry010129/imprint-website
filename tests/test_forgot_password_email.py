@@ -115,6 +115,8 @@ def test_request_reset_parses_email_then_subjects_limit_without_totp_gate():
         assert src.index(invalidate) < src.index(
             "insert into password_reset_tokens (token, user_id, expires_at)"
         )
+        assert "reset_mail_base_ok()" in src
+        assert src.index("reset_mail_base_ok()") < src.index("insert into password_reset_tokens")
 
 
 def test_consume_reset_keeps_used_at_check():
@@ -123,11 +125,34 @@ def test_consume_reset_keeps_used_at_check():
     json_src = (root / "app" / "controllers" / "auth_controller.py").read_text(encoding="utf-8")
     htmx_fn = htmx.split("async def auth_reset_password", 1)[1]
     json_fn = json_src.split("async def reset_password", 1)[1].split("async def ", 1)[0]
+    sibling = (
+        "update password_reset_tokens set used_at = now() "
+        "where user_id = %s and used_at is null"
+    )
     for src in (htmx_fn, json_fn):
         assert 'row["used_at"] is not None' in src
-        assert "update password_reset_tokens set used_at" in src
-        assert "where token = %s" in src
-        assert "and used_at is null" not in src
+        assert sibling in src
+        assert "token_version = token_version + 1" in src
+        assert "bump_token_version(" not in src
+        txn = src.split("with get_transaction()", 1)[1]
+        assert "bump_token_version(" not in txn
+
+
+def test_complete_and_change_password_burn_unused_tokens():
+    root = Path(__file__).resolve().parents[1]
+    totp = (root / "app" / "auth_totp_service.py").read_text(encoding="utf-8")
+    api = (root / "app" / "controllers" / "auth_controller.py").read_text(encoding="utf-8")
+    complete = totp.split("def complete_password_reset", 1)[1].split("\ndef ", 1)[0]
+    change = api.split("async def change_password", 1)[1].split("async def ", 1)[0]
+    burn = (
+        "update password_reset_tokens set used_at = now() "
+        "where user_id = %s and used_at is null"
+    )
+    for src in (complete, change):
+        assert "get_transaction()" in src
+        assert "token_version = token_version + 1" in src
+        assert src.index("password_hash") < src.index(burn)
+        assert "bump_token_version(" not in src
 
 
 def test_forgot_password_page_does_not_name_resend():
