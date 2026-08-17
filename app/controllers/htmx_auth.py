@@ -365,6 +365,7 @@ async def auth_forgot_password(request: Request) -> Response:
 
 @router.post("/auth/request-reset", response_class=HTMLResponse)
 async def auth_request_reset(request: Request) -> HTMLResponse:
+    # Email reset stays live for every active account, including Authenticator users.
     if not enforce_rate_limit(request, action="pwreset", limit=5, window_seconds=900):
         return html(request, "auth_error.html", {"error": "請求過於頻繁，請稍後再試。"}, 429)
     form = await request.form()

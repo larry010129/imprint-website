@@ -174,7 +174,7 @@
     <button type="button" class="account-member-card__logout" hx-post="/htmx/logout" hx-swap="none">登出</button>
     <button type="button" class="account-member-card__delete" data-account-delete-open>刪除帳號</button>
     {% if totp_enabled %}
-    <p class="account-member-card__admin">已啟用 Authenticator（可用於重設密碼）</p>
+    <p class="account-member-card__admin">已啟用 Authenticator（可用驗證碼重設密碼）</p>
     {% endif %}
     {% if is_admin %}
     <p class="account-member-card__admin"><a href="/admin">管理後台</a></p>

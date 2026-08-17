@@ -475,6 +475,7 @@ async def logout(request: Request) -> JSONResponse:
 async def request_password_reset(request: Request) -> JSONResponse:
     # Always returns ok — never reveal whether an email is registered. Throttled
     # per-IP so it can't be used to blast reset emails at someone's inbox.
+    # Email reset stays live for every active account, including Authenticator users.
     if not enforce_rate_limit(request, action="pwreset", limit=5, window_seconds=900):
         return _err(429, "請求過於頻繁，請稍後再試")
 

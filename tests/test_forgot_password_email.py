@@ -120,6 +120,28 @@ def test_forgot_password_page_does_not_name_resend():
     assert '<a href="#" data-fp-use-totp>已啟用 Authenticator？使用驗證碼</a>' in html
     assert 'data-fp-step="inbox"' in html
     assert 'hx-post="/htmx/auth/forgot-password-verify"' in html
+    assert "totp_enabled" not in html
+    assert "totpEnabled" not in html
+
+
+def test_forgot_password_email_path_is_not_gated_on_totp():
+    """Both first-screen actions stay live. Email send must not check totp_enabled."""
+    root = Path(__file__).resolve().parents[1]
+    page = (root / "content" / "site" / "templates" / "pages" / "forgot-password.html").read_text(
+        encoding="utf-8"
+    )
+    js = (root / "public" / "js" / "forgot-password.js").read_text(encoding="utf-8")
+    htmx = (root / "app" / "controllers" / "htmx_auth.py").read_text(encoding="utf-8")
+    api = (root / "app" / "controllers" / "auth_controller.py").read_text(encoding="utf-8")
+    assert "寄出重設信件" in page
+    assert "使用驗證碼" in page
+    assert "login-button--outline" in page
+    assert "totp_enabled" not in js
+    assert "totpEnabled" not in js
+    reset_fn = htmx.split("async def auth_request_reset", 1)[1].split("async def ", 1)[0]
+    assert "totp_enabled" not in reset_fn
+    json_fn = api.split("async def request_password_reset", 1)[1].split("async def ", 1)[0]
+    assert "totp_enabled" not in json_fn
 
 
 @pytest.mark.skipif(not os.environ.get("DATABASE_URL"), reason="DATABASE_URL not set")
@@ -166,6 +188,42 @@ def test_htmx_request_reset_known_email_sends_token_link(client):
         kwargs = send.call_args.kwargs
         assert kwargs["to"] == email
         assert "/reset-password?token=" in kwargs["reset_url"]
+    finally:
+        if user_id:
+            with get_connection() as conn, conn.cursor() as cur:
+                cur.execute("delete from password_reset_tokens where user_id = %s", (user_id,))
+                cur.execute("delete from users where id = %s", (user_id,))
+
+
+@pytest.mark.skipif(not os.environ.get("DATABASE_URL"), reason="DATABASE_URL not set")
+def test_htmx_request_reset_sends_when_totp_enabled(client):
+    from app.auth import hash_password
+    from app.database import get_connection
+    from app.totp import generate_secret
+
+    email = f"reset-totp-{uuid.uuid4().hex[:10]}@example.com"
+    user_id = None
+    try:
+        with get_connection() as conn, conn.cursor() as cur:
+            cur.execute(
+                """
+                insert into users (email, password_hash, email_verified, totp_secret, totp_enabled)
+                values (%s, %s, true, %s, true) returning id
+                """,
+                (email, hash_password("password123"), generate_secret()),
+            )
+            user_id = str(cur.fetchone()["id"])
+
+        with patch("app.mail.send_password_reset_email", return_value=True) as send:
+            resp = client.post(
+                "/htmx/auth/request-reset",
+                headers={"HX-Request": "true"},
+                data={"email": email},
+            )
+        assert resp.status_code == 200
+        assert "若此 Email 已註冊" in resp.text
+        send.assert_called_once()
+        assert send.call_args.kwargs["to"] == email
     finally:
         if user_id:
             with get_connection() as conn, conn.cursor() as cur:

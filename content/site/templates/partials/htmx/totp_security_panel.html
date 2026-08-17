@@ -16,7 +16,7 @@
 
     <h1>帳戶安全</h1>
 
-    <p>雙因素驗證（Authenticator）為<strong>選用</strong>，日常登入與管理後台<strong>不需要</strong>。若您希望使用「忘記密碼」自行重設密碼，請先在此啟用。</p>
+    <p>雙因素驗證（Authenticator）為<strong>選用</strong>，日常登入與管理後台<strong>不需要</strong>。忘記密碼可用信件重設；啟用後也可使用驗證碼。</p>
 
   </header>
 
@@ -26,7 +26,7 @@
 
   <div class="totp-status totp-status--on">
 
-    <p><strong>狀態：</strong>已啟用 Authenticator（可用於重設密碼）</p>
+    <p><strong>狀態：</strong>已啟用 Authenticator（可用驗證碼重設密碼）</p>
 
     <details class="totp-disable">
 
@@ -61,8 +61,6 @@
   </div>
 
   {% else %}
-
-  <p class="totp-banner totp-banner--warn">尚未啟用 Authenticator 時，無法使用「忘記密碼」自行重設；請聯絡管理員或完成下方設定。</p>
 
   <div class="totp-setup" id="totp-setup-root" data-email="{{ user.email }}">
 
