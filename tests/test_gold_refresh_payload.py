@@ -141,3 +141,22 @@ def test_fetch_bot_gold_quote_force_bypasses_memory_ttl() -> None:
         asyncio.run(bot_gold.fetch_bot_gold_quote(force=True))
         assert live.await_count == 2
     bot_gold.invalidate_bot_gold_memory_cache()
+
+
+def test_gold_quote_workflow_is_cache_only_no_main_commit() -> None:
+    """Hourly GHA must refresh gold_price_cache without committing to main."""
+    yml = (_ROOT / ".github" / "workflows" / "update-gold-quote.yml").read_text(
+        encoding="utf-8"
+    )
+    assert "git add" not in yml
+    assert "git commit" not in yml
+    assert "git push" not in yml
+    assert "contents: write" not in yml
+    assert "contents: read" in yml
+    assert "continue-on-error" not in yml
+    assert "python scripts/fetch_gold_quote.py" in yml
+    assert "/api/gold-refresh" in yml
+    assert "--data-binary @data/gold-quote.json" in yml
+    assert "hardcoded 4300/1050/61 fallback" in yml
+    assert (_ROOT / "data" / "gold-quote.json").is_file()
+    assert (_ROOT / "public" / "js" / "gold-quote-data.js").is_file()

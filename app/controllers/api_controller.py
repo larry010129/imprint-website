@@ -895,8 +895,9 @@ async def gold_refresh(request: Request) -> dict:
     """Persist gold_price_cache.
 
     Prefer an optional JSON body (same shape as ``data/gold-quote.json``) so
-    GitHub Actions can push a quote it already scraped. Empty body keeps the
-    legacy live re-scrape path. Requires ``Authorization: Bearer $GOLD_REFRESH_SECRET``.
+    GitHub Actions can POST a quote it already scraped (cache-only; no git
+    commit). Empty body keeps the legacy live re-scrape path. Requires
+    ``Authorization: Bearer $GOLD_REFRESH_SECRET``.
     """
     if not _gold_refresh_authorized(request):
         raise HTTPException(status_code=401, detail="unauthorized")

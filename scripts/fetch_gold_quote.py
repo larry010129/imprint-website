@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Fetch latest Allbeauty gold quote and write data/gold-quote.json + js/gold-quote-data.js."""
+"""Fetch latest Allbeauty gold quote and write data/gold-quote.json + js/gold-quote-data.js.
+
+Hourly CI POSTs the JSON to /api/gold-refresh (cache-only). It must not commit
+these files — they stay in the repo as last-resort bootstrap only.
+"""
 
 from __future__ import annotations
 

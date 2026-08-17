@@ -21,7 +21,8 @@
    因為 V3 的商品線是全新設計，沒有對應的克重資料，mounting 目前仍是估算表。
 
    即時金價：GitHub Actions 每小時跑 scripts/fetch_gold_quote.py，並 POST
-   /api/gold-refresh 寫入 gold_price_cache；線上頁面 GET /api/bot-gold 讀同一快取。
+   /api/gold-refresh 寫入 gold_price_cache（只更新快取，不 commit / 不重部）。
+   線上頁面 GET /api/bot-gold 讀同一快取。
    飾品戒台費用 = 基準表（DEFAULTS.mounting）依即時金價換算：金工費 NT$5,000 固定，
    金屬部分隨牌價等比浮動（與 frontend mounting-pricing.ts / 價格頁一致）。
 */

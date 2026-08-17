@@ -330,7 +330,7 @@ Most shop pricing routes are live in FastAPI (`GET /api/prices`, `POST /api/quot
 |------|---------|-------|
 | `/api/pricing` | Admin price overrides panel | Implemented as `/api/admin/pricing-overrides` — verify admin UI wiring |
 
-Gold display, shop calculator, and order pricing share **`gold_price_cache`** (hourly GHA `POST /api/gold-refresh`; set repo secret `IMPRINT_SITE_URL`).
+Gold display, shop calculator, and order pricing share **`gold_price_cache`** (hourly GHA `POST /api/gold-refresh`, cache-only — no git commit / Render deploy; set repo secret `IMPRINT_SITE_URL`).
 
 ---
 
