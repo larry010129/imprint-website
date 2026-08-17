@@ -95,6 +95,18 @@ def test_password_reset_email_skips_without_api_key(monkeypatch):
     assert called["n"] == 0
 
 
+def test_request_reset_parses_email_then_subjects_limit_without_totp_gate():
+    root = Path(__file__).resolve().parents[1]
+    htmx = (root / "app" / "controllers" / "htmx_auth.py").read_text(encoding="utf-8")
+    json_src = (root / "app" / "controllers" / "auth_controller.py").read_text(encoding="utf-8")
+    htmx_fn = htmx.split("async def auth_request_reset", 1)[1].split("async def ", 1)[0]
+    json_fn = json_src.split("async def request_password_reset", 1)[1].split("async def ", 1)[0]
+    for src in (htmx_fn, json_fn):
+        assert src.index("strip().lower()") < src.index("enforce_rate_limit")
+        assert "subject=email or None" in src
+        assert "totp_enabled" not in src
+
+
 def test_forgot_password_page_does_not_name_resend():
     html = (
         Path(__file__).resolve().parents[1]
@@ -246,6 +258,26 @@ def test_json_request_reset_unknown_email_is_generic(client):
     assert resp.status_code == 200
     assert resp.json() == {"ok": True}
     send.assert_not_called()
+
+
+def test_reset_password_handler_assigns_referrer_policy():
+    src = (
+        Path(__file__).resolve().parents[1] / "app" / "controllers" / "web_controller.py"
+    ).read_text(encoding="utf-8")
+    assert 'meta.route == "/reset-password"' in src
+    assert 'response.headers["Referrer-Policy"] = "no-referrer"' in src
+
+
+def test_reset_password_template_has_referrer_meta():
+    html = (
+        Path(__file__).resolve().parents[1]
+        / "content"
+        / "site"
+        / "templates"
+        / "pages"
+        / "reset-password.html"
+    ).read_text(encoding="utf-8")
+    assert '<meta name="referrer" content="no-referrer">' in html
 
 
 @pytest.mark.skipif(not os.environ.get("DATABASE_URL"), reason="DATABASE_URL not set")
