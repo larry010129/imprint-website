@@ -7,7 +7,15 @@
 (function (global) {
   'use strict';
 
-  var IMAGE_ROOT = (global.shopConfig && global.shopConfig.imageRoot) || '/static/images/shop-product/';
+  function imprintDiamondMediaBase() {
+    var raw = (typeof global !== 'undefined' && global.IMPRINT_DIAMOND_MEDIA_BASE) || '';
+    return String(raw || '').trim().replace(/\/+$/, '');
+  }
+
+  var _mediaBase = imprintDiamondMediaBase();
+  var IMAGE_ROOT = _mediaBase
+    ? _mediaBase + '/shop-product/'
+    : ((global.shopConfig && global.shopConfig.imageRoot) || '/static/images/shop-product/');
 
   var CATEGORY_ZH = {
     pendant: '項墜',
@@ -79,8 +87,16 @@
     'rose_gold|斗圓鍊K玫瑰|rose': '斗圓鍊_rose.png',
   };
 
+  var SITE_IMAGES_ROOT = _mediaBase
+    ? _mediaBase + '/'
+    : ((global.shopConfig && global.shopConfig.siteImagesRoot) || '/static/images/');
+
+  function siteImageUrl(rel) {
+    return String(SITE_IMAGES_ROOT).replace(/\/?$/, '/') + String(rel || '').replace(/^\/+/, '');
+  }
+
   var CATEGORY_THUMB = {
-    diamond: '/static/images/diamonds/colors/catalog-cluster.webp',
+    diamond: siteImageUrl('diamonds/colors/catalog-cluster.webp'),
     pendant: 'thumbs/pendant/A.webp',
     ring: 'thumbs/ring/A.webp',
     earring: 'thumbs/earring/A.webp',
@@ -90,13 +106,35 @@
 
   /* Pre-WebP originals, kept on disk as onerror fallback for categoryThumb. */
   var CATEGORY_THUMB_LEGACY = {
-    diamond: '/static/images/diamonds/colors/catalog-cluster.png',
+    diamond: siteImageUrl('diamonds/colors/catalog-cluster.png'),
     pendant: 'thumbs/pendant/A.jpg',
     ring: 'thumbs/ring/A.jpg',
     earring: 'thumbs/earring/A.jpg',
     bracelet: 'thumbs/bracelet/A.jpg',
     chain: 'thumbs/chain/A.jpg',
   };
+
+  function utf8ToBase64Url(str) {
+    var bytes = new TextEncoder().encode(String(str || ''));
+    var bin = '';
+    for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+  }
+
+  /** Match server `_ascii_filename` unicode branch: leaf stem → `u-<base64url>`. */
+  function asciiFilename(name) {
+    var raw = String(name || '');
+    if (!raw || !/[^\x00-\x7F]/.test(raw)) return raw;
+    if (/^u-[A-Za-z0-9_-]+\.[A-Za-z0-9]+$/.test(raw)) return raw;
+    var dot = raw.lastIndexOf('.');
+    var stem = dot > 0 ? raw.slice(0, dot) : raw;
+    var ext = dot > 0 ? raw.slice(dot).toLowerCase() : '';
+    return 'u-' + utf8ToBase64Url(stem) + ext;
+  }
+
+  function isStorageImageRoot(root) {
+    return /\/storage\/v1\/object\/public\//i.test(String(root || ''));
+  }
 
   function thumbUrl(rel) {
     if (!rel) return '';
@@ -135,6 +173,9 @@
     var slash = rel.lastIndexOf('/');
     var dir = slash >= 0 ? rel.slice(0, slash + 1) : '';
     var file = slash >= 0 ? rel.slice(slash + 1) : rel;
+    if (isStorageImageRoot(IMAGE_ROOT)) {
+      return IMAGE_ROOT + dir + asciiFilename(file);
+    }
     return IMAGE_ROOT + dir + encodeURIComponent(file);
   }
 

@@ -58,7 +58,13 @@ def matrix_shape_image_url(shape: str, color: str) -> str:
     color_id = str(color or "white").strip().lower()
     if color_id not in VALID_DIAMOND_COLORS:
         color_id = "white"
-    return f"/static/images/diamonds/matrix/{shape_id}-{color_id}.png"
+    rel = f"diamonds/matrix/{shape_id}-{color_id}.png"
+    try:
+        from app.storage import site_image_public_url
+        stored = site_image_public_url(rel)
+    except (ImportError, AttributeError, TypeError):
+        stored = None
+    return stored or f"/static/images/{rel}"
 
 
 def default_shape_images(color: str) -> dict[str, list[str]]:
@@ -438,12 +444,8 @@ def ensure_memorial_diamond_products(cur) -> int:
 
 
 def _static_entry(product: dict[str, Any]) -> dict[str, Any]:
-    images = {
-        shape: list(urls)
-        for shape, urls in (product.get("images") or {}).items()
-        if isinstance(urls, list)
-    }
     color = str(product.get("defaultColor") or "white")
+    images = default_shape_images(color)
     return {
         "id": product["id"],
         "styleKey": product["styleKey"],

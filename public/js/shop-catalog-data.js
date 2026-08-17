@@ -1232,4 +1232,39 @@
     "chain"
   ]
 };
+
+  function imprintDiamondMediaBase() {
+    var raw = (typeof global !== 'undefined' && global.IMPRINT_DIAMOND_MEDIA_BASE) || '';
+    return String(raw || '').trim().replace(/\/+$/, '');
+  }
+
+  function rewriteShopStillUrl(url) {
+    if (typeof url !== 'string') return url;
+    var q = url.indexOf('?');
+    var path = q >= 0 ? url.slice(0, q) : url;
+    var query = q >= 0 ? url.slice(q) : '';
+    var match = path.match(/^\/static\/images\/(diamonds|shop-product|products)\/(.+)$/);
+    if (!match) return url;
+    var base = imprintDiamondMediaBase();
+    if (!base) return url;
+    return base + '/' + match[1] + '/' + match[2] + query;
+  }
+
+  function rewriteShopStillsDeep(node) {
+    if (typeof node === 'string') return rewriteShopStillUrl(node);
+    if (Array.isArray(node)) {
+      for (var i = 0; i < node.length; i++) node[i] = rewriteShopStillsDeep(node[i]);
+      return node;
+    }
+    if (node && typeof node === 'object') {
+      for (var key in node) {
+        if (Object.prototype.hasOwnProperty.call(node, key)) {
+          node[key] = rewriteShopStillsDeep(node[key]);
+        }
+      }
+    }
+    return node;
+  }
+
+  rewriteShopStillsDeep(global.shopCatalogData);
 })(window);

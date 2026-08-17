@@ -6,16 +6,55 @@
   var STYLE_ID = /^([a-z]+)-([A-C])$/i;
   var UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+  function imprintDiamondMediaBase() {
+    var raw = (typeof global !== 'undefined' && global.IMPRINT_DIAMOND_MEDIA_BASE) || '';
+    return String(raw || '').trim().replace(/\/+$/, '');
+  }
+
+  function utf8ToBase64Url(str) {
+    var bytes = new TextEncoder().encode(String(str || ''));
+    var bin = '';
+    for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+  }
+
+  function asciiFilename(name) {
+    var raw = String(name || '');
+    if (!raw || !/[^\x00-\x7F]/.test(raw)) return raw;
+    if (/^u-[A-Za-z0-9_-]+\.[A-Za-z0-9]+$/.test(raw)) return raw;
+    var dot = raw.lastIndexOf('.');
+    var stem = dot > 0 ? raw.slice(0, dot) : raw;
+    var ext = dot > 0 ? raw.slice(dot).toLowerCase() : '';
+    return 'u-' + utf8ToBase64Url(stem) + ext;
+  }
+
+  function rewriteShopStill(path) {
+    var p = String(path || '');
+    var q = p.indexOf('?');
+    var only = q >= 0 ? p.slice(0, q) : p;
+    var query = q >= 0 ? p.slice(q) : '';
+    var match = only.match(/^\/static\/images\/(diamonds|shop-product|products)\/(.+)$/);
+    if (!match) return p;
+    var base = imprintDiamondMediaBase();
+    if (!base) return p;
+    var rest = match[2];
+    try { rest = decodeURIComponent(rest); } catch (err) { /* keep */ }
+    var slash = rest.lastIndexOf('/');
+    var dir = slash >= 0 ? rest.slice(0, slash + 1) : '';
+    var file = slash >= 0 ? rest.slice(slash + 1) : rest;
+    return base + '/' + match[1] + '/' + dir + asciiFilename(file) + query;
+  }
+
   function resolve(path) {
     if (!path) return '';
     var p = String(path).trim();
     if (p.indexOf('http') === 0) return p;
-    if (p.indexOf('/static/') === 0) return p;
+    if (p.indexOf('/static/') === 0) return rewriteShopStill(p);
     if (p.indexOf('/') === 0) return p;
 
     if (p.indexOf('images/shop/') === 0) return '/static/' + p;
-    if (p.indexOf('static/') === 0) return '/' + p;
-    if (p.indexOf('images/') === 0) return '/static/' + p;
+    if (p.indexOf('static/') === 0) return rewriteShopStill('/' + p);
+    if (p.indexOf('images/') === 0) return rewriteShopStill('/static/' + p);
     return '/' + p;
   }
 
@@ -26,7 +65,7 @@
       var thumb = global.ShopAssets.categoryThumb(cat);
       if (thumb) return thumb;
     }
-    return '/static/images/shop-product/thumbs/' + cat + '/A.jpg';
+    return rewriteShopStill('/static/images/shop-product/thumbs/' + cat + '/A.jpg');
   }
 
   function orderFallback(category, styleType) {

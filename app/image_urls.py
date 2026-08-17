@@ -8,7 +8,14 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qsl, unquote, urlencode, urlsplit, urlunsplit
 
-from app.storage import is_supabase_storage_url, prefer_category_scoped_product_url
+from app.storage import (
+    diamond_media_base,
+    is_supabase_storage_url,
+    prefer_category_scoped_product_url,
+    rewrite_shop_still_url,
+    site_image_public_url,
+    site_images_public_base,
+)
 
 # Query key for cache-busting. `?v=` is the repo convention: the static
 # middleware in app/__init__.py grants 1y+immutable to query-bearing URLs.
@@ -40,6 +47,11 @@ _DIAMOND_MATRIX_SHAPES = frozenset(
     }
 )
 _DIAMOND_CATEGORY_THUMB = "/static/images/diamonds/colors/catalog-cluster.png"
+_SHOP_STILL_PREFIXES = (
+    "/static/images/diamonds/",
+    "/static/images/shop-product/",
+    "/static/images/products/",
+)
 
 _IMAGE_ROOT = "/static/images/shop-product/"
 
@@ -149,24 +161,47 @@ def strip_cache_buster(url: str | None) -> str:
     return _rewrite_query(value, None)
 
 
+_SHARE_SITE_ORIGIN = "https://www.imprintdiamond.com"
+_DEFAULT_OG_IMAGE = "static/images/hero/imprint-diamond-family-memorial.jpg"
+# Match /static/images/{diamonds|shop-product|products}/… not after a host.
+_SHOP_STILL_IN_HTML = re.compile(
+    r'(?<![:\w])/static/images/(?:diamonds|shop-product|products)/[^"\'?\s<>]+'
+)
+
+
 def resolve_product_image_url(file_path: str | None) -> str:
     if not file_path:
         return ""
     path = file_path.strip()
     if path.startswith(("http://", "https://")):
         return path
-    if path.startswith("/static/"):
-        return path
-    if path.startswith("/"):
-        return path
-
     if path.startswith("images/shop/"):
-        return f"/static/{path}"
-    if path.startswith("static/"):
-        return f"/{path}"
-    if path.startswith("images/"):
-        return f"/static/{path}"
-    return f"/{path}"
+        path = f"/static/{path}"
+    elif path.startswith("static/"):
+        path = f"/{path}"
+    elif path.startswith("images/"):
+        path = f"/static/{path}"
+    elif not path.startswith("/"):
+        path = f"/{path}"
+    return rewrite_shop_still_url(path)
+
+
+def share_image_url(og_image: str | None) -> str:
+    """Absolute og/twitter image. Shop stills use Storage; else site origin + path."""
+    raw = str(og_image or "").strip() or _DEFAULT_OG_IMAGE
+    if raw.startswith(("http://", "https://")):
+        return raw
+    mapped = rewrite_shop_still_url(raw if raw.startswith("/") else f"/{raw}")
+    if mapped.startswith(("http://", "https://")):
+        return mapped
+    return f"{_SHARE_SITE_ORIGIN}/{raw.lstrip('/')}"
+
+
+def rewrite_shop_stills_in_html(html: str) -> str:
+    """Swap leftover shop-still /static/ paths after render. Skip host-prefixed og tags."""
+    if not html or not diamond_media_base():
+        return html
+    return _SHOP_STILL_IN_HTML.sub(lambda match: rewrite_shop_still_url(match.group(0)), html)
 
 
 def _is_raster_url(url: str) -> bool:
@@ -202,14 +237,22 @@ def config_diamond_color(config: dict[str, Any] | None) -> str:
 
 
 def _join_shop_path(relative: str) -> str:
-    return _IMAGE_ROOT + relative.lstrip("/")
+    rel = relative.lstrip("/")
+    stored = site_image_public_url(f"shop-product/{rel}")
+    if stored:
+        return stored
+    return _IMAGE_ROOT + rel
 
 
 _SHOP_ASSET_EXISTS_CACHE: dict[str, bool] = {}
 
 
 def static_url_exists(url: str | None) -> bool:
-    """True when URL is a local /static/ path on disk or a Supabase Storage public URL."""
+    """True when URL is a local /static/ path on disk or a Supabase Storage public URL.
+
+    Shop stills (diamonds / shop-product / products) live in Storage after the
+    git folders are gone — treat those prefixes as present when SUPABASE_URL is set.
+    """
     if not url:
         return False
     path = str(url).strip().split("?", 1)[0]
@@ -219,10 +262,13 @@ def static_url_exists(url: str | None) -> bool:
         return False
     if not path.startswith("/static/"):
         return False
+    from config.settings import settings
+
+    if diamond_media_base() and any(path.startswith(prefix) for prefix in _SHOP_STILL_PREFIXES):
+        return True
     cached = _SHOP_ASSET_EXISTS_CACHE.get(path)
     if cached is not None:
         return cached
-    from config.settings import settings
 
     rel = unquote(path[len("/static/") :])
     exists = (settings.static_dir / Path(rel)).is_file()
@@ -275,6 +321,11 @@ def shop_style_png_url(
     suffix = _COLOR_SUFFIX[resolved]
     diamond = _resolve_diamond(diamond_color)
     diamond_suffix = f"_{diamond}" if diamond != "white" else ""
+
+    # Bracelet fancy-stone renders are not in the asset library (matches shop-assets.js).
+    if cat == "bracelet" and diamond != "white":
+        diamond = "white"
+        diamond_suffix = ""
 
     if cat == "chain":
         basename = _CHAIN_BASENAME.get(style)
@@ -413,7 +464,8 @@ def shop_style_thumb_url(style_key: str | None) -> str:
 def shop_category_thumb_url(category: str | None) -> str:
     cat = (category or "").strip().lower()
     if cat == "diamond":
-        return _DIAMOND_CATEGORY_THUMB if static_url_exists(_DIAMOND_CATEGORY_THUMB) else ""
+        url = site_image_public_url("diamonds/colors/catalog-cluster.png") or _DIAMOND_CATEGORY_THUMB
+        return url if static_url_exists(url) else ""
     rel = _CATEGORY_THUMB.get(cat)
     return _join_shop_path(rel) if rel else ""
 
@@ -429,15 +481,20 @@ def diamond_matrix_image_url(
     candidates = [shape_id]
     if shape_id not in _DIAMOND_MATRIX_SHAPES and shape_id != "round":
         candidates.append("round")
+    storage_on = bool(site_images_public_base())
     for sid in candidates:
-        url = f"/static/images/diamonds/matrix/{sid}-{color_id}.png"
-        if static_url_exists(url):
+        rel = f"diamonds/matrix/{sid}-{color_id}.png"
+        url = site_image_public_url(rel) or f"/static/images/{rel}"
+        if storage_on or static_url_exists(url):
             return url
         if color_id != "white":
-            white = f"/static/images/diamonds/matrix/{sid}-white.png"
-            if static_url_exists(white):
+            white_rel = f"diamonds/matrix/{sid}-white.png"
+            white = site_image_public_url(white_rel) or f"/static/images/{white_rel}"
+            if storage_on or static_url_exists(white):
                 return white
-    return ""
+    # git rm of public/images/diamonds — still emit the requested path.
+    rel = f"diamonds/matrix/{candidates[0]}-{color_id}.png"
+    return site_image_public_url(rel) or f"/static/images/{rel}"
 
 
 def memorial_diamond_color_options() -> list[dict[str, str]]:

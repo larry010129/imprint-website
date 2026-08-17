@@ -94,6 +94,7 @@ def _load_admin_products():
     st.product_folder_segment = lambda *_a, **_k: "folder"
     st.promote_pending_product_url = lambda url, *_a, **_k: url
     st.relocate_product_object_url = lambda url, *_a, **_k: url
+    st.site_image_public_url = lambda *_a, **_k: None
     sys.modules["app.storage"] = st
 
     jsonb_mod = types.ModuleType("psycopg.types.json")
@@ -128,7 +129,7 @@ def test_diamond_products_are_four_colors_with_shape_images():
         images = product["images"]
         assert set(images) == md.VALID_DIAMOND_SHAPES
         assert images["round"] == [md.matrix_shape_image_url("round", color)]
-        assert "/images/diamonds/matrix/" in images["round"][0]
+        assert "diamonds/matrix/" in images["round"][0]
         assert not md.is_legacy_lifestyle_image(images["round"][0])
     assert "diamond-first-love" in md.LEGACY_SERIES_STYLE_KEYS
 

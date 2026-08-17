@@ -141,7 +141,27 @@ def test_home_dna_cta_prefers_local_webp():
     }
     out = apply_page_image_slots(html, "/", [row])
     assert 'src="/static/images/diamonds/colors/blue-320.webp"' in out
-    assert "supabase.co" not in out
+    assert "cms/colors/blue" not in out
+
+
+def test_home_dna_cta_rewrites_to_diamond_media_base(monkeypatch):
+    from app.image_urls import rewrite_shop_stills_in_html
+
+    monkeypatch.setenv("SUPABASE_URL", "https://abc123.supabase.co")
+    monkeypatch.setenv("SUPABASE_STORAGE_BUCKET", "shop-media")
+    html = '<img data-cms-slot="dna-cta-diamond" src="/static/images/diamonds/colors/blue.webp">'
+    row = {
+        "slot_key": "dna-cta-diamond",
+        "display_url": "https://xxx.supabase.co/storage/v1/object/public/cms/colors/blue.png",
+        "display_webp": "",
+        "is_published": True,
+    }
+    out = rewrite_shop_stills_in_html(apply_page_image_slots(html, "/", [row]))
+    assert (
+        'src="https://abc123.supabase.co/storage/v1/object/public/shop-media/'
+        'site-images/diamonds/colors/blue-320.webp"'
+    ) in out
+    assert "cms/colors/blue" not in out
 
 
 def test_page_image_storage_folders_cover_admin_tabs():

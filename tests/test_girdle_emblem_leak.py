@@ -86,7 +86,7 @@ def test_emblem_imgs_have_intrinsic_size_fallback():
     src = GIRDLE_JS.read_text(encoding="utf-8")
     assert 'width="18" height="18"' in src
     shop = SHOP_JS.read_text(encoding="utf-8")
-    assert "girdle-engrave.js?v=27" in shop
+    assert "girdle-engrave.js?v=29" in shop
     hidden_clear = shop.split("function updateEngravingSteps()", 1)[1].split("function closeAllShopDropdowns", 1)[0]
     assert "shop-girdle-engrave-preview" in hidden_clear
     assert "preview.innerHTML = ''" in hidden_clear
