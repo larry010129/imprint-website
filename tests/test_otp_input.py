@@ -99,7 +99,7 @@ def test_forgot_password_js_declares_wizard_state():
     assert "function ensureOtpInit()" in text
     assert "fp-email-form" in text
     assert "data-fp-use-totp" in text
-    assert "setStep('inbox')" in text
+    assert "setStep('inbox', true)" in text
     assert "請輸入 Email。" in text
     assert "改用 6 位數驗證碼" in text
 
