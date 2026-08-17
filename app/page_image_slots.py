@@ -602,34 +602,60 @@ def _is_series_default_asset(series_key: str, url: str, webp: str) -> bool:
     return _hero_stem(webp or url) == default_stem
 
 
-def _series_page_hero_admin_urls(series_key: str, url: str, webp: str) -> tuple[str, str]:
+def _series_page_hero_row(series_key: str, cur=None) -> dict | None:
+    """Load /series/{key}/ 主視覺. Use cur when caller already holds a connection."""
+    if cur is not None:
+        from app.content import fetch_page_image
+
+        return fetch_page_image(cur, f"/series/{series_key}/", "hero")
+    from app.controllers.web_controller import _load_page_images
+
+    rows = _load_page_images(f"/series/{series_key}/")
+    return next((row for row in rows if str(row.get("slot_key") or "") == "hero"), None)
+
+
+def _series_urls_from_hero_row(
+    series_key: str, row: dict | None, url: str, webp: str
+) -> tuple[str, str, bool]:
+    """Custom 主視覺 wins over leftover overview/home files. No silent fallback."""
+    if not row:
+        return url, webp, False
+    from app.content import effective_page_image_url, effective_page_image_webp
+    from app.image_urls import with_cache_buster
+
+    hero = effective_page_image_url(row)
+    hero_webp = effective_page_image_webp(row)
+    if hero and not _is_series_default_asset(series_key, hero, hero_webp):
+        stamp = row.get("updated_at")
+        return (
+            with_cache_buster(hero, stamp),
+            with_cache_buster(hero_webp or hero, stamp),
+            True,
+        )
+    return url, webp, False
+
+
+def overlay_series_overview_heroes(cur, rows: list[dict]) -> None:
+    """Same-cursor: /series overview rows take a custom /series/{key}/ 主視覺."""
+    for row in rows:
+        key = str(row.get("slot_key") or "")
+        if key not in _SERIES:
+            continue
+        hero_row = _series_page_hero_row(key, cur)
+        hero_url, hero_webp, used = _series_urls_from_hero_row(key, hero_row, "", "")
+        if not used:
+            continue
+        row["display_url"] = hero_url
+        row["display_webp"] = hero_webp or hero_url
+        if hero_row and hero_row.get("updated_at") is not None:
+            row["updated_at"] = hero_row.get("updated_at")
+
+
+def _series_page_hero_admin_urls(series_key: str, url: str, webp: str) -> tuple[str, str, bool]:
     """Use /series/{key}/ 主視覺 when that hero is a real admin/custom upload."""
     if series_key not in _SERIES:
-        return url, webp
-    try:
-        from app.content import (
-            effective_page_image_url,
-            effective_page_image_webp,
-            fetch_page_image,
-        )
-        from app.database import get_connection
-        from app.image_urls import with_cache_buster
-
-        with get_connection() as conn, conn.cursor() as cur:
-            row = fetch_page_image(cur, f"/series/{series_key}/", "hero")
-        if not row:
-            return url, webp
-        hero = effective_page_image_url(row)
-        hero_webp = effective_page_image_webp(row)
-        if hero and not _is_series_default_asset(series_key, hero, hero_webp):
-            stamp = row.get("updated_at")
-            return (
-                with_cache_buster(hero, stamp),
-                with_cache_buster(hero_webp or hero, stamp),
-            )
-    except Exception:
-        pass
-    return url, webp
+        return url, webp, False
+    return _series_urls_from_hero_row(series_key, _series_page_hero_row(series_key), url, webp)
 
 
 def _home_series_admin_urls(slot_key: str, url: str, webp: str) -> tuple[str, str]:
@@ -637,7 +663,12 @@ def _home_series_admin_urls(slot_key: str, url: str, webp: str) -> tuple[str, st
     series_key = _series_key_from_home_slot(slot_key)
     if not series_key:
         return url, webp
-    return _series_page_hero_admin_urls(series_key, url, webp)
+    resolved, resolved_webp, _used = _series_page_hero_admin_urls(series_key, url, webp)
+    return resolved, resolved_webp
+
+
+def _is_series_overview_route(route: str) -> bool:
+    return str(route or "").rstrip("/") == "/series"
 
 
 def _is_stock_hero_asset(url: str) -> bool:
@@ -769,7 +800,8 @@ def _replace_marked(html: str, slot_key: str, url: str, webp: str) -> str | None
 
 def apply_page_image_slots(html: str, route: str, rows: list[dict]) -> str:
     """Rewrite only image blocks declared for route and slot."""
-    specs = {spec.slot_key: spec for spec in page_image_slot_specs() if spec.page_key == route}
+    page_key = "/series" if _is_series_overview_route(route) else route
+    specs = {spec.slot_key: spec for spec in page_image_slot_specs() if spec.page_key == page_key}
     for row in rows:
         spec = specs.get(str(row.get("slot_key") or "hero"))
         if not spec:
@@ -782,20 +814,22 @@ def apply_page_image_slots(html: str, route: str, rows: list[dict]) -> str:
             if "display_webp" in row
             else _effective_url(row, "image_webp", "default_image_webp")
         )
-        if route == "/":
+        used_hero = False
+        if page_key == "/":
             url, webp = _prefer_local_home_asset(spec.slot_key, url, webp)
             if _series_key_from_home_slot(spec.slot_key):
                 url, webp = _home_series_admin_urls(spec.slot_key, url, webp)
-        elif route == "/series":
+        elif page_key == "/series":
             if spec.slot_key in _SERIES:
-                url, webp = _series_page_hero_admin_urls(spec.slot_key, url, webp)
+                url, webp, used_hero = _series_page_hero_admin_urls(spec.slot_key, url, webp)
             url, webp = _prefer_local_series_asset(url, webp)
         url, webp = _drop_stale_stock_srcset(url, webp)
         from app.image_urls import with_cache_buster
 
-        stamp = row.get("updated_at")
-        url = with_cache_buster(url, stamp)
-        webp = with_cache_buster(webp, stamp)
+        if not used_hero:
+            stamp = row.get("updated_at")
+            url = with_cache_buster(url, stamp)
+            webp = with_cache_buster(webp, stamp)
         marked = _replace_marked(html, spec.slot_key, url, webp)
         if marked is not None:
             html = marked

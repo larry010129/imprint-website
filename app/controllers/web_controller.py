@@ -208,7 +208,12 @@ def _fetch_page_images_cached(route: str, _time_bucket: int) -> list[dict]:
     from app.database import get_connection
 
     with get_connection() as conn, conn.cursor() as cur:
-        return fetch_page_images(cur, route)
+        rows = fetch_page_images(cur, route)
+        if str(route or "").rstrip("/") == "/series":
+            from app.page_image_slots import overlay_series_overview_heroes
+
+            overlay_series_overview_heroes(cur, rows)
+        return rows
 
 
 def _load_page_images(route: str) -> list[dict]:
