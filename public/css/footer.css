@@ -463,7 +463,7 @@ body.site-layout:not(.page-home) > .site-footer{
 .sf-cinematic__marquee-track{
   display:flex;
   width:max-content;
-  animation:sf-marquee 96s linear infinite;
+  animation:sf-marquee 288s linear infinite;
   font-family:var(--sans, "Noto Sans TC", sans-serif);
   font-size:10px;
   letter-spacing:.28em;
