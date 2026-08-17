@@ -300,7 +300,7 @@
 }
 .contact-section--intro .contact-grid{
   gap:28px;
-  align-items:start;
+  align-items:stretch;
 }
 .contact-section--intro .contact-card{
   padding:22px 20px;
@@ -321,12 +321,13 @@
 .contact-section--intro .mt-lg{
   margin-top:14px;
 }
+.contact-section--intro .contact-map{
+  height:100%;
+  min-height:100%;
+}
 .contact-section--intro .contact-map iframe{
   min-height:0;
-  height:200px;
-}
-@media (min-width:901px){
-  .contact-section--intro .contact-map iframe{ height:240px; }
+  height:100%;
 }
 .contact-scroll-hint{
   margin:18px 0 0;

@@ -185,6 +185,7 @@ body.site-layout:not(.page-home) > .site-footer{
 .site-footer__links address{
   margin:0;
   font-style:normal;
+  white-space:nowrap;
 }
 
 .site-footer__col--learn .site-footer__heading{
