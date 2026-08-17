@@ -59,6 +59,7 @@ def send_email(*, to: str, subject: str, text: str, html: str | None = None) -> 
         headers={
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
+            "User-Agent": "imprint-website/1.0",
         },
     )
     try:

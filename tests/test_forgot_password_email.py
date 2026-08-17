@@ -55,6 +55,7 @@ def test_password_reset_email_uses_shop_html_and_token_link(monkeypatch):
         captured["url"] = req.full_url
         captured["payload"] = json.loads(req.data.decode("utf-8"))
         captured["auth"] = req.get_header("Authorization")
+        captured["ua"] = req.get_header("User-agent")
         return _Resp()
 
     monkeypatch.setenv("RESEND_API_KEY", "re_test_key")
@@ -80,6 +81,7 @@ def test_password_reset_email_uses_shop_html_and_token_link(monkeypatch):
     assert "Resend" not in payload["html"]
     assert "Supabase" not in payload["text"]
     assert captured["auth"] == "Bearer re_test_key"
+    assert captured["ua"] == "imprint-website/1.0"
 
 
 def test_password_reset_email_skips_without_api_key(monkeypatch):
