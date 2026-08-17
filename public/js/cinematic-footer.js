@@ -10,6 +10,44 @@
   var reveal = document.querySelector("[data-footer-reveal]");
   if (!footer || !reveal) return;
 
+  function fillMarquee() {
+    var track = footer.querySelector(".sf-cinematic__marquee-track");
+    if (!track) return;
+    var spans = track.querySelectorAll("span");
+    if (!spans.length) return;
+    var phrase = (
+      spans[0].getAttribute("data-marquee-phrase") ||
+      spans[0].textContent ||
+      ""
+    ).trim();
+    if (!phrase) return;
+    if (!/\s$/.test(phrase)) phrase += " ";
+    var box = track.parentElement;
+    var target = Math.max(
+      (box && box.offsetWidth) || 0,
+      window.innerWidth || 0
+    );
+    if (!target) return;
+    var unit = spans[0];
+    unit.textContent = phrase;
+    var n = 0;
+    while (unit.offsetWidth < target && n < 24) {
+      unit.textContent += phrase;
+      n += 1;
+    }
+    var packed = unit.textContent;
+    if (spans.length < 2) {
+      track.appendChild(unit.cloneNode(true));
+      spans = track.querySelectorAll("span");
+    }
+    for (var i = 1; i < spans.length; i += 1) {
+      spans[i].textContent = packed;
+    }
+  }
+
+  fillMarquee();
+  window.addEventListener("resize", fillMarquee, { passive: true });
+
   var reduced =
     window.matchMedia &&
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
