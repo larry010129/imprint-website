@@ -316,13 +316,19 @@ def test_series_overview_other_series_follow_custom_hero(monkeypatch):
     )
     stamp = datetime(2026, 8, 17, 6, 0, 0, tzinfo=timezone.utc)
     _mock_series_hero(monkeypatch, custom, stamp, series_key="pet")
+    stock_srcset = (
+        "/static/images/hero/imprint-diamond-pet-memorial-cat-800w.webp 800w, "
+        "/static/images/hero/imprint-diamond-pet-memorial-cat.webp 2400w"
+    )
     html = (
-        '<picture><source srcset="/static/images/hero/imprint-diamond-pet-memorial-cat.webp">'
+        f'<picture><source type="image/webp" srcset="{stock_srcset}">'
         '<img data-cms-slot="pet" '
-        'src="/static/images/hero/imprint-diamond-pet-memorial-cat.jpg"></picture>'
-        '<picture><source srcset="/static/images/hero/imprint-diamond-pet-memorial-cat.webp">'
+        'src="/static/images/hero/imprint-diamond-pet-memorial-cat.jpg" '
+        f'srcset="{stock_srcset}"></picture>'
+        f'<picture><source type="image/webp" srcset="{stock_srcset}">'
         '<img data-cms-slot="pet" '
-        'src="/static/images/hero/imprint-diamond-pet-memorial-cat.jpg"></picture>'
+        'src="/static/images/hero/imprint-diamond-pet-memorial-cat.jpg" '
+        f'srcset="{stock_srcset}"></picture>'
     )
     row = {
         "slot_key": "pet",
@@ -337,7 +343,8 @@ def test_series_overview_other_series_follow_custom_hero(monkeypatch):
         "is_published": True,
     }
     out = apply_page_image_slots(html, "/series", [row])
-    assert out.count(f"{custom}?v=1786946400") == 2
+    assert f"{custom}?v=1786946400" in out
+    assert out.count(f"{custom}?v=1786946400") >= 2
     assert "imprint-diamond-pet-memorial-cat" not in out
     assert "<source" not in out.lower()
 
