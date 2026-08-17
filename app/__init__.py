@@ -254,8 +254,8 @@ async def lifespan(_app: FastAPI):
 
     from app.gold_scrape_job import gold_scrape_loop
 
-    # Background only — never await gold_scrape_loop before yield (blocks
-    # listen + gunicorn notify). Work runs after the app is serving.
+    # Background only — do not await this loop before listen (blocks
+    # gunicorn notify). Work runs after the app is serving.
     gold_task = asyncio.create_task(gold_scrape_loop(), name="imprint-gold-scrape")
     # Featured-video channel sync is button-only (admin POST /featured-video/sync).
     # No background timer / lifespan refresh for the gallery.

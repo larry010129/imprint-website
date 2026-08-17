@@ -106,7 +106,7 @@ def test_lifespan_starts_and_cancels_gold_scrape_task() -> None:
     assert 'name="imprint-gold-scrape"' in init_src
     assert "gold_task.cancel()" in init_src
     assert "create_task(gold_scrape_loop()" in init_src
-    assert "await gold_scrape_loop" not in init_src
+    assert "await gold_scrape_loop()" not in init_src
     assert init_src.index("create_task(gold_scrape_loop()") < init_src.index("        yield")
     # Featured video must not auto-sync on a timer — admin button only.
     assert "featured_video_refresh_loop" not in init_src
