@@ -1122,3 +1122,12 @@ a.btn-sm.btn-primary:hover{background:#453A34;color:#fff;border-color:#453A34;}
   }
   .content-row .btn-sm{min-height:var(--tap-target-min);width:100%;text-align:center;}
 }
+
+.ap-char-count{
+  margin:6px 0 0;
+  text-align:right;
+  font-size:12px;
+  letter-spacing:.04em;
+  color:var(--ink-faint);
+  font-variant-numeric:tabular-nums;
+}

@@ -15,6 +15,8 @@
   var _testimonials = [];
   var _journalPosts = [];
   var _journalError = '';
+  var JOURNAL_TITLE_MAX = 60;
+  var JOURNAL_BODY_MAX = 20000;
   var _faqItems = [];
   var _faqCategories = [];
   var _faqCategoryId = '';
@@ -1448,7 +1450,7 @@
       '<tr data-id="' + esc(String(p.id)) + '">' +
         '<td>' + esc(p.posted_at || '') + '</td>' +
         '<td>' + esc(p.title || '') + '</td>' +
-        '<td>' + esc(truncate(p.body || '', 48)) + '</td>' +
+        '<td>' + esc(truncate(p.body_preview || p.body || '', 48)) + '</td>' +
         '<td>' + thumb + '</td>' +
         '<td>' + (archived
           ? '<span class="ap-status-badge ap-status-badge--offline">活動已結束</span>'
@@ -1502,7 +1504,49 @@
       var id = btn.getAttribute('data-id');
       if (!id || !action) return;
       if (action === 'edit') {
-        openJournalModal(findJournalPost(id));
+        var row = findJournalPost(id);
+        if (!row) return;
+        btn.disabled = true;
+        var preview = String(row.body_preview || '');
+        var openWith = function (post) {
+          btn.disabled = false;
+          openJournalModal(post);
+        };
+        var looksTrimmed = function (body) {
+          var text = String(body || '');
+          if (!text) return true;
+          if (preview && text === preview) return true;
+          if (preview && text.length <= preview.length && preview.indexOf(text) === 0) return true;
+          return false;
+        };
+        var finish = function (post) {
+          var merged = Object.assign({}, row, post || {});
+          if (!looksTrimmed(merged.body)) { openWith(merged); return; }
+          fetch('/api/journal/posts?page=1&page_size=100', { credentials: 'include' })
+            .then(function (r) { return r.json().catch(function () { return {}; }); })
+            .then(function (data) {
+              var posts = (data && data.posts) || [];
+              var found = null;
+              for (var i = 0; i < posts.length; i++) {
+                if (String(posts[i].id) === String(id)) { found = posts[i]; break; }
+              }
+              if (found && !looksTrimmed(found.body)) {
+                openWith(Object.assign({}, merged, found));
+                return;
+              }
+              openWith(Object.assign({}, merged, { body: (found && found.body) || row.body || '' }));
+            })
+            .catch(function () {
+              openWith(Object.assign({}, merged, { body: row.body || '' }));
+            });
+        };
+        if (api.admin.getJournalPost) {
+          api.admin.getJournalPost(id).then(function (res) {
+            finish(res && res.post ? res.post : null);
+          }).catch(function () { finish(null); });
+        } else {
+          finish(null);
+        }
         return;
       }
       if (action === 'delete' && !confirm('確定刪除此日誌？')) return;
@@ -1529,10 +1573,12 @@
             '<label class="ap-field"><span>日期' + reqStar() + '</span>' +
               '<input type="date" name="posted_at" required value="' + esc(postedAt) + '"></label>' +
             '<label class="ap-field ap-field--full"><span>標題' + reqStar() + '</span>' +
-              '<input name="title" required maxlength="200" value="' + esc(isEdit ? (p.title || '') : '') + '"></label>' +
+              '<input name="title" id="acJournalTitle" required maxlength="' + JOURNAL_TITLE_MAX + '" value="' + esc(isEdit ? (p.title || '') : '') + '">' +
+              '<p class="ap-char-count" id="acJournalTitleCount" aria-live="polite">0/' + JOURNAL_TITLE_MAX + '</p></label>' +
             '<label class="ap-field ap-field--full"><span>內容</span>' +
-              '<textarea name="body" class="ap-textarea" rows="8" placeholder="日誌內容…">' +
-                esc(isEdit ? (p.body || '') : '') + '</textarea></label>' +
+              '<textarea name="body" id="acJournalBody" class="ap-textarea" rows="8" maxlength="' + JOURNAL_BODY_MAX + '" placeholder="日誌內容…">' +
+                esc(isEdit ? (p.body || '') : '') + '</textarea>' +
+              '<p class="ap-char-count" id="acJournalBodyCount" aria-live="polite">0/' + JOURNAL_BODY_MAX + '</p></label>' +
             '<div class="ap-field ap-field--full"><span>圖片（選填）</span>' +
               '<div id="acJournalImageUploadMount"></div>' +
               '<p class="ap-section-hint">JPG / PNG / WEBP；上傳後轉 WebP。可留空；已有圖不必重傳。</p>' +
@@ -1553,6 +1599,7 @@
     window.AdminPanel.openModal(html);
     var form = document.getElementById('acJournalForm');
     if (form) form.addEventListener('submit', submitJournal);
+    bindJournalCounts();
 
     var urlInput = document.getElementById('acJournalImageUrl');
     if (window.AdminTables && window.AdminTables.renderImageUploadField) {
@@ -1575,6 +1622,23 @@
         hintMissing.hidden = false;
       }
     }
+  }
+
+
+  function bindCount(inputId, countId, max) {
+    var input = document.getElementById(inputId);
+    var el = document.getElementById(countId);
+    if (!input || !el) return;
+    var paint = function () {
+      el.textContent = String(input.value.length) + '/' + max;
+    };
+    input.addEventListener('input', paint);
+    paint();
+  }
+
+  function bindJournalCounts() {
+    bindCount('acJournalTitle', 'acJournalTitleCount', JOURNAL_TITLE_MAX);
+    bindCount('acJournalBody', 'acJournalBodyCount', JOURNAL_BODY_MAX);
   }
 
   function submitJournal(e) {

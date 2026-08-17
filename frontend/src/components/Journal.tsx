@@ -63,13 +63,13 @@ function EntryCard({ entry, active }: { entry: JournalEntry; active: boolean }) 
         <div className="space-y-2">
           <h2
             className={
-              "text-lg font-medium leading-tight tracking-tight transition-colors duration-200 md:text-xl " +
+              "whitespace-nowrap text-lg font-medium leading-tight tracking-tight transition-colors duration-200 md:text-xl " +
               (active ? "text-neutral-900" : "text-neutral-700")
             }
           >
             <a
               href={detailHref}
-              className="inline-flex items-center gap-1.5 hover:text-neutral-500"
+              className="inline-flex items-center gap-1.5 whitespace-nowrap hover:text-neutral-500"
             >
               {entry.title}
               <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
@@ -191,7 +191,7 @@ export default function Journal() {
       <div className="container">
         <div className="mx-auto max-w-3xl">
           <p className="mb-2 text-sm tracking-widest text-neutral-500">JOURNAL</p>
-          <h1 className="mb-4 text-3xl font-bold tracking-tight text-neutral-900 md:text-5xl">
+          <h1 className="mb-4 whitespace-nowrap text-3xl font-bold tracking-tight text-neutral-900 md:text-5xl">
             品牌日誌
           </h1>
           <p className="mb-6 text-base text-neutral-600 md:text-lg">

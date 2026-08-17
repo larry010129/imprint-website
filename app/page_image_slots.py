@@ -521,9 +521,50 @@ def _prefer_local_home_asset(slot_key: str, url: str, webp: str) -> tuple[str, s
             return _LOCAL_DNA_BLUE, _LOCAL_DNA_BLUE
         return url, webp or url
     if key in _HOME_RESPONSIVE_SLOTS:
+        # Admin upload (Supabase / any remote) always wins. Do not remap it
+        # back to the local wedding-couple srcset just because the stem matches.
+        if _is_remote_asset(url) or _is_remote_asset(webp):
+            return url, webp or url
         stem = _hero_stem(webp or url)
         if stem in _HERO_STEM_MAX_W:
             return f"/static/images/hero/{stem}-800w.webp", _hero_responsive_srcset(stem)
+    return url, webp
+
+
+_SIGNATURE_DEFAULT_STEM = "imprint-diamond-wedding-couple-ring"
+
+
+def _is_signature_default_asset(url: str, webp: str) -> bool:
+    if _is_remote_asset(url) or _is_remote_asset(webp):
+        return False
+    stem = _hero_stem(webp or url)
+    if not (url or webp):
+        return True
+    return stem == _SIGNATURE_DEFAULT_STEM
+
+
+def _series_signature_admin_urls(url: str, webp: str) -> tuple[str, str]:
+    """Landing 真我鑽石 card: use 首頁 slot, else the series-page 主視覺."""
+    if not _is_signature_default_asset(url, webp):
+        return url, webp or url
+    try:
+        from app.content import (
+            effective_page_image_url,
+            effective_page_image_webp,
+            fetch_page_image,
+        )
+        from app.database import get_connection
+
+        with get_connection() as conn, conn.cursor() as cur:
+            row = fetch_page_image(cur, "/series/signature/", "hero")
+        if not row:
+            return url, webp
+        hero = effective_page_image_url(row)
+        hero_webp = effective_page_image_webp(row)
+        if hero and not _is_signature_default_asset(hero, hero_webp):
+            return hero, hero_webp or hero
+    except Exception:
+        pass
     return url, webp
 
 
@@ -647,6 +688,8 @@ def apply_page_image_slots(html: str, route: str, rows: list[dict]) -> str:
         )
         if route == "/":
             url, webp = _prefer_local_home_asset(spec.slot_key, url, webp)
+            if spec.slot_key == "series-signature":
+                url, webp = _series_signature_admin_urls(url, webp)
         elif route == "/series":
             url, webp = _prefer_local_series_asset(url, webp)
         marked = _replace_marked(html, spec.slot_key, url, webp)

@@ -503,6 +503,10 @@ def parse_journal_post_payload(body: dict | None) -> tuple[dict | None, str | No
     errors: list[str] = []
     if not title:
         errors.append("請填寫標題")
+    elif len(title) > JOURNAL_TITLE_MAX_CHARS:
+        errors.append(f"標題最多 {JOURNAL_TITLE_MAX_CHARS} 字")
+    if len(body_text) > JOURNAL_BODY_MAX_CHARS:
+        errors.append(f"內容最多 {JOURNAL_BODY_MAX_CHARS} 字")
     if date_err:
         errors.append(date_err)
     if errors:
@@ -531,6 +535,8 @@ def next_journal_post_sort_order(cur) -> int:
 
 
 JOURNAL_BODY_PREVIEW_CHARS = 120
+JOURNAL_TITLE_MAX_CHARS = 60
+JOURNAL_BODY_MAX_CHARS = 20000
 
 
 def serialize_journal_post(row: dict) -> dict:
@@ -561,12 +567,12 @@ def serialize_journal_post(row: dict) -> dict:
 def serialize_journal_post_list(row: dict) -> dict:
     """Admin list row: body_preview only, never full body."""
     src = dict(row)
-    body = src.pop("body", None)
+    body = src.get("body")
     preview = src.get("body_preview")
     if preview is None and body is not None:
         preview = str(body)[:JOURNAL_BODY_PREVIEW_CHARS]
     out = serialize_journal_post(src)
-    out.pop("body", None)
+    out["body"] = str(body or "")
     out["body_preview"] = str(preview or "")[:JOURNAL_BODY_PREVIEW_CHARS]
     return out
 
@@ -610,6 +616,19 @@ def fetch_published_journal_post(cur, post_id) -> dict | None:
     return serialize_journal_post(row) if row else None
 
 
+def fetch_journal_post(cur, post_id) -> dict | None:
+    """Admin: one journal post with full body, any publish state."""
+    cur.execute(
+        """
+        select * from journal_posts
+        where id = %s
+        limit 1
+        """,
+        (post_id,),
+    )
+    row = cur.fetchone()
+    return serialize_journal_post(row) if row else None
+
 def count_all_journal_posts(cur) -> int:
     cur.execute("select count(*)::int as n from journal_posts")
     row = cur.fetchone() or {}
@@ -625,7 +644,7 @@ def fetch_all_journal_posts(
     """Admin list: omit full body; expose body_preview only."""
     sql = f"""
         select
-          id, title,
+          id, title, coalesce(body, '') as body,
           left(coalesce(body, ''), {JOURNAL_BODY_PREVIEW_CHARS}) as body_preview,
           posted_at, image_url, is_archived, is_published, sort_order,
           created_at, updated_at

@@ -10,6 +10,7 @@
 .journal-list__title {
   margin: 0 0 1rem; font-size: clamp(1.875rem, 4vw, 3rem);
   font-weight: 700; letter-spacing: -.02em; color: #171717;
+  white-space: nowrap;
 }
 .journal-list__lead { margin: 0; font-size: 1.125rem; line-height: 1.7; color: #525252; }
 .journal-list__feed {
@@ -53,7 +54,10 @@
   border-radius: .5rem; margin: 0 0 1rem;
 }
 .journal-card__body { padding: .25rem .25rem .5rem; }
-.journal-card h2 { margin: 0 0 .5rem; font-size: 1.125rem; font-weight: 500; line-height: 1.3; color: #404040; }
+.journal-card h2 { margin: 0 0 .5rem; font-size: 1.125rem; font-weight: 500; line-height: 1.3; color: #404040; white-space: nowrap; }
+.journal-card h2 a { white-space: nowrap; }
+[data-journal-app] article h2,
+[data-journal-app] article h2 a { white-space: nowrap; }
 .journal-row--active .journal-card h2 { color: #171717; }
 .journal-card h2 a { color: inherit; text-decoration: none; }
 .journal-card__excerpt {

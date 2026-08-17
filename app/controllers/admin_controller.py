@@ -2608,18 +2608,24 @@ async def admin_journal_posts_list(request: Request) -> Response:
     from app.content import count_all_journal_posts, fetch_all_journal_posts
 
     page, page_size, limit, offset = parse_paging_from_mapping(request.query_params)
-    cache_key = ("journal-posts", page, page_size)
+    with get_connection() as conn, conn.cursor() as cur:
+        total = count_all_journal_posts(cur)
+        rows = fetch_all_journal_posts(cur, limit=limit, offset=offset)
+    return JSONResponse(content=page_response(
+        rows, page=page, page_size=page_size, total=total, items_key="posts"
+    ))
 
-    def build() -> dict:
-        with get_connection() as conn, conn.cursor() as cur:
-            total = count_all_journal_posts(cur)
-            rows = fetch_all_journal_posts(cur, limit=limit, offset=offset)
-        return page_response(
-            rows, page=page, page_size=page_size, total=total, items_key="posts"
-        )
 
-    return _admin_cached_json(request, cache_key, build)
+@router.get("/journal-posts/{post_id}")
+async def admin_journal_post_get(request: Request, post_id: str) -> Response:
+    _require_admin(request)
+    from app.content import fetch_journal_post
 
+    with get_connection() as conn, conn.cursor() as cur:
+        row = fetch_journal_post(cur, post_id)
+    if not row:
+        return JSONResponse(status_code=404, content={"error": "找不到這則日誌"})
+    return JSONResponse(content={"post": row})
 
 @router.post("/journal-posts")
 async def admin_journal_posts_create(request: Request) -> JSONResponse:

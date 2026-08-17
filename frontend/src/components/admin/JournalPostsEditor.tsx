@@ -14,6 +14,10 @@ export type JournalPost = {
 };
 
 export type JournalPostsApi = {
+  getJournalPost?: (id: string) => Promise<{
+    post?: JournalPost;
+    error?: string;
+  }>;
   getJournalPosts: (options?: Record<string, unknown>) => Promise<{
     posts?: JournalPost[];
     error?: string;
@@ -35,6 +39,9 @@ export type JournalPostsApi = {
     error?: string | { message?: string };
   }>;
 };
+
+const JOURNAL_TITLE_MAX = 60;
+const JOURNAL_BODY_MAX = 20000;
 
 type Draft = Omit<JournalPost, "id"> & { id?: string };
 
@@ -161,9 +168,9 @@ export default function JournalPostsEditor({ api }: { api: JournalPostsApi }) {
       {draft ? (
         <article className="cms-copy-card">
           <h4>{draft.id ? "編輯日誌文章" : "新增日誌文章"}</h4>
-          <label className="cms-field"><span>標題</span><input value={draft.title} maxLength={200} onChange={(event) => setField("title", event.target.value)} /></label>
+          <label className="cms-field"><span>標題</span><input value={draft.title} maxLength={JOURNAL_TITLE_MAX} onChange={(event) => setField("title", event.target.value)} /><p className="ap-char-count">{draft.title.length}/{JOURNAL_TITLE_MAX}</p></label>
           <label className="cms-field"><span>日期</span><input type="date" value={draft.posted_at} onChange={(event) => setField("posted_at", event.target.value)} /></label>
-          <label className="cms-field"><span>內文</span><textarea rows={8} value={draft.body} onChange={(event) => setField("body", event.target.value)} /></label>
+          <label className="cms-field"><span>內文</span><textarea rows={8} maxLength={JOURNAL_BODY_MAX} value={draft.body} onChange={(event) => setField("body", event.target.value)} /><p className="ap-char-count">{draft.body.length}/{JOURNAL_BODY_MAX}</p></label>
           <ImageUploadField
             key={imageFieldKey}
             label="文章圖片（選填）"
@@ -196,10 +203,13 @@ export default function JournalPostsEditor({ api }: { api: JournalPostsApi }) {
             <div className="cms-copy-card__actions">
               <span className="cms-hint">{post.is_published ? "已發布" : "草稿"}</span>
               <button type="button" className="btn-sm" onClick={() => {
-                setDraft(draftFromPost(post));
-                setError(null);
-                setImagePending(false);
-                setImageFieldKey((key) => key + 1);
+                void (async () => {
+                  setError(null);
+                  setImagePending(false);
+                  const full = api.getJournalPost ? await api.getJournalPost(post.id) : null;
+                  setDraft(draftFromPost(full?.post || { ...post, body: post.body || "" }));
+                  setImageFieldKey((key) => key + 1);
+                })();
               }}>編輯</button>
               <button type="button" className="btn-sm" onClick={() => void action(post, post.is_published ? "unpublish" : "publish")}>{post.is_published ? "取消發布" : "發布"}</button>
               <button type="button" className="btn-sm adx-action--danger" onClick={() => void action(post, "delete")}>刪除</button>

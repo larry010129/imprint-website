@@ -396,6 +396,9 @@
       getJournalPosts: function (opts) {
         return requestPagedList('/api/admin/journal-posts', 'posts', opts);
       },
+      getJournalPost: function (id) {
+        return request('/api/admin/journal-posts/' + encodeURIComponent(id));
+      },
       createJournalPost: function (fields) { return request('/api/admin/journal-posts', { method: 'POST', body: fields }); },
       updateJournalPost: function (fields) { return request('/api/admin/journal-post-update', { method: 'POST', body: fields }); },
       journalPostAction: function (id, action) {
