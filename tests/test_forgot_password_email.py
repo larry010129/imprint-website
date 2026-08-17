@@ -106,6 +106,9 @@ def test_forgot_password_page_does_not_name_resend():
     assert "resend" not in html.lower()
     assert "可用信件重設，也可以使用驗證碼。" in html
     assert "寄出重設信件" in html
+    assert "Authenticator 的 6 位數或備用碼" in html
+    assert "請開啟主旨為「重設銘印鑽石帳戶密碼」的信件" in html
+    assert "Authenticator 6 位數或備用碼" not in html
     assert "寄送重設信件" not in html
     assert "寄出重設連結" not in html
     assert "用信件重設，或使用驗證碼。兩種方式都可以。" not in html

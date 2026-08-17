@@ -198,6 +198,8 @@ def test_forgot_password_page_has_email_and_totp_paths(client):
     assert "otp-input.js?v=3" in resp.text
     assert "可用信件重設，也可以使用驗證碼。" in resp.text
     assert "寄出重設信件" in resp.text
+    assert "Authenticator 的 6 位數或備用碼" in resp.text
+    assert "請開啟主旨為「重設銘印鑽石帳戶密碼」的信件" in resp.text
     assert "使用驗證碼" in resp.text
     assert "login-button--outline" in resp.text
     assert '<p class="auth-divider">或</p>' in resp.text
