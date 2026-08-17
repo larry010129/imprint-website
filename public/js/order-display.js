@@ -58,7 +58,10 @@
       var thumb = global.ShopAssets.categoryThumb(o.category);
       if (thumb) return thumb;
     }
-    if (o.category) return '/static/images/shop-product/thumbs/' + o.category + '/A.jpg';
+    if (o.category) {
+      var root = (global.shopConfig && global.shopConfig.imageRoot) || '/static/images/shop-product/';
+      return String(root).replace(/\/?$/, '/') + 'thumbs/' + o.category + '/A.jpg';
+    }
     return '';
   }
 

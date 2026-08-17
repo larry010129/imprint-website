@@ -139,14 +139,75 @@ def _object_api_url(base: str, bucket: str, object_path: str) -> str:
 
 
 def public_url_for_object(object_path: str, *, bucket: str | None = None) -> str:
-    base, _, default_bucket = _require_config()
-    b = bucket or default_bucket
+    """Public object URL from SUPABASE_URL + bucket. No service-role key needed."""
+    base = (settings.supabase_url or "").rstrip("/")
+    b = (bucket or settings.supabase_storage_bucket or "shop-media").strip() or "shop-media"
     path = (object_path or "").strip().lstrip("/")
+    if not base:
+        raise StorageNotConfiguredError(
+            "Supabase Storage 未設定：請設定 SUPABASE_URL"
+        )
     if not path:
         raise StorageUploadError(
             "Storage upload failed: empty object path (InvalidKey)"
         )
     return f"{base}/storage/v1/object/public/{b}/{path}"
+
+
+# Bundled shop stills live under site-images/ (same map as testimonials migrate).
+# Admin catalog uploads use products/{ring,pendant,…} — never this prefix.
+_SITE_IMAGES_KIND = "site-images"
+_STATIC_IMAGES_PREFIXES = (
+    "/static/images/",
+    "static/images/",
+    "/images/",
+    "images/",
+)
+SHOP_STILL_FOLDERS = frozenset({"diamonds", "shop-product", "products"})
+
+
+def site_images_public_base() -> str | None:
+    """``…/object/public/{bucket}/site-images`` or None when SUPABASE_URL missing."""
+    if not (settings.supabase_url or "").strip():
+        return None
+    try:
+        return public_url_for_object(_SITE_IMAGES_KIND).rstrip("/")
+    except (StorageNotConfiguredError, StorageUploadError):
+        return None
+
+
+def site_image_object_path(local_path: str) -> str | None:
+    """Map ``/static/images/X`` or ``X`` → ``site-images/X``; encode unicode leaf only."""
+    raw = unquote(str(local_path or "").strip().split("?", 1)[0]).replace("\\", "/")
+    rest = raw
+    for prefix in _STATIC_IMAGES_PREFIXES:
+        if rest.startswith(prefix):
+            rest = rest[len(prefix) :]
+            break
+    rest = rest.lstrip("/")
+    if not rest:
+        return None
+    parts = [part for part in rest.split("/") if part and part != "."]
+    if not parts or any(part == ".." for part in parts):
+        return None
+    leaf = parts[-1]
+    folders = parts[:-1]
+    try:
+        safe_leaf = _ascii_filename(leaf) if any(ord(ch) > 127 for ch in leaf) else leaf
+    except StorageUploadError:
+        return None
+    return "/".join([_SITE_IMAGES_KIND, *folders, safe_leaf])
+
+
+def site_image_public_url(local_path: str) -> str | None:
+    """Public Storage URL for a bundled site image. None if unconfigured/invalid."""
+    object_path = site_image_object_path(local_path)
+    if not object_path:
+        return None
+    try:
+        return public_url_for_object(object_path)
+    except (StorageNotConfiguredError, StorageUploadError):
+        return None
 
 
 def is_supabase_storage_url(url: str | None) -> bool:

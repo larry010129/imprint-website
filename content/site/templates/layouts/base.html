@@ -34,6 +34,13 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 {% set defer_pages_css = is_series_overview or is_series_detail or is_jewelry_hub
   or _cp in ['about', 'stories', 'faq'] %}
 <meta charset="utf-8">
+{% set _sm = shop_media_config() %}
+<script>
+window.shopConfig = Object.assign({
+  imageRoot: {{ _sm.imageRoot | tojson }},
+  siteImagesRoot: {{ _sm.siteImagesRoot | tojson }}
+}, window.shopConfig || {});
+</script>
 <script>window.imgFallback=function(img){var s=img.dataset.fbStep?parseInt(img.dataset.fbStep,10):0;var e=["jpg","png","jpeg"];var pic=img.parentElement&&img.parentElement.tagName==="PICTURE"?img.parentElement:null;if(s<e.length-1){s++;img.dataset.fbStep=String(s);if(pic){var srcs=pic.querySelectorAll("source");for(var i=0;i<srcs.length;i++){srcs[i].remove();}}img.src=img.src.replace(/\.(jpg|jpeg|png)(\?.*)?$/i,"."+e[s]+"$2");}else{(pic||img).remove();}};</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block title %}{{ title }}{% endblock %}</title>

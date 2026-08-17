@@ -256,10 +256,10 @@ def test_shop_js_fancy_carat_dropdown_intersects_admin_min():
     assert "stockFancyDiamondColors" in (
         ROOT / "public" / "js" / "shop-assets.js"
     ).read_text(encoding="utf-8")
-    assert "shop.js?v=168" in (
+    assert "shop.js?v=169" in (
         ROOT / "content" / "site" / "templates" / "pages" / "shop" / "calculator.html"
     ).read_text(encoding="utf-8")
-    assert "shop.js?v=168" in (
+    assert "shop.js?v=169" in (
         ROOT / "content" / "site" / "page-registry.json"
     ).read_text(encoding="utf-8")
     assert "function setShopOptionDisabled" in src
@@ -282,7 +282,7 @@ def test_shop_js_fancy_carat_dropdown_intersects_admin_min():
         "// Full catalog: 預設顏色 slots first; lite uses server thumbUrl (same priority)."
         in src
     )
-    assert "shop-assets.js?v=16" in (
+    assert "shop-assets.js?v=17" in (
         ROOT / "content" / "site" / "templates" / "pages" / "shop" / "calculator.html"
     ).read_text(encoding="utf-8")
     # Fancy preview must not reuse metal-only / white-stone catalog slots.

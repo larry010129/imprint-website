@@ -3,7 +3,10 @@
 {% block title %}{% if q_preview %}預覽模式｜不會送出真實訂單｜{% endif %}{{ title }}{% endblock %}
 {% block main_class %} class="main-content shop-calculator-page{% if q_preview %} is-shop-preview{% endif %}"{% endblock %}
 {% block resource_hints %}
-<link rel="preconnect" href="https://erobemoojyptyxvnyvuf.supabase.co" crossorigin>
+{% set _sm = shop_media_config() %}
+{% if _sm.supabaseOrigin %}
+<link rel="preconnect" href="{{ _sm.supabaseOrigin }}" crossorigin>
+{% endif %}
 {% endblock %}
 {% block extra_css %}
 <style>
@@ -1010,11 +1013,13 @@
     quoteSheetUrl: '/quote-sheet',
     shareBaseUrl: '/s/TOKEN',
     preview: {% if q_preview %}true{% else %}false{% endif %},
+    imageRoot: {{ shop_media_config().imageRoot | tojson }},
+    siteImagesRoot: {{ shop_media_config().siteImagesRoot | tojson }},
   }, window.shopConfig || {});
 </script>
-<script src="/static/js/shop-assets.js?v=16" defer></script>
+<script src="/static/js/shop-assets.js?v=17" defer></script>
 <script src="/static/js/shop-i18n.js?v=24" defer></script>
 <script src="/static/js/shop-terms.js?v=5" defer></script>
 <script src="/static/js/catalog-multi-filter.js?v=1" defer></script>
-<script src="/static/js/shop.js?v=168" defer></script>
+<script src="/static/js/shop.js?v=169" defer></script>
 {% endblock %}

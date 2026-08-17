@@ -478,7 +478,9 @@
   // Color-only extreme girdle macro zoom (shape ignored for preview image).
   var GIRDLE_ZOOM_BASE = '/static/images/shop/girdle/girdle-zoom';
   var GIRDLE_ZOOM_VERSION = '7';
-  var GIRDLE_MATRIX_BASE = '/static/images/diamonds/girdle-matrix';
+  var GIRDLE_MATRIX_BASE = (window.shopConfig && window.shopConfig.siteImagesRoot)
+    ? String(window.shopConfig.siteImagesRoot).replace(/\/?$/, '/') + 'diamonds/girdle-matrix'
+    : '/static/images/diamonds/girdle-matrix';
   var GIRDLE_MATRIX_VERSION = '8';
   var GIRDLE_PREVIEW_BY_COLOR = {
     white: GIRDLE_ZOOM_BASE + '-white.jpg?v=' + GIRDLE_ZOOM_VERSION,

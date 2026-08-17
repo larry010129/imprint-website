@@ -34,6 +34,29 @@ templates.env.globals["google_client_id"] = settings.google_client_id
 templates.env.globals["recaptcha_site_key"] = settings.recaptcha_site_key
 
 
+def shop_media_config() -> dict[str, str]:
+    """Public Storage bases for shop stills. Disk paths when SUPABASE_URL missing."""
+    from app.storage import site_images_public_base
+
+    base = site_images_public_base()
+    origin = (settings.supabase_url or "").rstrip("/")
+    if not base:
+        return {
+            "supabaseOrigin": origin,
+            "siteImagesRoot": "/static/images/",
+            "imageRoot": "/static/images/shop-product/",
+        }
+    root = base.rstrip("/") + "/"
+    return {
+        "supabaseOrigin": origin,
+        "siteImagesRoot": root,
+        "imageRoot": f"{root}shop-product/",
+    }
+
+
+templates.env.globals["shop_media_config"] = shop_media_config
+
+
 # mtime-keyed so CSS edits apply without process restart (dev + hot reload).
 _INLINE_CSS_CACHE: dict[str, tuple[float, str]] = {}
 
@@ -884,8 +907,38 @@ def register_pages(app: FastAPI) -> None:
         return await _make_handler(PAGE_404, status_code=404)(request)
 
 
+def _shop_still_redirect(folder: str):
+    """302 leftover /static/images/{folder}/* to shop-media/site-images."""
+
+    async def redirect_shop_still(request: Request, rest: str) -> RedirectResponse:
+        from app.storage import SHOP_STILL_FOLDERS, site_image_public_url
+
+        if folder not in SHOP_STILL_FOLDERS:
+            raise StarletteHTTPException(status_code=404, detail="Not Found")
+        target = site_image_public_url(f"{folder}/{rest}")
+        if not target:
+            raise StarletteHTTPException(status_code=404, detail="Not Found")
+        query = request.url.query
+        location = f"{target}?{query}" if query else target
+        return RedirectResponse(url=location, status_code=302)
+
+    return redirect_shop_still
+
+
 def mount_static(app: FastAPI) -> None:
     """Mount static assets last so page + API routes take precedence."""
+    # Leftover HTML/JS still hits /static/images/{diamonds|shop-product|products}.
+    # Register before the /static mount so the 302 wins after those folders leave git.
+    if settings.supabase_url:
+        from app.storage import SHOP_STILL_FOLDERS
+
+        for folder in sorted(SHOP_STILL_FOLDERS):
+            app.add_api_route(
+                f"/static/images/{folder}/{{rest:path}}",
+                _shop_still_redirect(folder),
+                methods=["GET", "HEAD"],
+                include_in_schema=False,
+            )
     js_dir = settings.static_dir / "js"
     css_dir = settings.static_dir / "css"
     if js_dir.is_dir():

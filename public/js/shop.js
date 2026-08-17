@@ -3520,7 +3520,9 @@ function diamondMetaLabel(item) {
 
 function diamondAssetUrl(relativePath) {
   if (!relativePath) return '';
-  return `/static/images/${relativePath}?v=24`;
+  const root = (window.shopConfig && window.shopConfig.siteImagesRoot) || '/static/images/';
+  const rel = String(relativePath).replace(/^\/+/, '').replace(/\\/g, '/');
+  return `${root}${rel}?v=24`;
 }
 
 function isBundledMatrixUrl(url) {
@@ -5920,7 +5922,7 @@ function loadGirdleEngrave() {
   if (girdleEngraveLoadPromise) return girdleEngraveLoadPromise;
   girdleEngraveLoadPromise = new Promise((resolve, reject) => {
     const script = document.createElement('script');
-    script.src = '/static/js/girdle-engrave.js?v=27';
+    script.src = '/static/js/girdle-engrave.js?v=28';
     script.async = true;
     script.onload = () => resolve(window.GirdleEngrave);
     script.onerror = () => reject(new Error('girdle engraving script failed to load'));

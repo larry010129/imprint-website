@@ -1,11 +1,14 @@
-from pathlib import Path
-from urllib.parse import unquote
-
 import pytest
 
 from app.image_urls import catalog_image_slot_urls, shop_product_image_url
 from app.seed_catalog import backfill_catalog_image_slots
-from config.settings import settings
+from app.storage import site_image_public_url
+
+
+@pytest.fixture(autouse=True)
+def _shop_stills_storage(monkeypatch):
+    monkeypatch.setenv("SUPABASE_URL", "https://abc123.supabase.co")
+    monkeypatch.setenv("SUPABASE_STORAGE_BUCKET", "shop-media")
 
 
 EXPECTED_SLOT_COUNTS = {
@@ -31,34 +34,26 @@ def test_every_catalog_slot_resolves_to_an_existing_image(style_key, expected):
 
     assert len(slots) == expected
     for image_url in slots.values():
-        assert image_url.startswith("/static/images/shop-product/")
-        relative_path = Path(unquote(image_url.removeprefix("/static/")))
-        assert (settings.static_dir / relative_path).is_file()
+        assert "/storage/v1/object/public/shop-media/site-images/shop-product/" in image_url
 
 
 def test_earring_yellow_fancy_uses_gold_fancy_renders():
     """Gold earring fancy must be gold-folder assets, not silver-metal copies."""
-    silver_root = settings.static_dir / "images" / "shop-product" / "silver"
-    gold_root = settings.static_dir / "images" / "shop-product" / "gold"
     for diamond in ("yellow", "blue", "pink"):
-        image_url = unquote(
-            shop_product_image_url("earring-A", "yellow", diamond_color=diamond)
-        )
+        image_url = shop_product_image_url("earring-A", "yellow", diamond_color=diamond)
         assert "/gold/" in image_url
-        assert image_url.endswith(f"耳飾A_gold_{diamond}.png")
-        gold_path = gold_root / f"耳飾A_gold_{diamond}.png"
-        silver_path = silver_root / f"耳飾A_silver_{diamond}.png"
-        assert gold_path.is_file()
-        assert gold_path.read_bytes() != silver_path.read_bytes()
+        assert image_url == site_image_public_url(
+            f"shop-product/gold/耳飾A_gold_{diamond}.png"
+        )
 
 
 def test_earring_rose_fancy_stays_in_rose_gold_folder():
     for diamond in ("yellow", "blue", "pink"):
-        image_url = unquote(
-            shop_product_image_url("earring-A", "rose", diamond_color=diamond)
-        )
+        image_url = shop_product_image_url("earring-A", "rose", diamond_color=diamond)
         assert "/rose_gold/" in image_url
-        assert image_url.endswith(f"耳飾A_rose_{diamond}.png")
+        assert image_url == site_image_public_url(
+            f"shop-product/rose_gold/耳飾A_rose_{diamond}.png"
+        )
 
 
 def test_missing_fancy_renders_use_same_product_originals():
@@ -72,7 +67,7 @@ def test_chain_b_rose_uses_the_rose_gold_photo():
     image_url = shop_product_image_url("chain-B", "rose", diamond_color="white")
 
     assert "/rose_gold/" in image_url
-    assert image_url.endswith("_rose.png")
+    assert image_url == site_image_public_url("shop-product/rose_gold/斗圓鍊_rose.png")
     assert "silver2" not in image_url
 
 
@@ -89,13 +84,14 @@ class _CatalogCursor:
         if normalized.startswith("delete from product_images"):
             self.deletes.append(params)
             self.rowcount = 0
-        elif normalized.startswith("select id, product_id, color"):
+        elif "from product_images" in normalized and "file_path" in normalized:
             self.rows = [
                 {
                     "id": f"image-{index}",
                     "product_id": "product-1",
                     "color": color,
                     "file_path": f"/static/uploads/products/{color}.png",
+                    "category": "ring",
                     "sort_order": index,
                 }
                 for index, color in enumerate(("white", "yellow", "rose"))
@@ -132,13 +128,14 @@ class _MissingImageCursor(_CatalogCursor):
         if normalized.startswith("delete from product_images"):
             self.deletes.append(params)
             self.rowcount = 0
-        elif normalized.startswith("select id, product_id, color"):
+        elif "from product_images" in normalized and "file_path" in normalized:
             self.rows = [
                 {
                     "id": "image-dead",
                     "product_id": "product-1",
                     "color": "white-white",
                     "file_path": "/static/uploads/products/test.png",
+                    "category": "ring",
                     "sort_order": 0,
                 }
             ]

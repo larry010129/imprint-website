@@ -30,7 +30,14 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </div>
   </main>
   <script src="/static/js/shop-config-token.js"></script>
-<script src="/static/js/shop-assets.js?v=13"></script>
+{% set _sm = shop_media_config() %}
+<script>
+window.shopConfig = Object.assign({
+  imageRoot: {{ _sm.imageRoot | tojson }},
+  siteImagesRoot: {{ _sm.siteImagesRoot | tojson }}
+}, window.shopConfig || {});
+</script>
+<script src="/static/js/shop-assets.js?v=17"></script>
   <script src="/static/js/shop-quote-render.js?v=14"></script>
   <script src="/static/js/share-summary.js"></script>
 </body>
