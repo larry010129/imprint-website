@@ -501,16 +501,9 @@ async def request_password_reset(request: Request) -> JSONResponse:
 
     reset_url = f"{settings.public_base_url}/reset-password?token={raw_token}"
     try:
-        from app.mail import send_email
+        from app.mail import send_password_reset_email
 
-        send_email(
-            to=user["email"],
-            subject="銘印鑽石｜重設密碼",
-            text=(
-                "您好，\n\n我們收到您重設密碼的請求。請於 1 小時內點擊以下連結設定新密碼：\n\n"
-                f"{reset_url}\n\n若您沒有提出此請求，請忽略這封信，您的密碼不會變更。\n\n銘印鑽石 IMPRINT DIAMOND"
-            ),
-        )
+        send_password_reset_email(to=user["email"], reset_url=reset_url)
     except Exception:
         log.exception("password reset email failed")
 

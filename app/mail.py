@@ -1,7 +1,12 @@
-"""Transactional email via Resend. Missing config → silent no-op."""
+"""Transactional email via Resend API. Missing API key → silent no-op.
+
+Password reset is this shop mailer (token link), not Supabase Auth.
+Set RESEND_API_KEY on the host — never commit the key.
+"""
 
 from __future__ import annotations
 
+import html as html_lib
 import json
 import logging
 import os
@@ -11,6 +16,8 @@ import urllib.request
 log = logging.getLogger(__name__)
 
 _RESEND_URL = "https://api.resend.com/emails"
+DEFAULT_FROM = "nonreply@imprintdiamond.com"
+PASSWORD_RESET_SUBJECT = "重設銘印鑽石帳戶密碼"
 
 
 def _resend_key() -> str:
@@ -18,15 +25,17 @@ def _resend_key() -> str:
 
 
 def _from_address() -> str:
-    return (os.environ.get("RESET_EMAIL_FROM") or os.environ.get("EMAIL_FROM") or "").strip()
+    return (
+        os.environ.get("RESET_EMAIL_FROM") or os.environ.get("EMAIL_FROM") or DEFAULT_FROM
+    ).strip()
 
 
 def _contact_notify_to() -> str:
     return (os.environ.get("CONTACT_NOTIFY_TO") or "").strip()
 
 
-def send_email(*, to: str, subject: str, text: str) -> bool:
-    """Send a plain-text email. Returns False if skipped or failed."""
+def send_email(*, to: str, subject: str, text: str, html: str | None = None) -> bool:
+    """Send a plain-text email (optional HTML). Returns False if skipped or failed."""
     api_key = _resend_key()
     from_addr = _from_address()
     to_addr = (to or "").strip()
@@ -34,10 +43,15 @@ def send_email(*, to: str, subject: str, text: str) -> bool:
         log.info("mail: skip send (missing RESEND_API_KEY / from / to)")
         return False
 
-    payload = json.dumps(
-        {"from": from_addr, "to": [to_addr], "subject": subject, "text": text},
-        ensure_ascii=False,
-    ).encode("utf-8")
+    body: dict[str, object] = {
+        "from": from_addr,
+        "to": [to_addr],
+        "subject": subject,
+        "text": text,
+    }
+    if html:
+        body["html"] = html
+    payload = json.dumps(body, ensure_ascii=False).encode("utf-8")
     req = urllib.request.Request(
         _RESEND_URL,
         data=payload,
@@ -95,3 +109,23 @@ def notify_contact_message(
         "請至後台 leads 查看並回覆。",
     ]
     return send_email(to=to_addr, subject=subject, text="\n".join(lines))
+
+
+def send_password_reset_email(*, to: str, reset_url: str) -> bool:
+    """Shop-owned reset mail. Token link only — no Supabase Auth templates."""
+    url = (reset_url or "").strip()
+    text = (
+        "您好，\n\n我們收到您重設銘印鑽石帳戶密碼的請求。"
+        "請於 1 小時內點擊以下連結設定新密碼：\n\n"
+        f"{url}\n\n若您沒有提出此請求，請忽略這封信，您的密碼不會變更。\n\n"
+        "銘印鑽石 IMPRINT DIAMOND"
+    )
+    safe_url = html_lib.escape(url, quote=True)
+    html = (
+        "<p>您好，</p>"
+        "<p>我們收到您重設銘印鑽石帳戶密碼的請求。請於 1 小時內點擊以下連結設定新密碼：</p>"
+        f'<p><a href="{safe_url}">{safe_url}</a></p>'
+        "<p>若您沒有提出此請求，請忽略這封信，您的密碼不會變更。</p>"
+        "<p>銘印鑽石 IMPRINT DIAMOND</p>"
+    )
+    return send_email(to=to, subject=PASSWORD_RESET_SUBJECT, text=text, html=html)

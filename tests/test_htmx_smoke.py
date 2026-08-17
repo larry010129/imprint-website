@@ -182,20 +182,24 @@ def test_login_page_has_htmx_form(client):
     assert "accounts.google.com/gsi/client" in resp.text or "google_client_id" not in resp.text
 
 
-def test_forgot_password_page_explains_totp_requirement(client):
+def test_forgot_password_page_has_email_and_totp_paths(client):
     resp = client.get("/forgot-password")
     assert resp.status_code == 200
+    assert 'hx-post="/htmx/auth/request-reset"' in resp.text
     assert 'hx-post="/htmx/auth/forgot-password-verify"' in resp.text
     assert 'hx-post="/htmx/auth/forgot-password"' in resp.text
     assert 'data-fp-wizard' in resp.text
+    assert 'data-fp-step="inbox"' in resp.text
+    assert "data-fp-use-totp" in resp.text
     assert 'data-otp-group' in resp.text
     assert 'data-otp-target="fpCodeHidden"' in resp.text
     assert 'id="fpCodeHidden"' in resp.text
-    assert "forgot-password.js?v=3" in resp.text
+    assert "forgot-password.js?v=4" in resp.text
     assert "otp-input.js?v=3" in resp.text
     assert "已啟用 Authenticator" in resp.text
-    assert 'href="/account-security"' in resp.text
-    assert 'href="/login?next=/account-security"' in resp.text
+    assert "僅適用於" not in resp.text
+    assert "Resend" not in resp.text
+    assert "resend" not in resp.text.lower()
 
 
 def test_account_security_page_has_htmx_and_totp_script(client):

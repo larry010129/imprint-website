@@ -1,0 +1,176 @@
+"""Forgot-password email send (shop mailer) + both reset paths."""
+
+from __future__ import annotations
+
+import json
+import os
+import uuid
+from pathlib import Path
+from unittest.mock import patch
+
+import pytest
+from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).resolve().parents[1] / ".env")
+os.environ.setdefault("STARTUP_SEED_MODE", "off")
+
+from app.mail import DEFAULT_FROM, PASSWORD_RESET_SUBJECT, send_password_reset_email
+
+
+@pytest.fixture(autouse=True)
+def _clear_pwreset_rate_limits():
+    if not os.environ.get("DATABASE_URL"):
+        yield
+        return
+    from app.database import get_connection
+
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute("delete from login_lockouts where lockout_key like 'pwreset:%'")
+    yield
+
+
+@pytest.fixture(scope="module")
+def client():
+    from fastapi.testclient import TestClient
+
+    from app import create_app
+
+    with TestClient(create_app()) as c:
+        yield c
+
+
+def test_password_reset_email_uses_shop_html_and_token_link(monkeypatch):
+    captured: dict = {}
+
+    class _Resp:
+        status = 200
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+    def fake_urlopen(req, timeout=12):
+        captured["url"] = req.full_url
+        captured["payload"] = json.loads(req.data.decode("utf-8"))
+        captured["auth"] = req.get_header("Authorization")
+        return _Resp()
+
+    monkeypatch.setenv("RESEND_API_KEY", "re_test_key")
+    monkeypatch.delenv("RESET_EMAIL_FROM", raising=False)
+    monkeypatch.delenv("EMAIL_FROM", raising=False)
+    monkeypatch.setattr("app.mail.urllib.request.urlopen", fake_urlopen)
+
+    ok = send_password_reset_email(
+        to="member@example.com",
+        reset_url="https://www.imprintdiamond.com/reset-password?token=abc123",
+    )
+    assert ok is True
+    payload = captured["payload"]
+    assert payload["subject"] == PASSWORD_RESET_SUBJECT
+    assert payload["from"] == DEFAULT_FROM
+    assert payload["to"] == ["member@example.com"]
+    assert "reset-password?token=abc123" in payload["text"]
+    assert "reset-password?token=abc123" in payload["html"]
+    assert "<a href=" in payload["html"]
+    assert "Resend" not in payload["text"]
+    assert "Resend" not in payload["html"]
+    assert "Supabase" not in payload["text"]
+    assert captured["auth"] == "Bearer re_test_key"
+
+
+def test_password_reset_email_skips_without_api_key(monkeypatch):
+    monkeypatch.setenv("RESEND_API_KEY", "")
+    called = {"n": 0}
+
+    def boom(*_a, **_k):
+        called["n"] += 1
+        raise AssertionError("must not call Resend without key")
+
+    monkeypatch.setattr("app.mail.urllib.request.urlopen", boom)
+    assert send_password_reset_email(to="a@b.com", reset_url="https://x/reset-password?token=t") is False
+    assert called["n"] == 0
+
+
+def test_forgot_password_page_does_not_name_resend(client):
+    resp = client.get("/forgot-password")
+    assert resp.status_code == 200
+    assert "Resend" not in resp.text
+    assert "resend" not in resp.text.lower()
+    assert 'hx-post="/htmx/auth/request-reset"' in resp.text
+    assert "data-fp-use-totp" in resp.text
+
+
+@pytest.mark.skipif(not os.environ.get("DATABASE_URL"), reason="DATABASE_URL not set")
+def test_htmx_request_reset_unknown_email_is_generic(client):
+    with patch("app.mail.send_password_reset_email") as send:
+        resp = client.post(
+            "/htmx/auth/request-reset",
+            headers={"HX-Request": "true"},
+            data={"email": f"missing-{uuid.uuid4().hex[:8]}@example.com"},
+        )
+    assert resp.status_code == 200
+    assert "若此 Email 已註冊" in resp.text
+    assert resp.headers.get("HX-Trigger") == "fp-email-sent"
+    send.assert_not_called()
+
+
+@pytest.mark.skipif(not os.environ.get("DATABASE_URL"), reason="DATABASE_URL not set")
+def test_htmx_request_reset_known_email_sends_token_link(client):
+    from app.auth import hash_password
+    from app.database import get_connection
+
+    email = f"reset-mail-{uuid.uuid4().hex[:10]}@example.com"
+    user_id = None
+    try:
+        with get_connection() as conn, conn.cursor() as cur:
+            cur.execute(
+                """
+                insert into users (email, password_hash, email_verified)
+                values (%s, %s, true) returning id
+                """,
+                (email, hash_password("password123")),
+            )
+            user_id = str(cur.fetchone()["id"])
+
+        with patch("app.mail.send_password_reset_email", return_value=True) as send:
+            resp = client.post(
+                "/htmx/auth/request-reset",
+                headers={"HX-Request": "true"},
+                data={"email": email},
+            )
+        assert resp.status_code == 200
+        assert "若此 Email 已註冊" in resp.text
+        send.assert_called_once()
+        kwargs = send.call_args.kwargs
+        assert kwargs["to"] == email
+        assert "/reset-password?token=" in kwargs["reset_url"]
+    finally:
+        if user_id:
+            with get_connection() as conn, conn.cursor() as cur:
+                cur.execute("delete from password_reset_tokens where user_id = %s", (user_id,))
+                cur.execute("delete from users where id = %s", (user_id,))
+
+
+@pytest.mark.skipif(not os.environ.get("DATABASE_URL"), reason="DATABASE_URL not set")
+def test_json_request_reset_unknown_email_is_generic(client):
+    with patch("app.mail.send_password_reset_email") as send:
+        resp = client.post(
+            "/api/auth/request-password-reset",
+            json={"email": f"missing-{uuid.uuid4().hex[:8]}@example.com"},
+        )
+    assert resp.status_code == 200
+    assert resp.json() == {"ok": True}
+    send.assert_not_called()
+
+
+@pytest.mark.skipif(not os.environ.get("DATABASE_URL"), reason="DATABASE_URL not set")
+def test_totp_verify_path_still_rejects_bad_code(client):
+    resp = client.post(
+        "/htmx/auth/forgot-password-verify",
+        headers={"HX-Request": "true"},
+        data={"email": "anyone@example.com", "code": "000000"},
+    )
+    assert resp.status_code == 401
+    assert "Email 或驗證碼不正確" in resp.text or "不正確" in resp.text
