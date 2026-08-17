@@ -474,13 +474,15 @@ async def logout(request: Request) -> JSONResponse:
 @router.post("/request-password-reset")
 async def request_password_reset(request: Request) -> JSONResponse:
     # Always returns ok — never reveal whether an email is registered. Throttled
-    # per-IP so it can't be used to blast reset emails at someone's inbox.
+    # per-IP and per-normalized-email so it can't blast one inbox from many IPs.
     # Email reset stays live for every active account, including Authenticator users.
-    if not enforce_rate_limit(request, action="pwreset", limit=5, window_seconds=900):
-        return _err(429, "請求過於頻繁，請稍後再試")
-
     body = await request.json()
     email = (body.get("email") or "").strip().lower()
+    if not enforce_rate_limit(
+        request, action="pwreset", limit=5, window_seconds=900, subject=email or None
+    ):
+        return _err(429, "請求過於頻繁，請稍後再試")
+
     generic = JSONResponse(content={"ok": True})
     if not email:
         return generic

@@ -59,6 +59,7 @@ def send_email(*, to: str, subject: str, text: str, html: str | None = None) -> 
         headers={
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
+            "User-Agent": "imprint-website/1.0",
         },
     )
     try:
@@ -124,7 +125,7 @@ def send_password_reset_email(*, to: str, reset_url: str) -> bool:
     html = (
         "<p>您好，</p>"
         "<p>我們收到您重設銘印鑽石帳戶密碼的請求。請於 1 小時內點擊以下連結設定新密碼：</p>"
-        f'<p><a href="{safe_url}">{safe_url}</a></p>'
+        f'<p><a href="{safe_url}" referrerpolicy="no-referrer" rel="noreferrer">{safe_url}</a></p>'
         "<p>若您沒有提出此請求，請忽略這封信，您的密碼不會變更。</p>"
         "<p>銘印鑽石 IMPRINT DIAMOND</p>"
     )
