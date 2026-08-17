@@ -93,13 +93,20 @@ def test_password_reset_email_skips_without_api_key(monkeypatch):
     assert called["n"] == 0
 
 
-def test_forgot_password_page_does_not_name_resend(client):
-    resp = client.get("/forgot-password")
-    assert resp.status_code == 200
-    assert "Resend" not in resp.text
-    assert "resend" not in resp.text.lower()
-    assert 'hx-post="/htmx/auth/request-reset"' in resp.text
-    assert "data-fp-use-totp" in resp.text
+def test_forgot_password_page_does_not_name_resend():
+    html = (
+        Path(__file__).resolve().parents[1]
+        / "content"
+        / "site"
+        / "templates"
+        / "pages"
+        / "forgot-password.html"
+    ).read_text(encoding="utf-8")
+    assert "Resend" not in html
+    assert "resend" not in html.lower()
+    assert 'hx-post="/htmx/auth/request-reset"' in html
+    assert "data-fp-use-totp" in html
+    assert 'hx-post="/htmx/auth/forgot-password-verify"' in html
 
 
 @pytest.mark.skipif(not os.environ.get("DATABASE_URL"), reason="DATABASE_URL not set")

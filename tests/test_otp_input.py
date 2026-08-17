@@ -176,7 +176,7 @@ const sandbox = {
 };
 vm.runInNewContext(code, sandbox);
 try {
-  emailForm['htmx:afterRequest']({ detail: { successful: true } });
+  emailForm['_htmx:afterRequest']({ detail: { successful: true } });
 } catch (err) {
   console.error('email success threw: ' + err.message);
   process.exit(1);
