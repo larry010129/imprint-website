@@ -180,6 +180,8 @@ def _about_specs() -> list[SlotSpec]:
 
 
 def _series_overview_specs() -> list[SlotSpec]:
+    # Six detail imgs then six quick-grid imgs: pair i with i+6.
+    # (i+5 was correct for the old five-series page.)
     return [
         _slot(
             "/series",
@@ -188,8 +190,9 @@ def _series_overview_specs() -> list[SlotSpec]:
             f"系列・{label}",
             "series",
             "pages/series.html",
-            (i, i + 5),
+            (i, i + 6),
             (2400, 1165),
+            indexed=True,
         )
         for i, (key, (label, _asset)) in enumerate(_SERIES.items())
     ]
@@ -539,32 +542,56 @@ def _series_key_from_home_slot(slot_key: str) -> str | None:
     return key if key in _SERIES else None
 
 
-def paired_series_slot(page_key: str, slot_key: str) -> tuple[str, str] | None:
-    """Home series-* card <-> series page 主視覺."""
-    home_key = _series_key_from_home_slot(slot_key)
-    if page_key == "/" and home_key:
-        return f"/series/{home_key}/", "hero"
-    if str(slot_key or "") == "hero":
-        for key in _SERIES:
-            if page_key == f"/series/{key}/":
-                return "/", f"series-{key}"
+def _series_key_from_overview_slot(page_key: str, slot_key: str) -> str | None:
+    if str(page_key or "").rstrip("/") != "/series":
+        return None
+    key = str(slot_key or "")
+    return key if key in _SERIES else None
+
+
+def _series_key_from_detail_page(page_key: str) -> str | None:
+    raw = str(page_key or "").strip()
+    for key in _SERIES:
+        if raw in {f"/series/{key}/", f"/series/{key}", f"/series/{key}.html"}:
+            return key
     return None
 
 
+def paired_series_slots(page_key: str, slot_key: str) -> tuple[tuple[str, str], ...]:
+    """Home series-* and /series overview {key} <-> series-page 主視覺."""
+    home_key = _series_key_from_home_slot(slot_key)
+    if page_key == "/" and home_key:
+        return ((f"/series/{home_key}/", "hero"),)
+    overview_key = _series_key_from_overview_slot(page_key, slot_key)
+    if overview_key:
+        return ((f"/series/{overview_key}/", "hero"),)
+    if str(slot_key or "") == "hero":
+        detail_key = _series_key_from_detail_page(page_key)
+        if detail_key:
+            return (
+                ("/", f"series-{detail_key}"),
+                ("/series", detail_key),
+            )
+    return ()
+
+
+def paired_series_slot(page_key: str, slot_key: str) -> tuple[str, str] | None:
+    """First twin only (home series-* or /series overview <-> 主視覺)."""
+    pairs = paired_series_slots(page_key, slot_key)
+    return pairs[0] if pairs else None
+
+
 def sync_paired_series_image(cur, page_key: str, slot_key: str, image_url: str, image_webp: str | None) -> None:
-    """Copy a 主視覺/home-card upload onto its twin so the two cannot drift."""
-    pair = paired_series_slot(page_key, slot_key)
-    if not pair:
-        return
-    twin_page, twin_slot = pair
-    cur.execute(
-        """
-        update page_images
-        set image_url = %s, image_webp = %s, updated_at = now()
-        where page_key = %s and slot_key = %s
-        """,
-        (image_url, image_webp, twin_page, twin_slot),
-    )
+    """Copy a 主視覺/home-card/overview upload onto every twin so they cannot drift."""
+    for twin_page, twin_slot in paired_series_slots(page_key, slot_key):
+        cur.execute(
+            """
+            update page_images
+            set image_url = %s, image_webp = %s, updated_at = now()
+            where page_key = %s and slot_key = %s
+            """,
+            (image_url, image_webp, twin_page, twin_slot),
+        )
 
 
 def _is_series_default_asset(series_key: str, url: str, webp: str) -> bool:
@@ -575,10 +602,9 @@ def _is_series_default_asset(series_key: str, url: str, webp: str) -> bool:
     return _hero_stem(webp or url) == default_stem
 
 
-def _home_series_admin_urls(slot_key: str, url: str, webp: str) -> tuple[str, str]:
-    """Homepage series card: series 主視覺 wins over a leftover home-slot file."""
-    series_key = _series_key_from_home_slot(slot_key)
-    if not series_key:
+def _series_page_hero_admin_urls(series_key: str, url: str, webp: str) -> tuple[str, str]:
+    """Use /series/{key}/ 主視覺 when that hero is a real admin/custom upload."""
+    if series_key not in _SERIES:
         return url, webp
     try:
         from app.content import (
@@ -604,6 +630,14 @@ def _home_series_admin_urls(slot_key: str, url: str, webp: str) -> tuple[str, st
     except Exception:
         pass
     return url, webp
+
+
+def _home_series_admin_urls(slot_key: str, url: str, webp: str) -> tuple[str, str]:
+    """Homepage series card: series 主視覺 wins over a leftover home-slot file."""
+    series_key = _series_key_from_home_slot(slot_key)
+    if not series_key:
+        return url, webp
+    return _series_page_hero_admin_urls(series_key, url, webp)
 
 
 def _is_stock_hero_asset(url: str) -> bool:
@@ -753,6 +787,8 @@ def apply_page_image_slots(html: str, route: str, rows: list[dict]) -> str:
             if _series_key_from_home_slot(spec.slot_key):
                 url, webp = _home_series_admin_urls(spec.slot_key, url, webp)
         elif route == "/series":
+            if spec.slot_key in _SERIES:
+                url, webp = _series_page_hero_admin_urls(spec.slot_key, url, webp)
             url, webp = _prefer_local_series_asset(url, webp)
         url, webp = _drop_stale_stock_srcset(url, webp)
         from app.image_urls import with_cache_buster

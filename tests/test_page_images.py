@@ -23,6 +23,9 @@ from app.page_image_slots import (
     build_page_image_seed,
     page_image_slot_specs,
     page_image_storage_folder,
+    paired_series_slot,
+    paired_series_slots,
+    sync_paired_series_image,
 )
 
 _SUPABASE = "https://abc123.supabase.co"
@@ -202,6 +205,235 @@ def test_series_overview_custom_upload_does_not_keep_local_srcset():
     assert "imprint-diamond-pet-memorial-cat" not in out
     assert "-400w.webp" not in out
     assert "/static/images/hero/" not in out
+
+
+def _overview_couple_html() -> str:
+    couple = (
+        "/static/images/hero/imprint-diamond-wedding-couple-ring.webp"
+    )
+    couple_srcset = (
+        f"{couple} 2400w, "
+        "/static/images/hero/imprint-diamond-wedding-couple-ring-800w.webp 800w"
+    )
+    return (
+        '<picture><source type="image/webp" '
+        f'srcset="{couple_srcset}">'
+        f'<img data-cms-slot="love" src="{couple}" '
+        f'srcset="{couple_srcset}" alt="結髮鑽石"></picture>'
+        '<picture><source type="image/webp" '
+        f'srcset="{couple_srcset}">'
+        f'<img data-cms-slot="signature" src="{couple}" '
+        f'srcset="{couple_srcset}" alt="真我鑽石 detail"></picture>'
+        '<picture><source type="image/webp" '
+        f'srcset="{couple_srcset}">'
+        f'<img data-cms-slot="signature" src="{couple}" '
+        f'srcset="{couple_srcset}" alt="真我鑽石 quick"></picture>'
+    )
+
+
+def _mock_series_hero(monkeypatch, hero_url: str, stamp, series_key: str = "signature"):
+    class _Conn:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return None
+
+        def cursor(self):
+            return self
+
+    monkeypatch.setattr("app.database.get_connection", lambda: _Conn())
+    monkeypatch.setattr(
+        "app.content.fetch_page_image",
+        lambda *_a, **_k: {
+            "image_url": hero_url,
+            "image_webp": hero_url,
+            "default_image_url": (
+                "/static/images/hero/imprint-diamond-wedding-couple-ring.jpg"
+            ),
+            "is_published": True,
+            "updated_at": stamp,
+        }
+        if _a[1] == f"/series/{series_key}/"
+        else None,
+    )
+
+
+def test_series_overview_signature_uses_custom_hero_not_wedding_couple(monkeypatch):
+    """ /series 真我 must follow /series/signature/ 主視覺, not the couple file. """
+    custom = (
+        "https://xxx.supabase.co/storage/v1/object/public/shop-media/"
+        "page-images/signature-diamond/image-122d47ff150e4a70a2f5e9a8bbd328fb.webp"
+    )
+    leftover = (
+        "https://xxx.supabase.co/storage/v1/object/public/shop-media/"
+        "page-images/series-overview/imprint-diamond-wedding-couple-ring.webp"
+    )
+    stamp = datetime(2026, 8, 17, 6, 28, 58, tzinfo=timezone.utc)
+    later = datetime(2026, 8, 17, 7, 28, 58, tzinfo=timezone.utc)
+    _mock_series_hero(monkeypatch, custom, stamp)
+    row = {
+        "slot_key": "signature",
+        "display_url": leftover,
+        "display_webp": leftover,
+        "updated_at": stamp,
+        "is_published": True,
+    }
+    out = apply_page_image_slots(_overview_couple_html(), "/series", [row])
+    assert f"{custom}?v=1786948138" in out
+    assert 'alt="真我鑽石 detail"' in out
+    assert 'alt="真我鑽石 quick"' in out
+    signature_blocks = [
+        block
+        for block in out.split("<picture>")
+        if 'data-cms-slot="signature"' in block
+    ]
+    assert len(signature_blocks) == 2
+    for block in signature_blocks:
+        assert f"{custom}?v=1786948138" in block
+        assert "imprint-diamond-wedding-couple-ring" not in block
+        assert "<source" not in block.lower()
+    love_block = next(
+        block for block in out.split("<picture>") if 'data-cms-slot="love"' in block
+    )
+    assert "imprint-diamond-wedding-couple-ring" in love_block
+    assert custom not in love_block
+
+    _mock_series_hero(monkeypatch, custom, later)
+    out_later = apply_page_image_slots(
+        _overview_couple_html(),
+        "/series",
+        [{**row, "updated_at": later}],
+    )
+    assert f"{custom}?v=1786951738" in out_later
+    assert f"{custom}?v=1786948138" not in out_later
+
+
+def test_series_overview_other_series_follow_custom_hero(monkeypatch):
+    custom = (
+        "https://xxx.supabase.co/storage/v1/object/public/shop-media/"
+        "page-images/pet-diamond/pet-hero-swap.webp"
+    )
+    stamp = datetime(2026, 8, 17, 6, 0, 0, tzinfo=timezone.utc)
+    _mock_series_hero(monkeypatch, custom, stamp, series_key="pet")
+    html = (
+        '<picture><source srcset="/static/images/hero/imprint-diamond-pet-memorial-cat.webp">'
+        '<img data-cms-slot="pet" '
+        'src="/static/images/hero/imprint-diamond-pet-memorial-cat.jpg"></picture>'
+        '<picture><source srcset="/static/images/hero/imprint-diamond-pet-memorial-cat.webp">'
+        '<img data-cms-slot="pet" '
+        'src="/static/images/hero/imprint-diamond-pet-memorial-cat.jpg"></picture>'
+    )
+    row = {
+        "slot_key": "pet",
+        "display_url": (
+            "https://xxx.supabase.co/storage/v1/object/public/shop-media/"
+            "page-images/series-overview/imprint-diamond-pet-memorial-cat.webp"
+        ),
+        "display_webp": (
+            "https://xxx.supabase.co/storage/v1/object/public/shop-media/"
+            "page-images/series-overview/imprint-diamond-pet-memorial-cat.webp"
+        ),
+        "is_published": True,
+    }
+    out = apply_page_image_slots(html, "/series", [row])
+    assert out.count(f"{custom}?v=1786946400") == 2
+    assert "imprint-diamond-pet-memorial-cat" not in out
+    assert "<source" not in out.lower()
+
+
+def test_series_overview_template_marks_both_images_per_series():
+    from pathlib import Path
+
+    html = (
+        Path(__file__).resolve().parents[1]
+        / "content/site/templates/pages/series.html"
+    ).read_text(encoding="utf-8")
+    for key in ("first-love", "pet", "love", "family", "heirloom", "signature"):
+        assert html.count(f'data-cms-slot="{key}"') == 2
+
+
+def test_series_overview_indexes_pair_detail_and_quick():
+    specs = [spec for spec in page_image_slot_specs() if spec.page_key == "/series"]
+    assert [spec.slot_key for spec in specs] == [
+        "first-love",
+        "pet",
+        "love",
+        "family",
+        "heirloom",
+        "signature",
+    ]
+    for index, spec in enumerate(specs):
+        assert spec.image_indexes == (index, index + 6)
+        assert spec.indexed is True
+
+
+def test_paired_series_slots_include_overview_and_home():
+    assert paired_series_slots("/series/signature/", "hero") == (
+        ("/", "series-signature"),
+        ("/series", "signature"),
+    )
+    assert paired_series_slots("/series/signature", "hero") == (
+        ("/", "series-signature"),
+        ("/series", "signature"),
+    )
+    assert paired_series_slots("/series", "signature") == (
+        ("/series/signature/", "hero"),
+    )
+    assert paired_series_slots("/", "series-signature") == (
+        ("/series/signature/", "hero"),
+    )
+    assert paired_series_slot("/series", "signature") == (
+        "/series/signature/",
+        "hero",
+    )
+    assert paired_series_slot("/about", "cinema") is None
+
+
+def test_sync_paired_series_image_updates_overview_and_home():
+    updates: list[tuple] = []
+
+    class _Cur:
+        def execute(self, _sql, params=None):
+            updates.append(params)
+
+    sync_paired_series_image(
+        _Cur(),
+        "/series/signature/",
+        "hero",
+        "https://example.test/new.webp",
+        "https://example.test/new.webp",
+    )
+    assert updates == [
+        (
+            "https://example.test/new.webp",
+            "https://example.test/new.webp",
+            "/",
+            "series-signature",
+        ),
+        (
+            "https://example.test/new.webp",
+            "https://example.test/new.webp",
+            "/series",
+            "signature",
+        ),
+    ]
+    updates.clear()
+    sync_paired_series_image(
+        _Cur(),
+        "/series",
+        "pet",
+        "https://example.test/pet.webp",
+        None,
+    )
+    assert updates == [
+        (
+            "https://example.test/pet.webp",
+            None,
+            "/series/pet/",
+            "hero",
+        )
+    ]
 
 
 def test_stock_remote_series_hero_does_not_override_custom_home_card(monkeypatch):
