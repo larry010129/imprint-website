@@ -1,5 +1,6 @@
 {% extends "layouts/base.html" %}
 {% block extra_css %}
+<link rel="stylesheet" href="/static/css/journal-list.css?v=1">
 {# SSR list stays visible until the island fetches OK — journal.js hides [data-journal-ssr]
    itself. Eager journal-js hide caused the 2.45s LCP render delay. #}
 <style>
@@ -29,7 +30,7 @@
 <div data-journal-root>
   {% if journal_post %}
   <article class="prose-section journal-detail-page">
-    <div class="container prose">
+    <div class="container">
       <p class="breadcrumb"><a href="/journal">品牌日誌</a><span class="sep">/</span><span class="current">{{ journal_post.title }}</span></p>
       {% if journal_post.posted_at %}
       <p class="eyebrow">{{ journal_post.posted_at }}</p>
@@ -48,31 +49,48 @@
     </div>
   </article>
   {% else %}
-  <section class="prose-section" data-journal-ssr>
-    <div class="container prose">
-      <p class="eyebrow" data-cms-text="list-eyebrow">JOURNAL</p>
-      <h1 data-cms-text="list-title">品牌日誌</h1>
-      <p data-cms-text="list-lead">培育鑽石知識分享、品牌動態與展會紀錄。</p>
+  <section class="journal-list" data-journal-ssr>
+    <div class="container">
+      <div class="journal-list__intro"><p class="journal-list__eyebrow" data-cms-text="list-eyebrow">JOURNAL</p>
+      <h1 class="journal-list__title" data-cms-text="list-title">品牌日誌</h1>
+      <p class="journal-list__lead" data-cms-text="list-lead">培育鑽石知識分享、品牌動態與展會紀錄。</p></div>
       {% if journal_ssr %}
-      <ol class="journal-ssr-list" style="list-style:none;padding:0;margin:2rem 0 0;">
+      <div class="journal-list__feed">
         {% for post in journal_ssr %}
-        <li class="journal-ssr-item" style="margin-bottom:1.75rem;padding-bottom:1.5rem;border-bottom:1px solid rgba(0,0,0,0.08);">
-          {% if post.posted_at %}
-          <p class="eyebrow" style="margin-bottom:0.35rem;">{{ post.posted_at }}</p>
-          {% endif %}
-          <h2 style="font-size:1.2rem;margin:0 0 0.5rem;"><a href="/journal/{{ post.id }}" style="text-decoration:underline;text-underline-offset:0.2em;">{{ post.title }}</a></h2>
-          {% if post.is_archived %}
-          <p style="font-size:0.8rem;opacity:0.65;margin:0 0 0.5rem;">活動已結束，僅供紀錄</p>
-          {% endif %}
-          {% if post.body %}
-          <p style="white-space:pre-line;margin:0;">{{ post.body[:280] }}{% if post.body|length > 280 %}…{% endif %}</p>
-          {% endif %}
-          {% if post.image_url %}
-          <img src="{{ post.image_url }}" alt="" loading="{% if loop.index0 < 2 %}eager{% else %}lazy{% endif %}" decoding="async" style="width:100%;max-width:36rem;aspect-ratio:3/2;margin:0.75rem 0 0;object-fit:cover;object-position:center top;">
-          {% endif %}
-        </li>
+        {% set raw_date = post.posted_at or "" %}
+        {% if raw_date|length >= 10 and raw_date[4] == "-" %}
+        {% set date_label = raw_date[0:4] ~ " · " ~ raw_date[5:7] ~ "." ~ raw_date[8:10] %}
+        {% else %}
+        {% set date_label = raw_date %}
+        {% endif %}
+        <article class="journal-row{% if loop.first %} journal-row--active{% endif %}">
+          <div class="journal-row__meta">
+            <span class="journal-row__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+            </span>
+            <div class="journal-row__meta-copy">
+              <a class="journal-row__meta-title" href="/journal/{{ post.id }}">{{ post.title }}</a>
+              {% if date_label %}<span class="journal-row__meta-date">{{ date_label }}</span>{% endif %}
+            </div>
+          </div>
+          <div class="journal-card">
+            {% if post.image_url %}
+            <img src="{{ post.image_url }}" alt="" loading="{% if loop.index0 < 2 %}eager{% else %}lazy{% endif %}" decoding="async">
+            {% endif %}
+            <div class="journal-card__body">
+              <h2><a href="/journal/{{ post.id }}">{{ post.title }}</a></h2>
+              {% if post.body %}
+              <p class="journal-card__excerpt">{{ post.body[:280] }}{% if post.body|length > 280 %}…{% endif %}</p>
+              {% endif %}
+              {% if post.is_archived %}
+              <p class="journal-card__archived">活動已結束，僅供紀錄</p>
+              {% endif %}
+              <a class="journal-card__more" href="/journal/{{ post.id }}">閱讀完整文章</a>
+            </div>
+          </div>
+        </article>
         {% endfor %}
-      </ol>
+      </div>
       {% else %}
       <p>目前尚無公開日誌文章。歡迎透過<a href="https://lin.ee/ktVBtmx" target="_blank" rel="noopener">官方 LINE</a>與顧問聯繫，或稍後再訪。</p>
       {% endif %}

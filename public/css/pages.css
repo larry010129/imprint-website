@@ -81,6 +81,8 @@
   font-family:var(--serif); font-weight:600; color:var(--ink);
   font-size:clamp(28px, 3.4vw, 42px); letter-spacing:.06em; line-height:1.45; margin:16px 0 18px;
 }
+.page-hero h1.keep-line{ white-space:nowrap; }
+.page-hero p.keep-line{ white-space:nowrap; max-width:none; }
 .page-hero p{ font-size:15px; color:var(--ink-soft); line-height:2; max-width:480px; }
 
 /* 內文長文排版(品牌故事／DNA鑽石知識頁) */
