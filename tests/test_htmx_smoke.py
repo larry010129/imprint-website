@@ -200,7 +200,9 @@ def test_forgot_password_page_has_email_and_totp_paths(client):
     assert "寄出重設信件" in resp.text
     assert "使用驗證碼" in resp.text
     assert "login-button--outline" in resp.text
-    assert "auth-divider" in resp.text
+    assert '<p class="auth-divider">或</p>' in resp.text
+    assert '<p class="auth-divider">或使用</p>' not in resp.text
+    assert '<a href="#" data-fp-use-totp>已啟用 Authenticator？使用驗證碼</a>' in resp.text
     assert "已啟用 Authenticator" in resp.text
     assert "僅適用於" not in resp.text
     assert "totp-banner" not in resp.text

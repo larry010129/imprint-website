@@ -21,6 +21,10 @@
 </div>
 {% endmacro %}
 
+{% macro auth_divider(label='或使用') %}
+<p class="auth-divider">{{ label }}</p>
+{% endmacro %}
+
 {% macro auth_password_field(id, label='密碼', autocomplete='current-password', minlength=None, name='password') %}
 <div class="form-field">
   <input type="password" id="{{ id }}" name="{{ name }}" placeholder=" " autocomplete="{{ autocomplete }}"{% if minlength %} minlength="{{ minlength }}"{% endif %} required>

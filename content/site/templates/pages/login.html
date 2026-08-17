@@ -8,7 +8,7 @@
 {% endif %}
 {% endblock %}
 {% block content %}
-{% from "partials/auth_macros.html" import auth_shell, auth_password_field %}
+{% from "partials/auth_macros.html" import auth_shell, auth_password_field, auth_divider %}
 {% call auth_shell() %}
   <div class="login-header">
     <h1>會員登入</h1>
@@ -35,7 +35,7 @@
     <button type="submit" class="login-button">登入</button>
   </form>
   {% if google_client_id %}
-  <p class="auth-divider">或使用</p>
+  {{ auth_divider() }}
   <div id="googleSignInMsg" class="form-msg" aria-live="polite"></div>
   <div id="googleSignInBtn" class="google-signin-btn"></div>
   {% endif %}

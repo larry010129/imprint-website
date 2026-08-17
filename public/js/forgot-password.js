@@ -19,6 +19,7 @@
   function init() {
     var wizard = document.querySelector('[data-fp-wizard]');
     if (!wizard) return;
+    var root = (wizard.closest && wizard.closest('[data-auth-container]')) || wizard;
 
     var currentStep = 1;
     var backupMode = false;
@@ -69,7 +70,7 @@
 
     function setStep(step, keepMsg) {
       currentStep = step;
-      wizard.querySelectorAll('[data-fp-step]').forEach(function (el) {
+      root.querySelectorAll('[data-fp-step]').forEach(function (el) {
         el.hidden = String(el.getAttribute('data-fp-step')) !== String(step);
       });
       if (!keepMsg) clearMsg();
