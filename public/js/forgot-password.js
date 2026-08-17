@@ -2,12 +2,6 @@
   'use strict';
 
   var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  var STEP_TEXT = {
-    1: '請輸入您的 Email。我們將寄送重設密碼信件。',
-    inbox: '請至信箱查看重設密碼信件。',
-    2: '請在 Authenticator 應用程式中查看 6 位數驗證碼。',
-    3: '請設定新密碼（至少 8 碼）。',
-  };
 
   function showMsg(html) {
     var msg = document.getElementById('auth-form-msg');
@@ -16,6 +10,10 @@
 
   function clearMsg() {
     showMsg('');
+  }
+
+  function errMsg(text) {
+    showMsg('<div class="form-msg is-err">' + text + '</div>');
   }
 
   function init() {
@@ -28,7 +26,6 @@
     var emailInput = document.getElementById('fpEmail');
     var emailHidden = document.getElementById('fpEmailHidden');
     var codeHidden = document.getElementById('fpCodeHidden');
-    var stepDesc = document.querySelector('[data-fp-step-desc]');
     var emailForm = document.getElementById('fp-email-form');
     var verifyForm = document.getElementById('fp-verify-form');
     var passwordForm = document.getElementById('fp-password-form');
@@ -66,19 +63,16 @@
       return email;
     }
 
-    function setStep(step) {
+    function readEmail() {
+      return emailInput ? emailInput.value.trim() : '';
+    }
+
+    function setStep(step, keepMsg) {
       currentStep = step;
       wizard.querySelectorAll('[data-fp-step]').forEach(function (el) {
         el.hidden = String(el.getAttribute('data-fp-step')) !== String(step);
       });
-      var indicatorN = step === 'inbox' ? 1 : Number(step);
-      wizard.querySelectorAll('[data-fp-indicator]').forEach(function (el) {
-        var n = Number(el.getAttribute('data-fp-indicator'));
-        el.classList.toggle('is-active', n === indicatorN);
-        el.classList.toggle('is-done', n < indicatorN || (step === 'inbox' && n === 1));
-      });
-      if (stepDesc && STEP_TEXT[step]) stepDesc.textContent = STEP_TEXT[step];
-      clearMsg();
+      if (!keepMsg) clearMsg();
       if (step === 'inbox') return;
       if (step === 2) {
         ensureOtpInit();
@@ -90,15 +84,27 @@
       }
     }
 
+    function requireEmail() {
+      var email = readEmail();
+      if (!email) {
+        setStep(1);
+        errMsg('請輸入 Email。');
+        if (emailInput) emailInput.focus();
+        return '';
+      }
+      if (!EMAIL_RE.test(email)) {
+        setStep(1);
+        errMsg('請輸入有效的 Email 格式。');
+        if (emailInput) emailInput.focus();
+        return '';
+      }
+      if (emailHidden) emailHidden.value = email;
+      return email;
+    }
+
     function goTotp(ev) {
       if (ev) ev.preventDefault();
-      var email = syncEmailHidden();
-      if (!EMAIL_RE.test(email)) {
-        showMsg('<div class="form-msg is-err">請輸入有效的 Email 格式。</div>');
-        setStep(1);
-        if (emailInput) emailInput.focus();
-        return;
-      }
+      if (!requireEmail()) return;
       setStep(2);
     }
 
@@ -108,16 +114,23 @@
 
     wizard.querySelectorAll('[data-fp-back]').forEach(function (btn) {
       btn.addEventListener('click', function () {
-        setStep(Number(btn.getAttribute('data-fp-back')));
+        var target = btn.getAttribute('data-fp-back');
+        setStep(target === 'inbox' ? 'inbox' : Number(target));
       });
     });
 
     if (emailForm) {
       emailForm.addEventListener('submit', function (ev) {
-        var email = emailInput ? emailInput.value.trim() : '';
+        var email = readEmail();
+        if (!email) {
+          ev.preventDefault();
+          errMsg('請輸入 Email。');
+          if (emailInput) emailInput.focus();
+          return;
+        }
         if (!EMAIL_RE.test(email)) {
           ev.preventDefault();
-          showMsg('<div class="form-msg is-err">請輸入有效的 Email 格式。</div>');
+          errMsg('請輸入有效的 Email 格式。');
           if (emailInput) emailInput.focus();
           return;
         }
@@ -127,7 +140,7 @@
       emailForm.addEventListener('htmx:afterRequest', function (ev) {
         if (!ev.detail.successful) return;
         syncEmailHidden();
-        setStep('inbox');
+        setStep('inbox', true);
       });
     }
 
@@ -137,7 +150,7 @@
         backupMode = !backupMode;
         if (otpField) otpField.querySelector('[data-otp-group]').hidden = backupMode;
         if (backupField) backupField.hidden = !backupMode;
-        backupToggle.textContent = backupMode ? '使用 6 位數驗證碼' : '使用備用碼';
+        backupToggle.textContent = backupMode ? '改用 6 位數驗證碼' : '使用備用碼';
         clearMsg();
         if (backupMode && backupInput) {
           backupInput.value = '';
@@ -155,7 +168,7 @@
         syncCodeHidden(code);
         if (!code || (!backupMode && code.length !== 6)) {
           ev.preventDefault();
-          showMsg('<div class="form-msg is-err">請輸入完整的 6 位數驗證碼。</div>');
+          errMsg('請輸入完整的 6 位數驗證碼。');
           if (backupMode && backupInput) backupInput.focus();
           else {
             ensureOtpInit();
@@ -171,7 +184,7 @@
 
       verifyForm.addEventListener('htmx:afterRequest', function (ev) {
         if (!ev.detail.successful) return;
-        setStep(3);
+        setStep(3, true);
       });
     }
 
@@ -181,15 +194,22 @@
         var confirmEl = document.getElementById('fpPasswordConfirm');
         var pwd = pwdEl ? pwdEl.value : '';
         var confirm = confirmEl ? confirmEl.value : '';
+        if (!pwd || !confirm) {
+          ev.preventDefault();
+          errMsg('請輸入新密碼並再次確認。');
+          if (pwdEl && !pwd) pwdEl.focus();
+          else if (confirmEl) confirmEl.focus();
+          return;
+        }
         if (pwd.length < 8) {
           ev.preventDefault();
-          showMsg('<div class="form-msg is-err">密碼至少需要 8 碼。</div>');
+          errMsg('密碼至少需要 8 碼。');
           if (pwdEl) pwdEl.focus();
           return;
         }
         if (pwd !== confirm) {
           ev.preventDefault();
-          showMsg('<div class="form-msg is-err">兩次密碼不一致。</div>');
+          errMsg('兩次密碼不一致。');
           if (confirmEl) confirmEl.focus();
         }
       });

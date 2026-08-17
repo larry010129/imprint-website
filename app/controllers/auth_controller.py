@@ -552,10 +552,12 @@ async def forgot_password_verify(request: Request) -> JSONResponse:
     body = await request.json()
     email = (body.get("email") or "").strip()
     code = str(body.get("code") or "").strip()
-    if not email or not code:
-        return _err(400, "請輸入 Email 與驗證碼")
+    if not email:
+        return _err(400, "請輸入 Email。")
+    if not code:
+        return _err(400, "請輸入完整的 6 位數驗證碼。")
     if not is_valid_email(email):
-        return _err(400, "請輸入有效的 Email 格式")
+        return _err(400, "請輸入有效的 Email 格式。")
 
     normalized = email.lower()
     if not enforce_rate_limit(
@@ -592,7 +594,7 @@ async def reset_password_totp(request: Request) -> JSONResponse:
 
     user_id = get_pwreset_user_id(request)
     if not user_id:
-        return _err(401, "驗證已過期，請重新輸入 Email 與 Authenticator 驗證碼。")
+        return _err(401, "驗證已過期，請重新輸入 Email，或改從信件中的連結重設。")
 
     body = await request.json()
     new_password = body.get("newPassword") or body.get("password") or ""

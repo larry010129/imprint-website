@@ -287,7 +287,7 @@ def test_htmx_forgot_password_verify_rejects_empty_fields(client):
 
     assert resp.status_code == 400
 
-    assert "請輸入 Email 與驗證碼" in resp.text
+    assert "請輸入 Email。" in resp.text
 
 
 

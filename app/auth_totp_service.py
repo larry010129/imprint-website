@@ -131,7 +131,7 @@ def confirm_totp_setup(user_id: str, code: str) -> tuple[list[str] | None, str |
 
 
 NO_TOTP_ENROLLED_MSG = "請先於帳戶安全設定驗證器，或聯絡管理員重設密碼"
-PWRESET_GENERIC_ERR = "Email 或驗證碼不正確"
+PWRESET_GENERIC_ERR = "Email 或驗證碼不正確。"
 
 
 def verify_totp_for_pwreset(

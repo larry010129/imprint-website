@@ -104,8 +104,17 @@ def test_forgot_password_page_does_not_name_resend():
     ).read_text(encoding="utf-8")
     assert "Resend" not in html
     assert "resend" not in html.lower()
+    assert "可用信件重設，也可以使用驗證碼。" in html
+    assert "寄出重設信件" in html
+    assert "寄送重設信件" not in html
+    assert "寄出重設連結" not in html
+    assert "用信件重設，或使用驗證碼。兩種方式都可以。" not in html
+    assert "輸入註冊信箱，選擇重設方式。" not in html
+    assert "totp-banner" not in html
+    assert "fp-steps" not in html
     assert 'hx-post="/htmx/auth/request-reset"' in html
     assert "data-fp-use-totp" in html
+    assert "login-button--outline" in html
     assert 'hx-post="/htmx/auth/forgot-password-verify"' in html
 
 
