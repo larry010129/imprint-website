@@ -297,16 +297,18 @@ async def auth_forgot_password_verify(request: Request) -> Response:
     form = await request.form()
     email = str(form.get("email") or "").strip()
     code = str(form.get("code") or "").strip()
-    if not email or not code:
-        return html(request, "auth_error.html", {"error": "請輸入 Email 與驗證碼"}, 400)
+    if not email:
+        return html(request, "auth_error.html", {"error": "請輸入 Email。"}, 400)
+    if not code:
+        return html(request, "auth_error.html", {"error": "請輸入完整的 6 位數驗證碼。"}, 400)
     if not is_valid_email(email):
-        return html(request, "auth_error.html", {"error": "請輸入有效的 Email 格式"}, 400)
+        return html(request, "auth_error.html", {"error": "請輸入有效的 Email 格式。"}, 400)
 
     normalized = email.lower()
     if not enforce_rate_limit(
         request, action="pwreset-totp", limit=5, window_seconds=900, subject=normalized
     ):
-        return html(request, "auth_error.html", {"error": "請求過於頻繁，請稍後再試"}, 429)
+        return html(request, "auth_error.html", {"error": "請求過於頻繁，請稍後再試。"}, 429)
 
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute("select id from users where email = %s and is_active = true", (normalized,))
@@ -315,11 +317,10 @@ async def auth_forgot_password_verify(request: Request) -> Response:
     if row:
         lockout_keys, locked = check_totp_verify_lockout(request, str(row["id"]))
         if locked:
-            mins = math.ceil(TOTP_VERIFY_LOCKOUT_SECONDS / 60)
             return html(
                 request,
                 "auth_error.html",
-                {"error": f"驗證失敗次數過多，請 {mins} 分鐘後再試"},
+                {"error": "驗證失敗次數過多，請稍後再試。"},
                 429,
             )
 
@@ -335,14 +336,14 @@ async def auth_forgot_password_verify(request: Request) -> Response:
 @router.post("/auth/forgot-password", response_class=HTMLResponse)
 async def auth_forgot_password(request: Request) -> Response:
     if not enforce_rate_limit(request, action="pwreset-totp", limit=5, window_seconds=900):
-        return html(request, "auth_error.html", {"error": "請求過於頻繁，請稍後再試"}, 429)
+        return html(request, "auth_error.html", {"error": "請求過於頻繁，請稍後再試。"}, 429)
 
     user_id = get_pwreset_user_id(request)
     if not user_id:
         return html(
             request,
             "auth_error.html",
-            {"error": "驗證已過期，請重新輸入 Email 與 Authenticator 驗證碼。"},
+            {"error": "驗證已過期，請重新輸入 Email，或改從信件中的連結重設。"},
             401,
         )
 
@@ -350,11 +351,11 @@ async def auth_forgot_password(request: Request) -> Response:
     new_password = str(form.get("password") or "")
     password_confirm = str(form.get("passwordConfirm") or "")
     if not new_password or not password_confirm:
-        return html(request, "auth_error.html", {"error": "請輸入新密碼並再次確認"}, 400)
+        return html(request, "auth_error.html", {"error": "請輸入新密碼並再次確認。"}, 400)
     if new_password != password_confirm:
-        return html(request, "auth_error.html", {"error": "兩次密碼不一致"}, 400)
+        return html(request, "auth_error.html", {"error": "兩次密碼不一致。"}, 400)
     if len(new_password) < 8:
-        return html(request, "auth_error.html", {"error": "密碼至少需要 8 碼"}, 400)
+        return html(request, "auth_error.html", {"error": "密碼至少需要 8 碼。"}, 400)
 
     complete_password_reset(user_id, new_password)
     resp = hx_redirect("/login")
@@ -364,44 +365,45 @@ async def auth_forgot_password(request: Request) -> Response:
 
 @router.post("/auth/request-reset", response_class=HTMLResponse)
 async def auth_request_reset(request: Request) -> HTMLResponse:
-    if not enforce_rate_limit(request, action="pwreset", limit=5, window_seconds=900):
-        return html(request, "auth_error.html", {"error": "請求過於頻繁，請稍後再試"}, 429)
+    # Email reset stays live for every active account, including Authenticator users.
     form = await request.form()
     email = str(form.get("email") or "").strip().lower()
-    if email:
+    if not enforce_rate_limit(
+        request, action="pwreset", limit=5, window_seconds=900, subject=email or None
+    ):
+        return html(request, "auth_error.html", {"error": "請求過於頻繁，請稍後再試。"}, 429)
+    if not email:
+        return html(request, "auth_error.html", {"error": "請輸入 Email。"}, 400)
+    if not is_valid_email(email):
+        return html(request, "auth_error.html", {"error": "請輸入有效的 Email 格式。"}, 400)
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute(
+            "select id, email from users where email = %s and is_active = true", (email,)
+        )
+        user = cur.fetchone()
+    if user:
+        raw = secrets.token_urlsafe(32)
+        token_hash = hashlib.sha256(raw.encode("utf-8")).hexdigest()
+        expires = datetime.now(timezone.utc) + timedelta(hours=1)
         with get_connection() as conn, conn.cursor() as cur:
             cur.execute(
-                "select id, email from users where email = %s and is_active = true", (email,)
+                "insert into password_reset_tokens (token, user_id, expires_at) values (%s, %s, %s)",
+                (token_hash, user["id"], expires),
             )
-            user = cur.fetchone()
-        if user:
-            raw = secrets.token_urlsafe(32)
-            token_hash = hashlib.sha256(raw.encode("utf-8")).hexdigest()
-            expires = datetime.now(timezone.utc) + timedelta(hours=1)
-            with get_connection() as conn, conn.cursor() as cur:
-                cur.execute(
-                    "insert into password_reset_tokens (token, user_id, expires_at) values (%s, %s, %s)",
-                    (token_hash, user["id"], expires),
-                )
-            reset_url = f"{settings.public_base_url}/reset-password?token={raw}"
-            try:
-                from app.mail import send_email
+        reset_url = f"{settings.public_base_url}/reset-password?token={raw}"
+        try:
+            from app.mail import send_password_reset_email
 
-                send_email(
-                    to=user["email"],
-                    subject="銘印鑽石｜重設密碼",
-                    text=(
-                        "您好，\n\n我們收到您重設密碼的請求。請於 1 小時內點擊以下連結設定新密碼：\n\n"
-                        f"{reset_url}\n\n若您沒有提出此請求，請忽略這封信。\n\n銘印鑽石 IMPRINT DIAMOND"
-                    ),
-                )
-            except Exception:
-                log.exception("htmx password reset email failed")
-    return html(
+            send_password_reset_email(to=user["email"], reset_url=reset_url)
+        except Exception:
+            log.exception("htmx password reset email failed")
+    resp = html(
         request,
         "auth_success.html",
-        {"message": "若此 Email 已註冊，您將收到重設密碼信件。"},
+        {"message": "若此 Email 已註冊，重設連結已寄出。"},
     )
+    resp.headers["HX-Trigger"] = "fp-email-sent"
+    return resp
 
 
 @router.post("/auth/reset-password", response_class=HTMLResponse)
@@ -412,7 +414,7 @@ async def auth_reset_password(request: Request) -> Response:
     if not token or not new_password:
         return html(request, "auth_error.html", {"error": "缺少驗證碼或新密碼"}, 400)
     if len(new_password) < 8:
-        return html(request, "auth_error.html", {"error": "密碼至少需要 8 碼"}, 400)
+        return html(request, "auth_error.html", {"error": "密碼至少需要 8 碼。"}, 400)
 
     token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
     now = datetime.now(timezone.utc)
@@ -424,7 +426,7 @@ async def auth_reset_password(request: Request) -> Response:
         row = cur.fetchone()
         if not row or row["used_at"] is not None or row["expires_at"] < now:
             return html(
-                request, "auth_error.html", {"error": "重設連結無效或已過期，請重新申請"}, 400
+                request, "auth_error.html", {"error": "重設連結無效或已過期，請重新申請。"}, 400
             )
         cur.execute(
             "update users set password_hash = %s where id = %s",

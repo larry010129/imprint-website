@@ -474,12 +474,15 @@ async def logout(request: Request) -> JSONResponse:
 @router.post("/request-password-reset")
 async def request_password_reset(request: Request) -> JSONResponse:
     # Always returns ok — never reveal whether an email is registered. Throttled
-    # per-IP so it can't be used to blast reset emails at someone's inbox.
-    if not enforce_rate_limit(request, action="pwreset", limit=5, window_seconds=900):
-        return _err(429, "請求過於頻繁，請稍後再試")
-
+    # per-IP and per-normalized-email so it can't blast one inbox from many IPs.
+    # Email reset stays live for every active account, including Authenticator users.
     body = await request.json()
     email = (body.get("email") or "").strip().lower()
+    if not enforce_rate_limit(
+        request, action="pwreset", limit=5, window_seconds=900, subject=email or None
+    ):
+        return _err(429, "請求過於頻繁，請稍後再試")
+
     generic = JSONResponse(content={"ok": True})
     if not email:
         return generic
@@ -501,16 +504,9 @@ async def request_password_reset(request: Request) -> JSONResponse:
 
     reset_url = f"{settings.public_base_url}/reset-password?token={raw_token}"
     try:
-        from app.mail import send_email
+        from app.mail import send_password_reset_email
 
-        send_email(
-            to=user["email"],
-            subject="銘印鑽石｜重設密碼",
-            text=(
-                "您好，\n\n我們收到您重設密碼的請求。請於 1 小時內點擊以下連結設定新密碼：\n\n"
-                f"{reset_url}\n\n若您沒有提出此請求，請忽略這封信，您的密碼不會變更。\n\n銘印鑽石 IMPRINT DIAMOND"
-            ),
-        )
+        send_password_reset_email(to=user["email"], reset_url=reset_url)
     except Exception:
         log.exception("password reset email failed")
 
@@ -559,10 +555,12 @@ async def forgot_password_verify(request: Request) -> JSONResponse:
     body = await request.json()
     email = (body.get("email") or "").strip()
     code = str(body.get("code") or "").strip()
-    if not email or not code:
-        return _err(400, "請輸入 Email 與驗證碼")
+    if not email:
+        return _err(400, "請輸入 Email。")
+    if not code:
+        return _err(400, "請輸入完整的 6 位數驗證碼。")
     if not is_valid_email(email):
-        return _err(400, "請輸入有效的 Email 格式")
+        return _err(400, "請輸入有效的 Email 格式。")
 
     normalized = email.lower()
     if not enforce_rate_limit(
@@ -599,7 +597,7 @@ async def reset_password_totp(request: Request) -> JSONResponse:
 
     user_id = get_pwreset_user_id(request)
     if not user_id:
-        return _err(401, "驗證已過期，請重新輸入 Email 與 Authenticator 驗證碼。")
+        return _err(401, "驗證已過期，請重新輸入 Email，或改從信件中的連結重設。")
 
     body = await request.json()
     new_password = body.get("newPassword") or body.get("password") or ""

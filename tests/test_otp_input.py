@@ -42,7 +42,7 @@ def test_forgot_password_page_wires_otp_hidden_target(client):
     assert 'data-otp-target="fpCodeHidden"' in resp.text
     assert 'id="fpCodeHidden"' in resp.text
     assert "otp-input.js?v=3" in resp.text
-    assert "forgot-password.js?v=3" in resp.text
+    assert "forgot-password.js?v=5" in resp.text
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not installed")
@@ -97,18 +97,24 @@ def test_forgot_password_js_declares_wizard_state():
     assert "var currentStep = 1;" in text
     assert "var backupMode = false;" in text
     assert "function ensureOtpInit()" in text
+    assert "fp-email-form" in text
+    assert "data-fp-use-totp" in text
+    assert "setStep('inbox', true)" in text
+    assert "請輸入 Email。" in text
+    assert "改用 6 位數驗證碼" in text
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not installed")
-def test_forgot_password_step1_next_node():
-    """Step 1 Next must call setStep(2) without ReferenceError in strict mode."""
+def test_forgot_password_email_then_totp_node():
+    """Email success shows inbox; Authenticator control opens TOTP step."""
     script = """
 const fs = require('fs');
 const vm = require('vm');
 const code = fs.readFileSync(process.argv[1], 'utf8');
 const steps = {};
 const indicators = {};
-let nextBtn = null;
+let totpBtn = null;
+let emailForm = null;
 function el(attrs) {
   return {
     hidden: false,
@@ -122,11 +128,12 @@ function el(attrs) {
       return [];
     },
     addEventListener(type, fn) {
-      if (type === 'click') this._click = fn;
+      this['_' + type] = fn;
     },
   };
 }
 steps[1] = el({ 'data-fp-step': '1' });
+steps.inbox = el({ 'data-fp-step': 'inbox' });
 steps[2] = el({ 'data-fp-step': '2' });
 steps[3] = el({ 'data-fp-step': '3' });
 indicators[1] = el({ 'data-fp-indicator': '1' });
@@ -134,32 +141,29 @@ indicators[2] = el({ 'data-fp-indicator': '2' });
 indicators[3] = el({ 'data-fp-indicator': '3' });
 const wizard = el({ 'data-fp-wizard': '1' });
 wizard.querySelector = function(sel) {
-  if (sel === '[data-otp-group]') return null;
-  if (sel === '[data-otp-field]') return null;
-  if (sel === '[data-fp-backup-field]') return null;
-  if (sel === '[data-fp-toggle-backup]') return null;
   return null;
 };
 wizard.querySelectorAll = function(sel) {
-  if (sel === '[data-fp-next]') {
-    if (!nextBtn) {
-      nextBtn = el({ 'data-fp-next': '2' });
-    }
-    return [nextBtn];
+  if (sel === '[data-fp-use-totp]') {
+    if (!totpBtn) totpBtn = el({ 'data-fp-use-totp': '' });
+    return [totpBtn];
   }
   if (sel === '[data-fp-back]') return [];
   if (sel === '[data-fp-step]') return Object.values(steps);
   if (sel === '[data-fp-indicator]') return Object.values(indicators);
   return [];
 };
+const emailHidden = { value: '' };
 const emailInput = { value: 'user@example.com', focus() {} };
+emailForm = el({});
 const sandbox = {
   document: {
     readyState: 'complete',
     getElementById(id) {
       if (id === 'fpEmail') return emailInput;
-      if (id === 'fpEmailHidden') return { value: '' };
+      if (id === 'fpEmailHidden') return emailHidden;
       if (id === 'fpCodeHidden') return { value: '' };
+      if (id === 'fp-email-form') return emailForm;
       if (id === 'auth-form-msg') return { innerHTML: '' };
       return null;
     },
@@ -172,16 +176,33 @@ const sandbox = {
   },
   window: { ImprintOtpInput: { initGroup() { return null; }, readDigits() { return ''; } } },
 };
-sandbox.window = sandbox.window;
 vm.runInNewContext(code, sandbox);
 try {
-  nextBtn._click();
+  emailForm['_htmx:afterRequest']({ detail: { successful: true } });
 } catch (err) {
-  console.error('step1 next threw: ' + err.message);
+  console.error('email success threw: ' + err.message);
+  process.exit(1);
+}
+if (steps.inbox.hidden !== false) {
+  console.error('inbox should be visible after email success');
+  process.exit(1);
+}
+if (steps[2].hidden !== true) {
+  console.error('step 2 should stay hidden after email success');
+  process.exit(1);
+}
+try {
+  totpBtn._click({ preventDefault() {} });
+} catch (err) {
+  console.error('totp control threw: ' + err.message);
   process.exit(1);
 }
 if (steps[2].hidden !== false) {
-  console.error('step 2 should be visible after next');
+  console.error('step 2 should be visible after Authenticator control');
+  process.exit(1);
+}
+if (emailHidden.value !== 'user@example.com') {
+  console.error('email hidden not synced');
   process.exit(1);
 }
 """

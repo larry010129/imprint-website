@@ -182,20 +182,39 @@ def test_login_page_has_htmx_form(client):
     assert "accounts.google.com/gsi/client" in resp.text or "google_client_id" not in resp.text
 
 
-def test_forgot_password_page_explains_totp_requirement(client):
+def test_forgot_password_page_has_email_and_totp_paths(client):
     resp = client.get("/forgot-password")
     assert resp.status_code == 200
+    assert 'hx-post="/htmx/auth/request-reset"' in resp.text
     assert 'hx-post="/htmx/auth/forgot-password-verify"' in resp.text
     assert 'hx-post="/htmx/auth/forgot-password"' in resp.text
     assert 'data-fp-wizard' in resp.text
+    assert 'data-fp-step="inbox"' in resp.text
+    assert "data-fp-use-totp" in resp.text
     assert 'data-otp-group' in resp.text
     assert 'data-otp-target="fpCodeHidden"' in resp.text
     assert 'id="fpCodeHidden"' in resp.text
-    assert "forgot-password.js?v=3" in resp.text
+    assert "forgot-password.js?v=5" in resp.text
     assert "otp-input.js?v=3" in resp.text
+    assert "可用信件重設，也可以使用驗證碼。" in resp.text
+    assert "寄出重設信件" in resp.text
+    assert "Authenticator 的 6 位數或備用碼" in resp.text
+    assert "請開啟主旨為「重設銘印鑽石帳戶密碼」的信件" in resp.text
+    assert "使用驗證碼" in resp.text
+    assert "login-button--outline" in resp.text
+    assert '<p class="auth-divider">或</p>' in resp.text
+    assert '<p class="auth-divider">或使用</p>' not in resp.text
+    assert '<a href="#" data-fp-use-totp>已啟用 Authenticator？使用驗證碼</a>' in resp.text
     assert "已啟用 Authenticator" in resp.text
-    assert 'href="/account-security"' in resp.text
-    assert 'href="/login?next=/account-security"' in resp.text
+    assert "僅適用於" not in resp.text
+    assert "totp-banner" not in resp.text
+    assert "fp-steps" not in resp.text
+    assert "寄送重設信件" not in resp.text
+    assert "寄出重設連結" not in resp.text
+    assert "用信件重設，或使用驗證碼。兩種方式都可以。" not in resp.text
+    assert "輸入註冊信箱，選擇重設方式。" not in resp.text
+    assert "Resend" not in resp.text
+    assert "resend" not in resp.text.lower()
 
 
 def test_account_security_page_has_htmx_and_totp_script(client):
