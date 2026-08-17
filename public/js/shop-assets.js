@@ -7,7 +7,15 @@
 (function (global) {
   'use strict';
 
-  var IMAGE_ROOT = (global.shopConfig && global.shopConfig.imageRoot) || '/static/images/shop-product/';
+  function imprintDiamondMediaBase() {
+    var raw = (typeof global !== 'undefined' && global.IMPRINT_DIAMOND_MEDIA_BASE) || '';
+    return String(raw || '').trim().replace(/\/+$/, '');
+  }
+
+  var _mediaBase = imprintDiamondMediaBase();
+  var IMAGE_ROOT = _mediaBase
+    ? _mediaBase + '/shop-product/'
+    : ((global.shopConfig && global.shopConfig.imageRoot) || '/static/images/shop-product/');
 
   var CATEGORY_ZH = {
     pendant: '項墜',
@@ -79,7 +87,9 @@
     'rose_gold|斗圓鍊K玫瑰|rose': '斗圓鍊_rose.png',
   };
 
-  var SITE_IMAGES_ROOT = (global.shopConfig && global.shopConfig.siteImagesRoot) || '/static/images/';
+  var SITE_IMAGES_ROOT = _mediaBase
+    ? _mediaBase + '/'
+    : ((global.shopConfig && global.shopConfig.siteImagesRoot) || '/static/images/');
 
   function siteImageUrl(rel) {
     return String(SITE_IMAGES_ROOT).replace(/\/?$/, '/') + String(rel || '').replace(/^\/+/, '');

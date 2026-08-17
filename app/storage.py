@@ -166,14 +166,18 @@ _STATIC_IMAGES_PREFIXES = (
 SHOP_STILL_FOLDERS = frozenset({"diamonds", "shop-product", "products"})
 
 
+def diamond_media_base() -> str:
+    """Public site-images prefix for shop stills. No secrets. Empty if no SUPABASE_URL."""
+    base = (settings.supabase_url or "").rstrip("/")
+    bucket = (settings.supabase_storage_bucket or "shop-media").strip() or "shop-media"
+    if not base:
+        return ""
+    return f"{base}/storage/v1/object/public/{bucket}/site-images"
+
+
 def site_images_public_base() -> str | None:
-    """``…/object/public/{bucket}/site-images`` or None when SUPABASE_URL missing."""
-    if not (settings.supabase_url or "").strip():
-        return None
-    try:
-        return public_url_for_object(_SITE_IMAGES_KIND).rstrip("/")
-    except (StorageNotConfiguredError, StorageUploadError):
-        return None
+    """Same prefix as ``diamond_media_base``, or None when unconfigured."""
+    return diamond_media_base() or None
 
 
 def site_image_object_path(local_path: str) -> str | None:
@@ -204,10 +208,31 @@ def site_image_public_url(local_path: str) -> str | None:
     object_path = site_image_object_path(local_path)
     if not object_path:
         return None
-    try:
-        return public_url_for_object(object_path)
-    except (StorageNotConfiguredError, StorageUploadError):
+    base = diamond_media_base()
+    if not base:
         return None
+    rel = object_path[len(_SITE_IMAGES_KIND) :].lstrip("/")
+    if not rel:
+        return None
+    return f"{base}/{rel}"
+
+
+def rewrite_shop_still_url(url: str) -> str:
+    """Map a diamonds/shop-product/products local path to Storage. Else unchanged."""
+    raw = str(url or "").strip()
+    if not raw or raw.startswith(("http://", "https://", "data:")):
+        return raw
+    path, _sep, query = raw.partition("?")
+    object_path = site_image_object_path(path)
+    if not object_path:
+        return raw
+    parts = object_path.split("/")
+    if len(parts) < 2 or parts[0] != _SITE_IMAGES_KIND or parts[1] not in SHOP_STILL_FOLDERS:
+        return raw
+    mapped = site_image_public_url(path)
+    if not mapped:
+        return raw
+    return f"{mapped}?{query}" if query else mapped
 
 
 def is_supabase_storage_url(url: str | None) -> bool:

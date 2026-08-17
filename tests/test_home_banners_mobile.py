@@ -93,6 +93,15 @@ def test_home_series_cards_use_local_hero_srcset():
         assert f'data-cms-slot="{slot}"' in html
         assert f"/static/images/hero/{stem}-800w.webp" in html
     assert 'src="/static/images/diamonds/colors/blue-320.webp"' in html
+    from app.image_urls import rewrite_shop_stills_in_html
+    from app.storage import diamond_media_base
+
+    rewritten = rewrite_shop_stills_in_html(html)
+    base = diamond_media_base()
+    if base:
+        assert f"{base}/diamonds/colors/blue-320.webp" in rewritten
+    else:
+        assert 'src="/static/images/diamonds/colors/blue-320.webp"' in rewritten
     assert "function posterForId" in html
     assert "data-yt-poster=" not in html
     assert "style=\"background-image:url" not in html

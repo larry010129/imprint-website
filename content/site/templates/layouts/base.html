@@ -36,6 +36,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 <meta charset="utf-8">
 {% set _sm = shop_media_config() %}
 <script>
+window.IMPRINT_DIAMOND_MEDIA_BASE = {{ diamond_media_base()|tojson }};
 window.shopConfig = Object.assign({
   imageRoot: {{ _sm.imageRoot | tojson }},
   siteImagesRoot: {{ _sm.siteImagesRoot | tojson }}
@@ -72,9 +73,9 @@ window.shopConfig = Object.assign({
 {% block og_tags %}
 <meta property="og:title" content="{{ og_title or title }}">
 <meta property="og:description" content="{{ og_description or description }}">
-<meta property="og:image" content="https://www.imprintdiamond.com/{{ og_image or 'static/images/hero/imprint-diamond-family-memorial.jpg' }}">
+<meta property="og:image" content="{{ share_image_url(og_image) }}">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="https://www.imprintdiamond.com/{{ og_image or 'static/images/hero/imprint-diamond-family-memorial.jpg' }}">
+<meta name="twitter:image" content="{{ share_image_url(og_image) }}">
 {% endblock %}
 
 <style>{{ inline_css('base.css') | safe }}</style>

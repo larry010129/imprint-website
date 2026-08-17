@@ -3518,11 +3518,22 @@ function diamondMetaLabel(item) {
   return shopLang() === 'en' ? (item.labelEn || item.labelZh) : item.labelZh;
 }
 
+/** Rex injects window.IMPRINT_DIAMOND_MEDIA_BASE =
+ *  `{SUPABASE_URL}/storage/v1/object/public/shop-media/site-images` (no trailing slash).
+ *  Join `{base}/{rel}` only — do not append site-images or shop-media here.
+ *  Empty / whitespace → `/static/images`.
+ */
+function imprintDiamondMediaBase() {
+  const raw = typeof window !== 'undefined' ? window.IMPRINT_DIAMOND_MEDIA_BASE : '';
+  return String(raw || '').trim().replace(/\/+$/, '');
+}
+
 function diamondAssetUrl(relativePath) {
   if (!relativePath) return '';
-  const root = (window.shopConfig && window.shopConfig.siteImagesRoot) || '/static/images/';
-  const rel = String(relativePath).replace(/^\/+/, '').replace(/\\/g, '/');
-  return `${root}${rel}?v=24`;
+  const rel = String(relativePath).replace(/^\/+/, '');
+  const base = imprintDiamondMediaBase();
+  const prefix = base || '/static/images';
+  return `${prefix}/${rel}?v=25`;
 }
 
 function isBundledMatrixUrl(url) {
@@ -5922,7 +5933,7 @@ function loadGirdleEngrave() {
   if (girdleEngraveLoadPromise) return girdleEngraveLoadPromise;
   girdleEngraveLoadPromise = new Promise((resolve, reject) => {
     const script = document.createElement('script');
-    script.src = '/static/js/girdle-engrave.js?v=28';
+    script.src = '/static/js/girdle-engrave.js?v=29';
     script.async = true;
     script.onload = () => resolve(window.GirdleEngrave);
     script.onerror = () => reject(new Error('girdle engraving script failed to load'));

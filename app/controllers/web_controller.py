@@ -36,9 +36,9 @@ templates.env.globals["recaptcha_site_key"] = settings.recaptcha_site_key
 
 def shop_media_config() -> dict[str, str]:
     """Public Storage bases for shop stills. Disk paths when SUPABASE_URL missing."""
-    from app.storage import site_images_public_base
+    from app.storage import diamond_media_base
 
-    base = site_images_public_base()
+    base = diamond_media_base()
     origin = (settings.supabase_url or "").rstrip("/")
     if not base:
         return {
@@ -54,7 +54,21 @@ def shop_media_config() -> dict[str, str]:
     }
 
 
+def _diamond_media_base_global() -> str:
+    from app.storage import diamond_media_base
+
+    return diamond_media_base()
+
+
+def _share_image_url_global(og_image: str | None = None) -> str:
+    from app.image_urls import share_image_url
+
+    return share_image_url(og_image)
+
+
 templates.env.globals["shop_media_config"] = shop_media_config
+templates.env.globals["diamond_media_base"] = _diamond_media_base_global
+templates.env.globals["share_image_url"] = _share_image_url_global
 
 
 # mtime-keyed so CSS edits apply without process restart (dev + hot reload).
@@ -562,6 +576,9 @@ def _make_handler(meta: PageMeta, status_code: int = 200):
         html = response.body.decode(response.charset)
         html = apply_page_image_slots(html, meta.route, context["page_images"])
         html = apply_page_copy_slots(html, meta.route, context["page_copy_slots"])
+        from app.image_urls import rewrite_shop_stills_in_html
+
+        html = rewrite_shop_stills_in_html(html)
         if site_edit:
             page_key = json.dumps(meta.route)
             edit_boot = (

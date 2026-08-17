@@ -32,12 +32,13 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <script src="/static/js/shop-config-token.js"></script>
 {% set _sm = shop_media_config() %}
 <script>
+window.IMPRINT_DIAMOND_MEDIA_BASE = {{ diamond_media_base()|tojson }};
 window.shopConfig = Object.assign({
   imageRoot: {{ _sm.imageRoot | tojson }},
   siteImagesRoot: {{ _sm.siteImagesRoot | tojson }}
 }, window.shopConfig || {});
 </script>
-<script src="/static/js/shop-assets.js?v=17"></script>
+<script src="/static/js/shop-assets.js?v=18"></script>
   <script src="/static/js/shop-quote-render.js?v=14"></script>
   <script src="/static/js/share-summary.js"></script>
 </body>

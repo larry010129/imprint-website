@@ -6,10 +6,19 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from app.image_urls import (
+    resolve_product_image_url,
+    rewrite_shop_stills_in_html,
+    share_image_url,
+    static_url_exists,
+)
 from app.storage import (
+    diamond_media_base,
     encode_unicode_filename_stem,
+    rewrite_shop_still_url,
     site_image_object_path,
     site_image_public_url,
+    site_images_public_base,
 )
 
 
@@ -54,6 +63,79 @@ def test_missing_supabase_url_keeps_disk_paths(monkeypatch):
     monkeypatch.delenv("SUPABASE_URL", raising=False)
     monkeypatch.setenv("SUPABASE_URL", "")
     assert site_image_public_url("diamonds/matrix/round-white.png") is None
+    assert diamond_media_base() == ""
+    assert site_images_public_base() is None
+    assert rewrite_shop_still_url("/static/images/products/category-ring.jpg") == (
+        "/static/images/products/category-ring.jpg"
+    )
+
+
+def test_diamond_media_base_is_the_one_site_images_prefix(storage_env):
+    assert diamond_media_base() == PUBLIC_PREFIX
+    assert not diamond_media_base().endswith("/")
+    assert site_images_public_base() == PUBLIC_PREFIX
+
+
+def test_resolve_product_image_url_rewrites_seed_and_memorial_paths(storage_env):
+    assert resolve_product_image_url("/static/images/products/white/pendant-A.png") == (
+        f"{PUBLIC_PREFIX}/products/white/pendant-A.png"
+    )
+    assert resolve_product_image_url(
+        "/static/images/diamonds/matrix/round-white.png"
+    ) == f"{PUBLIC_PREFIX}/diamonds/matrix/round-white.png"
+    leaf = f"{encode_unicode_filename_stem('耳飾A_gold')}.png"
+    assert resolve_product_image_url(
+        "/static/images/shop-product/gold/耳飾A_gold.png"
+    ) == f"{PUBLIC_PREFIX}/shop-product/gold/{leaf}"
+    assert resolve_product_image_url("/static/images/hero/keep.jpg") == (
+        "/static/images/hero/keep.jpg"
+    )
+
+
+def test_share_image_url_avoids_double_site_prefix(storage_env):
+    assert share_image_url("static/images/products/category-ring.jpg") == (
+        f"{PUBLIC_PREFIX}/products/category-ring.jpg"
+    )
+    assert share_image_url("static/images/hero/imprint-diamond-family-memorial.jpg") == (
+        "https://www.imprintdiamond.com/static/images/hero/"
+        "imprint-diamond-family-memorial.jpg"
+    )
+
+
+def test_html_rewrite_maps_shop_stills_not_host_prefixed_og(storage_env):
+    html = (
+        '<img src="/static/images/diamonds/colors/blue-320.webp">'
+        '<img src="/static/images/shop-product/gold/耳飾A_gold.png">'
+        '<meta property="og:image" content="https://www.imprintdiamond.com/'
+        'static/images/products/category-ring.jpg">'
+    )
+    out = rewrite_shop_stills_in_html(html)
+    leaf = f"{encode_unicode_filename_stem('耳飾A_gold')}.png"
+    assert f'src="{PUBLIC_PREFIX}/diamonds/colors/blue-320.webp"' in out
+    assert f'src="{PUBLIC_PREFIX}/shop-product/gold/{leaf}"' in out
+    assert (
+        'content="https://www.imprintdiamond.com/static/images/products/category-ring.jpg"'
+        in out
+    )
+    assert "imprintdiamond.com/https://" not in out
+
+
+def test_shop_catalog_data_rewrites_at_runtime():
+    src = (
+        __import__("pathlib").Path(__file__).resolve().parents[1]
+        / "public"
+        / "js"
+        / "shop-catalog-data.js"
+    ).read_text(encoding="utf-8")
+    assert "function imprintDiamondMediaBase()" in src
+    assert "rewriteShopStillsDeep(global.shopCatalogData)" in src
+    assert "/static/images/products/white/pendant-A.png" in src
+
+
+def test_static_url_exists_treats_shop_stills_as_present(storage_env):
+    assert static_url_exists("/static/images/diamonds/matrix/round-white.png")
+    assert static_url_exists("/static/images/products/category-ring.jpg")
+    assert static_url_exists("/static/images/shop-product/gold/ear.png")
 
 
 @pytest.fixture

@@ -9,8 +9,10 @@ from typing import Any
 from urllib.parse import parse_qsl, unquote, urlencode, urlsplit, urlunsplit
 
 from app.storage import (
+    diamond_media_base,
     is_supabase_storage_url,
     prefer_category_scoped_product_url,
+    rewrite_shop_still_url,
     site_image_public_url,
     site_images_public_base,
 )
@@ -159,24 +161,47 @@ def strip_cache_buster(url: str | None) -> str:
     return _rewrite_query(value, None)
 
 
+_SHARE_SITE_ORIGIN = "https://www.imprintdiamond.com"
+_DEFAULT_OG_IMAGE = "static/images/hero/imprint-diamond-family-memorial.jpg"
+# Match /static/images/{diamonds|shop-product|products}/… not after a host.
+_SHOP_STILL_IN_HTML = re.compile(
+    r'(?<![:\w])/static/images/(?:diamonds|shop-product|products)/[^"\'?\s<>]+'
+)
+
+
 def resolve_product_image_url(file_path: str | None) -> str:
     if not file_path:
         return ""
     path = file_path.strip()
     if path.startswith(("http://", "https://")):
         return path
-    if path.startswith("/static/"):
-        return path
-    if path.startswith("/"):
-        return path
-
     if path.startswith("images/shop/"):
-        return f"/static/{path}"
-    if path.startswith("static/"):
-        return f"/{path}"
-    if path.startswith("images/"):
-        return f"/static/{path}"
-    return f"/{path}"
+        path = f"/static/{path}"
+    elif path.startswith("static/"):
+        path = f"/{path}"
+    elif path.startswith("images/"):
+        path = f"/static/{path}"
+    elif not path.startswith("/"):
+        path = f"/{path}"
+    return rewrite_shop_still_url(path)
+
+
+def share_image_url(og_image: str | None) -> str:
+    """Absolute og/twitter image. Shop stills use Storage; else site origin + path."""
+    raw = str(og_image or "").strip() or _DEFAULT_OG_IMAGE
+    if raw.startswith(("http://", "https://")):
+        return raw
+    mapped = rewrite_shop_still_url(raw if raw.startswith("/") else f"/{raw}")
+    if mapped.startswith(("http://", "https://")):
+        return mapped
+    return f"{_SHARE_SITE_ORIGIN}/{raw.lstrip('/')}"
+
+
+def rewrite_shop_stills_in_html(html: str) -> str:
+    """Swap leftover shop-still /static/ paths after render. Skip host-prefixed og tags."""
+    if not html or not diamond_media_base():
+        return html
+    return _SHOP_STILL_IN_HTML.sub(lambda match: rewrite_shop_still_url(match.group(0)), html)
 
 
 def _is_raster_url(url: str) -> bool:
@@ -239,7 +264,7 @@ def static_url_exists(url: str | None) -> bool:
         return False
     from config.settings import settings
 
-    if settings.supabase_url and any(path.startswith(prefix) for prefix in _SHOP_STILL_PREFIXES):
+    if diamond_media_base() and any(path.startswith(prefix) for prefix in _SHOP_STILL_PREFIXES):
         return True
     cached = _SHOP_ASSET_EXISTS_CACHE.get(path)
     if cached is not None:
@@ -467,7 +492,9 @@ def diamond_matrix_image_url(
             white = site_image_public_url(white_rel) or f"/static/images/{white_rel}"
             if storage_on or static_url_exists(white):
                 return white
-    return ""
+    # git rm of public/images/diamonds — still emit the requested path.
+    rel = f"diamonds/matrix/{candidates[0]}-{color_id}.png"
+    return site_image_public_url(rel) or f"/static/images/{rel}"
 
 
 def memorial_diamond_color_options() -> list[dict[str, str]]:

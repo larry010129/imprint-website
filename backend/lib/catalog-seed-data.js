@@ -169,9 +169,19 @@ function buildWeightTable() {
   return legacy;
 }
 
+function siteImagesBase() {
+  const base = String(process.env.SUPABASE_URL || '').replace(/\/+$/, '');
+  const bucket = String(process.env.SUPABASE_STORAGE_BUCKET || 'shop-media').trim() || 'shop-media';
+  if (!base) return '';
+  return `${base}/storage/v1/object/public/${bucket}/site-images`;
+}
+
 /** Canonical persisted originals used by both 商品上架 and the storefront. */
 function imagePath(category, style, color) {
-  return `/static/images/products/${color}/${category}-${style}.png`;
+  const rel = `products/${color}/${category}-${style}.png`;
+  const base = siteImagesBase();
+  if (base) return `${base}/${rel}`;
+  return `/static/images/${rel}`;
 }
 
 function styleSortOrder(style) {

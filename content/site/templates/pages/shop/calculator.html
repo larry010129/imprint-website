@@ -1002,7 +1002,8 @@
 {% endif %}
 {% include "partials/shop-tour-react-js.html" %}
 <script src="/static/js/api-client.js" defer></script>
-<script defer>
+<script>
+  window.IMPRINT_DIAMOND_MEDIA_BASE = {{ diamond_media_base()|tojson }};
   window.shopConfig = Object.assign({
     mode: 'order',
     useApi: true,
@@ -1017,9 +1018,9 @@
     siteImagesRoot: {{ shop_media_config().siteImagesRoot | tojson }},
   }, window.shopConfig || {});
 </script>
-<script src="/static/js/shop-assets.js?v=17" defer></script>
+<script src="/static/js/shop-assets.js?v=18" defer></script>
 <script src="/static/js/shop-i18n.js?v=24" defer></script>
 <script src="/static/js/shop-terms.js?v=5" defer></script>
 <script src="/static/js/catalog-multi-filter.js?v=1" defer></script>
-<script src="/static/js/shop.js?v=169" defer></script>
+<script src="/static/js/shop.js?v=170" defer></script>
 {% endblock %}

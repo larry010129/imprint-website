@@ -51,6 +51,7 @@ from app.storage import (
     product_object_key,
     product_upload_relative_path,
     promote_pending_product_url,
+    diamond_media_base,
     sanitize_product_name_slug,
     short_product_id_segment,
     storage_safe_folder_segment,
@@ -81,6 +82,51 @@ def _storage_env(monkeypatch):
     monkeypatch.setenv("SUPABASE_URL", SUPABASE_URL)
     monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "test-service-role")
     monkeypatch.setenv("SUPABASE_STORAGE_BUCKET", "shop-media")
+
+
+def test_diamond_media_base_public_prefix_no_trailing_slash():
+    assert diamond_media_base() == (
+        f"{SUPABASE_URL}/storage/v1/object/public/shop-media/site-images"
+    )
+    assert not diamond_media_base().endswith("/")
+
+
+def test_diamond_media_base_empty_without_url(monkeypatch):
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+    monkeypatch.setenv("SUPABASE_URL", "")
+    assert diamond_media_base() == ""
+
+
+def test_diamond_matrix_image_url_uses_site_images_prefix():
+    from app.image_urls import diamond_matrix_image_url
+
+    assert diamond_matrix_image_url("round", "blue") == (
+        f"{SUPABASE_URL}/storage/v1/object/public/shop-media/"
+        "site-images/diamonds/matrix/round-blue.png"
+    )
+
+
+def test_matrix_shape_image_url_uses_site_images_prefix():
+    from app.memorial_diamonds import matrix_shape_image_url
+
+    assert matrix_shape_image_url("oval", "pink") == (
+        f"{SUPABASE_URL}/storage/v1/object/public/shop-media/"
+        "site-images/diamonds/matrix/oval-pink.png"
+    )
+
+
+def test_matrix_urls_fall_back_to_static_without_supabase(monkeypatch):
+    from app.image_urls import diamond_matrix_image_url
+    from app.memorial_diamonds import matrix_shape_image_url
+
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+    monkeypatch.setenv("SUPABASE_URL", "")
+    assert matrix_shape_image_url("round", "white") == (
+        "/static/images/diamonds/matrix/round-white.png"
+    )
+    assert diamond_matrix_image_url("round", "white") == (
+        "/static/images/diamonds/matrix/round-white.png"
+    )
 
 
 def test_is_supabase_storage_url():
