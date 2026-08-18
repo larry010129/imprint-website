@@ -53,10 +53,10 @@ def test_home_first_slide_matches_banner_seed():
 
 def test_home_banners_cache_bust():
     html = INDEX.read_text(encoding="utf-8")
-    assert "home-banners.js?v=15" in html
+    assert "home-banners.js?v=16" in html
     # Phone crops must not wait on 10s below-fold delay.
     assert "HOME_EXTRAS_MS" not in html
-    assert "inject('/static/js/home-banners.js?v=15');" in html
+    assert "inject('/static/js/home-banners.js?v=16');" in html
     assert "aspect-ratio:800/388" not in html
 
 
@@ -246,3 +246,39 @@ def test_shop_catalog_tiles_square_cover_fill():
     assert "width: 100%" in shop_gem
     assert "object-fit: contain" in shop_gem
     assert "max-width: 16rem" in shop
+
+
+def test_hero_carousel_preloads_and_swaps_after_decode():
+    """Phone flash: empty data-src + imgFallback + immediate is-active."""
+    main = (ROOT / "public" / "js" / "main.js").read_text(encoding="utf-8")
+    src_at = main.index("img.src = img.dataset.src")
+    srcset_at = main.index("source.srcset = source.dataset.srcset")
+    assert src_at < srcset_at
+    assert "function preloadAround" in main
+    assert "function whenImgReady" in main
+    assert "function imgDecoded" in main
+    assert "Never activate an img with no src" in main
+    assert "restartImg.style.transform = clearNoAnim ? 'scale(1)' : 'scale(1.09)'" in main
+
+
+def test_img_fallback_guards_empty_src_and_hero():
+    base = (ROOT / "content" / "site" / "templates" / "layouts" / "base.html").read_text(
+        encoding="utf-8"
+    )
+    assert "if(!img.currentSrc&&!img.getAttribute('src'))return;" in base
+    assert "img.closest('.hc-slide,.hc-media,.gh-hero--carousel')" in base
+
+
+def test_home_banners_lazy_slides_have_real_src_not_imgfallback():
+    src = HOME_BANNERS.read_text(encoding="utf-8")
+    html = INDEX.read_text(encoding="utf-8")
+    assert "var imageAttr = 'src';" in src
+    assert "onerror=\"imgFallback(this)\"" not in src
+    assert "function isWidthSrcset" in src
+    assert "Single CMS mobile URL" in src
+    assert "hero-sky.jpg" not in src
+    assert "ghibli/hero-sky" not in src
+    hero = html.split('id="hcTrack"', 1)[1].split("</ul>", 1)[0]
+    assert "data-src=" not in hero
+    assert "onerror=" not in hero
+    assert 'src="/static/images/hero/imprint-diamond-newborn-baby-necklace-800w.webp"' in hero

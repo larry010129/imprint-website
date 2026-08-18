@@ -104,6 +104,18 @@
     );
   }
 
+  /** True srcset (w / x / comma list). A lone CMS URL must go on <img src>. */
+  function isWidthSrcset(value) {
+    return /,\s*|\s+\d+w\b|\s+[\d.]+x\b/.test(String(value || ''));
+  }
+
+  function desktopSource(sourceAttr, desktopSrcset, isWebp) {
+    if (!desktopSrcset) return '';
+    return '<source media="(min-width:901px)" ' + sourceAttr + '="' +
+      esc(desktopSrcset) + '"' + (isWebp ? ' type="image/webp"' : '') +
+      ' sizes="100vw">';
+  }
+
   function formatLead(lead) {
     var t = esc(lead);
     return t.replace(/\bDNA\b/g, '<span class="gh-dna">DNA</span>');
@@ -139,18 +151,22 @@
    * - max-width:900 source = phone crop only (never desktop URL)
    * - min-width:901 source = desktop only
    * - <img> fallback = phone URL when crop exists (lazy loader sets img.src)
+   * - Single CMS mobile URL → <img src>, never srcset without w
    * - Never put desktop URLs in <img srcset> — phone must not pick PC bytes
+   * - Do not point banners at 主視覺天空 / hero-sky
    */
   function memorialPicture(sourceAttr, mobileOverride) {
     var mobileValue = String(mobileOverride || '').trim();
+    var imgSrc = mobileValue || MEMORIAL_IMG;
+    var webp = desktopSource(sourceAttr, MEMORIAL_DESKTOP, true);
+    if (mobileValue && !isWidthSrcset(mobileValue)) {
+      return { mobile: '', webp: webp, imgSrc: imgSrc, imgExtra: '' };
+    }
     var mobileSrc = mobileValue || MEMORIAL_MOBILE;
     var mobileIsWebp = /\.webp(\s|\?|$)/i.test(mobileSrc);
     var mobileType = (!mobileValue || mobileIsWebp) ? ' type="image/webp"' : '';
     var mobile = '<source media="(max-width:900px)" ' + sourceAttr + '="' +
       esc(mobileSrc) + '"' + mobileType + ' sizes="100vw">';
-    var webp = '<source media="(min-width:901px)" ' + sourceAttr + '="' +
-      esc(MEMORIAL_DESKTOP) + '" type="image/webp" sizes="100vw">';
-    var imgSrc = mobileValue || MEMORIAL_IMG;
     // Phone-safe srcset only — desktop stays on min-width source.
     var imgExtra = mobileValue
       ? ''
@@ -165,18 +181,20 @@
     var stem = localHeroStem(b.image_webp || b.image_url);
     // Local hero: phone gets 800/960/1200 only; admin image_url_mobile wins.
     if (stem) {
-      var mobileSrcset = mobileValue || localHeroMobileSrcset(stem);
-      var mobileIsWebp = /\.webp(\s|\?|$)/i.test(mobileSrcset);
       var desktop = '/static/images/hero/' + stem + '.webp';
       var desktopSrcset =
         '/static/images/hero/' + stem + '-1280w.webp 1280w, ' +
         '/static/images/hero/' + stem + '-1200w.webp 1200w, ' +
         desktop + ' ' + LOCAL_HERO_MAX_W[stem] + 'w';
+      var webp = desktopSource(sourceAttr, desktopSrcset, true);
+      if (mobileValue && !isWidthSrcset(mobileValue)) {
+        return { mobile: '', webp: webp, imgSrc: mobileValue, imgExtra: '' };
+      }
+      var mobileSrcset = mobileValue || localHeroMobileSrcset(stem);
+      var mobileIsWebp = /\.webp(\s|\?|$)/i.test(mobileSrcset);
       var mobile = '<source media="(max-width:900px)" ' + sourceAttr + '="' +
         esc(mobileSrcset) + '"' + (mobileIsWebp ? ' type="image/webp"' : '') +
         ' sizes="100vw">';
-      var webp = '<source media="(min-width:901px)" ' + sourceAttr + '="' +
-        esc(desktopSrcset) + '" type="image/webp" sizes="100vw">';
       var imgSrc = mobileValue ||
         '/static/images/hero/' + stem + '-800w.webp';
       var imgExtra = '';
@@ -192,24 +210,21 @@
     // Remote CMS: phone crop required for phone; never fall back to desktop URL
     // on ≤900px when image_url_mobile is set.
     var mobileSrc = mobileValue || desktopUrl;
+    var desktopSrc = desktopUrl;
+    var imgSrc = mobileValue || desktopSrc;
+    var webp = '';
+    if (desktopSrc && desktopSrc !== mobileSrc) {
+      webp = desktopSource(sourceAttr, desktopSrc, /\.webp(\s|\?|$)/i.test(desktopSrc));
+    } else if (desktopSrc && !mobileValue) {
+      webp = desktopSource(sourceAttr, desktopSrc, /\.webp(\s|\?|$)/i.test(desktopSrc));
+    }
+    if (mobileSrc && !isWidthSrcset(mobileSrc)) {
+      return { mobile: '', webp: webp, imgSrc: imgSrc, imgExtra: '' };
+    }
     var remoteMobileIsWebp = /\.webp(\s|\?|$)/i.test(mobileSrc);
     var mobile = '<source media="(max-width:900px)" ' + sourceAttr + '="' +
       esc(mobileSrc) + '"' + (remoteMobileIsWebp ? ' type="image/webp"' : '') +
       ' sizes="100vw">';
-    var desktopSrc = desktopUrl;
-    var webp = '';
-    if (desktopSrc && desktopSrc !== mobileSrc) {
-      var desktopIsWebp = /\.webp(\s|\?|$)/i.test(desktopSrc);
-      webp = '<source media="(min-width:901px)" ' + sourceAttr + '="' +
-        esc(desktopSrc) + '"' + (desktopIsWebp ? ' type="image/webp"' : '') +
-        ' sizes="100vw">';
-    } else if (desktopSrc && !mobileValue) {
-      var deskWebp = /\.webp(\s|\?|$)/i.test(desktopSrc);
-      webp = '<source media="(min-width:901px)" ' + sourceAttr + '="' +
-        esc(desktopSrc) + '"' + (deskWebp ? ' type="image/webp"' : '') +
-        ' sizes="100vw">';
-    }
-    var imgSrc = mobileValue || desktopSrc;
     return { mobile: mobile, webp: webp, imgSrc: imgSrc, imgExtra: '' };
   }
 
@@ -224,7 +239,8 @@
       ? 'loading="eager" fetchpriority="high"'
       : 'loading="lazy"';
     var sourceAttr = index === 0 ? 'srcset' : 'data-srcset';
-    var imageAttr = index === 0 ? 'src' : 'data-src';
+    /* Lazy slides still need a real src — empty src + imgFallback strips <source>. */
+    var imageAttr = 'src';
     var mobileValue = String(b.image_url_mobile || '').trim();
     var pic = (index === 0 && isMemorial(b))
       ? memorialPicture(sourceAttr, mobileValue)
@@ -256,7 +272,7 @@
           pic.mobile +
           pic.webp +
           '<img ' + imageAttr + '="' + esc(pic.imgSrc) + '" alt="' + esc(b.image_alt || b.title) + '"' +
-          pic.imgExtra + ' ' + loading + ' decoding="async" onerror="imgFallback(this)">' +
+          pic.imgExtra + ' ' + loading + ' decoding="async">' +
         '</picture></div>' +
         '<div class="hc-scrim gh-hc-scrim"></div>' +
         '<div class="container hc-copy gh-hc-copy">' +

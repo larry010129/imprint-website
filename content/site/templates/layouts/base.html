@@ -44,7 +44,7 @@ window.shopConfig = Object.assign({
   siteImagesRoot: {{ _sm.siteImagesRoot | tojson }}
 }, window.shopConfig || {});
 </script>
-<script>window.imgFallback=function(img){var s=img.dataset.fbStep?parseInt(img.dataset.fbStep,10):0;var e=["jpg","png","jpeg"];var pic=img.parentElement&&img.parentElement.tagName==="PICTURE"?img.parentElement:null;if(s<e.length-1){s++;img.dataset.fbStep=String(s);if(pic){var srcs=pic.querySelectorAll("source");for(var i=0;i<srcs.length;i++){srcs[i].remove();}}img.src=img.src.replace(/\.(jpg|jpeg|png)(\?.*)?$/i,"."+e[s]+"$2");}else{(pic||img).remove();}};</script>
+<script>window.imgFallback=function(img){if(!img.currentSrc&&!img.getAttribute('src'))return;if(img.closest&&img.closest('.hc-slide,.hc-media,.gh-hero--carousel'))return;var s=img.dataset.fbStep?parseInt(img.dataset.fbStep,10):0;var e=["jpg","png","jpeg"];var pic=img.parentElement&&img.parentElement.tagName==="PICTURE"?img.parentElement:null;if(s<e.length-1){s++;img.dataset.fbStep=String(s);if(pic){var srcs=pic.querySelectorAll("source");for(var i=0;i<srcs.length;i++){srcs[i].remove();}}img.src=img.src.replace(/\.(jpg|jpeg|png)(\?.*)?$/i,"."+e[s]+"$2");}else{(pic||img).remove();}};</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block title %}{{ title }}{% endblock %}</title>
 {% block meta_description %}<meta name="description" content="{{ description }}">{% endblock %}
@@ -217,7 +217,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 {% endif %}
 {% endif %}
 <script src="/static/js/site-layout.js?v=3" defer></script>
-<script src="/static/js/main.js?v=2.10" defer></script>
+<script src="/static/js/main.js?v=2.11" defer></script>
 {% block social_fab %}{% include "partials/social-fab.html" %}{% endblock %}
 {% block botpress_webchat %}{% include "partials/botpress-webchat.html" %}{% endblock %}
 </body>
