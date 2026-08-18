@@ -430,6 +430,17 @@ tr.order-row-main.is-detail-open td { background: var(--mint-soft, #f4fbfb); }
   background: #fff;
 }
 
+.orders-bulk-bar .adx-action--danger {
+  color: #B5523D;
+  border-color: #E8C4BC;
+}
+
+.orders-bulk-bar .adx-action--danger:hover:not(:disabled) {
+  color: #8F3D2C;
+  border-color: #D4A399;
+  background: #FDF6F4;
+}
+
 .order-cancel-dialog {
   border: 0;
   border-radius: 12px;

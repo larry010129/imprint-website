@@ -180,7 +180,7 @@ def test_admin1_and_admin_html_have_export_button():
         html = (ROOT / name).read_text(encoding="utf-8")
         assert 'id="btnExportOrdersCsv"' in html
         assert "匯出 Excel" in html
-        assert "admin-orders.js?v=25" in html
+        assert "admin-orders.js?v=26" in html
 
 
 def test_admin_orders_js_downloads_canonical_export():

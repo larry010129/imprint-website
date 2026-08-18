@@ -615,7 +615,7 @@ def test_admin_html_cache_bust_v50():
     for name in ("admin1.html", "admin.html"):
         html = (ROOT / name).read_text(encoding="utf-8")
         assert "admin-products.js?v=65" in html
-        assert "api-client.js?v=25" in html
+        assert "api-client.js?v=27" in html
 
 
 def test_jewelry_validate_still_requires_variant():

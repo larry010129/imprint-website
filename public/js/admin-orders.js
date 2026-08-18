@@ -1,4 +1,4 @@
-/* Admin orders — checkboxes, bulk status, cancel with reason */
+/* Admin orders — checkboxes, bulk status, batch delete, cancel with reason */
 (function () {
   'use strict';
 
@@ -13,6 +13,7 @@
   var bulkStatus = document.getElementById('ordersBulkStatus');
   var bulkApply = document.getElementById('ordersBulkApply');
   var bulkClear = document.getElementById('ordersBulkClear');
+  var bulkDelete = document.getElementById('ordersBulkDelete');
   var cancelDialog = document.getElementById('orderCancelDialog');
   var cancelForm = document.getElementById('orderCancelForm');
   var cancelChips = document.getElementById('orderCancelChips');
@@ -441,6 +442,21 @@
     });
   }
 
+  function applyBatchDelete() {
+    var ids = selectedIds();
+    if (!ids.length) return;
+    if (!confirm('確定刪除 ' + ids.length + ' 筆訂單？此操作無法復原。')) return;
+    if (bulkDelete) bulkDelete.disabled = true;
+    api.admin.batchDeleteOrders(ids).then(function (res) {
+      if (bulkDelete) bulkDelete.disabled = false;
+      if (res.error) {
+        alert('批次刪除失敗：' + (res.error.message || res.error));
+        return;
+      }
+      load(null, true, true);
+    });
+  }
+
   function applyBulkStatus() {
     var ids = selectedIds();
     if (!ids.length || !bulkStatus) return;
@@ -608,6 +624,7 @@
   fillCancelChips();
 
   bulkApply?.addEventListener('click', applyBulkStatus);
+  bulkDelete?.addEventListener('click', applyBatchDelete);
   bulkClear?.addEventListener('click', function () {
     tbody.querySelectorAll('.order-row-check').forEach(function (cb) { cb.checked = false; });
     updateBulkBar();

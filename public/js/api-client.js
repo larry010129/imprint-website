@@ -305,6 +305,14 @@
       deleteOrder: function (id, reason) {
         return this.cancelOrder(id, reason || '管理員取消');
       },
+      // Hard delete — Rex owns POST /api/admin/orders/batch-delete.
+      // Body: { ids: string[] }. Admin cookie session (credentials: include).
+      batchDeleteOrders: function (ids) {
+        return request('/api/admin/orders/batch-delete', {
+          method: 'POST',
+          body: { ids: ids },
+        });
+      },
       getProducts: function (opts) {
         return request('/api/admin/products' + pagingQuery(opts));
       },
