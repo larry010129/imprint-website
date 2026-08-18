@@ -99,17 +99,10 @@ def _privacy_slots() -> list[dict[str, Any]]:
         ),
         _t(
             p,
-            "cookie-short",
-            "隱私權・短期Cookie",
-            "登入流程另可能設定短期 Cookie：imprint_pre2fa（約 5 分鐘，用於二次驗證）、imprint_pwreset（約 10 分鐘，用於重設密碼），完成或逾期後失效。",
-            52,
-        ),
-        _t(
-            p,
             "cookie-gtm",
             "隱私權・GTM",
-            "官網頁面載入 Google 代碼管理工具（Google Tag Manager）。GTM 可能載入 Google Ads 轉換追蹤。",
-            53,
+            "官網頁面並載入 Google 代碼管理工具（Google Tag Manager），用於網站營運所需的頁面測量。",
+            52,
         ),
         _t(p, "purpose-title", "隱私權・目的標題", "資料使用目的", 60),
         _t(
@@ -124,11 +117,9 @@ def _privacy_slots() -> list[dict[str, Any]]:
             p,
             "third-body",
             "隱私權・第三方內文",
-            "Google 登入由 Google 提供身份驗證，其資料處理受 Google 隱私權政策規範。您可於 Google 帳戶設定中管理或撤銷本網站的存取權限。Google Ads 轉換追蹤亦由 Google 處理。",
+            "Google 登入由 Google 提供身份驗證，其資料處理受 Google 隱私權政策規範。您可於 Google 帳戶設定中管理或撤銷本網站的存取權限。",
             71,
         ),
-        _t(p, "third-recaptcha", "隱私權・reCAPTCHA", "註冊頁使用 reCAPTCHA。", 72),
-        _t(p, "third-chat", "隱私權・客服對話框", "線上客服對話框僅在您點選後載入。", 73),
         _t(p, "rights-title", "隱私權・權利標題", "查詢、更正與刪除", 80),
         _t(
             p,
