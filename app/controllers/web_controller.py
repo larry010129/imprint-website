@@ -26,6 +26,7 @@ from config.routes import (
 )
 from config.settings import settings
 from app.legacy_redirects import is_retired_jewelry_route, register_legacy_redirects
+from app.robots_host import html_robots_content
 from app.youtube_channel import fetch_latest_channel_video, resolve_channel_id
 
 log = logging.getLogger(__name__)
@@ -509,7 +510,7 @@ def _context(request: Request, meta: PageMeta, *, include_journal_ssr: bool = Tr
         "description": meta.description,
         "canonical_path": meta.canonical_path,
         "canonical_url": _build_canonical_url(meta.canonical_path, omit=omit_canonical),
-        "robots": meta.robots,
+        "robots": html_robots_content(request.headers.get("host"), meta.robots),
         "og_title": meta.og_title,
         "og_description": meta.og_description,
         "og_image": meta.og_image,
