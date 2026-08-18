@@ -119,6 +119,10 @@ a.checkout-stepper-label:hover {
   color: var(--ink);
 }
 
+.checkout-notice-body + .checkout-notice-body {
+  margin-top: 8px;
+}
+
 .checkout-lead {
   margin: 0;
   font-size: 14px;
