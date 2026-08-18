@@ -21,6 +21,7 @@ def client():
         yield c
 
 
+@pytest.mark.skipif(not os.environ.get("DATABASE_URL"), reason="DATABASE_URL not set")
 def test_home_defers_htmx_gtag_and_extras(client):
     resp = client.get("/")
     assert resp.status_code == 200
@@ -98,6 +99,7 @@ def test_public_layouts_share_one_deferred_gtm_snippet():
         assert text.count("GTM-KD4FZ458") == 1
 
 
+@pytest.mark.skipif(not os.environ.get("DATABASE_URL"), reason="DATABASE_URL not set")
 def test_home_auth_quote_and_share_defer_gtm(client):
     for path in ("/", "/login", "/quote-sheet", "/share/summary"):
         resp = client.get(path)
