@@ -1,4 +1,4 @@
-/* Admin orders — checkboxes, bulk status, cancel with reason */
+/* Admin orders — checkboxes, bulk status, batch delete, cancel with reason */
 (function () {
   'use strict';
 
@@ -13,6 +13,8 @@
   var bulkStatus = document.getElementById('ordersBulkStatus');
   var bulkApply = document.getElementById('ordersBulkApply');
   var bulkClear = document.getElementById('ordersBulkClear');
+  var bulkDelete = document.getElementById('ordersBulkDelete');
+  var ordersTabs = document.getElementById('ordersTabs');
   var cancelDialog = document.getElementById('orderCancelDialog');
   var cancelForm = document.getElementById('orderCancelForm');
   var cancelChips = document.getElementById('orderCancelChips');
@@ -39,6 +41,24 @@
   var _pageSize = 20;
   var _total = 0;
   var _lastQuery = '';
+  var _tab = 'all';
+  var BULK_DELETE_CAP = 100;
+  // Same tab keys / status groups as /history (Shopee-like).
+  var HISTORY_TAB_STATUSES = {
+    unpaid: ['received', 'order_confirming'],
+    to_ship: ['deposit_confirmed', 'dna_lab', 'in_production', 'quality_check'],
+    to_receive: ['shipped'],
+    completed: ['completed'],
+    cancelled: ['cancelled', 'canceled'],
+  };
+  var EMPTY_BY_TAB = {
+    all: '目前沒有訂單',
+    unpaid: '目前沒有待付款訂單',
+    to_ship: '目前沒有待出貨訂單',
+    to_receive: '目前沒有待收貨訂單',
+    completed: '尚無已完成訂單',
+    cancelled: '目前沒有不成立訂單',
+  };
 
   var STATUS_COLORS = {
     received: '#e0a458',
@@ -360,6 +380,7 @@
     var n = ids.length;
     if (bulkBar) bulkBar.hidden = n === 0;
     if (bulkCount) bulkCount.textContent = '已選 ' + n + ' 筆';
+    if (bulkDelete) bulkDelete.disabled = n === 0;
     var selectAll = tbody.querySelector('#ordersSelectAll');
     if (selectAll) {
       var checks = tbody.querySelectorAll('.order-row-check:not(:disabled)');
@@ -441,6 +462,21 @@
     });
   }
 
+  function applyBatchDelete() {
+    var ids = selectedIds().slice(0, BULK_DELETE_CAP);
+    if (!ids.length) return;
+    if (!confirm('確定刪除 ' + ids.length + ' 筆訂單？此操作無法復原。')) return;
+    if (bulkDelete) bulkDelete.disabled = true;
+    api.admin.bulkDeleteOrders(ids).then(function (res) {
+      if (bulkDelete) bulkDelete.disabled = selectedIds().length === 0;
+      if (res.error) {
+        alert('批次刪除失敗：' + (res.error.message || res.error));
+        return;
+      }
+      load(null, true, true);
+    });
+  }
+
   function applyBulkStatus() {
     var ids = selectedIds();
     if (!ids.length || !bulkStatus) return;
@@ -488,10 +524,35 @@
     if (window.AdminTables) window.AdminTables.unmount(tbody);
   }
 
+  function orderMatchesTab(o) {
+    var statuses = HISTORY_TAB_STATUSES[_tab];
+    if (!statuses) return true;
+    return statuses.indexOf(String(o.status || '').toLowerCase()) >= 0;
+  }
+
+  function syncTabChrome() {
+    if (!ordersTabs) return;
+    ordersTabs.querySelectorAll('[data-orders-tab]').forEach(function (btn) {
+      var on = btn.getAttribute('data-orders-tab') === _tab;
+      btn.classList.toggle('is-active', on);
+      btn.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+  }
+
+  function setOrdersTab(key) {
+    if (key !== 'all' && !HISTORY_TAB_STATUSES[key]) key = 'all';
+    if (key === _tab) return;
+    _tab = key;
+    _pageIndex = 0;
+    syncTabChrome();
+    load(_lastQuery || null, false, true);
+  }
+
   function renderRows(orders) {
-    if (!orders.length && !_total) {
+    var rows = (orders || []).filter(orderMatchesTab);
+    if (!rows.length) {
       unmountTable();
-      tbody.innerHTML = '<p class="orders-empty">目前沒有訂單</p>';
+      tbody.innerHTML = '<p class="orders-empty">' + esc(EMPTY_BY_TAB[_tab] || EMPTY_BY_TAB.all) + '</p>';
       updateBulkBar();
       return;
     }
@@ -500,7 +561,7 @@
       return;
     }
     window.AdminTables.renderOrdersTable(tbody, {
-      rows: orders.map(toOrderTableRow),
+      rows: rows.map(toOrderTableRow),
       total: _total,
       pageIndex: _pageIndex,
       pageSize: _pageSize,
@@ -584,6 +645,7 @@
       page_size: _pageSize,
     };
     if (q) params.q = q;
+    if (_tab && _tab !== 'all') params.tab = _tab;
     api.admin.getOrders(params).then(function (res) {
       if (res.error) {
         unmountTable();
@@ -606,8 +668,17 @@
 
   fillBulkStatusSelect();
   fillCancelChips();
+  if (bulkDelete) bulkDelete.disabled = true;
+  syncTabChrome();
+
+  ordersTabs?.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-orders-tab]');
+    if (!btn || !ordersTabs.contains(btn)) return;
+    setOrdersTab(btn.getAttribute('data-orders-tab') || 'all');
+  });
 
   bulkApply?.addEventListener('click', applyBulkStatus);
+  bulkDelete?.addEventListener('click', applyBatchDelete);
   bulkClear?.addEventListener('click', function () {
     tbody.querySelectorAll('.order-row-check').forEach(function (cb) { cb.checked = false; });
     updateBulkBar();
@@ -646,6 +717,7 @@
     var q = (searchInput && searchInput.value.trim()) || _lastQuery || '';
     var params = new URLSearchParams();
     if (q) params.set('q', q);
+    if (_tab && _tab !== 'all') params.set('tab', _tab);
     params.set('_', String(Date.now()));
     window.location.href = (window.IMPRINT_API_BASE || '')
       + '/api/admin/orders/export?' + params.toString();

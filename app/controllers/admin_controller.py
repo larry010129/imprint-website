@@ -79,10 +79,14 @@ from app.product_categories import (
 from config.settings import settings
 from app.database import get_connection, get_transaction
 from app.orders import (
+    HISTORY_TAB_STATUSES,
     attach_order_display,
     attach_order_relations,
+    delete_orders_by_ids,
     hydrate_order,
     merge_status_timestamps,
+    normalize_history_tab,
+    parse_admin_order_ids,
 )
 from app.paging import page_response, parse_paging_from_mapping, sql_count_total
 
@@ -302,12 +306,14 @@ def _admin_orders_search_from() -> str:
     from orders o
     left join order_items oi on oi.order_id = o.id
     left join order_contacts oc on oc.order_id = o.id
-    where o.order_number ilike %s
+    where (
+          o.order_number ilike %s
        or o.status ilike %s
        or o.summary_zh ilike %s
        or oc.customer_name ilike %s
        or oc.customer_phone ilike %s
        or oi.summary_zh ilike %s
+    )
     """
 
 
@@ -316,45 +322,75 @@ def _admin_order_like_params(search: str) -> tuple:
     return (like, like, like, like, like, like)
 
 
-def _fetch_admin_orders(cur, search: str, *, limit: int, offset: int = 0) -> list[dict]:
+def _admin_tab_statuses(tab: str | None) -> frozenset[str] | None:
+    """Same tab= query as /history. Unknown tab → all (no status predicate)."""
+    return HISTORY_TAB_STATUSES.get(normalize_history_tab(tab))
+
+
+def _admin_status_sql(*, aliased: bool) -> str:
+    col = "o.status" if aliased else "status"
+    return f" lower({col}) = any(%s)"
+
+
+def _fetch_admin_orders(
+    cur, search: str, *, limit: int, offset: int = 0, tab: str | None = None
+) -> list[dict]:
     q = (search or "").strip()
+    statuses = _admin_tab_statuses(tab)
+    status_params = (list(statuses),) if statuses else ()
     if q:
+        sql = "select distinct o.* " + _admin_orders_search_from()
+        if statuses:
+            sql += " and" + _admin_status_sql(aliased=True)
+        sql += " order by o.created_at desc limit %s offset %s"
         cur.execute(
-            "select distinct o.* "
-            + _admin_orders_search_from()
-            + " order by o.created_at desc limit %s offset %s",
-            (*_admin_order_like_params(q), limit, offset),
+            sql, (*_admin_order_like_params(q), *status_params, limit, offset)
         )
     else:
-        cur.execute(
-            "select * from orders order by created_at desc limit %s offset %s",
-            (limit, offset),
-        )
+        sql = "select * from orders"
+        if statuses:
+            sql += " where" + _admin_status_sql(aliased=False)
+        sql += " order by created_at desc limit %s offset %s"
+        cur.execute(sql, (*status_params, limit, offset))
     return list(cur.fetchall())
 
 
-def _count_admin_orders(cur, search: str) -> int:
+def _count_admin_orders(cur, search: str, *, tab: str | None = None) -> int:
     q = (search or "").strip()
+    statuses = _admin_tab_statuses(tab)
+    status_params = (list(statuses),) if statuses else ()
     if not q:
-        return sql_count_total(cur, "select count(*)::int from orders")
-    return sql_count_total(
-        cur,
+        sql = "select count(*)::int from orders"
+        if statuses:
+            sql += " where" + _admin_status_sql(aliased=False)
+        return sql_count_total(cur, sql, status_params or None)
+    sql = (
         "select count(*)::int from (select distinct o.id "
         + _admin_orders_search_from()
-        + ") t",
-        _admin_order_like_params(q),
+    )
+    if statuses:
+        sql += " and" + _admin_status_sql(aliased=True)
+    sql += ") t"
+    return sql_count_total(
+        cur, sql, (*_admin_order_like_params(q), *status_params)
     )
 
 
 @router.get("/orders")
-async def orders_list(request: Request, q: str | None = Query(None)) -> dict:
+async def orders_list(
+    request: Request,
+    q: str | None = Query(None),
+    tab: str | None = Query(None),
+) -> dict:
     _require_admin(request)
     search = (q or "").strip()
     page, page_size, limit, offset = parse_paging_from_mapping(request.query_params)
 
     with get_connection() as conn, conn.cursor() as cur:
-        total = _count_admin_orders(cur, search)
-        orders = _fetch_admin_orders(cur, search, limit=limit, offset=offset)
+        total = _count_admin_orders(cur, search, tab=tab)
+        orders = _fetch_admin_orders(
+            cur, search, limit=limit, offset=offset, tab=tab
+        )
         attach_order_display(cur, orders)
 
     return page_response(
@@ -363,13 +399,15 @@ async def orders_list(request: Request, q: str | None = Query(None)) -> dict:
 
 
 @router.get("/orders/export")
-async def orders_export(request: Request, q: str | None = Query(None)) -> Response:
+async def orders_export(
+    request: Request, q: str | None = Query(None), tab: str | None = Query(None)
+) -> Response:
     """Canonical download: GET /api/admin/orders/export (no file extension)."""
     _require_admin(request)
     search = (q or "").strip()
     with get_connection() as conn, conn.cursor() as cur:
         orders = _fetch_admin_orders(
-            cur, search, limit=DASHBOARD_ORDER_HARD_LIMIT, offset=0
+            cur, search, limit=DASHBOARD_ORDER_HARD_LIMIT, offset=0, tab=tab
         )
         attach_order_display(cur, orders)
     today = datetime.now(timezone(timedelta(hours=8))).strftime("%Y-%m-%d")
@@ -383,13 +421,17 @@ async def orders_export(request: Request, q: str | None = Query(None)) -> Respon
 
 
 @router.get("/orders/export.csv")
-async def orders_export_csv(request: Request, q: str | None = Query(None)) -> Response:
-    return await orders_export(request, q)
+async def orders_export_csv(
+    request: Request, q: str | None = Query(None), tab: str | None = Query(None)
+) -> Response:
+    return await orders_export(request, q, tab)
 
 
 @router.get("/orders/export.xlsx")
-async def orders_export_xlsx(request: Request, q: str | None = Query(None)) -> Response:
-    return await orders_export(request, q)
+async def orders_export_xlsx(
+    request: Request, q: str | None = Query(None), tab: str | None = Query(None)
+) -> Response:
+    return await orders_export(request, q, tab)
 
 
 @router.post("/orders")
@@ -583,6 +625,48 @@ async def orders_bulk_update(request: Request) -> JSONResponse:
             updated += 1
 
     return JSONResponse(content={"ok": True, "updated": updated})
+
+
+_BATCH_DELETE_ERRORS = {
+    "empty": "missing ids",
+    "invalid": "invalid id",
+    "too_many": "too many ids",
+}
+
+
+@router.post("/orders-bulk-delete")
+async def orders_bulk_delete(request: Request) -> JSONResponse:
+    """Hard-delete the IDs the client sent. Select-all = those IDs, never the whole table.
+
+    POST /api/admin/orders-bulk-delete — not /order-delete (that path is cancel).
+    """
+    admin_id = _require_admin(request)
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse(status_code=400, content={"error": "invalid JSON"})
+    if not isinstance(body, dict):
+        return JSONResponse(status_code=400, content={"error": "invalid body"})
+    if body.get("confirm") is not True:
+        return JSONResponse(status_code=400, content={"error": "confirm required"})
+
+    ids, err = parse_admin_order_ids(body.get("ids"))
+    if err:
+        return JSONResponse(
+            status_code=400, content={"error": _BATCH_DELETE_ERRORS[err]}
+        )
+
+    with get_transaction() as conn, conn.cursor() as cur:
+        deleted = delete_orders_by_ids(cur, ids)
+        cur.execute("select email from users where id = %s", (admin_id,))
+        actor = cur.fetchone()
+
+    log_admin_action(
+        actor["email"] if actor else None,
+        "orders_bulk_delete",
+        {"deleted": deleted, "requested": len(ids)},
+    )
+    return JSONResponse(content={"ok": True, "deleted": deleted})
 
 
 _ALLOWED_IMAGE_EXT = {".png", ".jpg", ".jpeg", ".webp"}

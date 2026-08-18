@@ -29,6 +29,11 @@ from app.onboarding import (
     profile_fields_complete,
     should_show_onboarding_prompt,
 )
+from app.orders import (
+    HISTORY_TABS,
+    HISTORY_TAB_STATUSES,
+    normalize_history_tab as _normalize_history_tab,
+)
 from app.profile_schema import fetch_profile
 from app.tw_address import STREET_ERROR, valid_tw_street
 
@@ -121,7 +126,6 @@ async def track_order_partial(request: Request) -> HTMLResponse:
 HISTORY_DEFAULT_PAGE_SIZE = 20
 FAVORITES_DEFAULT_PAGE_SIZE = 20
 ACCOUNT_ORDERS_PAGE_SIZE = 12
-HISTORY_TABS = ("all", "unpaid", "to_ship", "to_receive", "completed", "cancelled")
 
 
 @router.get("/favorites", response_class=HTMLResponse)
@@ -173,24 +177,6 @@ async def favorites_partial(request: Request) -> HTMLResponse:
             "has_more": offset + len(items) < total,
         },
     )
-
-
-# Shopee-like history tabs → order.status codes (Imprint pipeline).
-# No return/refund tab — custom DNA orders rarely allow returns.
-HISTORY_TAB_STATUSES: dict[str, frozenset[str]] = {
-    "unpaid": frozenset({"received", "order_confirming"}),
-    "to_ship": frozenset(
-        {"deposit_confirmed", "dna_lab", "in_production", "quality_check"}
-    ),
-    "to_receive": frozenset({"shipped"}),
-    "completed": frozenset({"completed"}),
-    "cancelled": frozenset({"cancelled", "canceled"}),
-}
-
-
-def _normalize_history_tab(raw) -> str:
-    tab = str(raw or "all").strip().lower()
-    return tab if tab in HISTORY_TAB_STATUSES or tab == "all" else "all"
 
 
 def _empty_history_context(*, guest: bool, tab: str = "all") -> dict:

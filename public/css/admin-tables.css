@@ -1044,4 +1044,10 @@
     width: 100%;
     min-height: var(--tap-target-min, 44px);
   }
+
+  .orders-tab {
+    flex: 0 0 auto;
+    min-height: var(--tap-target-min, 44px);
+    padding: 12px 14px;
+  }
 }
