@@ -5933,7 +5933,7 @@ function loadGirdleEngrave() {
   if (girdleEngraveLoadPromise) return girdleEngraveLoadPromise;
   girdleEngraveLoadPromise = new Promise((resolve, reject) => {
     const script = document.createElement('script');
-    script.src = '/static/js/girdle-engrave.js?v=29';
+    script.src = '/static/js/girdle-engrave.js?v=30';
     script.async = true;
     script.onload = () => resolve(window.GirdleEngrave);
     script.onerror = () => reject(new Error('girdle engraving script failed to load'));
