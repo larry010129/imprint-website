@@ -50,27 +50,29 @@ def test_privacy_keeps_draft_noindex_and_locked_cookie_third(client):
     body_start = html.find("Cookie 與登入狀態")
     body = html[body_start : html.find("資料使用目的")]
     assert "imprint_session Cookie（httpOnly）" in body
-    assert "官網頁面並載入 Google 代碼管理工具（Google Tag Manager），用於網站營運所需的頁面測量。" in body
+    assert "官網頁面載入 Google 代碼管理工具（Google Tag Manager）。GTM 可能載入 Google Ads 轉換追蹤。" in body
+    assert "並載入" not in body
+    assert "頁面測量" not in body
     assert "imprint_pre2fa" not in body
-    assert "Google Ads" not in body
     assert "AW-" not in body
     assert "GTM-" not in body
-    assert "Meta" not in body
     assert "GA4" not in body
+    assert "TikTok" not in body
     third = html[html.find("第三方服務") : html.find("查詢、更正與刪除")]
-    assert "Google 登入由 Google 提供身份驗證" in third
-    assert "Google Ads" not in third
+    assert "Google Ads 轉換追蹤亦由 Google 處理。" in third
     assert "reCAPTCHA" not in third
     assert "Botpress" not in third
     assert "AW-" not in third
+    assert "TikTok" not in third
     slots = _legal_slots("/privacy")
     assert slots["cookie-gtm"] == (
-        "官網頁面並載入 Google 代碼管理工具（Google Tag Manager），用於網站營運所需的頁面測量。"
+        "官網頁面載入 Google 代碼管理工具（Google Tag Manager）。GTM 可能載入 Google Ads 轉換追蹤。"
     )
     assert "cookie-short" not in slots
     assert "third-chat" not in slots
     assert slots["third-body"] == (
-        "Google 登入由 Google 提供身份驗證，其資料處理受 Google 隱私權政策規範。您可於 Google 帳戶設定中管理或撤銷本網站的存取權限。"
+        "Google 登入由 Google 提供身份驗證，其資料處理受 Google 隱私權政策規範。"
+        "您可於 Google 帳戶設定中管理或撤銷本網站的存取權限。Google Ads 轉換追蹤亦由 Google 處理。"
     )
     assert slots["pending-title"] == "尚待確認"
 
