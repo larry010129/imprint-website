@@ -93,9 +93,11 @@
 
   function localHeroMobileSrcset(stem) {
     return (
+      '/static/images/hero/' + stem + '-640w.webp 640w, ' +
       '/static/images/hero/' + stem + '-800w.webp 800w, ' +
       '/static/images/hero/' + stem + '-960w.webp 960w, ' +
-      '/static/images/hero/' + stem + '-1200w.webp 1200w'
+      '/static/images/hero/' + stem + '-1200w.webp 1200w, ' +
+      '/static/images/hero/' + stem + '-1280w.webp 1280w'
     );
   }
 
@@ -164,6 +166,7 @@
       var mobileIsWebp = /\.webp(\s|\?|$)/i.test(mobileSrcset);
       var desktop = '/static/images/hero/' + stem + '.webp';
       var desktopSrcset =
+        '/static/images/hero/' + stem + '-1280w.webp 1280w, ' +
         '/static/images/hero/' + stem + '-1200w.webp 1200w, ' +
         desktop + ' ' + LOCAL_HERO_MAX_W[stem] + 'w';
       var mobile = '<source media="(max-width:900px)" ' + sourceAttr + '="' +

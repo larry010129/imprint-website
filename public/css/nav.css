@@ -177,7 +177,6 @@
     font-size:15px;
     letter-spacing:.05em;
     white-space:nowrap;
-    transition:color .25s;
   }
   .site-nav-desktop .nav-item > a:hover{ color:var(--mint-deep); }
   .site-nav-desktop .nav-item > .nav-label{ cursor:default; }
@@ -218,8 +217,6 @@
   display:block; padding:12px 14px; font-size:16px; letter-spacing:.12em;
 
   white-space:nowrap;
-
-  transition:color .25s;
 
 }
 
@@ -512,23 +509,23 @@ a.account-menu-trigger{
 
 .nav-burger span{
 
-  position:absolute; left:11px; width:22px; height:1.6px; background:var(--ink);
+  position:absolute; left:11px; top:22px; width:22px; height:1.6px; background:var(--ink);
 
-  transition:all .3s var(--ease);
+  transition:transform .3s var(--ease), opacity .3s var(--ease);
 
 }
 
-.nav-burger span:nth-child(1){ top:16px; }
+.nav-burger span:nth-child(1){ transform:translateY(-6px); }
 
-.nav-burger span:nth-child(2){ top:22px; }
+.nav-burger span:nth-child(2){ transform:none; }
 
-.nav-burger span:nth-child(3){ top:28px; }
+.nav-burger span:nth-child(3){ transform:translateY(6px); }
 
-.nav-burger.is-open span:nth-child(1){ top:22px; transform:rotate(45deg); }
+.nav-burger.is-open span:nth-child(1){ transform:rotate(45deg); }
 
 .nav-burger.is-open span:nth-child(2){ opacity:0; }
 
-.nav-burger.is-open span:nth-child(3){ top:22px; transform:rotate(-45deg); }
+.nav-burger.is-open span:nth-child(3){ transform:rotate(-45deg); }
 
 /* Gradient CTA — migrated from frozen public/react/src.css */
 @keyframes gradient-button-spin{
@@ -936,13 +933,12 @@ a.account-menu-trigger{
     opacity:0;
     visibility:hidden;
     pointer-events:none;
-    transition:opacity .2s ease-out,visibility 0s linear .2s;
+    transition:opacity .2s ease-out;
   }
   .mobile-animated-nav.is-open{
     opacity:1;
     visibility:visible;
     pointer-events:auto;
-    transition-delay:0s;
   }
   .mobile-animated-nav__panel{
     position:absolute;

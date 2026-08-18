@@ -30,12 +30,11 @@
     if (!target) return;
     var unit = spans[0];
     unit.textContent = phrase;
-    var n = 0;
-    while (unit.offsetWidth < target && n < 24) {
-      unit.textContent += phrase;
-      n += 1;
-    }
-    var packed = unit.textContent;
+    var unitW = unit.offsetWidth;
+    if (!unitW) return;
+    var copies = Math.min(24, Math.max(1, Math.ceil(target / unitW)));
+    var packed = phrase.repeat(copies);
+    unit.textContent = packed;
     if (spans.length < 2) {
       track.appendChild(unit.cloneNode(true));
       spans = track.querySelectorAll("span");
@@ -45,8 +44,16 @@
     }
   }
 
-  fillMarquee();
-  window.addEventListener("resize", fillMarquee, { passive: true });
+  var marqueeRaf = 0;
+  var scheduleMarquee = function () {
+    if (marqueeRaf) return;
+    marqueeRaf = window.requestAnimationFrame(function () {
+      marqueeRaf = 0;
+      fillMarquee();
+    });
+  };
+  scheduleMarquee();
+  window.addEventListener("resize", scheduleMarquee, { passive: true });
 
   var reduced =
     window.matchMedia &&

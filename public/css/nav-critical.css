@@ -156,11 +156,11 @@ a.account-menu-trigger{ text-decoration:none; color:inherit; }
 
 .nav-burger{ display:none; width:44px; height:44px; position:relative; flex-shrink:0; }
 .nav-burger span{
-  position:absolute; left:11px; width:22px; height:1.6px; background:var(--ink);
+  position:absolute; left:11px; top:22px; width:22px; height:1.6px; background:var(--ink);
 }
-.nav-burger span:nth-child(1){ top:16px; }
-.nav-burger span:nth-child(2){ top:22px; }
-.nav-burger span:nth-child(3){ top:28px; }
+.nav-burger span:nth-child(1){ transform:translateY(-6px); }
+.nav-burger span:nth-child(2){ transform:none; }
+.nav-burger span:nth-child(3){ transform:translateY(6px); }
 .mobile-animated-nav{ display:none; }
 
 @media (min-width:1401px){

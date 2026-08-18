@@ -93,17 +93,17 @@ window.shopConfig = Object.assign({
 {% endif %}
 {# nav.css: home defers (critical inline); non-home blocks — avoid CTA FOUC #}
 {% if is_home %}
-<link rel="stylesheet" href="/static/css/nav.css?v=4.45" media="print" onload="this.media='all'">
-<noscript><link rel="stylesheet" href="/static/css/nav.css?v=4.45"></noscript>
+<link rel="stylesheet" href="/static/css/nav.css?v=4.46" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="/static/css/nav.css?v=4.46"></noscript>
 {% else %}
-<link rel="stylesheet" href="/static/css/nav.css?v=4.45">
+<link rel="stylesheet" href="/static/css/nav.css?v=4.46">
 {% endif %}
 {% if not skip_home_css %}
-<link rel="stylesheet" href="/static/css/home.css?v=5.9">
+<link rel="stylesheet" href="/static/css/home.css?v=5.10">
 {% endif %}
 {# footer / responsive / social-fab: print-onload all routes (home pattern) #}
-<link rel="stylesheet" href="/static/css/footer.css?v=30" media="print" onload="this.media='all'">
-<noscript><link rel="stylesheet" href="/static/css/footer.css?v=30"></noscript>
+<link rel="stylesheet" href="/static/css/footer.css?v=31" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="/static/css/footer.css?v=31"></noscript>
 {% if not is_home and not is_shop_calculator %}
 {% if defer_pages_css %}
 <link rel="stylesheet" href="/static/css/pages.css?v=5.41" media="print" onload="this.media='all'">
@@ -146,7 +146,7 @@ window.shopConfig = Object.assign({
 height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <!-- End Google Tag Manager (noscript) -->
 {# data-site-nav-root: nav.css scopes mobile drawer + hero nav here (was React SiteChrome / frozen src.css). #}
-<div class="site-chrome" data-site-nav-root>
+<div class="site-chrome{% if is_home %} is-nav-hero{% endif %}" data-site-nav-root>
 {% include "partials/topbar.html" %}
 {% include "partials/nav.html" %}
 </div>
@@ -162,7 +162,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 {% include "partials/footer.html" %}
 {% if is_home %}
 <script src="/static/js/home-section-reveal.js?v=3" defer></script>
-<script src="/static/js/cinematic-footer.js?v=7" defer></script>
+<script src="/static/js/cinematic-footer.js?v=8" defer></script>
 {% endif %}
 {% if is_home %}
 <script>
@@ -195,7 +195,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <script src="/static/js/htmx.min.js" defer></script>
 {% endif %}
 <script src="/static/js/nav-dropdown.js?v=1" defer></script>
-<script src="/static/js/nav-chrome.js?v=5" defer></script>
+<script src="/static/js/nav-chrome.js?v=6" defer></script>
 {% if load_skeleton_ui %}
 <script src="/static/js/skeleton-ui.js?v=1" defer></script>
 {% endif %}

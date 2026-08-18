@@ -47,9 +47,7 @@
       window.requestAnimationFrame(apply);
     };
     if (isHome) {
-      /* Prefer [data-site-nav-root] (site-chrome); fallback parent for older markup */
-      var heroRoot = root.closest('[data-site-nav-root]') || root.parentElement;
-      if (heroRoot) heroRoot.classList.add('is-nav-hero');
+      /* SSR already sets .is-nav-hero on [data-site-nav-root]; skip layout write. */
       bindScrollFlag(document.body, 'is-nav-scrolled', 16);
     } else {
       bindScrollFlag(root, 'is-scrolled', 10);
@@ -78,8 +76,11 @@
     });
   }
 
-  document.querySelectorAll('[data-site-nav]').forEach(setupNav);
-  setupAccountMenus(document);
+  var boot = function () {
+    document.querySelectorAll('[data-site-nav]').forEach(setupNav);
+    setupAccountMenus(document);
+  };
+  window.requestAnimationFrame(boot);
   document.body.addEventListener('htmx:afterSwap', function (e) {
     setupAccountMenus(e.target);
   });

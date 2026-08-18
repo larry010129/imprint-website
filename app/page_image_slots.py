@@ -492,9 +492,11 @@ def _hero_responsive_srcset(stem: str) -> str:
     max_w = _HERO_STEM_MAX_W.get(stem, 2400)
     return (
         f"/static/images/hero/{stem}-400w.webp 400w, "
+        f"/static/images/hero/{stem}-640w.webp 640w, "
         f"/static/images/hero/{stem}-800w.webp 800w, "
         f"/static/images/hero/{stem}-960w.webp 960w, "
         f"/static/images/hero/{stem}-1200w.webp 1200w, "
+        f"/static/images/hero/{stem}-1280w.webp 1280w, "
         f"/static/images/hero/{stem}.webp {max_w}w"
     )
 
