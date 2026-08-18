@@ -54,4 +54,4 @@ Disallow: /
 User-agent: Bytespider
 Disallow: /
 
-Sitemap: https://www.imprintdiamond.com/sitemap.xml
+Sitemap: https://imprint-diamond.com/sitemap.xml

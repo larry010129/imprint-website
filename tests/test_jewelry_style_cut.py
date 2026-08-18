@@ -93,8 +93,8 @@ def test_sitemap_and_registry_drop_style_slugs():
     routes = {entry["route"] for entry in registry}
     for slug in JEWELRY_STYLE_REDIRECTS:
         assert slug not in sitemap
-        assert f"https://www.imprintdiamond.com{slug}" not in sitemap
+        assert f"https://imprint-diamond.com{slug}" not in sitemap
         assert slug not in routes
     for hub in HUBS:
-        assert f"https://www.imprintdiamond.com{hub}" in sitemap
+        assert f"https://imprint-diamond.com{hub}" in sitemap
         assert hub in routes
