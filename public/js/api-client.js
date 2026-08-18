@@ -158,7 +158,7 @@
       });
     },
     requestPasswordReset: function (email) { return request('/api/auth/request-password-reset', { method: 'POST', body: { email: email } }); },
-    resetPassword: function (token, newPassword) { return request('/api/auth/reset-password', { method: 'POST', body: { token: token, newPassword: newPassword } }); },
+    resetPassword: function (token, newPassword, passwordConfirm) { return request('/api/auth/reset-password', { method: 'POST', body: { token: token, newPassword: newPassword, passwordConfirm: passwordConfirm } }); },
     verifyPasswordResetTotp: function (email, code) {
       return request('/api/auth/forgot-password-verify', {
         method: 'POST',

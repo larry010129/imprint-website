@@ -42,7 +42,7 @@ def test_forgot_password_page_wires_otp_hidden_target(client):
     assert 'data-otp-target="fpCodeHidden"' in resp.text
     assert 'id="fpCodeHidden"' in resp.text
     assert "otp-input.js?v=3" in resp.text
-    assert "forgot-password.js?v=5" in resp.text
+    assert "forgot-password.js?v=6" in resp.text
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not installed")
@@ -102,6 +102,9 @@ def test_forgot_password_js_declares_wizard_state():
     assert "setStep('inbox', true)" in text
     assert "請輸入 Email。" in text
     assert "改用 6 位數驗證碼" in text
+    assert "請輸入備用碼" in text
+    assert "data-fp-home-header" in text
+    assert "homeHeader.hidden" in text
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not installed")
