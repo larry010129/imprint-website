@@ -17,11 +17,11 @@
     "layout": "site",
     "main_class": "",
     "extra_css": [
-      "/static/css/home-ghibli.css?v=64"
+      "/static/css/home-ghibli.css?v=65"
     ],
     "extra_scripts": [
       {
-        "src": "/static/js/home-banners.js?v=13",
+        "src": "/static/js/home-banners.js?v=15",
         "defer": true
       }
     ],

@@ -111,12 +111,14 @@
 .page-home .hc-slide{
   position:absolute; inset:0; height:100%;
   opacity:0; visibility:hidden; pointer-events:none; z-index:1;
-  transition:opacity 1.3s cubic-bezier(.4,0,.2,1), visibility 0s linear 1.3s;
+  /* Opacity only — do not transition visibility (PSI + LCP render delay). */
+  transition:opacity 1.3s cubic-bezier(.4,0,.2,1);
 }
 .page-home .hc-slide.is-active{
   opacity:1; visibility:visible; pointer-events:auto; z-index:2;
-  transition:opacity 1.3s cubic-bezier(.4,0,.2,1), visibility 0s linear 0s;
 }
+/* LCP is the first-slide h1. A 1.3s fade from opacity:0 delays element render. */
+.page-home .hc-slide.is-active:first-child,
 .page-home .hc-slide.no-anim{ transition:none; }
 .page-home .hc-media{
   position:absolute; inset:0; z-index:0;
@@ -148,16 +150,18 @@
 .page-home .hc-arrow svg{ display:block; flex:none; }
 .page-home .hc-prev{ left:20px; } .page-home .hc-next{ right:20px; }
 .page-home .hc-dots{
-  position:absolute; left:50%; bottom:26px; transform:translateX(-50%);
-  display:flex; gap:0; z-index:5;
+  position:absolute; left:50%; bottom:72px; transform:translateX(-50%);
+  display:flex; gap:8px; z-index:5;
 }
-/* Hit area ≥44px; visual pip stays 8×8 via ::after (WCAG 2.5.8 target-size). */
+/* Beat .page-home .hc-dots — 48px hits clear the 48px cue by ≥8px. */
+.page-home .hc-dots.gh-hc-dots{ bottom:72px; }
+/* Hit 48×48 + 8px gap. Pip stays 8×8; active = scaleX to 26px pill. */
 .page-home .hc-dot{
   position:relative;
-  width:var(--tap-target-min, 44px);
-  height:var(--tap-target-min, 44px);
-  min-width:var(--tap-target-min, 44px);
-  min-height:var(--tap-target-min, 44px);
+  width:48px;
+  height:48px;
+  min-width:48px;
+  min-height:48px;
   margin:0; padding:0; border:0;
   background:transparent;
   border-radius:0;
@@ -169,13 +173,14 @@
 .page-home .hc-dot::after{
   content:"";
   position:absolute; left:50%; top:50%;
-  transform:translate(-50%,-50%);
   width:8px; height:8px; border-radius:50%;
   background:rgba(255,255,255,.42);
-  transition:width .3s, border-radius .3s, background .3s, box-shadow .3s;
+  transform:translate(-50%,-50%) scale(1);
+  transition:transform .3s;
 }
 .page-home .hc-dot.is-active::after{
-  width:26px; border-radius:5px; background:#fff;
+  border-radius:5px; background:#fff;
+  transform:translate(-50%,-50%) scaleX(3.25);
 }
 
 /* Beat deferred responsive.css .hc-viewport height (same element has both classes) */
@@ -236,7 +241,7 @@
 .gh-hc-arrow{
   background:rgba(255,255,255,.22); border-color:rgba(255,255,255,.55); color:#fff;
 }
-.gh-hc-dots{ bottom:64px; }
+.gh-hc-dots{ bottom:72px; }
 .gh-hc-dots .hc-dot.is-active::after{
   background:var(--gh-grad);
   box-shadow:0 0 0 2px rgba(255,255,255,.35);
@@ -400,5 +405,7 @@ button.gh-btn--primary{ border:none; }
     letter-spacing:.06em;
     margin-bottom:16px;
   }
-  .gh-hc-dots{ bottom:calc(58px + var(--safe-area-bottom, 0px)); }
+  .page-home .hc-dots,
+  .page-home .hc-dots.gh-hc-dots,
+  .gh-hc-dots{ bottom:calc(66px + var(--safe-area-bottom, 0px)); }
 }

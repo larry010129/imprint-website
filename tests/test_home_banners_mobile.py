@@ -53,10 +53,10 @@ def test_home_first_slide_matches_banner_seed():
 
 def test_home_banners_cache_bust():
     html = INDEX.read_text(encoding="utf-8")
-    assert "home-banners.js?v=13" in html
+    assert "home-banners.js?v=15" in html
     # Phone crops must not wait on 10s below-fold delay.
     assert "HOME_EXTRAS_MS" not in html
-    assert "inject('/static/js/home-banners.js?v=13');" in html
+    assert "inject('/static/js/home-banners.js?v=15');" in html
     assert "aspect-ratio:800/388" not in html
 
 
@@ -75,10 +75,15 @@ def test_home_hero_slides_use_responsive_webp_srcset():
         "imprint-diamond-family-portrait-jewelry",
         "imprint-diamond-heirloom-memorial",
     ]
+    hero = ROOT / "public" / "images" / "hero"
     for stem in stems:
         assert f"{stem}-400w.webp 400w" in html
+        assert f"{stem}-640w.webp 640w" in html
         assert f"{stem}-800w.webp 800w" in html
         assert f"{stem}-1200w.webp 1200w" in html
+        assert f"{stem}-1280w.webp 1280w" in html
+        assert (hero / f"{stem}-640w.webp").is_file()
+        assert (hero / f"{stem}-1280w.webp").is_file()
 
 
 def test_home_series_cards_use_local_hero_srcset():
@@ -112,6 +117,8 @@ def test_home_banners_expands_local_hero_srcset():
     src = HOME_BANNERS.read_text(encoding="utf-8")
     assert "LOCAL_HERO_MAX_W" in src
     assert "localHeroMobileSrcset" in src
+    assert "-640w.webp 640w" in src
+    assert "-1280w.webp 1280w" in src
     assert "replace(/-\\d+w$/i, '')" in src
 
 
@@ -165,7 +172,7 @@ def test_home_yt_gallery_autoplay_mute_has_gesture_unmute():
     assert "activateThumb(thumb, { play: true, muted: false })" in html
     assert "embedFacade(btn, { muted: false })" in html
     assert ".gh-yt-unmute{" in css
-    assert "home-ghibli.css?v=64" in html
+    assert "home-ghibli.css?v=65" in html
 
 
 def test_phone_card_images_fill_media_box():

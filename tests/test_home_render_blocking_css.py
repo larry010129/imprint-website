@@ -26,16 +26,14 @@ def test_home_inlines_nav_and_hero_critical():
 
 
 def test_home_sync_nav_defers_ghibli_remainder():
-    """nav.css is sync (InteractiveHoverButton); ghibli remainder still deferred."""
+    """Home inlines nav-critical; full nav.css is print-onload. Ghibli remainder deferred."""
     base = BASE.read_text(encoding="utf-8")
     index = INDEX.read_text(encoding="utf-8")
     assert 'nav.css?v=' in base
-    # Sync all pages — do not defer nav.css (hover CTA needs full rules)
     assert 'href="/static/css/nav.css?v=' in base
-    nav_link_idx = base.index('href="/static/css/nav.css?v=')
-    nav_snippet = base[nav_link_idx : nav_link_idx + 80]
-    assert 'media="print"' not in nav_snippet
     assert "is_home" in base and "nav-critical.css" in base
+    home_nav = base.split("{% if is_home %}", 2)[2].split("{% else %}", 1)[0]
+    assert 'media="print"' in home_nav
     assert 'home-ghibli.css?v=' in index
     assert "data-home-ghibli-lazy" in index
     assert "max-width:900px" in index
@@ -62,11 +60,36 @@ def test_hero_copy_stays_above_media_in_critical():
     assert "display:flex" in copy_block
 
 
+def test_pagespeed_touch_and_compositor_lock():
+    """Nico lock: 48×48 hits, 8px gap, transform/opacity only."""
+    index = INDEX.read_text(encoding="utf-8")
+    nav = (ROOT / "public" / "css" / "nav.css").read_text(encoding="utf-8")
+    footer = (ROOT / "public" / "css" / "footer.css").read_text(encoding="utf-8")
+    hero = GHIBLI_CRITICAL.read_text(encoding="utf-8")
+    cue = index[index.index(".gh-scroll-cue{") : index.index(".gh-scroll-cue:hover")]
+    assert "width:48px" in cue and "height:48px" in cue
+    assert "min-width:48px" in cue and "min-height:48px" in cue
+    assert "inset:-2px" not in index
+    assert "inset:2px" in index
+    assert "transition:background .3s, border-color .3s" not in index
+    assert ".page-home .hc-dots.gh-hc-dots{" in hero
+    assert "bottom:72px" in hero
+    assert "bottom:26px" not in hero
+    assert "transition:color" not in nav.split(".mobile-animated-nav{")[1][:400]
+    assert "transition:all" not in nav.split(".nav-burger span{")[1][:220]
+    assert "transition:transform .25s ease;" in footer
+    assert "background .2s ease, color .2s ease, border-color" not in footer
+    assert "visibility 0s linear" not in nav
+
+
 def test_hc_dot_and_nav_tap_targets_in_critical():
     """WCAG 2.5.8: carousel dots + closed-bar cart/burger ≥44px on first paint."""
     hero = GHIBLI_CRITICAL.read_text(encoding="utf-8")
     nav = NAV_CRITICAL.read_text(encoding="utf-8")
     assert ".page-home .hc-dot{" in hero
+    assert "width:48px" in hero
+    assert "gap:8px" in hero
+    assert "scaleX(3.25)" in hero
     assert "var(--tap-target-min, 44px)" in hero
     assert ".page-home .hc-dot::after{" in hero
     assert ".nav-cart-link{" in nav
@@ -115,6 +138,16 @@ def test_live_home_has_no_sync_critical_css(client):
     assert pos >= 0
     snippet = text[pos : pos + 100]
     assert 'media="print"' not in snippet, snippet
+
+
+def test_home_lcp_first_slide_and_serif_paint_immediately():
+    """LCP is the first-slide h1 — no fade-in, serif optional so swap cannot stall."""
+    hero = GHIBLI_CRITICAL.read_text(encoding="utf-8")
+    base = (ROOT / "public" / "css" / "base.css").read_text(encoding="utf-8")
+    assert "visibility 0s linear" not in hero
+    assert ".page-home .hc-slide.is-active:first-child" in hero
+    serif = base.split('font-family:"Noto Serif TC"', 1)[1]
+    assert "font-display:optional" in serif[:180]
 
 
 def test_home_lcp_image_does_not_start_zoom_animation():

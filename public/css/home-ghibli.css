@@ -6,7 +6,7 @@
 /* Nav interaction (scroll hide, drawer ink, dropdowns, account panel) */
 .page-home .topbar,
 .page-home .nav{
-  transition:transform .28s var(--ease), opacity .28s var(--ease), visibility .28s;
+  transition:transform .28s var(--ease), opacity .28s var(--ease);
 }
 .page-home.is-nav-scrolled .topbar{
   transform:translateY(-100%);
