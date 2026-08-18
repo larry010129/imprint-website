@@ -76,6 +76,7 @@ def test_privacy_keeps_draft_noindex_and_locked_cookie_third(client):
         "您可於 Google 帳戶設定中管理或撤銷本網站的存取權限。Google Ads 轉換追蹤亦由 Google 處理。"
     )
     assert slots["pending-title"] == "尚待確認"
+    assert "hero-lead" not in slots
 
 
 def test_terms_keeps_draft_noindex_and_return_policy_links(client):
@@ -97,7 +98,8 @@ def test_terms_keeps_draft_noindex_and_return_policy_links(client):
     assert "管轄法院" not in slots.get("todo-li-3", "")
     assert "todo-title" not in slots
     image_keys = {spec.page_key for spec in page_image_slot_specs()}
-    assert "/terms" in image_keys
+    assert "/terms" not in image_keys
+    assert "hero-lead" not in slots
 
 
 def test_return_policy_stays_indexable(client):

@@ -28,7 +28,6 @@ PAGE_IMAGE_STORAGE_FOLDERS: dict[str, str] = {
     "/series/signature/": "signature-diamond",  # 真我鑽石 Signature
     "/what-is-dna-diamond": "dna-diamond",  # DNA 鑽石的誕生
     "/privacy": "privacy",  # 隱私權政策
-    "/terms": "terms",  # 服務條款
     "/return-policy": "return-policy",  # 退換貨政策
 }
 PAGE_IMAGE_PENDING_FOLDER = "_pending"
@@ -340,12 +339,6 @@ def page_image_slot_specs() -> tuple[SlotSpec, ...]:
             "隱私權政策",
             "pages/privacy.html",
             "隱私權政策頁主圖",
-        )
-        + _empty_hero_specs(
-            "/terms",
-            "服務條款",
-            "pages/terms.html",
-            "服務條款頁主圖",
         )
         + _empty_hero_specs(
             "/return-policy",
