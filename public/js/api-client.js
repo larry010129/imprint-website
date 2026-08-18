@@ -308,7 +308,8 @@
       deleteOrder: function (id, reason) {
         return this.cancelOrder(id, reason || '管理員取消');
       },
-      // Rex/Ash lock: POST /api/admin/orders-bulk-delete { ids, confirm: true }
+      // POST /api/admin/orders-bulk-delete { ids, confirm: true }
+      // Path is FINAL (not TBD). Handler not on this branch yet.
       // Same cookie CSRF as other admin POSTs. Never empty. Cap 100.
       // Do not call deleteOrder / /order-delete (those cancel).
       bulkDeleteOrders: function (ids) {
