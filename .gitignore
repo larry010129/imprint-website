@@ -47,6 +47,14 @@ Desktop.ini
 *.swp
 *~
 
+# Editor / agent tooling (local only; do not track)
+.agents/
+.claude/
+.claude-flow/
+.codex/
+.cursor/
+.swarm/
+
 # Logs & temp
 *.log
 *.log.err
@@ -70,28 +78,8 @@ ruvector.db
 *.rvf.lock
 .ruvector/
 
-# Ruflo / Claude Flow — local runtime (config.yaml + CAPABILITIES.md may stay tracked)
-.claude-flow/data/
-.claude-flow/logs/
-.claude-flow/sessions/
-.claude-flow/neural/
-.claude-flow/metrics/
-.claude-flow/agents/
-.claude-flow/swarm/
-.claude-flow/security/
-.claude-flow/learning/
-.claude-flow/workflows/
-.claude-flow/policy/
-.claude-flow/daemon-state.json
-.claude-flow/daemon.pid
-.claude-flow/harness-active-policy.json
-.claude-flow/memory-package.json
-.claude-flow/routing-outcomes.json
+# Nested Claude Flow runtime (repo-root .claude-flow/ ignored above)
 frontend/.claude-flow/
-
-# Swarm memory (local SQLite); keep schema if present
-.swarm/
-!.swarm/schema.sql
 
 # Local Claude / MCP overrides
 CLAUDE.local.md
