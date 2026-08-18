@@ -308,16 +308,16 @@
       deleteOrder: function (id, reason) {
         return this.cancelOrder(id, reason || '管理員取消');
       },
-      // Rex lock: POST /api/admin/orders-bulk-delete { ids, confirm: true }
-      // Same cookie CSRF as other admin POSTs. Never empty. Cap 100.
-      // Do not call deleteOrder / /order-delete (those cancel).
+      // PLACEHOLDER path — Rex path + method TBD. Swap in a follow-up.
+      // Payload lock: { ids: [<selected order ids>] } only. Never POST empty (400).
+      // Same cookie CSRF as other admin POSTs. Cap 100. Not deleteOrder /order-delete.
       bulkDeleteOrders: function (ids) {
         if (!ids || !ids.length) {
           return Promise.resolve({ error: 'missing ids' });
         }
         return request('/api/admin/orders-bulk-delete', {
           method: 'POST',
-          body: { ids: ids.slice(0, 100), confirm: true },
+          body: { ids: ids.slice(0, 100) },
         });
       },
       getProducts: function (opts) {

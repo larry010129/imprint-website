@@ -241,7 +241,7 @@ def test_admin_js_wires_patch_and_surfaces_errors():
     assert "/api/admin/product-category/" in api
     assert "method: 'PATCH'" in api
     html = ADMIN_HTML.read_text(encoding="utf-8")
-    assert "api-client.js?v=28" in html
+    assert "api-client.js?v=29" in html
     assert "admin-products.js?v=65" in html
 
 

@@ -17,7 +17,7 @@ def test_admin_orders_toolbar_delete_disabled_until_checked():
         assert 'id="ordersBulkDelete" disabled' in html
         assert ">刪除</button>" in html
         assert "admin-orders.js?v=27" in html
-        assert "api-client.js?v=28" in html
+        assert "api-client.js?v=29" in html
 
 
 def test_admin_orders_has_history_status_tabs():
@@ -52,8 +52,9 @@ def test_api_client_bulk_delete_rex_lock():
     src = (ROOT / "public" / "js" / "api-client.js").read_text(encoding="utf-8")
     assert "bulkDeleteOrders" in src
     assert BULK_DELETE in src
-    assert "confirm: true" in src
-    assert "ids.slice(0, 100)" in src
+    assert "PLACEHOLDER" in src
+    assert "confirm: true" not in src
+    assert "body: { ids: ids.slice(0, 100) }" in src
     assert "missing ids" in src
     # Cancel alias must stay unused by bulk delete.
     assert "function (id, reason)" in src
