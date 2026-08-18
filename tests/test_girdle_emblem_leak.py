@@ -1,4 +1,5 @@
 """Girdle emblem PNGs must not paint outside the engraving step (file-level)."""
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -106,6 +107,19 @@ def test_girdle_typed_text_is_not_alnum_gated():
     assert "girdle-engrave.js?v=30" in shop
     registry = (ROOT / "content" / "site" / "page-registry.json").read_text(encoding="utf-8")
     assert "girdle-engrave.js?v=30" in registry
+
+
+def test_girdle_keeps_special_symbols():
+    src = GIRDLE_JS.read_text(encoding="utf-8")
+    assert (
+        "CONTROL_OR_BREAK = /[\\u0000-\\u0008\\u000B\\u000C\\u000E-\\u001F\\u007F-\\u009F\\r\\n\\t]/g"
+        in src
+    )
+    # Same class as CONTROL_OR_BREAK — controls/line-breaks only, not punctuation.
+    control_or_break = re.compile(r"[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\r\n\t]")
+    kept = "LOVE / 2024 .@$#!%&*()_-+=[]{};:'\",.<>?"
+    assert control_or_break.sub("", kept) == kept
+    assert control_or_break.sub("", "愛.@$") == "愛.@$"
 
 
 def test_girdle_placeholder_allows_punctuation_example():
