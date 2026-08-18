@@ -276,8 +276,12 @@ def test_hero_carousel_preloads_and_swaps_after_decode():
     assert "function pinSelectedImgSrc" in banners
     crit = (ROOT / "public" / "css" / "home-ghibli-critical.css").read_text(encoding="utf-8")
     assert ".page-home .hc-slide.is-armed" in crit
+    assert ".page-home .gh-hero__sky{ display:none; }" in crit
     home_css = (ROOT / "public" / "css" / "home.css").read_text(encoding="utf-8")
     assert ".hc-slide.is-armed" in home_css
+    html = INDEX.read_text(encoding="utf-8")
+    assert 'data-cms-slot="hero-sky"' in html
+    assert 'class="gh-hero__sky"' in html
 
 
 def test_img_fallback_guards_empty_src_and_hero():

@@ -100,6 +100,8 @@
 .gh-hero__sky img{
   width:100%; height:100%; object-fit:cover; opacity:.35;
 }
+/* Public home: dusk sky must not show as the hero background. CMS 主視覺天空 slot stays. */
+.page-home .gh-hero__sky{ display:none; }
 
 .gh-hero--carousel{ display:block; min-height:0; padding:0; }
 .page-home .hc-viewport{
