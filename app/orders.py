@@ -8,6 +8,7 @@ import unicodedata
 from datetime import date, datetime, time, timedelta, timezone
 from html import unescape
 from typing import Any
+from uuid import UUID
 from zoneinfo import ZoneInfo
 
 from app.admin_products import CATEGORY_LABELS
@@ -320,6 +321,21 @@ ORDER_STATUS_LABELS_ZH = {
     "cancelled": "已取消",
 }
 
+# Shopee-like /history tabs → order.status codes. Shared by member history
+# and GET /api/admin/orders. Do not invent extra tab keys.
+HISTORY_TABS = ("all", "unpaid", "to_ship", "to_receive", "completed", "cancelled")
+HISTORY_TAB_STATUSES: dict[str, frozenset[str]] = {
+    "unpaid": frozenset({"received", "order_confirming"}),
+    "to_ship": frozenset(
+        {"deposit_confirmed", "dna_lab", "in_production", "quality_check"}
+    ),
+    "to_receive": frozenset({"shipped"}),
+    "completed": frozenset({"completed"}),
+    "cancelled": frozenset({"cancelled", "canceled"}),
+}
+
+ADMIN_ORDER_BATCH_DELETE_MAX = 100
+
 # Member cancel only before 訂金已確認 (deposit_confirmed).
 # 已收到申請 / 訂單已確認 OK; 訂金已確認 and later blocked.
 MEMBER_CANCELABLE_STATUSES = frozenset({"received", "order_confirming"})
@@ -330,6 +346,64 @@ MEMBER_CANCEL_REASON_PRESETS = (
     "暫時不需要",
     "其他",
 )
+
+
+def normalize_history_tab(raw) -> str:
+    """Unknown / empty tab → all (same as /htmx/history)."""
+    tab = str(raw or "all").strip().lower()
+    return tab if tab in HISTORY_TAB_STATUSES or tab == "all" else "all"
+
+
+def parse_admin_order_ids(raw) -> tuple[list[str], str | None]:
+    """Validate admin batch-delete IDs. Returns (ids, error).
+
+    error is 'empty' | 'invalid' | 'too_many' | None. Empty list is always
+    an error — never treat it as “delete everything”.
+    """
+    if raw is None:
+        return [], "empty"
+    if not isinstance(raw, list):
+        return [], "invalid"
+    if len(raw) == 0:
+        return [], "empty"
+    if len(raw) > ADMIN_ORDER_BATCH_DELETE_MAX:
+        return [], "too_many"
+    ids: list[str] = []
+    seen: set[str] = set()
+    for item in raw:
+        text = str(item or "").strip()
+        try:
+            uid = str(UUID(text))
+        except (ValueError, TypeError, AttributeError):
+            return [], "invalid"
+        if uid not in seen:
+            seen.add(uid)
+            ids.append(uid)
+    if not ids:
+        return [], "empty"
+    return ids, None
+
+
+def delete_orders_by_ids(cur, ids: list[str]) -> int:
+    """Hard-delete the given order IDs and related rows. All-or-nothing caller txn.
+
+    Child tables first (even when FK ON DELETE CASCADE exists), then orders.
+    user_notifications.order_id is ON DELETE SET NULL — clear it explicitly.
+    Returns the number of orders actually removed (missing IDs are silent).
+    """
+    if not ids:
+        return 0
+    params = (ids,)
+    cur.execute("delete from coupon_redemptions where order_id = any(%s)", params)
+    cur.execute("delete from order_items where order_id = any(%s)", params)
+    cur.execute("delete from order_contacts where order_id = any(%s)", params)
+    cur.execute("delete from order_fulfillment where order_id = any(%s)", params)
+    cur.execute(
+        "update user_notifications set order_id = null where order_id = any(%s)",
+        params,
+    )
+    cur.execute("delete from orders where id = any(%s)", params)
+    return int(cur.rowcount or 0)
 
 
 def can_member_cancel_order(status: str | None) -> bool:
