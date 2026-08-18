@@ -35,6 +35,8 @@
     var backupField = wizard.querySelector('[data-fp-backup-field]');
     var backupInput = document.getElementById('fpBackupCode');
     var backupToggle = wizard.querySelector('[data-fp-toggle-backup]');
+    var backupHidden = document.getElementById('fpBackupHidden');
+    var homeHeader = root.querySelector('[data-fp-home-header]');
     var otp = null;
 
     function ensureOtpInit() {
@@ -68,11 +70,16 @@
       return emailInput ? emailInput.value.trim() : '';
     }
 
+    function syncBackupHidden() {
+      if (backupHidden) backupHidden.value = backupMode ? '1' : '';
+    }
+
     function setStep(step, keepMsg) {
       currentStep = step;
       root.querySelectorAll('[data-fp-step]').forEach(function (el) {
         el.hidden = String(el.getAttribute('data-fp-step')) !== String(step);
       });
+      if (homeHeader) homeHeader.hidden = String(step) !== '1';
       if (!keepMsg) clearMsg();
       if (step === 'inbox') return;
       if (step === 2) {
@@ -149,6 +156,7 @@
       backupToggle.addEventListener('click', function (ev) {
         ev.preventDefault();
         backupMode = !backupMode;
+        syncBackupHidden();
         if (otpField) otpField.querySelector('[data-otp-group]').hidden = backupMode;
         if (backupField) backupField.hidden = !backupMode;
         backupToggle.textContent = backupMode ? '改用 6 位數驗證碼' : '使用備用碼';
@@ -167,19 +175,22 @@
       verifyForm.addEventListener('submit', function (ev) {
         var code = readOtpCode();
         syncCodeHidden(code);
-        if (!code || (!backupMode && code.length !== 6)) {
+        syncBackupHidden();
+        if (backupMode && !code) {
+          ev.preventDefault();
+          errMsg('請輸入備用碼');
+          if (backupInput) backupInput.focus();
+          return;
+        }
+        if (!backupMode && (!code || code.length !== 6)) {
           ev.preventDefault();
           errMsg('請輸入完整的 6 位數驗證碼。');
-          if (backupMode && backupInput) backupInput.focus();
-          else {
-            ensureOtpInit();
-            if (otp) otp.focusFirst();
-            else if (otpGroup) {
-              var first = otpGroup.querySelector('[data-otp-digit]');
-              if (first) first.focus();
-            }
+          ensureOtpInit();
+          if (otp) otp.focusFirst();
+          else if (otpGroup) {
+            var first = otpGroup.querySelector('[data-otp-digit]');
+            if (first) first.focus();
           }
-          return;
         }
       });
 

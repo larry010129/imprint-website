@@ -194,7 +194,7 @@ def test_forgot_password_page_has_email_and_totp_paths(client):
     assert 'data-otp-group' in resp.text
     assert 'data-otp-target="fpCodeHidden"' in resp.text
     assert 'id="fpCodeHidden"' in resp.text
-    assert "forgot-password.js?v=5" in resp.text
+    assert "forgot-password.js?v=6" in resp.text
     assert "otp-input.js?v=3" in resp.text
     assert "可用信件重設，也可以使用驗證碼。" in resp.text
     assert "寄出重設信件" in resp.text
@@ -202,6 +202,9 @@ def test_forgot_password_page_has_email_and_totp_paths(client):
     assert "請開啟主旨為「重設銘印鑽石帳戶密碼」的信件" in resp.text
     assert "使用驗證碼" in resp.text
     assert "login-button--outline" in resp.text
+    assert "驗證碼 → 新密碼" not in resp.text
+    assert "data-fp-home-header" in resp.text
+    assert 'class="login-button login-button--outline" data-fp-back="1"' in resp.text
     assert '<p class="auth-divider">或</p>' in resp.text
     assert '<p class="auth-divider">或使用</p>' not in resp.text
     assert '<a href="#" data-fp-use-totp>已啟用 Authenticator？使用驗證碼</a>' in resp.text

@@ -180,6 +180,9 @@ def test_forgot_password_page_does_not_name_resend():
     assert 'hx-post="/htmx/auth/request-reset"' in html
     assert "data-fp-use-totp" in html
     assert "login-button--outline" in html
+    assert "驗證碼 → 新密碼" not in html
+    assert "data-fp-home-header" in html
+    assert 'data-fp-step="1"' in html
     assert "auth_divider('或')" in html
     assert '<p class="auth-divider">或使用</p>' not in html
     assert '<a href="#" data-fp-use-totp>已啟用 Authenticator？使用驗證碼</a>' in html

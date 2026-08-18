@@ -526,10 +526,15 @@ async def reset_password(request: Request) -> JSONResponse:
     body = await request.json()
     token = (body.get("token") or "").strip()
     new_password = body.get("newPassword") or body.get("password") or ""
-    if not token or not new_password:
-        return _err(400, "缺少驗證碼或新密碼")
+    password_confirm = body.get("passwordConfirm") or ""
+    if not new_password or not password_confirm:
+        return _err(400, "請輸入新密碼並再次確認。")
+    if new_password != password_confirm:
+        return _err(400, "兩次密碼不一致。")
     if len(new_password) < 8:
-        return _err(400, "密碼至少需要 8 碼")
+        return _err(400, "密碼至少需要 8 碼。")
+    if not token:
+        return _err(400, "重設連結無效或已過期，請重新申請。")
 
     token_hash = _hash_reset_token(token)
     now = datetime.now(timezone.utc)
@@ -540,7 +545,7 @@ async def reset_password(request: Request) -> JSONResponse:
         )
         row = cur.fetchone()
         if not row or row["used_at"] is not None or row["expires_at"] < now:
-            return _err(400, "重設連結無效或已過期，請重新申請")
+            return _err(400, "重設連結無效或已過期，請重新申請。")
 
         cur.execute(
             """
@@ -565,10 +570,15 @@ async def forgot_password_verify(request: Request) -> JSONResponse:
     body = await request.json()
     email = (body.get("email") or "").strip()
     code = str(body.get("code") or "").strip()
+    backup = body.get("backup")
+    if isinstance(backup, str):
+        backup = backup.strip().lower() in ("1", "true", "yes", "on")
+    else:
+        backup = bool(backup)
     if not email:
         return _err(400, "請輸入 Email。")
     if not code:
-        return _err(400, "請輸入完整的 6 位數驗證碼。")
+        return _err(400, "請輸入備用碼" if backup else "請輸入完整的 6 位數驗證碼。")
     if not is_valid_email(email):
         return _err(400, "請輸入有效的 Email 格式。")
 

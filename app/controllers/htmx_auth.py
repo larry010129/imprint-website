@@ -296,10 +296,12 @@ async def auth_forgot_password_verify(request: Request) -> Response:
     form = await request.form()
     email = str(form.get("email") or "").strip()
     code = str(form.get("code") or "").strip()
+    backup = form_bool(form.get("backup"))
     if not email:
         return html(request, "auth_error.html", {"error": "請輸入 Email。"}, 400)
     if not code:
-        return html(request, "auth_error.html", {"error": "請輸入完整的 6 位數驗證碼。"}, 400)
+        empty_code_err = "請輸入備用碼" if backup else "請輸入完整的 6 位數驗證碼。"
+        return html(request, "auth_error.html", {"error": empty_code_err}, 400)
     if not is_valid_email(email):
         return html(request, "auth_error.html", {"error": "請輸入有效的 Email 格式。"}, 400)
 
@@ -417,10 +419,17 @@ async def auth_reset_password(request: Request) -> Response:
     form = await request.form()
     token = str(form.get("token") or "").strip()
     new_password = str(form.get("password") or "")
-    if not token or not new_password:
-        return html(request, "auth_error.html", {"error": "缺少驗證碼或新密碼"}, 400)
+    password_confirm = str(form.get("passwordConfirm") or "")
+    if not new_password or not password_confirm:
+        return html(request, "auth_error.html", {"error": "請輸入新密碼並再次確認。"}, 400)
+    if new_password != password_confirm:
+        return html(request, "auth_error.html", {"error": "兩次密碼不一致。"}, 400)
     if len(new_password) < 8:
         return html(request, "auth_error.html", {"error": "密碼至少需要 8 碼。"}, 400)
+    if not token:
+        return html(
+            request, "auth_error.html", {"error": "重設連結無效或已過期，請重新申請。"}, 400
+        )
 
     token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
     now = datetime.now(timezone.utc)
