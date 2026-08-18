@@ -1,15 +1,26 @@
-"""Girdle engraving accepts shop text; only 12-slot + control/HTML are stripped."""
+"""Girdle engraving: any Latin/punct at any carat; CJK only at 0.3ct+."""
 
 from app.controllers.htmx_shop_wizard import _config_from_form
 from app.controllers.shop_controller import _validate_config
 from app.orders import (
     GIRDLE_MAX_SLOTS,
     apply_girdle_engraving,
+    carat_allows_chinese_engraving,
     cart_details_from_config,
     hydrate_order,
     pack_order_config,
     sanitize_girdle_engraving,
 )
+
+
+def test_carat_allows_chinese_engraving():
+    assert carat_allows_chinese_engraving(0.3) is True
+    assert carat_allows_chinese_engraving("0.3") is True
+    assert carat_allows_chinese_engraving("1") is True
+    assert carat_allows_chinese_engraving(0.29) is False
+    assert carat_allows_chinese_engraving("0.2") is False
+    assert carat_allows_chinese_engraving(None) is False
+    assert carat_allows_chinese_engraving("") is False
 
 
 def test_sanitize_keeps_cjk_spaces_punctuation_and_symbols():
@@ -20,6 +31,9 @@ def test_sanitize_keeps_cjk_spaces_punctuation_and_symbols():
     assert sanitize_girdle_engraving("love.@$") == "love.@$"
     assert sanitize_girdle_engraving("A@B.$/2024") == "A@B.$/2024"
     assert sanitize_girdle_engraving("愛.@$") == "愛.@$"
+    assert sanitize_girdle_engraving("永遠", carat="0.3") == "永遠"
+    assert sanitize_girdle_engraving("永遠.@$", carat="0.2") == ".@$"
+    assert sanitize_girdle_engraving("〔雙心〕永遠", allow_chinese=False) == "〔雙心〕"
 
 
 def test_sanitize_strips_html_controls_and_clips():
@@ -41,14 +55,18 @@ def test_sanitize_clips_to_twelve_slots_keeps_emblems():
 
 
 def test_apply_accepts_snake_and_camel():
-    camel = {"engravingGirdle": "永遠"}
+    camel = {"carat": "0.3", "engravingGirdle": "永遠"}
     apply_girdle_engraving(camel)
     assert camel["engravingGirdle"] == "永遠"
 
-    snake = {"engraving_girdle": "<b>Love 2026</b>"}
+    snake = {"carat": "0.3", "engraving_girdle": "<b>Love 2026</b>"}
     apply_girdle_engraving(snake)
     assert snake["engravingGirdle"] == "Love 2026"
     assert snake["engraving_girdle"] == "Love 2026"
+
+    below = {"carat": "0.2", "engravingGirdle": "永遠.@$"}
+    apply_girdle_engraving(below)
+    assert below["engravingGirdle"] == ".@$"
 
 
 def test_validate_config_keeps_shop_girdle_text():
@@ -73,8 +91,9 @@ def test_validate_config_keeps_shop_girdle_text():
     body["carat"] = "0.2"
     body["engravingGirdle"] = "永遠.@$"
     assert _validate_config(body) is None
-    assert body["engravingGirdle"] == "永遠.@$"
+    assert body["engravingGirdle"] == ".@$"
 
+    body["carat"] = "0.3"
     body["engravingGirdle"] = "<img src=x>永遠"
     assert _validate_config(body) is None
     assert body["engravingGirdle"] == "永遠"
@@ -85,6 +104,7 @@ def test_pack_and_hydrate_keep_text_strip_html():
         {
             "category": "pendant",
             "type": "four-prong",
+            "carat": "0.3",
             "engravingGirdle": "Love 2026",
             "clientPricing": {"total": 1},
         }
@@ -97,10 +117,23 @@ def test_pack_and_hydrate_keep_text_strip_html():
                 "engravingGirdle": "<script>x</script>永遠",
                 "category": "pendant",
                 "type": "four-prong",
+                "carat": "0.3",
             }
         }
     )
     assert order["engraving_girdle"] == "x永遠"
+
+    small = hydrate_order(
+        {
+            "config_json": {
+                "engravingGirdle": "永遠.@$",
+                "category": "pendant",
+                "type": "four-prong",
+                "carat": "0.2",
+            }
+        }
+    )
+    assert small["engraving_girdle"] == ".@$"
 
 
 def test_cart_details_and_htmx_form_keep_girdle_text():
@@ -136,4 +169,15 @@ def test_cart_details_and_htmx_form_keep_girdle_text():
             "engravingGirdle": "love.@$ / 永遠",
         }
     )
-    assert cfg_sym["engravingGirdle"] == "love.@$ / 永遠"
+    assert cfg_sym["engravingGirdle"] == "love.@$ /"
+
+    cfg_cjk = _config_from_form(
+        {
+            "category": "pendant",
+            "type": "four-prong",
+            "carat": "0.3",
+            "gold": "14k",
+            "engravingGirdle": "love.@$ / 永遠",
+        }
+    )
+    assert cfg_cjk["engravingGirdle"] == "love.@$ / 永遠"

@@ -16,12 +16,15 @@ from app.image_urls import config_image_url, is_uuid, order_product_id, resolve_
 _TAIPEI = ZoneInfo("Asia/Taipei")
 
 # Match shop UI: 12 slots, known 〔label〕 emblems cost 2. No A-Za-z0-9 gate.
+# CJK (中文) only at 0.3ct+ — same as shop.js caratAllowsChineseEngraving.
 GIRDLE_MAX_SLOTS = 12
 GIRDLE_EMBLEM_SLOT_COST = 2
 GIRDLE_ENGRAVING_MAX_LEN = GIRDLE_MAX_SLOTS  # text-only clip; emblems use slots
+GIRDLE_CHINESE_MIN_CARAT = 0.3
 _GIRDLE_HTML_TAG_RE = re.compile(r"<[^>]*>", re.DOTALL)
 _GIRDLE_ANGLE_RE = re.compile(r"[<>]")
 _GIRDLE_TOKEN_RE = re.compile(r"〔([^〕]+)〕|[^〔〕]+")
+_GIRDLE_CJK_RE = re.compile(r"[\u3400-\u4dbf\u4e00-\u9fff]")
 _GIRDLE_EMBLEM_LABELS = frozenset(
     {
         "貓掌",
@@ -67,11 +70,26 @@ def _trim_girdle_slots(text: str, max_slots: int = GIRDLE_MAX_SLOTS) -> str:
     return "".join(out)
 
 
-def sanitize_girdle_engraving(value: Any) -> str:
-    """Keep any shop-posted girdle text; strip controls/HTML; cap 12 slots.
+def carat_allows_chinese_engraving(carat: Any) -> bool:
+    """True when carat >= 0.3. Missing/invalid carat is closed (no CJK)."""
+    try:
+        return float(carat) >= GIRDLE_CHINESE_MIN_CARAT
+    except (TypeError, ValueError):
+        return False
 
-    No A-Za-z0-9 / 0.3ct Chinese gate. Letters, CJK, digits, punctuation,
-    spaces, and symbols (. @ $ and the rest) stay. Emblems stay.
+
+def sanitize_girdle_engraving(
+    value: Any,
+    *,
+    allow_chinese: bool | None = None,
+    carat: Any = None,
+) -> str:
+    """Keep shop-posted girdle text; strip controls/HTML; cap 12 slots.
+
+    Letters, digits, punctuation, spaces, and symbols (. @ $ and the rest)
+    stay at any carat. Emblems stay. CJK is kept only when allow_chinese
+    is true, or carat >= 0.3. Standalone calls (no carat / flag) keep CJK
+    so already-accepted display text is not rewritten.
     """
     if value is None:
         return ""
@@ -79,6 +97,10 @@ def sanitize_girdle_engraving(value: Any) -> str:
     text = _GIRDLE_HTML_TAG_RE.sub("", text)
     text = _GIRDLE_ANGLE_RE.sub("", text)
     text = "".join(ch for ch in text if unicodedata.category(ch) != "Cc")
+    if allow_chinese is None and carat is not None:
+        allow_chinese = carat_allows_chinese_engraving(carat)
+    if allow_chinese is False:
+        text = _GIRDLE_CJK_RE.sub("", text)
     text = text.strip()
     return _trim_girdle_slots(text)
 
@@ -92,7 +114,10 @@ def apply_girdle_engraving(cfg: dict[str, Any] | None) -> None:
     raw = cfg.get("engravingGirdle")
     if raw is None:
         raw = cfg.get("engraving_girdle")
-    cleaned = sanitize_girdle_engraving(raw)
+    cleaned = sanitize_girdle_engraving(
+        raw,
+        allow_chinese=carat_allows_chinese_engraving(cfg.get("carat")),
+    )
     cfg["engravingGirdle"] = cleaned
     if "engraving_girdle" in cfg:
         cfg["engraving_girdle"] = cleaned
@@ -194,7 +219,8 @@ def _engraving_parts(cfg: dict) -> list[str]:
     if cfg.get("engravingRemark"):
         parts.append(f"金屬刻字 {cfg['engravingRemark']}")
     girdle = sanitize_girdle_engraving(
-        cfg.get("engravingGirdle") or cfg.get("engraving_girdle") or ""
+        cfg.get("engravingGirdle") or cfg.get("engraving_girdle") or "",
+        allow_chinese=carat_allows_chinese_engraving(cfg.get("carat")),
     )
     if girdle:
         parts.append(f"腰圍刻字 {girdle}")
@@ -775,7 +801,12 @@ def hydrate_order(order: dict) -> dict:
     if config:
         apply_girdle_engraving(config)
         if order.get("engraving_girdle") is not None:
-            order["engraving_girdle"] = sanitize_girdle_engraving(order["engraving_girdle"])
+            order["engraving_girdle"] = sanitize_girdle_engraving(
+                order["engraving_girdle"],
+                allow_chinese=carat_allows_chinese_engraving(
+                    config.get("carat") or order.get("carat")
+                ),
+            )
         order.setdefault("category", config.get("category"))
         order.setdefault(
             "product_type",

@@ -87,7 +87,7 @@ def test_emblem_imgs_have_intrinsic_size_fallback():
     src = GIRDLE_JS.read_text(encoding="utf-8")
     assert 'width="18" height="18"' in src
     shop = SHOP_JS.read_text(encoding="utf-8")
-    assert "girdle-engrave.js?v=30" in shop
+    assert "girdle-engrave.js?v=31" in shop
     hidden_clear = shop.split("function updateEngravingSteps()", 1)[1].split("function closeAllShopDropdowns", 1)[0]
     assert "shop-girdle-engrave-preview" in hidden_clear
     assert "preview.innerHTML = ''" in hidden_clear
@@ -101,12 +101,25 @@ def test_girdle_typed_text_is_not_alnum_gated():
     assert "disallowedCharsRe" not in src
     assert "A-Za-z0-9" not in src
     assert "CONTROL_OR_BREAK" in src
-    assert "setAllowChinese: function ()" in src
-    assert "sanitizeTextNodes(input, false)" not in src
+    assert "setAllowChinese: function (flag)" in src
+    assert "sanitizeTextNodes(input, false)" in src
+    assert "stripCjk" in src
     shop = SHOP_JS.read_text(encoding="utf-8")
-    assert "girdle-engrave.js?v=30" in shop
+    assert "girdle-engrave.js?v=31" in shop
     registry = (ROOT / "content" / "site" / "page-registry.json").read_text(encoding="utf-8")
-    assert "girdle-engrave.js?v=30" in registry
+    assert "girdle-engrave.js?v=31" in registry
+
+
+def test_girdle_cjk_only_when_allow_chinese():
+    src = GIRDLE_JS.read_text(encoding="utf-8")
+    assert "var allowChinese = !!opts.allowChinese" in src
+    assert "if (!allowChinese) clean = stripCjk(clean)" in src
+    assert "if (!allowChinese && CJK_CHAR.test(e.key))" in src
+    # Punctuation / Latin stay outside the CJK strip class.
+    cjk = re.compile(r"[\u3400-\u4DBF\u4E00-\u9FFF]")
+    kept = "LOVE / 2024 .@$#!%&*()_-+=[]{};:'\",.<>?"
+    assert cjk.sub("", kept) == kept
+    assert cjk.sub("", "愛.@$永遠") == ".@$"
 
 
 def test_girdle_keeps_special_symbols():
