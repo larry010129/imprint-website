@@ -17,6 +17,9 @@
   opacity:1; visibility:visible; pointer-events:auto; z-index:2;
   transition:opacity 1.3s cubic-bezier(.4,0,.2,1), visibility 0s linear 0s;
 }
+.hc-slide.is-armed{
+  visibility:visible; opacity:0; pointer-events:none; z-index:1;
+}
 .hc-slide.no-anim{ transition:none; }
 .hc-media{
   position:absolute; inset:0;

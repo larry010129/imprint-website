@@ -381,12 +381,54 @@
     return listSig(list) === ssrSig();
   }
 
+  /* Point <img src> at the matching <source> so desktop does not start on the
+     phone CMS file (picture swap would flash a broken icon over .gh-hero__sky). */
+  function pinSelectedImgSrc(root) {
+    var slides = root.querySelectorAll('.hc-slide');
+    for (var i = 0; i < slides.length; i++) {
+      var img = slides[i].querySelector('.hc-media img');
+      if (!img) continue;
+      var pic = img.parentNode;
+      if (!pic || pic.tagName !== 'PICTURE') continue;
+      var sources = pic.querySelectorAll('source');
+      var url = '';
+      for (var j = 0; j < sources.length; j++) {
+        var source = sources[j];
+        var media = source.getAttribute('media');
+        if (media && window.matchMedia && !window.matchMedia(media).matches) continue;
+        var srcset = source.getAttribute('srcset') || source.getAttribute('data-srcset') || '';
+        var token = srcset.split(',')[0].trim().split(/\s+/)[0] || '';
+        if (token) { url = token; break; }
+      }
+      if (url) img.setAttribute('src', url);
+    }
+  }
+
   function apply(list) {
     if (!list.length) return;
-    track.innerHTML = list.map(slideHtml).join('');
-    if (window.ImprintHeroCarousel && window.ImprintHeroCarousel.reinit) {
-      window.ImprintHeroCarousel.reinit();
+    var staging = document.createElement('ul');
+    staging.innerHTML = list.map(slideHtml).join('');
+    pinSelectedImgSrc(staging);
+    var firstImg = staging.querySelector('.hc-media img');
+    var committed = false;
+    function commit() {
+      if (committed) return;
+      committed = true;
+      track.innerHTML = staging.innerHTML;
+      if (window.ImprintHeroCarousel && window.ImprintHeroCarousel.reinit) {
+        window.ImprintHeroCarousel.reinit();
+      }
     }
+    if (!firstImg || !firstImg.getAttribute('src')) {
+      commit();
+      return;
+    }
+    var probe = new Image();
+    probe.onload = commit;
+    probe.onerror = commit;
+    probe.src = firstImg.getAttribute('src');
+    if (probe.complete && probe.naturalWidth > 0) commit();
+    setTimeout(commit, 3000);
   }
 
   function refreshBanners() {

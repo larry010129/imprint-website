@@ -100,6 +100,8 @@
 .gh-hero__sky img{
   width:100%; height:100%; object-fit:cover; opacity:.35;
 }
+/* Public home: dusk sky must not show as the hero background. CMS 主視覺天空 slot stays. */
+.page-home .gh-hero__sky{ display:none; }
 
 .gh-hero--carousel{ display:block; min-height:0; padding:0; }
 .page-home .hc-viewport{
@@ -116,6 +118,10 @@
 }
 .page-home .hc-slide.is-active{
   opacity:1; visibility:visible; pointer-events:auto; z-index:2;
+}
+/* Decode the picture-selected file under the current slide — do not fade in empty/broken. */
+.page-home .hc-slide.is-armed{
+  visibility:visible; opacity:0; pointer-events:none; z-index:1;
 }
 /* LCP is the first-slide h1. A 1.3s fade from opacity:0 delays element render. */
 .page-home .hc-slide.is-active:first-child,
