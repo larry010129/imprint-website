@@ -44,6 +44,7 @@ from app.controllers.shop_controller import (
     _summary,
     _validate_config,
 )
+from app.orders import apply_girdle_engraving
 from app.database import get_connection
 from app.image_urls import (
     category_image_url,
@@ -354,8 +355,14 @@ def _config_from_form(form: Any) -> dict[str, Any]:
         "fancyColor": fancy_color,
         "includeChain": form_bool(form.get("includeChain")),
         "summaryZh": name,
-        # ponytail: chainProductId / chainGold / chainLength / engraving* not in HTMX core path
+        # ponytail: chainProductId / chainGold / chainLength still deferred on HTMX
     }
+    girdle = form.get("engravingGirdle")
+    if girdle is None:
+        girdle = form.get("engraving_girdle")
+    if girdle is not None:
+        cfg["engravingGirdle"] = str(girdle)
+        apply_girdle_engraving(cfg)
     if category == "earring":
         cfg["quantity"] = _as_earring_quantity(form.get("quantity"))
     return cfg

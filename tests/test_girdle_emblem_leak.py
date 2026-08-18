@@ -1,4 +1,5 @@
 """Girdle emblem PNGs must not paint outside the engraving step (file-level)."""
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -86,7 +87,45 @@ def test_emblem_imgs_have_intrinsic_size_fallback():
     src = GIRDLE_JS.read_text(encoding="utf-8")
     assert 'width="18" height="18"' in src
     shop = SHOP_JS.read_text(encoding="utf-8")
-    assert "girdle-engrave.js?v=29" in shop
+    assert "girdle-engrave.js?v=30" in shop
     hidden_clear = shop.split("function updateEngravingSteps()", 1)[1].split("function closeAllShopDropdowns", 1)[0]
     assert "shop-girdle-engrave-preview" in hidden_clear
     assert "preview.innerHTML = ''" in hidden_clear
+
+
+def test_girdle_typed_text_is_not_alnum_gated():
+    src = GIRDLE_JS.read_text(encoding="utf-8")
+    assert "CHARSET_BASE" not in src
+    assert "CHARSET_CJK" not in src
+    assert "allowedCharRe" not in src
+    assert "disallowedCharsRe" not in src
+    assert "A-Za-z0-9" not in src
+    assert "CONTROL_OR_BREAK" in src
+    assert "setAllowChinese: function ()" in src
+    assert "sanitizeTextNodes(input, false)" not in src
+    shop = SHOP_JS.read_text(encoding="utf-8")
+    assert "girdle-engrave.js?v=30" in shop
+    registry = (ROOT / "content" / "site" / "page-registry.json").read_text(encoding="utf-8")
+    assert "girdle-engrave.js?v=30" in registry
+
+
+def test_girdle_keeps_special_symbols():
+    src = GIRDLE_JS.read_text(encoding="utf-8")
+    assert (
+        "CONTROL_OR_BREAK = /[\\u0000-\\u0008\\u000B\\u000C\\u000E-\\u001F\\u007F-\\u009F\\r\\n\\t]/g"
+        in src
+    )
+    # Same class as CONTROL_OR_BREAK — controls/line-breaks only, not punctuation.
+    control_or_break = re.compile(r"[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\r\n\t]")
+    kept = "LOVE / 2024 .@$#!%&*()_-+=[]{};:'\",.<>?"
+    assert control_or_break.sub("", kept) == kept
+    assert control_or_break.sub("", "愛.@$") == "愛.@$"
+
+
+def test_girdle_placeholder_allows_punctuation_example():
+    calc = CALC.read_text(encoding="utf-8")
+    start = calc.find('id="shop-girdle-engrave-input"')
+    assert start >= 0
+    tag = calc[max(0, start - 80) : calc.find(">", start) + 1]
+    assert 'data-placeholder="e.g. LOVE / 2024 / initials"' in tag
+    assert "maxlength" not in tag.lower()

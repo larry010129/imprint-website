@@ -16,6 +16,7 @@ from app.coupons import apply_discount_split, record_redemptions, validate_coupo
 from app.database import get_connection, get_transaction
 from app.image_urls import config_image_url
 from app.orders import (
+    apply_girdle_engraving,
     attach_order_display,
     attach_order_relations,
     cart_details_from_config,
@@ -72,6 +73,7 @@ def _pricing(config: dict[str, Any]) -> dict[str, Any]:
 def _validate_config(body: dict[str, Any]) -> str | None:
     # ponytail: required-field + length; upgrade = port choice/engraving checks
     # from retired backend/lib/validation.js when bad CMS/cart payloads show up.
+    apply_girdle_engraving(body)
     for key in ("category", "type", "carat"):
         if not body.get(key):
             return f"缺少欄位：{key}"

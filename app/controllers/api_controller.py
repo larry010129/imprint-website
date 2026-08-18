@@ -42,6 +42,7 @@ from app.memorial_diamonds import list_tombstoned_style_keys, merge_memorial_dia
 from app.paging import page_meta, page_response, page_window_from_params, sql_count_total
 from app.product_categories import build_category_meta, build_category_meta_from_rows, fetch_categories
 from app.orders import (
+    apply_girdle_engraving,
     attach_order_display,
     attach_order_relations,
     enrich_member_order,
@@ -814,6 +815,7 @@ async def shop_quote(request: Request, preview: int = Query(0)) -> dict:
     body = await request.json()
     if not isinstance(body, dict):
         return _err(400, "invalid body")
+    apply_girdle_engraving(body)
     require_published = True
     if preview:
         user_id = get_user_id(request)

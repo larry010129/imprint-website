@@ -44,36 +44,27 @@
 
   var ZWS = '\u200B';
   var EMBLEM_SLOT_COST = 2;
-  // Typed text: A-Z / a-z / 0-9 always; Chinese (CJK Unified Ideographs) only once
-  // the caller says the selected diamond is large enough to engrave it legibly
-  // (0.3ct+ -- see setAllowChinese). Emblem tokens insert via buttons, not keys.
-  var CHARSET_BASE = 'A-Za-z0-9';
-  var CHARSET_CJK = 'A-Za-z0-9一-鿿㐀-䶿';
-
-  function allowedCharRe(allowChinese) {
-    return new RegExp('^[' + (allowChinese ? CHARSET_CJK : CHARSET_BASE) + ']$');
-  }
-
-  function disallowedCharsRe(allowChinese) {
-    return new RegExp('[^' + (allowChinese ? CHARSET_CJK : CHARSET_BASE) + ']', 'g');
-  }
+  // Typed text: any visible characters (letters, CJK, digits, punctuation, spaces).
+  // Emblem tokens still insert via buttons. Slot cap stays at 12.
+  // ZWS is caret glue; strip C0/C1 controls and line breaks so the field stays single-line.
+  var CONTROL_OR_BREAK = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\r\n\t]/g;
 
   function stripZws(text) {
     return (text || '').replace(/\u200B/g, '');
   }
 
-  function sanitizePlainText(text, allowChinese) {
-    return stripZws(text).replace(disallowedCharsRe(allowChinese), '');
+  function sanitizePlainText(text) {
+    return stripZws(text).replace(CONTROL_OR_BREAK, '');
   }
 
-  function sanitizeTextNodes(input, allowChinese) {
+  function sanitizeTextNodes(input) {
     if (!input) return false;
     var changed = false;
     input.childNodes.forEach(function (node) {
       if (node.nodeType !== 3) return;
       var raw = node.textContent || '';
       var keptZws = raw.indexOf(ZWS) >= 0;
-      var clean = sanitizePlainText(raw, allowChinese);
+      var clean = sanitizePlainText(raw);
       var next = keptZws && clean ? ZWS + clean : (keptZws && !clean ? ZWS : clean);
       if (next !== raw) {
         node.textContent = next;
@@ -449,7 +440,7 @@
     afterChange();
   }
 
-  function setFromReadable(input, str, max, allowChinese, afterChange) {
+  function setFromReadable(input, str, max, afterChange) {
     if (!input) return;
     input.innerHTML = '';
     if (!str) {
@@ -467,7 +458,7 @@
           ensureZwsAfter(token);
         }
       } else {
-        var plain = sanitizePlainText(match[0], allowChinese);
+        var plain = sanitizePlainText(match[0]);
         if (plain) input.appendChild(document.createTextNode(plain));
       }
     }
@@ -613,7 +604,6 @@
     var emblemsRoot = typeof opts.emblemsRoot === 'string' ? document.getElementById(opts.emblemsRoot) : opts.emblemsRoot;
     var previewColor = opts.previewColor || 'white';
     var previewShape = opts.previewShape || 'round';
-    var allowChinese = !!opts.allowChinese;
     normalizeEmblemButtons(emblemsRoot);
     useRealGirdlePreview(previewEl, previewShape, previewColor);
     var lastValidHtml = input.innerHTML;
@@ -634,7 +624,7 @@
     }
 
     function afterChange() {
-      sanitizeTextNodes(input, allowChinese);
+      sanitizeTextNodes(input);
       if (slots(input) > max) {
         restoreValid();
       } else {
@@ -648,7 +638,7 @@
     }
 
     function insertAllowedText(text) {
-      var clean = sanitizePlainText(text, allowChinese);
+      var clean = sanitizePlainText(text);
       if (!clean) return;
       var sel = window.getSelection();
       var range = sel && sel.rangeCount && input.contains(sel.anchorNode)
@@ -721,7 +711,7 @@
       if (e.inputType === 'insertFromComposition' || e.inputType === 'insertCompositionText') return;
       if (e.inputType === 'insertText' || e.inputType === 'insertReplacementText') {
         var raw = e.data || '';
-        var clean = sanitizePlainText(raw, allowChinese);
+        var clean = sanitizePlainText(raw);
         if (!clean || clean !== raw) {
           e.preventDefault();
           if (clean) insertAllowedText(clean);
@@ -765,10 +755,6 @@
       }
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       if (e.key.length !== 1) return;
-      if (!allowedCharRe(allowChinese).test(e.key)) {
-        e.preventDefault();
-        return;
-      }
       var selKey = window.getSelection();
       if (selKey && selKey.rangeCount && input.contains(selKey.anchorNode)) {
         var rangeKey = selKey.getRangeAt(0);
@@ -815,23 +801,16 @@
 
     return {
       readable: function () { return readable(input); },
-      setValue: function (str) { setFromReadable(input, str || '', max, allowChinese, afterChange); },
+      setValue: function (str) { setFromReadable(input, str || '', max, afterChange); },
       setPreviewColor: function (colorId) {
         setGirdlePreview(previewEl, wrapShapeId(previewEl), colorId);
       },
       setPreviewShapeAndColor: function (shapeId, colorId) {
         setGirdlePreview(previewEl, shapeId || 'round', colorId || 'white');
       },
-      setAllowChinese: function (flag) {
-        flag = !!flag;
-        if (flag === allowChinese) return;
-        allowChinese = flag;
-        if (!allowChinese) {
-          // Downgrading (carat dropped below threshold) — strip any Chinese
-          // already typed instead of silently keeping now-disallowed content.
-          sanitizeTextNodes(input, false);
-          afterChange();
-        }
+      setAllowChinese: function () {
+        // Always-on: typing is not gated by carat. Hook stays so shop.js /
+        // configurator callers do not break.
       },
       focus: function () { input.focus(); }
     };

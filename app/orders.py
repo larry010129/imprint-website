@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import json
+import re
+import unicodedata
 from datetime import date, datetime, time, timedelta, timezone
+from html import unescape
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -11,6 +14,88 @@ from app.admin_products import CATEGORY_LABELS
 from app.image_urls import config_image_url, is_uuid, order_product_id, resolve_product_image_url
 
 _TAIPEI = ZoneInfo("Asia/Taipei")
+
+# Match shop UI: 12 slots, known 〔label〕 emblems cost 2. No A-Za-z0-9 gate.
+GIRDLE_MAX_SLOTS = 12
+GIRDLE_EMBLEM_SLOT_COST = 2
+GIRDLE_ENGRAVING_MAX_LEN = GIRDLE_MAX_SLOTS  # text-only clip; emblems use slots
+_GIRDLE_HTML_TAG_RE = re.compile(r"<[^>]*>", re.DOTALL)
+_GIRDLE_ANGLE_RE = re.compile(r"[<>]")
+_GIRDLE_TOKEN_RE = re.compile(r"〔([^〕]+)〕|[^〔〕]+")
+_GIRDLE_EMBLEM_LABELS = frozenset(
+    {
+        "貓掌",
+        "雙心",
+        "弓箭",
+        "狗骨",
+        "四葉草",
+        "狗掌",
+        "愛心",
+        "無限",
+        "戒圈",
+        "蝴蝶結",
+        "雙愛心",
+        "幸運草",
+        "肉球",
+        "骨頭",
+    }
+)
+
+
+def _trim_girdle_slots(text: str, max_slots: int = GIRDLE_MAX_SLOTS) -> str:
+    """Keep FE-readable tokens until the 12-slot cap. Unknown 〔…〕 dropped."""
+    out: list[str] = []
+    used = 0
+    for match in _GIRDLE_TOKEN_RE.finditer(text):
+        token = match.group(0)
+        if token.startswith("〔"):
+            label = match.group(1)
+            if label not in _GIRDLE_EMBLEM_LABELS:
+                continue
+            if used + GIRDLE_EMBLEM_SLOT_COST > max_slots:
+                continue
+            out.append(token)
+            used += GIRDLE_EMBLEM_SLOT_COST
+            continue
+        room = max_slots - used
+        if room <= 0:
+            break
+        chunk = token[:room]
+        if chunk:
+            out.append(chunk)
+            used += len(chunk)
+    return "".join(out)
+
+
+def sanitize_girdle_engraving(value: Any) -> str:
+    """Keep any shop-posted girdle text; strip controls/HTML; cap 12 slots.
+
+    No A-Za-z0-9 / 0.3ct Chinese gate. Letters, CJK, digits, punctuation,
+    spaces, and symbols (. @ $ and the rest) stay. Emblems stay.
+    """
+    if value is None:
+        return ""
+    text = unescape(str(value)).replace("\u200B", "")
+    text = _GIRDLE_HTML_TAG_RE.sub("", text)
+    text = _GIRDLE_ANGLE_RE.sub("", text)
+    text = "".join(ch for ch in text if unicodedata.category(ch) != "Cc")
+    text = text.strip()
+    return _trim_girdle_slots(text)
+
+
+def apply_girdle_engraving(cfg: dict[str, Any] | None) -> None:
+    """Normalize engravingGirdle / engraving_girdle on a config or request body."""
+    if not isinstance(cfg, dict):
+        return
+    if "engravingGirdle" not in cfg and "engraving_girdle" not in cfg:
+        return
+    raw = cfg.get("engravingGirdle")
+    if raw is None:
+        raw = cfg.get("engraving_girdle")
+    cleaned = sanitize_girdle_engraving(raw)
+    cfg["engravingGirdle"] = cleaned
+    if "engraving_girdle" in cfg:
+        cfg["engraving_girdle"] = cleaned
 
 
 def _as_dict(value: Any) -> dict:
@@ -108,8 +193,11 @@ def _engraving_parts(cfg: dict) -> list[str]:
         parts.append(f"戒圈刻字 {cfg['engravingBand']}")
     if cfg.get("engravingRemark"):
         parts.append(f"金屬刻字 {cfg['engravingRemark']}")
-    if cfg.get("engravingGirdle"):
-        parts.append(f"腰圍刻字 {cfg['engravingGirdle']}")
+    girdle = sanitize_girdle_engraving(
+        cfg.get("engravingGirdle") or cfg.get("engraving_girdle") or ""
+    )
+    if girdle:
+        parts.append(f"腰圍刻字 {girdle}")
     return parts
 
 
@@ -664,6 +752,7 @@ def track_order_public_row(order: dict) -> dict:
 def pack_order_config(config: dict[str, Any]) -> tuple[dict, dict, str | None, str, float | None]:
     """Split shop config into persisted config_json, pricing_json, summary, total."""
     cfg = dict(config)
+    apply_girdle_engraving(cfg)
     pricing = _as_dict(cfg.pop("clientPricing", None))
     if not pricing:
         pricing = _as_dict(cfg.get("clientPricing"))
@@ -684,6 +773,9 @@ def hydrate_order(order: dict) -> dict:
         pricing = _as_dict(config.get("clientPricing"))
 
     if config:
+        apply_girdle_engraving(config)
+        if order.get("engraving_girdle") is not None:
+            order["engraving_girdle"] = sanitize_girdle_engraving(order["engraving_girdle"])
         order.setdefault("category", config.get("category"))
         order.setdefault(
             "product_type",
