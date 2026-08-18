@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import json
+import re
+import unicodedata
 from datetime import date, datetime, time, timedelta, timezone
+from html import unescape
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -11,6 +14,43 @@ from app.admin_products import CATEGORY_LABELS
 from app.image_urls import config_image_url, is_uuid, order_product_id, resolve_product_image_url
 
 _TAIPEI = ZoneInfo("Asia/Taipei")
+
+# Shop UI is 12 slots; emblem tokens like 〔雙心〕 expand stored length.
+GIRDLE_ENGRAVING_MAX_LEN = 64
+_GIRDLE_HTML_TAG_RE = re.compile(r"<[^>]*>", re.DOTALL)
+_GIRDLE_ANGLE_RE = re.compile(r"[<>]")
+
+
+def sanitize_girdle_engraving(value: Any) -> str:
+    """Keep shop-posted girdle text; strip controls, HTML, and cap length.
+
+    No charset filter — CJK, spaces, punctuation, letters, and digits stay.
+    """
+    if value is None:
+        return ""
+    text = unescape(str(value))
+    text = _GIRDLE_HTML_TAG_RE.sub("", text)
+    text = _GIRDLE_ANGLE_RE.sub("", text)
+    text = "".join(ch for ch in text if unicodedata.category(ch) != "Cc")
+    text = text.strip()
+    if len(text) > GIRDLE_ENGRAVING_MAX_LEN:
+        text = text[:GIRDLE_ENGRAVING_MAX_LEN]
+    return text
+
+
+def apply_girdle_engraving(cfg: dict[str, Any] | None) -> None:
+    """Normalize engravingGirdle / engraving_girdle on a config or request body."""
+    if not isinstance(cfg, dict):
+        return
+    if "engravingGirdle" not in cfg and "engraving_girdle" not in cfg:
+        return
+    raw = cfg.get("engravingGirdle")
+    if raw is None:
+        raw = cfg.get("engraving_girdle")
+    cleaned = sanitize_girdle_engraving(raw)
+    cfg["engravingGirdle"] = cleaned
+    if "engraving_girdle" in cfg:
+        cfg["engraving_girdle"] = cleaned
 
 
 def _as_dict(value: Any) -> dict:
@@ -108,8 +148,11 @@ def _engraving_parts(cfg: dict) -> list[str]:
         parts.append(f"戒圈刻字 {cfg['engravingBand']}")
     if cfg.get("engravingRemark"):
         parts.append(f"金屬刻字 {cfg['engravingRemark']}")
-    if cfg.get("engravingGirdle"):
-        parts.append(f"腰圍刻字 {cfg['engravingGirdle']}")
+    girdle = sanitize_girdle_engraving(
+        cfg.get("engravingGirdle") or cfg.get("engraving_girdle") or ""
+    )
+    if girdle:
+        parts.append(f"腰圍刻字 {girdle}")
     return parts
 
 
@@ -664,6 +707,7 @@ def track_order_public_row(order: dict) -> dict:
 def pack_order_config(config: dict[str, Any]) -> tuple[dict, dict, str | None, str, float | None]:
     """Split shop config into persisted config_json, pricing_json, summary, total."""
     cfg = dict(config)
+    apply_girdle_engraving(cfg)
     pricing = _as_dict(cfg.pop("clientPricing", None))
     if not pricing:
         pricing = _as_dict(cfg.get("clientPricing"))
@@ -684,6 +728,9 @@ def hydrate_order(order: dict) -> dict:
         pricing = _as_dict(config.get("clientPricing"))
 
     if config:
+        apply_girdle_engraving(config)
+        if order.get("engraving_girdle") is not None:
+            order["engraving_girdle"] = sanitize_girdle_engraving(order["engraving_girdle"])
         order.setdefault("category", config.get("category"))
         order.setdefault(
             "product_type",

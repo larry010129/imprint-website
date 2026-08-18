@@ -354,8 +354,13 @@ def _config_from_form(form: Any) -> dict[str, Any]:
         "fancyColor": fancy_color,
         "includeChain": form_bool(form.get("includeChain")),
         "summaryZh": name,
-        # ponytail: chainProductId / chainGold / chainLength / engraving* not in HTMX core path
+        # ponytail: chainProductId / chainGold / chainLength still deferred on HTMX
     }
+    girdle = form.get("engravingGirdle")
+    if girdle is None:
+        girdle = form.get("engraving_girdle")
+    if girdle is not None:
+        cfg["engravingGirdle"] = str(girdle)
     if category == "earring":
         cfg["quantity"] = _as_earring_quantity(form.get("quantity"))
     return cfg
