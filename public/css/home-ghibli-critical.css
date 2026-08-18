@@ -150,9 +150,11 @@
 .page-home .hc-arrow svg{ display:block; flex:none; }
 .page-home .hc-prev{ left:20px; } .page-home .hc-next{ right:20px; }
 .page-home .hc-dots{
-  position:absolute; left:50%; bottom:26px; transform:translateX(-50%);
+  position:absolute; left:50%; bottom:72px; transform:translateX(-50%);
   display:flex; gap:8px; z-index:5;
 }
+/* Beat .page-home .hc-dots — 48px hits clear the 48px cue by ≥8px. */
+.page-home .hc-dots.gh-hc-dots{ bottom:72px; }
 /* Hit 48×48 + 8px gap. Pip stays 8×8; active = scaleX to 26px pill. */
 .page-home .hc-dot{
   position:relative;
@@ -403,5 +405,7 @@ button.gh-btn--primary{ border:none; }
     letter-spacing:.06em;
     margin-bottom:16px;
   }
+  .page-home .hc-dots,
+  .page-home .hc-dots.gh-hc-dots,
   .gh-hc-dots{ bottom:calc(66px + var(--safe-area-bottom, 0px)); }
 }

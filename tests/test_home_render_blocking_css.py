@@ -66,10 +66,15 @@ def test_pagespeed_touch_and_compositor_lock():
     nav = (ROOT / "public" / "css" / "nav.css").read_text(encoding="utf-8")
     footer = (ROOT / "public" / "css" / "footer.css").read_text(encoding="utf-8")
     hero = GHIBLI_CRITICAL.read_text(encoding="utf-8")
-    assert ".gh-scroll-cue::after{" in index
-    assert "inset:-2px" in index
+    cue = index[index.index(".gh-scroll-cue{") : index.index(".gh-scroll-cue:hover")]
+    assert "width:48px" in cue and "height:48px" in cue
+    assert "min-width:48px" in cue and "min-height:48px" in cue
+    assert "inset:-2px" not in index
+    assert "inset:2px" in index
     assert "transition:background .3s, border-color .3s" not in index
+    assert ".page-home .hc-dots.gh-hc-dots{" in hero
     assert "bottom:72px" in hero
+    assert "bottom:26px" not in hero
     assert "transition:color" not in nav.split(".mobile-animated-nav{")[1][:400]
     assert "transition:all" not in nav.split(".nav-burger span{")[1][:220]
     assert "transition:transform .25s ease;" in footer

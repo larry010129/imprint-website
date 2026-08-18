@@ -49,18 +49,22 @@
    Kept inline (first paint): critical CSS budget has no headroom (18KB cap). */
 .gh-scroll-cue{
   position:absolute; left:50%; bottom:14px; transform:translateX(-50%);
-  z-index:6; width:44px; height:44px; margin:0; padding:0; border-radius:50%;
+  z-index:6; box-sizing:border-box;
+  width:48px; height:48px; min-width:48px; min-height:48px;
+  margin:0; padding:0; border:0; border-radius:50%;
   display:flex; align-items:center; justify-content:center;
-  background:rgba(43,35,32,.55); border:1px solid rgba(232,213,183,.65); color:#F5E9D3;
-  box-shadow:0 2px 14px rgba(0,0,0,.22);
-  backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+  background:transparent; color:#F5E9D3;
   cursor:pointer; appearance:none; -webkit-appearance:none;
   animation:ghScrollCue 2.6s ease-in-out infinite;
 }
+/* Face stays 44×44. Hit is the 48×48 button — ::after is paint only. */
 .gh-scroll-cue::after{
-  content:""; position:absolute; inset:-2px; border-radius:inherit;
+  content:""; position:absolute; inset:2px; border-radius:inherit; pointer-events:none;
+  background:rgba(43,35,32,.55); border:1px solid rgba(232,213,183,.65);
+  box-shadow:0 2px 14px rgba(0,0,0,.22);
+  backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
 }
-.gh-scroll-cue:hover{ background:rgba(43,35,32,.8); border-color:rgba(232,213,183,.95); }
+.gh-scroll-cue:hover::after{ background:rgba(43,35,32,.8); border-color:rgba(232,213,183,.95); }
 .gh-scroll-cue:focus-visible{ outline:2px solid #E8D5B7; outline-offset:2px; }
 .gh-scroll-cue svg{ display:block; flex:none; position:relative; z-index:1; }
 @keyframes ghScrollCue{
