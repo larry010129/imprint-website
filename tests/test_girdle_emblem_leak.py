@@ -110,6 +110,8 @@ def test_girdle_typed_text_is_not_alnum_gated():
 
 def test_girdle_placeholder_allows_punctuation_example():
     calc = CALC.read_text(encoding="utf-8")
-    assert 'data-placeholder="e.g. LOVE / 2024 / initials"' in calc
-    input_open = calc.split('id="shop-girdle-engrave-input"', 1)[0]
-    assert "maxlength" not in input_open.split("<div", 1)[-1].lower()
+    start = calc.find('id="shop-girdle-engrave-input"')
+    assert start >= 0
+    tag = calc[max(0, start - 80) : calc.find(">", start) + 1]
+    assert 'data-placeholder="e.g. LOVE / 2024 / initials"' in tag
+    assert "maxlength" not in tag.lower()
