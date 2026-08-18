@@ -111,12 +111,14 @@
 .page-home .hc-slide{
   position:absolute; inset:0; height:100%;
   opacity:0; visibility:hidden; pointer-events:none; z-index:1;
-  transition:opacity 1.3s cubic-bezier(.4,0,.2,1), visibility 0s linear 1.3s;
+  /* Opacity only — do not transition visibility (PSI + LCP render delay). */
+  transition:opacity 1.3s cubic-bezier(.4,0,.2,1);
 }
 .page-home .hc-slide.is-active{
   opacity:1; visibility:visible; pointer-events:auto; z-index:2;
-  transition:opacity 1.3s cubic-bezier(.4,0,.2,1), visibility 0s linear 0s;
 }
+/* LCP is the first-slide h1. A 1.3s fade from opacity:0 delays element render. */
+.page-home .hc-slide.is-active:first-child,
 .page-home .hc-slide.no-anim{ transition:none; }
 .page-home .hc-media{
   position:absolute; inset:0; z-index:0;

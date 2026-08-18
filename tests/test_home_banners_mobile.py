@@ -53,10 +53,10 @@ def test_home_first_slide_matches_banner_seed():
 
 def test_home_banners_cache_bust():
     html = INDEX.read_text(encoding="utf-8")
-    assert "home-banners.js?v=14" in html
+    assert "home-banners.js?v=15" in html
     # Phone crops must not wait on 10s below-fold delay.
     assert "HOME_EXTRAS_MS" not in html
-    assert "inject('/static/js/home-banners.js?v=14');" in html
+    assert "inject('/static/js/home-banners.js?v=15');" in html
     assert "aspect-ratio:800/388" not in html
 
 

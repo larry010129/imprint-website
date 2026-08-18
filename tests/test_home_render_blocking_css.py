@@ -135,6 +135,16 @@ def test_live_home_has_no_sync_critical_css(client):
     assert 'media="print"' not in snippet, snippet
 
 
+def test_home_lcp_first_slide_and_serif_paint_immediately():
+    """LCP is the first-slide h1 — no fade-in, serif optional so swap cannot stall."""
+    hero = GHIBLI_CRITICAL.read_text(encoding="utf-8")
+    base = (ROOT / "public" / "css" / "base.css").read_text(encoding="utf-8")
+    assert "visibility 0s linear" not in hero
+    assert ".page-home .hc-slide.is-active:first-child" in hero
+    serif = base.split('font-family:"Noto Serif TC"', 1)[1]
+    assert "font-display:optional" in serif[:180]
+
+
 def test_home_lcp_image_does_not_start_zoom_animation():
     main = (ROOT / "public" / "js" / "main.js").read_text(encoding="utf-8")
     assert "restartImg.style.transform = clearNoAnim ? 'scale(1)' : 'scale(1.09)'" in main

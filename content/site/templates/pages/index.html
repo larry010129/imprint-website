@@ -200,6 +200,8 @@
         </div>
       </li>
 
+      {# Ren Photo hook: {stem}-640w.webp + {stem}-1280w.webp on the five series
+         heroes below. Do not generate or swap 主視覺 — drop files in a follow-up. #}
       <li class="hc-slide" data-align="left" data-tone="light">
         <div class="hc-media">
           <picture>
@@ -1170,7 +1172,7 @@
   }
   /* Banner CMS (phone 9:16 crop) must load ASAP — delayed inject left phones on
      PC landscape SSR for 10s+. Wall stays below-fold / PSI-deferred. */
-  inject('/static/js/home-banners.js?v=14');
+  inject('/static/js/home-banners.js?v=15');
   var HOME_WALL_MS = 10000;
   function loadHomeWall() {
     if (window.__homeWallInjected) return;

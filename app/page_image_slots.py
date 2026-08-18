@@ -489,6 +489,7 @@ def _hero_stem(url: str) -> str:
 
 
 def _hero_responsive_srcset(stem: str) -> str:
+    """Ren Photo hook: include {stem}-640w / {stem}-1280w. Do not generate bytes."""
     max_w = _HERO_STEM_MAX_W.get(stem, 2400)
     return (
         f"/static/images/hero/{stem}-400w.webp 400w, "

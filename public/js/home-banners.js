@@ -91,6 +91,9 @@
     return LOCAL_HERO_MAX_W[key] ? key : '';
   }
 
+  /* Ren Photo hook — {stem}-640w.webp / {stem}-1280w.webp (do not generate).
+     Stems: family-portrait-jewelry, wedding-couple-ring, pet-memorial-cat,
+     newborn-baby-necklace, heirloom-memorial. 800w stays. Masters stay. */
   function localHeroMobileSrcset(stem) {
     return (
       '/static/images/hero/' + stem + '-640w.webp 640w, ' +

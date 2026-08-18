@@ -44,7 +44,8 @@
   font-family:"Noto Serif TC";
   font-style:normal;
   font-weight:100 900;
-  font-display:swap;
+  /* optional: LCP h1 (.gh-hero__title) must paint fallback, not wait on swap */
+  font-display:optional;
   src:local("Noto Serif TC"),local("PMingLiU");
 }
 
