@@ -502,7 +502,7 @@
   {
     "route": "/privacy",
     "template": "pages/privacy.html",
-    "title": "隱私權政策（草稿）｜銘印鑽石 IMPRINT DIAMOND",
+    "title": "隱私權政策｜銘印鑽石 IMPRINT DIAMOND",
     "description": "",
     "canonical_path": "privacy",
     "og_title": null,
@@ -562,7 +562,7 @@
   {
     "route": "/return-policy",
     "template": "pages/return-policy.html",
-    "title": "退換貨與取消政策（草稿）｜銘印鑽石 IMPRINT DIAMOND",
+    "title": "退換貨與取消政策｜銘印鑽石 IMPRINT DIAMOND",
     "description": "",
     "canonical_path": "return-policy",
     "og_title": null,
