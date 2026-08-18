@@ -45,7 +45,10 @@ def test_privacy_keeps_draft_noindex_and_locked_cookie_third(client):
     assert "已整理全部資料類型" not in html
     assert "或其他 Google 服務內容" not in html
     assert "尚待確認" in html
-    assert "不臆造" in html
+    assert "個人資料保存期限" in html
+    assert "金流、物流業者名稱" in html
+    assert "不臆造" not in html
+    assert "Zeczec" not in html
     body_start = html.find("Cookie 與登入狀態")
     body = html[body_start : html.find("資料使用目的")]
     assert "imprint_session Cookie（httpOnly）" in body
