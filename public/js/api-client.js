@@ -52,6 +52,9 @@
       parts.push('page_size=' + encodeURIComponent(size));
     }
     if (opts.q) parts.push('q=' + encodeURIComponent(opts.q));
+    if (opts.tab && opts.tab !== 'all') {
+      parts.push('tab=' + encodeURIComponent(opts.tab));
+    }
     if (opts.category) parts.push('category=' + encodeURIComponent(opts.category));
     if (opts.page_key || opts.pageKey) {
       parts.push('page_key=' + encodeURIComponent(opts.page_key || opts.pageKey));
@@ -305,12 +308,16 @@
       deleteOrder: function (id, reason) {
         return this.cancelOrder(id, reason || '管理員取消');
       },
-      // Hard delete — Rex owns POST /api/admin/orders/batch-delete.
-      // Body: { ids: string[] }. Admin cookie session (credentials: include).
-      batchDeleteOrders: function (ids) {
-        return request('/api/admin/orders/batch-delete', {
+      // Rex lock: POST /api/admin/orders-bulk-delete { ids, confirm: true }
+      // Same cookie CSRF as other admin POSTs. Never empty. Cap 100.
+      // Do not call deleteOrder / /order-delete (those cancel).
+      bulkDeleteOrders: function (ids) {
+        if (!ids || !ids.length) {
+          return Promise.resolve({ error: 'missing ids' });
+        }
+        return request('/api/admin/orders-bulk-delete', {
           method: 'POST',
-          body: { ids: ids },
+          body: { ids: ids.slice(0, 100), confirm: true },
         });
       },
       getProducts: function (opts) {

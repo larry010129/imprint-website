@@ -8,9 +8,9 @@
 <meta name="robots" content="noindex">
 <link rel="stylesheet" href="/css/admin-core.css?v=36">
 <link rel="stylesheet" href="/css/skeleton.css?v=1">
-<link rel="stylesheet" href="/css/admin1-shell.css?v=8">
-<link rel="stylesheet" href="/css/admin-orders.css?v=13">
-<link rel="stylesheet" href="/css/admin-tables.css?v=30">
+<link rel="stylesheet" href="/css/admin1-shell.css?v=9">
+<link rel="stylesheet" href="/css/admin-orders.css?v=14">
+<link rel="stylesheet" href="/css/admin-tables.css?v=31">
 <link rel="stylesheet" href="/static/react/admin-tables.css?v=41">
 
 <link rel="stylesheet" href="/css/cms-editor.css?v=12">
@@ -374,6 +374,14 @@
             <button class="btn-sm btn-primary" id="btnNewOrder" type="button">+ 新增訂單</button>
           </div>
         </header>
+        <div class="orders-tabs" id="ordersTabs" role="tablist" aria-label="訂單分類">
+          <button type="button" class="orders-tab is-active" role="tab" aria-selected="true" data-orders-tab="all">全部</button>
+          <button type="button" class="orders-tab" role="tab" aria-selected="false" data-orders-tab="unpaid">待付款</button>
+          <button type="button" class="orders-tab" role="tab" aria-selected="false" data-orders-tab="to_ship">待出貨</button>
+          <button type="button" class="orders-tab" role="tab" aria-selected="false" data-orders-tab="to_receive">待收貨</button>
+          <button type="button" class="orders-tab" role="tab" aria-selected="false" data-orders-tab="completed">已完成</button>
+          <button type="button" class="orders-tab" role="tab" aria-selected="false" data-orders-tab="cancelled">不成立</button>
+        </div>
         <div class="orders-search">
           <input type="search" id="ordersSearch" placeholder="搜尋訂單編號、客戶、品項…" aria-label="搜尋訂單">
         </div>
@@ -383,7 +391,7 @@
             <select id="ordersBulkStatus" class="orders-bulk-select"></select>
           </label>
           <button type="button" class="btn-sm btn-primary" id="ordersBulkApply">套用</button>
-          <button type="button" class="btn-sm adx-action--danger" id="ordersBulkDelete">刪除</button>
+          <button type="button" class="btn-sm adx-action--danger" id="ordersBulkDelete" disabled>刪除</button>
           <button type="button" class="btn-sm" id="ordersBulkClear">清除選取</button>
         </div>
         <div class="records-table-wrap" id="ordersTableBody" aria-busy="true">
@@ -591,7 +599,7 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 
-<script src="/js/api-client.js?v=27"></script>
+<script src="/js/api-client.js?v=28"></script>
 <script src="/js/admin1-shell.js?v=4"></script>
 <script src="/js/admin-nav-visibility.js?v=1"></script>
 <script src="/js/toast.js?v=1"></script>
@@ -604,7 +612,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <script src="/js/admin-image-urls.js?v=12"></script>
 <script src="/js/admin.js?v=25"></script>
 <script src="/js/girdle-engrave.js?v=11"></script>
-<script src="/js/admin-orders.js?v=26"></script>
+<script src="/js/admin-orders.js?v=27"></script>
 <script src="/js/order-detail.js"></script>
 <script src="/js/admin-products.js?v=65"></script>
 <script src="/js/admin-accounts.js?v=12"></script>
