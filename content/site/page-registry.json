@@ -930,13 +930,13 @@
         "src": "/static/js/shop-i18n.js?v=24"
       },
       {
-        "src": "/static/js/girdle-engrave.js?v=30"
+        "src": "/static/js/girdle-engrave.js?v=31"
       },
       {
         "src": "/static/js/shop-terms.js?v=4"
       },
       {
-        "src": "/static/js/shop.js?v=171"
+        "src": "/static/js/shop.js?v=172"
       }
     ],
     "head_extras": []

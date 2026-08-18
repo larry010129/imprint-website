@@ -44,27 +44,36 @@
 
   var ZWS = '\u200B';
   var EMBLEM_SLOT_COST = 2;
-  // Typed text: any visible characters (letters, CJK, digits, punctuation, spaces).
-  // Emblem tokens still insert via buttons. Slot cap stays at 12.
+  // Typed text: letters, digits, punctuation, spaces at any carat.
+  // CJK Unified Ideographs (+ Ext A) only when setAllowChinese(true) — shop
+  // uses 0.3ct+. Emblem tokens still insert via buttons. Slot cap stays at 12.
   // ZWS is caret glue; strip C0/C1 controls and line breaks so the field stays single-line.
   var CONTROL_OR_BREAK = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\r\n\t]/g;
+  var CJK_CHAR = /[\u3400-\u4DBF\u4E00-\u9FFF]/;
+  var CJK_STRIP = /[\u3400-\u4DBF\u4E00-\u9FFF]/g;
 
   function stripZws(text) {
     return (text || '').replace(/\u200B/g, '');
   }
 
-  function sanitizePlainText(text) {
-    return stripZws(text).replace(CONTROL_OR_BREAK, '');
+  function stripCjk(text) {
+    return (text || '').replace(CJK_STRIP, '');
   }
 
-  function sanitizeTextNodes(input) {
+  function sanitizePlainText(text, allowChinese) {
+    var clean = stripZws(text).replace(CONTROL_OR_BREAK, '');
+    if (!allowChinese) clean = stripCjk(clean);
+    return clean;
+  }
+
+  function sanitizeTextNodes(input, allowChinese) {
     if (!input) return false;
     var changed = false;
     input.childNodes.forEach(function (node) {
       if (node.nodeType !== 3) return;
       var raw = node.textContent || '';
       var keptZws = raw.indexOf(ZWS) >= 0;
-      var clean = sanitizePlainText(raw);
+      var clean = sanitizePlainText(raw, allowChinese);
       var next = keptZws && clean ? ZWS + clean : (keptZws && !clean ? ZWS : clean);
       if (next !== raw) {
         node.textContent = next;
@@ -440,7 +449,7 @@
     afterChange();
   }
 
-  function setFromReadable(input, str, max, afterChange) {
+  function setFromReadable(input, str, max, allowChinese, afterChange) {
     if (!input) return;
     input.innerHTML = '';
     if (!str) {
@@ -458,7 +467,7 @@
           ensureZwsAfter(token);
         }
       } else {
-        var plain = sanitizePlainText(match[0]);
+        var plain = sanitizePlainText(match[0], allowChinese);
         if (plain) input.appendChild(document.createTextNode(plain));
       }
     }
@@ -604,6 +613,7 @@
     var emblemsRoot = typeof opts.emblemsRoot === 'string' ? document.getElementById(opts.emblemsRoot) : opts.emblemsRoot;
     var previewColor = opts.previewColor || 'white';
     var previewShape = opts.previewShape || 'round';
+    var allowChinese = !!opts.allowChinese;
     normalizeEmblemButtons(emblemsRoot);
     useRealGirdlePreview(previewEl, previewShape, previewColor);
     var lastValidHtml = input.innerHTML;
@@ -624,7 +634,7 @@
     }
 
     function afterChange() {
-      sanitizeTextNodes(input);
+      sanitizeTextNodes(input, allowChinese);
       if (slots(input) > max) {
         restoreValid();
       } else {
@@ -638,7 +648,7 @@
     }
 
     function insertAllowedText(text) {
-      var clean = sanitizePlainText(text);
+      var clean = sanitizePlainText(text, allowChinese);
       if (!clean) return;
       var sel = window.getSelection();
       var range = sel && sel.rangeCount && input.contains(sel.anchorNode)
@@ -711,7 +721,7 @@
       if (e.inputType === 'insertFromComposition' || e.inputType === 'insertCompositionText') return;
       if (e.inputType === 'insertText' || e.inputType === 'insertReplacementText') {
         var raw = e.data || '';
-        var clean = sanitizePlainText(raw);
+        var clean = sanitizePlainText(raw, allowChinese);
         if (!clean || clean !== raw) {
           e.preventDefault();
           if (clean) insertAllowedText(clean);
@@ -755,6 +765,10 @@
       }
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       if (e.key.length !== 1) return;
+      if (!allowChinese && CJK_CHAR.test(e.key)) {
+        e.preventDefault();
+        return;
+      }
       var selKey = window.getSelection();
       if (selKey && selKey.rangeCount && input.contains(selKey.anchorNode)) {
         var rangeKey = selKey.getRangeAt(0);
@@ -801,16 +815,23 @@
 
     return {
       readable: function () { return readable(input); },
-      setValue: function (str) { setFromReadable(input, str || '', max, afterChange); },
+      setValue: function (str) { setFromReadable(input, str || '', max, allowChinese, afterChange); },
       setPreviewColor: function (colorId) {
         setGirdlePreview(previewEl, wrapShapeId(previewEl), colorId);
       },
       setPreviewShapeAndColor: function (shapeId, colorId) {
         setGirdlePreview(previewEl, shapeId || 'round', colorId || 'white');
       },
-      setAllowChinese: function () {
-        // Always-on: typing is not gated by carat. Hook stays so shop.js /
-        // configurator callers do not break.
+      setAllowChinese: function (flag) {
+        flag = !!flag;
+        if (flag === allowChinese) return;
+        allowChinese = flag;
+        if (!allowChinese) {
+          // Carat dropped below 0.3 — strip CJK already typed. Letters,
+          // digits, punctuation, spaces, and emblems stay.
+          sanitizeTextNodes(input, false);
+          afterChange();
+        }
       },
       focus: function () { input.focus(); }
     };
