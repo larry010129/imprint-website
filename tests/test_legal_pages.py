@@ -94,7 +94,7 @@ def test_terms_keeps_draft_noindex_and_return_policy_links(client):
     assert "管轄法院" not in slots.get("todo-li-3", "")
     assert "todo-title" not in slots
     image_keys = {spec.page_key for spec in page_image_slot_specs()}
-    assert "/terms" not in image_keys
+    assert "/terms" in image_keys
 
 
 def test_return_policy_stays_indexable(client):

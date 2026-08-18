@@ -683,11 +683,13 @@ def test_page_image_storage_folders_cover_admin_tabs():
     assert PAGE_IMAGE_STORAGE_FOLDERS["/series/signature/"] == "signature-diamond"
     assert PAGE_IMAGE_STORAGE_FOLDERS["/what-is-dna-diamond"] == "dna-diamond"
     assert PAGE_IMAGE_STORAGE_FOLDERS["/privacy"] == "privacy"
+    assert PAGE_IMAGE_STORAGE_FOLDERS["/terms"] == "terms"
     assert PAGE_IMAGE_STORAGE_FOLDERS["/return-policy"] == "return-policy"
     assert page_image_storage_folder(None) == "_pending"
     assert page_image_storage_folder("/series/pet") == "pet-diamond"
     assert page_image_storage_folder("/series/signature/") == "signature-diamond"
     assert page_image_storage_folder("/privacy") == "privacy"
+    assert page_image_storage_folder("/terms") == "terms"
     assert page_image_storage_folder("/return-policy") == "return-policy"
 
 
@@ -695,13 +697,14 @@ def test_inventory_excludes_empty_calculator_and_jewelry_slots():
     rows = build_page_image_seed()
     counts = Counter(row["page_key"] for row in rows)
     by_slot = {row["slot_key"]: row for row in rows if row["page_key"] == "/what-is-dna-diamond"}
-    assert len(rows) == 52
-    assert len(counts) == 13
+    assert len(rows) == 53
+    assert len(counts) == 14
     assert counts["/journal"] == 1
     assert counts["/about"] == 3
     assert counts["/what-is-dna-diamond"] == 14
     assert counts["/series/signature/"] == 2
     assert counts["/privacy"] == 1
+    assert counts["/terms"] == 1
     assert counts["/return-policy"] == 1
     assert "/shop/calculator/" not in counts
     assert not any(key.startswith("/jewelry") for key in counts)
@@ -736,11 +739,15 @@ def test_signature_series_page_label_is_true_self_not_brand():
 
 
 def test_legal_pages_with_hero_binding_have_empty_slots():
-    rows = {row["page_key"]: row for row in build_page_image_seed() if row["page_key"] in {"/privacy", "/return-policy"}}
+    rows = {row["page_key"]: row for row in build_page_image_seed() if row["page_key"] in {"/privacy", "/terms", "/return-policy"}}
     assert rows["/privacy"]["slot_key"] == "hero"
     assert rows["/privacy"]["label"] == "隱私權政策"
     assert rows["/privacy"]["slot_label"] == "頁首圖片"
     assert rows["/privacy"]["default_image_url"] == ""
+    assert rows["/terms"]["slot_key"] == "hero"
+    assert rows["/terms"]["label"] == "服務條款"
+    assert rows["/terms"]["slot_label"] == "頁首圖片"
+    assert rows["/terms"]["default_image_url"] == ""
     assert rows["/return-policy"]["slot_key"] == "hero"
     assert rows["/return-policy"]["label"] == "退換貨政策"
     assert rows["/return-policy"]["default_image_url"] == ""
@@ -756,7 +763,6 @@ def test_copy_pages_without_content_images_have_no_slots():
         "/contact",
         "/faq",
         "/stories",
-        "/terms",
     ):
         assert route not in page_keys
 
