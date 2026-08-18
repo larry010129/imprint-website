@@ -101,6 +101,27 @@ a.checkout-stepper-label:hover {
   background: #fff;
   border: 1px solid rgba(198, 40, 40, 0.22);
   padding: 16px 18px;
+  animation: checkout-notice-flash 0.65s ease-in-out 2;
+}
+
+@keyframes checkout-notice-flash {
+  0%,
+  100% {
+    background-color: #fff;
+    border-color: rgba(198, 40, 40, 0.22);
+    box-shadow: none;
+  }
+  50% {
+    background-color: #fdecea;
+    border-color: rgba(198, 40, 40, 0.55);
+    box-shadow: 0 0 0 3px rgba(198, 40, 40, 0.18);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .checkout-notice {
+    animation: none;
+  }
 }
 
 .checkout-notice-title {
