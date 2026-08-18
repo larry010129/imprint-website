@@ -675,22 +675,22 @@ JEWELRY_CATEGORY_RINGS = PageMeta(
 )
 
 JEWELRY_STYLE_REDIRECTS: dict[str, str] = {
-    "/jewelry/rings/classic-solitaire/": "/shop/calculator/",
-    "/jewelry/rings/pave-halo/": "/shop/calculator/",
-    "/jewelry/rings/vintage-vine/": "/shop/calculator/",
-    "/jewelry/rings/modern-band/": "/shop/calculator/",
-    "/jewelry/earrings/stud/": "/shop/calculator/",
-    "/jewelry/earrings/drop/": "/shop/calculator/",
-    "/jewelry/earrings/hoop/": "/shop/calculator/",
-    "/jewelry/earrings/ear-cuff/": "/shop/calculator/",
-    "/jewelry/necklaces/classic-pendant/": "/shop/calculator/",
-    "/jewelry/necklaces/halo-pendant/": "/shop/calculator/",
-    "/jewelry/necklaces/bar/": "/shop/calculator/",
-    "/jewelry/necklaces/double-layer/": "/shop/calculator/",
-    "/jewelry/bracelets/tennis/": "/shop/calculator/",
-    "/jewelry/bracelets/chain/": "/shop/calculator/",
-    "/jewelry/bracelets/charm/": "/shop/calculator/",
-    "/jewelry/bracelets/bangle/": "/shop/calculator/",
+    "/jewelry/rings/classic-solitaire/": "/",
+    "/jewelry/rings/pave-halo/": "/",
+    "/jewelry/rings/vintage-vine/": "/",
+    "/jewelry/rings/modern-band/": "/",
+    "/jewelry/earrings/stud/": "/",
+    "/jewelry/earrings/drop/": "/",
+    "/jewelry/earrings/hoop/": "/",
+    "/jewelry/earrings/ear-cuff/": "/",
+    "/jewelry/necklaces/classic-pendant/": "/",
+    "/jewelry/necklaces/halo-pendant/": "/",
+    "/jewelry/necklaces/bar/": "/",
+    "/jewelry/necklaces/double-layer/": "/",
+    "/jewelry/bracelets/tennis/": "/",
+    "/jewelry/bracelets/chain/": "/",
+    "/jewelry/bracelets/charm/": "/",
+    "/jewelry/bracelets/bangle/": "/",
 }
 
 
