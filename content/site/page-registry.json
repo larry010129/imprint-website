@@ -39,7 +39,7 @@
   {
     "route": "/404",
     "template": "pages/404.html",
-    "title": "找不到頁面｜銘印鑽石 IMPRINT DIAMOND",
+    "title": "找不到這個頁面｜銘印鑽石 IMPRINT DIAMOND",
     "description": "",
     "canonical_path": "",
     "og_title": null,
@@ -54,7 +54,7 @@
     "layout": "site",
     "main_class": "",
     "extra_css": [
-      "/static/css/error-404.css?v=1"
+      "/static/css/error-404.css?v=2"
     ],
     "extra_scripts": [],
     "head_extras": []
