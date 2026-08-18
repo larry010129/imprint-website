@@ -34,7 +34,8 @@ def test_home_defers_htmx_gtag_and_extras(client):
 
     assert "GTM-KD4FZ458" in html
     assert "function injectGtm" in html
-    assert "GTM_FALLBACK_MS = 12000" in html
+    assert "largest-contentful-paint" in html
+    assert "GTM_FALLBACK_MS" not in html
     assert "https://www.googletagmanager.com/gtm.js?id=" in html
     assert "G-J5QPK34V89" not in html
     assert "gtagMinDelayMs" not in html
@@ -67,8 +68,9 @@ def _assert_deferred_gtm(html: str) -> None:
     assert "GTM-KD4FZ458" in html
     assert html.count("GTM-KD4FZ458") == 2
     assert "function injectGtm" in html
-    assert "GTM_FALLBACK_MS = 12000" in html
-    assert "addEventListener('load', scheduleGtm)" in html
+    assert "largest-contentful-paint" in html
+    assert "GTM_FALLBACK_MS" not in html
+    assert "function afterLcp" in html
     assert "https://www.googletagmanager.com/gtm.js?id=" in html
     assert "https://www.googletagmanager.com/ns.html?id=GTM-KD4FZ458" in html
     assert '<script src="https://www.googletagmanager.com/gtm.js' not in html
@@ -87,7 +89,10 @@ def test_public_layouts_share_one_deferred_gtm_snippet():
     assert "GTM-KD4FZ458" in head
     assert head.count("GTM-") == 1
     assert "function injectGtm" in head
-    assert "GTM_FALLBACK_MS = 12000" in head
+    assert "largest-contentful-paint" in head
+    assert "GTM_FALLBACK_MS" not in head
+    assert "ad.doubleclick.net" not in head
+    assert "googleads.g.doubleclick.net" not in head
     assert "G-J5QPK34V89" not in head
     assert "gtag/js" not in head
     assert "AW-18310006207" not in head
@@ -110,6 +115,8 @@ def test_home_auth_quote_and_share_defer_gtm(client):
 def test_csp_still_omits_ads_collect_hosts():
     from app import HTML_CONTENT_SECURITY_POLICY
 
+    assert "ad.doubleclick.net" not in HTML_CONTENT_SECURITY_POLICY
+    assert "googleads.g.doubleclick.net" not in HTML_CONTENT_SECURITY_POLICY
     assert "doubleclick.net" not in HTML_CONTENT_SECURITY_POLICY
     assert "googleads" not in HTML_CONTENT_SECURITY_POLICY
 

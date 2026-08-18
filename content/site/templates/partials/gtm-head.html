@@ -1,26 +1,37 @@
 <!-- Google Tag Manager -->
 <script>
 (function () {
-  /* Off first paint / LCP. rIC alone fires during PSI lab idle. */
-  var GTM_FALLBACK_MS = 12000;
+  /* After LCP only. CSP stays locked — later Ads CSP errors are OK. */
   function injectGtm() {
     if (window.__gtmInjected) return;
     window.__gtmInjected = true;
-    ['pointerdown', 'keydown', 'touchstart', 'scroll'].forEach(function (evt) {
-      window.removeEventListener(evt, injectGtm, true);
-    });
     (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
     new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
     j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
     })(window,document,'script','dataLayer','GTM-KD4FZ458');
   }
-  ['pointerdown', 'keydown', 'touchstart', 'scroll'].forEach(function (evt) {
-    window.addEventListener(evt, injectGtm, { once: true, passive: true, capture: true });
-  });
-  function scheduleGtm() { setTimeout(injectGtm, GTM_FALLBACK_MS); }
-  if (document.readyState === 'complete') scheduleGtm();
-  else window.addEventListener('load', scheduleGtm);
+  function afterLcp() {
+    if (document.readyState === 'complete') {
+      injectGtm();
+      return;
+    }
+    var po;
+    try {
+      po = new PerformanceObserver(function () {
+        po.disconnect();
+        injectGtm();
+      });
+      po.observe({ type: 'largest-contentful-paint', buffered: true });
+    } catch (e) {
+      po = null;
+    }
+    window.addEventListener('load', function () {
+      if (po) po.disconnect();
+      injectGtm();
+    });
+  }
+  afterLcp();
 })();
 </script>
 <!-- End Google Tag Manager -->
