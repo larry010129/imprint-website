@@ -177,22 +177,17 @@ def test_checkout_hold_notice_is_copy_only():
     assert "保管費" not in shop_js
 
 
-def test_calculator_hold_notice_under_action_row_only():
+def test_calculator_omits_hold_notice():
     root = Path(__file__).resolve().parents[1]
-    calc = (root / "content/site/templates/pages/shop/calculator.html").read_text(
-        encoding="utf-8"
-    )
     notice = (
         "成品通知後請於三個月內取件；逾期自第四個月起，"
         "按尾款 5% 計收保管費（未滿一個月以一個月計）。"
     )
-    assert calc.count(notice) == 1
-    after_actions = calc.split('id="shop-action-row"', 1)[1]
-    before_secondary = after_actions.split("shop-secondary-actions", 1)[0]
-    assert f'<p class="hero-price-disclaimer">{notice}</p>' in before_secondary
-    terms = calc[calc.find('id="shop-terms-dialog"') : calc.find('id="mobile-buy-bar"')]
-    assert notice not in terms
-    mobile_bar = calc[calc.find('id="mobile-buy-bar"') : calc.find("product-image-lightbox")]
-    assert notice not in mobile_bar
+    calc = (root / "content/site/templates/pages/shop/calculator.html").read_text(
+        encoding="utf-8"
+    )
+    body = (root / "content/site/bodies/shop__calculator.html").read_text(encoding="utf-8")
+    assert notice not in calc
+    assert notice not in body
     shop_js = (root / "public/js/shop.js").read_text(encoding="utf-8")
     assert notice not in shop_js
