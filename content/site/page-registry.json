@@ -177,7 +177,7 @@
     "main_class": "",
     "extra_css": [
       "/static/css/member-app.css?v=8",
-      "/static/css/checkout-page.css?v=17"
+      "/static/css/checkout-page.css?v=18"
     ],
     "extra_scripts": [
       {
