@@ -16,31 +16,51 @@ from app.orders import (
 def test_carat_allows_chinese_engraving():
     assert carat_allows_chinese_engraving(0.3) is True
     assert carat_allows_chinese_engraving("0.3") is True
+    assert carat_allows_chinese_engraving("0.30") is True
+    assert carat_allows_chinese_engraving("0.30ct") is True
     assert carat_allows_chinese_engraving("1") is True
     assert carat_allows_chinese_engraving(0.29) is False
     assert carat_allows_chinese_engraving("0.2") is False
     assert carat_allows_chinese_engraving(None) is False
     assert carat_allows_chinese_engraving("") is False
+    assert carat_allows_chinese_engraving("3fen") is False
+
+
+def test_sanitize_cjk_only_at_point_three():
+    assert sanitize_girdle_engraving("永遠", "0.3") == "永遠"
+    assert sanitize_girdle_engraving("永遠", 0.3) == "永遠"
+    assert sanitize_girdle_engraving("永遠", "0.30") == "永遠"
+    assert sanitize_girdle_engraving("永遠", carat="0.3") == "永遠"
+    assert sanitize_girdle_engraving("永遠", 0.2) == ""
+    assert sanitize_girdle_engraving("永遠", "0.2") == ""
+    assert sanitize_girdle_engraving("永遠") == ""
+    assert sanitize_girdle_engraving("永遠", None) == ""
+
+
+def test_sanitize_keeps_latin_punct_at_small_carat():
+    assert sanitize_girdle_engraving("Love 2026", 0.2) == "Love 2026"
+    assert sanitize_girdle_engraving("A.B @ $", 0.2) == "A.B @ $"
+    assert sanitize_girdle_engraving("love.@$", 0.2) == "love.@$"
+    assert sanitize_girdle_engraving("A@B.$/2024", 0.2) == "A@B.$/2024"
 
 
 def test_sanitize_keeps_cjk_spaces_punctuation_and_symbols():
-    assert sanitize_girdle_engraving("永遠") == "永遠"
+    assert sanitize_girdle_engraving("永遠", carat="0.3") == "永遠"
     assert sanitize_girdle_engraving("Love 2026") == "Love 2026"
-    assert sanitize_girdle_engraving("A&B · 永遠!") == "A&B · 永遠!"
-    assert sanitize_girdle_engraving("〔雙心〕永遠") == "〔雙心〕永遠"
+    assert sanitize_girdle_engraving("A&B · 永遠!", carat="0.3") == "A&B · 永遠!"
+    assert sanitize_girdle_engraving("〔雙心〕永遠", carat="0.3") == "〔雙心〕永遠"
     assert sanitize_girdle_engraving("love.@$") == "love.@$"
     assert sanitize_girdle_engraving("A@B.$/2024") == "A@B.$/2024"
-    assert sanitize_girdle_engraving("愛.@$") == "愛.@$"
-    assert sanitize_girdle_engraving("永遠", carat="0.3") == "永遠"
+    assert sanitize_girdle_engraving("愛.@$", carat="0.3") == "愛.@$"
     assert sanitize_girdle_engraving("永遠.@$", carat="0.2") == ".@$"
     assert sanitize_girdle_engraving("〔雙心〕永遠", allow_chinese=False) == "〔雙心〕"
 
 
 def test_sanitize_strips_html_controls_and_clips():
-    assert sanitize_girdle_engraving("<b>永遠</b>") == "永遠"
+    assert sanitize_girdle_engraving("<b>永遠</b>", carat="0.3") == "永遠"
     assert sanitize_girdle_engraving("<script>alert(1)</script>Love") == "alert(1)Love"
     assert sanitize_girdle_engraving("Love\x00 2026\n") == "Love 2026"
-    assert sanitize_girdle_engraving("&lt;i&gt;永遠&lt;/i&gt;") == "永遠"
+    assert sanitize_girdle_engraving("&lt;i&gt;永遠&lt;/i&gt;", carat="0.3") == "永遠"
     assert sanitize_girdle_engraving("x" * 200) == "x" * GIRDLE_MAX_SLOTS
 
 
@@ -68,6 +88,18 @@ def test_apply_accepts_snake_and_camel():
     apply_girdle_engraving(below)
     assert below["engravingGirdle"] == ".@$"
 
+    latin = {"carat": "0.2", "engravingGirdle": "A.B @ $"}
+    apply_girdle_engraving(latin)
+    assert latin["engravingGirdle"] == "A.B @ $"
+
+    missing = {"engravingGirdle": "永遠"}
+    apply_girdle_engraving(missing)
+    assert missing["engravingGirdle"] == ""
+
+    alt = {"diamondCarat": "0.30", "engravingGirdle": "永遠"}
+    apply_girdle_engraving(alt)
+    assert alt["engravingGirdle"] == "永遠"
+
 
 def test_validate_config_keeps_shop_girdle_text():
     body = {
@@ -92,6 +124,14 @@ def test_validate_config_keeps_shop_girdle_text():
     body["engravingGirdle"] = "永遠.@$"
     assert _validate_config(body) is None
     assert body["engravingGirdle"] == ".@$"
+
+    body["engravingGirdle"] = "Love 2026"
+    assert _validate_config(body) is None
+    assert body["engravingGirdle"] == "Love 2026"
+
+    body["engravingGirdle"] = "A.B @ $"
+    assert _validate_config(body) is None
+    assert body["engravingGirdle"] == "A.B @ $"
 
     body["carat"] = "0.3"
     body["engravingGirdle"] = "<img src=x>永遠"

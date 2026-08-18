@@ -15,16 +15,18 @@ from app.image_urls import config_image_url, is_uuid, order_product_id, resolve_
 
 _TAIPEI = ZoneInfo("Asia/Taipei")
 
-# Match shop UI: 12 slots, known 〔label〕 emblems cost 2. No A-Za-z0-9 gate.
-# CJK (中文) only at 0.3ct+ — same as shop.js caratAllowsChineseEngraving.
+# Match shop UI: 12 slots, known 〔label〕 emblems cost 2.
+# CJK (中文) only at 0.3ct+ — same gate as shop.js caratAllowsChineseEngraving.
 GIRDLE_MAX_SLOTS = 12
 GIRDLE_EMBLEM_SLOT_COST = 2
 GIRDLE_ENGRAVING_MAX_LEN = GIRDLE_MAX_SLOTS  # text-only clip; emblems use slots
 GIRDLE_CHINESE_MIN_CARAT = 0.3
+_GIRDLE_CARAT_KEYS = ("carat", "diamondCarat", "diamond_carat")
 _GIRDLE_HTML_TAG_RE = re.compile(r"<[^>]*>", re.DOTALL)
 _GIRDLE_ANGLE_RE = re.compile(r"[<>]")
 _GIRDLE_TOKEN_RE = re.compile(r"〔([^〕]+)〕|[^〔〕]+")
-_GIRDLE_CJK_RE = re.compile(r"[\u3400-\u4dbf\u4e00-\u9fff]")
+# FE CJK class + compatibility ideographs. Fullwidth punctuation is not here.
+_GIRDLE_CJK_RE = re.compile(r"[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]")
 _GIRDLE_EMBLEM_LABELS = frozenset(
     {
         "貓掌",
@@ -70,26 +72,63 @@ def _trim_girdle_slots(text: str, max_slots: int = GIRDLE_MAX_SLOTS) -> str:
     return "".join(out)
 
 
-def carat_allows_chinese_engraving(carat: Any) -> bool:
-    """True when carat >= 0.3. Missing/invalid carat is closed (no CJK)."""
+def parse_girdle_carat(value: Any) -> float | None:
+    """Shop carat → float. \"0.3\" / 0.3 / \"0.30\" / \"0.30ct\" are 0.3.
+
+    Missing, blank, or unparseable (3fen, 1.0mm) → None.
+    """
+    if isinstance(value, bool) or value is None or value == "":
+        return None
+    if isinstance(value, (int, float)):
+        num = float(value)
+        return None if num != num else num
+    text = "".join(str(value).strip().lower().split())
+    if text.endswith("ct"):
+        text = text[:-2]
+    if not text or any(ch.isalpha() for ch in text):
+        return None
     try:
-        return float(carat) >= GIRDLE_CHINESE_MIN_CARAT
-    except (TypeError, ValueError):
-        return False
+        return float(text)
+    except ValueError:
+        return None
+
+
+def _girdle_carat_from_cfg(cfg: dict[str, Any]) -> Any:
+    for key in _GIRDLE_CARAT_KEYS:
+        if cfg.get(key) not in (None, ""):
+            return cfg[key]
+    return None
+
+
+def carat_allows_chinese_engraving(carat: Any) -> bool:
+    """True when parsed carat >= 0.3. Missing/unparseable → no CJK."""
+    parsed = parse_girdle_carat(carat)
+    return parsed is not None and parsed >= GIRDLE_CHINESE_MIN_CARAT
+
+
+def _strip_girdle_cjk(text: str) -> str:
+    """Drop Han from typed text. Known 〔label〕 emblems stay (圖騰, any size)."""
+    parts: list[str] = []
+    for match in _GIRDLE_TOKEN_RE.finditer(text):
+        token = match.group(0)
+        if token.startswith("〔") and match.group(1) in _GIRDLE_EMBLEM_LABELS:
+            parts.append(token)
+            continue
+        parts.append(_GIRDLE_CJK_RE.sub("", token))
+    return "".join(parts)
 
 
 def sanitize_girdle_engraving(
     value: Any,
+    carat: Any = None,
     *,
     allow_chinese: bool | None = None,
-    carat: Any = None,
 ) -> str:
-    """Keep shop-posted girdle text; strip controls/HTML; cap 12 slots.
+    """Keep shop girdle text; strip controls/HTML; cap 12 slots.
 
-    Letters, digits, punctuation, spaces, and symbols (. @ $ and the rest)
-    stay at any carat. Emblems stay. CJK is kept only when allow_chinese
-    is true, or carat >= 0.3. Standalone calls (no carat / flag) keep CJK
-    so already-accepted display text is not rewritten.
+    Letters, digits, punctuation (. @ $ and the rest), spaces, and emblems
+    stay at any size. CJK stays only when allow_chinese is true, or when
+    parsed carat >= 0.3. Missing/unparseable carat → strip CJK.
     """
     if value is None:
         return ""
@@ -97,10 +136,10 @@ def sanitize_girdle_engraving(
     text = _GIRDLE_HTML_TAG_RE.sub("", text)
     text = _GIRDLE_ANGLE_RE.sub("", text)
     text = "".join(ch for ch in text if unicodedata.category(ch) != "Cc")
-    if allow_chinese is None and carat is not None:
+    if allow_chinese is None:
         allow_chinese = carat_allows_chinese_engraving(carat)
-    if allow_chinese is False:
-        text = _GIRDLE_CJK_RE.sub("", text)
+    if not allow_chinese:
+        text = _strip_girdle_cjk(text)
     text = text.strip()
     return _trim_girdle_slots(text)
 
@@ -114,10 +153,7 @@ def apply_girdle_engraving(cfg: dict[str, Any] | None) -> None:
     raw = cfg.get("engravingGirdle")
     if raw is None:
         raw = cfg.get("engraving_girdle")
-    cleaned = sanitize_girdle_engraving(
-        raw,
-        allow_chinese=carat_allows_chinese_engraving(cfg.get("carat")),
-    )
+    cleaned = sanitize_girdle_engraving(raw, _girdle_carat_from_cfg(cfg))
     cfg["engravingGirdle"] = cleaned
     if "engraving_girdle" in cfg:
         cfg["engraving_girdle"] = cleaned
@@ -220,7 +256,7 @@ def _engraving_parts(cfg: dict) -> list[str]:
         parts.append(f"金屬刻字 {cfg['engravingRemark']}")
     girdle = sanitize_girdle_engraving(
         cfg.get("engravingGirdle") or cfg.get("engraving_girdle") or "",
-        allow_chinese=carat_allows_chinese_engraving(cfg.get("carat")),
+        _girdle_carat_from_cfg(cfg),
     )
     if girdle:
         parts.append(f"腰圍刻字 {girdle}")
@@ -801,11 +837,15 @@ def hydrate_order(order: dict) -> dict:
     if config:
         apply_girdle_engraving(config)
         if order.get("engraving_girdle") is not None:
+            carat = _girdle_carat_from_cfg(config)
+            if carat in (None, ""):
+                carat = (
+                    order.get("carat")
+                    or order.get("diamondCarat")
+                    or order.get("diamond_carat")
+                )
             order["engraving_girdle"] = sanitize_girdle_engraving(
-                order["engraving_girdle"],
-                allow_chinese=carat_allows_chinese_engraving(
-                    config.get("carat") or order.get("carat")
-                ),
+                order["engraving_girdle"], carat
             )
         order.setdefault("category", config.get("category"))
         order.setdefault(
