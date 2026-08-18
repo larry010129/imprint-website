@@ -415,11 +415,9 @@ def create_app() -> FastAPI:
                 HTML_CONTENT_SECURITY_POLICY,
             )
             response.headers.setdefault("Permissions-Policy", HTML_PERMISSIONS_POLICY)
-        from app.robots_host import x_robots_tag_value
+        from app.robots_host import apply_x_robots_tag
 
-        robots_tag = x_robots_tag_value(request.headers.get("host"))
-        if robots_tag:
-            response.headers["X-Robots-Tag"] = robots_tag
+        apply_x_robots_tag(request, response)
         return response
 
     # Legacy + versioned JSON mounts (public HTML is Jinja/HTMX, not JSON clients).

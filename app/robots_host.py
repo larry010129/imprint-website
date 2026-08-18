@@ -59,3 +59,10 @@ def x_robots_tag_value(host_header: str | None) -> str | None:
     if is_noindex_host(host_header):
         return HOST_NOINDEX_ROBOTS
     return None
+
+
+def apply_x_robots_tag(request, response) -> None:
+    """Set X-Robots-Tag from request Host. Used by app middleware and tests."""
+    tag = x_robots_tag_value(request.headers.get("host"))
+    if tag:
+        response.headers["X-Robots-Tag"] = tag

@@ -34,11 +34,27 @@ _INDEX_HOSTS = (
 
 @pytest.fixture(scope="module")
 def client():
+    """Slim app: real page SSR + the same X-Robots-Tag helper as create_app.
+
+    Avoids create_app() lifespan (DATABASE_URL). Header + meta still share
+    ``is_noindex_host`` / ``HOST_NOINDEX_ROBOTS``.
+    """
+    from fastapi import FastAPI
     from fastapi.testclient import TestClient
 
-    from app import create_app
+    from app.controllers.web_controller import register_pages
+    from app.robots_host import apply_x_robots_tag
 
-    with TestClient(create_app()) as c:
+    app = FastAPI()
+
+    @app.middleware("http")
+    async def host_robots(request, call_next):
+        response = await call_next(request)
+        apply_x_robots_tag(request, response)
+        return response
+
+    register_pages(app)
+    with TestClient(app) as c:
         yield c
 
 
