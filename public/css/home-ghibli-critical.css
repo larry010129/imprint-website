@@ -117,6 +117,10 @@
 .page-home .hc-slide.is-active{
   opacity:1; visibility:visible; pointer-events:auto; z-index:2;
 }
+/* Decode the picture-selected file under the current slide — do not fade in empty/broken. */
+.page-home .hc-slide.is-armed{
+  visibility:visible; opacity:0; pointer-events:none; z-index:1;
+}
 /* LCP is the first-slide h1. A 1.3s fade from opacity:0 delays element render. */
 .page-home .hc-slide.is-active:first-child,
 .page-home .hc-slide.no-anim{ transition:none; }

@@ -53,10 +53,19 @@ def test_home_first_slide_matches_banner_seed():
 
 def test_home_banners_cache_bust():
     html = INDEX.read_text(encoding="utf-8")
-    assert "home-banners.js?v=16" in html
+    registry = (ROOT / "content" / "site" / "page-registry.json").read_text(encoding="utf-8")
+    base = (ROOT / "content" / "site" / "templates" / "layouts" / "base.html").read_text(
+        encoding="utf-8"
+    )
+    assert "home-banners.js?v=17" in html
+    assert "home-banners.js?v=17" in registry
+    assert "main.js?v=2.12" in base
+    assert "main.js?v=2.11" not in base
+    assert "home-banners.js?v=16" not in html
+    assert "home-banners.js?v=16" not in registry
     # Phone crops must not wait on 10s below-fold delay.
     assert "HOME_EXTRAS_MS" not in html
-    assert "inject('/static/js/home-banners.js?v=16');" in html
+    assert "inject('/static/js/home-banners.js?v=17');" in html
     assert "aspect-ratio:800/388" not in html
 
 
@@ -257,8 +266,18 @@ def test_hero_carousel_preloads_and_swaps_after_decode():
     assert "function preloadAround" in main
     assert "function whenImgReady" in main
     assert "function imgDecoded" in main
+    assert "function imgPictureReady" in main
+    assert "function selectedPictureUrls" in main
+    assert "function armSlide" in main
+    assert "is-armed" in main
     assert "Never activate an img with no src" in main
     assert "restartImg.style.transform = clearNoAnim ? 'scale(1)' : 'scale(1.09)'" in main
+    banners = HOME_BANNERS.read_text(encoding="utf-8")
+    assert "function pinSelectedImgSrc" in banners
+    crit = (ROOT / "public" / "css" / "home-ghibli-critical.css").read_text(encoding="utf-8")
+    assert ".page-home .hc-slide.is-armed" in crit
+    home_css = (ROOT / "public" / "css" / "home.css").read_text(encoding="utf-8")
+    assert ".hc-slide.is-armed" in home_css
 
 
 def test_img_fallback_guards_empty_src_and_hero():

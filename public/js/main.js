@@ -247,6 +247,34 @@
       }
       var hcDots = Array.prototype.slice.call(hcViewport.querySelectorAll('.hc-dot'));
 
+      function srcsetUrls(srcset) {
+        return String(srcset || '').split(',').map(function (p) { return p.trim().split(/\s+/)[0]; }).filter(Boolean);
+      }
+      function assetPath(url) {
+        var s = String(url || '').split('#')[0].split('?')[0];
+        try { s = new URL(s, document.baseURI).pathname; } catch (e) {}
+        return s.toLowerCase();
+      }
+      /* First matching <source> (picture algorithm). data-srcset still pending = not settled. */
+      function selectedPictureUrls(img) {
+        var src = img && (img.getAttribute('src') || img.dataset.src || '');
+        var pic = img && img.parentNode;
+        if (!pic || pic.tagName !== 'PICTURE') {
+          return { urls: src ? [src] : [], pending: !!(img && img.dataset.src) };
+        }
+        var sources = pic.querySelectorAll('source');
+        for (var i = 0; i < sources.length; i++) {
+          var source = sources[i];
+          var media = source.getAttribute('media');
+          if (media && window.matchMedia && !window.matchMedia(media).matches) continue;
+          var pending = source.getAttribute('data-srcset');
+          var srcset = source.getAttribute('srcset');
+          if (!srcset && pending) return { urls: srcsetUrls(pending), pending: true };
+          if (srcset) return { urls: srcsetUrls(srcset), pending: false };
+        }
+        return { urls: src ? [src] : [], pending: !!img.dataset.src };
+      }
+
       function loadSlideImage(slide) {
         var img = slide.querySelector('.hc-media img');
         if (img) {
@@ -273,52 +301,63 @@
         return !!(img && imgHasSrc(img) && img.complete && img.naturalWidth > 0);
       }
 
+      /* complete+decode can be the OLD img.src while <picture> fetches the matching source. */
+      function imgPictureReady(img) {
+        if (!imgDecoded(img) || !img.currentSrc) return false;
+        var sel = selectedPictureUrls(img);
+        if (sel.pending) return false;
+        if (!sel.urls.length) return !!img.getAttribute('src');
+        var cur = assetPath(img.currentSrc);
+        return sel.urls.some(function (u) { return cur && cur === assetPath(u); });
+      }
+
       function whenImgReady(img, done) {
-        var cancelled = false;
+        var cancelled = false, timer = 0;
         function finish(ok) {
           if (cancelled) return;
           cancelled = true;
-          done(ok);
+          if (timer) clearTimeout(timer);
+          if (!ok) { done(false); return; }
+          requestAnimationFrame(function () {
+            requestAnimationFrame(function () { done(imgPictureReady(img)); });
+          });
         }
-        if (!img || !imgHasSrc(img)) {
-          finish(false);
-          return function () {};
+        function decodeThen() {
+          if (cancelled) return;
+          if (!imgPictureReady(img)) { finish(false); return; }
+          if (typeof img.decode !== 'function') { finish(true); return; }
+          img.decode().then(function () { finish(true); }, function () { finish(imgPictureReady(img)); });
         }
-        if (imgDecoded(img)) {
-          if (typeof img.decode === 'function') {
-            img.decode().then(function () { finish(true); }, function () { finish(imgDecoded(img)); });
-            return function () { cancelled = true; };
-          }
-          finish(true);
-          return function () {};
-        }
-        function onLoad() {
-          img.removeEventListener('load', onLoad);
-          img.removeEventListener('error', onErr);
-          if (typeof img.decode === 'function') {
-            img.decode().then(function () { finish(true); }, function () { finish(imgDecoded(img)); });
-          } else {
-            finish(true);
-          }
-        }
-        function onErr() {
-          img.removeEventListener('load', onLoad);
-          img.removeEventListener('error', onErr);
-          finish(false);
-        }
-        img.addEventListener('load', onLoad);
-        img.addEventListener('error', onErr);
+        if (!img || !imgHasSrc(img)) { finish(false); return function () {}; }
+        function onLoad() { img.removeEventListener('load', onLoad); img.removeEventListener('error', onErr); decodeThen(); }
+        function onErr() { img.removeEventListener('load', onLoad); img.removeEventListener('error', onErr); finish(false); }
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () {
+            if (cancelled) return;
+            if (imgPictureReady(img)) { decodeThen(); return; }
+            img.addEventListener('load', onLoad);
+            img.addEventListener('error', onErr);
+            if (imgPictureReady(img)) { img.removeEventListener('load', onLoad); img.removeEventListener('error', onErr); decodeThen(); }
+          });
+        });
+        timer = setTimeout(decodeThen, 4000);
         return function () {
           cancelled = true;
+          if (timer) clearTimeout(timer);
           img.removeEventListener('load', onLoad);
           img.removeEventListener('error', onErr);
         };
       }
 
+      function armSlide(slide) {
+        if (slide && !slide.classList.contains('is-active')) slide.classList.add('is-armed');
+      }
+
       function preloadAround() {
         if (hcCount < 2) return;
-        loadSlideImage(hcSlides[(hcIndex + 1) % hcCount]);
-        loadSlideImage(hcSlides[(hcIndex - 1 + hcCount) % hcCount]);
+        [hcSlides[(hcIndex + 1) % hcCount], hcSlides[(hcIndex - 1 + hcCount) % hcCount]].forEach(function (s) {
+          loadSlideImage(s); armSlide(s);
+        });
       }
 
       function paintSlide(withTransition) {
@@ -335,6 +374,7 @@
           var willBeActive = i === hcIndex;
           var img = s.querySelector('.hc-media img');
           if (clearNoAnim) { s.classList.add('no-anim'); }
+          s.classList.toggle('is-armed', false);
           s.classList.toggle('is-active', willBeActive);
 
           var isFirstRender = clearNoAnim;
@@ -356,23 +396,16 @@
           d.setAttribute('aria-selected', i === hcIndex ? 'true' : 'false');
         });
 
-        /* Batch writes above; restart CSS transitions after paint (double-rAF)
-           instead of void offsetWidth forced reflow / layout thrash. */
         if (restartSlide || clearNoAnim) {
           scheduleAfterLayout(function () {
             if (restartSlide) {
-              restartSlide.querySelectorAll('.reveal').forEach(function (el) {
-                el.classList.add('is-in');
-              });
+              restartSlide.querySelectorAll('.reveal').forEach(function (el) { el.classList.add('is-in'); });
             }
             if (restartImg) {
               restartImg.classList.remove('kb-reset');
-              /* Keep the first LCP frame static; animate only user-visible slide changes. */
               restartImg.style.transform = clearNoAnim ? 'scale(1)' : 'scale(1.09)';
             }
-            if (clearNoAnim) {
-              hcSlides.forEach(function (s) { s.classList.remove('no-anim'); });
-            }
+            if (clearNoAnim) hcSlides.forEach(function (s) { s.classList.remove('no-anim'); });
           });
         }
         preloadAround();
@@ -383,18 +416,15 @@
         if (!incoming) return;
         var img = loadSlideImage(incoming);
         if (img && !imgHasSrc(img)) return;
-        if (img && !imgDecoded(img)) {
-          var gen = (hcSwapGen += 1);
-          if (hcSwapCancel) hcSwapCancel();
-          hcSwapCancel = whenImgReady(img, function (ok) {
-            if (gen !== hcSwapGen) return;
-            hcSwapCancel = null;
-            if (!ok || !imgDecoded(img)) return;
-            paintSlide(withTransition);
-          });
-          return;
-        }
-        paintSlide(withTransition);
+        armSlide(incoming);
+        if (!img) { paintSlide(withTransition); return; }
+        var gen = (hcSwapGen += 1);
+        if (hcSwapCancel) hcSwapCancel();
+        hcSwapCancel = whenImgReady(img, function (ok) {
+          if (gen !== hcSwapGen) return;
+          hcSwapCancel = null;
+          if (ok && imgPictureReady(img)) paintSlide(withTransition);
+        });
       }
 
       function hcGoTo(i) {
