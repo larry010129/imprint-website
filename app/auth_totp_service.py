@@ -8,13 +8,12 @@ from typing import Any
 from app.auth import (
     TOTP_VERIFY_LOCKOUT_SECONDS,
     TOTP_VERIFY_MAX_ATTEMPTS,
-    bump_token_version,
     hash_password,
     record_failures,
     record_successes,
     verify_password,
 )
-from app.database import get_connection
+from app.database import get_connection, get_transaction
 from app.totp import (
     burn_backup_code,
     generate_backup_codes,
@@ -169,12 +168,20 @@ def verify_totp_for_pwreset(
 
 
 def complete_password_reset(user_id: str, new_password: str) -> None:
-    with get_connection() as conn, conn.cursor() as cur:
+    with get_transaction() as conn, conn.cursor() as cur:
         cur.execute(
-            "update users set password_hash = %s where id = %s",
+            """
+            update users
+               set password_hash = %s,
+                   token_version = token_version + 1
+             where id = %s
+            """,
             (hash_password(new_password), user_id),
         )
-    bump_token_version(user_id)
+        cur.execute(
+            "update password_reset_tokens set used_at = now() where user_id = %s and used_at is null",
+            (user_id,),
+        )
 
 
 def reset_password_with_totp(

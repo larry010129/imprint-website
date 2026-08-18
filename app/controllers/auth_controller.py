@@ -71,7 +71,7 @@ from app.auth_totp_service import (
     verify_step_up_password,
     verify_totp_for_pwreset,
 )
-from app.database import get_connection
+from app.database import get_connection, get_transaction
 from app.google_people import (
     fetch_people_profile,
     merge_into_profile,
@@ -494,9 +494,17 @@ async def request_password_reset(request: Request) -> JSONResponse:
     if not user:
         return generic  # same response as success — no account enumeration
 
+    if not settings.reset_mail_base_ok():
+        log.error("skip password-reset insert+mail: unsafe public_base_url on Render")
+        return generic
+
     raw_token = secrets.token_urlsafe(32)
     expires = datetime.now(timezone.utc) + timedelta(hours=RESET_TOKEN_TTL_HOURS)
-    with get_connection() as conn, conn.cursor() as cur:
+    with get_transaction() as conn, conn.cursor() as cur:
+        cur.execute(
+            "update password_reset_tokens set used_at = now() where user_id = %s and used_at is null",
+            (user["id"],),
+        )
         cur.execute(
             "insert into password_reset_tokens (token, user_id, expires_at) values (%s, %s, %s)",
             (_hash_reset_token(raw_token), user["id"], expires),
@@ -525,7 +533,7 @@ async def reset_password(request: Request) -> JSONResponse:
 
     token_hash = _hash_reset_token(token)
     now = datetime.now(timezone.utc)
-    with get_connection() as conn, conn.cursor() as cur:
+    with get_transaction() as conn, conn.cursor() as cur:
         cur.execute(
             "select token, user_id, expires_at, used_at from password_reset_tokens where token = %s",
             (token_hash,),
@@ -535,17 +543,19 @@ async def reset_password(request: Request) -> JSONResponse:
             return _err(400, "重設連結無效或已過期，請重新申請")
 
         cur.execute(
-            "update users set password_hash = %s where id = %s",
+            """
+            update users
+               set password_hash = %s,
+                   token_version = token_version + 1
+             where id = %s
+            """,
             (hash_password(new_password), row["user_id"]),
         )
         cur.execute(
-            "update password_reset_tokens set used_at = now() where token = %s",
-            (token_hash,),
+            "update password_reset_tokens set used_at = now() where user_id = %s and used_at is null",
+            (row["user_id"],),
         )
 
-    # Invalidate every existing session for this user (the reset may be because
-    # an attacker had access) — they must sign in again with the new password.
-    bump_token_version(row["user_id"])
     return JSONResponse(content={"ok": True})
 
 
@@ -791,16 +801,22 @@ async def change_password(request: Request) -> JSONResponse:
     if step_err:
         return _err(401, step_err)
 
-    with get_connection() as conn, conn.cursor() as cur:
+    with get_transaction() as conn, conn.cursor() as cur:
         cur.execute(
-            "update users set password_hash = %s where id = %s",
+            """
+            update users
+               set password_hash = %s,
+                   token_version = token_version + 1
+             where id = %s
+         returning token_version
+            """,
             (hash_password(new_password), user_id),
         )
-    bump_token_version(user_id)
-
-    with get_connection() as conn, conn.cursor() as cur:
-        cur.execute("select token_version from users where id = %s", (user_id,))
         row = cur.fetchone()
+        cur.execute(
+            "update password_reset_tokens set used_at = now() where user_id = %s and used_at is null",
+            (user_id,),
+        )
     if not row:
         return _err(401, "請先登入")
 

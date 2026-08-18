@@ -4,9 +4,25 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from urllib.parse import urlparse
 
 # Repository root (parent of config/)
 ROOT = Path(__file__).resolve().parent.parent
+_LOOPBACK_HOSTS = frozenset({"localhost", "127.0.0.1", "::1", "0.0.0.0"})
+
+
+def public_reset_base_is_safe(base: str) -> bool:
+    """True when a reset-link base is https and not loopback / empty."""
+    raw = (base or "").strip()
+    if not raw:
+        return False
+    parsed = urlparse(raw if "://" in raw else f"//{raw}")
+    if parsed.scheme != "https":
+        return False
+    host = (parsed.hostname or "").lower()
+    if not host or host in _LOOPBACK_HOSTS or host.endswith(".localhost"):
+        return False
+    return True
 
 
 class Settings:
@@ -51,6 +67,12 @@ class Settings:
         if self.is_render and not base.startswith("http"):
             base = f"https://{base}"
         return base.rstrip("/")
+
+    def reset_mail_base_ok(self) -> bool:
+        """On Render, refuse empty / loopback / non-https reset-link bases."""
+        if not self.is_render:
+            return True
+        return public_reset_base_is_safe(self.public_base_url)
 
     @property
     def supabase_url(self) -> str:
