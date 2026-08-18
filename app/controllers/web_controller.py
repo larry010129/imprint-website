@@ -19,13 +19,13 @@ from starlette.responses import Response
 
 from config.routes import (
     ALL_PAGES,
-    JEWELRY_STYLE_REDIRECTS,
     PAGE_404,
     STANDALONE_PAGES,
     STANDALONE_SHARE_SUMMARY,
     PageMeta,
 )
 from config.settings import settings
+from app.legacy_redirects import is_retired_jewelry_route, register_legacy_redirects
 from app.youtube_channel import fetch_latest_channel_video, resolve_channel_id
 
 log = logging.getLogger(__name__)
@@ -667,6 +667,9 @@ def register_pages(app: FastAPI) -> None:
         """Render / load-balancer health — must not 404 or the API service is SIGTERM'd."""
         return JSONResponse({"ok": True, "service": "imprint-api"})
 
+    # Cutover 301s first so leftover jewelry PageMeta routes cannot stay 200.
+    register_legacy_redirects(app)
+
     def _shop_index_redirect(request: Request) -> RedirectResponse:
         query = request.url.query
         location = f"/shop/calculator/?{query}" if query else "/shop/calculator/"
@@ -689,17 +692,10 @@ def register_pages(app: FastAPI) -> None:
             include_in_schema=False,
         )
 
-    # Retired jewelry style PDPs → live shop catalog.
-    for retired, target in JEWELRY_STYLE_REDIRECTS.items():
-        app.add_api_route(
-            retired,
-            _make_html_redirect(target),
-            methods=["GET", "HEAD"],
-            include_in_schema=False,
-        )
-
     # Include HEAD: Render probes HEAD / (405 if GET-only → deploy marked unhealthy).
     for meta in [*ALL_PAGES, *STANDALONE_PAGES]:
+        if is_retired_jewelry_route(meta.route):
+            continue
         app.add_api_route(
             meta.route,
             _make_handler(meta),

@@ -44,7 +44,6 @@ def client():
         "/diamond-4c",
         "/lab-grown-diamond",
         "/diamond-comparison",
-        "/jewelry/engagement/",
         "/journal",
         "/price",
         "/series",
@@ -117,12 +116,10 @@ def test_about_canonical_is_absolute_https(client):
     assert match.group(1) == "https://www.imprintdiamond.com/about"
 
 
-def test_jewelry_canonical_keeps_trailing_slash(client):
-    resp = client.get("/jewelry/")
-    assert resp.status_code == 200
-    match = _CANONICAL_HREF.search(resp.text)
-    assert match is not None
-    assert match.group(1) == "https://www.imprintdiamond.com/jewelry/"
+def test_jewelry_hub_301_to_home(client):
+    resp = client.get("/jewelry/", follow_redirects=False)
+    assert resp.status_code == 301
+    assert resp.headers.get("location", "").split("?", 1)[0] == "/"
 
 
 def test_404_is_noindex_and_omits_homepage_canonical(client):
