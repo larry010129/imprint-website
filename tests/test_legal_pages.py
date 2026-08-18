@@ -191,3 +191,25 @@ def test_calculator_omits_hold_notice():
     assert notice not in body
     shop_js = (root / "public/js/shop.js").read_text(encoding="utf-8")
     assert notice not in shop_js
+
+
+def test_calculator_terms_include_pickup_hold():
+    root = Path(__file__).resolve().parents[1]
+    sentence = (
+        "成品完成通知後，須於三個月內取件，逾期未取件者，"
+        "第四個月起酌收尾款5%之保管費，未滿一個月以一個月計算。"
+    )
+    calc = (root / "content/site/templates/pages/shop/calculator.html").read_text(
+        encoding="utf-8"
+    )
+    body = (root / "content/site/bodies/shop__calculator.html").read_text(encoding="utf-8")
+    for html in (calc, body):
+        dialog = html[html.find("shop-terms-dialog") : html.find("ring-size-guide-dialog")]
+        deposit = dialog.find("五、訂金與付款")
+        hold = dialog.find("取件與保管")
+        privacy = dialog.find("六、個人資料")
+        assert deposit != -1 and hold != -1 and privacy != -1
+        assert deposit < hold < privacy
+        assert sentence in dialog
+    shop_js = (root / "public/js/shop.js").read_text(encoding="utf-8")
+    assert sentence not in shop_js
