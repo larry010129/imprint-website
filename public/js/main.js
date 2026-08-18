@@ -195,11 +195,15 @@
     var hcTimer = null;
     /* Bump to cancel pending double-rAF animation restarts (no sync offsetWidth flush). */
     var hcAnimGen = 0;
+    var hcSwapCancel = null;
+    var hcSwapGen = 0;
 
     function destroy() {
       if (hcTimer) { clearInterval(hcTimer); hcTimer = null; }
       if (abortCtrl) { abortCtrl.abort(); abortCtrl = null; }
+      if (hcSwapCancel) { hcSwapCancel(); hcSwapCancel = null; }
       hcAnimGen += 1;
+      hcSwapGen += 1;
     }
 
     function scheduleAfterLayout(fn) {
@@ -245,26 +249,91 @@
 
       function loadSlideImage(slide) {
         var img = slide.querySelector('.hc-media img');
+        if (img) {
+          img.removeAttribute('onerror');
+          /* img.src BEFORE source.srcset — empty src + picture update fires imgFallback. */
+          if (img.dataset.src) {
+            img.src = img.dataset.src;
+            img.removeAttribute('data-src');
+          }
+          img.loading = 'eager';
+        }
         slide.querySelectorAll('.hc-media source[data-srcset]').forEach(function (source) {
           source.srcset = source.dataset.srcset;
           source.removeAttribute('data-srcset');
         });
-        if (img && img.dataset.src) {
-          img.src = img.dataset.src;
-          img.removeAttribute('data-src');
-        }
+        return img;
       }
 
-      function hcRender(withTransition) {
+      function imgHasSrc(img) {
+        return !!(img && (img.getAttribute('src') || img.currentSrc));
+      }
+
+      function imgDecoded(img) {
+        return !!(img && imgHasSrc(img) && img.complete && img.naturalWidth > 0);
+      }
+
+      function whenImgReady(img, done) {
+        var cancelled = false;
+        function finish(ok) {
+          if (cancelled) return;
+          cancelled = true;
+          done(ok);
+        }
+        if (!img || !imgHasSrc(img)) {
+          finish(false);
+          return function () {};
+        }
+        if (imgDecoded(img)) {
+          if (typeof img.decode === 'function') {
+            img.decode().then(function () { finish(true); }, function () { finish(imgDecoded(img)); });
+            return function () { cancelled = true; };
+          }
+          finish(true);
+          return function () {};
+        }
+        function onLoad() {
+          img.removeEventListener('load', onLoad);
+          img.removeEventListener('error', onErr);
+          if (typeof img.decode === 'function') {
+            img.decode().then(function () { finish(true); }, function () { finish(imgDecoded(img)); });
+          } else {
+            finish(true);
+          }
+        }
+        function onErr() {
+          img.removeEventListener('load', onLoad);
+          img.removeEventListener('error', onErr);
+          finish(false);
+        }
+        img.addEventListener('load', onLoad);
+        img.addEventListener('error', onErr);
+        return function () {
+          cancelled = true;
+          img.removeEventListener('load', onLoad);
+          img.removeEventListener('error', onErr);
+        };
+      }
+
+      function preloadAround() {
+        if (hcCount < 2) return;
+        loadSlideImage(hcSlides[(hcIndex + 1) % hcCount]);
+        loadSlideImage(hcSlides[(hcIndex - 1 + hcCount) % hcCount]);
+      }
+
+      function paintSlide(withTransition) {
         var restartSlide = null;
         var restartImg = null;
         var clearNoAnim = withTransition === false;
+        var incoming = hcSlides[hcIndex];
+        var incomingImg = incoming && incoming.querySelector('.hc-media img');
+        /* Never activate an img with no src — sky (.gh-hero__sky) would show through. */
+        if (incomingImg && !imgHasSrc(incomingImg)) return;
 
         hcSlides.forEach(function (s, i) {
           var wasActive = s.classList.contains('is-active');
           var willBeActive = i === hcIndex;
           var img = s.querySelector('.hc-media img');
-          if (willBeActive) loadSlideImage(s);
           if (clearNoAnim) { s.classList.add('no-anim'); }
           s.classList.toggle('is-active', willBeActive);
 
@@ -306,6 +375,26 @@
             }
           });
         }
+        preloadAround();
+      }
+
+      function hcRender(withTransition) {
+        var incoming = hcSlides[hcIndex];
+        if (!incoming) return;
+        var img = loadSlideImage(incoming);
+        if (img && !imgHasSrc(img)) return;
+        if (img && !imgDecoded(img)) {
+          var gen = (hcSwapGen += 1);
+          if (hcSwapCancel) hcSwapCancel();
+          hcSwapCancel = whenImgReady(img, function (ok) {
+            if (gen !== hcSwapGen) return;
+            hcSwapCancel = null;
+            if (!ok || !imgDecoded(img)) return;
+            paintSlide(withTransition);
+          });
+          return;
+        }
+        paintSlide(withTransition);
       }
 
       function hcGoTo(i) {

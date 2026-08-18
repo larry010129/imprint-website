@@ -21,7 +21,7 @@
     ],
     "extra_scripts": [
       {
-        "src": "/static/js/home-banners.js?v=15",
+        "src": "/static/js/home-banners.js?v=16",
         "defer": true
       }
     ],
