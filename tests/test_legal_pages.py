@@ -38,7 +38,10 @@ def test_privacy_keeps_draft_noindex_and_locked_cookie_third(client):
     assert resp.status_code == 200
     html = resp.text
     assert 'content="noindex, nofollow"' in html
+    assert "<title>隱私權政策｜銘印鑽石 IMPRINT DIAMOND</title>" in html
+    assert "隱私權政策（草稿）" not in html
     assert "本頁面為草稿" in html
+    assert "TODO：待補充" not in html
     assert "已整理全部資料類型" not in html
     assert "或其他 Google 服務內容" not in html
     assert "尚待確認" in html
@@ -78,6 +81,12 @@ def test_terms_keeps_draft_noindex_and_return_policy_links(client):
     assert html.count('href="/return-policy"') >= 3
     assert 'href="/return"' not in html
     assert "NT$24,000" not in html
+    assert "NT$98,000" not in html
+    assert "NT$250,000" not in html
+    slots = _legal_slots("/terms")
+    assert slots["price-body"] == "鑽石與飾品價格以雙方確認及價格總覽為準。本頁不列克拉價目。"
+    assert "管轄法院" not in slots.get("todo-li-3", "")
+    assert "todo-title" not in slots
     image_keys = {spec.page_key for spec in page_image_slot_specs()}
     assert "/terms" not in image_keys
 
@@ -91,3 +100,11 @@ def test_return_policy_stays_indexable(client):
     assert "退換貨與取消政策" in html
     assert "50% 訂金" in html
     assert 'href="/return"' not in html
+    assert "NT$250,000" not in html
+    assert "克拉尺寸誤差" not in html
+    assert "若成品大於訂購尺寸，無需支付額外費用。若成品小於訂購尺寸，將按比例退款。" in html
+    slots = _legal_slots("/return-policy")
+    assert slots["carat-title"] == "克拉尺寸"
+    assert slots["carat-body"] == (
+        "若成品大於訂購尺寸，無需支付額外費用。若成品小於訂購尺寸，將按比例退款。"
+    )
