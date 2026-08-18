@@ -162,8 +162,37 @@ def test_checkout_hold_notice_is_copy_only():
         "成品通知後請於三個月內取件；逾期自第四個月起，"
         "按尾款 5% 計收保管費（未滿一個月以一個月計）。"
     )
-    assert notice in panel
-    assert panel.count(notice) == 1
+    assert panel.count(notice) == 2
+    fulfillment = panel[panel.find("取貨方式") : panel.find("給銘印鑽石的訊息")]
+    assert f'<p class="checkout-block-hint">{notice}</p>' in fulfillment
+    assert "製作期約三個月" in fulfillment
+    submit_zone = panel[panel.find("此步驟尚未付款") : panel.find("確認送出訂單")]
+    assert f'<p class="checkout-pay-note" role="note">{notice}</p>' in submit_zone
+    notice_box = panel[panel.find("checkout-notice") : panel.find("checkout-lead")]
+    assert notice not in notice_box
+    mobile_bar = panel[panel.find("checkout-mobile-bar") :]
+    assert notice not in mobile_bar
     shop_js = (root / "public/js/shop.js").read_text(encoding="utf-8")
     assert notice not in shop_js
     assert "保管費" not in shop_js
+
+
+def test_calculator_hold_notice_under_action_row_only():
+    root = Path(__file__).resolve().parents[1]
+    calc = (root / "content/site/templates/pages/shop/calculator.html").read_text(
+        encoding="utf-8"
+    )
+    notice = (
+        "成品通知後請於三個月內取件；逾期自第四個月起，"
+        "按尾款 5% 計收保管費（未滿一個月以一個月計）。"
+    )
+    assert calc.count(notice) == 1
+    after_actions = calc.split('id="shop-action-row"', 1)[1]
+    before_secondary = after_actions.split("shop-secondary-actions", 1)[0]
+    assert f'<p class="hero-price-disclaimer">{notice}</p>' in before_secondary
+    terms = calc[calc.find('id="shop-terms-dialog"') : calc.find('id="mobile-buy-bar"')]
+    assert notice not in terms
+    mobile_bar = calc[calc.find('id="mobile-buy-bar"') : calc.find("product-image-lightbox")]
+    assert notice not in mobile_bar
+    shop_js = (root / "public/js/shop.js").read_text(encoding="utf-8")
+    assert notice not in shop_js
