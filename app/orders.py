@@ -15,27 +15,72 @@ from app.image_urls import config_image_url, is_uuid, order_product_id, resolve_
 
 _TAIPEI = ZoneInfo("Asia/Taipei")
 
-# Shop UI is 12 slots; emblem tokens like 〔雙心〕 expand stored length.
-GIRDLE_ENGRAVING_MAX_LEN = 64
+# Match shop UI: 12 slots, known 〔label〕 emblems cost 2. No A-Za-z0-9 gate.
+GIRDLE_MAX_SLOTS = 12
+GIRDLE_EMBLEM_SLOT_COST = 2
+GIRDLE_ENGRAVING_MAX_LEN = GIRDLE_MAX_SLOTS  # text-only clip; emblems use slots
 _GIRDLE_HTML_TAG_RE = re.compile(r"<[^>]*>", re.DOTALL)
 _GIRDLE_ANGLE_RE = re.compile(r"[<>]")
+_GIRDLE_TOKEN_RE = re.compile(r"〔([^〕]+)〕|[^〔〕]+")
+_GIRDLE_EMBLEM_LABELS = frozenset(
+    {
+        "貓掌",
+        "雙心",
+        "弓箭",
+        "狗骨",
+        "四葉草",
+        "狗掌",
+        "愛心",
+        "無限",
+        "戒圈",
+        "蝴蝶結",
+        "雙愛心",
+        "幸運草",
+        "肉球",
+        "骨頭",
+    }
+)
+
+
+def _trim_girdle_slots(text: str, max_slots: int = GIRDLE_MAX_SLOTS) -> str:
+    """Keep FE-readable tokens until the 12-slot cap. Unknown 〔…〕 dropped."""
+    out: list[str] = []
+    used = 0
+    for match in _GIRDLE_TOKEN_RE.finditer(text):
+        token = match.group(0)
+        if token.startswith("〔"):
+            label = match.group(1)
+            if label not in _GIRDLE_EMBLEM_LABELS:
+                continue
+            if used + GIRDLE_EMBLEM_SLOT_COST > max_slots:
+                continue
+            out.append(token)
+            used += GIRDLE_EMBLEM_SLOT_COST
+            continue
+        room = max_slots - used
+        if room <= 0:
+            break
+        chunk = token[:room]
+        if chunk:
+            out.append(chunk)
+            used += len(chunk)
+    return "".join(out)
 
 
 def sanitize_girdle_engraving(value: Any) -> str:
-    """Keep shop-posted girdle text; strip controls, HTML, and cap length.
+    """Keep any shop-posted girdle text; strip controls/HTML; cap 12 slots.
 
-    No charset filter — CJK, spaces, punctuation, letters, and digits stay.
+    No A-Za-z0-9 / 0.3ct Chinese gate. Letters, CJK, digits, punctuation,
+    spaces, and symbols (. @ $ and the rest) stay. Emblems stay.
     """
     if value is None:
         return ""
-    text = unescape(str(value))
+    text = unescape(str(value)).replace("\u200B", "")
     text = _GIRDLE_HTML_TAG_RE.sub("", text)
     text = _GIRDLE_ANGLE_RE.sub("", text)
     text = "".join(ch for ch in text if unicodedata.category(ch) != "Cc")
     text = text.strip()
-    if len(text) > GIRDLE_ENGRAVING_MAX_LEN:
-        text = text[:GIRDLE_ENGRAVING_MAX_LEN]
-    return text
+    return _trim_girdle_slots(text)
 
 
 def apply_girdle_engraving(cfg: dict[str, Any] | None) -> None:
