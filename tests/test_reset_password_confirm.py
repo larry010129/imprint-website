@@ -61,17 +61,33 @@ def test_verify_handlers_split_empty_backup_and_totp():
         assert src.index("請輸入備用碼") < src.index("請輸入完整的 6 位數驗證碼。")
 
 
-def test_reset_password_page_is_separate_landing(client):
+def test_reset_password_page_is_separate_landing():
+    html = (
+        ROOT / "content" / "site" / "templates" / "pages" / "reset-password.html"
+    ).read_text(encoding="utf-8")
+    body = (ROOT / "content" / "site" / "bodies" / "reset-password.html").read_text(
+        encoding="utf-8"
+    )
+    assert '<meta name="referrer" content="no-referrer">' in html
+    assert 'name="passwordConfirm"' in html
+    assert "確認新密碼" in html
+    assert "reset-password.js?v=1" in html
+    assert "auth-shell.js" not in html
+    assert "auth_shell" not in html
+    assert "particles-canvas" not in html
+    assert "缺少驗證碼或新密碼" not in html
+    assert 'name="passwordConfirm"' in body
+    assert "確認新密碼" in body
+
+
+@pytest.mark.skipif(not os.environ.get("DATABASE_URL"), reason="DATABASE_URL not set")
+def test_reset_password_page_keeps_no_referrer(client):
     resp = client.get("/reset-password?token=leak-me")
     assert resp.status_code == 200
     assert resp.headers.get("referrer-policy") == "no-referrer"
-    assert '<meta name="referrer" content="no-referrer">' in resp.text
-    assert 'name="passwordConfirm"' in resp.text
-    assert "確認新密碼" in resp.text
     assert "reset-password.js?v=1" in resp.text
     assert "auth-shell.js" not in resp.text
-    assert "particles-canvas" not in resp.text
-    assert "缺少驗證碼或新密碼" not in resp.text
+    assert 'name="passwordConfirm"' in resp.text
 
 
 def test_reset_password_js_has_client_checks_and_error_swap():
