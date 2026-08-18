@@ -16,11 +16,14 @@ os.environ.setdefault("STARTUP_SEED_MODE", "off")
 
 @pytest.fixture(scope="module")
 def client():
+    from fastapi import FastAPI
     from fastapi.testclient import TestClient
 
-    from app import create_app
+    from app.controllers.web_controller import register_pages
 
-    with TestClient(create_app()) as c:
+    app = FastAPI()
+    register_pages(app)
+    with TestClient(app) as c:
         yield c
 
 
