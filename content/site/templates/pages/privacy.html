@@ -1,12 +1,12 @@
 {% extends "layouts/base.html" %}
 {% block extra_head %}<meta name="robots" content="noindex, nofollow">{% endblock %}
 {% block content %}
-<section class="page-hero page-hero--short">
-  {% set _pi = page_image or {} %}
-  {% set _pi_url = _pi.display_url or _pi.image_url or '' %}
-  {% set _pi_webp = _pi.display_webp or _pi.image_webp or '' %}
-  {% set _pi_alt = _pi.image_alt or '隱私權政策頁主圖' %}
-  <div class="page-hero-media">{% if _pi_url %}<picture>{% if _pi_webp %}<source srcset="{{ _pi_webp }}" type="image/webp">{% endif %}<img src="{{ _pi_url }}" alt="{{ _pi_alt }}" loading="eager" decoding="async" fetchpriority="high" onerror="imgFallback(this)"></picture>{% endif %}</div>
+{% set _pi = page_image or {} %}
+{% set _pi_url = _pi.display_url or _pi.image_url or '' %}
+{% set _pi_webp = _pi.display_webp or _pi.image_webp or '' %}
+{% set _pi_alt = _pi.image_alt or '隱私權政策頁主圖' %}
+<section class="page-hero page-hero--short{% if not _pi_url %} page-hero--text{% endif %}">
+  {% if _pi_url %}<div class="page-hero-media"><picture>{% if _pi_webp %}<source srcset="{{ _pi_webp }}" type="image/webp">{% endif %}<img src="{{ _pi_url }}" alt="{{ _pi_alt }}" loading="eager" decoding="async" fetchpriority="high" onerror="imgFallback(this)"></picture></div>{% endif %}
   <div class="page-hero-scrim"></div>
   <div class="container page-hero-inner">
     <p class="breadcrumb"><a href="/">首頁</a><span class="sep">/</span><span class="current" data-cms-text="crumb-current">隱私權政策</span></p>

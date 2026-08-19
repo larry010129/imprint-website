@@ -153,6 +153,20 @@ def test_return_policy_stays_indexable(client):
     )
 
 
+@pytest.mark.parametrize("route", ["/privacy", "/terms", "/return-policy"])
+def test_legal_pages_omit_empty_hero_template_graphic(client, route):
+    """Empty .page-hero-media paints the leftover kite via CSS :empty::after."""
+    resp = client.get(route)
+    assert resp.status_code == 200
+    html = resp.text
+    hero = html[html.find("page-hero") : html.find("prose-section")]
+    assert "page-hero--text" in hero
+    assert "page-hero-media" not in hero
+    assert '<div class="page-hero-media"></div>' not in html
+    assert "brand-mark" in html
+    assert "M20 30 L50 8 L80 30" not in html
+
+
 def test_checkout_hold_notice_is_copy_only():
     root = Path(__file__).resolve().parents[1]
     panel = (root / "content/site/templates/partials/htmx/checkout_panel.html").read_text(
