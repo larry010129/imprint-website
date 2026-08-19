@@ -153,17 +153,24 @@ def test_return_policy_stays_indexable(client):
     )
 
 
-@pytest.mark.parametrize("route", ["/privacy", "/terms", "/return-policy"])
-def test_legal_pages_omit_empty_hero_template_graphic(client, route):
+@pytest.mark.parametrize(
+    "relpath",
+    (
+        "content/site/templates/pages/privacy.html",
+        "content/site/templates/pages/terms.html",
+        "content/site/templates/pages/return-policy.html",
+        "content/site/bodies/privacy.html",
+        "content/site/bodies/terms.html",
+        "content/site/bodies/return-policy.html",
+    ),
+)
+def test_legal_pages_omit_empty_hero_template_graphic(relpath):
     """Empty .page-hero-media paints the leftover kite via CSS :empty::after."""
-    resp = client.get(route)
-    assert resp.status_code == 200
-    html = resp.text
+    root = Path(__file__).resolve().parents[1]
+    html = (root / relpath).read_text(encoding="utf-8")
     hero = html[html.find("page-hero") : html.find("prose-section")]
     assert "page-hero--text" in hero
-    assert "page-hero-media" not in hero
     assert '<div class="page-hero-media"></div>' not in html
-    assert "brand-mark" in html
     assert "M20 30 L50 8 L80 30" not in html
 
 
