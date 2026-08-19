@@ -205,14 +205,21 @@ def test_calculator_terms_include_pickup_hold():
     body = (root / "content/site/bodies/shop__calculator.html").read_text(encoding="utf-8")
     for html in (calc, body):
         dialog = html[html.find("shop-terms-dialog") : html.find("ring-size-guide-dialog")]
-        deposit = dialog.find("五、訂金與付款")
-        hold = dialog.find("六、取件與保管")
-        privacy = dialog.find("七、個人資料")
-        liability = dialog.find("八、責任限制與準據法")
-        revision = dialog.find("九、條款修訂")
-        assert deposit != -1 and hold != -1 and privacy != -1
-        assert liability != -1 and revision != -1
-        assert deposit < hold < privacy < liability < revision
+        headings = (
+            "一、條款接受",
+            "二、試算價格",
+            "三、鑽石顏色與預覽",
+            "四、訂製品與交期",
+            "五、訂金與付款",
+            "六、取件與保管",
+            "七、個人資料",
+            "八、責任限制與準據法",
+            "九、條款修訂",
+        )
+        found = [dialog.find(f"<strong>{title}</strong>") for title in headings]
+        assert all(i != -1 for i in found)
+        assert found == sorted(found)
+        assert dialog.count('class="shop-terms-section"') == 9
         assert sentence in dialog
     shop_js = (root / "public/js/shop.js").read_text(encoding="utf-8")
     assert sentence not in shop_js
