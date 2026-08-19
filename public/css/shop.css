@@ -1161,10 +1161,19 @@ body.shop-terms-blocked .shop-page {
 }
 
 .shop-terms-dialog[open] {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
   display: flex;
   flex-direction: column;
-  width: min(32rem, calc(100% - 2rem));
-  max-height: 80vh;
+  box-sizing: border-box;
+  /* 100vw/svh — dialog UA max-width uses cyclic 100% and shrinks on phones */
+  width: min(32rem, calc(100vw - 2rem));
+  max-width: calc(100vw - 2rem);
+  height: min(40rem, calc(100vh - 2rem));
+  height: min(40rem, calc(100dvh - 2rem));
+  max-height: min(40rem, calc(100vh - 2rem));
+  max-height: min(40rem, calc(100svh - 2rem));
   margin: auto;
   padding: 0;
   border: 1px solid var(--mint-line);
@@ -1213,9 +1222,10 @@ body.shop-terms-blocked .shop-page {
 }
 
 .shop-terms-scroll {
-  flex: 1;
-  min-height: 0;
+  flex: 1 1 auto;
+  min-height: min(12rem, 40vh);
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 24px 16px;
   -webkit-overflow-scrolling: touch;
   outline: none;
@@ -1352,6 +1362,47 @@ body.shop-terms-blocked .shop-page {
 .shop-terms-btn:focus-visible {
   outline: 2px solid var(--mint-deep);
   outline-offset: 2px;
+}
+
+@media (max-width: 639px), (max-height: 540px) {
+  .shop-terms-dialog[open] {
+    inset: max(0.5rem, env(safe-area-inset-top, 0px))
+      max(0.5rem, env(safe-area-inset-right, 0px))
+      max(0.5rem, env(safe-area-inset-bottom, 0px))
+      max(0.5rem, env(safe-area-inset-left, 0px));
+    width: auto;
+    max-width: none;
+    height: auto;
+    max-height: none;
+    margin: 0;
+  }
+
+  .shop-terms-header {
+    padding: 12px 14px;
+    gap: 6px;
+  }
+
+  .shop-terms-header h2 {
+    font-size: 17px;
+  }
+
+  .shop-terms-desc {
+    font-size: 13px;
+  }
+
+  .shop-terms-scroll {
+    min-height: 0;
+    padding: 16px 14px;
+  }
+
+  .shop-terms-section p {
+    font-size: 15px;
+    line-height: 1.7;
+  }
+
+  .shop-terms-footer {
+    padding: 10px 14px;
+  }
 }
 
 .ring-size-guide-dialog {

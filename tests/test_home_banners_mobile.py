@@ -238,7 +238,7 @@ def test_shop_catalog_tiles_square_cover_fill():
     assert "width: 100%" in extra_gem
     assert "object-fit: contain" in extra_gem
     assert "object-fit: cover" not in extra_gem
-    assert "shop.css?v=6.64" in extra
+    assert "shop.css?v=6.65" in extra
     assert "catalog-tile__media" in js
     assert "media.className = 'catalog-tile__media'" in js
     assert "catalog-tile__media" in htmx

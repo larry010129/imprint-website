@@ -213,3 +213,25 @@ def test_calculator_terms_include_pickup_hold():
         assert sentence in dialog
     shop_js = (root / "public/js/shop.js").read_text(encoding="utf-8")
     assert sentence not in shop_js
+
+
+def test_calculator_terms_dialog_uses_viewport_units_on_phones():
+    root = Path(__file__).resolve().parents[1]
+    css = (root / "public/css/shop.css").read_text(encoding="utf-8")
+    start = css.find(".shop-terms-dialog[open]")
+    end = css.find(".ring-size-guide-dialog")
+    assert start != -1 and end > start
+    dialog_css = css[start:end]
+    assert "calc(100vw - 2rem)" in dialog_css
+    assert "calc(100% - 2rem)" not in dialog_css
+    assert "100svh" in dialog_css
+    assert "@media (max-width: 639px), (max-height: 540px)" in dialog_css
+    assert "safe-area-inset-top" in dialog_css
+
+    calc = (root / "content/site/templates/pages/shop/calculator.html").read_text(
+        encoding="utf-8"
+    )
+    critical = calc[calc.find(".shop-terms-dialog[open]") : calc.find("</style>")]
+    assert "calc(100vw - 2rem)" in critical
+    assert "calc(100% - 2rem)" not in critical
+    assert "@media (max-width: 639px), (max-height: 540px)" in critical
