@@ -206,10 +206,13 @@ def test_calculator_terms_include_pickup_hold():
     for html in (calc, body):
         dialog = html[html.find("shop-terms-dialog") : html.find("ring-size-guide-dialog")]
         deposit = dialog.find("五、訂金與付款")
-        hold = dialog.find("取件與保管")
-        privacy = dialog.find("六、個人資料")
+        hold = dialog.find("六、取件與保管")
+        privacy = dialog.find("七、個人資料")
+        liability = dialog.find("八、責任限制與準據法")
+        revision = dialog.find("九、條款修訂")
         assert deposit != -1 and hold != -1 and privacy != -1
-        assert deposit < hold < privacy
+        assert liability != -1 and revision != -1
+        assert deposit < hold < privacy < liability < revision
         assert sentence in dialog
     shop_js = (root / "public/js/shop.js").read_text(encoding="utf-8")
     assert sentence not in shop_js
