@@ -121,13 +121,83 @@
           <input type="email" id="cEmail" name="email" autocomplete="email" placeholder="name@example.com">
         </div>
         <div class="form-field">
-          <label for="cSlot" data-cms-text="form-label-slot">希望預約時段</label>
-          <select id="cSlot" name="preferred_slot">
-            <option value="" data-cms-text="form-opt-1">尚未決定／稍後再約</option>
-            <option value="上午 10:00～12:00" data-cms-text="form-opt-2">上午 10:00～12:00</option>
-            <option value="下午 1:30～6:30" data-cms-text="form-opt-3">下午 1:30～6:30</option>
-          </select>
+          <label data-cms-text="form-label-slot">希望預約時段（最多可選 3 組日期＋時段）</label>
+          <div id="cSlotRows" class="contact-slot-rows">
+            <div class="contact-slot-row">
+              <input type="date" name="preferred_date" class="contact-slot-row__date">
+              <select name="preferred_slot" class="contact-slot-row__select">
+                <option value="" data-cms-text="form-opt-1">尚未決定／稍後再約</option>
+                <option value="上午 10:00～11:00" data-cms-text="form-opt-2">上午 10:00～11:00</option>
+                <option value="上午 11:00～12:00" data-cms-text="form-opt-3">上午 11:00～12:00</option>
+                <option value="下午 1:30～2:30" data-cms-text="form-opt-4">下午 1:30～2:30</option>
+                <option value="下午 2:30～3:30" data-cms-text="form-opt-5">下午 2:30～3:30</option>
+                <option value="下午 3:30～4:30" data-cms-text="form-opt-6">下午 3:30～4:30</option>
+                <option value="下午 4:30～5:30" data-cms-text="form-opt-7">下午 4:30～5:30</option>
+                <option value="下午 5:30～6:30" data-cms-text="form-opt-8">下午 5:30～6:30</option>
+                <option value="其他" class="contact-slot-row__other-opt" data-cms-text="form-opt-9">其他</option>
+              </select>
+              <input type="text" class="contact-slot-row__other-input" style="display:none"
+                placeholder="請輸入希望時段" maxlength="60">
+            </div>
+          </div>
+          <button type="button" id="cSlotAdd" class="contact-slot-add">＋ 新增時段選項</button>
         </div>
+        <script>
+        (function () {
+          var rows = document.getElementById('cSlotRows');
+          var addBtn = document.getElementById('cSlotAdd');
+          if (!rows || !addBtn) return;
+          var MAX = 3;
+          var today = new Date().toISOString().slice(0, 10);
+
+          function syncRow(row) {
+            var sel = row.querySelector('.contact-slot-row__select');
+            var otherOpt = row.querySelector('.contact-slot-row__other-opt');
+            var other = row.querySelector('.contact-slot-row__other-input');
+            var isOther = sel.options[sel.selectedIndex] === otherOpt;
+            other.style.display = isOther ? '' : 'none';
+            otherOpt.value = isOther && other.value.trim() ? ('其他：' + other.value.trim()) : '其他';
+          }
+
+          function refreshAddBtn() {
+            addBtn.style.display = rows.children.length >= MAX ? 'none' : '';
+          }
+
+          Array.prototype.forEach.call(rows.querySelectorAll('input[type=date]'), function (d) { d.min = today; });
+          Array.prototype.forEach.call(rows.querySelectorAll('.contact-slot-row'), syncRow);
+
+          rows.addEventListener('change', function (e) {
+            if (e.target.classList.contains('contact-slot-row__select')) syncRow(e.target.closest('.contact-slot-row'));
+          });
+          rows.addEventListener('input', function (e) {
+            if (e.target.classList.contains('contact-slot-row__other-input')) syncRow(e.target.closest('.contact-slot-row'));
+          });
+
+          addBtn.addEventListener('click', function () {
+            if (rows.children.length >= MAX) return;
+            var clone = rows.children[0].cloneNode(true);
+            Array.prototype.forEach.call(clone.querySelectorAll('input'), function (i) {
+              i.value = '';
+              if (i.type !== 'date') i.style.display = 'none';
+            });
+            clone.querySelector('input[type=date]').min = today;
+            clone.querySelector('select').selectedIndex = 0;
+            var remove = document.createElement('button');
+            remove.type = 'button';
+            remove.className = 'contact-slot-row__remove';
+            remove.textContent = '－ 移除';
+            remove.addEventListener('click', function () {
+              clone.remove();
+              refreshAddBtn();
+            });
+            clone.appendChild(remove);
+            rows.appendChild(clone);
+            refreshAddBtn();
+          });
+
+          refreshAddBtn();
+        })();
+        </script>
         <div class="form-field">
           <label for="cMessage" data-cms-text="form-label-message">您的需求 <span class="req">*</span></label>
           <textarea id="cMessage" name="message" rows="4" placeholder="簡述您想了解的克拉、系列或預約時間…" required></textarea>
