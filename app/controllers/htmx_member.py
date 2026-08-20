@@ -64,7 +64,7 @@ async def contact_submit(request: Request) -> HTMLResponse:
     name = str(form.get("name") or "").strip()
     phone = str(form.get("phone") or "").strip()
     message = str(form.get("message") or "").strip()
-    email = str(form.get("email") or "").strip() or None
+    email = str(form.get("email") or "").strip()
     preferred_dates = form.getlist("preferred_date")
     preferred_slots = form.getlist("preferred_slot")
     slot_pairs = []
@@ -76,9 +76,9 @@ async def contact_submit(request: Request) -> HTMLResponse:
     if slot_pairs:
         lines = "\n".join(f"{i + 1}. {pair}" for i, pair in enumerate(slot_pairs[:3]))
         message = f"{message}\n\n【希望預約時段】\n{lines}"
-    if not name or not phone or not message:
+    if not name or not phone or not email or not message:
         return html(
-            request, "form_msg.html", {"ok": False, "message": "請填寫姓名、電話與您的需求"}, 400
+            request, "form_msg.html", {"ok": False, "message": "請填寫姓名、電話、Email 與您的需求"}, 400
         )
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute(
