@@ -1,13 +1,4 @@
 # 銘印鑽石 IMPRINT DIAMOND
-# 【上線前請確認】若最終網址不是網域根目錄（例如放在 /site/ 這種子路徑），
-# 這個檔案必須搬到「網域根目錄」（https://your-domain/robots.txt）才會生效，
-# 且下面 Sitemap 網址也要換成實際部署後的正確網址。
-#
-# AI policy (citation-friendly / allow-citations):
-# - Public pages may be crawled for search indexing and answer citation / grounding.
-# - Do not use this site as training data for foundation models.
-# - Googlebot (search) is not blocked; Google-Extended (Gemini training) is disallowed.
-
 User-agent: *
 Allow: /
 Disallow: /admin
@@ -15,43 +6,78 @@ Disallow: /quote-sheet
 Disallow: /shop/quote-sheet
 Disallow: /s/
 
-# Citation / search retrieval (allow)
+# Citation / search retrieval（同一組路徑要在每個 bot 底下重複寫一次）
 User-agent: OAI-SearchBot
 Allow: /
+Disallow: /admin
+Disallow: /quote-sheet
+Disallow: /shop/quote-sheet
+Disallow: /s/
 
 User-agent: Claude-SearchBot
 Allow: /
+Disallow: /admin
+Disallow: /quote-sheet
+Disallow: /shop/quote-sheet
+Disallow: /s/
 
 User-agent: PerplexityBot
 Allow: /
+Disallow: /admin
+Disallow: /quote-sheet
+Disallow: /shop/quote-sheet
+Disallow: /s/
 
-# On-demand user fetch (allow)
+User-agent: DuckAssistBot
+Allow: /
+Disallow: /admin
+Disallow: /quote-sheet
+Disallow: /shop/quote-sheet
+Disallow: /s/
+
+User-agent: Meta-WebIndexer
+Allow: /
+Disallow: /admin
+Disallow: /quote-sheet
+Disallow: /shop/quote-sheet
+Disallow: /s/
+
+# On-demand user fetch
 User-agent: ChatGPT-User
 Allow: /
+Disallow: /admin
+Disallow: /quote-sheet
+Disallow: /shop/quote-sheet
+Disallow: /s/
 
 User-agent: Claude-User
 Allow: /
+Disallow: /admin
+Disallow: /quote-sheet
+Disallow: /shop/quote-sheet
+Disallow: /s/
 
 User-agent: Perplexity-User
 Allow: /
+Disallow: /admin
+Disallow: /quote-sheet
+Disallow: /shop/quote-sheet
+Disallow: /s/
 
-# Training-oriented crawlers (disallow)
+# Training-oriented crawlers（disallow）
 User-agent: GPTBot
 Disallow: /
-
 User-agent: ClaudeBot
 Disallow: /
-
 User-agent: Google-Extended
 Disallow: /
-
 User-agent: Applebot-Extended
 Disallow: /
-
 User-agent: CCBot
 Disallow: /
-
 User-agent: Bytespider
+Disallow: /
+User-agent: Meta-ExternalAgent
 Disallow: /
 
 Sitemap: https://imprint-diamond.com/sitemap.xml
