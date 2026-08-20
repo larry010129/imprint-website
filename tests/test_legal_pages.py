@@ -40,7 +40,9 @@ def test_privacy_keeps_draft_noindex_and_locked_cookie_third(client):
     assert 'content="noindex, nofollow"' in html
     assert "<title>隱私權政策｜銘印鑽石 IMPRINT DIAMOND</title>" in html
     assert "隱私權政策（草稿）" not in html
-    assert "本頁面為草稿" in html
+    assert "本頁面為草稿" not in html
+    assert "尚待法務" not in html
+    assert 'class="callout"' not in html
     assert "TODO：待補充" not in html
     assert "已整理全部資料類型" not in html
     assert "或其他 Google 服務內容" not in html
@@ -74,6 +76,7 @@ def test_privacy_keeps_draft_noindex_and_locked_cookie_third(client):
     assert "GA4" not in third
     assert "TikTok" not in third
     slots = _legal_slots("/privacy")
+    assert "callout-top" not in slots
     assert slots["cookie-gtm"] == (
         "官網頁面載入 Google 代碼管理工具（Google Tag Manager）。GTM 可能載入 Google Ads 轉換追蹤。"
     )
@@ -101,7 +104,9 @@ def test_terms_keeps_draft_noindex_and_return_policy_links(client):
     assert resp.status_code == 200
     html = resp.text
     assert 'content="noindex, nofollow"' in html
-    assert "本頁面為草稿" in html
+    assert "本頁面為草稿" not in html
+    assert "尚待法務" not in html
+    assert 'class="callout"' not in html
     assert "管轄法院" not in html
     assert "TODO：待補充" not in html
     assert "本頁不列克拉價目" in html
@@ -111,6 +116,7 @@ def test_terms_keeps_draft_noindex_and_return_policy_links(client):
     assert "NT$98,000" not in html
     assert "NT$250,000" not in html
     slots = _legal_slots("/terms")
+    assert "callout-top" not in slots
     assert slots["price-body"] == "鑽石與飾品價格以雙方確認及價格總覽為準。本頁不列克拉價目。"
     assert "管轄法院" not in slots.get("todo-li-3", "")
     assert "todo-title" not in slots

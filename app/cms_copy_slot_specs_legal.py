@@ -28,13 +28,6 @@ def _privacy_slots() -> list[dict[str, Any]]:
         _t(p, "hero-eyebrow", "隱私權・眉標", "PRIVACY POLICY", 3),
         _t(
             p,
-            "callout-top",
-            "隱私權・草稿提示",
-            "本頁面為草稿，尚待法務審閱與正式公告，目前設定為不開放搜尋引擎索引（noindex）。",
-            10,
-        ),
-        _t(
-            p,
             "intro",
             "隱私權・引言",
             "心之銘印鑽石有限公司（下稱我們）說明本網站如何蒐集與使用您的個人資料。如有疑問，請透過官方 LINE 或電話 02-2977-0268 與我們聯繫。",
@@ -148,13 +141,6 @@ def _terms_slots() -> list[dict[str, Any]]:
         _t(p, "hero-title", "服務條款・標題", "服務條款", 1),
         _t(p, "crumb-current", "服務條款・麵包屑", "服務條款", 2),
         _t(p, "hero-eyebrow", "服務條款・眉標", "TERMS OF SERVICE", 3),
-        _t(
-            p,
-            "callout-top",
-            "服務條款・草稿提示",
-            "本頁面為草稿，尚待法務審閱與正式公告，目前設定為不開放搜尋引擎索引（noindex）。",
-            10,
-        ),
         _t(
             p,
             "intro",
