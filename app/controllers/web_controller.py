@@ -15,6 +15,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Redirect
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.requests import ClientDisconnect
 from starlette.responses import Response
 
 from config.routes import (
@@ -934,6 +935,12 @@ def register_pages(app: FastAPI) -> None:
         if exc.status_code != 404:
             return HTMLResponse(content=str(exc.detail), status_code=exc.status_code)
         return await _make_handler(PAGE_404, status_code=404)(request)
+
+    @app.exception_handler(ClientDisconnect)
+    async def client_disconnect(request: Request, exc: ClientDisconnect) -> Response:
+        # Client left mid-upload (e.g. closed tab while POSTing). No one is
+        # listening for a response; just stop without logging a traceback.
+        return Response(status_code=499)
 
 
 def _shop_still_redirect(folder: str):
