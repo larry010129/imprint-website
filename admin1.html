@@ -11,7 +11,7 @@
 <link rel="stylesheet" href="/css/admin1-shell.css?v=9">
 <link rel="stylesheet" href="/css/admin-orders.css?v=14">
 <link rel="stylesheet" href="/css/admin-tables.css?v=31">
-<link rel="stylesheet" href="/static/react/admin-tables.css?v=41">
+<link rel="stylesheet" href="/static/react/admin-tables.css?v=42">
 
 <link rel="stylesheet" href="/css/cms-editor.css?v=12">
 <link rel="stylesheet" href="/css/toast.css?v=1">
@@ -566,7 +566,7 @@ window.__adminLoadTables = (function () {
   return function () {
     if (window.AdminTables) return Promise.resolve();
     if (!loading) {
-      loading = import('/static/react/admin-tables.js?v=67').then(null, function (err) {
+      loading = import('/static/react/admin-tables.js?v=68').then(null, function (err) {
         loading = null;
         throw err;
       });
