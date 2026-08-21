@@ -566,7 +566,7 @@ window.__adminLoadTables = (function () {
   return function () {
     if (window.AdminTables) return Promise.resolve();
     if (!loading) {
-      loading = import('/static/react/admin-tables.js?v=68').then(null, function (err) {
+      loading = import('/static/react/admin-tables.js?v=69').then(null, function (err) {
         loading = null;
         throw err;
       });
@@ -599,7 +599,7 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 
-<script src="/js/api-client.js?v=31"></script>
+<script src="/js/api-client.js?v=32"></script>
 <script src="/js/admin1-shell.js?v=4"></script>
 <script src="/js/admin-nav-visibility.js?v=1"></script>
 <script src="/js/toast.js?v=1"></script>
@@ -610,7 +610,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <script src="/js/admin-dashboard-chart.js"></script>
 <script src="/js/admin-table-sort.js?v=1"></script>
 <script src="/js/admin-image-urls.js?v=12"></script>
-<script src="/js/admin.js?v=25"></script>
+<script src="/js/admin.js?v=26"></script>
 <script src="/js/girdle-engrave.js?v=11"></script>
 <script src="/js/admin-orders.js?v=27"></script>
 <script src="/js/order-detail.js"></script>

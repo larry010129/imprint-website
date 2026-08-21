@@ -301,6 +301,44 @@ async def leads_mark_done(request: Request) -> JSONResponse:
     return JSONResponse(content={"ok": True})
 
 
+@router.post("/leads-delete")
+async def leads_delete(request: Request) -> JSONResponse:
+    """Hard-delete one lead row. Same {type, id} shape as the mark-done POST.
+
+    Nothing references contact_messages / quote_requests, so no child cleanup.
+    """
+    admin_id = _require_admin(request)
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse(status_code=400, content={"error": "invalid JSON"})
+    if not isinstance(body, dict):
+        return JSONResponse(status_code=400, content={"error": "invalid body"})
+
+    lead_type = body.get("type")
+    if lead_type not in ("message", "quote"):
+        return JSONResponse(status_code=400, content={"error": "invalid lead reference"})
+    try:
+        lead_id = str(uuid.UUID(str(body.get("id") or "")))
+    except ValueError:
+        return JSONResponse(status_code=400, content={"error": "invalid lead id"})
+
+    # Table name comes from the validated enum above, never from the request body.
+    table = "contact_messages" if lead_type == "message" else "quote_requests"
+    with get_transaction() as conn, conn.cursor() as cur:
+        cur.execute(f"delete from {table} where id = %s", (lead_id,))
+        deleted = int(cur.rowcount or 0)
+        cur.execute("select email from users where id = %s", (admin_id,))
+        actor = cur.fetchone()
+
+    log_admin_action(
+        actor["email"] if actor else None,
+        "lead_delete",
+        {"type": lead_type, "id": lead_id, "deleted": deleted},
+    )
+    return JSONResponse(content={"ok": True, "deleted": deleted})
+
+
 def _admin_orders_search_from() -> str:
     return """
     from orders o

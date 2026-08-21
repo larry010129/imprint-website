@@ -280,6 +280,7 @@
       },
       getLeads: function () { return request('/api/admin/leads'); },
       markLeadDone: function (type, id) { return request('/api/admin/leads', { method: 'POST', body: { type: type, id: id } }); },
+      deleteLead: function (type, id) { return request('/api/admin/leads-delete', { method: 'POST', body: { type: type, id: id } }); },
       getOrders: function (opts) {
         return request('/api/admin/orders' + pagingQuery(opts));
       },

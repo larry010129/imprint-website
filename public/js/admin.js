@@ -571,6 +571,7 @@
                   '<td><div class="adx-actions">' +
                     '<button type="button" class="btn-sm" data-lead-detail="' + escapeHtml(key) + '">詳情</button>' +
                     (isDone ? '' : '<button type="button" class="btn-sm" data-mark-done="' + escapeHtml(key) + '">標記已處理</button>') +
+                    '<button type="button" class="btn-sm adx-action--danger" data-lead-delete="' + escapeHtml(key) + '">刪除</button>' +
                   '</div></td>' +
                 '</tr>'
               );
@@ -584,6 +585,31 @@
           tbody.querySelectorAll('[data-lead-detail]').forEach(function (btn) {
             btn.addEventListener('click', function () {
               openLeadDetail(btn.dataset.leadDetail);
+            });
+          });
+
+          tbody.querySelectorAll('[data-lead-delete]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+              var key = btn.dataset.leadDelete;
+              var item = _leadsByKey[key] || {};
+              if (!confirm('確定刪除「' + (item.name || '此筆諮詢') + '」的諮詢紀錄？此操作無法復原。')) return;
+              var sep = key.indexOf(':');
+              btn.disabled = true;
+              btn.textContent = '刪除中…';
+              api.admin.deleteLead(key.slice(0, sep), key.slice(sep + 1)).then(function (res) {
+                if (res.error) {
+                  console.error('[admin]', res.error);
+                  btn.disabled = false;
+                  btn.textContent = '刪除';
+                  var msg = typeof res.error === 'string' ? res.error : (res.error.message || '請稍後再試');
+                  if (window.showToast) window.showToast('刪除失敗：' + msg, 'error');
+                  else alert('刪除失敗：' + msg);
+                  return;
+                }
+                if (window.showToast) window.showToast('已刪除諮詢紀錄', 'success');
+                loadLeads(true, true);
+                loadDashboardStats();
+              });
             });
           });
 

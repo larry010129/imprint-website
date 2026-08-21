@@ -149,7 +149,7 @@ def test_chart_sheet_embeds_revenue_trend_line_chart():
 
 
 def test_admin_html_dashboard_export_button_and_cache_bust():
-    for name, version in (("admin1.html", "25"), ("admin.html", "23")):
+    for name, version in (("admin1.html", "26"), ("admin.html", "24")):
         html = (ROOT / name).read_text(encoding="utf-8")
         assert 'id="dashExportBtn"' in html
         assert "匯出 Excel" in html
