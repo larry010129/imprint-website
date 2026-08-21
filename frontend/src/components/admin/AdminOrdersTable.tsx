@@ -82,7 +82,6 @@ const columns: ColumnDef<OrderTableRow>[] = [
           type="checkbox"
           className="adx-check-input order-row-check"
           data-order-id={row.original.id}
-          disabled={row.original.isCancelled}
           aria-label="選取訂單"
         />
         <span className="adx-check-ui" aria-hidden="true"></span>
