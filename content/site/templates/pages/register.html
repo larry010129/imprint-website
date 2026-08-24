@@ -69,7 +69,7 @@
     </label>
     <p class="terms-check-hint">需開啟條款並捲動至底部後才能勾選同意</p>
 
-    <button type="submit" class="login-button" id="registerSubmitBtn"{% if not recaptcha_site_key %} disabled{% endif %}>建立會員帳號</button>
+    <button type="submit" class="login-button" id="registerSubmitBtn">建立會員帳號</button>
   </form>
   <p class="signup-prompt">已經是會員了？<a href="/login">直接登入</a></p>
 {% endcall %}
@@ -97,6 +97,6 @@
 {% if recaptcha_site_key %}
 <script src="https://www.google.com/recaptcha/api.js?render={{ recaptcha_site_key }}" async defer></script>
 {% endif %}
-<script src="/static/js/auth-shell.js?v=8"></script>
-<script src="/static/js/register-terms.js?v=1"></script>
+<script src="/static/js/auth-shell.js?v=10"></script>
+<script src="/static/js/register-terms.js?v=2"></script>
 {% endblock %}

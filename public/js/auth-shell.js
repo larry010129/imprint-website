@@ -183,6 +183,18 @@
     if (ta) ta.value = token || '';
   }
 
+  function setAuthFormMsg(text) {
+    var box = document.getElementById('auth-form-msg');
+    if (!box) return;
+    box.innerHTML = '';
+    if (!text) return;
+    var p = document.createElement('p');
+    p.className = 'form-msg is-err';
+    p.setAttribute('role', 'alert');
+    p.textContent = text;
+    box.appendChild(p);
+  }
+
   function resetRecaptcha(form) {
     setRecaptchaResponse(form || document.getElementById('registerForm'), '');
   }
@@ -391,6 +403,9 @@
 
   function initRegisterFieldClear(root) {
     root.querySelectorAll('#registerForm input').forEach(function (input) {
+      // passwordConfirm owns its own state in initPasswordMatch — blindly clearing
+      // on every keystroke here is what hid the mismatch error.
+      if (input.name === 'passwordConfirm') return;
       var evt = input.type === 'checkbox' ? 'change' : 'input';
       input.addEventListener(evt, function () {
         if (input.type === 'checkbox' && input.name === 'acceptTerms' && !input.checked) return;
@@ -399,6 +414,20 @@
         }
       });
     });
+  }
+
+  function initPasswordMatch(form) {
+    var pw = form.querySelector('[name="password"]');
+    var confirm = form.querySelector('[name="passwordConfirm"]');
+    if (!pw || !confirm) return;
+    function check() {
+      if (!confirm.value) clearFieldInvalid(confirm);
+      else if (confirm.value === pw.value) clearFieldInvalid(confirm);
+      else setFieldInvalid(confirm, '兩次密碼不一致');
+    }
+    pw.addEventListener('input', check);
+    confirm.addEventListener('input', check);
+    confirm.addEventListener('blur', check);
   }
 
   function initRegisterEmailCheck(form) {
@@ -534,6 +563,7 @@
     var emailCheck = initRegisterEmailCheck(form);
     var inviteCheck = initRegisterInviteCheck(form);
     initRegisterFieldClear(root);
+    initPasswordMatch(form);
 
     form.addEventListener('submit', function (ev) {
       var result = validateRegisterForm(form, emailCheck.get(), inviteCheck.get());
@@ -552,19 +582,24 @@
       }
       ev.preventDefault();
       var issueRequest = ev.detail && ev.detail.issueRequest;
+      // ponytail: recaptcha may never resolve (script blocked / offline). Fail loud
+      // instead of dropping the submit — the server still fails closed on a bad token.
+      function captchaFailed() {
+        setFieldInvalid(form.querySelector('[data-auth-recaptcha]'), '請完成驗證');
+        setAuthFormMsg('無法完成安全驗證，請確認網路連線或關閉廣告攔截後重試。');
+      }
       executeRecaptchaV3(form)
         .then(function (token) {
           if (!token) {
-            setFieldInvalid(form.querySelector('[data-auth-recaptcha]'), '請完成驗證');
+            captchaFailed();
             return;
           }
           setRecaptchaResponse(form, token);
           clearFieldInvalid(form.querySelector('[data-auth-recaptcha]'));
+          setAuthFormMsg('');
           if (typeof issueRequest === 'function') issueRequest(true);
         })
-        .catch(function () {
-          setFieldInvalid(form.querySelector('[data-auth-recaptcha]'), '請完成驗證');
-        });
+        .catch(captchaFailed);
     });
 
     form.addEventListener('htmx:afterSwap', function () {

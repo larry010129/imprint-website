@@ -14,6 +14,9 @@
       onAgree(true);
       return;
     }
+    // Clicking the checkbox bubbles to the wrapping label, so this runs twice —
+    // a second showModal() on an open dialog throws and kills the handler.
+    if (dialog.open) return;
 
     var scroll = dialog.querySelector('.register-terms-scroll');
     var agreeBtn = dialog.querySelector('#register-terms-agree');
