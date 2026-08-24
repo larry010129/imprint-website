@@ -992,8 +992,10 @@
 
 @media (max-width: 900px) {
   .login-container {
-    align-items: flex-start;
-    padding: 56px var(--page-padding-x, 16px) calc(88px + env(safe-area-inset-bottom, 0px));
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 56px var(--page-padding-x, 16px) calc(24px + env(safe-area-inset-bottom, 0px));
   }
 
   .login-container .login-card {
@@ -1013,13 +1015,10 @@
   .login-container .login-button:not(.login-button--outline),
   .login-container .fp-step-actions .login-button,
   .totp-form .login-button {
-    position: fixed;
-    left: var(--page-padding-x, 16px);
-    right: var(--page-padding-x, 16px);
+    position: sticky;
     bottom: calc(12px + env(safe-area-inset-bottom, 0px));
-    width: auto;
+    width: 100%;
     z-index: 10050;
-    margin: 0;
     box-shadow: 0 8px 24px rgba(94, 207, 207, 0.35);
   }
 
@@ -1052,6 +1051,7 @@
 
   .login-container .recaptcha-disclosure {
     position: static;
+    width: 100%;
     max-width: none;
     margin-top: 16px;
     text-align: center;

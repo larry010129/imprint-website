@@ -1,6 +1,6 @@
 {% extends "layouts/base-auth.html" %}
 {% block extra_css %}
-<link rel="stylesheet" href="/static/css/auth.css?v=14">
+<link rel="stylesheet" href="/static/css/auth.css?v=15">
 {% endblock %}
 {% block extra_head %}
 {% if google_client_id %}
@@ -43,7 +43,7 @@
 {% endcall %}
 {% endblock %}
 {% block extra_scripts %}
-<script src="/static/js/auth-shell.js?v=2"></script>
+<script src="/static/js/auth-shell.js?v=10"></script>
 {% if google_client_id %}
 <script src="/static/js/google-signin.js?v=2" defer data-client-id="{{ google_client_id }}"></script>
 {% endif %}
