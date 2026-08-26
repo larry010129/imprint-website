@@ -27,7 +27,7 @@ from config.routes import (
 )
 from config.settings import settings
 from app.legacy_redirects import is_retired_jewelry_route, register_legacy_redirects
-from app.robots_host import html_robots_content
+from app.robots_host import html_robots_content, is_noindex_host
 from app.youtube_channel import fetch_latest_channel_video, resolve_channel_id
 
 log = logging.getLogger(__name__)
@@ -758,7 +758,11 @@ def register_pages(app: FastAPI) -> None:
         return FileResponse(settings.site_root / "favicon.svg")
 
     @app.get("/robots.txt", include_in_schema=False)
-    async def robots() -> FileResponse:
+    async def robots(request: Request) -> Response:
+        # Test/staging mirrors (old domain, raw *.onrender.com URL) must never
+        # point crawlers at the production sitemap — block them outright.
+        if is_noindex_host(request.headers.get("host")):
+            return Response("User-agent: *\nDisallow: /\n", media_type="text/plain")
         return FileResponse(settings.site_root / "robots.txt")
 
     @app.get("/llms.txt", include_in_schema=False)

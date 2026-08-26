@@ -1,7 +1,8 @@
-"""Host-gated robots: noindex only the no-hyphen imprintdiamond.com hosts.
+"""Host-gated robots: noindex the no-hyphen imprintdiamond.com hosts + Render's
+raw *.onrender.com test URL — never the production shop domain.
 
 Shop hosts (imprint-diamond.com / www) stay index, follow. Other hosts
-(localhost, Render, TestClient) keep whatever the page already emits.
+(localhost, TestClient) keep whatever the page already emits.
 """
 
 from __future__ import annotations
@@ -13,6 +14,9 @@ NOINDEX_HOSTS = frozenset(
         "www.imprintdiamond.com",
     }
 )
+# Render's raw <service>.onrender.com URL — always a test/staging mirror of
+# whichever custom domain is live, never the canonical site.
+_NOINDEX_HOST_SUFFIX = ".onrender.com"
 
 HOST_NOINDEX_ROBOTS = "noindex, follow"
 
@@ -32,8 +36,9 @@ def normalize_request_host(host_header: str | None) -> str:
 
 
 def is_noindex_host(host_header: str | None) -> bool:
-    """True when FastAPI request Host is a no-hyphen imprintdiamond.com host."""
-    return normalize_request_host(host_header) in NOINDEX_HOSTS
+    """True for a no-hyphen imprintdiamond.com host or any *.onrender.com host."""
+    host = normalize_request_host(host_header)
+    return host in NOINDEX_HOSTS or host.endswith(_NOINDEX_HOST_SUFFIX)
 
 
 def _is_indexable_robots(page_robots: str | None) -> bool:

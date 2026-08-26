@@ -92,7 +92,18 @@ def test_is_noindex_host_skips_hyphen_shop(host):
 def test_is_noindex_host_skips_other_hosts():
     assert is_noindex_host("testserver") is False
     assert is_noindex_host("localhost:8000") is False
-    assert is_noindex_host("imprint-website.onrender.com") is False
+
+
+@pytest.mark.parametrize(
+    "host",
+    [
+        "imprint-website.onrender.com",
+        "imprint-website-kh6x.onrender.com",
+        "IMPRINT-WEBSITE-KH6X.ONRENDER.COM:443",
+    ],
+)
+def test_is_noindex_host_catches_any_onrender_host(host):
+    assert is_noindex_host(host) is True
 
 
 def test_html_and_header_share_one_gate():
@@ -149,7 +160,6 @@ def test_noindex_host_check_is_case_insensitive_and_strips_port(client, host):
     [
         "testserver",
         "localhost:8000",
-        "imprint-website.onrender.com",
     ],
 )
 def test_other_hosts_keep_current_index_follow(client, host):
@@ -158,3 +168,32 @@ def test_other_hosts_keep_current_index_follow(client, host):
     tag = (resp.headers.get("x-robots-tag") or "").lower()
     assert "noindex" not in tag
     assert _INDEXABLE_META in resp.text
+
+
+@pytest.mark.parametrize(
+    "host",
+    ["imprint-website.onrender.com", "imprint-website-kh6x.onrender.com"],
+)
+def test_onrender_host_is_noindexed(client, host):
+    resp = client.get("/", headers={"Host": host})
+    assert resp.status_code == 200
+    assert resp.headers.get("x-robots-tag") == "noindex, follow"
+    assert _NOINDEX_META in resp.text
+
+
+@pytest.mark.parametrize(
+    "host",
+    ["imprint-website.onrender.com", "imprint-website-kh6x.onrender.com"],
+)
+def test_onrender_host_robots_txt_disallows_all(client, host):
+    resp = client.get("/robots.txt", headers={"Host": host})
+    assert resp.status_code == 200
+    assert "Disallow: /" in resp.text
+    assert "Sitemap:" not in resp.text
+
+
+def test_production_host_robots_txt_stays_indexable(client):
+    resp = client.get("/robots.txt", headers={"Host": "www.imprint-diamond.com"})
+    assert resp.status_code == 200
+    assert "Sitemap:" in resp.text
+    assert resp.text.strip() != "User-agent: *\nDisallow: /"
