@@ -80,4 +80,4 @@ Disallow: /
 User-agent: Meta-ExternalAgent
 Disallow: /
 
-Sitemap: https://imprint-diamond.com/sitemap.xml
+Sitemap: https://www.imprint-diamond.com/sitemap.xml

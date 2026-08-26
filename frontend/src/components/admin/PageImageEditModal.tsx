@@ -116,6 +116,7 @@ export default function PageImageEditModal({
 
   const [imageUrl, setImageUrl] = useState(row.image_url || "");
   const [imageWebp, setImageWebp] = useState(row.image_webp || "");
+  const [imageAlt, setImageAlt] = useState(row.image_alt || "");
   const [previousUrl, setPreviousUrl] = useState(() => previousUrlOf(row));
   const [saving, setSaving] = useState(false);
   const [validationError, setValidationError] = useState("");
@@ -159,17 +160,19 @@ export default function PageImageEditModal({
       const nextUrl = saved?.image_url || fallbackUrl;
       const nextWebp = saved?.image_webp || "";
       const nextPrev = saved ? previousUrlOf(saved) : "";
+      const nextAlt = saved?.image_alt ?? imageAlt;
       setImageUrl(nextUrl);
       setImageWebp(nextWebp);
       setPreviousUrl(nextPrev);
+      setImageAlt(nextAlt);
       if (nextUrl) resetPreview(nextUrl);
       onSaved({
         slotKey: row.slot_key,
         imageUrl: nextUrl,
-        imageAlt: row.image_alt || "",
+        imageAlt: nextAlt,
       });
     },
-    [onSaved, resetPreview, row.image_alt, row.slot_key],
+    [imageAlt, onSaved, resetPreview, row.slot_key],
   );
 
   const handleSave = useCallback(async () => {
@@ -214,7 +217,7 @@ export default function PageImageEditModal({
         slotKey: keys.slotKey,
         imageUrl: nextUrl,
         imageWebp: nextWebp,
-        imageAlt: row.image_alt || "",
+        imageAlt,
         isPublished: !!row.is_published,
       });
 
@@ -235,10 +238,10 @@ export default function PageImageEditModal({
     cropTouched,
     file,
     hasPreview,
+    imageAlt,
     imageUrl,
     imageWebp,
     previewUrl,
-    row.image_alt,
     row.is_published,
     row.page_key,
     row.slot_key,
@@ -396,6 +399,16 @@ export default function PageImageEditModal({
             {validationError ? (
               <p className="text-xs text-[#c0392b]">{validationError}</p>
             ) : null}
+          </div>
+
+          <div className="space-y-2">
+            <Label>圖片替代文字（alt，供螢幕閱讀器與 SEO 使用；純裝飾圖片可留空）</Label>
+            <Input
+              value={imageAlt}
+              disabled={saving}
+              onChange={(event) => setImageAlt(event.target.value)}
+              placeholder="描述這張圖片的內容"
+            />
           </div>
         </div>
 

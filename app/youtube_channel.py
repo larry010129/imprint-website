@@ -19,7 +19,7 @@ _YT = "http://www.youtube.com/xml/schemas/2015"
 _DEFAULT_TTL = 6 * 60 * 60
 _EMBED_TTL = 6 * 60 * 60
 _EMBED_CACHE_VERSION = 2
-_DEFAULT_EMBED_REFERER = "https://www.imprintdiamond.com/"
+_DEFAULT_EMBED_REFERER = "https://www.imprint-diamond.com/"
 # Memory: cache_key -> (checked_at, embeddable)
 _embed_memory: dict[str, tuple[float, bool]] = {}
 _logger = logging.getLogger(__name__)

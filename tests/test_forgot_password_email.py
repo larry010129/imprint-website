@@ -65,7 +65,7 @@ def test_password_reset_email_uses_shop_html_and_token_link(monkeypatch):
 
     ok = send_password_reset_email(
         to="member@example.com",
-        reset_url="https://www.imprintdiamond.com/reset-password?token=abc123",
+        reset_url="https://www.imprint-diamond.com/reset-password?token=abc123",
     )
     assert ok is True
     payload = captured["payload"]

@@ -97,7 +97,7 @@ def test_share_image_url_avoids_double_site_prefix(storage_env):
         f"{PUBLIC_PREFIX}/products/category-ring.jpg"
     )
     assert share_image_url("static/images/hero/imprint-diamond-family-memorial.jpg") == (
-        "https://www.imprintdiamond.com/static/images/hero/"
+        "https://www.imprint-diamond.com/static/images/hero/"
         "imprint-diamond-family-memorial.jpg"
     )
 
@@ -106,7 +106,7 @@ def test_html_rewrite_maps_shop_stills_not_host_prefixed_og(storage_env):
     html = (
         '<img src="/static/images/diamonds/colors/blue-320.webp">'
         '<img src="/static/images/shop-product/gold/耳飾A_gold.png">'
-        '<meta property="og:image" content="https://www.imprintdiamond.com/'
+        '<meta property="og:image" content="https://www.imprint-diamond.com/'
         'static/images/products/category-ring.jpg">'
     )
     out = rewrite_shop_stills_in_html(html)
@@ -114,10 +114,10 @@ def test_html_rewrite_maps_shop_stills_not_host_prefixed_og(storage_env):
     assert f'src="{PUBLIC_PREFIX}/diamonds/colors/blue-320.webp"' in out
     assert f'src="{PUBLIC_PREFIX}/shop-product/gold/{leaf}"' in out
     assert (
-        'content="https://www.imprintdiamond.com/static/images/products/category-ring.jpg"'
+        'content="https://www.imprint-diamond.com/static/images/products/category-ring.jpg"'
         in out
     )
-    assert "imprintdiamond.com/https://" not in out
+    assert "imprint-diamond.com/https://" not in out
 
 
 def test_shop_catalog_data_rewrites_at_runtime():

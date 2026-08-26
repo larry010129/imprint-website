@@ -14,17 +14,17 @@ def _clear_url_env(monkeypatch):
 
 def test_public_base_url_prefers_public_site_url(monkeypatch):
     _clear_url_env(monkeypatch)
-    monkeypatch.setenv("PUBLIC_SITE_URL", "https://www.imprintdiamond.com/")
+    monkeypatch.setenv("PUBLIC_SITE_URL", "https://www.imprint-diamond.com/")
     monkeypatch.setenv("SITE_URL", "https://ignored.example/")
     monkeypatch.setenv("RENDER_EXTERNAL_URL", "https://app.onrender.com/")
-    assert Settings().public_base_url == "https://www.imprintdiamond.com"
+    assert Settings().public_base_url == "https://www.imprint-diamond.com"
 
 
 def test_public_base_url_falls_back_to_site_url(monkeypatch):
     _clear_url_env(monkeypatch)
-    monkeypatch.setenv("SITE_URL", "https://www.imprintdiamond.com")
+    monkeypatch.setenv("SITE_URL", "https://www.imprint-diamond.com")
     monkeypatch.setenv("RENDER_EXTERNAL_URL", "https://app.onrender.com/")
-    assert Settings().public_base_url == "https://www.imprintdiamond.com"
+    assert Settings().public_base_url == "https://www.imprint-diamond.com"
 
 
 def test_public_base_url_falls_back_to_render_external(monkeypatch):
@@ -67,5 +67,5 @@ def test_reset_mail_base_ok_skips_only_on_render(monkeypatch):
 
 def test_render_yaml_uses_live_shop_public_site_url():
     yaml = (Path(__file__).resolve().parents[1] / "render.yaml").read_text(encoding="utf-8")
-    assert "value: https://imprint-website-kh6x.onrender.com" in yaml
-    assert "value: https://www.imprintdiamond.com" not in yaml
+    assert "value: https://www.imprint-diamond.com" in yaml
+    assert "value: https://imprint-website-kh6x.onrender.com" not in yaml

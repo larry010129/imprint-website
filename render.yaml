@@ -45,7 +45,7 @@ services:
       - key: RESEND_API_KEY
         sync: false
       - key: PUBLIC_SITE_URL
-        value: https://imprint-website-kh6x.onrender.com
+        value: https://www.imprint-diamond.com
       # Optional: Bearer for POST /api/featured-video-sync (admin UI sync button is the primary path).
       - key: FEATURED_VIDEO_SYNC_SECRET
         sync: false

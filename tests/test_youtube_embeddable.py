@@ -40,7 +40,7 @@ def test_is_youtube_embeddable_oembed_404_skips(monkeypatch):
         yt, "_fetch_embed_page_html", lambda *_a, **_k: (_ for _ in ()).throw(AssertionError)
     )
     monkeypatch.setattr(yt, "_write_embed_disk_cache", lambda *_a, **_k: None)
-    assert yt.is_youtube_embeddable("blockedVid01", referer="https://www.imprintdiamond.com/") is False
+    assert yt.is_youtube_embeddable("blockedVid01", referer="https://www.imprint-diamond.com/") is False
 
 
 def test_is_youtube_embeddable_oembed_ok_but_embed_blocked(monkeypatch):
@@ -72,7 +72,7 @@ def test_is_youtube_embeddable_oembed_ok_and_embed_playable(monkeypatch):
     )
     monkeypatch.setattr(yt, "_read_embed_disk_cache", lambda *_a, **_k: None)
     monkeypatch.setattr(yt, "_write_embed_disk_cache", lambda *_a, **_k: None)
-    assert yt.is_youtube_embeddable("EdYQTJfD2hE", referer="https://www.imprintdiamond.com/") is True
+    assert yt.is_youtube_embeddable("EdYQTJfD2hE", referer="https://www.imprint-diamond.com/") is True
 
 
 def test_is_youtube_embeddable_network_fail_not_cached(monkeypatch):

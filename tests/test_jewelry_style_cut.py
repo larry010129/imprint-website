@@ -76,8 +76,8 @@ def test_sitemap_and_registry_drop_style_slugs():
     sitemap = (ROOT / "sitemap.xml").read_text(encoding="utf-8")
     for slug in JEWELRY_STYLE_REDIRECTS:
         assert slug not in sitemap
-        assert f"https://www.imprintdiamond.com{slug}" not in sitemap
+        assert f"https://www.imprint-diamond.com{slug}" not in sitemap
         assert f"https://imprint-diamond.com{slug}" not in sitemap
     for hub in HUBS:
-        assert f"https://www.imprintdiamond.com{hub}" not in sitemap
+        assert f"https://www.imprint-diamond.com{hub}" not in sitemap
         assert f"https://imprint-diamond.com{hub}" not in sitemap

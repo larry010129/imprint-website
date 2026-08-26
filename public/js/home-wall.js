@@ -28,8 +28,9 @@
     var quote = '「' + excerpt(t.text) + '」';
     var loc = (t.city === '其他' && t.country) ? t.country : t.city;
     var role = t.role || ((t.category || '') + (loc ? '・' + loc : ''));
+    var photoAlt = (t.category || '銘印鑽石') + '客戶回饋照片' + (t.name ? '－' + t.name : '');
     var photo = t.image_url
-      ? '<div class="gh-wall__photo"><img src="' + esc(t.image_url) + '" alt="" loading="lazy" decoding="async"></div>'
+      ? '<div class="gh-wall__photo"><img src="' + esc(t.image_url) + '" alt="' + esc(photoAlt) + '" loading="lazy" decoding="async"></div>'
       : '';
     return (
       '<div class="gh-wall__card"' + (hidden ? ' aria-hidden="true"' : '') + '>' +

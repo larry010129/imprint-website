@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 os.environ.setdefault("STARTUP_SEED_MODE", "off")
 # Canonical / og:url must use production host in these assertions.
-os.environ["PUBLIC_SITE_URL"] = "https://www.imprintdiamond.com"
+os.environ["PUBLIC_SITE_URL"] = "https://www.imprint-diamond.com"
 
 _CANONICAL_HREF = re.compile(
     r'<link\s+rel="canonical"\s+href="([^"]+)"',
@@ -105,7 +105,7 @@ def test_canonical_omits_html_extension(client):
     assert resp.status_code == 200
     assert 'rel="canonical"' in resp.text
     assert "about.html" not in resp.text.split('rel="canonical"', 1)[1][:200]
-    assert 'href="https://www.imprintdiamond.com/about"' in resp.text
+    assert 'href="https://www.imprint-diamond.com/about"' in resp.text
 
 
 def test_about_canonical_is_absolute_https(client):
@@ -113,7 +113,7 @@ def test_about_canonical_is_absolute_https(client):
     assert resp.status_code == 200
     match = _CANONICAL_HREF.search(resp.text)
     assert match is not None
-    assert match.group(1) == "https://www.imprintdiamond.com/about"
+    assert match.group(1) == "https://www.imprint-diamond.com/about"
 
 
 def test_jewelry_hub_301_to_home(client):

@@ -176,7 +176,7 @@ def strip_cache_buster(url: str | None) -> str:
     return _rewrite_query(value, None)
 
 
-_SHARE_SITE_ORIGIN = "https://www.imprintdiamond.com"
+_SHARE_SITE_ORIGIN = "https://www.imprint-diamond.com"
 _DEFAULT_OG_IMAGE = "static/images/hero/imprint-diamond-family-memorial.jpg"
 # Match /static/images/{diamonds|shop-product|products}/… not after a host.
 _SHOP_STILL_IN_HTML = re.compile(

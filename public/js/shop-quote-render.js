@@ -236,7 +236,7 @@
       + '<div class="share-total"><span>含稅預估總價</span><strong>NT$ ' + esc(fmt(total)) + '</strong></div>'
       + '<p class="share-note">本報價為當下金價之預估結果；實際金額可能因市場價格與最終規格調整 ±10%。</p>'
       + actions
-      + '<p class="quote-sheet-footnote">銘印鑽石 · imprintdiamond.com</p>'
+      + '<p class="quote-sheet-footnote">銘印鑽石 · imprint-diamond.com</p>'
       + '</article>';
   }
 

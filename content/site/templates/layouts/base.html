@@ -125,12 +125,12 @@ window.shopConfig = Object.assign({
 {% endif %}
 
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"Organization","@id":"https://www.imprintdiamond.com/#organization","name":"銘印鑽石 IMPRINT DIAMOND","alternateName":["銘印鑽石","IMPRINT DIAMOND","Imprint Diamond"],"legalName":"心之銘印鑽石有限公司","url":"https://www.imprintdiamond.com/","logo":"https://www.imprintdiamond.com/favicon.svg","telephone":"+886-2-2977-0268","address":{"@type":"PostalAddress","streetAddress":"福德南路43號1樓","addressLocality":"三重區","addressRegion":"新北市","addressCountry":"TW"},"contactPoint":[{"@type":"ContactPoint","telephone":"+886-2-2977-0268","contactType":"customer service","areaServed":"TW","availableLanguage":["zh-Hant","zh-TW"]}],"sameAs":["https://www.facebook.com/Imprintdiamond/","https://lin.ee/ktVBtmx","https://www.youtube.com/@imprintdiamond"],"areaServed":"TW"}
+{"@context":"https://schema.org","@type":"Organization","@id":"https://www.imprint-diamond.com/#organization","name":"銘印鑽石 IMPRINT DIAMOND","alternateName":["銘印鑽石","IMPRINT DIAMOND","Imprint Diamond"],"legalName":"心之銘印鑽石有限公司","url":"https://www.imprint-diamond.com/","logo":"https://www.imprint-diamond.com/favicon.svg","telephone":"+886-2-2977-0268","address":{"@type":"PostalAddress","streetAddress":"福德南路43號1樓","addressLocality":"三重區","addressRegion":"新北市","addressCountry":"TW"},"contactPoint":[{"@type":"ContactPoint","telephone":"+886-2-2977-0268","contactType":"customer service","areaServed":"TW","availableLanguage":["zh-Hant","zh-TW"]}],"sameAs":["https://www.facebook.com/Imprintdiamond/","https://lin.ee/ktVBtmx","https://www.youtube.com/@imprintdiamond"],"areaServed":"TW"}
 </script>
 
 {% if breadcrumbs %}
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{% for name, url in breadcrumbs %}{"@type":"ListItem","position":{{ loop.index }},"name":"{{ name }}"{% if url %},"item":"https://www.imprintdiamond.com{{ url }}"{% endif %}}{% if not loop.last %},{% endif %}{% endfor %}]}
+{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{% for name, url in breadcrumbs %}{"@type":"ListItem","position":{{ loop.index }},"name":"{{ name }}"{% if url %},"item":"https://www.imprint-diamond.com{{ url }}"{% endif %}}{% if not loop.last %},{% endif %}{% endfor %}]}
 </script>
 {% endif %}
 {% block extra_head %}{% endblock %}
