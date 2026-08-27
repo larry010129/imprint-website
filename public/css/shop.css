@@ -258,29 +258,20 @@ body.shop-mobile-bar > main {
 #shop-styles .type-grid.type-grid--size-xl,
 #shop-styles .type-grid.type-grid--size-lg,
 #shop-styles .type-grid.type-grid--size-md,
-#shop-styles .type-grid.type-grid--size-sm {
-  grid-template-columns: repeat(var(--type-cols, 3), minmax(0, 1fr));
-}
-
+#shop-styles .type-grid.type-grid--size-sm,
 #shop-styles .type-grid.type-grid--size-xs {
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  /* !important: fixed 3-column layout regardless of size class or item
+     count — beats the server's inline style="--type-cols: N" everywhere. */
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
 }
 
-#shop-styles .type-grid.type-grid--size-xl {
-  max-width: min(100%, 360px);
-  margin-inline: auto;
-}
-
-#shop-styles .type-grid.type-grid--size-lg {
-  max-width: min(100%, calc(var(--type-cols, 3) * 280px));
-  margin-inline: auto;
-}
-
-#shop-styles .type-grid.type-grid--size-md {
-  max-width: min(100%, calc(var(--type-cols, 3) * 220px));
-  margin-inline: auto;
-}
-
+/* All sizes render the same fixed 3-col grid now, so none of them get a
+   per-size --type-cols-based width cap — that cap assumed a variable
+   column count and would otherwise squeeze 3 columns into a 1- or 2-col
+   width. */
+#shop-styles .type-grid.type-grid--size-xl,
+#shop-styles .type-grid.type-grid--size-lg,
+#shop-styles .type-grid.type-grid--size-md,
 #shop-styles .type-grid.type-grid--size-sm {
   max-width: 100%;
 }
@@ -3080,11 +3071,11 @@ body.app-shell:not(.dark-theme) .shop-fit {
   flex-shrink: 0;
 }
 
-/* Catalog — five tiles in one row (imprint-calculator shop-fit) */
+/* Catalog — always 3 tiles per row (imprint-calculator shop-fit) */
 .shop-fit .catalog-grid {
   flex: 1;
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
   gap: 16px;
   align-content: center;
   align-items: start;
@@ -4646,6 +4637,20 @@ body.app-shell:not(.dark-theme) .shop-fit {
   }
 }
 
+/* Vertical (portrait) tablets — the preview is already full-bleed width here,
+   so "2x size" means taller, not wider: double the preview's height and let
+   the image cover-crop into it instead of just shrinking to fit. */
+@media (min-width: 481px) and (max-width: 1024px) and (orientation: portrait) {
+  .shop-fit .shop-girdle-engrave .cfg-engrave-preview {
+    aspect-ratio: 640 / 720;
+  }
+
+  .shop-fit .shop-girdle-engrave .cfg-engrave-gem {
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
 /* Intermediate calculator widths: keep the selection flow readable before
    the phone breakpoint.  The price panel moves below the selection area so
    the buy column is not squeezed beside a fixed sidebar during zoom/device
@@ -4674,14 +4679,14 @@ body.app-shell:not(.dark-theme) .shop-fit {
   #shop-styles .type-grid.type-grid--size-md,
   #shop-styles .type-grid.type-grid--size-sm,
   #shop-styles .type-grid.type-grid--size-xs {
-    --type-cols: 2;
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    --type-cols: 3;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
     max-width: 100% !important;
     margin-inline: 0;
   }
 
   .shop-fit .catalog-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .shop-fit .product-options-section {

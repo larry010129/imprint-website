@@ -2048,6 +2048,10 @@
   .jewelry-block-media { order: -1; }
 
   .contact-section { padding: 64px 0 72px; }
+  /* ponytail: .contact-section--flush is equal-specificity and declared
+     earlier in the file, so without this it loses padding-top:0 here and
+     the form section gets a spurious 64px gap under it on tablets. */
+  .contact-section--flush { padding-top: 0; }
   .contact-form-card { margin-top: 32px; }
   .diamond-hub-cta {
     flex-direction: column;
