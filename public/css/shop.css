@@ -2325,17 +2325,6 @@ body.dark-theme .ring-size-guide-table thead th {
     min-height: 44px;
   }
 
-  #shop-styles .type-grid,
-  #shop-styles .type-grid.type-grid--size-xl,
-  #shop-styles .type-grid.type-grid--size-lg,
-  #shop-styles .type-grid.type-grid--size-md,
-  #shop-styles .type-grid.type-grid--size-sm,
-  #shop-styles .type-grid.type-grid--size-xs {
-    --type-cols: 2;
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    max-width: 100% !important;
-    margin-inline: 0;
-  }
 
   .catalog-tile,
   #shop-styles .type-card {
@@ -2966,7 +2955,10 @@ body.app-shell:not(.dark-theme) .shop-fit {
   margin: 0;
 }
 
-@media (min-width: 1101px) {
+/* ponytail: (hover:none)+(pointer:coarse) keeps touchscreen tablets (iPad
+   landscape is commonly 1180-1366px, past this cutoff) on the scrolling
+   layout below instead of the desktop no-scroll "fit" mode */
+@media (min-width: 1101px) and (hover: hover) and (pointer: fine) {
   body.app-shell:has(.shop-fit) {
     overflow: hidden;
   }
@@ -4473,9 +4465,10 @@ body.app-shell:not(.dark-theme) .shop-fit {
   letter-spacing: 0.06em;
 }
 
-/* Tablet landscape (901–1100px): keep a side price panel, but release the
-   viewport-height lock so the page scrolls normally. */
-@media (max-width: 1100px) {
+/* Tablet landscape (901-1100px), plus any touchscreen tablet regardless of
+   width (iPad landscape commonly runs 1180-1366px): keep a side price
+   panel, but release the viewport-height lock so the page scrolls normally. */
+@media (max-width: 1100px), (hover: none) and (pointer: coarse) {
   .shop-fit {
     height: auto;
     min-height: 0;
@@ -4671,6 +4664,22 @@ body.app-shell:not(.dark-theme) .shop-fit {
 }
 
 @media (max-width: 640px) {
+  /* ponytail: was a blanket ≤900px override that force-capped every style
+     grid at 2 cols regardless of item count, ignoring the xs/sm/md size-class
+     system below — made tablets like iPad mini (768px) show oversized cards
+     needing lots of scrolling. Phone-only now; tablets use their own size class. */
+  #shop-styles .type-grid,
+  #shop-styles .type-grid.type-grid--size-xl,
+  #shop-styles .type-grid.type-grid--size-lg,
+  #shop-styles .type-grid.type-grid--size-md,
+  #shop-styles .type-grid.type-grid--size-sm,
+  #shop-styles .type-grid.type-grid--size-xs {
+    --type-cols: 2;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    max-width: 100% !important;
+    margin-inline: 0;
+  }
+
   .shop-fit .catalog-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

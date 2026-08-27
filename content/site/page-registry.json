@@ -901,7 +901,7 @@
     "layout": "site",
     "main_class": "main-content shop-calculator-page",
     "extra_css": [
-      "/static/css/shop.css?v=6.65",
+      "/static/css/shop.css?v=6.67",
       "/static/css/shop-wizard.css?v=27",
       "/static/css/shop-tour.css?v=7",
       "/static/react/shop-tour.css?v=18"
