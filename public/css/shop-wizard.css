@@ -3,6 +3,12 @@
 .shop-calculator-page {
   padding-top: 16px;
   padding-bottom: 48px;
+  /* This step is only slightly taller than one screen on tablets. iOS Chrome's
+     bounce/toolbar-collapse animation can eat a swipe entirely on a page that
+     short, reading as "stuck" even though the page is not actually blocked.
+     Contain overscroll here so the gesture always scrolls this page's own
+     content instead of chaining into browser-chrome bounce. */
+  overscroll-behavior-y: contain;
 }
 
 /* Shop must not render the shared CMS "end" host — leftover empty
