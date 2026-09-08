@@ -819,6 +819,7 @@
       id: product.id,
       category: product.category,
       categoryLabel: state.categoryLabels[product.category] || product.category,
+      customId: product.custom_id || '',
       name: product.name_zh,
       nameEn: product.name_en || '',
       thumbUrl: productThumb(product) || '',

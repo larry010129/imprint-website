@@ -29,6 +29,7 @@ export interface ProductTableRow {
   id: string;
   category: string;
   categoryLabel: string;
+  customId: string;
   name: string;
   nameEn: string;
   thumbUrl: string;
@@ -65,6 +66,12 @@ const columns: ColumnDef<ProductTableRow>[] = [
         ⋮⋮
       </button>
     ),
+  },
+  {
+    id: "customId",
+    accessorFn: (r) => r.customId,
+    header: "商品編號",
+    cell: ({ row }) => row.original.customId || "-",
   },
   {
     id: "thumb",
