@@ -67,6 +67,7 @@ VALID_COLORS = {"white", "yellow", "rose"}
 IMAGE_COLOR_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,31}$")
 PRODUCT_NAME_MAX = 150
 PRODUCT_DESC_MAX = 2000
+PRODUCT_CUSTOM_ID_MAX = 60
 _BROWSER_LOCAL_URL_RE = re.compile(r"^(?:blob:|data:)", re.I)
 _DEAD_CATALOG_PLACEHOLDER_RE = re.compile(
     r"(?:\.svg(?:$|\?))|/images/shop/styles/",
@@ -149,6 +150,15 @@ def ensure_product_style_key_column(cur) -> None:
 def ensure_product_ring_size_config_column(cur) -> None:
     """Add products.ring_size_config jsonb if missing (migration 20260806180000)."""
     cur.execute("alter table products add column if not exists ring_size_config jsonb")
+
+
+def ensure_product_custom_id_column(cur) -> None:
+    """Add products.custom_id if missing (migration 20260908130000).
+
+    Admin-only internal code (e.g. "N-001") — never surfaced to the public
+    shop API; see build_catalog_product(_lite) in app/catalog.py.
+    """
+    cur.execute("alter table products add column if not exists custom_id text")
 
 
 def ensure_product_images_previous_column(cur) -> None:
@@ -497,6 +507,11 @@ def validate_product_fields(body: dict | None, *, valid_categories: set[str] | N
         errors.append(f"description must be at most {PRODUCT_DESC_MAX} characters")
     cleaned["descriptionZh"] = desc_zh or None
     cleaned["descriptionEn"] = desc_en or None
+
+    custom_id = str(body.get("customId") or "").strip()
+    if len(custom_id) > PRODUCT_CUSTOM_ID_MAX:
+        custom_id = custom_id[:PRODUCT_CUSTOM_ID_MAX]
+    cleaned["customId"] = custom_id or None
 
     default_color = str(body.get("defaultColor") or "white").strip()
     if category == "diamond":

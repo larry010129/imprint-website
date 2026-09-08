@@ -405,12 +405,12 @@
     var products = (payload && payload.products) || (Array.isArray(payload) ? payload : []) || [];
     var out = [];
     products.forEach(function (p) {
-      var blob = [p.name_zh, p.name_en, p.sku, p.category, p.id].join(' ');
+      var blob = [p.name_zh, p.name_en, p.custom_id, p.category, p.id].join(' ');
       if (!matchText(blob, q)) return;
       out.push({
         panel: 'products',
         type: '商品',
-        label: p.name_zh || p.name_en || p.sku || p.id,
+        label: p.name_zh || p.name_en || p.custom_id || p.id,
         sub: p.category || ''
       });
     });

@@ -28,6 +28,7 @@ from app.admin_products import (
     as_jsonb,
     delete_product_image_urls_if_unreferenced,
     ensure_product_chain_type_column,
+    ensure_product_custom_id_column,
     ensure_product_images_previous_column,
     ensure_product_length_weights_column,
     ensure_product_sell_mode_columns,
@@ -1110,6 +1111,26 @@ async def product_category_upload(
     return JSONResponse(content={"url": url, "category": category})
 
 
+def _admin_product_filters(
+    *,
+    category: str | None = None,
+    search: str | None = None,
+) -> tuple[str, list]:
+    """Shared WHERE clause + params for the admin product list/count queries."""
+    clauses: list[str] = []
+    params: list = []
+    if category:
+        clauses.append("category = %s")
+        params.append(category)
+    q = (search or "").strip()
+    if q:
+        clauses.append("(name_zh ilike %s or name_en ilike %s or custom_id ilike %s)")
+        needle = f"%{q}%"
+        params.extend([needle, needle, needle])
+    where = f" where {' and '.join(clauses)}" if clauses else ""
+    return where, params
+
+
 def _products_with_children(
     cur,
     *,
@@ -1117,6 +1138,7 @@ def _products_with_children(
     offset: int = 0,
     product_ids: list | None = None,
     category: str | None = None,
+    search: str | None = None,
 ) -> list[dict]:
     if product_ids is not None:
         ids = list(product_ids)
@@ -1131,12 +1153,8 @@ def _products_with_children(
             (ids,),
         )
     else:
-        sql = "select * from products"
-        params: list = []
-        if category:
-            sql += " where category = %s"
-            params.append(category)
-        sql += " order by sort_order, created_at desc"
+        where, params = _admin_product_filters(category=category, search=search)
+        sql = f"select * from products{where} order by sort_order, created_at desc"
         if limit is not None:
             sql += " limit %s offset %s"
             params.extend([limit, offset])
@@ -1184,20 +1202,17 @@ async def products_list(request: Request) -> dict:
     _require_admin(request)
     page, page_size, limit, offset = parse_paging_from_mapping(request.query_params)
     category = (request.query_params.get("category") or "").strip() or None
+    search = (request.query_params.get("q") or "").strip() or None
     # Startup/seed maintenance owns schema checks, memorial-diamond seeding,
     # and removal of auto-stock image rows. Keep this list endpoint read-only
     # so the 商品上架 page is not blocked by repeated write-heavy maintenance.
     with get_connection() as conn, conn.cursor() as cur:
-        if category:
-            total = sql_count_total(
-                cur,
-                "select count(*)::int from products where category = %s",
-                (category,),
-            )
-        else:
-            total = sql_count_total(cur, "select count(*)::int from products")
+        where, count_params = _admin_product_filters(category=category, search=search)
+        total = sql_count_total(
+            cur, f"select count(*)::int from products{where}", count_params
+        )
         products = _products_with_children(
-            cur, limit=limit, offset=offset, category=category
+            cur, limit=limit, offset=offset, category=category, search=search
         )
         cur.execute(
             "select category, count(*)::int as n from products group by category"
@@ -1251,6 +1266,7 @@ async def products_create(request: Request) -> JSONResponse:
         ensure_product_variant_addon_price_column(cur)
         ensure_product_style_key_column(cur)
         ensure_product_ring_size_config_column(cur)
+        ensure_product_custom_id_column(cur)
         cur.execute(
             """
             insert into products (
@@ -1258,9 +1274,9 @@ async def products_create(request: Request) -> JSONResponse:
                 default_color, allows_engraving, allows_fancy_shapes,
                 allows_pendant_only, allows_with_chain,
                 length_weights, chain_type, style_key, ring_size_config,
-                is_published, first_published_at, created_by_id
+                custom_id, is_published, first_published_at, created_by_id
             )
-            values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             returning *
             """,
             (
@@ -1278,6 +1294,7 @@ async def products_create(request: Request) -> JSONResponse:
                 cleaned.get("chainType"),
                 cleaned.get("styleKey"),
                 as_jsonb(cleaned.get("ringSizeConfig")),
+                cleaned.get("customId"),
                 cleaned["isPublished"],
                 first_published,
                 user_id,
@@ -1330,6 +1347,7 @@ async def product_update(request: Request) -> JSONResponse:
         ensure_product_variant_addon_price_column(cur)
         ensure_product_style_key_column(cur)
         ensure_product_ring_size_config_column(cur)
+        ensure_product_custom_id_column(cur)
         cur.execute(
             "select id, is_published, first_published_at, ring_size_config "
             "from products where id = %s",
@@ -1357,7 +1375,7 @@ async def product_update(request: Request) -> JSONResponse:
                 default_color = %s, allows_engraving = %s, allows_fancy_shapes = %s,
                 allows_pendant_only = %s, allows_with_chain = %s,
                 length_weights = %s, chain_type = %s, style_key = %s,
-                ring_size_config = %s,
+                ring_size_config = %s, custom_id = %s,
                 is_published = %s, first_published_at = %s, updated_at = now()
             where id = %s
             returning *
@@ -1377,6 +1395,7 @@ async def product_update(request: Request) -> JSONResponse:
                 cleaned.get("chainType"),
                 cleaned.get("styleKey"),
                 as_jsonb(cleaned.get("ringSizeConfig")),
+                cleaned.get("customId"),
                 cleaned["isPublished"],
                 first_published,
                 product_id,

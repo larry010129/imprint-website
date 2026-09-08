@@ -221,9 +221,11 @@
     activeTab: 'cat-diamond',
     editingId: null,
     view: 'list',
+    searchQuery: '',
   };
   var _pageIndex = 0;
   var _pageSize = 10;
+  var _searchDebounce = null;
   var _loaded = false;
   var _loading = false;
   var _loadSeq = 0;
@@ -785,8 +787,11 @@
       '<p class="note">管理商品款式、金屬選項與照片。上架後會顯示於客製試算頁；拖曳列可調整排序。</p>' +
       '<p class="note ap-memorial-note">紀念鑽石：編輯款式名稱、鑽石顏色與照片以連結試算頁；不含金屬／價格（價格請用「前往價格設定」）。</p>' +
       '<div class="ap-toolbar">' +
-        '<button type="button" class="btn-sm" id="btnGotoPricing">前往價格設定</button>' +
-        '<button type="button" class="btn-sm btn-primary" id="btnNewProduct">+ 新增商品</button>' +
+        '<input type="search" id="apProductSearch" class="ap-product-search" placeholder="搜尋商品名稱或自訂編號…" value="' + esc(state.searchQuery) + '">' +
+        '<div class="ap-toolbar-actions">' +
+          '<button type="button" class="btn-sm" id="btnGotoPricing">前往價格設定</button>' +
+          '<button type="button" class="btn-sm btn-primary" id="btnNewProduct">+ 新增商品</button>' +
+        '</div>' +
       '</div>' +
       '<div class="ap-category-tabs" role="tablist">' + tabs + '</div>' +
       categoryPanelHtml() +
@@ -919,6 +924,24 @@
         refreshRingSizeSection();
       });
     });
+
+    var searchInput = document.getElementById('apProductSearch');
+    if (searchInput) {
+      searchInput.addEventListener('input', function () {
+        var value = searchInput.value;
+        if (_searchDebounce) clearTimeout(_searchDebounce);
+        _searchDebounce = setTimeout(function () {
+          _searchDebounce = null;
+          if (state.searchQuery === value) return;
+          state.searchQuery = value;
+          _pageIndex = 0;
+          unmountProductsTable();
+          var tableRoot = document.getElementById('apProductsTableRoot');
+          if (tableRoot) tableRoot.innerHTML = tableAreaSkeletonHtml();
+          load(true, true);
+        }, 300);
+      });
+    }
 
     var addCatBtn = document.getElementById('apAddCategory');
     if (addCatBtn) addCatBtn.addEventListener('click', openAddCategoryDialog);
@@ -3025,6 +3048,7 @@
               '<label><span>' + (isDiamond ? '預設鑽石顏色' : '預設顏色') + '</span><select name="defaultColor" id="apDefaultColor">' + colorOpts + '</select></label>' +
               '<label><span>中文名稱 <span class="ap-required" aria-hidden="true">*</span></span><input name="nameZh" maxlength="150" autocomplete="off" value="' + esc(product && product.name_zh) + '"></label>' +
               '<label><span>英文名稱（資料用） <span class="ap-required" aria-hidden="true">*</span></span><input name="nameEn" maxlength="150" required autocomplete="off" value="' + esc(product && product.name_en) + '"></label>' +
+              '<label><span>自訂編號（後台管理用，不會顯示給客戶）</span><input name="customId" maxlength="60" autocomplete="off" placeholder="例如：N-001" value="' + esc(product && product.custom_id) + '"></label>' +
               '<label id="apStyleKeyField"' + (isDiamond ? '' : ' hidden') + '><span>試算連結代碼</span>' +
                 '<input name="styleKey" maxlength="48" autocomplete="off" placeholder="diamond-…" value="' + esc(styleKey) + '"' +
                 (styleKeyLocked ? ' readonly' : '') + '>' +
@@ -3438,6 +3462,7 @@
       category: category,
       nameZh: String(fd.get('nameZh') || '').trim(),
       nameEn: String(fd.get('nameEn') || '').trim(),
+      customId: String(fd.get('customId') || '').trim(),
       descriptionZh: String(fd.get('descriptionZh') || '').trim(),
       descriptionEn: String(fd.get('descriptionEn') || '').trim(),
       defaultColor: fd.get('defaultColor') || 'white',
@@ -3599,6 +3624,7 @@
       page: _pageIndex + 1,
       pageSize: _pageSize,
       category: cat || undefined,
+      q: state.searchQuery || undefined,
     });
   }
 
