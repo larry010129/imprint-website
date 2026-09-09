@@ -4664,22 +4664,22 @@ body.app-shell:not(.dark-theme) .shop-fit {
   }
 
   /* Engraving text/symbols overlay was capped at 18px on every screen size,
-     so it read as tiny against the tablet's full-bleed diamond photo — 5x it. */
+     so it read as tiny against the tablet's full-bleed diamond photo — 3x it. */
   .shop-fit .shop-girdle-engrave .cfg-engrave-preview-text {
-    font-size: clamp(70px, 9.25vw, 90px);
+    font-size: clamp(42px, 5.55vw, 54px);
   }
 
   .shop-fit .shop-girdle-engrave .cfg-engrave-preview-text .cfg-emblem-token {
-    width: 90px;
-    height: 90px;
+    width: 54px;
+    height: 54px;
   }
 
   .shop-fit .shop-girdle-engrave .cfg-engrave-preview-text .cfg-emblem-token img,
   .shop-fit .shop-girdle-engrave .cfg-engrave-preview-text .cfg-emblem-token svg {
-    width: 90px;
-    height: 90px;
-    max-width: 90px;
-    max-height: 90px;
+    width: 54px;
+    height: 54px;
+    max-width: 54px;
+    max-height: 54px;
   }
 }
 
