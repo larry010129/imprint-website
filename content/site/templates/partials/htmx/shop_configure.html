@@ -39,7 +39,7 @@
 
       <div class="product-buy-col">
         <header class="product-info-header">
-          <p class="product-subtitle">{{ category_label }}</p>
+          <p class="product-subtitle">{{ category_label }}{% if product.customId %} <span class="product-custom-id">{{ product.customId }}</span>{% endif %}</p>
           <h2 class="product-title">{{ product.nameZh or '—' }}</h2>
         </header>
 

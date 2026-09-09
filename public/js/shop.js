@@ -2254,6 +2254,13 @@ function updateProductHeader() {
       const badge = stoneCountBadgeText();
       if (badge) sub = sub ? `${sub} · ${badge}` : badge;
       subtitle.textContent = sub;
+      if (product.customId) {
+        subtitle.appendChild(document.createTextNode(' '));
+        const idBadge = document.createElement('span');
+        idBadge.className = 'product-custom-id';
+        idBadge.textContent = product.customId;
+        subtitle.appendChild(idBadge);
+      }
     }
     if (description) {
       const desc = shopLang() === 'en'
