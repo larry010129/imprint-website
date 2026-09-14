@@ -1841,7 +1841,7 @@
     var earClaspHead = category === 'earring' ? '<span>耳扣價錢</span>' : '';
     return (
       '<div class="ap-variant-head">' +
-        '<span>金屬</span><span>克拉</span><span>蠟重（錢）</span><span>預估金重</span>' +
+        '<span>金屬</span><span>蠟重（錢）</span><span>預估金重</span><span>克拉</span>' +
         '<span>配鑽 cts</span><span>一克拉價格</span><span>配鑽價錢</span>' +
         '<span>品項加價 (NT$)</span>' +
         earClaspHead +
@@ -1966,9 +1966,9 @@
     var gold = (variant && variant.gold) || GOLDS[0];
     return '<div class="ap-variant-row">' +
       '<select name="gold">' + goldOpts + '</select>' +
-      '<select name="carat">' + caratOpts + '</select>' +
       '<input type="number" name="weight" step="0.0001" min="0.0001" placeholder="蠟重（錢）" value="' + esc(weight) + '">' +
       '<output class="ap-metal-weight-out" name="metalWeight">' + metalWeightLabel(weight, gold) + '</output>' +
+      '<select name="carat">' + caratOpts + '</select>' +
       '<input type="number" name="sideStoneCarat" step="any" min="0" placeholder="配鑽 cts" value="' + esc(sideStoneCts) + '">' +
       '<input type="number" name="sideStonePrice" step="1" min="0" placeholder="一克拉價格" value="' + esc(sideStone) + '">' +
       '<input type="number" name="sideStoneTotal" step="1" min="0" placeholder="配鑽價錢" value="' +
@@ -3065,7 +3065,6 @@
               '<h4 class="ap-section-title">款式選項</h4>' +
               '<div class="ap-variant-block' +
                 (category === 'chain' ? ' ap-variant-block--chain' : '') +
-                (['ring', 'pendant', 'earring'].indexOf(category) >= 0 ? ' ap-variant-block--no-carat' : '') +
                 (category === 'earring' ? ' ap-variant-block--earring' : '') +
               '">' +
                 variantHeadHtml(category) +
