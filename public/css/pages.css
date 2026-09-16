@@ -525,7 +525,14 @@
 }
 .contact-form-panel .form-msg{ margin-top:14px; font-size:13px; }
 .contact-form-panel .form-msg.is-ok{ color:#2f7a4a; }
-.contact-form-panel .form-msg.is-err{ color:#C0574A; }
+.contact-form-panel .form-msg.is-err,
+.contact-form-panel .form-msg.is-error{ color:#C0574A; }
+.contact-form-panel .form-field.invalid input,
+.contact-form-panel .form-field.invalid textarea{ border-color:#C0574A; }
+.contact-form-panel .form-field .error-message{
+  display:block; margin-top:6px; font-size:12px; color:#C0574A;
+}
+.contact-form-panel .form-field .error-message[hidden]{ display:none; }
 
 .email-split{
   display:flex; align-items:stretch;
@@ -554,7 +561,8 @@
 .email-domain-custom{ margin-top:8px; }
 .form-msg{ margin-top:14px; font-size:13px; letter-spacing:.04em; min-height:1.4em; }
 .form-msg.is-ok{ color:#3E8F63; }
-.form-msg.is-err{ color:#C0574A; }
+.form-msg.is-err,
+.form-msg.is-error{ color:#C0574A; }
 #contactSubmitBtn[disabled]{ opacity:.6; cursor:not-allowed; }
 
 /* 線上估價需求彈窗（客製試算頁共用） */
@@ -576,6 +584,7 @@
   width:28px; height:28px; display:flex; align-items:center; justify-content:center; border-radius:50%;
 }
 .qr-modal-close:hover{ background:#F3EEE8; color:var(--ink); }
+.qr-modal .contact-success-ok{ width:100%; text-align:center; margin-top:4px; }
 .qr-modal-summary{ background:var(--mint-soft); border:1px solid var(--mint-line); border-radius:8px; padding:14px 16px; margin-bottom:22px; }
 .qr-summary-row{ display:flex; justify-content:space-between; gap:12px; font-size:13px; padding:5px 0; }
 .qr-summary-row .k{ color:var(--ink-faint); flex:none; }

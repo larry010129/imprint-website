@@ -227,16 +227,170 @@
   if (!form) return;
 
   var loadedAt = document.getElementById('cFormLoadedAt');
-  if (loadedAt) loadedAt.value = String(Date.now());
+  function refreshLoadedAt() { if (loadedAt) loadedAt.value = String(Date.now()); }
+  refreshLoadedAt();
 
   var siteKey = form.getAttribute('data-recaptcha-sitekey');
   var action = form.getAttribute('data-recaptcha-action') || 'contact';
-  if (!siteKey) return;
+
+  /* ---------- field-level validation ---------- */
+
+  var FIELDS = ['name', 'phone', 'email', 'message'];
+
+  function fieldWrap(input) { return input ? input.closest('.form-field') : null; }
+
+  function ensureErrorMessage(wrap) {
+    var msgEl = wrap.querySelector('.error-message');
+    if (msgEl) return msgEl;
+    msgEl = document.createElement('span');
+    msgEl.className = 'error-message';
+    msgEl.setAttribute('role', 'alert');
+    wrap.appendChild(msgEl);
+    return msgEl;
+  }
+
+  function setFieldInvalid(input, message) {
+    var wrap = fieldWrap(input);
+    if (!wrap) return;
+    wrap.classList.add('invalid');
+    var msgEl = ensureErrorMessage(wrap);
+    msgEl.textContent = message || '';
+    msgEl.hidden = !message;
+  }
+
+  function clearFieldInvalid(input) {
+    var wrap = fieldWrap(input);
+    if (!wrap) return;
+    wrap.classList.remove('invalid');
+    var msgEl = wrap.querySelector('.error-message');
+    if (msgEl) { msgEl.textContent = ''; msgEl.hidden = true; }
+  }
+
+  function isValidEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
+  function isValidPhone(v) { return /^\d{8,15}$/.test(v); }
+
+  function validateField(fieldName) {
+    var input = form.querySelector('[name="' + fieldName + '"]');
+    if (!input) return true;
+    var value = input.value.trim();
+    var error = null;
+    if (fieldName === 'name') {
+      if (!value) error = '請填寫姓名';
+    } else if (fieldName === 'phone') {
+      if (!value) error = '請填寫電話';
+      else if (!isValidPhone(value)) error = '請輸入有效的電話號碼（純數字 8～15 碼）';
+    } else if (fieldName === 'email') {
+      if (!value) error = '請填寫 Email';
+      else if (!isValidEmail(value)) error = '請輸入有效的 Email 格式';
+    } else if (fieldName === 'message') {
+      if (!value) error = '請填寫您的需求';
+    }
+    if (error) { setFieldInvalid(input, error); return false; }
+    clearFieldInvalid(input);
+    return true;
+  }
+
+  function validateForm() {
+    var ok = true;
+    var firstBad = null;
+    FIELDS.forEach(function (fieldName) {
+      var fieldOk = validateField(fieldName);
+      if (!fieldOk && !firstBad) firstBad = form.querySelector('[name="' + fieldName + '"]');
+      ok = ok && fieldOk;
+    });
+    return { ok: ok, firstBad: firstBad };
+  }
+
+  FIELDS.forEach(function (fieldName) {
+    var input = form.querySelector('[name="' + fieldName + '"]');
+    if (!input) return;
+    input.addEventListener('blur', function () { validateField(fieldName); });
+    input.addEventListener('input', function () {
+      var wrap = fieldWrap(input);
+      if (wrap && wrap.classList.contains('invalid')) validateField(fieldName);
+    });
+  });
+
+  /* ---------- success popup (shared .qr-modal pattern) ---------- */
+
+  function showSuccessModal(text) {
+    var overlay = document.getElementById('contactSuccessOverlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'contactSuccessOverlay';
+      overlay.className = 'qr-modal-overlay';
+      document.body.appendChild(overlay);
+      overlay.addEventListener('click', function (e) {
+        if (e.target === overlay) closeSuccessModal();
+      });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && overlay.classList.contains('is-open')) closeSuccessModal();
+      });
+    }
+    overlay.innerHTML =
+      '<div class="qr-modal" role="alertdialog" aria-modal="true" aria-labelledby="contactSuccessTitle">' +
+        '<button type="button" class="qr-modal-close" data-modal-close aria-label="關閉">&times;</button>' +
+        '<h3 id="contactSuccessTitle">已收到您的留言</h3>' +
+        '<p class="qr-modal-sub"></p>' +
+        '<button type="button" class="btn btn-dark contact-success-ok" data-modal-close>好的</button>' +
+      '</div>';
+    overlay.querySelector('.qr-modal-sub').textContent = text;
+    overlay.classList.add('is-open');
+    document.body.style.overflow = 'hidden';
+    overlay.querySelectorAll('[data-modal-close]').forEach(function (btn) {
+      btn.addEventListener('click', closeSuccessModal);
+    });
+    var closeBtn = overlay.querySelector('.qr-modal-close');
+    if (closeBtn) closeBtn.focus();
+  }
+
+  function closeSuccessModal() {
+    var overlay = document.getElementById('contactSuccessOverlay');
+    if (!overlay) return;
+    overlay.classList.remove('is-open');
+    document.body.style.overflow = '';
+  }
+
+  /* ---------- htmx wiring ---------- */
+
+  /* htmx only swaps 2xx responses by default — without this, a 4xx error
+     response never reaches #contactFormMsg and the user sees nothing. */
+  document.body.addEventListener('htmx:beforeSwap', function (evt) {
+    var xhr = evt.detail && evt.detail.xhr;
+    if (!xhr || xhr.status < 400 || xhr.status >= 600) return;
+    var elt = evt.detail.elt;
+    if (!elt || !elt.closest || elt.closest('#contactForm') !== form) return;
+    evt.detail.shouldSwap = true;
+    evt.detail.isError = false;
+  });
+
+  document.body.addEventListener('htmx:afterSwap', function (evt) {
+    var target = evt.detail && evt.detail.target;
+    if (!target || target.id !== 'contactFormMsg') return;
+    var okMsg = target.querySelector('.form-msg.is-ok');
+    if (!okMsg) return;
+    var text = okMsg.textContent;
+    target.innerHTML = '';
+    showSuccessModal(text);
+    form.reset();
+    refreshLoadedAt();
+    FIELDS.forEach(function (fieldName) {
+      var input = form.querySelector('[name="' + fieldName + '"]');
+      if (input) clearFieldInvalid(input);
+    });
+  });
 
   document.body.addEventListener('htmx:confirm', function (evt) {
     if (evt.target !== form) return;
     evt.preventDefault();
-    if (typeof grecaptcha === 'undefined' || typeof grecaptcha.execute !== 'function') {
+
+    var result = validateForm();
+    if (!result.ok) {
+      if (result.firstBad) result.firstBad.focus();
+      return;
+    }
+
+    if (!siteKey || typeof grecaptcha === 'undefined' || typeof grecaptcha.execute !== 'function') {
       evt.detail.issueRequest();
       return;
     }
