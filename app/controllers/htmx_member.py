@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, Response
 
@@ -14,6 +16,7 @@ from app.auth import (
     is_admin,
 )
 from app.auth_totp_service import verify_step_up_password
+from app.captcha import recaptcha_error_or_none
 from app.controllers.htmx_common import form_bool, html, hx_redirect
 from app.database import get_connection
 from app.membership_config import load_config
@@ -35,9 +38,16 @@ from app.orders import (
     normalize_history_tab as _normalize_history_tab,
 )
 from app.profile_schema import fetch_profile
+from app.spam_filter import (
+    FORM_LOADED_FIELD,
+    HONEYPOT_FIELD,
+    is_spam_submission,
+    load_dynamic_keywords,
+)
 from app.tw_address import STREET_ERROR, valid_tw_street
 
 router = APIRouter(tags=["htmx-member"])
+log = logging.getLogger(__name__)
 
 
 def _format_member_since(value) -> str | None:
@@ -80,6 +90,25 @@ async def contact_submit(request: Request) -> HTMLResponse:
         return html(
             request, "form_msg.html", {"ok": False, "message": "請填寫姓名、電話、Email 與您的需求"}, 400
         )
+
+    with get_connection() as conn, conn.cursor() as cur:
+        dynamic_spam_keywords = load_dynamic_keywords(cur)
+
+    if is_spam_submission(
+        honeypot=str(form.get(HONEYPOT_FIELD) or ""),
+        form_loaded_at=str(form.get(FORM_LOADED_FIELD) or ""),
+        text_fields=[name, message, phone, email],
+        extra_keywords=dynamic_spam_keywords,
+    ):
+        log.info("contact form rejected as spam (source=/contact)")
+        return html(request, "form_msg.html", {"ok": True, "message": "已收到您的留言，顧問將盡快聯繫。"})
+
+    captcha_error = recaptcha_error_or_none(
+        request, str(form.get("g-recaptcha-response") or ""), expected_action="contact"
+    )
+    if captcha_error:
+        return html(request, "form_msg.html", {"ok": False, "message": captcha_error}, 400)
+
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute(
             """

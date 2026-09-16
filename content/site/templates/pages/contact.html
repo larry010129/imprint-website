@@ -104,8 +104,17 @@
         hx-post="/htmx/contact"
         hx-target="#contactFormMsg"
         hx-swap="innerHTML"
-        hx-disabled-elt="button[type=submit]">
+        hx-disabled-elt="button[type=submit]"
+        {% if recaptcha_site_key %}data-recaptcha-sitekey="{{ recaptcha_site_key }}" data-recaptcha-action="contact"{% endif %}>
         <p class="contact-form-panel__muted" data-cms-text="form-muted">留下簡短訊息</p>
+        <div class="contact-form-panel__hp" aria-hidden="true">
+          <label for="cWebsite">網站</label>
+          <input type="text" id="cWebsite" name="hp_website" tabindex="-1" autocomplete="off">
+        </div>
+        <input type="hidden" id="cFormLoadedAt" name="hp_ts" value="">
+        {% if recaptcha_site_key %}
+        <input type="hidden" name="g-recaptcha-response" id="cRecaptchaResponse" value="">
+        {% endif %}
         <div class="contact-form-panel__grid">
           <div class="form-field">
             <label for="cName" data-cms-text="form-label-name">姓名 <span class="req">*</span></label>
@@ -208,4 +217,42 @@
     </div>
   </div>
 </section>
+
+{% if recaptcha_site_key %}
+<script src="https://www.google.com/recaptcha/api.js?render={{ recaptcha_site_key }}" async defer></script>
+{% endif %}
+<script>
+(function () {
+  var form = document.getElementById('contactForm');
+  if (!form) return;
+
+  var loadedAt = document.getElementById('cFormLoadedAt');
+  if (loadedAt) loadedAt.value = String(Date.now());
+
+  var siteKey = form.getAttribute('data-recaptcha-sitekey');
+  var action = form.getAttribute('data-recaptcha-action') || 'contact';
+  if (!siteKey) return;
+
+  document.body.addEventListener('htmx:confirm', function (evt) {
+    if (evt.target !== form) return;
+    evt.preventDefault();
+    if (typeof grecaptcha === 'undefined' || typeof grecaptcha.execute !== 'function') {
+      evt.detail.issueRequest();
+      return;
+    }
+    grecaptcha.ready(function () {
+      grecaptcha
+        .execute(siteKey, { action: action })
+        .then(function (token) {
+          var field = document.getElementById('cRecaptchaResponse');
+          if (field) field.value = token;
+          evt.detail.issueRequest();
+        })
+        .catch(function () {
+          evt.detail.issueRequest();
+        });
+    });
+  });
+})();
+</script>
 {% endblock %}

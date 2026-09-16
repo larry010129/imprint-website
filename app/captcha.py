@@ -76,11 +76,16 @@ def verify_recaptcha(
     return score >= recaptcha_min_score()
 
 
-def recaptcha_error_or_none(request: "Request", token: str | None) -> str | None:
+def recaptcha_error_or_none(
+    request: "Request",
+    token: str | None,
+    *,
+    expected_action: str = RECAPTCHA_ACTION,
+) -> str | None:
     """Return Chinese error if token missing/invalid; None if ok."""
     if not recaptcha_secret_key():
         return RECAPTCHA_CONFIG_ERROR
     remote_ip = request.client.host if request.client else None
-    if verify_recaptcha(token, remote_ip):
+    if verify_recaptcha(token, remote_ip, expected_action=expected_action):
         return None
     return RECAPTCHA_ERROR

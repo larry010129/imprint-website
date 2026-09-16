@@ -79,6 +79,7 @@ from app.product_categories import (
 )
 from config.settings import settings
 from app.database import get_connection, get_transaction
+from app.spam_filter import add_spam_keywords, extract_candidate_keywords
 from app.orders import (
     HISTORY_TAB_STATUSES,
     attach_order_display,
@@ -338,6 +339,63 @@ async def leads_delete(request: Request) -> JSONResponse:
         {"type": lead_type, "id": lead_id, "deleted": deleted},
     )
     return JSONResponse(content={"ok": True, "deleted": deleted})
+
+
+_LEAD_TEXT_SKIP_KEYS = {"id", "status", "created_at", "quantity", "estimated_price"}
+
+
+def _lead_text_blob(row: dict) -> str:
+    """Every free-text-ish column on a lead row, joined for keyword extraction."""
+    return " ".join(str(v) for k, v in row.items() if k not in _LEAD_TEXT_SKIP_KEYS and v)
+
+
+@router.post("/leads-mark-spam")
+async def leads_mark_spam(request: Request) -> JSONResponse:
+    """Delete one lead row and teach the spam filter a few of its distinguishing
+    words, so future submissions carrying the same words are rejected up front.
+    Same {type, id} shape as the mark-done / delete endpoints.
+    """
+    admin_id = _require_admin(request)
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse(status_code=400, content={"error": "invalid JSON"})
+    if not isinstance(body, dict):
+        return JSONResponse(status_code=400, content={"error": "invalid body"})
+
+    lead_type = body.get("type")
+    if lead_type not in ("message", "quote"):
+        return JSONResponse(status_code=400, content={"error": "invalid lead reference"})
+    try:
+        lead_id = str(uuid.UUID(str(body.get("id") or "")))
+    except ValueError:
+        return JSONResponse(status_code=400, content={"error": "invalid lead id"})
+
+    # Table name comes from the validated enum above, never from the request body.
+    table = "contact_messages" if lead_type == "message" else "quote_requests"
+    with get_transaction() as conn, conn.cursor() as cur:
+        cur.execute(f"select * from {table} where id = %s", (lead_id,))
+        row = cur.fetchone()
+
+        cur.execute("select email from users where id = %s", (admin_id,))
+        actor = cur.fetchone()
+        actor_email = actor["email"] if actor else None
+
+        added_keywords: list[str] = []
+        if row:
+            candidates = extract_candidate_keywords(_lead_text_blob(dict(row)))
+            if candidates:
+                added_keywords = add_spam_keywords(cur, candidates, created_by=actor_email)
+
+        cur.execute(f"delete from {table} where id = %s", (lead_id,))
+        deleted = int(cur.rowcount or 0)
+
+    log_admin_action(
+        actor_email,
+        "lead_mark_spam",
+        {"type": lead_type, "id": lead_id, "deleted": deleted, "keywords": added_keywords},
+    )
+    return JSONResponse(content={"ok": True, "deleted": deleted, "keywords": added_keywords})
 
 
 def _admin_orders_search_from() -> str:

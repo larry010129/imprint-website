@@ -472,6 +472,10 @@
   margin:22px 0; border:0; border-top:1px solid #EFE9E3;
 }
 .contact-form-panel__form .contact-form-panel__muted{ margin-bottom:14px; }
+.contact-form-panel__hp{
+  position:absolute; width:1px; height:1px; overflow:hidden;
+  clip:rect(0 0 0 0); clip-path:inset(50%); white-space:nowrap;
+}
 .contact-form-panel__grid{
   display:grid; grid-template-columns:1fr; gap:0 16px;
 }

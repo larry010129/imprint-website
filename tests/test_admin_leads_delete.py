@@ -136,5 +136,5 @@ def test_admin_js_confirms_before_deleting_lead():
 def test_admin_pages_ship_bumped_assets():
     for name in ("admin.html", "admin1.html"):
         html = (ROOT / name).read_text(encoding="utf-8")
-        assert "api-client.js?v=32" in html
+        assert "api-client.js?v=33" in html
         assert 'data-panel="leads"' in html or "諮詢名單" in html

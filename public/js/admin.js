@@ -571,6 +571,7 @@
                   '<td><div class="adx-actions">' +
                     '<button type="button" class="btn-sm" data-lead-detail="' + escapeHtml(key) + '">詳情</button>' +
                     (isDone ? '' : '<button type="button" class="btn-sm" data-mark-done="' + escapeHtml(key) + '">標記已處理</button>') +
+                    '<button type="button" class="btn-sm adx-action--danger" data-lead-spam="' + escapeHtml(key) + '">標記垃圾</button>' +
                     '<button type="button" class="btn-sm adx-action--danger" data-lead-delete="' + escapeHtml(key) + '">刪除</button>' +
                   '</div></td>' +
                 '</tr>'
@@ -607,6 +608,33 @@
                   return;
                 }
                 if (window.showToast) window.showToast('已刪除諮詢紀錄', 'success');
+                loadLeads(true, true);
+                loadDashboardStats();
+              });
+            });
+          });
+
+          tbody.querySelectorAll('[data-lead-spam]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+              var key = btn.dataset.leadSpam;
+              var item = _leadsByKey[key] || {};
+              if (!confirm('確定將「' + (item.name || '此筆諮詢') + '」標記為垃圾訊息？系統會學習其中的關鍵字，未來相似的留言會被自動擋下，此紀錄也會一併刪除，無法復原。')) return;
+              var sep = key.indexOf(':');
+              btn.disabled = true;
+              btn.textContent = '處理中…';
+              api.admin.markLeadSpam(key.slice(0, sep), key.slice(sep + 1)).then(function (res) {
+                if (res.error) {
+                  console.error('[admin]', res.error);
+                  btn.disabled = false;
+                  btn.textContent = '標記垃圾';
+                  var msg = typeof res.error === 'string' ? res.error : (res.error.message || '請稍後再試');
+                  if (window.showToast) window.showToast('標記失敗：' + msg, 'error');
+                  else alert('標記失敗：' + msg);
+                  return;
+                }
+                var keywords = res.keywords || [];
+                var note = keywords.length ? '，已學習關鍵字：' + keywords.join('、') : '';
+                if (window.showToast) window.showToast('已標記為垃圾並移除' + note, 'success');
                 loadLeads(true, true);
                 loadDashboardStats();
               });

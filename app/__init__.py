@@ -179,6 +179,13 @@ async def lifespan(_app: FastAPI):
             _ensure_invite_schema(cur)
     except Exception:
         log.exception("ensure_invite_schema failed")
+    try:
+        from app.spam_filter import ensure_spam_keywords_schema
+
+        with get_connection() as conn, conn.cursor() as cur:
+            ensure_spam_keywords_schema(cur)
+    except Exception:
+        log.exception("ensure_spam_keywords_schema failed")
     # Sell-mode / variant columns must not ride the silent try below — missing cols = product 500.
     try:
         with get_connection() as conn, conn.cursor() as cur:
