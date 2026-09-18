@@ -5151,7 +5151,7 @@ async function updateChainOptions() {
 
 function currentProductImages() {
   const product = getSelectedProduct();
-  if (!product || usesPendantCompositePreview()) return [];
+  if (!product) return [];
   if (isDiamondOnlyCategory()) {
     return [memorialDiamondShapeImageUrl(resolvedDiamondShape(), selectedDiamondColorId())];
   }
@@ -5281,7 +5281,6 @@ function updateLargeImage(layer) {
   const pendantImg = document.getElementById('large-image-pendant');
   const img = document.getElementById('large-image');
   const zoomBtn = document.getElementById('product-zoom-btn');
-  const thumbs = document.getElementById('product-image-thumbs');
   const previewRoot = document.getElementById('large-image-container');
 
   if (preview.composite && compositeEl && chainImg && pendantImg && preview.chain && preview.pendant) {
@@ -5295,10 +5294,11 @@ function updateLargeImage(layer) {
     chainImg.onerror = failComposite;
     pendantImg.onerror = failComposite;
     if (zoomBtn) zoomBtn.hidden = false;
-    if (thumbs) thumbs.hidden = true;
-    document.getElementById('product-gallery-prev')?.setAttribute('hidden', '');
-    document.getElementById('product-gallery-next')?.setAttribute('hidden', '');
-    document.getElementById('product-gallery-counter')?.setAttribute('hidden', '');
+    // Thumbnails follow the same rule as every other category (e.g. ring): show
+    // whatever admin-uploaded photos exist, regardless of composite/chain preview.
+    const compositeImages = currentProductImages();
+    renderProductThumbnails(compositeImages);
+    updateGalleryNav(compositeImages);
     return;
   }
 
