@@ -1001,7 +1001,14 @@ console.log(JSON.stringify({
 
 
 def test_shop_js_catalog_cross_diamond_image_fallback():
-    """White↔fancy catalog slots fall back to next upload; preview keeps fancy strict."""
+    """White↔fancy catalog slots fall back to next upload; preview keeps fancy strict.
+
+    Cross-diamond/metal fallback returns the FULL uploaded image array (not just one
+    URL) so the thumbnail gallery keeps showing every admin-uploaded photo when the
+    shopper picks a metal/diamond combo that has no dedicated slot of its own —
+    otherwise renderProductThumbnails() collapses the gallery to a single image and
+    hides the thumbnail row entirely (public/js/shop.js renderProductThumbnails).
+    """
     import json
     import subprocess
 
@@ -1032,22 +1039,28 @@ function catalogImagesForKeys(product, keys) {
   }
   return [];
 }
+function orderedCatalogImageUrls(product) {
+  if (!product?.images) return [];
+  const out = [];
+  const seen = new Set();
+  const addKey = (key) => {
+    for (const url of catalogImagesForKeys(product, [key])) {
+      if (seen.has(url)) continue;
+      seen.add(url);
+      out.push(url);
+    }
+  };
+  const keyOrder = Array.isArray(product.colors) && product.colors.length ? product.colors : [];
+  for (const key of keyOrder) addKey(key);
+  for (const key of Object.keys(product.images)) addKey(key);
+  return out;
+}
 function firstAnyCatalogImageUrl(product) {
-  if (!product?.images) return '';
-  const keyOrder = Array.isArray(product.colors) && product.colors.length ? product.colors : Object.keys(product.images);
-  for (const key of keyOrder) {
-    const urls = catalogImagesForKeys(product, [key]);
-    if (urls.length) return urls[0];
-  }
-  for (const list of Object.values(product.images)) {
-    const normalized = (Array.isArray(list) ? list : list ? [list] : []).filter(isUsableCatalogImageUrl);
-    if (normalized.length) return normalized[0];
-  }
-  return '';
+  return orderedCatalogImageUrls(product)[0] || '';
 }
 function catalogImageCrossDiamondFallback(product, metal, diamond, chainMetal, opts) {
   opts = opts || {};
-  if (!product?.images) return '';
+  if (!product?.images) return [];
   const m = metal || 'white';
   const d = diamond || 'white';
   const chain = chainMetal || null;
@@ -1056,14 +1069,14 @@ function catalogImageCrossDiamondFallback(product, metal, diamond, chainMetal, o
     for (const fd of fancyIds) {
       const keys = ShopAssets.imageSlotKeysForLookup(m, fd, chain);
       const urls = catalogImagesForKeys(product, keys);
-      if (urls.length) return urls[0];
+      if (urls.length) return urls;
     }
   } else if (fancyIds.includes(d) && opts.allowWhiteForFancy !== false) {
     const keys = ShopAssets.imageSlotKeysForLookup(m, 'white', chain);
     const urls = catalogImagesForKeys(product, keys);
-    if (urls.length) return urls[0];
+    if (urls.length) return urls;
   }
-  return firstAnyCatalogImageUrl(product);
+  return orderedCatalogImageUrls(product);
 }
 function catalogPreviewSrc(product, metal, diamond, chainMetal) {
   if (!product?.images) return '';
@@ -1083,8 +1096,7 @@ function styleGridImageUrl(product) {
   const fromCatalog = catalogImagesForKeys(product, whiteKeys)[0];
   if (fromCatalog) return fromCatalog;
   const crossCatalog = catalogImageCrossDiamondFallback(product, 'white', 'white', null);
-  if (crossCatalog) return crossCatalog;
-  return '';
+  return crossCatalog[0] || '';
 }
 function productImagesForColor(product, metalColor, diamondColor) {
   const metal = metalColor || 'white';
@@ -1098,11 +1110,11 @@ function productImagesForColor(product, metalColor, diamondColor) {
     const fromWhite = catalogImagesForKeys(product, whiteKeys);
     if (fromWhite.length) return fromWhite;
     const crossWhite = catalogImageCrossDiamondFallback(product, metal, 'white', null);
-    if (crossWhite) return [crossWhite];
+    if (crossWhite.length) return crossWhite;
   }
   if (diamond !== 'white') {
     const crossFancy = catalogImageCrossDiamondFallback(product, metal, diamond, null);
-    if (crossFancy) return [crossFancy];
+    if (crossFancy.length) return crossFancy;
   }
   return [];
 }
@@ -1119,6 +1131,20 @@ const whiteOnly = {
   colors: ['white-white'],
   images: { 'white-white': ['/static/uploads/products/ring-white-only.png'] },
 };
+// Admin uploaded a main photo + 2 extra photos to ONE slot only — they must keep
+// showing as a full gallery for every other metal/diamond combo, not collapse to 1.
+const multiPhoto = {
+  id: 'uuid-pendant-multi',
+  category: 'pendant',
+  colors: ['white-white'],
+  images: {
+    'white-white': [
+      '/static/uploads/products/pendant-main.png',
+      '/static/uploads/products/pendant-extra1.png',
+      '/static/uploads/products/pendant-extra2.png',
+    ],
+  },
+};
 
 console.log(JSON.stringify({
   gridFancy: styleGridImageUrl(fancyOnly),
@@ -1126,6 +1152,9 @@ console.log(JSON.stringify({
   previewPinkStrict: catalogPreviewSrc(whiteOnly, 'white', 'pink', null),
   previewPinkLoose: productImagesForColor(whiteOnly, 'white', 'pink')[0] || '',
   previewWhiteFromFancy: productImagesForColor(fancyOnly, 'white', 'white')[0] || '',
+  multiPhotoOnUpload: productImagesForColor(multiPhoto, 'white', 'white'),
+  multiPhotoOnFancyDiamond: productImagesForColor(multiPhoto, 'white', 'yellow'),
+  multiPhotoOnOtherMetal: productImagesForColor(multiPhoto, 'rose', 'white'),
 }));
 """
     out = json.loads(
@@ -1142,6 +1171,17 @@ console.log(JSON.stringify({
     assert out["previewPinkStrict"] == ""
     assert out["previewPinkLoose"] == "/static/uploads/products/ring-white-only.png"
     assert out["previewWhiteFromFancy"] == "/static/uploads/products/ring-pink-only.png"
+    multi_photos = [
+        "/static/uploads/products/pendant-main.png",
+        "/static/uploads/products/pendant-extra1.png",
+        "/static/uploads/products/pendant-extra2.png",
+    ]
+    # Exact uploaded slot: full gallery.
+    assert out["multiPhotoOnUpload"] == multi_photos
+    # Switching to a diamond color / metal with no dedicated slot must NOT collapse
+    # the gallery to a single fallback image — all 3 photos should keep showing.
+    assert out["multiPhotoOnFancyDiamond"] == multi_photos
+    assert out["multiPhotoOnOtherMetal"] == multi_photos
 
 
 def test_shop_js_style_grid_ordered_image_fallback_chain():

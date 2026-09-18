@@ -905,12 +905,16 @@ function firstAnyCatalogImageUrl(product) {
 
 /**
  * Missing white diamond slot → same-metal fancy uploads; missing fancy → white;
- * still empty → any next catalog upload. Does not apply legacy metal-only keys
- * when the caller asked for an explicit fancy stone (preview uses stock first).
+ * still empty → every other catalog upload (general product photos should keep
+ * showing across variants that have no dedicated slot of their own). Returns the
+ * full matched image array (not just one URL) so the thumbnail gallery doesn't
+ * collapse when the shopper picks a metal/diamond combo the admin never
+ * photographed. Does not apply legacy metal-only keys when the caller asked for
+ * an explicit fancy stone (preview uses stock first).
  */
 function catalogImageCrossDiamondFallback(product, metal, diamond, chainMetal, opts) {
   opts = opts || {};
-  if (!product?.images) return '';
+  if (!product?.images) return [];
   const m = metal || 'white';
   const d = diamond || 'white';
   const chain = chainMetal || null;
@@ -922,17 +926,17 @@ function catalogImageCrossDiamondFallback(product, metal, diamond, chainMetal, o
         ? window.ShopAssets.imageSlotKeysForLookup(m, fd, chain)
         : (chain ? [`${m}-${fd}-${chain}`, `${m}-${fd}`] : [`${m}-${fd}`]);
       const urls = catalogImagesForKeys(product, keys);
-      if (urls.length) return urls[0];
+      if (urls.length) return urls;
     }
   } else if (fancyIds.includes(d) && opts.allowWhiteForFancy !== false) {
     const keys = window.ShopAssets?.imageSlotKeysForLookup
       ? window.ShopAssets.imageSlotKeysForLookup(m, 'white', chain)
       : (chain ? [`${m}-white-${chain}`, m, `${m}-white`] : [m, `${m}-white`]);
     const urls = catalogImagesForKeys(product, keys);
-    if (urls.length) return urls[0];
+    if (urls.length) return urls;
   }
 
-  return firstAnyCatalogImageUrl(product);
+  return orderedCatalogImageUrls(product);
 }
 
 /** Admin-upload catalog URL only — same slot order as step-2 style grid / image_urls.py. */
@@ -1230,7 +1234,7 @@ function productImagesForColor(product, metalColor, diamondColor, opts) {
     const fromWhite = catalogImagesForKeys(product, whiteKeys);
     if (fromWhite.length) return fromWhite;
     const crossWhite = catalogImageCrossDiamondFallback(product, metal, 'white', chainMetal);
-    if (crossWhite) return [crossWhite];
+    if (crossWhite.length) return crossWhite;
   }
 
   // Empty product with no letter-SKU mapping → no invent. Letter A–C stock may
@@ -1264,7 +1268,7 @@ function productImagesForColor(product, metalColor, diamondColor, opts) {
   // Fancy: letter stock first; white / any catalog upload only when stock misses.
   if (diamond !== 'white') {
     const crossFancy = catalogImageCrossDiamondFallback(product, metal, diamond, chainMetal);
-    if (crossFancy) return [crossFancy];
+    if (crossFancy.length) return crossFancy;
   }
 
   // White diamond: broader catalog + letter-stock fallbacks after shop-product miss.
