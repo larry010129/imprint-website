@@ -54,31 +54,33 @@
     }
   }
 
-  function setupAccountMenus(scope) {
-    (scope || document).querySelectorAll('[data-account-menu]').forEach(function (menu) {
-      if (menu.dataset.bound) return;
-      menu.dataset.bound = '1';
-      var toggle = menu.querySelector('[data-account-toggle]');
-      var panel = menu.querySelector('[data-account-panel]');
-      if (!toggle || !panel) return;
-      toggle.addEventListener('click', function () {
-        var open = panel.hasAttribute('hidden');
-        if (open) panel.removeAttribute('hidden');
-        else panel.setAttribute('hidden', '');
-        toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-      });
-      document.addEventListener('mousedown', function (e) {
-        if (!menu.contains(e.target)) {
-          panel.setAttribute('hidden', '');
-          toggle.setAttribute('aria-expanded', 'false');
-        }
-      });
-    });
+  /* Account menu via document-level delegation: the menu markup is replaced by
+     cached paint and /htmx/nav-state OOB swaps, so per-element binding would
+     leave the swapped-in menu dead after the first click. */
+  function setMenuOpen(menu, open) {
+    var toggle = menu.querySelector('[data-account-toggle]');
+    var panel = menu.querySelector('[data-account-panel]');
+    if (!toggle || !panel) return;
+    if (open) panel.removeAttribute('hidden');
+    else panel.setAttribute('hidden', '');
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
   }
+
+  document.addEventListener('click', function (e) {
+    var toggle = e.target.closest && e.target.closest('[data-account-toggle]');
+    var menu = toggle && toggle.closest('[data-account-menu]');
+    if (!menu) return;
+    var panel = menu.querySelector('[data-account-panel]');
+    setMenuOpen(menu, !!panel && panel.hasAttribute('hidden'));
+  });
+  document.addEventListener('mousedown', function (e) {
+    document.querySelectorAll('[data-account-menu]').forEach(function (menu) {
+      if (!menu.contains(e.target)) setMenuOpen(menu, false);
+    });
+  });
 
   var boot = function () {
     document.querySelectorAll('[data-site-nav]').forEach(setupNav);
-    setupAccountMenus(document);
   };
   /* Cache raw /htmx/nav-state markup (not live DOM: data-bound etc. must not
      persist) for nav.html's instant paint. Key = imprint_nav session cookie. */
@@ -95,12 +97,6 @@
   };
 
   window.requestAnimationFrame(boot);
-  document.body.addEventListener('htmx:afterSwap', function (e) {
-    setupAccountMenus(e.target);
-  });
-  document.body.addEventListener('htmx:oobAfterSwap', function (e) {
-    setupAccountMenus(e.target);
-  });
   document.body.addEventListener('htmx:afterRequest', function (e) {
     var elt = e.detail && e.detail.elt;
     if (elt && elt.hasAttribute('data-nav-state') && e.detail.successful) {
