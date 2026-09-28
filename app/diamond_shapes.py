@@ -61,6 +61,7 @@ _schema_ready = False
 _SHAPES_CACHE_TTL_SECONDS = 300.0
 _shapes_cache: tuple[float, list[dict]] | None = None
 _shapes_cache_lock = threading.Lock()
+_schema_lock = threading.Lock()
 
 
 def clear_shapes_cache() -> None:
@@ -78,6 +79,14 @@ def ensure_diamond_shapes_schema(cur, *, force: bool = False) -> None:
     global _schema_ready
     if _schema_ready and not force:
         return
+    with _schema_lock:  # parallel first requests: one runs it, the rest wait
+        if _schema_ready and not force:
+            return
+        _ensure_diamond_shapes_schema_impl(cur)
+        _schema_ready = True
+
+
+def _ensure_diamond_shapes_schema_impl(cur) -> None:
     cur.execute(
         """
         create table if not exists diamond_shapes (
@@ -108,7 +117,6 @@ def ensure_diamond_shapes_schema(cur, *, force: bool = False) -> None:
                 int(shape["sort_order"]),
             ),
         )
-    _schema_ready = True
 
 
 def _serialize_row(row: dict) -> dict:

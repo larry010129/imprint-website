@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import threading
 import uuid
 from pathlib import Path
 
@@ -106,28 +107,44 @@ def _storage_upload(kind: str, name: str, data: bytes, ext: str) -> tuple[str | 
 
 
 _CMS_SCHEMA_READY = False
+_CMS_SCHEMA_LOCK = threading.Lock()
+
+
+def mark_cms_schema_ready() -> None:
+    """Startup lifespan ran the same schema/seed successfully — skip it per request."""
+    global _CMS_SCHEMA_READY
+    _CMS_SCHEMA_READY = True
 
 
 def _ensure_all(cur) -> None:
     """Run schema/seed once per process. Hot create/update must not re-seed.
 
-    Startup lifespan already seeds; repeating every copy-slot upsert + legacy
-    delete on each admin request was a major source of ~20s section-create latency.
+    Startup lifespan already seeds (and calls mark_cms_schema_ready); repeating
+    every copy-slot upsert + legacy delete on each admin request was a major
+    source of ~20s section-create latency.
+
+    Locked: admin GETs run in parallel threads, and the Content panel fires ~16
+    at once. Unlocked, every one of them ran this seed concurrently, contended
+    on the same rows/DDL locks while each held a pooled connection, and the
+    rest of the site hit PoolTimeout (HTTP 500) after 30s.
     """
     global _CMS_SCHEMA_READY
     if _CMS_SCHEMA_READY:
         return
-    from app.cms_copy_slots import ensure_page_copy_slots_schema, seed_page_copy_slots
-    from app.cms_media import ensure_cms_media_schema
-    from app.cms_pages import ensure_cms_pages_schema
-    from app.cms_seed import remove_legacy_seeded_pages
+    with _CMS_SCHEMA_LOCK:
+        if _CMS_SCHEMA_READY:
+            return
+        from app.cms_copy_slots import ensure_page_copy_slots_schema, seed_page_copy_slots
+        from app.cms_media import ensure_cms_media_schema
+        from app.cms_pages import ensure_cms_pages_schema
+        from app.cms_seed import remove_legacy_seeded_pages
 
-    ensure_cms_pages_schema(cur)
-    ensure_page_copy_slots_schema(cur)
-    ensure_cms_media_schema(cur)
-    seed_page_copy_slots(cur)
-    remove_legacy_seeded_pages(cur)
-    _CMS_SCHEMA_READY = True
+        ensure_cms_pages_schema(cur)
+        ensure_page_copy_slots_schema(cur)
+        ensure_cms_media_schema(cur)
+        seed_page_copy_slots(cur)
+        remove_legacy_seeded_pages(cur)
+        _CMS_SCHEMA_READY = True
 
 
 # ── CMS pages ────────────────────────────────────────────────────────────────

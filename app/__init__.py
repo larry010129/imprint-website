@@ -230,6 +230,11 @@ async def lifespan(_app: FastAPI):
             ensure_cms_kv_schema(cur)
             seed_page_copy_slots(cur)
             remove_legacy_seeded_pages(cur)
+        # Same work cms_admin_controller._ensure_all would redo on the first
+        # admin requests (concurrently, under lock contention) — mark it done.
+        from app.controllers.cms_admin_controller import mark_cms_schema_ready
+
+        mark_cms_schema_ready()
     except Exception:
         log.exception("ensure content/cms/product_categories schema failed")
     try:

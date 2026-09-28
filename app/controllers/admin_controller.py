@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import threading
 import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -1624,12 +1625,38 @@ async def products_reorder(request: Request) -> JSONResponse:
     return JSONResponse(content={"ok": True})
 
 
+_SCHEMA_ONCE_DONE: set[str] = set()
+_SCHEMA_ONCE_LOCK = threading.Lock()
+
+
+def _schema_once(name: str, cur, statements: tuple[str, ...]) -> None:
+    """Run idempotent DDL once per process (one thread; the rest wait).
+
+    `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` takes an ACCESS EXCLUSIVE lock
+    even when the column exists — per request it blocked every reader of
+    profiles (login check, nav) and piled up under parallel admin GETs.
+    """
+    if name in _SCHEMA_ONCE_DONE:
+        return
+    with _SCHEMA_ONCE_LOCK:
+        if name in _SCHEMA_ONCE_DONE:
+            return
+        for stmt in statements:
+            cur.execute(stmt)
+        _SCHEMA_ONCE_DONE.add(name)
+
+
 def _ensure_invite_schema(cur) -> None:
-    cur.execute("alter table invite_codes add column if not exists label text")
-    cur.execute(
-        "alter table invite_codes add column if not exists grants_partner boolean not null default false"
+    _schema_once(
+        "invite",
+        cur,
+        (
+            "alter table invite_codes add column if not exists label text",
+            "alter table invite_codes add column if not exists grants_partner boolean not null default false",
+            "alter table profiles add column if not exists is_partner boolean not null default false",
+        ),
     )
-    cur.execute("alter table profiles add column if not exists is_partner boolean not null default false")
+    # Data rule (not schema): non-admin invites count as partner invites — keep per call.
     cur.execute(
         "update invite_codes set grants_partner = true where grants_admin = false and grants_partner = false"
     )
@@ -1791,12 +1818,15 @@ def _serialize_account(row: dict) -> dict:
 
 
 def _ensure_membership_profile_cols(cur) -> None:
-    for stmt in (
-        "alter table profiles add column if not exists imprint_invited boolean not null default false",
-        "alter table profiles add column if not exists partner_imprint_invited boolean not null default false",
-        "alter table profiles add column if not exists referral_code text",
-    ):
-        cur.execute(stmt)
+    _schema_once(
+        "membership_profile_cols",
+        cur,
+        (
+            "alter table profiles add column if not exists imprint_invited boolean not null default false",
+            "alter table profiles add column if not exists partner_imprint_invited boolean not null default false",
+            "alter table profiles add column if not exists referral_code text",
+        ),
+    )
 
 
 @router.get("/accounts")
