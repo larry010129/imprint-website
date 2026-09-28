@@ -7,7 +7,7 @@ import re
 from datetime import datetime
 from uuid import uuid4
 
-from app.cms_boundary import assert_content_page_key, validate_cms_slug
+from app.cms_boundary import assert_content_page_key, normalize_page_key, validate_cms_slug
 
 
 def _serialize_page(row: dict) -> dict:
@@ -82,7 +82,11 @@ def ensure_site_route_page(cur, route: str, title: str | None = None) -> dict:
     page_key, key_err = assert_content_page_key(route)
     if key_err or not page_key:
         raise ValueError(key_err or "route 無效")
-    title_map = {item["route"]: item["title"] for item in EDITABLE_SITE_PAGES}
+    # page_key is normalized (trailing slash stripped: /series/love/ -> /series/love);
+    # normalize the registry the same way or every /series/<x>/ page is rejected.
+    title_map = {
+        normalize_page_key(item["route"]): item["title"] for item in EDITABLE_SITE_PAGES
+    }
     if page_key not in title_map:
         raise ValueError("此 route 非可編輯官網頁面")
     page_title = (title or title_map[page_key]).strip() or title_map[page_key]
