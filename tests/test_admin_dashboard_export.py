@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import io
 import os
 import re
@@ -149,7 +148,7 @@ def test_chart_sheet_embeds_revenue_trend_line_chart():
 
 
 def test_admin_html_dashboard_export_button_and_cache_bust():
-    for name, version in (("admin1.html", "27"), ("admin.html", "25")):
+    for name, version in (("admin1.html", "28"), ("admin.html", "25")):
         html = (ROOT / name).read_text(encoding="utf-8")
         assert 'id="dashExportBtn"' in html
         assert "匯出 Excel" in html
@@ -223,7 +222,7 @@ def _patch_export(monkeypatch, gold=None):
 
 def test_export_endpoint_sets_xlsx_filename(monkeypatch):
     _patch_export(monkeypatch)
-    resp = asyncio.run(
+    resp = (
         ac.dashboard_export(
             MagicMock(),
             granularity="day",
@@ -247,7 +246,7 @@ def test_export_endpoint_requires_admin(monkeypatch):
 
     monkeypatch.setattr(ac, "_require_admin", deny)
     with pytest.raises(HTTPException) as exc:
-        asyncio.run(ac.dashboard_export(MagicMock(), None, None, None, None))
+        ac.dashboard_export(MagicMock(), None, None, None, None)
     assert exc.value.status_code == 401
 
 

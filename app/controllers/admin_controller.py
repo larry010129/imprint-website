@@ -66,7 +66,12 @@ from app.auth import (
 )
 from app.auth_totp_service import step_up_from_body, verify_step_up_password
 from app.catalog import clear_public_catalog_cache, load_product_children
-from app.diamond_shapes import create_shape, fetch_shapes, matrix_shapes_payload
+from app.diamond_shapes import (
+    clear_shapes_cache,
+    create_shape,
+    fetch_shapes,
+    matrix_shapes_payload,
+)
 from app.product_categories import (
     category_labels,
     create_category,
@@ -163,15 +168,23 @@ def _fetch_orders(
 
 
 def _lead_counts(cur) -> tuple[int, int, int, int]:
-    cur.execute("select count(*) as c from contact_messages where status = 'new'")
-    new_messages = int(cur.fetchone()["c"])
-    cur.execute("select count(*) as c from quote_requests where status = 'pending'")
-    pending_quotes = int(cur.fetchone()["c"])
-    cur.execute("select count(*) as c from orders where status <> 'completed'")
-    active_orders = int(cur.fetchone()["c"])
-    cur.execute("select count(*) as c from orders where status = 'completed'")
-    completed_orders = int(cur.fetchone()["c"])
-    return new_messages, pending_quotes, active_orders, completed_orders
+    # One round trip (was four) — each trip crosses regions to the DB.
+    cur.execute(
+        """
+        select
+          (select count(*) from contact_messages where status = 'new') as new_messages,
+          (select count(*) from quote_requests where status = 'pending') as pending_quotes,
+          (select count(*) from orders where status <> 'completed') as active_orders,
+          (select count(*) from orders where status = 'completed') as completed_orders
+        """
+    )
+    row = cur.fetchone()
+    return (
+        int(row["new_messages"]),
+        int(row["pending_quotes"]),
+        int(row["active_orders"]),
+        int(row["completed_orders"]),
+    )
 
 
 def _fetch_dashboard_gold(cur) -> dict | None:
@@ -201,7 +214,7 @@ def _dashboard_query_params(
 
 
 @router.get("/dashboard")
-async def dashboard(
+def dashboard(
     request: Request,
     granularity: str | None = Query(None),
     period: str | None = Query(None),
@@ -229,7 +242,7 @@ async def dashboard(
 
 
 @router.get("/dashboard/export")
-async def dashboard_export(
+def dashboard_export(
     request: Request,
     granularity: str | None = Query(None),
     period: str | None = Query(None),
@@ -254,7 +267,7 @@ async def dashboard_export(
 
 
 @router.get("/leads")
-async def leads_get(request: Request) -> dict:
+def leads_get(request: Request) -> dict:
     _require_admin(request)
 
     def _ser_lead(row: dict) -> dict:
@@ -474,7 +487,7 @@ def _count_admin_orders(cur, search: str, *, tab: str | None = None) -> int:
 
 
 @router.get("/orders")
-async def orders_list(
+def orders_list(
     request: Request,
     q: str | None = Query(None),
     tab: str | None = Query(None),
@@ -496,7 +509,7 @@ async def orders_list(
 
 
 @router.get("/orders/export")
-async def orders_export(
+def orders_export(
     request: Request, q: str | None = Query(None), tab: str | None = Query(None)
 ) -> Response:
     """Canonical download: GET /api/admin/orders/export (no file extension)."""
@@ -518,17 +531,17 @@ async def orders_export(
 
 
 @router.get("/orders/export.csv")
-async def orders_export_csv(
+def orders_export_csv(
     request: Request, q: str | None = Query(None), tab: str | None = Query(None)
 ) -> Response:
-    return await orders_export(request, q, tab)
+    return orders_export(request, q, tab)
 
 
 @router.get("/orders/export.xlsx")
-async def orders_export_xlsx(
+def orders_export_xlsx(
     request: Request, q: str | None = Query(None), tab: str | None = Query(None)
 ) -> Response:
-    return await orders_export(request, q, tab)
+    return orders_export(request, q, tab)
 
 
 @router.post("/orders")
@@ -1048,12 +1061,13 @@ async def diamond_shape_create(request: Request) -> JSONResponse:
         )
     if error:
         return JSONResponse(status_code=400, content={"error": error})
+    clear_shapes_cache()  # after commit: no request can re-cache the pre-insert list
     clear_public_catalog_cache()
     return JSONResponse(content={"shape": shape})
 
 
 @router.delete("/product-category/{slug}")
-async def product_category_delete(request: Request, slug: str) -> JSONResponse:
+def product_category_delete(request: Request, slug: str) -> JSONResponse:
     _require_admin(request)
     with get_transaction() as conn, conn.cursor() as cur:
         ok, error = delete_category(cur, slug)
@@ -1256,7 +1270,7 @@ def _product_with_children(cur, product: dict) -> dict:
 
 
 @router.get("/products")
-async def products_list(request: Request) -> dict:
+def products_list(request: Request) -> dict:
     _require_admin(request)
     page, page_size, limit, offset = parse_paging_from_mapping(request.query_params)
     category = (request.query_params.get("category") or "").strip() or None
@@ -1265,19 +1279,25 @@ async def products_list(request: Request) -> dict:
     # and removal of auto-stock image rows. Keep this list endpoint read-only
     # so the 商品上架 page is not blocked by repeated write-heavy maintenance.
     with get_connection() as conn, conn.cursor() as cur:
-        where, count_params = _admin_product_filters(category=category, search=search)
-        total = sql_count_total(
-            cur, f"select count(*)::int from products{where}", count_params
-        )
-        products = _products_with_children(
-            cur, limit=limit, offset=offset, category=category, search=search
-        )
         cur.execute(
             "select category, count(*)::int as n from products group by category"
         )
         category_counts = {
             str(row["category"]): int(row["n"] or 0) for row in cur.fetchall()
         }
+        if search:
+            where, count_params = _admin_product_filters(category=category, search=search)
+            total = sql_count_total(
+                cur, f"select count(*)::int from products{where}", count_params
+            )
+        elif category:
+            # Same number the per-category count already gave — skip a round trip.
+            total = category_counts.get(category, 0)
+        else:
+            total = sum(category_counts.values())
+        products = _products_with_children(
+            cur, limit=limit, offset=offset, category=category, search=search
+        )
         categories = fetch_categories(cur)
         labels = category_labels(cur)
         diamond_shapes = fetch_shapes(cur)
@@ -1628,7 +1648,7 @@ def _serialize_invite(row: dict) -> dict:
 
 
 @router.get("/invites")
-async def invites_list(request: Request) -> dict:
+def invites_list(request: Request) -> dict:
     _require_admin(request)
     page, page_size, limit, offset = parse_paging_from_mapping(request.query_params)
     with get_connection() as conn, conn.cursor() as cur:
@@ -1780,7 +1800,7 @@ def _ensure_membership_profile_cols(cur) -> None:
 
 
 @router.get("/accounts")
-async def accounts_list(request: Request, q: str | None = Query(None)) -> dict:
+def accounts_list(request: Request, q: str | None = Query(None)) -> dict:
     _require_admin(request)
     search = (q or "").strip()
     page, page_size, limit, offset = parse_paging_from_mapping(request.query_params)
@@ -1837,7 +1857,7 @@ async def accounts_list(request: Request, q: str | None = Query(None)) -> dict:
 
 
 @router.get("/accounts/{account_id}", response_model=None)
-async def account_detail(request: Request, account_id: str):
+def account_detail(request: Request, account_id: str):
     _require_admin(request)
     try:
         uid = str(uuid.UUID(str(account_id).strip()))
@@ -2195,7 +2215,7 @@ def _parse_coupon_fields(body: dict):
 
 
 @router.get("/coupons")
-async def coupons_list(request: Request) -> dict:
+def coupons_list(request: Request) -> dict:
     _require_admin(request)
     page, page_size, limit, offset = parse_paging_from_mapping(request.query_params)
     with get_connection() as conn, conn.cursor() as cur:
@@ -2545,7 +2565,7 @@ def _build_content_bootstrap(
 
 
 @router.get("/content-bootstrap")
-async def admin_content_bootstrap(request: Request) -> Response:
+def admin_content_bootstrap(request: Request) -> Response:
     """One roundtrip for admin Content panel: active tab + page-image keys + site_pages."""
     _require_admin(request)
     tab = (request.query_params.get("tab") or "banners").strip().lower()
@@ -2571,7 +2591,7 @@ async def admin_content_bootstrap(request: Request) -> Response:
 
 
 @router.get("/testimonials")
-async def admin_testimonials_list(request: Request) -> Response:
+def admin_testimonials_list(request: Request) -> Response:
     _require_admin(request)
     from app.content import count_all_testimonials, fetch_all_testimonials
 
@@ -2802,7 +2822,7 @@ async def admin_testimonial_action(request: Request) -> JSONResponse:
 
 
 @router.get("/journal-posts")
-async def admin_journal_posts_list(request: Request) -> Response:
+def admin_journal_posts_list(request: Request) -> Response:
     _require_admin(request)
     from app.content import count_all_journal_posts, fetch_all_journal_posts
 
@@ -2816,7 +2836,7 @@ async def admin_journal_posts_list(request: Request) -> Response:
 
 
 @router.get("/journal-posts/{post_id}")
-async def admin_journal_post_get(request: Request, post_id: str) -> Response:
+def admin_journal_post_get(request: Request, post_id: str) -> Response:
     _require_admin(request)
     from app.content import fetch_journal_post
 
@@ -2966,7 +2986,7 @@ async def admin_journal_post_action(request: Request) -> JSONResponse:
 
 
 @router.get("/faq-categories")
-async def admin_faq_categories(request: Request) -> dict:
+def admin_faq_categories(request: Request) -> dict:
     _require_admin(request)
     from app.content import serialize_faq_category
 
@@ -2976,7 +2996,7 @@ async def admin_faq_categories(request: Request) -> dict:
 
 
 @router.get("/faq-items")
-async def admin_faq_items_list(request: Request) -> Response:
+def admin_faq_items_list(request: Request) -> Response:
     _require_admin(request)
     from app.content import count_faq_items, fetch_faq_admin
 
@@ -3211,7 +3231,7 @@ def _parse_banner_fields(body: dict):
 
 
 @router.get("/banners")
-async def admin_banners_list(request: Request) -> Response:
+def admin_banners_list(request: Request) -> Response:
     _require_admin(request)
     from app.content import count_all_banners, fetch_all_banners
 
@@ -3399,7 +3419,7 @@ async def admin_banner_action(request: Request) -> JSONResponse:
 
 
 @router.get("/page-images")
-async def admin_page_images_list(request: Request) -> Response:
+def admin_page_images_list(request: Request) -> Response:
     _require_admin(request)
     from app.content import count_all_page_images, fetch_all_page_images
 
@@ -3421,7 +3441,7 @@ async def admin_page_images_list(request: Request) -> Response:
 
 
 @router.get("/page-image-create-options")
-async def admin_page_image_create_options(request: Request) -> dict:
+def admin_page_image_create_options(request: Request) -> dict:
     _require_admin(request)
     from app.content import ensure_page_images_schema, fetch_missing_page_image_slots
 

@@ -134,7 +134,7 @@ def _ensure_all(cur) -> None:
 
 
 @router.get("/cms-pages")
-async def cms_pages_list(request: Request) -> dict:
+def cms_pages_list(request: Request) -> dict:
     _require_admin(request)
     from app.cms_copy_slot_specs import EDITABLE_SITE_PAGES
     from app.cms_pages import count_all_pages, fetch_all_pages
@@ -156,7 +156,7 @@ async def cms_pages_list(request: Request) -> dict:
 
 
 @router.get("/cms-site-page")
-async def cms_site_page_get(request: Request) -> JSONResponse:
+def cms_site_page_get(request: Request) -> JSONResponse:
     """Ensure host page for a fixed site route; return page + sections."""
     _require_admin(request)
     route = str(request.query_params.get("route") or "").strip()
@@ -256,7 +256,7 @@ async def cms_section_page_image_sync(request: Request) -> JSONResponse:
 
 
 @router.post("/cms-pages")
-async def cms_pages_create(request: Request) -> JSONResponse:
+def cms_pages_create(request: Request) -> JSONResponse:
     """Create campaign pages disabled — admin only edits finished site pages."""
     _require_admin(request)
     return JSONResponse(
@@ -266,7 +266,7 @@ async def cms_pages_create(request: Request) -> JSONResponse:
 
 
 @router.get("/cms-pages/{page_id}")
-async def cms_pages_get(request: Request, page_id: str) -> JSONResponse:
+def cms_pages_get(request: Request, page_id: str) -> JSONResponse:
     """Admin JSON for Next SSR — page + ordered sections + full normalized props."""
     _require_admin(request)
     if not _valid_uuid(page_id):
@@ -371,7 +371,7 @@ async def cms_section_create(request: Request, page_id: str) -> JSONResponse:
 
 
 @router.get("/cms-sections/{section_id}/html")
-async def cms_section_html(request: Request, section_id: str) -> JSONResponse:
+def cms_section_html(request: Request, section_id: str) -> JSONResponse:
     """JSON section payload for preview sync (HTML Jinja removed — Next owns render)."""
     _require_admin(request)
     if not _valid_uuid(section_id):
@@ -525,7 +525,7 @@ async def cms_sections_reorder(request: Request, page_id: str) -> JSONResponse:
 
 
 @router.get("/page-copy-slots")
-async def page_copy_slots_list(request: Request) -> dict:
+def page_copy_slots_list(request: Request) -> dict:
     _require_admin(request)
     from app.cms_copy_slots import fetch_all_copy_slots, fetch_copy_slots_for_page
     from app.cms_copy_slot_specs import EDITABLE_SITE_PAGES
@@ -574,7 +574,7 @@ async def page_copy_slot_update(request: Request) -> JSONResponse:
 
 
 @router.get("/cms-media")
-async def cms_media_list(request: Request) -> dict:
+def cms_media_list(request: Request) -> dict:
     _require_admin(request)
     from app.cms_media import count_media, fetch_media
 

@@ -37,6 +37,7 @@ from app.auth import (
     log_admin_action,
     record_failures,
     record_successes,
+    request_is_admin,
     set_pwreset_cookie,
     set_session_cookie,
     sign_pwreset,
@@ -126,11 +127,13 @@ def _session_payload(
     *,
     invite_count_2y: int = 0,
     referral_code: str | None = None,
+    admin: bool | None = None,
 ) -> dict:
     serialized = _serialize_profile(profile)
     if serialized is not None and referral_code:
         serialized["referral_code"] = referral_code
-    admin = is_admin(user_id)
+    if admin is None:
+        admin = is_admin(user_id)
     onboarding_done = is_onboarding_complete(profile)
     return {
         "user": {"id": str(user["id"]), "email": user["email"]},
@@ -633,7 +636,7 @@ async def reset_password_totp(request: Request) -> JSONResponse:
 
 
 @router.get("/session")
-async def session(request: Request) -> JSONResponse:
+def session(request: Request) -> JSONResponse:
     user_id = get_user_id(request)
     if not user_id:
         return JSONResponse(content={"user": None})
@@ -663,6 +666,7 @@ async def session(request: Request) -> JSONResponse:
             user_id,
             invite_count_2y=invite_count_2y,
             referral_code=referral_code,
+            admin=request_is_admin(request),
         )
     )
 

@@ -880,6 +880,62 @@
     setTimeout(function () { whenProductCropReady(fn, tries - 1); }, 50);
   }
 
+  /* Category-tab memory: last list payload per tab/page/search. A revisited tab
+     paints instantly and is refreshed in the background; only the table area
+     is redrawn (tabs/toolbar stay). Only product rows are reused — category
+     metadata always comes from the last full load(). Any full load() (edits,
+     pagination, search) clears it. */
+  var _listCache = {};
+  var _tabSeq = 0;
+
+  function listCacheKey(cat, pageIndex) {
+    return [cat, pageIndex, _pageSize, state.searchQuery || ''].join('|');
+  }
+
+  function applyTabListPayload(res, cat) {
+    state.products = (res.products || []).filter(function (p) {
+      return !p.category || p.category === cat;
+    });
+    state.listTotal = typeof res.total === 'number' ? res.total : state.products.length;
+  }
+
+  function redrawCategoryTable() {
+    unmountProductsTable();
+    renderActiveCategoryTable();
+  }
+
+  function switchCategoryTab() {
+    var cat = state.activeTab.replace('cat-', '');
+    var key = listCacheKey(cat, _pageIndex);
+    var cached = _listCache[key];
+    var seq = ++_tabSeq;
+    if (cached) {
+      applyTabListPayload(cached, cat);
+      redrawCategoryTable();
+    } else {
+      unmountProductsTable();
+      var tableRoot = document.getElementById('apProductsTableRoot');
+      if (tableRoot) tableRoot.innerHTML = tableAreaSkeletonHtml();
+    }
+    fetchProducts(cat).then(function (res) {
+      if (seq !== _tabSeq || state.view !== 'list' || state.activeTab !== 'cat-' + cat) return;
+      if (res.error) {
+        if (!cached) showProductsLoadError(res);
+        return;
+      }
+      _listCache[key] = res;
+      if (
+        cached &&
+        cached.total === res.total &&
+        JSON.stringify(cached.products) === JSON.stringify(res.products)
+      ) {
+        return; /* unchanged: keep the instant table, no redraw */
+      }
+      applyTabListPayload(res, cat);
+      redrawCategoryTable();
+    });
+  }
+
   function renderActiveCategoryTable() {
     var container = document.getElementById('apProductsTableRoot');
     if (!container) return;
@@ -917,12 +973,17 @@
           b.classList.toggle('is-active', active);
           b.setAttribute('aria-selected', active ? 'true' : 'false');
         });
-        unmountProductsTable();
-        var tableRoot = document.getElementById('apProductsTableRoot');
-        if (tableRoot) tableRoot.innerHTML = tableAreaSkeletonHtml();
-        load(true, true);
         refreshCategoryPanel();
         refreshRingSizeSection();
+        if (_loading) {
+          /* Initial/full load still in flight: it re-requests for the new tab itself. */
+          unmountProductsTable();
+          var tableRoot = document.getElementById('apProductsTableRoot');
+          if (tableRoot) tableRoot.innerHTML = tableAreaSkeletonHtml();
+          load(true, true);
+          return;
+        }
+        switchCategoryTab();
       });
     });
 
@@ -3651,8 +3712,12 @@
 
     if (!silent && state.view !== 'editor') showLoadingSkeleton();
 
+    /* Full (re)load = something may have changed: drop remembered tabs. */
+    _listCache = {};
+    ++_tabSeq; /* and ignore any tab refresh still in flight */
     var seq = ++_loadSeq;
     var requestedCat = state.activeTab.replace('cat-', '');
+    var requestedPage = _pageIndex;
     _loading = true;
     var settled = false;
     var timer = setTimeout(function () {
@@ -3724,6 +3789,9 @@
         return;
       }
       _loaded = true;
+      if (requestedPage === _pageIndex) {
+        _listCache[listCacheKey(requestedCat, requestedPage)] = res;
+      }
       if (state.view === 'editor') return;
       renderShell();
     });

@@ -148,12 +148,12 @@ def test_testimonial_country_ensure_once_per_process():
 def test_admin_list_endpoints_do_not_call_schema_ensure():
     src = open("app/controllers/admin_controller.py", encoding="utf-8").read()
     # Hot list GETs must stay pure SELECT/COUNT (schema at lifespan / once-per-process).
-    list_fn = src.split("async def admin_testimonials_list")[1].split(
-        "async def admin_testimonials_create"
+    list_fn = src.split("def admin_testimonials_list(")[1].split(
+        "def admin_testimonials_create("
     )[0]
     assert "ensure_testimonial_country_column" not in list_fn
-    page_fn = src.split("async def admin_page_images_list")[1].split(
-        "async def admin_page_image_create_options"
+    page_fn = src.split("def admin_page_images_list(")[1].split(
+        "def admin_page_image_create_options("
     )[0]
     assert "ensure_page_images_schema" not in page_fn
 

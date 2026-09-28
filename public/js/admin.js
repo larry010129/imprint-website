@@ -108,6 +108,8 @@
     }
 
     var dashParams = { granularity: 'month' };
+    /* Landing dashboard request started in parallel with getSession (see boot). */
+    var dashPrefetch = null;
 
     function readDashParamsFromUrl() {
       var qs = new URLSearchParams(window.location.search);
@@ -382,7 +384,11 @@
     /* ---------- 儀表板 ---------- */
     function loadDashboardStats() {
       showDashboardListSkeletons();
-      api.admin.getDashboardStats(dashboardRequestParams()).then(function (stats) {
+      var params = dashboardRequestParams();
+      var prefetched = dashPrefetch && dashPrefetch.key === JSON.stringify(params);
+      var request = prefetched ? dashPrefetch.promise : api.admin.getDashboardStats(params);
+      dashPrefetch = null;
+      request.then(function (stats) {
         if (stats.error) return;
         var pendingTotal = (stats.newMessages || 0) + (stats.pendingQuotes || 0) + (stats.activeOrders || 0);
         var orderCount = stats.periodOrderCount != null ? stats.periodOrderCount : (stats.totalOrders || 0);
@@ -726,6 +732,24 @@
     }
 
     /* ---------- 啟動：登入與員工權限檢查 ---------- */
+    /* The admin HTML is already server-gated (staff only), so start the landing
+       panel's data now instead of after getSession: two parallel requests
+       instead of a chain. /api/admin/* still enforces admin on its own. */
+    (function prefetchLandingPanel() {
+      if (location.hash) return; /* legacy /admin#panel links: panel decided later */
+      var m = location.pathname.match(/^\/admin\/?([a-z0-9-]*)\/?$/i);
+      var panel = (m && m[1] ? m[1].toLowerCase() : '') || 'dash';
+      if (panel === 'dash') {
+        readDashParamsFromUrl();
+        var params = dashboardRequestParams();
+        dashPrefetch = { key: JSON.stringify(params), promise: api.admin.getDashboardStats(params) };
+      } else if (panel === 'products' && window.AdminProductsPanel) {
+        window.AdminProductsPanel.prefetch();
+      } else if (panel === 'content' && window.AdminContentPanel && window.AdminContentPanel.prefetch) {
+        window.AdminContentPanel.prefetch();
+      }
+    })();
+
     api.getSession().then(function (res) {
       if (!res || !res.user) {
         window.location.href = '/login?next=/admin';
@@ -740,7 +764,9 @@
       if (topMeta) topMeta.textContent = res.user.email;
       readDashParamsFromUrl();
       bindDashboardRangeControls();
-      loadDashboardStats();
+      /* No loadDashboardStats() here: onPanelSwitch(active panel) below loads the
+         dashboard when it is the landing panel (this used to fetch it twice, and
+         once for nothing when landing on another panel). */
 
       /* React 表格島按需載入：僅訂單／商品／內容／品牌影片面板需要 window.AdminTables。
          每面板只重試一次；失敗時落到各面板既有的「元件尚未載入」提示。 */

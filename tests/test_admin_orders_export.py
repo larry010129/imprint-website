@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import inspect
 import io
 import os
@@ -239,7 +238,7 @@ def test_export_endpoint_filters_by_q_and_sets_filename(monkeypatch):
     cur = _Cur([_order(cancel_reason="重複訂單")])
     monkeypatch.setattr(ac, "get_connection", lambda: _Conn(cur))
 
-    resp = asyncio.run(ac.orders_export(MagicMock(), q="IMP-1001"))
+    resp = ac.orders_export(MagicMock(), q="IMP-1001")
     assert "spreadsheetml" in (resp.media_type or "")
     assert resp.media_type == XLSX_MEDIA_TYPE
     disp = resp.headers["content-disposition"]
@@ -261,7 +260,7 @@ def test_export_endpoint_requires_admin(monkeypatch):
 
     monkeypatch.setattr(ac, "_require_admin", deny)
     with pytest.raises(HTTPException) as exc:
-        asyncio.run(ac.orders_export(MagicMock(), q=None))
+        ac.orders_export(MagicMock(), q=None)
     assert exc.value.status_code == 401
 
 

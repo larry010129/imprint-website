@@ -477,8 +477,17 @@ def get_user_id(request: Request) -> str | None:
         request.state.user_id = None
         return None
     user_id, token_version = decoded
+    # Admin flag rides along in the same round trip: require_admin /
+    # request_is_admin read request.state.is_admin instead of querying again.
     with get_connection() as conn, conn.cursor() as cur:
-        cur.execute("select token_version, is_active from users where id = %s", (user_id,))
+        cur.execute(
+            """
+            select u.token_version, u.is_active,
+                   exists(select 1 from staff_admins s where s.user_id = u.id) as is_admin
+            from users u where u.id = %s
+            """,
+            (user_id,),
+        )
         row = cur.fetchone()
     if not row or row["token_version"] != token_version or not row["is_active"]:
         request.state._user_id_resolved = True
@@ -486,7 +495,20 @@ def get_user_id(request: Request) -> str | None:
         return None
     request.state._user_id_resolved = True
     request.state.user_id = user_id
+    request.state.is_admin = bool(row["is_admin"])
     return user_id
+
+
+def request_is_admin(request: Request) -> bool:
+    """is_admin(get_user_id(request)) without a second DB round trip."""
+    user_id = get_user_id(request)
+    if not user_id:
+        return False
+    flag = getattr(request.state, "is_admin", None)
+    if flag is None:
+        flag = is_admin(user_id)
+        request.state.is_admin = flag
+    return bool(flag)
 
 
 def is_admin(user_id: str | None) -> bool:

@@ -581,13 +581,13 @@ def _make_handler(meta: PageMeta, status_code: int = 200):
     # Plain def: FastAPI runs it in the threadpool, so the sync psycopg/file
     # work below does not block the event loop for every other visitor.
     def handler(request: Request) -> HTMLResponse:
-        from app.auth import get_user_id, is_admin
+        from app.auth import request_is_admin
         from app.cms_copy_slots import apply_page_copy_slots
         from app.page_image_slots import apply_page_image_slots, page_image_slot_specs
 
         site_edit = (
             str(request.query_params.get("cms_edit") or "").lower() in {"1", "true", "yes"}
-            and is_admin(get_user_id(request))
+            and request_is_admin(request)
         )
         context = _context(request, meta)
         context["site_cms_edit"] = site_edit
@@ -790,11 +790,11 @@ def register_pages(app: FastAPI) -> None:
 
     def _admin_gated_html(request: Request, filename: str, next_path: str):
         """Serve an admin HTML shell; non-admins go to login with next=/admin…."""
-        from app.auth import get_user_id, is_admin
+        from app.auth import request_is_admin
 
         if not next_path.startswith("/") or next_path.startswith("//"):
             next_path = "/admin"
-        if not is_admin(get_user_id(request)):
+        if not request_is_admin(request):
             return RedirectResponse(url=f"/login?next={next_path}", status_code=302)
         path = settings.site_root / filename
         if not path.is_file():
@@ -817,12 +817,12 @@ def register_pages(app: FastAPI) -> None:
     @app.api_route("/admin/release-notes", methods=["GET", "HEAD"], include_in_schema=False)
     async def admin_release_notes_page(request: Request):
         """Hidden editor — admin session + unlock cookie required."""
-        from app.auth import get_user_id, is_admin
+        from app.auth import get_user_id, request_is_admin
         from app.release_notes import require_unlock
 
         next_path = "/admin/release-notes"
         user_id = get_user_id(request)
-        if not is_admin(user_id):
+        if not request_is_admin(request):
             return RedirectResponse(url=f"/login?next={next_path}", status_code=302)
         if not user_id or not require_unlock(request, user_id):
             return RedirectResponse(url="/admin", status_code=302)
@@ -865,7 +865,7 @@ def register_pages(app: FastAPI) -> None:
 
     @app.get("/p/{slug}", include_in_schema=False)
     def cms_public_page(request: Request, slug: str) -> HTMLResponse:
-        from app.auth import get_user_id, is_admin
+        from app.auth import request_is_admin
         from app.cms_boundary import is_reserved_cms_slug, normalize_cms_slug
 
         clean = normalize_cms_slug(slug)
@@ -874,7 +874,7 @@ def register_pages(app: FastAPI) -> None:
 
         preview = str(request.query_params.get("preview") or "") in {"1", "true", "yes"}
         inline = str(request.query_params.get("inline") or "") in {"1", "true", "yes"}
-        admin_ok = is_admin(get_user_id(request))
+        admin_ok = request_is_admin(request)
         if (preview or inline) and not admin_ok:
             raise StarletteHTTPException(status_code=404, detail="Not Found")
 

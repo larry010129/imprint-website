@@ -7,7 +7,10 @@ Built-ins (incl. Asscher) seed on ensure; admins can add more via API.
 from __future__ import annotations
 
 import re
+import threading
 import uuid
+from copy import deepcopy
+from time import monotonic
 from typing import Any
 
 # Built-in matrix cuts. Asscher is first extension beyond the original ten.
@@ -54,8 +57,27 @@ def is_allowed_shape_id(shape_id: str | None) -> bool:
     return bool(SHAPE_ID_RE.match(key))
 
 
-def ensure_diamond_shapes_schema(cur) -> None:
-    """Create diamond_shapes + seed built-ins (Asscher included)."""
+_schema_ready = False
+_SHAPES_CACHE_TTL_SECONDS = 300.0
+_shapes_cache: tuple[float, list[dict]] | None = None
+_shapes_cache_lock = threading.Lock()
+
+
+def clear_shapes_cache() -> None:
+    global _shapes_cache
+    with _shapes_cache_lock:
+        _shapes_cache = None
+
+
+def ensure_diamond_shapes_schema(cur, *, force: bool = False) -> None:
+    """Create diamond_shapes + seed built-ins (Asscher included).
+
+    Once per process (app startup runs it): it is a CREATE + 10 upserts, i.e.
+    11 cross-region round trips, and used to run on every fetch_shapes call.
+    """
+    global _schema_ready
+    if _schema_ready and not force:
+        return
     cur.execute(
         """
         create table if not exists diamond_shapes (
@@ -86,6 +108,7 @@ def ensure_diamond_shapes_schema(cur) -> None:
                 int(shape["sort_order"]),
             ),
         )
+    _schema_ready = True
 
 
 def _serialize_row(row: dict) -> dict:
@@ -103,6 +126,20 @@ def _serialize_row(row: dict) -> dict:
 
 
 def fetch_shapes(cur) -> list[dict]:
+    """Shapes, cached in-process (cleared by create_shape)."""
+    global _shapes_cache
+    now = monotonic()
+    with _shapes_cache_lock:
+        cached = _shapes_cache
+    if cached and now - cached[0] < _SHAPES_CACHE_TTL_SECONDS:
+        return deepcopy(cached[1])
+    result = _fetch_shapes_uncached(cur)
+    with _shapes_cache_lock:
+        _shapes_cache = (now, result)
+    return deepcopy(result)
+
+
+def _fetch_shapes_uncached(cur) -> list[dict]:
     ensure_diamond_shapes_schema(cur)
     cur.execute(
         f"select {_SHAPE_SELECT} from diamond_shapes order by sort_order asc, id asc"
@@ -235,4 +272,5 @@ def create_shape(
         (sid, label_zh, label_en or sid.title(), sort_order),
     )
     row = cur.fetchone()
+    clear_shapes_cache()
     return _serialize_row(dict(row)), None
