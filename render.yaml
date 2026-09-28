@@ -11,7 +11,7 @@ services:
   - type: web
     name: imprint-api
     runtime: python
-    plan: free
+    plan: starter
     buildCommand: bash scripts/render-build.sh
     startCommand: bash scripts/render-start.sh
     healthCheckPath: /health

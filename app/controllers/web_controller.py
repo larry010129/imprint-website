@@ -15,6 +15,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Redirect
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.concurrency import run_in_threadpool
 from starlette.requests import ClientDisconnect
 from starlette.responses import Response
 
@@ -108,7 +109,9 @@ _FEATURED_YOUTUBE_LATEST_PATH = (
     Path(__file__).resolve().parent.parent / "data" / "featured-youtube-latest.json"
 )
 _PUBLIC_PHONE_TEXT = "電話：02-2977-0268；"
-_PAGE_IMAGE_CACHE_TTL_SECONDS = 30
+# Admin saves clear these caches explicitly (clear_page_image_cache etc.), so a
+# long TTL only skips cross-region DB round trips; edits still show at once.
+_PAGE_IMAGE_CACHE_TTL_SECONDS = 300
 
 
 def _strip_public_phone_metadata(block: str) -> str:
@@ -130,11 +133,21 @@ def _strip_public_phone_metadata(block: str) -> str:
     return json.dumps(clean(payload), ensure_ascii=False, indent=2)
 
 
-def load_featured_video(request: Request | None = None) -> dict | None:
-    """Return featured-video gallery for SSR (cms_kv / legacy file; no network)."""
+@lru_cache(maxsize=4)
+def _fetch_featured_video_cached(_time_bucket: int) -> dict | None:
     from app.featured_video import public_featured_payload, read_featured_video_file
 
     return public_featured_payload(read_featured_video_file())
+
+
+def load_featured_video(request: Request | None = None) -> dict | None:
+    """Return featured-video gallery for SSR (cms_kv / legacy file; no network)."""
+    time_bucket = int(monotonic() // _PAGE_IMAGE_CACHE_TTL_SECONDS)
+    return deepcopy(_fetch_featured_video_cached(time_bucket))
+
+
+def clear_featured_video_cache() -> None:
+    _fetch_featured_video_cached.cache_clear()
 
 
 def load_youtube_latest_video() -> dict | None:
@@ -160,8 +173,8 @@ def load_youtube_latest_video() -> dict | None:
                 latest = fetch_latest_channel_video(channel_id, ttl_seconds=ttl)
                 if latest:
                     data = {**data, **latest}
-            except OSError:
-                pass
+            except Exception:  # noqa: BLE001 — YouTube down must not 500 /about
+                log.warning("YouTube latest video unavailable", exc_info=True)
 
     if not data.get("youtube_id"):
         return None
@@ -565,7 +578,9 @@ def _context(request: Request, meta: PageMeta, *, include_journal_ssr: bool = Tr
 
 
 def _make_handler(meta: PageMeta, status_code: int = 200):
-    async def handler(request: Request) -> HTMLResponse:
+    # Plain def: FastAPI runs it in the threadpool, so the sync psycopg/file
+    # work below does not block the event loop for every other visitor.
+    def handler(request: Request) -> HTMLResponse:
         from app.auth import get_user_id, is_admin
         from app.cms_copy_slots import apply_page_copy_slots
         from app.page_image_slots import apply_page_image_slots, page_image_slot_specs
@@ -841,7 +856,7 @@ def register_pages(app: FastAPI) -> None:
         return RedirectResponse(url="/login?next=/admin", status_code=302)
 
     @app.get("/s/{token}", include_in_schema=False)
-    async def share_config(request: Request, token: str) -> HTMLResponse:
+    def share_config(request: Request, token: str) -> HTMLResponse:
         return templates.TemplateResponse(
             request,
             STANDALONE_SHARE_SUMMARY.template,
@@ -849,7 +864,7 @@ def register_pages(app: FastAPI) -> None:
         )
 
     @app.get("/p/{slug}", include_in_schema=False)
-    async def cms_public_page(request: Request, slug: str) -> HTMLResponse:
+    def cms_public_page(request: Request, slug: str) -> HTMLResponse:
         from app.auth import get_user_id, is_admin
         from app.cms_boundary import is_reserved_cms_slug, normalize_cms_slug
 
@@ -938,7 +953,7 @@ def register_pages(app: FastAPI) -> None:
             return await http_exception_handler(request, exc)
         if exc.status_code != 404:
             return HTMLResponse(content=str(exc.detail), status_code=exc.status_code)
-        return await _make_handler(PAGE_404, status_code=404)(request)
+        return await run_in_threadpool(_make_handler(PAGE_404, status_code=404), request)
 
     @app.exception_handler(ClientDisconnect)
     async def client_disconnect(request: Request, exc: ClientDisconnect) -> Response:

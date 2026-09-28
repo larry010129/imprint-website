@@ -458,6 +458,9 @@ def save_featured_video_file(
         from app.cms_kv_store import kv_set
 
         kv_set(_KV_KEY, data)
+        from app.controllers.web_controller import clear_featured_video_cache
+
+        clear_featured_video_cache()
         return admin_featured_payload(data)
     target = path
     target.parent.mkdir(parents=True, exist_ok=True)

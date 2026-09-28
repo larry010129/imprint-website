@@ -107,7 +107,8 @@
         hx-disabled-elt="button[type=submit]"
         {% if recaptcha_site_key %}data-recaptcha-sitekey="{{ recaptcha_site_key }}" data-recaptcha-action="contact"{% endif %}>
         <p class="contact-form-panel__muted" data-cms-text="form-muted">留下簡短訊息</p>
-        <div class="contact-form-panel__hp" aria-hidden="true">
+        {# Inline hide too: a stale cached pages.css must never reveal the bot trap. #}
+        <div class="contact-form-panel__hp" aria-hidden="true" style="position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden">
           <label for="cWebsite">網站</label>
           <input type="text" id="cWebsite" name="hp_website" tabindex="-1" autocomplete="off">
         </div>

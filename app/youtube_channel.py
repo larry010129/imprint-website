@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+import threading
 import time
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -452,9 +453,43 @@ def fetch_latest_channel_video(
     *,
     ttl_seconds: int = _DEFAULT_TTL,
 ) -> dict | None:
+    """Latest video, stale-while-revalidate.
+
+    Fresh cache → returned. Stale cache → returned immediately while a
+    background thread refreshes it, so a page render never waits on YouTube.
+    Only a missing cache fetches inline.
+    """
     cached = _read_cache(channel_id, ttl_seconds)
     if cached:
         return cached
 
+    stale = _read_cache(channel_id, ttl_seconds=_NO_EXPIRY)
+    if stale:
+        _refresh_latest_in_background(channel_id)
+        return stale
+
     videos = fetch_latest_channel_videos(channel_id, limit=1, ttl_seconds=0)
     return videos[0] if videos else None
+
+
+_NO_EXPIRY = 10**12
+_refresh_lock = threading.Lock()
+_refreshing: set[str] = set()
+
+
+def _refresh_latest_in_background(channel_id: str) -> None:
+    with _refresh_lock:
+        if channel_id in _refreshing:
+            return
+        _refreshing.add(channel_id)
+
+    def run() -> None:
+        try:
+            fetch_latest_channel_videos(channel_id, limit=1, ttl_seconds=0)
+        except Exception:  # noqa: BLE001 — keep serving the stale entry
+            _logger.warning("Background YouTube refresh failed", exc_info=True)
+        finally:
+            with _refresh_lock:
+                _refreshing.discard(channel_id)
+
+    threading.Thread(target=run, name="youtube-latest-refresh", daemon=True).start()

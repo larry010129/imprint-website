@@ -21,6 +21,7 @@ from config.settings import settings
 from app.database import get_connection
 
 COOKIE_NAME = "imprint_session"
+NAV_HINT_COOKIE = "imprint_nav"
 PRE2FA_COOKIE_NAME = "imprint_pre2fa"
 PWRESET_COOKIE_NAME = "imprint_pwreset"
 PRE2FA_MINUTES = 5
@@ -435,12 +436,31 @@ def set_session_cookie(
         else:
             kwargs["max_age"] = SESSION_DAYS * 24 * 60 * 60
     response.set_cookie(**kwargs)
+    decoded = verify_session_token(token)
+    if decoded:
+        # JS-readable twin with the same lifetime: lets the nav paint its cached
+        # account menu instantly, only for this exact session (see nav.html).
+        response.set_cookie(
+            **{**kwargs, "key": NAV_HINT_COOKIE, "value": nav_hint(*decoded), "httponly": False}
+        )
 
 
 def clear_session_cookie(response: Response, request: Request | None = None) -> None:
     """Delete session cookie — secure/samesite must match set_session_cookie or browsers keep it."""
     secure = _is_secure_request(request) if request is not None else False
     response.delete_cookie(key=COOKIE_NAME, path="/", httponly=True, secure=secure, samesite="lax")
+    clear_nav_hint_cookie(response, request)
+
+
+def nav_hint(user_id: str, token_version: int) -> str:
+    """Opaque per-session tag (no user id exposed) keying the browser nav cache."""
+    msg = f"nav:{user_id}:{token_version}".encode()
+    return hmac.new(_jwt_secret().encode(), msg, "sha256").hexdigest()[:16]
+
+
+def clear_nav_hint_cookie(response: Response, request: Request | None = None) -> None:
+    secure = _is_secure_request(request) if request is not None else False
+    response.delete_cookie(key=NAV_HINT_COOKIE, path="/", secure=secure, samesite="lax")
 
 
 def get_user_id(request: Request) -> str | None:

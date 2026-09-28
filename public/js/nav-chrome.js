@@ -80,8 +80,31 @@
     document.querySelectorAll('[data-site-nav]').forEach(setupNav);
     setupAccountMenus(document);
   };
+  /* Cache raw /htmx/nav-state markup (not live DOM: data-bound etc. must not
+     persist) for nav.html's instant paint. Key = imprint_nav session cookie. */
+  var NAV_CACHE = 'imprint-nav-cache';
+  var saveNavState = function (xhr) {
+    try {
+      var m = document.cookie.match(/(?:^|; )imprint_nav=([^;]+)/);
+      if (!m || xhr.getResponseHeader('X-Nav-User') !== '1') {
+        localStorage.removeItem(NAV_CACHE);
+        return;
+      }
+      localStorage.setItem(NAV_CACHE, JSON.stringify({ key: m[1], html: xhr.responseText }));
+    } catch (e) {}
+  };
+
   window.requestAnimationFrame(boot);
   document.body.addEventListener('htmx:afterSwap', function (e) {
     setupAccountMenus(e.target);
+  });
+  document.body.addEventListener('htmx:oobAfterSwap', function (e) {
+    setupAccountMenus(e.target);
+  });
+  document.body.addEventListener('htmx:afterRequest', function (e) {
+    var elt = e.detail && e.detail.elt;
+    if (elt && elt.hasAttribute('data-nav-state') && e.detail.successful) {
+      saveNavState(e.detail.xhr);
+    }
   });
 })();

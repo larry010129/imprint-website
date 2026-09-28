@@ -100,6 +100,38 @@ def nav_user(request: Request) -> dict[str, Any] | None:
         return None
 
 
+def nav_state(request: Request) -> tuple[dict[str, Any] | None, int]:
+    """(nav_user, cart_count) in one query — same shape as nav_user()/cart_count()."""
+    user_id = get_user_id(request)
+    if not user_id:
+        return None, 0
+    try:
+        with get_connection() as conn, conn.cursor() as cur:
+            cur.execute(
+                """
+                select u.id, u.email, p.full_name,
+                       exists(select 1 from staff_admins s where s.user_id = u.id) as is_admin,
+                       (select count(*) from cart_items c where c.user_id = u.id) as cart_count
+                from users u left join profiles p on p.id = u.id
+                where u.id = %s
+                """,
+                (user_id,),
+            )
+            row = cur.fetchone()
+    except Exception:
+        return None, 0
+    if not row:
+        return None, 0
+    name = (row.get("full_name") or row["email"] or "").strip()
+    user = {
+        "id": str(row["id"]),
+        "email": row["email"],
+        "name": name or row["email"],
+        "is_admin": bool(row["is_admin"]),
+    }
+    return user, int(row.get("cart_count") or 0)
+
+
 def cart_count(user_id: str | None) -> int:
     if not user_id:
         return 0
