@@ -62,7 +62,6 @@ RESERVED_PAGE_KEYS = frozenset(
         "/register",
         "/account",
         "/profile",
-        "/price",  # price table code-owned; no CMS ownership of pricing
     }
 )
 

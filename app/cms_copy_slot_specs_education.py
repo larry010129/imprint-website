@@ -20,6 +20,7 @@ def education_slot_specs() -> list[dict[str, Any]]:
     specs.extend(_lab_grown_slots())
     specs.extend(_comparison_slots())
     specs.extend(_dna_slots())
+    specs.extend(_price_slots())
     specs.extend(_journal_chrome_slots())
     specs.extend(_stories_chrome_slots())
     specs.extend(_faq_chrome_slots())
@@ -235,4 +236,26 @@ def _faq_chrome_slots() -> list[dict[str, Any]]:
         _t(p, "know-lab-desc", "FAQ頁・知識卡培育說明", "實驗室培育與 DNA 定位", 25),
         _t(p, "know-cmp-title", "FAQ頁・知識卡比較標題", "天然 vs 培育／DNA", 26),
         _t(p, "know-cmp-desc", "FAQ頁・知識卡比較說明", "差異對照（非他牌評比）", 27),
+    ]
+
+
+def _price_slots() -> list[dict[str, Any]]:
+    p = "/price"
+    items = (
+        "確認克拉數與實際區間",
+        "白鑽／彩鑽報價對照",
+        "切工形狀加價規則",
+        "多顆鑽石組合折扣",
+        "戒台材質與款式試算",
+    )
+    return [
+        _t(p, "hero-title", "價格總覽・標題", "DNA 紀念鑽石價格總覽", 1),
+        _t(p, "cta-title", "價格總覽・規劃標題", "還在規劃 DNA 鑽石規格？", 10),
+        _t(p, "cta-desc", "價格總覽・規劃說明", "先看牌價表掌握克拉區間，再用戒台試算估預算。", 11),
+        _t(p, "cta-calc", "價格總覽・試算按鈕文字", "戒台試算", 12),
+        _btn(p, "cta-gold", "價格總覽・黃金牌價連結", "黃金牌價", "/gold-price", 13),
+        *[
+            _t(p, f"cta-li-{i}", f"價格總覽・清單項目{i}", text, 20 + i)
+            for i, text in enumerate(items, 1)
+        ],
     ]

@@ -5,7 +5,6 @@ def test_copy_slot_specs_exclude_shop_jewelry():
     for spec in copy_slot_specs():
         assert not spec["page_key"].startswith("/shop/")
         assert not spec["page_key"].startswith("/jewelry/")
-        assert spec["page_key"] != "/price"
     signature = [
         spec for spec in copy_slot_specs() if spec["page_key"] == "/series/signature/"
     ]

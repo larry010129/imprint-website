@@ -19,6 +19,7 @@ EDITABLE_SITE_PAGES: tuple[dict[str, str], ...] = (
     {"route": "/lab-grown-diamond", "title": "什麼是培育鑽石", "content_tab": "page"},
     {"route": "/diamond-comparison", "title": "天然 vs 培育／DNA", "content_tab": "page"},
     {"route": "/contact", "title": "聯絡我們", "content_tab": "page"},
+    {"route": "/price", "title": "價格總覽", "content_tab": "page"},
     {"route": "/faq", "title": "常見問題", "content_tab": "faq"},
     {"route": "/stories", "title": "客戶見證", "content_tab": "testimonials"},
     {"route": "/journal", "title": "品牌日誌", "content_tab": "page"},
