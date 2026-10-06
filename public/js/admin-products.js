@@ -894,9 +894,13 @@
     return [cat, pageIndex, _pageSize, state.searchQuery || ''].join('|');
   }
 
+  function isSearching() {
+    return !!String(state.searchQuery || '').trim();
+  }
+
   function applyTabListPayload(res, cat) {
     state.products = (res.products || []).filter(function (p) {
-      return !p.category || p.category === cat;
+      return isSearching() || !p.category || p.category === cat;
     });
     state.listTotal = typeof res.total === 'number' ? res.total : state.products.length;
   }
@@ -944,11 +948,11 @@
     whenAdminTablesReady(function () {
       var cat = state.activeTab.replace('cat-', '');
       window.AdminTables.renderProductsTable(container, {
-        rows: productsInCategory(cat).map(toProductTableRow),
+        rows: (isSearching() ? state.products : productsInCategory(cat)).map(toProductTableRow),
         total: state.listTotal,
         pageIndex: _pageIndex,
         pageSize: _pageSize,
-        emptyLabel: '此品項尚無商品。',
+        emptyLabel: isSearching() ? '所有品項中找不到符合的商品。' : '此品項尚無商品。',
         onPaginationChange: function (pagination) {
           var nextIndex = pagination.pageIndex || 0;
           var nextSize = pagination.pageSize || _pageSize;
@@ -970,6 +974,12 @@
         if (!nextTab) return;
         state.activeTab = nextTab;
         _pageIndex = 0;
+        /* Picking a tab leaves search mode and shows that 品項 normally. */
+        if (isSearching()) {
+          state.searchQuery = '';
+          var searchBox = document.getElementById('apProductSearch');
+          if (searchBox) searchBox.value = '';
+        }
         root.querySelectorAll('.ap-tab-btn').forEach(function (b) {
           var active = b.dataset.tab === state.activeTab;
           b.classList.toggle('is-active', active);
@@ -3688,8 +3698,9 @@
     return api.admin.getProducts({
       page: _pageIndex + 1,
       pageSize: _pageSize,
-      category: cat || undefined,
-      q: state.searchQuery || undefined,
+      /* A search looks across every 品項, whichever tab is selected. */
+      category: isSearching() ? undefined : (cat || undefined),
+      q: isSearching() ? state.searchQuery.trim() : undefined,
     });
   }
 
@@ -3750,7 +3761,7 @@
         return;
       }
       var incoming = (res.products || []).filter(function (p) {
-        return !p.category || p.category === currentCat;
+        return isSearching() || !p.category || p.category === currentCat;
       });
       state.products = incoming;
       state.categoryLabels = res.categoryLabels || {};

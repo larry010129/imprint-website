@@ -18,6 +18,7 @@
     selected: '',
     form: null,
     showSettings: false,
+    blackoutDraft: [],
     message: ''
   };
   var ready = false;
@@ -72,7 +73,9 @@
       var booked = bookingsOn(date).length;
       var requested = requestedOn(date).length;
       var open = dayIsOpen(date);
-      var cls = 'bk-cell' + (open ? '' : ' is-closed') + (date === state.today ? ' is-today' : '') +
+      var weekend = pyWeekday(date) >= 5;
+      var cls = 'bk-cell' + (open ? (weekend ? ' is-weekend' : '') : ' is-closed') +
+        (date === state.today ? ' is-today' : '') +
         (date === state.selected ? ' is-selected' : '');
       cells +=
         '<button type="button" class="' + cls + '" data-date="' + date + '">' +
@@ -84,7 +87,10 @@
     }
     return (
       '<div class="bk-grid" role="grid">' +
-        WEEKDAYS.map(function (w) { return '<div class="bk-head">' + w + '</div>'; }).join('') +
+        WEEKDAYS.map(function (w, i) {
+          /* Header order is Sun…Sat, so index 0 and 6 are the weekend. */
+          return '<div class="bk-head' + (i === 0 || i === 6 ? ' bk-head--weekend' : '') + '">' + w + '</div>';
+        }).join('') +
         cells +
       '</div>'
     );
@@ -174,6 +180,33 @@
     );
   }
 
+  function blackoutChipsHtml() {
+    if (!state.blackoutDraft.length) return '<p class="bk-list-empty">尚未設定特別公休日</p>';
+    /* Always listed in date order (earliest first). */
+    state.blackoutDraft = state.blackoutDraft.slice().sort();
+    return '<ul class="bk-datelist">' + state.blackoutDraft.map(function (date) {
+      return '<li class="bk-dateitem"><span>' + esc(date) + '（' + PY_WEEKDAY_LABELS[pyWeekday(date)] + '）</span>' +
+        '<button type="button" class="btn-sm" data-blackout-remove="' + esc(date) +
+        '" aria-label="移除 ' + esc(date) + '">移除</button></li>';
+    }).join('') + '</ul>';
+  }
+
+  function refreshBlackoutChips() {
+    var list = document.getElementById('bkBlackoutList');
+    if (list) list.innerHTML = blackoutChipsHtml();
+  }
+
+  function addBlackoutFromInput() {
+    var input = document.getElementById('bkBlackoutDate');
+    if (!input || !input.value) return showError('bkSettingsError', '請先選擇日期');
+    showError('bkSettingsError', '');
+    if (state.blackoutDraft.indexOf(input.value) === -1) {
+      state.blackoutDraft = state.blackoutDraft.concat(input.value).sort();
+      refreshBlackoutChips();
+    }
+    input.value = '';
+  }
+
   function renderSettings() {
     if (!state.showSettings) return '';
     var s = state.data.settings;
@@ -189,8 +222,13 @@
           '<div class="bk-wide"><span class="bk-label">公休日</span><div class="bk-days">' + days + '</div></div>' +
           '<label class="bk-wide">時段開始時間（用逗號分隔，24 小時制）' +
             '<input type="text" name="slots" value="' + esc(s.slots.join(', ')) + '"></label>' +
-          '<label class="bk-wide">特別公休日期（每行一個，格式 2026-10-10）' +
-            '<textarea name="blackout" rows="3">' + esc(s.blackoutDates.join('\n')) + '</textarea></label>' +
+          '<div class="bk-wide"><span class="bk-label">特別公休日期</span>' +
+            '<div class="bk-date-add">' +
+              '<input type="date" id="bkBlackoutDate" min="' + esc(state.today) + '" aria-label="選擇公休日期">' +
+              '<button type="button" class="btn-sm" data-blackout-add>加入</button>' +
+            '</div>' +
+            '<div id="bkBlackoutList">' + blackoutChipsHtml() + '</div>' +
+          '</div>' +
         '</div>' +
         '<p class="bk-error" id="bkSettingsError" role="alert" hidden></p>' +
         '<div class="ap-form-actions">' +
@@ -309,8 +347,9 @@
     var data = new FormData(form);
     var closed = data.getAll('closed').map(Number);
     var slots = String(data.get('slots') || '').split(/[,，\s]+/).filter(Boolean);
-    var blackout = String(data.get('blackout') || '').split(/[\s,，]+/).filter(Boolean);
-    api.admin.saveBookingSettings({ closedWeekdays: closed, slots: slots, blackoutDates: blackout })
+    api.admin.saveBookingSettings({
+      closedWeekdays: closed, slots: slots, blackoutDates: state.blackoutDraft
+    })
       .then(function (res) {
         if (res && res.error) { showError('bkSettingsError', res.error); return; }
         state.showSettings = false;
@@ -329,7 +368,18 @@
     if (t.hasAttribute('data-month-prev')) return load(shiftMonth(state.month, -1));
     if (t.hasAttribute('data-month-next')) return load(shiftMonth(state.month, 1));
     if (t.hasAttribute('data-month-today')) { state.selected = ''; return load(''); }
-    if (t.hasAttribute('data-settings-open')) { state.form = null; state.showSettings = true; return render(); }
+    if (t.hasAttribute('data-settings-open')) {
+      state.form = null;
+      state.showSettings = true;
+      state.blackoutDraft = state.data.settings.blackoutDates.slice();
+      return render();
+    }
+    if (t.hasAttribute('data-blackout-add')) return addBlackoutFromInput();
+    var removeDate = t.getAttribute('data-blackout-remove');
+    if (removeDate) {
+      state.blackoutDraft = state.blackoutDraft.filter(function (d) { return d !== removeDate; });
+      return refreshBlackoutChips();
+    }
     if (t.hasAttribute('data-settings-cancel')) { state.showSettings = false; return render(); }
     if (t.hasAttribute('data-form-cancel')) { state.form = null; return render(); }
 
@@ -380,6 +430,14 @@
         if (res && res.error) return flash(res.error);
         reload().then(function () { flash('已取消預約'); });
       });
+    }
+  });
+
+  /* Enter in the date box adds the date instead of saving the whole form. */
+  root.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && e.target && e.target.id === 'bkBlackoutDate') {
+      e.preventDefault();
+      addBlackoutFromInput();
     }
   });
 

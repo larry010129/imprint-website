@@ -27,7 +27,7 @@ dialog{margin:auto;border:0;border-radius:12px;box-shadow:0 20px 60px rgba(43,35
 dialog::backdrop{background:rgba(43,35,32,.45);}
 a{color:inherit;text-decoration:none;}
 button{font-family:inherit;cursor:pointer;}
-button:not(.btn-sm):not(.ap-tab-btn):not(.nav-toggle):not(.side-backdrop):not([data-slot="button-1"]):not([data-granularity]):not([data-trend-metric]):not([data-trend-view]){border:none;background:none;}
+button:not(.btn-sm):not(.ap-tab-btn):not(.nav-toggle):not(.side-backdrop):not([data-slot="button-1"]):not([data-granularity]):not([data-trend-metric]):not([data-trend-view]):not(.bk-cell):not(.admin1-search-btn):not(.dash-refresh-btn){border:none;background:none;}
 
 .layout{display:grid;grid-template-columns:232px 1fr;min-height:100vh;}
 
@@ -1154,8 +1154,17 @@ a.btn-sm.btn-primary:hover{background:#453A34;color:#fff;border-color:#453A34;}
   border:1px solid #EDE7E0;border-radius:6px;background:#fff;font:inherit;text-align:left;cursor:pointer;}
 .bk-cell:hover{border-color:var(--mint-deep,#2a9d9d);}
 .bk-cell--blank{border:0;background:transparent;cursor:default;min-height:0;}
-.bk-cell.is-closed{background:#f6f3ef;color:var(--ink-faint,#9a9188);}
-.bk-cell.is-today .bk-day{background:var(--mint-deep,#2a9d9d);color:#fff;border-radius:10px;padding:0 6px;}
+/* Weekend (Sat + Sun, same red as Taiwan calendars mark 放假日). Days off win over it. */
+.bk-head--weekend{color:#C0392B;}
+.bk-cell.is-weekend{background:#FDF3F2;}
+.bk-cell.is-weekend .bk-day{color:#C0392B;}
+/* Not bookable (公休日 / 特別公休): grey diagonal stripes. */
+.bk-cell.is-closed{
+  background:repeating-linear-gradient(135deg,#F1EFEC 0,#F1EFEC 6px,#E7E4E0 6px,#E7E4E0 7px);
+  color:var(--ink-faint,#9a9188);cursor:not-allowed;
+}
+.bk-cell.is-closed .bk-day{color:#9A9188;}
+.bk-cell.is-today .bk-day{background:var(--mint-deep,#52c4c8);color:#0b1f20;border-radius:10px;padding:0 6px;}
 .bk-cell.is-selected{border-color:var(--mint-deep,#2a9d9d);box-shadow:0 0 0 1px var(--mint-deep,#2a9d9d) inset;}
 .bk-day{font-size:13px;font-weight:600;}
 .bk-tag{font-size:11px;line-height:1.3;padding:1px 6px;border-radius:8px;white-space:nowrap;}
@@ -1192,3 +1201,10 @@ a.btn-sm.btn-primary:hover{background:#453A34;color:#fff;border-color:#453A34;}
   .bk-slot{grid-template-columns:1fr;gap:4px;}
   .bk-form-grid{grid-template-columns:1fr;}
 }
+.bk-date-add{display:flex;align-items:center;gap:8px;margin-top:6px;}
+.bk-form-grid .bk-date-add input{width:auto;min-width:0;}
+.bk-datelist{list-style:none;margin:8px 0 0;padding:0;border:1px solid #EDE7E0;border-radius:6px;background:#fff;}
+.bk-dateitem{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 12px;
+  font-size:13.5px;color:var(--ink);}
+.bk-dateitem + .bk-dateitem{border-top:1px solid #EDE7E0;}
+.bk-list-empty{margin:8px 0 0;font-size:12.5px;color:var(--ink-faint,#9a9188);}

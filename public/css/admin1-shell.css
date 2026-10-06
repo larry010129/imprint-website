@@ -641,11 +641,16 @@ body.admin1-body .admin1-search-btn {
   padding: 3px 10px;
   border: 0;
   border-radius: calc(var(--a1-radius) - 2px);
-  background: var(--a1-accent, var(--mint-deep, #2a9d9d));
-  color: #fff;
+  background: var(--mint-deep, #52c4c8);
+  color: #0b1f20; /* dark text: white on this light teal is unreadable */
   font: inherit;
   font-size: 12px;
+  font-weight: 600;
   cursor: pointer;
+}
+
+body.admin1-body .admin1-search-btn:hover {
+  filter: brightness(0.95);
 }
 
 body.admin1-body .admin1-search-wrap svg {
