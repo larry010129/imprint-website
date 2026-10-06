@@ -1181,7 +1181,10 @@ a.btn-sm.btn-primary:hover{background:#453A34;color:#fff;border-color:#453A34;}
 .bk-form-grid input,.bk-form-grid select,.bk-form-grid textarea{font:inherit;font-size:13px;padding:7px 10px;
   border:1px solid #DDD5CC;border-radius:6px;background:#fff;color:var(--ink);}
 .bk-wide{grid-column:1/-1;}
-.bk-check{display:inline-flex;flex-direction:row;align-items:center;gap:4px;margin-right:12px;}
+.bk-days{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:6px;}
+.bk-form-grid .bk-check{display:inline-flex;flex-direction:row;align-items:center;gap:6px;
+  font-size:13.5px;color:var(--ink);cursor:pointer;}
+.bk-form-grid .bk-check input{width:auto;margin:0;padding:0;flex:none;}
 .bk-error{margin:0 0 10px;color:#b3261e;font-size:13px;}
 @media (max-width:640px){
   .bk-cell{min-height:56px;padding:4px;}

@@ -184,9 +184,9 @@
     return (
       '<form class="bk-form card" id="bkSettings" novalidate>' +
         '<h3>開放時間設定</h3>' +
-        '<p class="adx-panel-note">每個時段長 ' + state.data.slotMinutes + ' 分鐘，一個時段只能一位客人預約。</p>' +
+        '<p class="adx-panel-note">每個時段長 ' + state.data.slotMinutes + ' 分鐘，一個時段只能一組客人預約。</p>' +
         '<div class="bk-form-grid">' +
-          '<div class="bk-wide"><span class="bk-label">公休日</span>' + days + '</div>' +
+          '<div class="bk-wide"><span class="bk-label">公休日</span><div class="bk-days">' + days + '</div></div>' +
           '<label class="bk-wide">時段開始時間（用逗號分隔，24 小時制）' +
             '<input type="text" name="slots" value="' + esc(s.slots.join(', ')) + '"></label>' +
           '<label class="bk-wide">特別公休日期（每行一個，格式 2026-10-10）' +
