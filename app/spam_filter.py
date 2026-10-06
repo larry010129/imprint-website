@@ -14,9 +14,11 @@ from __future__ import annotations
 import re
 import time
 
-HONEYPOT_FIELD = "hp_website"
+# Not a name browsers/password managers recognise (hp_website got autofilled).
+HONEYPOT_FIELD = "hp_trap_x"
 FORM_LOADED_FIELD = "hp_ts"
 MIN_SUBMIT_SECONDS = 2.0
+MAX_CLOCK_SKEW_SECONDS = 86400.0
 
 _SPAM_KEYWORDS = (
     # Chinese
@@ -84,41 +86,52 @@ _SPAM_KEYWORDS = (
 _URL_RE = re.compile(r"https?://|www\.", re.IGNORECASE)
 
 
-def is_spam_submission(
+def spam_reason(
     *,
     honeypot: str | None,
     form_loaded_at: str | None,
     text_fields: list[str],
     extra_keywords: list[str] | None = None,
-) -> bool:
-    """True if the submission looks bot-generated rather than human.
+) -> str | None:
+    """Why the submission looks bot-generated, or None if it looks human.
 
     honeypot: value of the hidden trap field — any non-empty value is a bot.
     form_loaded_at: epoch-ms the form was rendered (set by client JS on
       load); missing, malformed, or submitted within MIN_SUBMIT_SECONDS
-      means it wasn't a human filling out the visible form.
+      means it wasn't a human filling out the visible form. The stamp comes
+      from the visitor's own clock, so a phone clock running ahead of the
+      server gives a negative elapsed time — that is not judged as a bot
+      (only an absurdly future stamp is).
     text_fields: user-supplied strings to scan for blacklisted spam markers.
     extra_keywords: additional words to check beyond the static list —
       pass load_dynamic_keywords(cur) here to include admin-taught ones.
     """
     if (honeypot or "").strip():
-        return True
+        return "honeypot filled"
 
     try:
         elapsed = (time.time() * 1000 - float(form_loaded_at)) / 1000
     except (TypeError, ValueError):
-        return True
-    if elapsed < MIN_SUBMIT_SECONDS:
-        return True
+        return "timestamp missing or malformed"
+    if 0 <= elapsed < MIN_SUBMIT_SECONDS:
+        return f"submitted too fast ({elapsed:.1f}s)"
+    if elapsed < -MAX_CLOCK_SKEW_SECONDS:
+        return f"timestamp too far in the future ({elapsed:.0f}s)"
 
     combined = " ".join(text_fields).lower()
     keywords = _SPAM_KEYWORDS + tuple(extra_keywords or ())
-    if any(word and word in combined for word in keywords):
-        return True
+    for word in keywords:
+        if word and word in combined:
+            return f"blacklisted keyword {word!r}"
     if len(_URL_RE.findall(combined)) >= 2:
-        return True
+        return "two or more links"
 
-    return False
+    return None
+
+
+def is_spam_submission(**kwargs) -> bool:
+    """True if the submission looks bot-generated rather than human."""
+    return spam_reason(**kwargs) is not None
 
 
 # ---------------------------------------------------------------------------

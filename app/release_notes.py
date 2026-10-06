@@ -38,6 +38,7 @@ ADMIN_NAV_KEYS = (
     "invites",
     "coupons",
     "leads",
+    "booking",
     "pricing",
     "membership",
     "content",

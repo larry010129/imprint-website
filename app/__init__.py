@@ -16,6 +16,7 @@ from app.controllers import (
     admin_controller,
     api_controller,
     auth_controller,
+    booking_controller,
     cms_admin_controller,
     htmx_controller,
     notifications_controller,
@@ -192,6 +193,13 @@ async def lifespan(_app: FastAPI):
             ensure_site_visits_schema(cur)
     except Exception:
         log.exception("ensure_site_visits_schema failed")
+    try:
+        from app.consult_bookings import ensure_consult_bookings_schema
+
+        with get_connection() as conn, conn.cursor() as cur:
+            ensure_consult_bookings_schema(cur)
+    except Exception:
+        log.exception("ensure_consult_bookings_schema failed")
     # Sell-mode / variant columns must not ride the silent try below — missing cols = product 500.
     try:
         with get_connection() as conn, conn.cursor() as cur:
@@ -470,6 +478,7 @@ def create_app() -> FastAPI:
     application.include_router(notifications_controller.router, prefix="/api")
     application.include_router(shop_controller.router, prefix="/api")
     application.include_router(admin_controller.router, prefix="/api")
+    application.include_router(booking_controller.router, prefix="/api")
     application.include_router(cms_admin_controller.router, prefix="/api")
     application.include_router(release_notes_controller.router, prefix="/api")
 

@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>銘印鑽石｜管理後台</title>
 <meta name="robots" content="noindex">
-<link rel="stylesheet" href="/css/admin-core.css?v=39">
+<link rel="stylesheet" href="/css/admin-core.css?v=40">
 <link rel="stylesheet" href="/css/skeleton.css?v=1">
 <link rel="stylesheet" href="/css/admin1-shell.css?v=10">
 <link rel="stylesheet" href="/css/admin-orders.css?v=15">
@@ -92,6 +92,10 @@
           <button data-panel="leads">
             <svg class="side-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
             <span>諮詢名單</span>
+          </button>
+          <button data-panel="booking">
+            <svg class="side-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <span>預約諮詢日曆</span>
           </button>
           <button data-panel="pricing">
             <svg class="side-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
@@ -571,6 +575,13 @@
       </div>
     </section>
 
+    <!-- 預約諮詢日曆 -->
+    <section class="panel" id="panel-booking">
+      <div id="bookingRoot" class="skel-panel" aria-busy="true" aria-label="載入預約諮詢日曆">
+        <span class="skel-line skel-line--short"></span>
+      </div>
+    </section>
+
     <!-- 首頁品牌影片 -->
     <section class="panel" id="panel-featured-video">
       <div id="featuredVideoRoot" class="skel-panel" aria-busy="true" aria-label="載入品牌影片編輯器">
@@ -622,9 +633,9 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 
-<script src="/js/api-client.js?v=33"></script>
+<script src="/js/api-client.js?v=34"></script>
 <script src="/js/admin1-shell.js?v=6"></script>
-<script src="/js/admin-nav-visibility.js?v=1"></script>
+<script src="/js/admin-nav-visibility.js?v=2"></script>
 <script src="/js/toast.js?v=1"></script>
 <script src="/js/skeleton-ui.js?v=4"></script>
 <script src="/js/order-status.js?v=4"></script>
@@ -633,7 +644,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <script src="/js/admin-dashboard-chart.js"></script>
 <script src="/js/admin-table-sort.js?v=1"></script>
 <script src="/js/admin-image-urls.js?v=12"></script>
-<script src="/js/admin.js?v=30"></script>
+<script src="/js/admin.js?v=31"></script>
 <script src="/js/girdle-engrave.js?v=11"></script>
 <script src="/js/admin-orders.js?v=28"></script>
 <script src="/js/order-detail.js"></script>
@@ -645,6 +656,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <script src="/js/taiwan-admin-divisions.js?v=2"></script>
 <script src="/js/admin-content.js?v=50"></script>
 <script src="/js/admin-featured-video.js?v=3"></script>
+<script src="/js/admin-booking.js?v=1"></script>
 <script src="/js/pricing-config.js?v=1.3"></script>
 <script src="/js/membership-config.js?v=7"></script>
 <script>
@@ -655,7 +667,7 @@ document.addEventListener('DOMContentLoaded', function () {
   var titles = {
     dash: '儀表板', orders: '訂單管理', products: '商品上架',
     accounts: '帳戶管理', 'member-search': '搜尋會員', invites: '邀請碼', coupons: '優惠券',
-    leads: '諮詢名單', pricing: '價格設定', membership: '會員等級', content: '內容與頁面圖片',
+    leads: '諮詢名單', booking: '預約諮詢日曆', pricing: '價格設定', membership: '會員等級', content: '內容與頁面圖片',
     'featured-video': '首頁品牌影片'
   };
   var mainEl = document.querySelector('.main');

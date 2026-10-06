@@ -252,6 +252,21 @@
 
     // ---- admin ----
     admin: {
+      getBookings: function (month) {
+        return request('/api/admin/bookings' + (month ? '?month=' + encodeURIComponent(month) : ''));
+      },
+      createBooking: function (body) {
+        return request('/api/admin/bookings', { method: 'POST', body: body });
+      },
+      updateBooking: function (id, body) {
+        return request('/api/admin/bookings/' + encodeURIComponent(id), { method: 'PATCH', body: body });
+      },
+      cancelBooking: function (id) {
+        return request('/api/admin/bookings/' + encodeURIComponent(id), { method: 'DELETE' });
+      },
+      saveBookingSettings: function (body) {
+        return request('/api/admin/bookings-settings', { method: 'PUT', body: body });
+      },
       getDashboardStats: function (params) {
         var qs = '';
         if (params) {

@@ -16,9 +16,10 @@
     },
     {
       id: 'booking', name: '預約諮詢日曆', icon: '約', category: '行銷',
-      desc: '客戶線上選時段預約門市諮詢',
-      long: '在官網提供預約時段選擇，門市管理員在後台看到日曆並確認或改期，避免來回訊息。',
-      features: ['開放時段設定', '預約確認與提醒', '後台日曆檢視'],
+      desc: '後台月曆管理門市諮詢預約，一個時段一位客人',
+      long: '客人在聯絡表單建議的時段會顯示在後台月曆上；管理員可一鍵「安排預約」，也能手動新增、改期、標示完成或取消。同一時段不會被重複預約。',
+      features: ['月曆檢視已約／待確認時段', '從諮詢名單一鍵安排預約', '公休日與特別公休設定', '同一時段不重複預約'],
+      live: '/admin/booking',
     },
     {
       id: 'review-invite', name: '客戶見證邀請', icon: '評', category: '行銷',
@@ -197,11 +198,14 @@
       '<div class="a1-store-detail-head">' +
         '<span class="a1-store-icon a1-store-icon--lg" aria-hidden="true">' + esc(p.icon) + '</span>' +
         '<div><h3>' + esc(p.name) + '</h3><p>' + esc(p.desc) + '</p>' +
-        '<button type="button" class="a1-store-btn" disabled>即將推出</button></div>' +
+        (p.live
+          ? '<a class="a1-store-btn" href="' + esc(p.live) + '">開啟</a>'
+          : '<button type="button" class="a1-store-btn" disabled>即將推出</button>') + '</div>' +
       '</div>' +
       '<h4>簡介</h4><p class="a1-store-long">' + esc(p.long) + '</p>' +
-      '<h4>預計功能</h4><ul>' + p.features.map(function (f) { return '<li>' + esc(f) + '</li>'; }).join('') + '</ul>' +
-      '<h4>資訊</h4><ul><li>分類：' + esc(p.category) + '</li><li>狀態：規劃中，尚未上線</li></ul>';
+      '<h4>' + (p.live ? '功能' : '預計功能') + '</h4><ul>' + p.features.map(function (f) { return '<li>' + esc(f) + '</li>'; }).join('') + '</ul>' +
+      '<h4>資訊</h4><ul><li>分類：' + esc(p.category) + '</li><li>狀態：' +
+        (p.live ? '已上線' : '規劃中，尚未上線') + '</li></ul>';
   }
 
   function renderList() {
@@ -219,7 +223,7 @@
         '<div class="a1-store-item-body">' +
           '<h3 class="a1-store-item-name">' + esc(p.name) + '</h3>' +
           '<p class="a1-store-item-desc">' + esc(p.desc) + '</p>' +
-          '<p class="a1-store-item-meta"><span class="a1-store-badge">即將推出</span> · ' + esc(p.category) + '</p>' +
+          '<p class="a1-store-item-meta"><span class="a1-store-badge">' + (p.live ? '已上線' : '即將推出') + '</span> · ' + esc(p.category) + '</p>' +
         '</div></li>';
     }).join('');
     renderDetail();

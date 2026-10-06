@@ -478,10 +478,29 @@
           '<h3>' + (item.type === 'message' ? '聯絡留言詳情' : '線上估價詳情') + '</h3>' +
           '<div class="lead-detail">' + body + '</div>' +
           '<div class="ap-form-actions" style="margin-top:16px">' +
+            (item.type === 'message'
+              ? '<button type="button" class="btn-sm btn-primary" data-schedule-lead>安排預約</button>'
+              : '') +
             '<button type="button" class="btn-sm" data-modal-close>關閉</button>' +
           '</div>' +
         '</div>'
       );
+
+      var scheduleBtn = modalOverlay.querySelector('[data-schedule-lead]');
+      if (scheduleBtn) {
+        scheduleBtn.addEventListener('click', function () {
+          closeModal();
+          if (window.Admin1Shell && window.Admin1Shell.switchPanel) window.Admin1Shell.switchPanel('booking');
+          if (window.AdminBookingPanel) {
+            window.AdminBookingPanel.startFromLead({
+              id: item.id || raw.id,
+              name: item.name,
+              phone: item.phone,
+              email: item.email
+            });
+          }
+        });
+      }
     }
 
     function loadLeads(silent, force) {
@@ -829,6 +848,7 @@
           if (panel === 'member-search' && window.AdminMemberSearchPanel) {
             window.AdminMemberSearchPanel.ensureLoaded();
           }
+          if (panel === 'booking' && window.AdminBookingPanel) window.AdminBookingPanel.ensureLoaded();
         }
       };
 

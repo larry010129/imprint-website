@@ -109,8 +109,8 @@
         <p class="contact-form-panel__muted" data-cms-text="form-muted">留下簡短訊息</p>
         {# Inline hide too: a stale cached pages.css must never reveal the bot trap. #}
         <div class="contact-form-panel__hp" aria-hidden="true" style="position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden">
-          <label for="cWebsite">網站</label>
-          <input type="text" id="cWebsite" name="hp_website" tabindex="-1" autocomplete="off">
+          <label for="cTrap">請勿填寫</label>
+          <input type="text" id="cTrap" name="hp_trap_x" tabindex="-1" autocomplete="off" data-lpignore="true" data-1p-ignore>
         </div>
         <input type="hidden" id="cFormLoadedAt" name="hp_ts" value="">
         {% if recaptcha_site_key %}

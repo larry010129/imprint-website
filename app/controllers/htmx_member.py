@@ -41,8 +41,8 @@ from app.profile_schema import fetch_profile
 from app.spam_filter import (
     FORM_LOADED_FIELD,
     HONEYPOT_FIELD,
-    is_spam_submission,
     load_dynamic_keywords,
+    spam_reason,
 )
 from app.tw_address import STREET_ERROR, valid_tw_street
 
@@ -94,13 +94,14 @@ async def contact_submit(request: Request) -> HTMLResponse:
     with get_connection() as conn, conn.cursor() as cur:
         dynamic_spam_keywords = load_dynamic_keywords(cur)
 
-    if is_spam_submission(
+    reason = spam_reason(
         honeypot=str(form.get(HONEYPOT_FIELD) or ""),
         form_loaded_at=str(form.get(FORM_LOADED_FIELD) or ""),
         text_fields=[name, message, phone, email],
         extra_keywords=dynamic_spam_keywords,
-    ):
-        log.info("contact form rejected as spam (source=/contact)")
+    )
+    if reason:
+        log.warning("contact form rejected as spam (source=/contact): %s", reason)
         return html(request, "form_msg.html", {"ok": True, "message": "已收到您的留言，顧問將盡快聯繫。"})
 
     captcha_error = recaptcha_error_or_none(

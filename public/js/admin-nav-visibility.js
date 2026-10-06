@@ -4,7 +4,7 @@
   var ITEMS = [
     ['dash', '儀表板'], ['orders', '訂單管理'], ['products', '商品上架'],
     ['accounts', '帳戶管理'], ['member-search', '搜尋會員'], ['invites', '邀請碼'],
-    ['coupons', '優惠券'], ['leads', '諮詢名單'], ['pricing', '價格設定'],
+    ['coupons', '優惠券'], ['leads', '諮詢名單'], ['booking', '預約諮詢日曆'], ['pricing', '價格設定'],
     ['membership', '會員等級'], ['content', '內容與頁面圖片'],
     ['featured-video', '首頁品牌影片'], ['settings', '系統設定'], ['plugins', '插件']
   ];
