@@ -12,7 +12,6 @@
   var PENDING_ORDER = {
     received: 1, order_confirming: 1, dna_lab: 1, deposit_confirmed: 1
   };
-  var SEARCH_DEBOUNCE_MS = 280;
   var SEARCH_MIN = 2;
   var NOTIFY_LIMIT = 8;
 
@@ -25,7 +24,6 @@
   var menuState = 'full';
   var prevDesktop = 'full';
   var hoverExpand = false;
-  var searchTimer = null;
   var searchSeq = 0;
 
   function api() {
@@ -488,55 +486,34 @@
   function bindSearch() {
     var input = document.getElementById('admin1Search');
     if (!input) return;
-    input.addEventListener('input', function () {
+    /* Typing only filters the side nav locally; the network search runs on
+       button click / Enter so it never interrupts typing. */
+    var submit = function () {
       var q = (input.value || '').trim();
-      if (searchTimer) clearTimeout(searchTimer);
       if (q.length < SEARCH_MIN) {
         filterSideNav(q);
         hideSearchResults();
         return;
       }
-      searchTimer = setTimeout(function () { runGlobalSearch(q); }, SEARCH_DEBOUNCE_MS);
+      runGlobalSearch(q);
+    };
+    input.addEventListener('input', function () {
+      var q = (input.value || '').trim();
+      filterSideNav(q);
+      if (q.length < SEARCH_MIN) hideSearchResults();
     });
     input.addEventListener('keydown', function (e) {
       if (e.key === 'Escape') hideSearchResults();
+      if (e.key === 'Enter') { e.preventDefault(); submit(); }
     });
+    var btn = document.getElementById('admin1SearchBtn');
+    if (btn) {
+      btn.addEventListener('mousedown', function (e) { e.preventDefault(); });
+      btn.addEventListener('click', submit);
+    }
     input.addEventListener('blur', function () {
       setTimeout(hideSearchResults, 180);
     });
-  }
-
-  /* ---- KPI strip ---- */
-  function kpiCard(label, value, hint, tone) {
-    var toneClass = tone ? ' dash-metric-v--' + tone : '';
-    return (
-      '<article class="dash-metric">' +
-        '<div class="dash-metric-top"><p class="dash-metric-k">' + esc(label) + '</p></div>' +
-        '<p class="dash-metric-v' + toneClass + '">' + esc(value) + '</p>' +
-        (hint ? '<p class="dash-metric-d">' + esc(hint) + '</p>' : '') +
-      '</article>'
-    );
-  }
-
-  function renderKpi(stats) {
-    var host = document.getElementById('admin1KpiStrip');
-    if (!host || !stats || stats.error) return;
-    var pending = (stats.newMessages || 0) + (stats.pendingQuotes || 0) + (stats.activeOrders || 0);
-    var orders = stats.periodOrderCount != null ? stats.periodOrderCount : (stats.totalOrders || 0);
-    host.innerHTML =
-      kpiCard('完成營收', formatCurrency(stats.totalRevenue), '區間已完成訂單', 'mint') +
-      kpiCard('訂單總數', String(orders), '區間訂單', '') +
-      kpiCard('待處理', String(pending), '留言・估價・進行中', '') +
-      kpiCard('已完成', String(stats.completedOrders != null ? stats.completedOrders : '—'), '全部已完成訂單', 'blue');
-  }
-
-  function loadKpi() {
-    var a = api();
-    var host = document.getElementById('admin1KpiStrip');
-    if (!host || !a || !a.admin || typeof a.admin.getDashboardStats !== 'function') return Promise.resolve();
-    return a.admin.getDashboardStats().then(function (stats) {
-      renderKpi(stats);
-    }).catch(function () { /* keep empty */ });
   }
 
   /* ---- Nested groups ---- */
@@ -667,7 +644,6 @@
   function bootData() {
     loadSession();
     loadNotifications();
-    loadKpi();
   }
 
   document.addEventListener('click', function () {
@@ -703,7 +679,6 @@
     loadSession: loadSession,
     applySession: applySession,
     switchPanel: switchPanel,
-    refreshNotifications: loadNotifications,
-    refreshKpi: loadKpi
+    refreshNotifications: loadNotifications
   };
 })();

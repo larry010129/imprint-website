@@ -398,8 +398,12 @@
         setText('statActiveOrders', stats.activeOrders != null ? stats.activeOrders : '-');
         setText('statPendingTotal', pendingTotal);
         setText('statOrderCount', orderCount);
+        setText('statOrdersHint', '區間訂單・累計已完成 ' + (stats.completedOrders != null ? stats.completedOrders : 0));
         setText('statTotalRevenue', formatCurrency(stats.totalRevenue));
         setText('statAverageSale', formatCurrency(stats.averageSale));
+        var visits = stats.visits || {};
+        setText('statSiteViews', visits.views != null ? visits.views : 0);
+        setText('statSiteVisitors', visits.uniques != null ? visits.uniques : 0);
 
         dashParams.granularity = stats.granularity || dashParams.granularity;
         dashParams.period = stats.period || '';

@@ -374,6 +374,7 @@
       '</header>' +
       '<div class="orders-search adx-member-search-bar">' +
         '<input type="search" id="memberSearchInput" placeholder="搜尋姓名、Email、電話、店家、編號…" aria-label="搜尋會員" autocomplete="off">' +
+        '<button type="button" class="btn-sm btn-primary" id="memberSearchBtn">搜尋</button>' +
       '</div>' +
       '<div id="memberSearchResults" class="adx-member-search-results" aria-live="polite">' +
         '<p class="adx-table-empty">輸入關鍵字開始搜尋。</p>' +
@@ -381,12 +382,11 @@
 
     var input = document.getElementById('memberSearchInput');
     if (input) {
-      input.addEventListener('input', function () {
-        clearTimeout(_timer);
-        _timer = setTimeout(function () {
-          search(input.value);
-        }, 300);
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); search(input.value); }
       });
+      var btn = document.getElementById('memberSearchBtn');
+      if (btn) btn.addEventListener('click', function () { search(input.value); });
       input.focus();
     }
   }

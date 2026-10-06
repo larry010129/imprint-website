@@ -6,10 +6,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>銘印鑽石｜管理後台</title>
 <meta name="robots" content="noindex">
-<link rel="stylesheet" href="/css/admin-core.css?v=37">
+<link rel="stylesheet" href="/css/admin-core.css?v=38">
 <link rel="stylesheet" href="/css/skeleton.css?v=1">
-<link rel="stylesheet" href="/css/admin1-shell.css?v=9">
-<link rel="stylesheet" href="/css/admin-orders.css?v=14">
+<link rel="stylesheet" href="/css/admin1-shell.css?v=10">
+<link rel="stylesheet" href="/css/admin-orders.css?v=15">
 <link rel="stylesheet" href="/css/admin-tables.css?v=31">
 <link rel="stylesheet" href="/static/react/admin-tables.css?v=43">
 
@@ -154,6 +154,7 @@
       <div class="admin1-search-wrap" id="admin1SearchWrap">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input type="search" id="admin1Search" placeholder="搜尋訂單、會員、商品…" autocomplete="off" aria-label="全域搜尋" aria-controls="admin1SearchResults" aria-autocomplete="list">
+        <button type="button" class="admin1-search-btn" id="admin1SearchBtn">搜尋</button>
         <div class="admin1-search-results" id="admin1SearchResults" role="listbox" hidden></div>
       </div>
       <div class="admin1-top-trailing">
@@ -259,7 +260,24 @@
         </article>
       </div>
 
-      <div id="admin1KpiStrip" class="dash-metrics admin1-kpi-strip" aria-label="營運指標"></div>
+      <div class="dash-metrics">
+        <article class="dash-metric">
+          <div class="dash-metric-top">
+            <p class="dash-metric-k">網站瀏覽量</p>
+            <svg class="dash-metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </div>
+          <p class="dash-metric-v skel-metric" id="statSiteViews">&nbsp;</p>
+          <p class="dash-metric-d">區間頁面瀏覽次數</p>
+        </article>
+        <article class="dash-metric">
+          <div class="dash-metric-top">
+            <p class="dash-metric-k">不重複訪客</p>
+            <svg class="dash-metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+          </div>
+          <p class="dash-metric-v skel-metric" id="statSiteVisitors">&nbsp;</p>
+          <p class="dash-metric-d">每日訪客加總（免登入）</p>
+        </article>
+      </div>
 
       <div class="dash-grid dash-grid--chart">
         <div class="card dash-chart-card">
@@ -384,6 +402,7 @@
         </div>
         <div class="orders-search">
           <input type="search" id="ordersSearch" placeholder="搜尋訂單編號、客戶、品項…" aria-label="搜尋訂單">
+          <button type="button" class="btn-sm btn-primary" id="ordersSearchBtn">搜尋</button>
         </div>
         <div class="orders-bulk-bar" id="ordersBulkBar" hidden>
           <span class="orders-bulk-count" id="ordersBulkCount">已選 0 筆</span>
@@ -600,7 +619,7 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
 
 <script src="/js/api-client.js?v=33"></script>
-<script src="/js/admin1-shell.js?v=5"></script>
+<script src="/js/admin1-shell.js?v=6"></script>
 <script src="/js/admin-nav-visibility.js?v=1"></script>
 <script src="/js/toast.js?v=1"></script>
 <script src="/js/skeleton-ui.js?v=4"></script>
@@ -610,13 +629,13 @@ document.addEventListener('DOMContentLoaded', function () {
 <script src="/js/admin-dashboard-chart.js"></script>
 <script src="/js/admin-table-sort.js?v=1"></script>
 <script src="/js/admin-image-urls.js?v=12"></script>
-<script src="/js/admin.js?v=28"></script>
+<script src="/js/admin.js?v=29"></script>
 <script src="/js/girdle-engrave.js?v=11"></script>
-<script src="/js/admin-orders.js?v=27"></script>
+<script src="/js/admin-orders.js?v=28"></script>
 <script src="/js/order-detail.js"></script>
-<script src="/js/admin-products.js?v=67"></script>
-<script src="/js/admin-accounts.js?v=12"></script>
-<script src="/js/admin-member-search.js?v=3"></script>
+<script src="/js/admin-products.js?v=68"></script>
+<script src="/js/admin-accounts.js?v=13"></script>
+<script src="/js/admin-member-search.js?v=4"></script>
 <script src="/js/admin-invites.js?v=12"></script>
 <script src="/js/admin-coupons.js?v=5"></script>
 <script src="/js/taiwan-admin-divisions.js?v=2"></script>

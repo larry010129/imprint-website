@@ -13,7 +13,6 @@ from fastapi.responses import JSONResponse, Response
 from psycopg.types.json import Jsonb
 
 from app.account_delete import delete_blocked_reason, hard_delete_user
-from app.admin_plugins import list_plugins, update_plugin
 from app.admin_dashboard import (
     DASHBOARD_ORDER_HARD_LIMIT,
     XLSX_MEDIA_TYPE,
@@ -188,6 +187,21 @@ def _lead_counts(cur) -> tuple[int, int, int, int]:
     )
 
 
+def _visit_stats(cfg: dict, since: datetime, until: datetime) -> dict:
+    """Visit counter numbers; never let a missing table break the dashboard."""
+    from app import site_visits
+
+    try:
+        win_start, win_end = site_visits.bounds_to_days(since, until)
+        top_start, top_end = site_visits.period_day_bounds(cfg)
+        with get_connection() as conn, conn.cursor() as cur:
+            daily = site_visits.fetch_visit_daily(cur, win_start, win_end)
+            top_pages = site_visits.fetch_top_pages(cur, top_start, top_end)
+        return site_visits.build_visit_payload(daily, cfg, top_pages)
+    except Exception:
+        return site_visits.empty_visit_payload()
+
+
 def _fetch_dashboard_gold(cur) -> dict | None:
     cur.execute(
         "select xau_per_gram, xpt_per_gram, xag_per_gram, fetched_at "
@@ -237,6 +251,7 @@ def dashboard(
             "pendingQuotes": pending_quotes,
             "activeOrders": active_orders,
             "completedOrders": completed_orders,
+            "visits": _visit_stats(cfg, since, until),
         }
     )
     return payload
@@ -985,48 +1000,6 @@ async def product_image_action(request: Request) -> JSONResponse:
         status = 404 if error == "找不到圖片" else 400
         return JSONResponse(status_code=status, content={"error": error})
     return JSONResponse(content={"image": _serialize_admin_image_row(image_row)})
-
-
-@router.get("/plugins")
-def admin_plugins_list(request: Request) -> JSONResponse:
-    _require_admin(request)
-    with get_connection() as conn, conn.cursor() as cur:
-        plugins = list_plugins(cur)
-    return JSONResponse(content={"plugins": plugins})
-
-
-@router.patch("/plugins")
-async def admin_plugins_patch(request: Request) -> JSONResponse:
-    """Update one plugin; body must include slug (+ enabled and/or config)."""
-    _require_admin(request)
-    body = await request.json()
-    if not isinstance(body, dict):
-        return JSONResponse(status_code=400, content={"error": "invalid body"})
-    slug = body.get("slug") or ""
-    with get_transaction() as conn, conn.cursor() as cur:
-        plugin, error = update_plugin(
-            cur, slug, enabled=body.get("enabled"), config=body.get("config")
-        )
-    if error:
-        status = 404 if error == "未知外掛" else 400
-        return JSONResponse(status_code=status, content={"error": error})
-    return JSONResponse(content={"plugin": plugin})
-
-
-@router.patch("/plugins/{slug}")
-async def admin_plugins_patch_by_slug(request: Request, slug: str) -> JSONResponse:
-    _require_admin(request)
-    body = await request.json()
-    if not isinstance(body, dict):
-        return JSONResponse(status_code=400, content={"error": "invalid body"})
-    with get_transaction() as conn, conn.cursor() as cur:
-        plugin, error = update_plugin(
-            cur, slug, enabled=body.get("enabled"), config=body.get("config")
-        )
-    if error:
-        status = 404 if error == "未知外掛" else 400
-        return JSONResponse(status_code=status, content={"error": error})
-    return JSONResponse(content={"plugin": plugin})
 
 
 @router.post("/product-category")

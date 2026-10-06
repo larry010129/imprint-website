@@ -82,7 +82,12 @@
 
 .orders-search {
   margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
+
+.orders-search .btn-sm { flex: none; white-space: nowrap; }
 
 .orders-search input {
   width: min(360px, 100%);

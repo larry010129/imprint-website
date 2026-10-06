@@ -651,19 +651,6 @@
         if (extra) Object.keys(extra).forEach(function (k) { body[k] = extra[k]; });
         return request('/api/admin/account-action', { method: 'POST', body: body });
       },
-      getPlugins: function () {
-        return request('/api/admin/plugins');
-      },
-      updatePlugin: function (slug, fields) {
-        var body = fields || {};
-        if (slug) {
-          return request('/api/admin/plugins/' + encodeURIComponent(slug), {
-            method: 'PATCH',
-            body: body,
-          });
-        }
-        return request('/api/admin/plugins', { method: 'PATCH', body: body });
-      },
       getFeaturedVideo: function () {
         return request('/api/admin/featured-video');
       },

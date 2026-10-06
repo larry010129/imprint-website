@@ -16,7 +16,7 @@ def test_admin_orders_toolbar_delete_disabled_until_checked():
         assert 'id="ordersBulkDelete"' in html
         assert 'id="ordersBulkDelete" disabled' in html
         assert ">刪除</button>" in html
-        assert "admin-orders.js?v=27" in html
+        assert "admin-orders.js?v=28" in html
         assert "api-client.js?v=33" in html
 
 

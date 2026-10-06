@@ -148,7 +148,6 @@ async def lifespan(_app: FastAPI):
         ensure_page_images_schema,
         ensure_testimonial_country_column,
     )
-    from app.admin_plugins import ensure_admin_plugins_schema
     from app.membership_config import ensure_membership_schema
     from app.orders import (
         ensure_collection_bottle_columns,
@@ -186,6 +185,13 @@ async def lifespan(_app: FastAPI):
             ensure_spam_keywords_schema(cur)
     except Exception:
         log.exception("ensure_spam_keywords_schema failed")
+    try:
+        from app.site_visits import ensure_site_visits_schema
+
+        with get_connection() as conn, conn.cursor() as cur:
+            ensure_site_visits_schema(cur)
+    except Exception:
+        log.exception("ensure_site_visits_schema failed")
     # Sell-mode / variant columns must not ride the silent try below — missing cols = product 500.
     try:
         with get_connection() as conn, conn.cursor() as cur:
@@ -209,7 +215,6 @@ async def lifespan(_app: FastAPI):
         with get_connection() as conn, conn.cursor() as cur:
             ensure_product_categories_schema(cur)
             ensure_diamond_shapes_schema(cur)
-            ensure_admin_plugins_schema(cur)
             ensure_membership_schema(cur)
             ensure_page_images_schema(cur)
             ensure_journal_posts_schema(cur)
@@ -272,6 +277,14 @@ async def lifespan(_app: FastAPI):
     # Featured-video channel sync is button-only (admin POST /featured-video/sync).
     # No background timer / lifespan refresh for the gallery.
 
+    from app import site_visits
+
+    visits_task = (
+        asyncio.create_task(site_visits.flush_loop(), name="imprint-site-visits")
+        if site_visits.enabled()
+        else None
+    )
+
     try:
         yield
     finally:
@@ -280,6 +293,13 @@ async def lifespan(_app: FastAPI):
             await gold_task
         except asyncio.CancelledError:
             pass
+        if visits_task is not None:
+            visits_task.cancel()
+            try:
+                await visits_task
+            except asyncio.CancelledError:
+                pass
+            await asyncio.to_thread(site_visits.flush)
         if seed_task is not None:
             await seed_task
         try:
@@ -430,6 +450,18 @@ def create_app() -> FastAPI:
         from app.robots_host import apply_x_robots_tag
 
         apply_x_robots_tag(request, response)
+        return response
+
+    @application.middleware("http")
+    async def visit_counter(request, call_next):
+        """Anonymous page-view count (in-memory only; flushed by a background task)."""
+        response = await call_next(request)
+        try:
+            from app.site_visits import record_visit
+
+            record_visit(request, response)
+        except Exception:
+            log.exception("record_visit failed")
         return response
 
     # Legacy + versioned JSON mounts (public HTML is Jinja/HTMX, not JSON clients).

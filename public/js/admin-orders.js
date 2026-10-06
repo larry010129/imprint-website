@@ -706,11 +706,11 @@
 
   var searchInput = document.getElementById('ordersSearch');
   if (searchInput) {
-    var timer;
-    searchInput.addEventListener('input', function () {
-      clearTimeout(timer);
-      timer = setTimeout(function () { load(searchInput.value.trim()); }, 300);
+    var runOrderSearch = function () { load(searchInput.value.trim()); };
+    searchInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); runOrderSearch(); }
     });
+    document.getElementById('ordersSearchBtn')?.addEventListener('click', runOrderSearch);
   }
 
   document.getElementById('btnExportOrdersCsv')?.addEventListener('click', function () {

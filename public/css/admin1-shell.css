@@ -633,6 +633,21 @@ body.admin1-body .admin1-search-wrap {
   position: relative;
 }
 
+body.admin1-body .admin1-search-btn {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 3px 10px;
+  border: 0;
+  border-radius: calc(var(--a1-radius) - 2px);
+  background: var(--a1-accent, var(--mint-deep, #2a9d9d));
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
 body.admin1-body .admin1-search-wrap svg {
   position: absolute;
   left: 10px;
@@ -1019,96 +1034,6 @@ body.admin1-body .a1-field select {
   background: var(--a1-bg);
   color: var(--a1-fg);
   font-size: 14px;
-}
-
-body.admin1-body .a1-plugin-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
-}
-
-body.admin1-body .a1-plugin-card {
-  padding: 16px;
-  border: 1px solid var(--a1-border);
-  border-radius: var(--a1-radius);
-}
-
-body.admin1-body .a1-plugin-card h3 {
-  margin: 0 0 6px;
-  font-size: 15px;
-}
-
-body.admin1-body .a1-plugin-card p {
-  margin: 0 0 12px;
-  font-size: 13px;
-  color: var(--a1-muted-fg);
-}
-
-body.admin1-body .a1-plugin-card.is-disabled {
-  opacity: 0.72;
-}
-
-body.admin1-body .a1-plugin-card-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 6px;
-}
-
-body.admin1-body .a1-plugin-card-head h3 {
-  margin: 0;
-}
-
-body.admin1-body .a1-plugin-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--a1-muted-fg);
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-body.admin1-body .a1-plugin-toggle input {
-  width: 16px;
-  height: 16px;
-  accent-color: var(--a1-fg);
-  cursor: pointer;
-}
-
-body.admin1-body .a1-plugin-card-foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-body.admin1-body .a1-plugin-slug {
-  font-size: 11px;
-  color: var(--a1-muted-fg);
-}
-
-body.admin1-body a.a1-plugin-settings {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--a1-fg);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-body.admin1-body .a1-plugin-status {
-  margin: 0 0 12px;
-  font-size: 13px;
-  color: var(--a1-muted-fg);
-}
-
-body.admin1-body .a1-plugin-status.is-error {
-  color: #b42318;
-}
-
-body.admin1-body.dark .a1-plugin-status.is-error {
-  color: #f97066;
 }
 
 body.admin1-body .a1-blank {
@@ -1769,4 +1694,126 @@ body.admin1-body.dark #admin1KpiStrip .dash-metric {
     min-width: 0;
     width: min(280px, calc(100vw - 24px));
   }
+}
+
+/* Plugin store — VS Code style list + detail */
+body.admin1-body .a1-store {
+  display: grid;
+  grid-template-columns: minmax(280px, 380px) 1fr;
+  gap: 16px;
+  align-items: start;
+}
+body.admin1-body .a1-store-list-col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+body.admin1-body .a1-store-search {
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--a1-border);
+  border-radius: 6px;
+  background: var(--a1-bg);
+  color: var(--a1-fg);
+  font-size: 14px;
+}
+body.admin1-body .a1-store-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+body.admin1-body .a1-store-chip {
+  padding: 4px 12px;
+  border: 1px solid var(--a1-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--a1-muted-fg);
+  font-size: 12px;
+  cursor: pointer;
+}
+body.admin1-body .a1-store-chip.is-active {
+  background: var(--a1-active-bg);
+  color: var(--a1-active-fg);
+  border-color: var(--a1-fg);
+}
+body.admin1-body .a1-store-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--a1-border);
+  border-radius: var(--a1-radius);
+  overflow: hidden;
+}
+body.admin1-body .a1-store-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  border-bottom: 1px solid var(--a1-border);
+  cursor: pointer;
+}
+body.admin1-body .a1-store-item:last-child { border-bottom: 0; }
+body.admin1-body .a1-store-item:hover { background: var(--a1-hover); }
+body.admin1-body .a1-store-item.is-selected { background: var(--a1-active-bg); }
+body.admin1-body .a1-store-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: var(--a1-muted);
+  color: var(--a1-fg);
+  font-size: 18px;
+  font-weight: 700;
+}
+body.admin1-body .a1-store-icon--lg { width: 72px; height: 72px; font-size: 32px; border-radius: 12px; }
+body.admin1-body .a1-store-item-body { min-width: 0; flex: 1; }
+body.admin1-body .a1-store-item-name { margin: 0; font-size: 14px; font-weight: 600; }
+body.admin1-body .a1-store-item-desc {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--a1-muted-fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+body.admin1-body .a1-store-item-meta { margin: 4px 0 0; font-size: 11px; color: var(--a1-muted-fg); }
+body.admin1-body .a1-store-badge {
+  display: inline-block;
+  padding: 1px 8px;
+  border: 1px solid var(--a1-border);
+  border-radius: 999px;
+  font-size: 11px;
+  color: var(--a1-muted-fg);
+  white-space: nowrap;
+}
+body.admin1-body .a1-store-detail {
+  padding: 20px;
+  border: 1px solid var(--a1-border);
+  border-radius: var(--a1-radius);
+  min-height: 320px;
+  position: sticky;
+  top: 16px;
+}
+body.admin1-body .a1-store-detail-head { display: flex; gap: 16px; align-items: center; margin-bottom: 16px; }
+body.admin1-body .a1-store-detail-head h3 { margin: 0 0 4px; font-size: 20px; }
+body.admin1-body .a1-store-detail-head p { margin: 0 0 10px; font-size: 13px; color: var(--a1-muted-fg); }
+body.admin1-body .a1-store-btn {
+  height: 32px;
+  padding: 0 16px;
+  border: 1px solid var(--a1-border);
+  border-radius: 6px;
+  background: var(--a1-muted);
+  color: var(--a1-muted-fg);
+  font-size: 13px;
+  font-weight: 600;
+}
+body.admin1-body .a1-store-btn:disabled { cursor: not-allowed; opacity: 0.8; }
+body.admin1-body .a1-store-detail h4 { margin: 20px 0 8px; font-size: 14px; }
+body.admin1-body .a1-store-detail ul { margin: 0; padding-left: 20px; font-size: 13px; color: var(--a1-muted-fg); line-height: 1.8; }
+body.admin1-body .a1-store-detail p.a1-store-long { margin: 0; font-size: 14px; line-height: 1.7; }
+body.admin1-body .a1-store-empty { padding: 24px; text-align: center; font-size: 13px; color: var(--a1-muted-fg); list-style: none; }
+@media (max-width: 860px) {
+  body.admin1-body .a1-store { grid-template-columns: 1fr; }
 }

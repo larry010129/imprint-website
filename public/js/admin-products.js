@@ -225,7 +225,6 @@
   };
   var _pageIndex = 0;
   var _pageSize = 10;
-  var _searchDebounce = null;
   var _loaded = false;
   var _loading = false;
   var _loadSeq = 0;
@@ -787,7 +786,10 @@
       '<p class="note">管理商品款式、金屬選項與照片。上架後會顯示於客製試算頁；拖曳列可調整排序。</p>' +
       '<p class="note ap-memorial-note">紀念鑽石：編輯款式名稱、鑽石顏色與照片以連結試算頁；不含金屬／價格（價格請用「前往價格設定」）。</p>' +
       '<div class="ap-toolbar">' +
-        '<input type="search" id="apProductSearch" class="ap-product-search" placeholder="搜尋商品名稱或自訂編號…" value="' + esc(state.searchQuery) + '">' +
+        '<div class="ap-search-form">' +
+          '<input type="search" id="apProductSearch" class="ap-product-search" placeholder="搜尋商品名稱或自訂編號…" value="' + esc(state.searchQuery) + '">' +
+          '<button type="button" class="btn-sm btn-primary" id="apProductSearchBtn">搜尋</button>' +
+        '</div>' +
         '<div class="ap-toolbar-actions">' +
           '<button type="button" class="btn-sm" id="btnGotoPricing">前往價格設定</button>' +
           '<button type="button" class="btn-sm btn-primary" id="btnNewProduct">+ 新增商品</button>' +
@@ -989,20 +991,22 @@
 
     var searchInput = document.getElementById('apProductSearch');
     if (searchInput) {
-      searchInput.addEventListener('input', function () {
+      /* Search runs on button click / Enter only, so typing is never interrupted. */
+      var runProductSearch = function () {
         var value = searchInput.value;
-        if (_searchDebounce) clearTimeout(_searchDebounce);
-        _searchDebounce = setTimeout(function () {
-          _searchDebounce = null;
-          if (state.searchQuery === value) return;
-          state.searchQuery = value;
-          _pageIndex = 0;
-          unmountProductsTable();
-          var tableRoot = document.getElementById('apProductsTableRoot');
-          if (tableRoot) tableRoot.innerHTML = tableAreaSkeletonHtml();
-          load(true, true);
-        }, 300);
+        if (state.searchQuery === value) return;
+        state.searchQuery = value;
+        _pageIndex = 0;
+        unmountProductsTable();
+        var tableRoot = document.getElementById('apProductsTableRoot');
+        if (tableRoot) tableRoot.innerHTML = tableAreaSkeletonHtml();
+        load(true, true);
+      };
+      searchInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); runProductSearch(); }
       });
+      var searchBtn = document.getElementById('apProductSearchBtn');
+      if (searchBtn) searchBtn.addEventListener('click', runProductSearch);
     }
 
     var addCatBtn = document.getElementById('apAddCategory');

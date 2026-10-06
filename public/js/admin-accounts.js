@@ -222,6 +222,7 @@ window.ImprintMemberId = window.ImprintMemberId || (function () {
       '<div class="adx-security-banner">為保護帳號安全，系統不儲存也不顯示明文密碼。如需協助店家登入，請使用「重設」設定新密碼後私下告知該店家。</div>' +
       '<div class="orders-search adx-accounts-search">' +
         '<input type="search" id="accountsSearchInput" placeholder="搜尋姓名、Email、電話、店家、編號…" aria-label="搜尋帳號" autocomplete="off" value="' + esc(_query) + '">' +
+        '<button type="button" class="btn-sm btn-primary" id="accountsSearchBtn">搜尋</button>' +
       '</div>' +
       pagerHtml() +
       '<div class="adx-member-list">' + renderList(shown) + '</div>';
@@ -235,14 +236,16 @@ window.ImprintMemberId = window.ImprintMemberId || (function () {
   function bindSearch() {
     var input = document.getElementById('accountsSearchInput');
     if (!input) return;
-    input.addEventListener('input', function () {
-      clearTimeout(_searchTimer);
-      _searchTimer = setTimeout(function () {
-        _query = input.value.trim();
-        _page = 1;
-        load(true, true);
-      }, 200);
+    var run = function () {
+      _query = input.value.trim();
+      _page = 1;
+      load(true, true);
+    };
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); run(); }
     });
+    var btn = document.getElementById('accountsSearchBtn');
+    if (btn) btn.addEventListener('click', run);
   }
 
   function bindPager() {
