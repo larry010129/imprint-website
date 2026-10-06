@@ -44,7 +44,6 @@ ADMIN_NAV_KEYS = (
     "content",
     "featured-video",
     "settings",
-    "plugins",
 )
 
 

@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>銘印鑽石｜輸入通行碼</title>
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="/css/admin1-shell.css?v=13">
+<style>
+  body.admin1-body.unlock-gate {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    padding: 16px; background: var(--a1-muted, #f4f6f8);
+  }
+  body.admin1-body.unlock-gate .a1-modal { width: min(380px, 100%); }
+  body.admin1-body.unlock-gate .a1-store-btn { display: inline-flex; align-items: center; text-decoration: none; cursor: pointer; }
+</style>
+</head>
+<body class="admin1-body unlock-gate">
+<form class="a1-modal" id="unlockForm" novalidate>
+  <h3>輸入通行碼</h3>
+  <p>這個頁面（更新說明、後台分頁顯示設定、插件）需要通行碼才能進入。</p>
+  <input type="password" id="unlockCode" maxlength="6" autocomplete="off" inputmode="text" aria-label="通行碼" autofocus>
+  <p class="a1-modal-error" id="unlockError" role="alert" hidden></p>
+  <div class="a1-modal-actions">
+    <a class="a1-store-btn a1-store-btn--ghost" href="/admin">返回後台</a>
+    <button type="submit" class="a1-store-btn" id="unlockSubmit">確認</button>
+  </div>
+</form>
+<script src="/js/admin-unlock-gate.js?v=1"></script>
+</body>
+</html>

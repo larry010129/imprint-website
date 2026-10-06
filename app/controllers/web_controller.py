@@ -635,7 +635,8 @@ def _make_handler(meta: PageMeta, status_code: int = 200):
 
 
 # Legacy on-disk shells; excluded from generic *.html→clean PageMeta redirects.
-# Canonical CMS URLs: /admin, /admin/settings, /admin/plugins (see register_pages).
+# Canonical CMS URLs: /admin, /admin/settings; /admin/plugins redirects into the
+# password-protected /admin/release-notes (see register_pages).
 _ADMIN_LEGACY_TO_CANONICAL: dict[str, str] = {
     "/admin.html": "/admin",
     "/admin1.html": "/admin",
@@ -812,11 +813,16 @@ def register_pages(app: FastAPI) -> None:
 
     @app.api_route("/admin/plugins", methods=["GET", "HEAD"], include_in_schema=False)
     async def admin_plugins_page(request: Request):
-        return _admin_gated_html(request, "admin1-plugins.html", "/admin/plugins")
+        # Plugins live in the password-protected release-notes page (tab 「插件」);
+        # that route sends anyone who hasn't unlocked it back to /admin.
+        return RedirectResponse(url="/admin/release-notes#plugins", status_code=302)
 
     @app.api_route("/admin/release-notes", methods=["GET", "HEAD"], include_in_schema=False)
     async def admin_release_notes_page(request: Request):
-        """Hidden editor — admin session + unlock cookie required."""
+        """Hidden editor — admin session + unlock cookie required.
+
+        An admin without the unlock gets a small 通行碼 prompt page (never the
+        editor itself); entering the code reloads this same URL."""
         from app.auth import get_user_id, request_is_admin
         from app.release_notes import require_unlock
 
@@ -824,12 +830,17 @@ def register_pages(app: FastAPI) -> None:
         user_id = get_user_id(request)
         if not request_is_admin(request):
             return RedirectResponse(url=f"/login?next={next_path}", status_code=302)
-        if not user_id or not require_unlock(request, user_id):
-            return RedirectResponse(url="/admin", status_code=302)
-        path = settings.site_root / "admin1-release-notes.html"
+        unlocked = bool(user_id and require_unlock(request, user_id))
+        name = "admin1-release-notes.html" if unlocked else "admin1-unlock.html"
+        path = settings.site_root / name
         if not path.is_file():
             raise StarletteHTTPException(status_code=404, detail="Not Found")
-        return FileResponse(path, media_type="text/html; charset=utf-8")
+        # no-store: a cached editor page must not be replayed after the unlock expires.
+        return FileResponse(
+            path,
+            media_type="text/html; charset=utf-8",
+            headers={"Cache-Control": "no-store"},
+        )
 
     # Deep-linkable admin tabs: /admin/<tab> serves the same admin1 shell.
     # Registered AFTER the explicit /admin/settings|plugins|release-notes routes

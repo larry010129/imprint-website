@@ -6,7 +6,7 @@
     ['accounts', '帳戶管理'], ['member-search', '搜尋會員'], ['invites', '邀請碼'],
     ['coupons', '優惠券'], ['leads', '諮詢名單'], ['booking', '預約諮詢日曆'], ['pricing', '價格設定'],
     ['membership', '會員等級'], ['content', '內容與頁面圖片'],
-    ['featured-video', '首頁品牌影片'], ['settings', '系統設定'], ['plugins', '插件']
+    ['featured-video', '首頁品牌影片'], ['settings', '系統設定']
   ];
   var endpoint = '/api/admin/nav-visibility';
   var loaded = false;
@@ -26,7 +26,7 @@
     });
     document.querySelectorAll('.side-nav a.side-nav-link').forEach(function (item) {
       var href = item.getAttribute('href') || '';
-      var key = href === '/admin/settings' ? 'settings' : href === '/admin/plugins' ? 'plugins' : '';
+      var key = href === '/admin/settings' ? 'settings' : '';
       if (key) item.hidden = map[key] === false;
     });
     document.querySelectorAll('.side-nav-group').forEach(function (group) {
@@ -139,7 +139,12 @@
     triggers.forEach(function (trigger) {
       trigger.addEventListener('click', function () { activate(trigger.getAttribute('data-rn-tab')); });
     });
-    activate('release-notes');
+    /* /admin/release-notes#plugins opens straight on that tab. */
+    var wanted = (location.hash || '').replace(/^#/, '');
+    var known = Array.prototype.some.call(triggers, function (trigger) {
+      return trigger.getAttribute('data-rn-tab') === wanted;
+    });
+    activate(known ? wanted : 'release-notes');
   }
 
   if (document.getElementById('admin-nav-visibility-root')) bindReleaseNotesTabs();

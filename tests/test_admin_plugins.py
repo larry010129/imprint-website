@@ -180,3 +180,67 @@ def test_unlock_is_rate_limited_and_checks_the_code(monkeypatch):
     good = asyncio.run(rnc.unlock(_request({"code": "abc123"})))
     assert good.status_code == 200
     assert rn.UNLOCK_COOKIE_NAME in good.headers.get("set-cookie", "")
+
+
+# ── the protected page itself (/admin/release-notes) ────────────────────
+
+def _page_client(monkeypatch, *, admin=True, user_id=ADMIN):
+    from fastapi.testclient import TestClient
+
+    from app import create_app
+
+    monkeypatch.setattr("app.auth.get_user_id", lambda request: user_id)
+    monkeypatch.setattr("app.auth.request_is_admin", lambda request: admin)
+    # No lifespan (no `with`): nothing touches the database.
+    return TestClient(create_app(), follow_redirects=False)
+
+
+def _is_prompt_page(resp) -> bool:
+    """The code prompt — and nothing from the protected editor."""
+    return (
+        resp.status_code == 200
+        and 'id="unlockForm"' in resp.text
+        and "輸入通行碼" in resp.text
+        and "data-rn-tab" not in resp.text
+        and "admin-nav-visibility-root" not in resp.text
+        and resp.headers["cache-control"] == "no-store"
+    )
+
+
+def test_admin_without_the_password_gets_the_code_prompt(monkeypatch):
+    client = _page_client(monkeypatch)
+    for url in ("/admin/release-notes", "/admin/release-notes?x=1"):
+        assert _is_prompt_page(client.get(url))
+
+
+def test_another_admins_unlock_only_gets_the_prompt(monkeypatch):
+    client = _page_client(monkeypatch, user_id="admin-2")
+    client.cookies.set(rn.UNLOCK_COOKIE_NAME, rn.sign_unlock(ADMIN))  # signed for admin-1
+    assert _is_prompt_page(client.get("/admin/release-notes"))
+
+
+def test_expired_or_garbage_unlock_gets_the_prompt(monkeypatch):
+    client = _page_client(monkeypatch)
+    client.cookies.set(rn.UNLOCK_COOKIE_NAME, "not-a-token")
+    assert _is_prompt_page(client.get("/admin/release-notes"))
+
+
+def test_protected_page_opens_only_with_own_unlock(monkeypatch):
+    client = _page_client(monkeypatch)
+    client.cookies.set(rn.UNLOCK_COOKIE_NAME, rn.sign_unlock(ADMIN))
+    resp = client.get("/admin/release-notes")
+    assert resp.status_code == 200 and "data-rn-tab=\"plugins\"" in resp.text
+    assert 'id="unlockForm"' not in resp.text
+    assert resp.headers["cache-control"] == "no-store"
+
+
+def test_protected_page_sends_non_admins_to_login(monkeypatch):
+    client = _page_client(monkeypatch, admin=False)
+    resp = client.get("/admin/release-notes")
+    assert resp.status_code == 302 and resp.headers["location"].startswith("/login")
+
+
+def test_old_plugin_page_url_now_redirects_into_the_protected_page(monkeypatch):
+    client = _page_client(monkeypatch)
+    resp = client.get("/admin/plugins")
+    assert resp.status_code == 302 and resp.headers["location"] == "/admin/release-notes#plugins"

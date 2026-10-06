@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>銘印鑽石｜更新說明</title>
 <meta name="robots" content="noindex">
-<link rel="stylesheet" href="/css/admin1-shell.css?v=8">
+<link rel="stylesheet" href="/css/admin1-shell.css?v=13">
 <link rel="stylesheet" href="/static/react/admin-tables.css?v=43">
 <style>
   body.admin1-body .rn-editor-main {
@@ -82,6 +82,10 @@
             <svg class="side-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="8" cy="6" r="2" fill="currentColor"/><circle cx="16" cy="12" r="2" fill="currentColor"/><circle cx="10" cy="18" r="2" fill="currentColor"/></svg>
             <span>後台分頁顯示設定</span>
           </button>
+          <button type="button" data-rn-tab="plugins">
+            <svg class="side-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+            <span>插件</span>
+          </button>
         </div>
       </div>
     </nav>
@@ -119,11 +123,26 @@
       <section data-rn-tab-panel="nav-visibility" hidden>
         <div id="admin-nav-visibility-root"></div>
       </section>
+      <section data-rn-tab-panel="plugins" hidden>
+        <div class="a1-page-head">
+          <h2>插件</h2>
+          <p>啟用、開啟或關閉後台插件。這個頁面需要通行碼才能進入。</p>
+        </div>
+        <div class="a1-store">
+          <div class="a1-store-list-col">
+            <input type="search" class="a1-store-search" id="storeSearch" placeholder="搜尋插件…" aria-label="搜尋插件" autocomplete="off">
+            <div class="a1-store-filters" id="storeFilters" role="group" aria-label="插件分類"></div>
+            <ul class="a1-store-list" id="storeList" role="listbox" aria-label="插件列表"></ul>
+          </div>
+          <section class="a1-store-detail" id="storeDetail" aria-live="polite"></section>
+        </div>
+      </section>
     </main>
   </div>
 </div>
 <script type="module" src="/static/react/admin-tables.js?v=69"></script>
 <script src="/js/admin1-shell.js?v=4"></script>
-<script src="/js/admin-nav-visibility.js?v=2"></script>
+<script src="/js/admin-nav-visibility.js?v=3"></script>
+<script src="/js/admin1-plugins.js?v=10"></script>
 </body>
 </html>
