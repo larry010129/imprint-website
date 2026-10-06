@@ -217,7 +217,7 @@
     return (
       '<form class="bk-form card" id="bkSettings" novalidate>' +
         '<h3>開放時間設定</h3>' +
-        '<p class="adx-panel-note">每個時段長 ' + state.data.slotMinutes + ' 分鐘，一個時段只能一組客人預約。</p>' +
+        '<p class="adx-panel-note">每個時段長 ' + state.data.slotMinutes + ' 分鐘，一個時段只能一組客人預約。這些設定也會控制官網聯絡表單可選的日期與時段。</p>' +
         '<div class="bk-form-grid">' +
           '<div class="bk-wide"><span class="bk-label">公休日</span><div class="bk-days">' + days + '</div></div>' +
           '<label class="bk-wide">時段開始時間（用逗號分隔，24 小時制）' +
@@ -269,7 +269,12 @@
     root.setAttribute('aria-busy', 'true');
     return api.admin.getBookings(month).then(function (res) {
       if (res && res.error) {
-        root.innerHTML = '<p class="adx-panel-note">' + esc(res.error) + '</p>';
+        root.removeAttribute('aria-busy');
+        root.classList.remove('skel-panel');
+        root.innerHTML = '<p class="adx-panel-note">' +
+          (res.error === 'plugin_disabled'
+            ? '「預約諮詢日曆」插件目前未開啟。請到「插件」頁面（需要通行碼）啟用並開啟。'
+            : esc(res.error)) + '</p>';
         return;
       }
       state.data = res;

@@ -168,6 +168,133 @@
   if (!listEl || !detailEl) return;
 
   var state = { q: '', category: '全部', selected: CATALOG[0].id };
+  /* Live plugin states from the server: { booking: 'disabled' | 'off' | 'on' }; null until loaded. */
+  var pluginStates = null;
+  var STATE_LABEL = { disabled: '未啟用', off: '已啟用・關閉', on: '已啟用・開啟' };
+  var busy = false;
+
+  function stateLabel(p) {
+    if (!p.live) return '即將推出';
+    if (!pluginStates || !pluginStates[p.id]) return '載入中…';
+    return STATE_LABEL[pluginStates[p.id]] || '未知';
+  }
+
+  function pluginControlsHtml(p) {
+    var s = pluginStates && pluginStates[p.id];
+    if (!s) return '<p class="a1-store-lock">載入狀態中…</p>';
+    var html;
+    if (s === 'disabled') {
+      html = '<button type="button" class="a1-store-btn" data-plugin-state="off"' + (busy ? ' disabled' : '') + '>啟用</button>';
+    } else {
+      html =
+        '<label class="a1-switch"><input type="checkbox" role="switch" data-plugin-toggle' +
+          (s === 'on' ? ' checked' : '') + (busy ? ' disabled' : '') + '>' +
+          '<span class="a1-switch-track" aria-hidden="true"></span>' +
+          '<span class="a1-switch-label">' + (s === 'on' ? '開啟中' : '已關閉') + '</span></label>' +
+        (s === 'on' ? '<a class="a1-store-btn" href="' + esc(p.live) + '">前往使用</a>' : '') +
+        '<button type="button" class="a1-store-btn a1-store-btn--ghost" data-plugin-state="disabled"' +
+          (busy ? ' disabled' : '') + '>停用</button>';
+    }
+    return '<div class="a1-store-actions">' + html + '</div>' +
+      '<p class="a1-store-lock">🔒 變更插件狀態需要通行碼</p>' +
+      '<p class="a1-store-msg" id="pluginMsg" role="status" hidden></p>';
+  }
+
+  function showPluginMsg(text) {
+    var el = document.getElementById('pluginMsg');
+    if (!el) return;
+    el.textContent = text || '';
+    el.hidden = !text;
+  }
+
+  /* Ask for the 通行碼 (same one as the release-notes editor); resolves true once unlocked. */
+  function askPassword() {
+    return new Promise(function (resolve) {
+      var overlay = document.createElement('div');
+      overlay.className = 'a1-modal-overlay';
+      overlay.innerHTML =
+        '<form class="a1-modal" role="dialog" aria-modal="true" aria-labelledby="a1PwTitle">' +
+          '<h3 id="a1PwTitle">輸入通行碼</h3>' +
+          '<p>變更插件狀態需要通行碼。</p>' +
+          '<input type="password" id="a1PwInput" maxlength="6" autocomplete="off" inputmode="text" aria-label="通行碼">' +
+          '<p class="a1-modal-error" id="a1PwError" role="alert" hidden></p>' +
+          '<div class="a1-modal-actions">' +
+            '<button type="button" class="a1-store-btn a1-store-btn--ghost" data-pw-cancel>取消</button>' +
+            '<button type="submit" class="a1-store-btn">確認</button>' +
+          '</div>' +
+        '</form>';
+      document.body.appendChild(overlay);
+      var form = overlay.querySelector('form');
+      var input = overlay.querySelector('#a1PwInput');
+      var err = overlay.querySelector('#a1PwError');
+      input.focus();
+      function close(result) { overlay.remove(); resolve(result); }
+      overlay.querySelector('[data-pw-cancel]').addEventListener('click', function () { close(false); });
+      overlay.addEventListener('mousedown', function (e) { if (e.target === overlay) close(false); });
+      overlay.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(false); });
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var code = input.value.trim();
+        if (!code) { err.textContent = '請輸入通行碼'; err.hidden = false; return; }
+        fetch('/api/admin/release-notes/unlock', {
+          method: 'POST', credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: code })
+        }).then(function (res) {
+          return res.json().catch(function () { return {}; }).then(function (data) {
+            if (res.ok) return close(true);
+            err.textContent = data.error || '通行碼錯誤';
+            err.hidden = false;
+            input.select();
+          });
+        }).catch(function () { err.textContent = '連線異常，請稍後再試'; err.hidden = false; });
+      });
+    });
+  }
+
+  function sendState(slug, next) {
+    return fetch('/api/admin/plugins/' + encodeURIComponent(slug), {
+      method: 'PATCH', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ state: next })
+    }).then(function (res) {
+      return res.json().catch(function () { return {}; }).then(function (data) {
+        return { ok: res.ok, status: res.status, data: data };
+      });
+    });
+  }
+
+  function changeState(slug, next) {
+    if (busy) return;
+    busy = true;
+    renderDetail();
+    function finish(result) {
+      busy = false;
+      if (result && result.ok && result.data.plugins) pluginStates = result.data.plugins;
+      renderList(); /* list badge + detail */
+      if (result && !result.ok) showPluginMsg(result.data.error || '變更失敗，請稍後再試');
+    }
+    sendState(slug, next).then(function (result) {
+      if (result.status === 403 && result.data.error === 'unlock required') {
+        return askPassword().then(function (unlocked) {
+          if (!unlocked) return finish(null);
+          return sendState(slug, next).then(finish);
+        });
+      }
+      finish(result);
+    }).catch(function () {
+      busy = false;
+      renderDetail();
+      showPluginMsg('連線異常，請稍後再試');
+    });
+  }
+
+  fetch('/api/admin/plugins', { credentials: 'include' })
+    .then(function (res) { return res.ok ? res.json() : null; })
+    .then(function (data) {
+      if (data && data.plugins) { pluginStates = data.plugins; renderList(); }
+    })
+    .catch(function () { /* controls stay on 「載入狀態中」 */ });
 
   function esc(s) {
     return String(s == null ? '' : s)
@@ -199,13 +326,13 @@
         '<span class="a1-store-icon a1-store-icon--lg" aria-hidden="true">' + esc(p.icon) + '</span>' +
         '<div><h3>' + esc(p.name) + '</h3><p>' + esc(p.desc) + '</p>' +
         (p.live
-          ? '<a class="a1-store-btn" href="' + esc(p.live) + '">開啟</a>'
+          ? pluginControlsHtml(p)
           : '<button type="button" class="a1-store-btn" disabled>即將推出</button>') + '</div>' +
       '</div>' +
       '<h4>簡介</h4><p class="a1-store-long">' + esc(p.long) + '</p>' +
       '<h4>' + (p.live ? '功能' : '預計功能') + '</h4><ul>' + p.features.map(function (f) { return '<li>' + esc(f) + '</li>'; }).join('') + '</ul>' +
       '<h4>資訊</h4><ul><li>分類：' + esc(p.category) + '</li><li>狀態：' +
-        (p.live ? '已上線' : '規劃中，尚未上線') + '</li></ul>';
+        (p.live ? esc(stateLabel(p)) : '規劃中，尚未上線') + '</li></ul>';
   }
 
   function renderList() {
@@ -223,7 +350,7 @@
         '<div class="a1-store-item-body">' +
           '<h3 class="a1-store-item-name">' + esc(p.name) + '</h3>' +
           '<p class="a1-store-item-desc">' + esc(p.desc) + '</p>' +
-          '<p class="a1-store-item-meta"><span class="a1-store-badge">' + (p.live ? '已上線' : '即將推出') + '</span> · ' + esc(p.category) + '</p>' +
+          '<p class="a1-store-item-meta"><span class="a1-store-badge">' + esc(stateLabel(p)) + '</span> · ' + esc(p.category) + '</p>' +
         '</div></li>';
     }).join('');
     renderDetail();
@@ -254,6 +381,17 @@
   searchEl.addEventListener('input', function () {
     state.q = searchEl.value;
     renderList();
+  });
+  detailEl.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-plugin-state]');
+    if (!btn || btn.disabled) return;
+    var next = btn.getAttribute('data-plugin-state');
+    if (next === 'disabled' && !window.confirm('確定要停用這個插件嗎？停用後選單與功能都會關閉（資料會保留）。')) return;
+    changeState(state.selected, next);
+  });
+  detailEl.addEventListener('change', function (e) {
+    if (!e.target.matches('[data-plugin-toggle]')) return;
+    changeState(state.selected, e.target.checked ? 'on' : 'off');
   });
 
   renderFilters();

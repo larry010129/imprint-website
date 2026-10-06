@@ -152,62 +152,7 @@
           </div>
           <button type="button" id="cSlotAdd" class="contact-slot-add">＋ 新增時段選項</button>
         </div>
-        <script>
-        (function () {
-          var rows = document.getElementById('cSlotRows');
-          var addBtn = document.getElementById('cSlotAdd');
-          if (!rows || !addBtn) return;
-          var MAX = 3;
-          var today = new Date().toISOString().slice(0, 10);
-
-          function syncRow(row) {
-            var sel = row.querySelector('.contact-slot-row__select');
-            var otherOpt = row.querySelector('.contact-slot-row__other-opt');
-            var other = row.querySelector('.contact-slot-row__other-input');
-            var isOther = sel.options[sel.selectedIndex] === otherOpt;
-            other.style.display = isOther ? '' : 'none';
-            otherOpt.value = isOther && other.value.trim() ? ('其他：' + other.value.trim()) : '其他';
-          }
-
-          function refreshAddBtn() {
-            addBtn.style.display = rows.children.length >= MAX ? 'none' : '';
-          }
-
-          Array.prototype.forEach.call(rows.querySelectorAll('input[type=date]'), function (d) { d.min = today; });
-          Array.prototype.forEach.call(rows.querySelectorAll('.contact-slot-row'), syncRow);
-
-          rows.addEventListener('change', function (e) {
-            if (e.target.classList.contains('contact-slot-row__select')) syncRow(e.target.closest('.contact-slot-row'));
-          });
-          rows.addEventListener('input', function (e) {
-            if (e.target.classList.contains('contact-slot-row__other-input')) syncRow(e.target.closest('.contact-slot-row'));
-          });
-
-          addBtn.addEventListener('click', function () {
-            if (rows.children.length >= MAX) return;
-            var clone = rows.children[0].cloneNode(true);
-            Array.prototype.forEach.call(clone.querySelectorAll('input'), function (i) {
-              i.value = '';
-              if (i.type !== 'date') i.style.display = 'none';
-            });
-            clone.querySelector('input[type=date]').min = today;
-            clone.querySelector('select').selectedIndex = 0;
-            var remove = document.createElement('button');
-            remove.type = 'button';
-            remove.className = 'contact-slot-row__remove';
-            remove.textContent = '－ 移除';
-            remove.addEventListener('click', function () {
-              clone.remove();
-              refreshAddBtn();
-            });
-            clone.appendChild(remove);
-            rows.appendChild(clone);
-            refreshAddBtn();
-          });
-
-          refreshAddBtn();
-        })();
-        </script>
+        <script src="/js/contact-slot-picker.js?v=1" defer></script>
         <div class="form-field">
           <label for="cMessage" data-cms-text="form-label-message">您的需求 <span class="req">*</span></label>
           <textarea id="cMessage" name="message" rows="4" placeholder="簡述您想了解的克拉、系列或預約時間…" required></textarea>

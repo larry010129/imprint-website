@@ -6,7 +6,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
 
 from app import release_notes as rn
-from app.auth import log_admin_action, require_admin
+from app.auth import enforce_rate_limit, log_admin_action, require_admin
 from app.database import get_connection
 
 router = APIRouter(prefix="/admin", tags=["admin-release-notes"])
@@ -48,7 +48,11 @@ async def get_nav_visibility(request: Request) -> JSONResponse:
 
 @router.patch("/nav-visibility")
 async def update_nav_visibility(request: Request) -> JSONResponse:
-    _require_admin(request)
+    admin_id = _require_admin(request)
+    # Changing which admin tabs show is password-protected on the server too
+    # (its editor page already requires the unlock; this closes the direct-API gap).
+    if not rn.require_unlock(request, admin_id):
+        return _unlock_denied()
     try:
         body = await request.json()
     except Exception:
@@ -65,6 +69,11 @@ async def update_nav_visibility(request: Request) -> JSONResponse:
 @router.post("/release-notes/unlock")
 async def unlock(request: Request) -> JSONResponse:
     admin_id = _require_admin(request)
+    # The code is short, so cap guesses (per IP and per admin account).
+    if not enforce_rate_limit(
+        request, action="admin-unlock", limit=10, window_seconds=900, subject=admin_id
+    ):
+        return JSONResponse(status_code=429, content={"error": "嘗試次數過多，請稍後再試"})
     try:
         body = await request.json()
     except Exception:

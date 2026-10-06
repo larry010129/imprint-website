@@ -78,11 +78,13 @@ async def contact_submit(request: Request) -> HTMLResponse:
     preferred_dates = form.getlist("preferred_date")
     preferred_slots = form.getlist("preferred_slot")
     slot_pairs = []
+    raw_pairs: list[tuple[str, str]] = []
     for raw_date, raw_slot in zip(preferred_dates, preferred_slots):
         date_part = str(raw_date or "").strip()
         slot_part = str(raw_slot or "").strip()
         if date_part or slot_part:
             slot_pairs.append(f"{date_part} {slot_part}".strip())
+            raw_pairs.append((date_part, slot_part))
     if slot_pairs:
         lines = "\n".join(f"{i + 1}. {pair}" for i, pair in enumerate(slot_pairs[:3]))
         message = f"{message}\n\n【希望預約時段】\n{lines}"
@@ -103,6 +105,15 @@ async def contact_submit(request: Request) -> HTMLResponse:
     if reason:
         log.warning("contact form rejected as spam (source=/contact): %s", reason)
         return html(request, "form_msg.html", {"ok": True, "message": "已收到您的留言，顧問將盡快聯繫。"})
+
+    if raw_pairs:
+        from app.consult_bookings import check_requested_slots
+
+        with get_connection() as conn, conn.cursor() as cur:
+            slot_error = check_requested_slots(cur, raw_pairs)
+        if slot_error:
+            # Visible error — never a fake success for a slot we can't offer.
+            return html(request, "form_msg.html", {"ok": False, "message": slot_error}, 400)
 
     captcha_error = recaptcha_error_or_none(
         request, str(form.get("g-recaptcha-response") or ""), expected_action="contact"

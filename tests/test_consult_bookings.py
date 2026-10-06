@@ -252,3 +252,165 @@ def test_create_success_returns_booking(monkeypatch):
     )
     assert out["ok"] is True
     assert out["booking"]["name"] == "王小明"
+
+
+# ── contact form shares the calendar's availability ──────────────────────
+
+from app.controllers import htmx_member as hm  # noqa: E402
+
+
+def test_parse_slot_label():
+    assert cb.parse_slot_label("下午 1:30～2:30") == "13:30"
+    assert cb.parse_slot_label("上午 10:00～11:00") == "10:00"
+    assert cb.parse_slot_label("下午 12:30～1:30") == "12:30"
+    assert cb.parse_slot_label("其他") is None
+    assert cb.parse_slot_label("其他：下午 3:00") is None
+    assert cb.parse_slot_label("尚未決定／稍後再約") is None
+    assert cb.parse_slot_label("") is None
+
+
+class _AvailCur(_Cur):
+    def __init__(self, booked=()):
+        super().__init__()
+        self.booked = list(booked)
+
+    def fetchall(self):
+        return [{"slot_start": s} for s in self.booked]
+
+
+def test_public_availability_has_no_personal_data():
+    now = _dt(2026, 10, 7, 9)
+    cur = _AvailCur(booked=[_dt(2026, 10, 12, 13, 30)])
+    out = cb.public_availability(cur, cb.default_settings(), now)
+    assert out["booked"] == ["2026-10-12 13:30"]
+    assert out["today"] == "2026-10-07"
+    assert out["slots"] == list(cb.DEFAULT_SLOTS)
+    assert out["windowDays"] == cb.FORM_WINDOW_DAYS
+    assert set(out) == {
+        "today", "nowTime", "windowDays", "slotMinutes", "slots",
+        "closedWeekdays", "blackoutDates", "booked",
+    }
+
+
+def test_validate_requested_pair_rules():
+    settings = cb.normalize_settings({"closedWeekdays": [3], "blackoutDates": ["2026-10-14"]})
+    now = _dt(2026, 10, 7, 12, 0)
+    booked = {"2026-10-12 13:30"}
+
+    def check(day, hhmm):
+        return cb.validate_requested_pair(day, hhmm, settings, booked, now)
+
+    assert check(date(2026, 10, 12), "10:00") is None
+    assert check(date(2026, 10, 12), "13:30") == "booked"
+    assert check(date(2026, 10, 12), "10:30") == "not_a_slot"
+    assert check(date(2026, 10, 8), "10:00") == "closed"  # Thursday off
+    assert check(date(2026, 10, 14), "10:00") == "closed"  # special day off
+    assert check(date(2026, 10, 6), "10:00") == "past"
+    assert check(date(2026, 10, 7), "10:00") == "past"  # earlier today
+    assert check(date(2026, 10, 7), "17:30") is None  # later today
+    assert check(date(2026, 10, 7) + timedelta(days=400), "10:00") == "too_far"
+
+
+def test_check_requested_slots_messages(monkeypatch):
+    monkeypatch.setattr(cb, "load_settings", lambda: cb.default_settings())
+    now = _dt(2026, 10, 7, 9)
+    cur = _AvailCur(booked=[_dt(2026, 10, 12, 13, 30)])
+    fallback_only = [("", ""), ("2026-10-12", "其他：晚上"), ("2026-10-13", "尚未決定／稍後再約")]
+    assert cb.check_requested_slots(cur, fallback_only, now) is None
+    assert cur.sql == []  # nothing to validate -> no DB round trip
+    assert cb.check_requested_slots(cur, [("2026-10-12", "上午 10:00～11:00")], now) is None
+    assert (
+        cb.check_requested_slots(cur, [("2026-10-12", "下午 1:30～2:30")], now)
+        == cb.SLOT_UNAVAILABLE_MESSAGE
+    )
+    assert (
+        cb.check_requested_slots(cur, [("", "上午 10:00～11:00")], now)
+        == cb.SLOT_NEEDS_DATE_MESSAGE
+    )
+
+
+def test_availability_endpoint_no_store_and_rate_limit(monkeypatch):
+    monkeypatch.setattr(bc, "enforce_rate_limit", lambda *a, **k: True)
+    monkeypatch.setattr(bc.cb, "load_settings", lambda: cb.default_settings())
+    monkeypatch.setattr(bc, "get_connection", lambda: _fake_conn(_AvailCur()))
+    resp = bc.booking_availability(_request())
+    assert resp.status_code == 200
+    assert resp.headers["cache-control"] == "no-store"
+    assert "booked" in _body(resp)
+
+    monkeypatch.setattr(bc, "enforce_rate_limit", lambda *a, **k: False)
+    limited = bc.booking_availability(_request())
+    assert limited.status_code == 429
+    assert limited.headers["cache-control"] == "no-store"
+
+
+class _Form(dict):
+    def getlist(self, key):
+        value = self.get(key, [])
+        return value if isinstance(value, list) else [value]
+
+
+def _contact_form(slots, dates):
+    return _Form(
+        name="王小明",
+        phone="0912345678",
+        email="a@example.com",
+        message="想了解婚戒訂製",
+        hp_ts=str((datetime.now().timestamp() - 60) * 1000),
+        preferred_slot=slots,
+        preferred_date=dates,
+    )
+
+
+def _run_contact(monkeypatch, form, booked=()):
+    """Drive contact_submit with everything external stubbed (no DB, no email)."""
+    sent = []
+    cur = _AvailCur(booked=booked)
+    req = MagicMock()
+
+    async def _form_coro():
+        return form
+
+    req.form = _form_coro
+    monkeypatch.setattr(hm, "enforce_rate_limit", lambda *a, **k: True)
+    monkeypatch.setattr(hm, "get_connection", lambda: _fake_conn(cur))
+    monkeypatch.setattr(hm, "load_dynamic_keywords", lambda c: [])
+    monkeypatch.setattr(hm, "recaptcha_error_or_none", lambda *a, **k: None)
+    monkeypatch.setattr(cb, "load_settings", lambda: cb.default_settings())
+    monkeypatch.setattr("app.mail.notify_contact_message", lambda **k: sent.append(k))
+    monkeypatch.setattr(
+        hm, "html", lambda request, name, ctx, status=200: (ctx, status)
+    )
+    result = asyncio.run(hm.contact_submit(req))
+    inserted = any("insert into contact_messages" in s for s in cur.sql)
+    return result, inserted
+
+
+def _future_day(days=3):
+    return (datetime.now(TZ).date() + timedelta(days=days)).isoformat()
+
+
+def test_contact_submit_rejects_unavailable_slot_visibly(monkeypatch):
+    day = _future_day()
+    slot_dt = datetime.fromisoformat(f"{day}T13:30:00").replace(tzinfo=TZ)
+    form = _contact_form(["下午 1:30～2:30"], [day])
+    (ctx, status), inserted = _run_contact(monkeypatch, form, booked=[slot_dt])
+    assert status == 400 and ctx["ok"] is False
+    assert ctx["message"] == cb.SLOT_UNAVAILABLE_MESSAGE
+    assert inserted is False
+
+
+def test_contact_submit_accepts_open_slot_and_fallback_rows(monkeypatch):
+    day = _future_day()
+    form = _contact_form(
+        ["上午 10:00～11:00", "其他：晚上", "尚未決定／稍後再約"], [day, day, ""]
+    )
+    (ctx, status), inserted = _run_contact(monkeypatch, form)
+    assert status == 200 and ctx["ok"] is True
+    assert inserted is True
+
+
+@pytest.fixture(autouse=True)
+def _plugin_on(monkeypatch):
+    """These tests are about booking behaviour; keep the plugin switch on and off the DB."""
+    monkeypatch.setattr("app.admin_plugins.is_on", lambda slug: True)

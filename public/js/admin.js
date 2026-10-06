@@ -478,7 +478,8 @@
           '<h3>' + (item.type === 'message' ? '聯絡留言詳情' : '線上估價詳情') + '</h3>' +
           '<div class="lead-detail">' + body + '</div>' +
           '<div class="ap-form-actions" style="margin-top:16px">' +
-            (item.type === 'message'
+            (item.type === 'message' &&
+              !(window.AdminPluginState && window.AdminPluginState.isOn('booking') === false)
               ? '<button type="button" class="btn-sm btn-primary" data-schedule-lead>安排預約</button>'
               : '') +
             '<button type="button" class="btn-sm" data-modal-close>關閉</button>' +

@@ -17,6 +17,7 @@ from app.controllers import (
     api_controller,
     auth_controller,
     booking_controller,
+    plugin_controller,
     cms_admin_controller,
     htmx_controller,
     notifications_controller,
@@ -479,6 +480,8 @@ def create_app() -> FastAPI:
     application.include_router(shop_controller.router, prefix="/api")
     application.include_router(admin_controller.router, prefix="/api")
     application.include_router(booking_controller.router, prefix="/api")
+    application.include_router(booking_controller.public_router, prefix="/api")
+    application.include_router(plugin_controller.router, prefix="/api")
     application.include_router(cms_admin_controller.router, prefix="/api")
     application.include_router(release_notes_controller.router, prefix="/api")
 

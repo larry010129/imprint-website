@@ -1822,3 +1822,50 @@ body.admin1-body .a1-store-empty { padding: 24px; text-align: center; font-size:
 @media (max-width: 860px) {
   body.admin1-body .a1-store { grid-template-columns: 1fr; }
 }
+
+/* Plugin store: live plugin controls + password dialog */
+body.admin1-body .a1-store-detail .a1-store-btn {
+  display: inline-flex; align-items: center; text-decoration: none; cursor: pointer;
+}
+body.admin1-body .a1-store-btn:not(:disabled):not(.a1-store-btn--ghost) {
+  background: var(--a1-fg); border-color: var(--a1-fg); color: var(--a1-bg);
+}
+body.admin1-body .a1-store-btn.a1-store-btn--ghost {
+  background: transparent; color: var(--a1-fg);
+}
+body.admin1-body .a1-store-btn:disabled { cursor: not-allowed; opacity: 0.55; }
+body.admin1-body .a1-store-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 10px; }
+body.admin1-body .a1-store-lock { margin: 8px 0 0; font-size: 12px; color: var(--a1-muted-fg); }
+body.admin1-body .a1-store-msg { margin: 8px 0 0; font-size: 13px; color: #b3261e; }
+body.admin1-body .a1-switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; }
+body.admin1-body .a1-switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+body.admin1-body .a1-switch-track {
+  position: relative; width: 38px; height: 22px; border-radius: 11px;
+  background: var(--a1-border); transition: background 0.15s;
+}
+body.admin1-body .a1-switch-track::after {
+  content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px;
+  border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25); transition: transform 0.15s;
+}
+body.admin1-body .a1-switch input:checked + .a1-switch-track { background: var(--mint-deep, #52c4c8); }
+body.admin1-body .a1-switch input:checked + .a1-switch-track::after { transform: translateX(16px); }
+body.admin1-body .a1-switch input:focus-visible + .a1-switch-track { outline: 2px solid var(--a1-fg); outline-offset: 2px; }
+body.admin1-body .a1-switch input:disabled + .a1-switch-track { opacity: 0.5; }
+body.admin1-body .a1-modal-overlay {
+  position: fixed; inset: 0; z-index: 300; display: flex; align-items: center; justify-content: center;
+  padding: 16px; background: var(--a1-backdrop, rgba(0, 0, 0, 0.5));
+}
+body.admin1-body .a1-modal {
+  width: min(360px, 100%); padding: 20px; border: 1px solid var(--a1-border);
+  border-radius: var(--a1-radius); background: var(--a1-main-surface); color: var(--a1-fg);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+}
+body.admin1-body .a1-modal h3 { margin: 0 0 6px; font-size: 16px; }
+body.admin1-body .a1-modal p { margin: 0 0 12px; font-size: 13px; color: var(--a1-muted-fg); }
+body.admin1-body .a1-modal input {
+  width: 100%; height: 38px; padding: 0 12px; border: 1px solid var(--a1-border); border-radius: 6px;
+  background: var(--a1-bg); color: var(--a1-fg); font-size: 15px; letter-spacing: 0.2em;
+}
+body.admin1-body .a1-modal p.a1-modal-error { margin: 8px 0 0; color: #b3261e; }
+body.admin1-body .a1-modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+body.admin1-body .side-nav button.plugin-off { display: none !important; }

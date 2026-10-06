@@ -163,20 +163,137 @@ def parse_requested_slots(message: str | None) -> list[datetime]:
         time_match = _SLOT_TIME_RE.search(rest)
         if not time_match:
             continue
-        meridiem, hour_s, minute_s = time_match.groups()
-        hour, minute = int(hour_s), int(minute_s)
-        if meridiem == "下午" and hour < 12:
-            hour += 12
-        if meridiem == "上午" and hour == 12:
-            hour = 0
-        if hour > 23 or minute > 59:
+        clock = _clock_24h(*time_match.groups())
+        if clock is None:
             continue
         try:
             day = date(*map(int, date_match.groups()))
         except ValueError:
             continue
-        found.append(datetime.combine(day, time(hour, minute), tzinfo=TZ_TAIPEI))
+        found.append(datetime.combine(day, time(*clock), tzinfo=TZ_TAIPEI))
     return found
+
+
+def _clock_24h(meridiem: str | None, hour_s: str, minute_s: str) -> tuple[int, int] | None:
+    hour, minute = int(hour_s), int(minute_s)
+    if meridiem == "下午" and hour < 12:
+        hour += 12
+    if meridiem == "上午" and hour == 12:
+        hour = 0
+    if hour > 23 or minute > 59:
+        return None
+    return hour, minute
+
+
+def parse_slot_label(label: str | None) -> str | None:
+    """Start time ('HH:MM') of a contact-form slot label such as
+    ``下午 1:30～2:30``. None for blanks and the free-text fallbacks
+    (尚未決定／稍後再約, 其他…), which are not validated."""
+    text = (label or "").strip()
+    if not text or text.startswith("其他"):
+        return None
+    match = _SLOT_TIME_RE.search(text)
+    if not match:
+        return None
+    clock = _clock_24h(*match.groups())
+    return f"{clock[0]:02d}:{clock[1]:02d}" if clock else None
+
+
+# ── public form availability ─────────────────────────────────────────────
+
+FORM_WINDOW_DAYS = 180
+
+
+def fetch_booked_keys(cur, start: datetime, end: datetime) -> set[str]:
+    """'YYYY-MM-DD HH:MM' (Taipei) for every non-cancelled booking in [start, end)."""
+    cur.execute(
+        """
+        select slot_start from consult_bookings
+        where slot_start >= %s and slot_start < %s and status <> 'cancelled'
+        """,
+        (start, end),
+    )
+    return {
+        row["slot_start"].astimezone(TZ_TAIPEI).strftime("%Y-%m-%d %H:%M")
+        for row in cur.fetchall()
+    }
+
+
+def form_window(now: datetime) -> tuple[datetime, datetime]:
+    start = datetime.combine(now.date(), time.min, tzinfo=TZ_TAIPEI)
+    return start, start + timedelta(days=FORM_WINDOW_DAYS + 1)
+
+
+def public_availability(cur, settings: dict, now: datetime | None = None) -> dict:
+    """What the public contact form needs: opening rules plus taken slots.
+
+    Deliberately carries no customer data — only 'YYYY-MM-DD HH:MM' keys."""
+    now = now or now_local()
+    start, end = form_window(now)
+    return {
+        "today": now.strftime("%Y-%m-%d"),
+        "nowTime": now.strftime("%H:%M"),
+        "windowDays": FORM_WINDOW_DAYS,
+        "slotMinutes": SLOT_MINUTES,
+        "slots": settings["slots"],
+        "closedWeekdays": settings["closedWeekdays"],
+        "blackoutDates": settings["blackoutDates"],
+        "booked": sorted(fetch_booked_keys(cur, start, end)),
+    }
+
+
+SLOT_UNAVAILABLE_MESSAGE = "您選的預約時段已額滿或公休，請重新選擇其他日期或時段"
+SLOT_NEEDS_DATE_MESSAGE = "請選擇預約日期"
+
+
+def check_requested_slots(cur, pairs: list[tuple[str, str]], now: datetime | None = None) -> str | None:
+    """Validate the contact form's (date, slot-label) rows against the calendar.
+
+    Rows without a real clock time (blank, 尚未決定, 其他…) are skipped. Returns a
+    message to show the customer, or None when everything can be offered."""
+    now = now or now_local()
+    checks: list[tuple[date, str]] = []
+    for date_part, slot_part in pairs:
+        hhmm = parse_slot_label(slot_part)
+        if hhmm is None:
+            continue
+        try:
+            checks.append((date.fromisoformat((date_part or "").strip()), hhmm))
+        except ValueError:
+            return SLOT_NEEDS_DATE_MESSAGE
+    if not checks:
+        return None
+    from app.admin_plugins import is_on
+
+    if not is_on("booking"):
+        return None  # plugin paused/disabled: the form uses its fixed time list
+    settings = load_settings()
+    start, end = form_window(now)
+    booked = fetch_booked_keys(cur, start, end)
+    for day, hhmm in checks:
+        if validate_requested_pair(day, hhmm, settings, booked, now):
+            return SLOT_UNAVAILABLE_MESSAGE
+    return None
+
+
+def validate_requested_pair(
+    day: date, hhmm: str, settings: dict, booked: set[str], now: datetime | None = None
+) -> str | None:
+    """Reason a customer's suggested (date, time) can't be offered, else None."""
+    now = now or now_local()
+    if day < now.date():
+        return "past"
+    if day > now.date() + timedelta(days=FORM_WINDOW_DAYS):
+        return "too_far"
+    if not day_is_open(day, settings):
+        return "closed"
+    if hhmm not in settings["slots"]:
+        return "not_a_slot"
+    if f"{day.isoformat()} {hhmm}" in booked:
+        return "booked"
+    if slot_start_on(day, hhmm) <= now:
+        return "past"
+    return None
 
 
 # ── storage ──────────────────────────────────────────────────────────────

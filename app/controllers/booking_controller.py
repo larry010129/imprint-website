@@ -5,20 +5,27 @@ from __future__ import annotations
 import re
 import uuid
 
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 
+from app import admin_plugins as plugins
 from app import consult_bookings as cb
-from app.auth import log_admin_action, require_admin
+from app.auth import enforce_rate_limit, log_admin_action, require_admin
 from app.database import get_connection
 
 router = APIRouter(prefix="/admin", tags=["admin-booking"])
+# No login: feeds the public contact form's date/time picker.
+public_router = APIRouter(tags=["booking-public"])
 
 _MONTH_RE = re.compile(r"^(\d{4})-(0[1-9]|1[0-2])$")
 
 
 def _require_admin(request: Request) -> str:
-    return require_admin(request)
+    """Signed-in admin AND the 預約諮詢日曆 plugin switched on."""
+    admin_id = require_admin(request)
+    if not plugins.is_on("booking"):
+        raise HTTPException(status_code=403, detail="plugin_disabled")
+    return admin_id
 
 
 def _error(status: int, message: str) -> JSONResponse:
@@ -51,6 +58,24 @@ def _lead_id_or_none(value) -> str | None:
         return str(uuid.UUID(str(value)))
     except ValueError:
         raise cb.BookingError("諮詢名單編號不正確")
+
+
+@public_router.get("/booking-availability")
+def booking_availability(request: Request):
+    """Opening rules + taken slots (no personal data) for the contact form."""
+    if not enforce_rate_limit(request, action="booking-availability", limit=120, window_seconds=600):
+        return JSONResponse(
+            status_code=429,
+            content={"error": "請求過於頻繁，請稍後再試"},
+            headers={"Cache-Control": "no-store"},
+        )
+    if not plugins.is_on("booking"):
+        # Plugin paused/disabled: the contact form falls back to its fixed time list.
+        return JSONResponse(content={"enabled": False}, headers={"Cache-Control": "no-store"})
+    settings = cb.load_settings()
+    with get_connection() as conn, conn.cursor() as cur:
+        payload = cb.public_availability(cur, settings)
+    return JSONResponse(content=payload, headers={"Cache-Control": "no-store"})
 
 
 @router.get("/bookings")
