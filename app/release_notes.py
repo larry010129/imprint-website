@@ -21,7 +21,10 @@ from config.settings import settings
 STORE_PATH = settings.site_root / "content" / "admin" / "release-notes.json"
 HISTORY_CAP = 20
 UNLOCK_COOKIE_NAME = "imprint_rn_unlock"
-UNLOCK_MINUTES = 120
+# Short on purpose: the protected page keeps the unlock alive while it is open
+# (keepalive) and locks it again the moment you leave (lock), so every new
+# visit asks for the code.
+UNLOCK_MINUTES = 5
 CODE_RE = re.compile(r"^[0-9A-Za-z]{6}$")
 DEFAULT_PASSWORD = "010129"
 _MAX_VERSION = 40
@@ -100,6 +103,10 @@ def set_unlock_cookie(response: Response, user_id: str, request: Request) -> Non
         samesite="lax",
         max_age=UNLOCK_MINUTES * 60,
     )
+
+
+def clear_unlock_cookie(response: Response) -> None:
+    response.delete_cookie(key=UNLOCK_COOKIE_NAME, path="/")
 
 
 def unlock_user_id(request: Request) -> str | None:

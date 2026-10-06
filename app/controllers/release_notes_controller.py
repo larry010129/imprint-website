@@ -88,6 +88,26 @@ async def unlock(request: Request) -> JSONResponse:
     return resp
 
 
+@router.post("/release-notes/keepalive")
+async def keepalive(request: Request) -> JSONResponse:
+    """Called while the protected page is open: renews the short unlock."""
+    admin_id = _require_admin(request)
+    if not rn.require_unlock(request, admin_id):
+        return _unlock_denied()
+    resp = JSONResponse(content={"ok": True})
+    rn.set_unlock_cookie(resp, admin_id, request)
+    return resp
+
+
+@router.post("/release-notes/lock")
+async def lock(request: Request) -> JSONResponse:
+    """Called when the protected page is left: the next visit asks for the code again."""
+    _require_admin(request)
+    resp = JSONResponse(content={"ok": True})
+    rn.clear_unlock_cookie(resp)
+    return resp
+
+
 @router.get("/release-notes/draft")
 async def get_draft(request: Request) -> JSONResponse:
     admin_id = _require_admin(request)

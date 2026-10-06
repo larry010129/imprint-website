@@ -244,3 +244,53 @@ def test_old_plugin_page_url_now_redirects_into_the_protected_page(monkeypatch):
     client = _page_client(monkeypatch)
     resp = client.get("/admin/plugins")
     assert resp.status_code == 302 and resp.headers["location"] == "/admin/release-notes#plugins"
+
+
+# ── every visit asks for the code: short unlock, kept alive, locked on leave ──
+
+def test_unlock_window_is_short():
+    assert rn.UNLOCK_MINUTES == 5
+
+
+def test_unlock_cookie_is_short_lived(monkeypatch):
+    monkeypatch.setattr(rnc, "_require_admin", lambda r: ADMIN)
+    monkeypatch.setattr(rn, "release_notes_password", lambda: "abc123")
+    monkeypatch.setattr(rnc, "enforce_rate_limit", lambda *a, **k: True)
+    resp = asyncio.run(rnc.unlock(_request({"code": "abc123"})))
+    cookie = resp.headers["set-cookie"].lower()
+    assert "max-age=300" in cookie and "httponly" in cookie
+
+
+def test_keepalive_only_renews_an_existing_unlock(monkeypatch):
+    monkeypatch.setattr(rnc, "_require_admin", lambda r: ADMIN)
+    locked = asyncio.run(rnc.keepalive(_request()))
+    assert locked.status_code == 403 and "set-cookie" not in locked.headers
+    other = asyncio.run(rnc.keepalive(_request(unlocked_for="someone-else")))
+    assert other.status_code == 403
+    renewed = asyncio.run(rnc.keepalive(_request(unlocked_for=ADMIN)))
+    assert renewed.status_code == 200
+    assert "max-age=300" in renewed.headers["set-cookie"].lower()
+
+
+def test_lock_clears_the_unlock_cookie(monkeypatch):
+    monkeypatch.setattr(rnc, "_require_admin", lambda r: ADMIN)
+    resp = asyncio.run(rnc.lock(_request(unlocked_for=ADMIN)))
+    assert resp.status_code == 200
+    cookie = resp.headers["set-cookie"].lower()
+    assert rn.UNLOCK_COOKIE_NAME in cookie
+    assert "max-age=0" in cookie or "expires=thu, 01 jan 1970" in cookie
+
+    def deny(_r):
+        raise HTTPException(status_code=401, detail="no")
+
+    monkeypatch.setattr(rnc, "_require_admin", deny)
+    with pytest.raises(HTTPException):
+        asyncio.run(rnc.lock(_request()))
+    with pytest.raises(HTTPException):
+        asyncio.run(rnc.keepalive(_request()))
+
+
+def test_protected_page_loads_the_lock_on_leave_script(monkeypatch):
+    client = _page_client(monkeypatch)
+    client.cookies.set(rn.UNLOCK_COOKIE_NAME, rn.sign_unlock(ADMIN))
+    assert "/js/admin-lock-on-leave.js" in client.get("/admin/release-notes").text
