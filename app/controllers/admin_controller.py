@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 import threading
 import uuid
@@ -199,6 +200,7 @@ def _visit_stats(cfg: dict, since: datetime, until: datetime) -> dict:
             top_pages = site_visits.fetch_top_pages(cur, top_start, top_end)
         return site_visits.build_visit_payload(daily, cfg, top_pages)
     except Exception:
+        logging.getLogger(__name__).exception("dashboard visit stats failed")
         return site_visits.empty_visit_payload()
 
 

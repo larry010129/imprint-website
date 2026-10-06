@@ -227,6 +227,10 @@ button:not(.btn-sm):not(.ap-tab-btn):not(.nav-toggle):not(.side-backdrop):not([d
   padding:8px 14px;border:1px solid #DDD5CC;border-radius:6px;background:#fff;color:var(--ink-soft);
 }
 .dash-export-btn:hover{border-color:var(--mint-deep);color:var(--mint-deep);}
+.dash-refresh-btn{font-family:inherit;cursor:pointer;}
+.dash-refresh-btn:disabled{opacity:.6;cursor:progress;}
+.dash-refresh-btn.is-loading svg{animation:dash-refresh-spin .8s linear infinite;}
+@keyframes dash-refresh-spin{to{transform:rotate(360deg);}}
 
 /* 商品上架 */
 .ap-toolbar{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;}

@@ -388,7 +388,7 @@
       var prefetched = dashPrefetch && dashPrefetch.key === JSON.stringify(params);
       var request = prefetched ? dashPrefetch.promise : api.admin.getDashboardStats(params);
       dashPrefetch = null;
-      request.then(function (stats) {
+      return request.then(function (stats) {
         if (stats.error) return;
         var pendingTotal = (stats.newMessages || 0) + (stats.pendingQuotes || 0) + (stats.activeOrders || 0);
         var orderCount = stats.periodOrderCount != null ? stats.periodOrderCount : (stats.totalOrders || 0);
@@ -752,6 +752,22 @@
       } else if (panel === 'content' && window.AdminContentPanel && window.AdminContentPanel.prefetch) {
         window.AdminContentPanel.prefetch();
       }
+    })();
+
+    /* Re-fetch dashboard numbers for the current range without a page reload. */
+    (function bindDashboardRefresh() {
+      var btn = document.getElementById('dashRefreshBtn');
+      if (!btn) return;
+      btn.addEventListener('click', function () {
+        if (btn.disabled) return;
+        btn.disabled = true;
+        btn.classList.add('is-loading');
+        var done = function () {
+          btn.disabled = false;
+          btn.classList.remove('is-loading');
+        };
+        Promise.resolve(loadDashboardStats()).then(done, done);
+      });
     })();
 
     api.getSession().then(function (res) {
