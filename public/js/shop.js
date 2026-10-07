@@ -6176,10 +6176,26 @@ function openQuoteSheet() {
   window.open(`${base}?config=${encodeURIComponent(token)}`, '_blank', 'noopener');
 }
 
-function openShareSummary() {
-  const token = encodeConfigToken(buildSubmitPayload());
+async function openShareSummary() {
+  const payload = buildSubmitPayload();
   const template = window.shopConfig?.shareBaseUrl || '/s/TOKEN';
-  window.open(template.replace('TOKEN', encodeURIComponent(token)), '_blank', 'noopener');
+  /* Open the tab now (still inside the click, so it isn't blocked) and point it at
+     the short link once the server has made one. */
+  const tab = window.open('about:blank', '_blank');
+  if (tab) tab.opener = null;
+  const go = (url) => {
+    if (tab && !tab.closed) tab.location.href = url;
+    else window.open(url, '_blank', 'noopener');
+  };
+  try {
+    const { res, data } = await shopApiFetch('/api/share', { method: 'POST', body: payload });
+    if (res.ok && data && data.code) {
+      go(template.replace('TOKEN', encodeURIComponent(data.code)));
+      return;
+    }
+  } catch (_) { /* fall through to the long link */ }
+  /* Server unavailable: the long self-contained link still works. */
+  go(template.replace('TOKEN', encodeURIComponent(encodeConfigToken(payload))));
 }
 
 function buildInquirySummaryLines() {

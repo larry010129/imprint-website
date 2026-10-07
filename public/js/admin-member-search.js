@@ -348,6 +348,14 @@
       renderResults([], '');
       return;
     }
+    /* A full 12-digit card number whose check digit is wrong is a typo: say so
+       instead of the misleading "member not found". */
+    var digitsOnly = query.replace(/[\s-]/g, '');
+    if (/^\d{12}$/.test(digitsOnly) && window.ImprintMemberId && window.ImprintMemberId.isValidMemberNumber
+        && !window.ImprintMemberId.isValidMemberNumber(digitsOnly)) {
+      list.innerHTML = '<p class="note warn">這組卡面編號的檢查碼不正確，可能輸入錯誤，請再確認一次。</p>';
+      return;
+    }
     list.innerHTML = '<p class="adx-loading-inline">搜尋中…</p>';
 
     api.admin.getAccounts({ q: query, page: 1, pageSize: 100 }).then(function (res) {

@@ -18,6 +18,7 @@ from app.controllers import (
     auth_controller,
     booking_controller,
     plugin_controller,
+    share_controller,
     cms_admin_controller,
     htmx_controller,
     notifications_controller,
@@ -201,6 +202,13 @@ async def lifespan(_app: FastAPI):
             ensure_consult_bookings_schema(cur)
     except Exception:
         log.exception("ensure_consult_bookings_schema failed")
+    try:
+        from app.share_links import ensure_share_links_schema
+
+        with get_connection() as conn, conn.cursor() as cur:
+            ensure_share_links_schema(cur)
+    except Exception:
+        log.exception("ensure_share_links_schema failed")
     # Sell-mode / variant columns must not ride the silent try below — missing cols = product 500.
     try:
         with get_connection() as conn, conn.cursor() as cur:
@@ -482,6 +490,7 @@ def create_app() -> FastAPI:
     application.include_router(booking_controller.router, prefix="/api")
     application.include_router(booking_controller.public_router, prefix="/api")
     application.include_router(plugin_controller.router, prefix="/api")
+    application.include_router(share_controller.router, prefix="/api")
     application.include_router(cms_admin_controller.router, prefix="/api")
     application.include_router(release_notes_controller.router, prefix="/api")
 

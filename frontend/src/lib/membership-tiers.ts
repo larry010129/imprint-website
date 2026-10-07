@@ -915,16 +915,40 @@ export function applyFetchedMembershipConfig(config: MembershipConfig): void {
   refreshMembershipPlansExport();
 }
 
-/** Stable 12-digit numeric display id from internal user id (UUID). */
+/** Luhn check digit (as on bank cards): catches typos, does not prove a member exists. */
+function luhnCheckDigit(digits: string): number {
+  let sum = 0;
+  [...digits].reverse().forEach((char, index) => {
+    let n = Number(char);
+    if (index % 2 === 0) {
+      n *= 2;
+      if (n > 9) n -= 9;
+    }
+    sum += n;
+  });
+  return (10 - (sum % 10)) % 10;
+}
+
+/**
+ * Stable 12-digit card number from internal user id (UUID): 11 digits + 1 Luhn
+ * check digit. Keep identical to derive_member_display_number (app/membership_tiers.py).
+ */
 export function deriveMemberDisplayNumber(memberId: string): string {
   const compact = memberId.replace(/[\s-]/g, "").trim().toLowerCase();
   if (!compact || !/^[0-9a-f]+$/.test(compact)) return "";
   try {
-    const value = BigInt(`0x${compact}`) % 1_000_000_000_000n;
-    return value.toString().padStart(12, "0");
+    const value = BigInt(`0x${compact}`) % 100_000_000_000n;
+    const payload = value.toString().padStart(11, "0");
+    return `${payload}${luhnCheckDigit(payload)}`;
   } catch {
     return "";
   }
+}
+
+export function isValidMemberNumber(value: string): boolean {
+  const compact = value.replace(/[\s-]/g, "");
+  if (!/^\d{12}$/.test(compact)) return false;
+  return luhnCheckDigit(compact.slice(0, 11)) === Number(compact.charAt(11));
 }
 
 export function formatMemberDisplayGroups(memberId: string): string {

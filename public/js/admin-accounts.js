@@ -1,22 +1,48 @@
 /* 銘印鑽石｜帳戶管理 */
 window.ImprintMemberId = window.ImprintMemberId || (function () {
   'use strict';
+  /* Luhn check digit (same test as bank cards): catches typos, not a proof the member exists. */
+  function luhnCheckDigit(digits) {
+    var rev = String(digits).split('').reverse();
+    var sum = 0;
+    for (var i = 0; i < rev.length; i++) {
+      var n = Number(rev[i]);
+      if (i % 2 === 0) {
+        n *= 2;
+        if (n > 9) n -= 9;
+      }
+      sum += n;
+    }
+    return (10 - (sum % 10)) % 10;
+  }
+  /* 11 digits from the account id + 1 check digit. Keep identical to
+     derive_member_display_number in app/membership_tiers.py. */
   function deriveMemberDisplayNumber(id) {
     var compact = String(id || '').replace(/[\s-]/g, '').trim().toLowerCase();
     if (!compact || !/^[0-9a-f]+$/.test(compact)) return '';
     try {
-      var n = BigInt('0x' + compact) % BigInt('1000000000000');
-      return n.toString().padStart(12, '0');
+      var n = BigInt('0x' + compact) % BigInt('100000000000');
+      var payload = n.toString().padStart(11, '0');
+      return payload + luhnCheckDigit(payload);
     } catch (e) {
       return '';
     }
+  }
+  function isValidMemberNumber(value) {
+    var compact = String(value || '').replace(/[\s-]/g, '');
+    if (!/^\d{12}$/.test(compact)) return false;
+    return luhnCheckDigit(compact.slice(0, 11)) === Number(compact.charAt(11));
   }
   function formatMemberDisplayGroups(id) {
     var number = deriveMemberDisplayNumber(id);
     if (!number) return '—';
     return number.replace(/(.{4})/g, '$1 ').trim();
   }
-  return { deriveMemberDisplayNumber: deriveMemberDisplayNumber, formatMemberDisplayGroups: formatMemberDisplayGroups };
+  return {
+    deriveMemberDisplayNumber: deriveMemberDisplayNumber,
+    formatMemberDisplayGroups: formatMemberDisplayGroups,
+    isValidMemberNumber: isValidMemberNumber
+  };
 })();
 
 (function () {

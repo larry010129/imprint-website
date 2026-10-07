@@ -110,17 +110,48 @@ def is_dark_tier(tier_id: str) -> bool:
     return tier_id in {"star", "imprint", "partner_star", "partner_imprint"}
 
 
+def luhn_check_digit(digits: str) -> int:
+    """Check digit that makes ``digits + check`` pass the Luhn test (as on bank cards)."""
+    total = 0
+    for index, char in enumerate(reversed(digits)):
+        n = int(char)
+        if index % 2 == 0:
+            n *= 2
+            if n > 9:
+                n -= 9
+        total += n
+    return (10 - total % 10) % 10
+
+
+def is_valid_member_number(number: str) -> bool:
+    """True when ``number`` is 12 digits whose last digit is the correct check digit.
+
+    Catches typos only (any single wrong digit, almost every swapped pair). It
+    does not prove the member exists — that still needs a lookup.
+    """
+    compact = (number or "").replace(" ", "").replace("-", "").strip()
+    if len(compact) != 12 or not compact.isdigit():
+        return False
+    return luhn_check_digit(compact[:-1]) == int(compact[-1])
+
+
 def derive_member_display_number(member_id: str) -> str:
-    """Stable 12-digit numeric display id from internal user id (UUID)."""
+    """Stable 12-digit card number from the internal user id (UUID).
+
+    11 digits taken from the id, plus 1 Luhn check digit. Must stay identical
+    to deriveMemberDisplayNumber in public/js/admin-accounts.js and
+    frontend/src/lib/membership-tiers.ts (tests compare Python with the JS).
+    """
     compact = member_id.replace("-", "").replace(" ", "").strip()
     if not compact:
         return ""
     try:
-        value = int(compact, 16) % 10**12
+        value = int(compact, 16) % 10**11
     except ValueError:
         digest = hashlib.sha256(compact.encode("utf-8")).hexdigest()
-        value = int(digest, 16) % 10**12
-    return f"{value:012d}"
+        value = int(digest, 16) % 10**11
+    payload = f"{value:011d}"
+    return f"{payload}{luhn_check_digit(payload)}"
 
 
 def format_member_id_groups(member_id: str) -> str:
