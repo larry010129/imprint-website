@@ -101,9 +101,9 @@ def _pool_sizes() -> tuple[int, int]:
     except ValueError:
         min_size = 1
     try:
-        max_size = max(min_size, int(os.environ.get("DB_POOL_MAX", "4")))
+        max_size = max(min_size, int(os.environ.get("DB_POOL_MAX", "3")))
     except ValueError:
-        max_size = max(min_size, 4)
+        max_size = max(min_size, 3)
     return min_size, max_size
 
 
@@ -137,9 +137,11 @@ def _ensure_pool() -> ConnectionPool:
             check=ConnectionPool.check_connection,
             reset=_reset_conn,
             open=True,
-            # Recycle before idle Session-pooler timeouts bite.
+            # Recycle before idle Session-pooler timeouts bite. Idle connections
+            # close after 60s (not 5 min) so a deploy's old instance frees its
+            # Session-pooler slots (limit 15 shared by every client) quickly.
             max_lifetime=1800.0,
-            max_idle=300.0,
+            max_idle=60.0,
             name="imprint",
         )
         return _pool
