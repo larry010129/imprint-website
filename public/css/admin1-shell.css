@@ -1869,3 +1869,21 @@ body.admin1-body .a1-modal input {
 body.admin1-body .a1-modal p.a1-modal-error { margin: 8px 0 0; color: #b3261e; }
 body.admin1-body .a1-modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
 body.admin1-body .side-nav button.plugin-off { display: none !important; }
+
+/* Dashboard stat cards double as chart selectors */
+body.admin1-body #panel-dash .dash-metric[data-chart] {
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+body.admin1-body #panel-dash .dash-metric[data-chart]:hover {
+  border-color: var(--mint-deep, #52c4c8);
+}
+body.admin1-body #panel-dash .dash-metric[data-chart].is-active {
+  border-color: var(--mint-deep, #52c4c8);
+  box-shadow: 0 0 0 1px var(--mint-deep, #52c4c8) inset;
+}
+body.admin1-body #panel-dash .dash-metric[data-chart]:focus-visible {
+  outline: 2px solid var(--mint-deep, #52c4c8);
+  outline-offset: 2px;
+}
+body.admin1-body #panel-dash .dash-toggle[hidden] { display: none !important; }

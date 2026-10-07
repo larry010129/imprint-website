@@ -179,28 +179,7 @@
     });
   }
 
-  /* ---- Side-nav filter (fallback) ---- */
-  function filterSideNav(q) {
-    var needle = (q || '').trim().toLowerCase();
-    document.querySelectorAll('.side-nav-section').forEach(function (sec) {
-      var visible = 0;
-      sec.querySelectorAll('.side-nav-items > button[data-panel], .side-nav-items > a.side-nav-link, .side-nav-sub button[data-panel]').forEach(function (item) {
-        var label = (item.textContent || '').trim().toLowerCase();
-        var show = !needle || label.indexOf(needle) !== -1;
-        item.style.display = show ? '' : 'none';
-        if (show) visible++;
-      });
-      sec.querySelectorAll('.side-nav-group').forEach(function (group) {
-        var sub = group.querySelector('.side-nav-sub');
-        var any = sub && Array.prototype.some.call(sub.querySelectorAll('button[data-panel]'), function (b) {
-          return b.style.display !== 'none';
-        });
-        group.style.display = !needle || any ? '' : 'none';
-        if (any) visible++;
-      });
-      sec.style.display = !needle || visible > 0 ? '' : 'none';
-    });
-  }
+  /* The sidebar is never filtered by the top search: every item stays visible. */
 
   /* ---- Session / avatar ---- */
   function applySession(res) {
@@ -449,7 +428,6 @@
   function runGlobalSearch(q) {
     var a = api();
     if (!a || !a.admin) {
-      filterSideNav(q);
       hideSearchResults();
       return;
     }
@@ -464,7 +442,6 @@
       var accountsRes = triple[1] || {};
       var productsRes = triple[2] || {};
       if (ordersRes.error && accountsRes.error && productsRes.error) {
-        filterSideNav(q);
         hideSearchResults();
         return;
       }
@@ -474,11 +451,9 @@
         .concat(searchOrders(orders, needle))
         .concat(searchAccounts(accounts, needle))
         .concat(searchProducts(productsRes, needle));
-      filterSideNav(q);
       renderSearchResults(rows);
     }).catch(function () {
       if (seq !== searchSeq) return;
-      filterSideNav(q);
       hideSearchResults();
     });
   }
@@ -486,12 +461,11 @@
   function bindSearch() {
     var input = document.getElementById('admin1Search');
     if (!input) return;
-    /* Typing only filters the side nav locally; the network search runs on
-       button click / Enter so it never interrupts typing. */
+    /* The search runs on button click / Enter only, so it never interrupts
+       typing, and it never touches the sidebar. */
     var submit = function () {
       var q = (input.value || '').trim();
       if (q.length < SEARCH_MIN) {
-        filterSideNav(q);
         hideSearchResults();
         return;
       }
@@ -499,7 +473,6 @@
     };
     input.addEventListener('input', function () {
       var q = (input.value || '').trim();
-      filterSideNav(q);
       if (q.length < SEARCH_MIN) hideSearchResults();
     });
     input.addEventListener('keydown', function (e) {

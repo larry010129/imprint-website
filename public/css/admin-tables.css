@@ -190,6 +190,17 @@
   background: rgba(247, 243, 238, 0.65);
 }
 
+/* Clicking a row opens the account detail window. */
+.adx-member-row[data-id] {
+  cursor: pointer;
+}
+
+.adx-member-row[data-id]:focus-visible {
+  outline: 2px solid var(--mint-deep, #52c4c8);
+  outline-offset: -2px;
+}
+
+
 .adx-member-head > div,
 .adx-member-row > div {
   text-align: center;

@@ -243,9 +243,18 @@
       }
     }
 
-    function renderTrendChart(trend) {
+    function renderTrendChart(trend, stats) {
       if (window.AdminDashboardChart) {
-        window.AdminDashboardChart.init(trend || []);
+        stats = stats || {};
+        window.AdminDashboardChart.init(trend || [], {
+          granularity: stats.granularity,
+          visits: stats.visits,
+          pending: {
+            messages: stats.newMessages,
+            quotes: stats.pendingQuotes,
+            active: stats.activeOrders
+          }
+        });
       }
     }
 
@@ -412,7 +421,7 @@
         renderRangeControls(stats);
         bindDashboardRangeControls();
 
-        renderTrendChart(stats.monthlyTrend || []);
+        renderTrendChart(stats.monthlyTrend || [], stats);
         renderStatusRows(stats.statusRows || []);
         renderTopProducts(stats.topProducts || []);
         renderTopSeries(stats.topSeries || []);

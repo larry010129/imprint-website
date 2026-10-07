@@ -319,6 +319,7 @@
             _cache = null;
             openAccountDetail(id);
             if (_lastQ) search(_lastQ);
+            document.dispatchEvent(new CustomEvent('admin-account-changed', { detail: { id: id } }));
           });
         } else if (action === 'reset-password') {
           var pwd = prompt('請輸入新密碼（至少 8 碼）：');

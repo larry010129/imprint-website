@@ -8,9 +8,9 @@
 <meta name="robots" content="noindex">
 <link rel="stylesheet" href="/css/admin-core.css?v=46">
 <link rel="stylesheet" href="/css/skeleton.css?v=1">
-<link rel="stylesheet" href="/css/admin1-shell.css?v=12">
+<link rel="stylesheet" href="/css/admin1-shell.css?v=14">
 <link rel="stylesheet" href="/css/admin-orders.css?v=15">
-<link rel="stylesheet" href="/css/admin-tables.css?v=31">
+<link rel="stylesheet" href="/css/admin-tables.css?v=32">
 <link rel="stylesheet" href="/static/react/admin-tables.css?v=43">
 
 <link rel="stylesheet" href="/css/cms-editor.css?v=12">
@@ -230,7 +230,7 @@
       </div>
 
       <div class="dash-metrics">
-        <article class="dash-metric">
+        <article class="dash-metric" data-chart="revenue" role="button" tabindex="0" aria-pressed="true" title="點擊查看營收趨勢圖">
           <div class="dash-metric-top">
             <p class="dash-metric-k">完成營收</p>
             <svg class="dash-metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
@@ -238,7 +238,7 @@
           <p class="dash-metric-v dash-metric-v--mint skel-metric" id="statTotalRevenue">&nbsp;</p>
           <p class="dash-metric-d" id="statRevenueHint">區間已完成訂單</p>
         </article>
-        <article class="dash-metric">
+        <article class="dash-metric" data-chart="orders" role="button" tabindex="0" aria-pressed="false" title="點擊查看訂單趨勢圖">
           <div class="dash-metric-top">
             <p class="dash-metric-k">訂單總數</p>
             <svg class="dash-metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/></svg>
@@ -246,7 +246,7 @@
           <p class="dash-metric-v skel-metric" id="statOrderCount">&nbsp;</p>
           <p class="dash-metric-d" id="statOrdersHint">區間訂單</p>
         </article>
-        <article class="dash-metric">
+        <article class="dash-metric" data-chart="average" role="button" tabindex="0" aria-pressed="false" title="點擊查看平均完成訂單趨勢圖">
           <div class="dash-metric-top">
             <p class="dash-metric-k">平均完成訂單</p>
             <svg class="dash-metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg>
@@ -254,7 +254,7 @@
           <p class="dash-metric-v dash-metric-v--blue skel-metric" id="statAverageSale">&nbsp;</p>
           <p class="dash-metric-d">已完成訂單均值</p>
         </article>
-        <article class="dash-metric dash-metric--live">
+        <article class="dash-metric dash-metric--live" data-chart="pending" role="button" tabindex="0" aria-pressed="false" title="點擊查看待處理分布圖">
           <div class="dash-metric-top">
             <p class="dash-metric-k">待處理</p>
             <svg class="dash-metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -265,7 +265,7 @@
       </div>
 
       <div class="dash-metrics">
-        <article class="dash-metric">
+        <article class="dash-metric" data-chart="views" role="button" tabindex="0" aria-pressed="false" title="點擊查看網站瀏覽量趨勢圖">
           <div class="dash-metric-top">
             <p class="dash-metric-k">網站瀏覽量</p>
             <svg class="dash-metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -273,7 +273,7 @@
           <p class="dash-metric-v skel-metric" id="statSiteViews">&nbsp;</p>
           <p class="dash-metric-d">區間頁面瀏覽次數</p>
         </article>
-        <article class="dash-metric">
+        <article class="dash-metric" data-chart="visitors" role="button" tabindex="0" aria-pressed="false" title="點擊查看不重複訪客趨勢圖">
           <div class="dash-metric-top">
             <p class="dash-metric-k">不重複訪客</p>
             <svg class="dash-metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
@@ -288,8 +288,8 @@
           <div class="card-head card-head--stack">
             <div class="dash-panel-head">
               <div>
-                <h3>營收趨勢</h3>
-                <p>訂單與完成營收（近 12 個月）</p>
+                <h3 id="dashChartTitle">營收趨勢</h3>
+                <p id="dashChartSub">訂單與完成營收（近 12 個月）</p>
               </div>
               <div class="dash-toggles">
                 <div class="dash-toggle" id="dashTrendMetricToggle" role="group" aria-label="圖表數值類型">
@@ -630,7 +630,7 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
 
 <script src="/js/api-client.js?v=34"></script>
-<script src="/js/admin1-shell.js?v=6"></script>
+<script src="/js/admin1-shell.js?v=7"></script>
 <script src="/js/admin-nav-visibility.js?v=3"></script>
 <script src="/js/admin-plugin-state.js?v=1"></script>
 <script src="/js/toast.js?v=1"></script>
@@ -638,16 +638,16 @@ document.addEventListener('DOMContentLoaded', function () {
 <script src="/js/order-status.js?v=4"></script>
 <script src="/js/chart.umd.min.js"></script>
 <script src="/js/shop-assets.js?v=15"></script>
-<script src="/js/admin-dashboard-chart.js"></script>
+<script src="/js/admin-dashboard-chart.js?v=2"></script>
 <script src="/js/admin-table-sort.js?v=1"></script>
 <script src="/js/admin-image-urls.js?v=12"></script>
-<script src="/js/admin.js?v=32"></script>
+<script src="/js/admin.js?v=33"></script>
 <script src="/js/girdle-engrave.js?v=11"></script>
 <script src="/js/admin-orders.js?v=28"></script>
 <script src="/js/order-detail.js"></script>
 <script src="/js/admin-products.js?v=69"></script>
-<script src="/js/admin-accounts.js?v=13"></script>
-<script src="/js/admin-member-search.js?v=4"></script>
+<script src="/js/admin-accounts.js?v=14"></script>
+<script src="/js/admin-member-search.js?v=5"></script>
 <script src="/js/admin-invites.js?v=12"></script>
 <script src="/js/admin-coupons.js?v=5"></script>
 <script src="/js/taiwan-admin-divisions.js?v=2"></script>

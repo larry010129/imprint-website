@@ -142,7 +142,7 @@ window.ImprintMemberId = window.ImprintMemberId || (function () {
     var role = accountRole(account);
     var roleLabel = role === 'admin' ? '管理員' : (role === 'partner' ? '合作廠商' : '會員');
     return (
-      '<div class="adx-member-row" data-id="' + esc(account.id) + '"' +
+      '<div class="adx-member-row" data-id="' + esc(account.id) + '" tabindex="0" title="點擊查看詳情"' +
         ' data-sort-name="' + esc(name) + '"' +
         ' data-sort-role="' + esc(roleLabel) + '"' +
         ' data-sort-status="' + esc(active ? '啟用' : '停用') + '"' +
@@ -434,6 +434,30 @@ window.ImprintMemberId = window.ImprintMemberId || (function () {
   function ensureLoaded() {
     load(_loaded);
   }
+
+  /* Clicking a user row opens the same 會員詳情 window as 搜尋會員. Clicks on the row's
+     own controls (role menu, checkboxes, 停用/重設/刪除 buttons) are left alone. */
+  function openRowDetail(row) {
+    var id = row && row.getAttribute('data-id');
+    var panel = window.AdminMemberSearchPanel;
+    if (id && panel && panel.openAccountDetail) panel.openAccountDetail(id);
+  }
+
+  root.addEventListener('click', function (e) {
+    if (e.target.closest('button, select, input, label, a, textarea, option')) return;
+    openRowDetail(e.target.closest('.adx-member-row'));
+  });
+
+  root.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter' || !e.target.classList || !e.target.classList.contains('adx-member-row')) return;
+    e.preventDefault();
+    openRowDetail(e.target);
+  });
+
+  /* The detail window can stop/start an account: keep this list in step. */
+  document.addEventListener('admin-account-changed', function () {
+    if (_loaded) load(true, true);
+  });
 
   window.AdminAccountsPanel = { load: load, ensureLoaded: ensureLoaded };
 })();
