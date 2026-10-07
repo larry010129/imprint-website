@@ -1,4 +1,4 @@
-/* Shared quote / share summary renderer — client-side, no /api/quote needed. */
+/* Shared quote / share summary renderer. The total comes from the server (POST /api/quote), never from the link. */
 (function (global) {
   'use strict';
 
@@ -253,22 +253,66 @@
     }
   }
 
+  function errorHtml(message, withRetry) {
+    return '<div class="share-page"><p class="share-error">' + message + '</p>'
+      + '<p class="share-error-actions">'
+      + (withRetry ? '<button type="button" class="share-btn share-btn--ghost" id="quote-retry-btn">重新載入</button> ' : '')
+      + '<a class="share-btn share-btn--primary" href="/shop/calculator/">返回試算</a></p></div>';
+  }
+
+  /* The calculator no longer puts a price in the link (a link could be edited to
+     show any total), so ask the server — the same POST /api/quote the calculator
+     uses for its live total. Resolves with the pricing object, or rejects with
+     {incomplete: true} when the selection can't be priced. */
+  function fetchServerPricing(config) {
+    var body = {};
+    Object.keys(config).forEach(function (key) { if (key !== 'clientPricing') body[key] = config[key]; });
+    return fetch('/api/quote', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    }).then(function (res) {
+      return res.json().catch(function () { return null; }).then(function (data) {
+        var pricing = data && (data.pricing || data);
+        if (res.ok && pricing && pricing.ready !== false && pricing.total != null) return pricing;
+        var err = new Error('quote not available');
+        err.incomplete = res.ok || (res.status >= 400 && res.status < 500);
+        throw err;
+      });
+    });
+  }
+
   function mount(root, config, mode) {
     if (!config) {
       root.innerHTML = '<div class="share-page"><p class="share-error">無法讀取試算資料，請回到計算機重新產生。</p></div>';
       return;
     }
-    if (!config.clientPricing || config.clientPricing.total == null) {
-      root.innerHTML = '<div class="share-page"><p class="share-error">試算資料不完整，請先完成規格選擇並確認總價後再試。</p>'
-        + '<p class="share-error-actions"><a class="share-btn share-btn--primary" href="/shop/calculator/">返回試算</a></p></div>';
-      return;
-    }
-    root.innerHTML = '<div class="share-page">' + renderCard(config, { mode: mode }) + '</div>';
-    root.querySelectorAll('.share-image[data-fallback]').forEach(function (img) {
-      var fb = img.getAttribute('data-fallback');
-      if (fb && global.ShopAssets) global.ShopAssets.attachImageFallback(img, fb);
+    root.innerHTML = '<div class="share-page"><p class="quote-sheet-loading">計算價格中…</p></div>';
+    fetchServerPricing(config).then(function (pricing) {
+      /* Always the server's number — never a price carried in the link. */
+      config.clientPricing = pricing;
+      try {
+        root.innerHTML = '<div class="share-page">' + renderCard(config, { mode: mode }) + '</div>';
+        root.querySelectorAll('.share-image[data-fallback]').forEach(function (img) {
+          var fb = img.getAttribute('data-fallback');
+          if (fb && global.ShopAssets) global.ShopAssets.attachImageFallback(img, fb);
+        });
+        bindActions(root, mode);
+      } catch (renderErr) {
+        /* A display bug is not a pricing/server problem — don't report it as one. */
+        if (global.console) global.console.error('quote render failed', renderErr);
+        root.innerHTML = errorHtml('報價單顯示發生問題，請重新整理頁面或回到計算機重新產生。', false);
+      }
+    }).catch(function (err) {
+      if (err && err.incomplete) {
+        root.innerHTML = errorHtml('試算資料不完整，請先完成規格選擇並確認總價後再試。', false);
+        return;
+      }
+      root.innerHTML = errorHtml('暫時無法取得最新報價，請稍後再試。', true);
+      var retry = root.querySelector('#quote-retry-btn');
+      if (retry) retry.addEventListener('click', function () { mount(root, config, mode); });
     });
-    bindActions(root, mode);
   }
 
   global.ShopQuoteRender = { mount: mount, renderCard: renderCard };
