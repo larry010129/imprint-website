@@ -729,5 +729,12 @@
     }
   });
 
-  window.AdminOrdersPanel = { load: load, ensureLoaded: ensureLoaded };
+  /* Used by the top-bar search: show the list filtered to this text. */
+  function searchFor(q) {
+    var text = String(q || '').trim();
+    if (searchInput) searchInput.value = text;
+    load(text, false, true);
+  }
+
+  window.AdminOrdersPanel = { load: load, ensureLoaded: ensureLoaded, searchFor: searchFor };
 })();

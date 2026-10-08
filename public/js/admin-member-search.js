@@ -339,6 +339,18 @@
     });
   }
 
+  /* Accounts matching the text: the server's hits first; if it has none (for example a
+     card number, which only the browser can work out), fall back to the full list. */
+  function lookup(query) {
+    return api.admin.getAccounts({ q: query, page: 1, pageSize: 100 }).then(function (res) {
+      var serverHits = (!res.error && res.accounts) ? res.accounts : null;
+      if (serverHits && serverHits.length) return serverHits;
+      return loadCache(!!res.error).then(function (all) {
+        return all.filter(function (a) { return matchesAccount(a, query); });
+      });
+    });
+  }
+
   function search(q) {
     var query = (q || '').trim();
     _lastQ = query;
@@ -358,17 +370,9 @@
     }
     list.innerHTML = '<p class="adx-loading-inline">搜尋中…</p>';
 
-    api.admin.getAccounts({ q: query, page: 1, pageSize: 100 }).then(function (res) {
+    lookup(query).then(function (accounts) {
       if (query !== _lastQ) return;
-      var serverHits = (!res.error && res.accounts) ? res.accounts : null;
-      if (serverHits && serverHits.length) {
-        renderResults(serverHits, query);
-        return;
-      }
-      return loadCache(!!res.error).then(function (all) {
-        if (query !== _lastQ) return;
-        renderResults(all.filter(function (a) { return matchesAccount(a, query); }), query);
-      });
+      renderResults(accounts, query);
     }).catch(function (err) {
       if (query !== _lastQ) return;
       list.innerHTML = '<p class="note warn">搜尋失敗：' + esc(err.message || err) + '</p>';
@@ -413,6 +417,7 @@
 
   window.AdminMemberSearchPanel = {
     search: search,
+    lookup: lookup,
     ensureLoaded: ensureLoaded,
     openAccountDetail: openAccountDetail,
   };

@@ -348,50 +348,75 @@
     return String(hay || '').toLowerCase().indexOf(q) !== -1;
   }
 
-  function searchOrders(orders, q) {
-    var out = [];
-    (orders || []).forEach(function (o) {
-      var blob = [o.order_number, o.customer_name, o.customer_email, o.customer_phone, o.product_type, o.series].join(' ');
-      if (!matchText(blob, q)) return;
-      out.push({
-        panel: 'orders',
+  var SEARCH_HITS_PER_TYPE = 6;
+
+  /* A panel loads its data itself; hand it the search first, then show the panel. */
+  function openPanelWithSearch(panel, handlerName, query) {
+    var owner = { orders: window.AdminOrdersPanel, products: window.AdminProductsPanel }[panel];
+    if (owner && typeof owner[handlerName] === 'function') owner[handlerName](query);
+    switchPanel(panel);
+  }
+
+  /* The server does the matching (whole database, not just the first page), so these
+     only turn its rows into clickable hits. */
+  function hitsFromOrders(res) {
+    var orders = (res && (res.orders || (Array.isArray(res) ? res : []))) || [];
+    return orders.slice(0, SEARCH_HITS_PER_TYPE).map(function (o) {
+      var number = o.order_number || String(o.id || '');
+      return {
         type: '訂單',
-        label: o.order_number || String(o.id || ''),
-        sub: o.customer_name || ''
-      });
+        label: number,
+        sub: o.customer_name || '',
+        open: function () { openPanelWithSearch('orders', 'searchFor', number); }
+      };
     });
-    return out.slice(0, 6);
   }
 
-  function searchAccounts(accounts, q) {
-    var out = [];
-    (accounts || []).forEach(function (acc) {
-      var blob = [acc.full_name, acc.email, acc.phone, acc.store_name, acc.id].join(' ');
-      if (!matchText(blob, q)) return;
-      out.push({
-        panel: 'accounts',
-        type: '會員',
-        label: acc.full_name || acc.email || acc.id,
-        sub: acc.email || ''
-      });
-    });
-    return out.slice(0, 6);
-  }
-
-  function searchProducts(payload, q) {
-    var products = (payload && payload.products) || (Array.isArray(payload) ? payload : []) || [];
-    var out = [];
-    products.forEach(function (p) {
-      var blob = [p.name_zh, p.name_en, p.custom_id, p.category, p.id].join(' ');
-      if (!matchText(blob, q)) return;
-      out.push({
-        panel: 'products',
+  function hitsFromProducts(res) {
+    var products = (res && (res.products || (Array.isArray(res) ? res : []))) || [];
+    return products.slice(0, SEARCH_HITS_PER_TYPE).map(function (p) {
+      var key = p.custom_id || p.name_zh || p.name_en || String(p.id || '');
+      return {
         type: '商品',
-        label: p.name_zh || p.name_en || p.custom_id || p.id,
-        sub: p.category || ''
-      });
+        label: p.name_zh || p.name_en || p.custom_id || String(p.id || ''),
+        sub: [p.custom_id, p.category].filter(Boolean).join(' · '),
+        open: function () { openPanelWithSearch('products', 'searchFor', key); }
+      };
     });
-    return out.slice(0, 6);
+  }
+
+  function hitsFromAccounts(accounts) {
+    return (accounts || []).slice(0, SEARCH_HITS_PER_TYPE).map(function (acc) {
+      return {
+        type: '會員',
+        label: acc.full_name || acc.email || String(acc.id || ''),
+        sub: acc.email || '',
+        open: function () {
+          var members = window.AdminMemberSearchPanel;
+          if (members && members.openAccountDetail) members.openAccountDetail(acc.id);
+          else switchPanel('accounts');
+        }
+      };
+    });
+  }
+
+  /* 諮詢名單 returns the latest 50 messages and 50 quote requests; match those here. */
+  function hitsFromLeads(res, needle) {
+    var out = [];
+    ((res && res.messages) || []).forEach(function (m) {
+      if (matchText([m.name, m.phone, m.email, m.message, m.source_page].join(' '), needle)) {
+        out.push({ type: '諮詢', label: m.name || m.email || '留言', sub: m.phone || m.email || '' });
+      }
+    });
+    ((res && res.quotes) || []).forEach(function (r) {
+      if (matchText([r.name, r.phone, r.email, r.series, r.product_type].join(' '), needle)) {
+        out.push({ type: '估價', label: r.name || r.email || '估價', sub: [r.series, r.product_type].filter(Boolean).join(' · ') });
+      }
+    });
+    return out.slice(0, SEARCH_HITS_PER_TYPE).map(function (hit) {
+      hit.open = function () { switchPanel('leads'); };
+      return hit;
+    });
   }
 
   function renderSearchResults(rows) {
@@ -404,9 +429,9 @@
       if (wrap) wrap.classList.add('is-search-open');
       return;
     }
-    box.innerHTML = rows.map(function (r) {
+    box.innerHTML = rows.map(function (r, index) {
       return (
-        '<button type="button" class="admin1-search-hit" role="option" data-panel="' + esc(r.panel) + '">' +
+        '<button type="button" class="admin1-search-hit" role="option" data-hit="' + index + '">' +
           '<span class="admin1-search-chip">' + esc(r.type) + '</span>' +
           '<span class="admin1-search-hit-text">' +
             '<strong>' + esc(r.label) + '</strong>' +
@@ -417,12 +442,22 @@
     }).join('');
     box.hidden = false;
     if (wrap) wrap.classList.add('is-search-open');
-    box.querySelectorAll('[data-panel]').forEach(function (el) {
+    box.querySelectorAll('[data-hit]').forEach(function (el) {
       el.addEventListener('click', function () {
+        var hit = rows[Number(el.getAttribute('data-hit'))];
         hideSearchResults();
-        switchPanel(el.getAttribute('data-panel'));
+        if (hit && typeof hit.open === 'function') hit.open();
       });
     });
+  }
+
+  function showSearchMessage(text) {
+    var box = document.getElementById('admin1SearchResults');
+    var wrap = document.getElementById('admin1SearchWrap');
+    if (!box) return;
+    box.innerHTML = '<div class="admin1-search-empty">' + esc(text) + '</div>';
+    box.hidden = false;
+    if (wrap) wrap.classList.add('is-search-open');
   }
 
   function runGlobalSearch(q) {
@@ -431,26 +466,40 @@
       hideSearchResults();
       return;
     }
+    /* A full 12-digit card number whose check digit is wrong is a typo: say so. */
+    var digits = q.replace(/[\s-]/g, '');
+    var memberId = window.ImprintMemberId;
+    if (/^\d{12}$/.test(digits) && memberId && memberId.isValidMemberNumber && !memberId.isValidMemberNumber(digits)) {
+      ++searchSeq;
+      showSearchMessage('這組卡面編號的檢查碼不正確，可能輸入錯誤，請再確認一次。');
+      return;
+    }
     var seq = ++searchSeq;
     var needle = q.toLowerCase();
-    var ordersP = a.admin.getOrders();
-    var accountsP = a.admin.getAccounts(q);
-    var productsP = a.admin.getProducts();
-    Promise.all([ordersP, accountsP, productsP]).then(function (triple) {
+    var members = window.AdminMemberSearchPanel;
+    /* Everything is asked of the server with the search text, so any page of any list is found. */
+    var ordersP = a.admin.getOrders({ q: q, pageSize: SEARCH_HITS_PER_TYPE });
+    var productsP = a.admin.getProducts({ q: q, pageSize: SEARCH_HITS_PER_TYPE });
+    var leadsP = a.admin.getLeads();
+    var accountsP = (members && members.lookup)
+      ? members.lookup(q).then(function (accounts) { return { accounts: accounts }; }, function (err) { return { error: err || true }; })
+      : a.admin.getAccounts({ q: q, pageSize: SEARCH_HITS_PER_TYPE });
+    Promise.all([ordersP, accountsP, productsP, leadsP]).then(function (all) {
       if (seq !== searchSeq) return;
-      var ordersRes = triple[0] || {};
-      var accountsRes = triple[1] || {};
-      var productsRes = triple[2] || {};
-      if (ordersRes.error && accountsRes.error && productsRes.error) {
+      var ordersRes = all[0] || {};
+      var accountsRes = all[1] || {};
+      var productsRes = all[2] || {};
+      var leadsRes = all[3] || {};
+      if (ordersRes.error && accountsRes.error && productsRes.error && leadsRes.error) {
         hideSearchResults();
         return;
       }
-      var orders = ordersRes.orders || (Array.isArray(ordersRes) ? ordersRes : []);
       var accounts = accountsRes.accounts || accountsRes.users || (Array.isArray(accountsRes) ? accountsRes : []);
       var rows = []
-        .concat(searchOrders(orders, needle))
-        .concat(searchAccounts(accounts, needle))
-        .concat(searchProducts(productsRes, needle));
+        .concat(hitsFromOrders(ordersRes))
+        .concat(hitsFromAccounts(accounts))
+        .concat(hitsFromProducts(productsRes))
+        .concat(hitsFromLeads(leadsRes, needle));
       renderSearchResults(rows);
     }).catch(function () {
       if (seq !== searchSeq) return;

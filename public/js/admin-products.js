@@ -3825,7 +3825,15 @@
     load(false, true);
   }
 
-  window.AdminProductsPanel = { load: load, ensureLoaded: ensureLoaded, prefetch: prefetch };
+  /* Used by the top-bar search: show the product list filtered to this text (all categories). */
+  function searchFor(q) {
+    state.searchQuery = String(q || '').trim();
+    _pageIndex = 0;
+    state.view = 'list';
+    load(false, true);
+  }
+
+  window.AdminProductsPanel = { load: load, ensureLoaded: ensureLoaded, prefetch: prefetch, searchFor: searchFor };
 
   if (root && !root.innerHTML.trim() && window.SkeletonUI) {
     showLoadingSkeleton();

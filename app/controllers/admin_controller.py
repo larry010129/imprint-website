@@ -1172,9 +1172,14 @@ def _admin_product_filters(
         params.append(category)
     q = (search or "").strip()
     if q:
-        clauses.append("(name_zh ilike %s or name_en ilike %s or custom_id ilike %s)")
+        # id::text so a product can also be found by its own (long) ID, with or without dashes.
+        clauses.append(
+            "(name_zh ilike %s or name_en ilike %s or custom_id ilike %s"
+            " or id::text ilike %s or replace(id::text, '-', '') ilike %s)"
+        )
         needle = f"%{q}%"
-        params.extend([needle, needle, needle])
+        compact = f"%{q.replace('-', '').replace(' ', '')}%"
+        params.extend([needle, needle, needle, needle, compact])
     where = f" where {' and '.join(clauses)}" if clauses else ""
     return where, params
 
