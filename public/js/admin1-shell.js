@@ -349,6 +349,7 @@
   }
 
   var SEARCH_HITS_PER_TYPE = 6;
+  var SEARCH_SOURCE_TIMEOUT_MS = 12000;
 
   /* A panel loads its data itself; hand it the search first, then show the panel. */
   function openPanelWithSearch(panel, handlerName, query) {
@@ -419,12 +420,19 @@
     });
   }
 
-  function renderSearchResults(rows) {
+  /* opts.pending: some sources haven't answered yet; opts.failed: names of sources that errored. */
+  function renderSearchResults(rows, opts) {
+    opts = opts || {};
     var box = document.getElementById('admin1SearchResults');
     var wrap = document.getElementById('admin1SearchWrap');
     if (!box) return;
+    var failedNote = (opts.failed && opts.failed.length)
+      ? '<div class="admin1-search-empty">' + esc(opts.failed.join('、') + '搜尋失敗，請稍後再試') + '</div>'
+      : '';
     if (!rows.length) {
-      box.innerHTML = '<div class="admin1-search-empty">找不到符合結果</div>';
+      /* Don't claim "nothing found" when a source actually failed: say that instead. */
+      var emptyText = opts.pending ? '搜尋中…' : (failedNote ? '' : '找不到符合結果');
+      box.innerHTML = (emptyText ? '<div class="admin1-search-empty">' + emptyText + '</div>' : '') + failedNote;
       box.hidden = false;
       if (wrap) wrap.classList.add('is-search-open');
       return;
@@ -439,7 +447,7 @@
           '</span>' +
         '</button>'
       );
-    }).join('');
+    }).join('') + (opts.pending ? '<div class="admin1-search-empty">搜尋中…</div>' : '') + failedNote;
     box.hidden = false;
     if (wrap) wrap.classList.add('is-search-open');
     box.querySelectorAll('[data-hit]').forEach(function (el) {
@@ -477,33 +485,55 @@
     var seq = ++searchSeq;
     var needle = q.toLowerCase();
     var members = window.AdminMemberSearchPanel;
-    /* Everything is asked of the server with the search text, so any page of any list is found. */
-    var ordersP = a.admin.getOrders({ q: q, pageSize: SEARCH_HITS_PER_TYPE });
-    var productsP = a.admin.getProducts({ q: q, pageSize: SEARCH_HITS_PER_TYPE });
-    var leadsP = a.admin.getLeads();
-    var accountsP = (members && members.lookup)
+    /* A card number can only be matched in the browser, which needs the full member
+       list; any other text is matched by the server, so don't download everyone for it. */
+    var looksLikeCardNumber = digits.length >= 6 && /^\d+$/.test(digits);
+    var accountsP = (members && members.lookup && looksLikeCardNumber)
       ? members.lookup(q).then(function (accounts) { return { accounts: accounts }; }, function (err) { return { error: err || true }; })
       : a.admin.getAccounts({ q: q, pageSize: SEARCH_HITS_PER_TYPE });
-    Promise.all([ordersP, accountsP, productsP, leadsP]).then(function (all) {
+
+    /* Each source reports on its own: slow or failing ones never hold back the others. */
+    var sources = [
+      { name: '訂單', run: function () { return a.admin.getOrders({ q: q, pageSize: SEARCH_HITS_PER_TYPE }); },
+        hits: function (res) { return hitsFromOrders(res); } },
+      { name: '會員', run: function () { return accountsP; },
+        hits: function (res) { return hitsFromAccounts(res.accounts || res.users || (Array.isArray(res) ? res : [])); } },
+      { name: '商品', run: function () { return a.admin.getProducts({ q: q, pageSize: SEARCH_HITS_PER_TYPE }); },
+        hits: function (res) { return hitsFromProducts(res); } },
+      { name: '諮詢', run: function () { return a.admin.getLeads(); },
+        hits: function (res) { return hitsFromLeads(res, needle); } }
+    ];
+    var results = sources.map(function () { return []; });
+    var failed = [];
+    var remaining = sources.length;
+
+    function paint() {
       if (seq !== searchSeq) return;
-      var ordersRes = all[0] || {};
-      var accountsRes = all[1] || {};
-      var productsRes = all[2] || {};
-      var leadsRes = all[3] || {};
-      if (ordersRes.error && accountsRes.error && productsRes.error && leadsRes.error) {
-        hideSearchResults();
-        return;
+      var rows = [];
+      results.forEach(function (hits) { rows = rows.concat(hits); });
+      renderSearchResults(rows, { pending: remaining > 0, failed: failed });
+    }
+
+    paint();
+    sources.forEach(function (source, index) {
+      var settled = false;
+      function done(hits, didFail) {
+        if (settled) return;
+        settled = true;
+        if (didFail && failed.indexOf(source.name) === -1) failed.push(source.name);
+        results[index] = hits || [];
+        remaining -= 1;
+        paint();
       }
-      var accounts = accountsRes.accounts || accountsRes.users || (Array.isArray(accountsRes) ? accountsRes : []);
-      var rows = []
-        .concat(hitsFromOrders(ordersRes))
-        .concat(hitsFromAccounts(accounts))
-        .concat(hitsFromProducts(productsRes))
-        .concat(hitsFromLeads(leadsRes, needle));
-      renderSearchResults(rows);
-    }).catch(function () {
-      if (seq !== searchSeq) return;
-      hideSearchResults();
+      var timer = setTimeout(function () { done([], true); }, SEARCH_SOURCE_TIMEOUT_MS);
+      Promise.resolve().then(source.run).then(function (res) {
+        clearTimeout(timer);
+        if (!res || res.error) return done([], true);
+        done(source.hits(res), false);
+      }).catch(function () {
+        clearTimeout(timer);
+        done([], true);
+      });
     });
   }
 
