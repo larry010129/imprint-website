@@ -705,7 +705,7 @@
     min-height: 44px;
   }
 
-  .shop-fit .catalog-tile span,
+  .shop-fit .catalog-tile .catalog-tile-label,
   .shop-fit #shop-styles .type-card .type-name,
   .shop-fit #shop-styles .type-card .type-card__name {
     padding-top: 12px;
@@ -1003,4 +1003,18 @@
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     max-width: 100% !important;
   }
+}
+
+/* Keep alt text for accessibility/SEO, but never paint it inside the image box
+   while a photo is loading or if it fails (browsers render alt as inline text). */
+.shop-page .catalog-tile__media img,
+.shop-page .type-card__media img,
+.shop-page .product-preview img,
+.shop-page .gem-icon img,
+.shop-page .product-gallery-col img {
+  color: transparent;
+  font-size: 0;
+  line-height: 0;
+  text-indent: -9999px;
+  overflow: hidden;
 }
