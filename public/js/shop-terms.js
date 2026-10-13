@@ -40,12 +40,16 @@
 
       function onScroll() {
         if (!scroll || readBottom) return;
-        var max = scroll.scrollHeight - scroll.clientHeight;
-        if (max <= 0 || scroll.scrollTop / max >= 0.99) setReadBottom(true);
+        /* Phones report fractional scrollTop and shift clientHeight with the
+           browser toolbar, so a strict ratio can stay a few px short forever. */
+        var remaining = scroll.scrollHeight - scroll.clientHeight - scroll.scrollTop;
+        if (remaining <= 32) setReadBottom(true);
       }
 
       function cleanup() {
         scroll?.removeEventListener('scroll', onScroll);
+        scroll?.removeEventListener('touchend', onScroll);
+        window.removeEventListener('resize', onScroll);
         dialog.removeEventListener('cancel', onCancel);
         document.body.classList.remove('shop-terms-blocked');
       }
@@ -70,6 +74,8 @@
       }, { once: true });
 
       scroll?.addEventListener('scroll', onScroll, { passive: true });
+      scroll?.addEventListener('touchend', onScroll, { passive: true });
+      window.addEventListener('resize', onScroll);
       dialog.addEventListener('cancel', onCancel);
       document.body.classList.add('shop-terms-blocked');
       setReadBottom(false);

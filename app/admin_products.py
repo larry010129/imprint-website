@@ -1341,13 +1341,25 @@ def publish_readiness(cur, product: dict) -> tuple[bool, str | None]:
     if int(cur.fetchone()["c"]) == 0:
         return False, "請先上傳至少一張商品照片"
     cur.execute(
-        "select color from product_images where product_id = %s",
+        "select color, file_path from product_images where product_id = %s",
         (product_id,),
     )
     default = product["default_color"]
+    rows = cur.fetchall()
+    # Shop catalog drops temp (_pending) / stock / placeholder files, so a row that
+    # points at one would publish a product with a blank card.
+    usable = [
+        row
+        for row in rows
+        if not is_pending_product_image(row.get("file_path"))
+        and not is_auto_stock_product_image(row.get("file_path"))
+        and not is_dead_catalog_placeholder(row.get("file_path"))
+    ]
+    if not usable:
+        return False, "商品照片尚未儲存完成，請重新上傳後再上架"
     if not any(
         image_covers_default_color(row["color"], default, category=category)
-        for row in cur.fetchall()
+        for row in usable
     ):
         return False, "預設顏色必須至少有一張商品照片"
     return True, None
