@@ -1129,9 +1129,9 @@
 }
 .price-page .shape-marquee.is-dragging{ cursor:grabbing; }
 .price-page .shape-marquee-inner{ display:flex; width:max-content; will-change:transform; }
-.price-page .shape-marquee-row{ display:flex; gap:14px; padding:0 20px; }
+.price-page .shape-marquee-row{ display:flex; flex:0 0 auto; gap:14px; padding:0 20px; }
 .price-page .shape-marquee .shape-card{
-  flex:0 0 128px; min-height:152px; padding:18px 10px 14px;
+  flex:0 0 128px; min-width:128px; box-sizing:border-box; min-height:152px; padding:18px 10px 14px;
 }
 .price-page .shape-marquee .shape-card .icon{ width:52px; height:52px; }
 .price-page .shape-marquee .shape-card .icon svg{ width:26px; height:26px; }
