@@ -2962,7 +2962,7 @@ body.app-shell:not(.dark-theme) .shop-fit {
 /* ponytail: (hover:none)+(pointer:coarse) keeps touchscreen tablets (iPad
    landscape is commonly 1180-1366px, past this cutoff) on the scrolling
    layout below instead of the desktop no-scroll "fit" mode */
-@media (min-width: 1101px) and (hover: hover) and (pointer: fine) {
+@media (min-width: 1367px) and (hover: hover) and (pointer: fine) {
   body.app-shell:has(.shop-fit) {
     overflow: hidden;
   }
@@ -4472,7 +4472,7 @@ body.app-shell:not(.dark-theme) .shop-fit {
 /* Tablet landscape (901-1100px), plus any touchscreen tablet regardless of
    width (iPad landscape commonly runs 1180-1366px): keep a side price
    panel, but release the viewport-height lock so the page scrolls normally. */
-@media (max-width: 1100px), (hover: none) and (pointer: coarse) {
+@media (max-width: 1366px), (hover: none) and (pointer: coarse) {
   .shop-fit {
     height: auto;
     min-height: 0;
@@ -5711,3 +5711,84 @@ body.app-shell .mobile-buy-actions .shop-cta--secondary:hover:not(:disabled) {
   }
 }
 
+
+/* ---- Old-Safari fallbacks ----------------------------------------------
+   .no-flex-gap is set by shop.js on browsers without flexbox gap (Safari <14.1,
+   e.g. first-gen iPad Pro left on old iPadOS). Modern browsers never match it. */
+.no-flex-gap .shop-back > * + * { margin-left: 6px; }
+.no-flex-gap .catalog-tile > * + * { margin-top: 12px; }
+.no-flex-gap .product-zoom-btn > * + * { margin-left: 6px; }
+.no-flex-gap .config-chips > * { margin: 0 8px 8px 0; }
+.no-flex-gap .variant-label-row > * + * { margin-left: 12px; }
+.no-flex-gap .ring-size-guide-inline__steps li > * + * { margin-left: 10px; }
+.no-flex-gap .shop-terms-header > * + * { margin-top: 8px; }
+.no-flex-gap .shop-terms-sections > * + * { margin-top: 20px; }
+.no-flex-gap .shop-terms-section > * + * { margin-top: 4px; }
+.no-flex-gap .shop-terms-footer > * { margin: 0 12px 10px 0; }
+.no-flex-gap .shop-terms-actions > * + * { margin-left: 8px; }
+.no-flex-gap .ring-size-guide-header > * + * { margin-left: 16px; }
+.no-flex-gap .variant-chips > * { margin: 0 8px 8px 0; }
+.no-flex-gap .variant-chips--row > * + * { margin-left: 10px; }
+.no-flex-gap .variant-chips--colors > * { margin: 0 12px 12px 0; }
+.no-flex-gap .color-swatch-labeled > * + * { margin-top: 6px; }
+.no-flex-gap .shop-quote-total__prices > * + * { margin-top: 0.15em; }
+.no-flex-gap .mobile-buy-bar > * + * { margin-left: 16px; }
+.no-flex-gap .mobile-buy-price > * + * { margin-top: 2px; }
+.no-flex-gap .diamond-carousel-wrap > * + * { margin-left: 8px; }
+.no-flex-gap .diamond-carousel > * + * { margin-left: 12px; }
+.no-flex-gap .diamond-carousel-item > * + * { margin-top: 8px; }
+.no-flex-gap .variant-chips--matrix-shapes > * { margin: 0 8px 8px 0; }
+.no-flex-gap .shop-fit .shop-toolbar > * + * { margin-left: 1rem; }
+.no-flex-gap .shop-fit .shop-progress > * + * { margin-left: 0.625rem; }
+.no-flex-gap .shop-fit .shop-progress-dots > * + * { margin-left: 0.3rem; }
+.no-flex-gap .shop-fit #metal-btn-row > * + *,
+.no-flex-gap .shop-fit #color-btn-row > * + *,
+.no-flex-gap .shop-fit #diamond-shape-row > * + * { margin-left: 0.375rem; }
+.no-flex-gap .shop-fit .shop-girdle-engrave > * + * { margin-top: 0.75rem; }
+.no-flex-gap .shop-fit .cfg-engrave-input-wrap > * + * { margin-top: 6px; }
+.no-flex-gap .shop-fit .cfg-engrave-input-meta > * { margin: 0 8px 8px 0; }
+.no-flex-gap .shop-fit .cfg-engrave-input-actions > * { margin: 0 6px 6px 0; }
+.no-flex-gap .shop-fit .cfg-engrave-input > * { margin: 0 2px 2px 0; }
+.no-flex-gap .shop-fit .shop-girdle-engrave__form > * + * { margin-top: 0.375rem; }
+.no-flex-gap .shop-fit .shop-girdle-engrave .cfg-emblems > * { margin: 0 0.5rem 0.5rem 0; }
+.no-flex-gap .shop-fit .shop-girdle-engrave .cfg-engrave-preview-text > * { margin: 0 4px 4px 0; }
+.no-flex-gap .shop-fit .diamond-carousel > * { margin: 0 0.375rem 0.375rem 0; }
+.no-flex-gap .diamond-shape-picker__trigger > * + * { margin-left: 0.625rem; }
+.no-flex-gap .diamond-shape-picker__text > * + * { margin-top: 0.125rem; }
+.no-flex-gap .diamond-shape-picker__option > * + * { margin-left: 0.625rem; }
+.no-flex-gap .shop-fit .shop-dd__trigger > * + * { margin-left: 0.5rem; }
+.no-flex-gap .shop-fit .shop-dd__option > * + * { margin-left: 0.5rem; }
+.no-flex-gap .shop-fit #pendant-chain-options .variant-chips--grid > * { margin: 0 0.5rem 0.5rem 0; }
+.no-flex-gap .shop-action-row > * + * { margin-left: 10px; }
+.no-flex-gap .shop-guest-banner > * { margin: 0 12px 12px 0; }
+.no-flex-gap .shop-guest-banner-copy > * { margin: 0 10px 6px 0; }
+.no-flex-gap .mobile-buy-actions > * + * { margin-left: 8px; }
+.no-flex-gap .catalog-tile--skeleton > * + * { margin-top: 12px; }
+.no-flex-gap .product-title-row > * + * { margin-left: 12px; }
+.no-flex-gap .shop-preview-banner > * + * { margin-left: 1rem; }
+.no-flex-gap .cart-page .cart-list > * + * { margin-top: 12px; }
+.no-flex-gap .cart-select-all > * + * { margin-left: 8px; }
+.no-flex-gap .cart-item-actions > * { margin: 0 8px 8px 0; }
+.no-flex-gap .cart-detail-pricing > * + * { margin-top: 8px; }
+.no-flex-gap .cart-detail-price-row > * + * { margin-left: 12px; }
+.no-flex-gap .cart-item > * + * { margin-left: 12px; }
+.no-flex-gap .cart-item-main > * + * { margin-top: 4px; }
+.no-flex-gap .cart-summary > * + * { margin-top: 12px; }
+@media (max-width: 900px) {
+  .no-flex-gap .mobile-buy-bar:not(.hidden) > * + * { margin-left: 12px; }
+  .no-flex-gap .mobile-buy-actions > * + * { margin-left: 8px; }
+  .no-flex-gap .ring-size-guide-inline__table tbody > * + *,
+  .no-flex-gap .ring-size-guide-table tbody > * + *,
+  .no-flex-gap .chain-length-guide-inline__table tbody > * + * { margin-top: 8px; }
+}
+
+/* :has() fallbacks (Safari <15.4) */
+.product-preview-composite:not(.hidden) ~ #large-image {
+  visibility: hidden;
+  position: absolute;
+  pointer-events: none;
+}
+
+body.app-shell .main-content.shop-calculator-page {
+  padding-left: 0;
+}

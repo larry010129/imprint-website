@@ -445,7 +445,10 @@ def create_app() -> FastAPI:
     async def security_headers(request, call_next):
         response = await call_next(request)
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
-        response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
+        # Local dev only: allow framing so device-preview tools (VS Code
+        # Mobile Preview, etc.) can embed the site. Render keeps the block.
+        if settings.is_render:
+            response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
         response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
         if request.url.scheme == "https" or settings.is_render:
             response.headers.setdefault(
@@ -459,10 +462,10 @@ def create_app() -> FastAPI:
         # Fonts, YouTube embeds. frame-ancestors 'self' + object-src 'none' +
         # base-uri 'self' are the high-value additions.
         if response.headers.get("content-type", "").startswith("text/html"):
-            response.headers.setdefault(
-                "Content-Security-Policy",
-                HTML_CONTENT_SECURITY_POLICY,
-            )
+            csp = HTML_CONTENT_SECURITY_POLICY
+            if not settings.is_render:
+                csp = csp.replace("frame-ancestors 'self'", "frame-ancestors *")
+            response.headers.setdefault("Content-Security-Policy", csp)
             response.headers.setdefault("Permissions-Policy", HTML_PERMISSIONS_POLICY)
         from app.robots_host import apply_x_robots_tag
 

@@ -190,7 +190,22 @@
     object-fit: contain;
   }
 </style>
-<link rel="stylesheet" href="/static/css/shop.css?v=6.72">
+<link rel="stylesheet" href="/static/css/shop.css?v=6.73">
+<script>
+/* Old Safari (<14.1) has no flexbox gap: flag it so shop.css can add margins. ES5 on purpose. */
+(function () {
+  try {
+    var d = document, h = d.documentElement, f = d.createElement('div');
+    f.style.cssText = 'display:flex;flex-direction:column;row-gap:1px;position:absolute;visibility:hidden';
+    f.appendChild(d.createElement('div'));
+    f.appendChild(d.createElement('div'));
+    h.appendChild(f);
+    var ok = f.scrollHeight === 1;
+    h.removeChild(f);
+    if (!ok) h.className += ' no-flex-gap';
+  } catch (e) {}
+})();
+</script>
 <link rel="stylesheet" href="/static/css/shop-wizard.css?v=31">
 {% if q_preview %}
 <meta name="robots" content="noindex, nofollow">
