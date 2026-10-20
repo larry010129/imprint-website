@@ -3172,6 +3172,13 @@ body.app-shell:not(.dark-theme) .shop-fit {
   padding: 0;
 }
 
+/* Category tiles: fill the square. If the WebP thumb fails to load (old iOS)
+   the page falls back to the older, non-square JPG, which would otherwise
+   show as a letterboxed strip with beige bars. */
+.shop-fit .catalog-tile__media img {
+  object-fit: cover;
+}
+
 .shop-fit #shop-styles .type-card {
   display: flex;
   flex-direction: column;

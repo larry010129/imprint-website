@@ -706,12 +706,19 @@ a.account-menu-trigger{
 }
 /* Phone / touch: rest = desktop hover (mint fill + 「開始試算」→) */
 @media (max-width:900px),(hover:none),(pointer:coarse){
+  /* Mint fill is the button background, not a 90x-scaled dot: older Safari
+     doesn't clip scaled children to the rounded overflow:hidden box, so the
+     fill painted as a square block behind the pill. */
   .nav-ihb{
+    background:var(--nav-ihb-fill);
     border-color:var(--nav-ihb-fill-deep);
     box-shadow:0 4px 16px color-mix(in srgb, var(--nav-ihb-fill-deep) 28%, transparent);
   }
-  .nav-ihb__dot{
-    transform:scale(90);
+  .nav-ihb__dot,
+  .nav-ihb:hover .nav-ihb__dot,
+  .nav-ihb:focus-visible .nav-ihb__dot{
+    transform:none;
+    opacity:0;
   }
   .nav-ihb__idle .nav-ihb__label{
     transform:translateX(2.5rem);

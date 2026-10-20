@@ -1630,8 +1630,14 @@ function renderCatalogTiles() {
     img.alt = '';
     const catUrl = categoryImageUrl(cat);
     img.src = catUrl || (products[0] ? styleGridImageUrl(products[0]) : '');
-    // WebP category thumbs keep their pre-WebP original as onerror fallback.
-    window.ShopAssets?.attachImageFallback(img, window.ShopAssets?.categoryThumbLegacy?.(cat) || catUrl);
+    // If the resized copy fails, retry the admin-set main image as-is before
+    // the built-in default, so a transform hiccup never swaps in an old photo.
+    const adminUrl = window._catalogCategoryMeta?.[cat]?.thumbUrl || '';
+    const legacyUrl = window.ShopAssets?.categoryThumbLegacy?.(cat) || '';
+    window.ShopAssets?.attachImageFallbackChain(
+      img,
+      [adminUrl, legacyUrl].filter((u, i, a) => u && u !== catUrl && a.indexOf(u) === i),
+    );
 
     const media = document.createElement('span');
     media.className = 'catalog-tile__media';

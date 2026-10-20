@@ -990,8 +990,10 @@
   }
 }
 
-/* Tablets (iPad portrait/landscape): 3 columns made style photos tiny — landscape
-   also loses 280px to the price panel. Two columns keep the product readable. */
+/* Tablets (iPad portrait/landscape): 3 columns in portrait, 4 in landscape.
+   Two columns made each style card oversized and needed a lot of scrolling;
+   the old "tiny photos" at 3 columns came from the aspect-ratio collapse in
+   old Safari, now fixed with the padding-top square in shop.css. */
 @media (min-width: 641px) and (max-width: 1180px) {
   .shop-fit #shop-styles .type-grid,
   .shop-fit #shop-styles .type-grid.type-grid--size-xl,
@@ -999,9 +1001,21 @@
   .shop-fit #shop-styles .type-grid.type-grid--size-md,
   .shop-fit #shop-styles .type-grid.type-grid--size-sm,
   .shop-fit #shop-styles .type-grid.type-grid--size-xs {
-    --type-cols: 2;
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    --type-cols: 3;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
     max-width: 100% !important;
+  }
+}
+
+@media (min-width: 981px) and (max-width: 1180px) {
+  .shop-fit #shop-styles .type-grid,
+  .shop-fit #shop-styles .type-grid.type-grid--size-xl,
+  .shop-fit #shop-styles .type-grid.type-grid--size-lg,
+  .shop-fit #shop-styles .type-grid.type-grid--size-md,
+  .shop-fit #shop-styles .type-grid.type-grid--size-sm,
+  .shop-fit #shop-styles .type-grid.type-grid--size-xs {
+    --type-cols: 4;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
   }
 }
 
