@@ -13,6 +13,7 @@ services:
     runtime: python
     plan: starter
     buildCommand: bash scripts/render-build.sh
+    preDeployCommand: python scripts/weekly_report.py --on-deploy
     startCommand: bash scripts/render-start.sh
     healthCheckPath: /health
     envVars:

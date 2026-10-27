@@ -196,6 +196,13 @@ async def lifespan(_app: FastAPI):
     except Exception:
         log.exception("ensure_site_visits_schema failed")
     try:
+        from app.weekly_report import ensure_weekly_report_schema
+
+        with get_connection() as conn, conn.cursor() as cur:
+            ensure_weekly_report_schema(cur)
+    except Exception:
+        log.exception("ensure_weekly_report_schema failed")
+    try:
         from app.consult_bookings import ensure_consult_bookings_schema
 
         with get_connection() as conn, conn.cursor() as cur:
@@ -302,6 +309,14 @@ async def lifespan(_app: FastAPI):
         else None
     )
 
+    from app import weekly_report
+
+    report_task = (
+        asyncio.create_task(weekly_report.report_loop(), name="imprint-weekly-report")
+        if weekly_report.enabled()
+        else None
+    )
+
     try:
         yield
     finally:
@@ -310,6 +325,12 @@ async def lifespan(_app: FastAPI):
             await gold_task
         except asyncio.CancelledError:
             pass
+        if report_task is not None:
+            report_task.cancel()
+            try:
+                await report_task
+            except asyncio.CancelledError:
+                pass
         if visits_task is not None:
             visits_task.cancel()
             try:
