@@ -17,7 +17,7 @@ services:
     healthCheckPath: /health
     envVars:
       - key: PYTHON_VERSION
-        value: "3.12.8"
+        value: "3.12.16"
       - key: NO_OPEN
         value: "1"
       # Skip live Allbeauty scrape on boot. Interval loop + /api/gold-refresh
