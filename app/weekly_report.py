@@ -22,7 +22,7 @@ import requests
 log = logging.getLogger("weekly_report")
 
 TAIPEI = timezone(timedelta(hours=8))
-NO_DATA = "n/a"
+NO_DATA = "無資料"
 
 
 def week_bounds(today: date) -> tuple[date, date, date]:
@@ -123,14 +123,23 @@ def _num(v, fmt="{:,}") -> str:
 # ── chart ────────────────────────────────────────────────────────────────
 
 CHART_W, CHART_H = 900, 380
-_BG, _FG, _MUTED, _GRID = (43, 45, 49), (242, 243, 245), (148, 155, 164), (70, 73, 79)
-_THIS = (88, 101, 242)
-_LAST = tuple(int(0.4 * t + 0.6 * b) for t, b in zip(_THIS, _BG))
-_DAYS = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+# Brand palette (public/css/base.css): paper #FDFCFA, ink #2B2320, mint-deep #52c4c8, gold #C4B49E
+_BG, _FG, _MUTED, _GRID = (253, 252, 250), (43, 35, 32), (138, 129, 123), (231, 224, 216)
+_THIS = (82, 196, 200)
+_LAST = (217, 205, 187)
+BRAND_COLOR = 0x52C4C8
+_DAYS = ("週一", "週二", "週三", "週四", "週五", "週六", "週日")
+_FONT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fonts",
+                          "NotoSansTC-Medium-chart-subset.ttf")
 
 
 def _font(size: int):
+    """Bundled Noto Sans TC subset (Chinese labels); falls back to Pillow's default."""
     from PIL import ImageFont
+    try:
+        return ImageFont.truetype(_FONT_PATH, size)
+    except OSError:
+        log.warning("chart font missing at %s; using default", _FONT_PATH)
     try:
         return ImageFont.load_default(size=size)
     except TypeError:                    # Pillow < 10.1: fixed-size bitmap font
@@ -147,13 +156,13 @@ def build_chart(this_daily: list[int], last_daily: list[int] | None,
     img = Image.new("RGB", (CHART_W, CHART_H), _BG)
     d = ImageDraw.Draw(img)
     last_day = end - timedelta(days=1)
-    d.text((30, 16), "Page views per day", font=_font(22), fill=_FG)
-    d.text((30, 50), f"{start:%Y-%m-%d} to {last_day:%Y-%m-%d} (Taipei time)",
+    d.text((30, 16), "每日瀏覽量", font=_font(22), fill=_FG)
+    d.text((30, 50), f"{start:%Y-%m-%d} 至 {last_day:%Y-%m-%d} (台北時間)",
            font=_font(14), fill=_MUTED)
     d.rectangle([CHART_W - 250, 22, CHART_W - 236, 36], fill=_THIS)
-    d.text((CHART_W - 230, 19), "This week", font=_font(13), fill=_FG)
+    d.text((CHART_W - 230, 19), "本週", font=_font(13), fill=_FG)
     d.rectangle([CHART_W - 140, 22, CHART_W - 126, 36], fill=_LAST)
-    d.text((CHART_W - 120, 19), "Last week", font=_font(13), fill=_FG)
+    d.text((CHART_W - 120, 19), "上週", font=_font(13), fill=_FG)
 
     x0, y0, x1, y1 = 60, 90, CHART_W - 30, CHART_H - 50
     peak = max(max(this_daily, default=0), max(last_daily, default=0), 1)
@@ -202,29 +211,29 @@ def build_payload(cur_m: dict, prev_m: dict, start: date, end: date,
         return f"**{label}:** {_num(c, fmt)}{_delta(c, p)}"
 
     fields = [
-        {"name": "🌐 Traffic", "inline": False, "value": "\n".join([
-            line("Page views", "visits", "views"),
-            line("Unique visitors", "visits", "uniques")])},
-        {"name": "🛒 Sales", "inline": False, "value": "\n".join([
-            line("Orders", "orders", "count"),
-            line("Revenue", "orders", "revenue", "NT${:,.0f}"),
-            line("Coupons used", "coupons")])},
-        {"name": "👥 Customers & enquiries", "inline": False, "value": "\n".join([
-            line("New accounts", "accounts"),
-            line("Consultation bookings", "bookings"),
-            line("Contact messages", "contacts"),
-            line("Quote requests", "quotes")])},
-        {"name": "🔒 Security", "inline": False,
-         "value": line("Login lockouts", "lockouts")},
+        {"name": "🌐 流量", "inline": False, "value": "\n".join([
+            line("瀏覽次數", "visits", "views"),
+            line("不重複訪客", "visits", "uniques")])},
+        {"name": "🛒 銷售", "inline": False, "value": "\n".join([
+            line("訂單數", "orders", "count"),
+            line("營收", "orders", "revenue", "NT${:,.0f}"),
+            line("優惠券使用", "coupons")])},
+        {"name": "👥 客戶與詢問", "inline": False, "value": "\n".join([
+            line("新註冊會員", "accounts"),
+            line("諮詢預約", "bookings"),
+            line("聯絡訊息", "contacts"),
+            line("報價詢問", "quotes")])},
+        {"name": "🔒 安全", "inline": False,
+         "value": line("登入鎖定", "lockouts")},
     ]
     top = cur_m.get("top_pages")
     if top:
-        fields.append({"name": "🔥 Top pages", "inline": False, "value": "\n".join(
+        fields.append({"name": "🔥 熱門頁面", "inline": False, "value": "\n".join(
             f"{i}. `{p}` - {v:,}" for i, (p, v) in enumerate(top, 1))[:1000]})
     embed = {
-        "title": "📊 Weekly site report",
-        "description": f"{start:%Y-%m-%d} to {last:%Y-%m-%d} (Taipei time)",
-        "color": 0x5865F2,
+        "title": "📊 每週網站報告",
+        "description": f"{start:%Y-%m-%d} 至 {last:%Y-%m-%d}（台北時間）",
+        "color": BRAND_COLOR,
         "fields": fields,
     }
     if with_chart:

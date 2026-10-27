@@ -19,9 +19,9 @@ def test_payload_handles_missing_metrics_and_no_personal_data():
             "accounts": 5}
     p = wr.build_payload(cur, prev, date(2026, 10, 26), date(2026, 11, 2))
     text = str(p)
-    assert "n/a" in text            # failed metric degrades, no crash
+    assert "無資料" in text          # failed metric degrades, no crash
     assert "🔺 20%" in text
-    assert "2026-10-26 to 2026-11-01" in text
+    assert "2026-10-26 至 2026-11-01" in text
 
 
 def test_due_window_is_monday_9am_taipei_with_catch_up():
@@ -71,3 +71,21 @@ def test_send_uploads_chart_as_multipart(monkeypatch):
     with_chart, text_only = calls[0][1], calls[1][1]
     assert "payload_json" in with_chart["data"] and with_chart["files"]["files[0]"][0] == "chart.png"
     assert "json" in text_only and "files" not in text_only
+
+
+def test_chart_font_is_bundled_and_covers_every_chart_label():
+    import os
+    from PIL import Image, ImageDraw, ImageFont
+
+    assert os.path.exists(wr._FONT_PATH)
+    font = ImageFont.truetype(wr._FONT_PATH, 40)
+
+    def render(ch):
+        img = Image.new("L", (80, 80), 0)
+        ImageDraw.Draw(img).text((10, 10), ch, font=font, fill=255)
+        return img.tobytes()
+
+    notdef = render("\ue000")                      # unmapped char -> .notdef box
+    labels = "".join(wr._DAYS) + "每日瀏覽量本週上週台北時間至"
+    missing = [c for c in set(labels) if render(c) == notdef]
+    assert not missing, f"chart font lacks glyphs for {missing}"
