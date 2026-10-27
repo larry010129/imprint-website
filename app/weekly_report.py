@@ -123,9 +123,11 @@ def _num(v, fmt="{:,}") -> str:
 # ── chart ────────────────────────────────────────────────────────────────
 
 CHART_W, CHART_H = 900, 380
-_BG, _FG, _MUTED, _GRID = (43, 45, 49), (242, 243, 245), (148, 155, 164), (70, 73, 79)
-_THIS = (88, 101, 242)
-_LAST = tuple(int(0.4 * t + 0.6 * b) for t, b in zip(_THIS, _BG))
+# Brand palette (public/css/base.css): paper #FDFCFA, ink #2B2320, mint-deep #52c4c8, gold #C4B49E
+_BG, _FG, _MUTED, _GRID = (253, 252, 250), (43, 35, 32), (138, 129, 123), (231, 224, 216)
+_THIS = (82, 196, 200)
+_LAST = (217, 205, 187)
+BRAND_COLOR = 0x52C4C8
 _DAYS = ("週一", "週二", "週三", "週四", "週五", "週六", "週日")
 _FONT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fonts",
                           "NotoSansTC-Medium-chart-subset.ttf")
@@ -231,7 +233,7 @@ def build_payload(cur_m: dict, prev_m: dict, start: date, end: date,
     embed = {
         "title": "📊 每週網站報告",
         "description": f"{start:%Y-%m-%d} 至 {last:%Y-%m-%d}（台北時間）",
-        "color": 0x5865F2,
+        "color": BRAND_COLOR,
         "fields": fields,
     }
     if with_chart:
