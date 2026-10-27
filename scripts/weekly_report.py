@@ -36,11 +36,12 @@ def run(argv: list[str]) -> None:
         print("weekly_report: DISCORD_REPORT_WEBHOOK_URL not set, skipping")
         return
     end = week_bounds(datetime.now(TAIPEI).date())[2]
-    payload = build_report(end)
+    payload, png = build_report(end)
     if dry:
         print(json.dumps(payload, ensure_ascii=False, indent=2))
+        print(f"chart: {'%d bytes' % len(png) if png else 'none'}")
         return
-    send(payload, url)
+    send(payload, url, png)
     print(f"weekly_report: sent report for {end - timedelta(days=7)} to {end - timedelta(days=1)}")
 
 
