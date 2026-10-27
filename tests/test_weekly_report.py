@@ -1,6 +1,6 @@
 from datetime import date
 
-from scripts import weekly_report as wr
+from app import weekly_report as wr
 
 
 def test_week_bounds_uses_last_full_monday_week():
@@ -22,3 +22,17 @@ def test_payload_handles_missing_metrics_and_no_personal_data():
     assert "n/a" in text            # failed metric degrades, no crash
     assert "+20% vs last wk" in text
     assert "2026-10-26 to 2026-11-01" in text
+
+
+def test_due_window_is_monday_9am_taipei_with_catch_up():
+    from datetime import datetime
+    tz = wr.TAIPEI
+    mon = date(2026, 11, 2)
+    assert wr.due_week_end(datetime(2026, 11, 2, 8, 59, tzinfo=tz)) is None
+    assert wr.due_week_end(datetime(2026, 11, 2, 9, 0, tzinfo=tz)) == mon
+    assert wr.due_week_end(datetime(2026, 11, 2, 20, 59, tzinfo=tz)) == mon   # catch-up
+    assert wr.due_week_end(datetime(2026, 11, 2, 21, 0, tzinfo=tz)) is None
+    assert wr.due_week_end(datetime(2026, 11, 3, 10, 0, tzinfo=tz)) is None   # Tuesday
+    # 01:00 UTC Monday == 09:00 Taipei
+    from datetime import timezone
+    assert wr.due_week_end(datetime(2026, 11, 2, 1, 0, tzinfo=timezone.utc)) == mon
