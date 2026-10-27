@@ -92,26 +92,105 @@ def collect(cur, start: date, end: date) -> dict:
     except Exception:
         log.exception("top_pages failed")
         out["top_pages"] = None
+    try:
+        cur.execute("select day, sum(views)::bigint v from site_visits_daily "
+                    "where day >= %s and day < %s group by day", (start, end))
+        by_day = {r["day"]: int(r["v"]) for r in cur.fetchall()}
+        out["daily_views"] = [by_day.get(start + timedelta(days=i), 0) for i in range(7)]
+    except Exception:
+        log.exception("daily_views failed")
+        out["daily_views"] = None
     return out
 
 
 def _delta(cur_v, prev_v) -> str:
+    """Arrow + change vs last week; empty when unchanged (keeps zero rows quiet)."""
     if cur_v is None or prev_v is None:
         return ""
     diff = cur_v - prev_v
     if diff == 0:
-        return " (no change)"
-    sign = "+" if diff > 0 else "-"
+        return ""
+    arrow = "🔺" if diff > 0 else "🔻"
     if prev_v:
-        return f" ({sign}{abs(diff / prev_v) * 100:.0f}% vs last wk)"
-    return f" ({sign}{abs(diff):g} vs last wk)"
+        return f"  {arrow} {abs(diff / prev_v) * 100:.0f}%"
+    return f"  {arrow} {abs(diff):g}"
 
 
 def _num(v, fmt="{:,}") -> str:
     return NO_DATA if v is None else fmt.format(v)
 
 
-def build_payload(cur_m: dict, prev_m: dict, start: date, end: date) -> dict:
+# ── chart ────────────────────────────────────────────────────────────────
+
+CHART_W, CHART_H = 900, 380
+_BG, _FG, _MUTED, _GRID = (43, 45, 49), (242, 243, 245), (148, 155, 164), (70, 73, 79)
+_THIS = (88, 101, 242)
+_LAST = tuple(int(0.4 * t + 0.6 * b) for t, b in zip(_THIS, _BG))
+_DAYS = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+
+
+def _font(size: int):
+    from PIL import ImageFont
+    try:
+        return ImageFont.load_default(size=size)
+    except TypeError:                    # Pillow < 10.1: fixed-size bitmap font
+        return ImageFont.load_default()
+
+
+def build_chart(this_daily: list[int], last_daily: list[int] | None,
+                start: date, end: date) -> bytes:
+    """PNG bar chart: page views per day, this week vs last week."""
+    import io
+    from PIL import Image, ImageDraw
+
+    last_daily = last_daily or [0] * 7
+    img = Image.new("RGB", (CHART_W, CHART_H), _BG)
+    d = ImageDraw.Draw(img)
+    last_day = end - timedelta(days=1)
+    d.text((30, 16), "Page views per day", font=_font(22), fill=_FG)
+    d.text((30, 50), f"{start:%Y-%m-%d} to {last_day:%Y-%m-%d} (Taipei time)",
+           font=_font(14), fill=_MUTED)
+    d.rectangle([CHART_W - 250, 22, CHART_W - 236, 36], fill=_THIS)
+    d.text((CHART_W - 230, 19), "This week", font=_font(13), fill=_FG)
+    d.rectangle([CHART_W - 140, 22, CHART_W - 126, 36], fill=_LAST)
+    d.text((CHART_W - 120, 19), "Last week", font=_font(13), fill=_FG)
+
+    x0, y0, x1, y1 = 60, 90, CHART_W - 30, CHART_H - 50
+    peak = max(max(this_daily, default=0), max(last_daily, default=0), 1)
+    base = 10 ** max(len(str(peak)) - 2, 0)
+    for mult in (1, 2, 5, 10, 20, 50):   # 4 gridline gaps of a round size
+        tick = base * mult
+        if tick * 4 >= peak:
+            break
+    top_val = tick * 4
+    for i in range(5):
+        g = tick * i
+        y = y1 - (y1 - y0) * g / top_val
+        d.line([(x0, y), (x1, y)], fill=_GRID, width=1)
+        d.text((14, y - 8), f"{g:,.0f}", font=_font(12), fill=_MUTED)
+    slot = (x1 - x0) / 7
+    bw = slot * 0.30
+    for i, name in enumerate(_DAYS):
+        cx = x0 + slot * (i + 0.5)
+        for off, v, col in ((-bw / 2 - 2, last_daily[i], _LAST), (bw / 2 + 2, this_daily[i], _THIS)):
+            top = y1 - (y1 - y0) * v / top_val
+            if v:
+                d.rounded_rectangle([cx + off - bw / 2, top, cx + off + bw / 2, y1],
+                                    radius=4, fill=col)
+        d.text((cx - 14, y1 + 8), name, font=_font(13), fill=_MUTED)
+        if this_daily[i]:
+            ty = y1 - (y1 - y0) * this_daily[i] / top_val - 18
+            d.text((cx + bw / 2 + 2 - 14, ty), f"{this_daily[i]:,}", font=_font(11), fill=_FG)
+    buf = io.BytesIO()
+    img.save(buf, "PNG")
+    return buf.getvalue()
+
+
+CHART_FILENAME = "chart.png"
+
+
+def build_payload(cur_m: dict, prev_m: dict, start: date, end: date,
+                  with_chart: bool = False) -> dict:
     last = end - timedelta(days=1)
 
     def pick(m, key, sub=None):
@@ -123,35 +202,43 @@ def build_payload(cur_m: dict, prev_m: dict, start: date, end: date) -> dict:
         return f"**{label}:** {_num(c, fmt)}{_delta(c, p)}"
 
     fields = [
-        {"name": "Traffic", "inline": False, "value": "\n".join([
+        {"name": "🌐 Traffic", "inline": False, "value": "\n".join([
             line("Page views", "visits", "views"),
             line("Unique visitors", "visits", "uniques")])},
-        {"name": "Sales", "inline": False, "value": "\n".join([
+        {"name": "🛒 Sales", "inline": False, "value": "\n".join([
             line("Orders", "orders", "count"),
             line("Revenue", "orders", "revenue", "NT${:,.0f}"),
             line("Coupons used", "coupons")])},
-        {"name": "Customers & enquiries", "inline": False, "value": "\n".join([
+        {"name": "👥 Customers & enquiries", "inline": False, "value": "\n".join([
             line("New accounts", "accounts"),
             line("Consultation bookings", "bookings"),
             line("Contact messages", "contacts"),
             line("Quote requests", "quotes")])},
-        {"name": "Security", "inline": False,
+        {"name": "🔒 Security", "inline": False,
          "value": line("Login lockouts", "lockouts")},
     ]
     top = cur_m.get("top_pages")
     if top:
-        fields.append({"name": "Top pages", "inline": False,
-                       "value": "\n".join(f"`{p}` - {v:,}" for p, v in top)[:1000]})
-    return {"embeds": [{
-        "title": "Weekly site report",
+        fields.append({"name": "🔥 Top pages", "inline": False, "value": "\n".join(
+            f"{i}. `{p}` - {v:,}" for i, (p, v) in enumerate(top, 1))[:1000]})
+    embed = {
+        "title": "📊 Weekly site report",
         "description": f"{start:%Y-%m-%d} to {last:%Y-%m-%d} (Taipei time)",
         "color": 0x5865F2,
         "fields": fields,
-    }]}
+    }
+    if with_chart:
+        embed["image"] = {"url": f"attachment://{CHART_FILENAME}"}
+    return {"embeds": [embed]}
 
 
-def send(payload: dict, url: str) -> None:
-    r = requests.post(url, json=payload, timeout=15)
+def send(payload: dict, url: str, chart_png: bytes | None = None) -> None:
+    if chart_png:
+        r = requests.post(
+            url, data={"payload_json": json.dumps(payload)},
+            files={"files[0]": (CHART_FILENAME, chart_png, "image/png")}, timeout=20)
+    else:
+        r = requests.post(url, json=payload, timeout=15)
     r.raise_for_status()
 
 
@@ -194,7 +281,8 @@ def ensure_weekly_report_schema(cur) -> None:
     cur.execute("alter table weekly_report_log enable row level security")
 
 
-def build_report(end: date) -> dict:
+def build_report(end: date) -> tuple[dict, bytes | None]:
+    """(Discord payload, chart PNG or None). A chart failure never blocks the text."""
     from app.database import get_connection
 
     start = end - timedelta(days=7)
@@ -206,7 +294,13 @@ def build_report(end: date) -> dict:
             prev_m = collect(cur, prev_start, start)
         finally:
             cur.execute("reset statement_timeout")
-    return build_payload(cur_m, prev_m, start, end)
+    png = None
+    if cur_m.get("daily_views") is not None:
+        try:
+            png = build_chart(cur_m["daily_views"], prev_m.get("daily_views"), start, end)
+        except Exception:
+            log.exception("chart failed; sending text only")
+    return build_payload(cur_m, prev_m, start, end, with_chart=png is not None), png
 
 
 def tick(now: datetime | None = None) -> bool:
@@ -224,7 +318,8 @@ def tick(now: datetime | None = None) -> bool:
         if cur.fetchone() is None:
             return False                      # another worker already has it
         try:
-            send(build_report(end), webhook_url())
+            payload, png = build_report(end)
+            send(payload, webhook_url(), png)
         except Exception:
             cur.execute("delete from weekly_report_log where week_end = %s", (end,))
             raise
