@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from copy import deepcopy
+from html import escape as html_escape
 from functools import lru_cache
 from pathlib import Path
 from time import monotonic
@@ -772,6 +774,75 @@ def register_pages(app: FastAPI) -> None:
     @app.get("/favicon.svg", include_in_schema=False)
     async def favicon() -> FileResponse:
         return FileResponse(settings.site_root / "favicon.svg")
+
+    @app.get("/ua", include_in_schema=False)
+    async def browser_check(request: Request) -> HTMLResponse:
+        """Show this browser's engine/version (in-store kiosk diagnostics).
+
+        Version comes from the User-Agent header server-side, so it renders even
+        on engines too old to run the site's JS. The inline feature list is ES5.
+        """
+        ua = request.headers.get("user-agent", "")
+        engines = [
+            (name, m.group(1))
+            for name, rx in (
+                ("Chrome / Chromium", r"(?:Chrome|Chromium|CriOS)/([\d.]+)"),
+                ("Edge", r"Edg(?:e|A|iOS)?/([\d.]+)"),
+                ("Electron", r"Electron/([\d.]+)"),
+                ("Safari", r"Version/([\d.]+).*Safari/"),
+                ("Firefox", r"Firefox/([\d.]+)"),
+                ("Internet Explorer", r"(?:MSIE |Trident/.*rv:)([\d.]+)"),
+            )
+            if (m := re.search(rx, ua))
+        ]
+        rows = "".join(
+            f"<tr><th>{html_escape(n)}</th><td>{html_escape(v)}</td></tr>" for n, v in engines
+        ) or "<tr><th>Engine</th><td>unknown</td></tr>"
+        page = f"""<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow"><title>Browser check</title>
+<style>
+body{{font:20px/1.5 sans-serif;margin:24px;color:#17231f;background:#fff}}
+h1{{font-size:28px;margin:0 0 16px}}table{{border-collapse:collapse;width:100%;margin-bottom:24px}}
+th,td{{border:1px solid #c7ddd2;padding:8px 12px;text-align:left;vertical-align:top}}
+th{{width:40%;background:#f1f7f4}}.ua{{word-break:break-all;font-size:16px}}
+.ok{{color:#11713b}}.no{{color:#b3261e;font-weight:bold}}
+</style></head><body>
+<h1>瀏覽器版本檢查 / Browser check</h1>
+<table>{rows}<tr><th>User-Agent</th><td class="ua">{html_escape(ua) or "(empty)"}</td></tr>
+<tr><th>Screen</th><td id="scr">JavaScript did not run</td></tr></table>
+<h1>功能支援 / Features</h1><table id="feat"><tr><td>JavaScript did not run</td></tr></table>
+<script>
+(function () {{
+  function syntax(src) {{ try {{ new Function(src); return true; }} catch (e) {{ return false; }} }}
+  function css(p, v) {{ try {{ return !!(window.CSS && CSS.supports && CSS.supports(p, v)); }} catch (e) {{ return false; }} }}
+  var d = document.createElement('dialog');
+  var checks = [
+    ['async / await (Chrome 55)', syntax('async function f(){{await 0}}')],
+    ['?. optional chaining (Chrome 80)', syntax('var a={{}};a?.b')],
+    ['flex gap (Chrome 84)', css('gap', '1px')],
+    ['inset (Chrome 87)', css('inset', '0')],
+    ['aspect-ratio (Chrome 88)', css('aspect-ratio', '1 / 1')],
+    ['structuredClone (Chrome 98)', typeof window.structuredClone === 'function'],
+    [':has() (Chrome 105)', css('selector(:has(a))', '') || (function () {{ try {{ document.querySelector(':has(a)'); return true; }} catch (e) {{ return false; }} }})()],
+    ['dvh units (Chrome 108)', css('height', '1dvh')],
+    ['color-mix() (Chrome 111)', css('color', 'color-mix(in srgb, red 50%, blue)')],
+    ['&lt;dialog&gt; showModal', typeof d.showModal === 'function']
+  ];
+  var out = '';
+  for (var i = 0; i < checks.length; i++) {{
+    out += '<tr><th>' + checks[i][0] + '</th><td class="' + (checks[i][1] ? 'ok">\\u2713 yes' : 'no">\\u2717 no') + '</td></tr>';
+  }}
+  document.getElementById('feat').innerHTML = out;
+  document.getElementById('scr').textContent = screen.width + ' x ' + screen.height +
+    ' (viewport ' + window.innerWidth + ' x ' + window.innerHeight + ', DPR ' + (window.devicePixelRatio || 1) + ')';
+}})();
+</script></body></html>"""
+        return HTMLResponse(
+            page,
+            headers={"Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow"},
+        )
 
     @app.get("/robots.txt", include_in_schema=False)
     async def robots(request: Request) -> Response:

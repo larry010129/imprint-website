@@ -1,0 +1,4 @@
+{# Old engines (kiosk / old iPads) get public/js/legacy-polyfills.js before any
+   other script. Object.fromEntries = Chrome 73 / Safari 12.1; ResizeObserver =
+   Safari 13.1. Modern browsers skip the request entirely. #}
+<script>if(!(Object.fromEntries&&window.ResizeObserver))document.write('<script src="/static/js/legacy-polyfills.js?v=1"><\/script>');</script>

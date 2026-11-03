@@ -28,6 +28,7 @@
 {% set defer_pages_css = is_series_overview or is_series_detail or is_jewelry_hub
   or _cp in ['about', 'stories', 'faq'] %}
 <meta charset="utf-8">
+{% include "partials/legacy-polyfills.html" %}
 <script>
 (function () {
   if (!("serviceWorker" in navigator)) return;

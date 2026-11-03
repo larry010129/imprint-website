@@ -334,10 +334,17 @@ function productHasAdminVariants(product) {
   return !!(weights && Object.keys(weights).length > 0);
 }
 
+/* structuredClone is Chrome 98+; the in-store kiosk's older engine lacks it.
+   These are plain number tables, so a JSON round-trip is an exact copy. */
+function cloneData(value) {
+  if (typeof structuredClone === 'function') return structuredClone(value);
+  return value == null ? value : JSON.parse(JSON.stringify(value));
+}
+
 function necklaceTypeLengthWeights(chainType) {
   const key = chainType || 'douyuan';
   const table = chainLengthWeightDefaults[key] || chainLengthWeightDefaults.douyuan;
-  return table ? structuredClone(table) : {};
+  return table ? cloneData(table) : {};
 }
 
 function lengthWeightsHasRealWax(lw) {
@@ -365,10 +372,10 @@ function mergeProductWeights(product, staticProduct, category) {
   if (category === 'chain') {
     const adminLengths = product.lengthWeights;
     if (lengthWeightsHasRealWax(adminLengths)) {
-      product.lengthWeights = structuredClone(adminLengths);
+      product.lengthWeights = cloneData(adminLengths);
     } else {
       // Excel / 項鍊類型標準表 — empty admin table is unset, not the only table.
-      product.lengthWeights = structuredClone(
+      product.lengthWeights = cloneData(
         necklaceTypeLengthWeights(product.chainType || 'douyuan')
       );
     }
@@ -383,7 +390,7 @@ function mergeProductWeights(product, staticProduct, category) {
     product.weights[gold] = { ...carats };
   }
   if (category !== 'chain') {
-    product.lengthWeights = structuredClone(staticProduct.lengthWeights || {});
+    product.lengthWeights = cloneData(staticProduct.lengthWeights || {});
   }
   if (Array.isArray(staticProduct.golds) && staticProduct.golds.length) {
     product.golds = [...staticProduct.golds];
