@@ -568,6 +568,25 @@
     return (wrap && wrap.getAttribute('data-girdle-shape')) || 'round';
   }
 
+  // Pin the engraving text to the girdle band of the photo as actually drawn.
+  // Some kiosk engines leave the photo at its natural 16:9 at the top of a
+  // taller preview box, so the box-relative CSS top:49% lands on the photo's
+  // bottom edge. Measure the photo and place the text on its band instead.
+  var GIRDLE_BAND_CENTER = 0.49;
+
+  function alignPreviewText(previewEl) {
+    var wrap = previewEl && previewEl.parentElement;
+    var img = wrap && wrap.querySelector('img.cfg-engrave-gem');
+    if (!img) return;
+    var imgH = img.offsetHeight;
+    var boxH = wrap.clientHeight;
+    if (!imgH || !boxH || Math.abs(boxH - imgH) < 2) {
+      previewEl.style.top = '';
+      return;
+    }
+    previewEl.style.top = Math.round(img.offsetTop + imgH * GIRDLE_BAND_CENTER) + 'px';
+  }
+
   function useRealGirdlePreview(previewEl, shapeId, colorId) {
     var wrap = previewEl && previewEl.parentElement;
     if (!wrap) return;
@@ -585,7 +604,9 @@
       if (svg) svg.replaceWith(img);
       else wrap.insertBefore(img, previewEl);
     }
+    img.addEventListener('load', function () { alignPreviewText(previewEl); });
     setGirdlePreview(previewEl, shapeId || 'round', colorId || 'white');
+    alignPreviewText(previewEl);
   }
 
   function normalizeEmblemButtons(root) {
@@ -616,6 +637,9 @@
     var allowChinese = !!opts.allowChinese;
     normalizeEmblemButtons(emblemsRoot);
     useRealGirdlePreview(previewEl, previewShape, previewColor);
+    if (previewEl) {
+      window.addEventListener('resize', function () { alignPreviewText(previewEl); });
+    }
     var lastValidHtml = input.innerHTML;
     var rangeStore = { range: null };
 
@@ -643,6 +667,7 @@
       trimOverflow(input, max);
       if (countEl) countEl.textContent = slots(input) + ' / ' + max;
       updatePreview(input, previewEl);
+      alignPreviewText(previewEl);
       if (typeof syncActionState === 'function') syncActionState();
       if (typeof opts.onChange === 'function') opts.onChange(readable(input));
     }

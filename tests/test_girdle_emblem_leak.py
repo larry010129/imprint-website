@@ -87,7 +87,7 @@ def test_emblem_imgs_have_intrinsic_size_fallback():
     src = GIRDLE_JS.read_text(encoding="utf-8")
     assert 'width="18" height="18"' in src
     shop = SHOP_JS.read_text(encoding="utf-8")
-    assert "girdle-engrave.js?v=31" in shop
+    assert "girdle-engrave.js?v=32" in shop
     hidden_clear = shop.split("function updateEngravingSteps()", 1)[1].split("function closeAllShopDropdowns", 1)[0]
     assert "shop-girdle-engrave-preview" in hidden_clear
     assert "preview.innerHTML = ''" in hidden_clear
@@ -105,9 +105,9 @@ def test_girdle_typed_text_is_not_alnum_gated():
     assert "sanitizeTextNodes(input, false)" in src
     assert "stripCjk" in src
     shop = SHOP_JS.read_text(encoding="utf-8")
-    assert "girdle-engrave.js?v=31" in shop
+    assert "girdle-engrave.js?v=32" in shop
     registry = (ROOT / "content" / "site" / "page-registry.json").read_text(encoding="utf-8")
-    assert "girdle-engrave.js?v=31" in registry
+    assert "girdle-engrave.js?v=32" in registry
 
 
 def test_girdle_cjk_only_when_allow_chinese():
