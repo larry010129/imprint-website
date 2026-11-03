@@ -104,3 +104,4 @@ scripts/_inspect-out/
 *.tsbuildinfo
 frontend/node_modules/.tmp/
 .venv/ 
+_hits.txt

@@ -7,8 +7,8 @@ window.botpress.init({
     botName: "銘印鑽石",
     website: {},
     email: {
-      title: "sales1@imprintdiamond.com",
-      link: "sales1@imprintdiamond.com"
+      title: "sales1@imprint-diamond.com",
+      link: "mailto:sales1@imprint-diamond.com"
     },
     termsOfService: {},
     privacyPolicy: {},

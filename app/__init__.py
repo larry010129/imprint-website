@@ -505,6 +505,23 @@ def create_app() -> FastAPI:
             log.exception("record_visit failed")
         return response
 
+    @application.middleware("http")
+    async def onrender_to_public_host(request, call_next):
+        """301 *.onrender.com page requests to PUBLIC_SITE_URL (outermost: no visit counted)."""
+        from app.host_redirect import onrender_redirect_location
+
+        location = onrender_redirect_location(
+            request.headers.get("host"),
+            request.method,
+            request.url.path,
+            request.url.query,
+        )
+        if location is not None:
+            from fastapi.responses import RedirectResponse
+
+            return RedirectResponse(url=location, status_code=301)
+        return await call_next(request)
+
     # Legacy + versioned JSON mounts (public HTML is Jinja/HTMX, not JSON clients).
     application.include_router(api_controller.router, prefix="/api")
     application.include_router(auth_controller.router, prefix="/api")
