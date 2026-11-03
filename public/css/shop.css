@@ -4684,19 +4684,9 @@ body.app-shell:not(.dark-theme) .shop-fit {
   }
 }
 
-/* Vertical (portrait) tablets — the preview is already full-bleed width here,
-   so "2x size" means taller, not wider: double the preview's height and let
-   the image cover-crop into it instead of just shrinking to fit. */
+/* Vertical (portrait) tablets — the preview keeps the photo's natural wide
+   (16:9) shape on every browser, matching what the in-store kiosk shows. */
 @media (min-width: 481px) and (max-width: 1024px) and (orientation: portrait) {
-  .shop-fit .shop-girdle-engrave .cfg-engrave-preview {
-    aspect-ratio: 640 / 720;
-  }
-
-  .shop-fit .shop-girdle-engrave .cfg-engrave-gem {
-    height: 100%;
-    object-fit: cover;
-  }
-
   /* Engraving text/symbols overlay was capped at 18px on every screen size,
      so it read as tiny against the tablet's full-bleed diamond photo — 3x it. */
   .shop-fit .shop-girdle-engrave .cfg-engrave-preview-text {
