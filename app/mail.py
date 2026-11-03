@@ -16,7 +16,7 @@ import urllib.request
 log = logging.getLogger(__name__)
 
 _RESEND_URL = "https://api.resend.com/emails"
-DEFAULT_FROM = "nonreply@imprintdiamond.com"
+DEFAULT_FROM = "nonreply@imprint-diamond.com"
 PASSWORD_RESET_SUBJECT = "重設銘印鑽石帳戶密碼"
 
 

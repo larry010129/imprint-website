@@ -19,7 +19,7 @@ See **`docs/ARCHITECTURE.md`** for directory layout.
 ```bash
 python -m venv .venv
 .venv\Scripts\activate          # Windows
-pip install -r requirements.txt
+pip install -r requirements-dev.txt   # app deps + pytest
 cp .env.example .env            # DATABASE_URL, JWT_SECRET, …
 dev.bat                         # or: npm run dev
 ```

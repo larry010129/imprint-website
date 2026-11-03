@@ -1,4 +1,3 @@
-# FastAPI API only (JSON + /static + admin.html).
-# Public HTML site is imprint-web (Next) from render.yaml — do not point the
-# marketing domain at this process alone or every page route will 404.
+# Sole public origin: FastAPI + Jinja SSR serves the HTML site, /api and
+# /static (single Render service imprint-api in render.yaml).
 web: bash scripts/render-start.sh
