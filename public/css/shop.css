@@ -4688,33 +4688,13 @@ body.app-shell:not(.dark-theme) .shop-fit {
    so "2x size" means taller, not wider: double the preview's height and let
    the image cover-crop into it instead of just shrinking to fit. */
 @media (min-width: 481px) and (max-width: 1024px) and (orientation: portrait) {
-  /* Padding-box sizing instead of aspect-ratio + height:100%: older kiosk
-     engines either drop aspect-ratio or never resolve the img's percentage
-     height against it, leaving the photo at its natural 16:9 at the top of a
-     taller box while the text (top:49% of the box) lands on the photo's
-     bottom edge. Pinning the photo absolutely keeps photo and text sharing
-     the same box on every engine. */
   .shop-fit .shop-girdle-engrave .cfg-engrave-preview {
-    height: 0;
-    padding-top: 112.5%; /* 720 / 640 */
+    aspect-ratio: 640 / 720;
   }
 
-  .shop-fit .shop-girdle-engrave .cfg-engrave-gem-picture,
   .shop-fit .shop-girdle-engrave .cfg-engrave-gem {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
     height: 100%;
-  }
-
-  .shop-fit .shop-girdle-engrave .cfg-engrave-gem {
     object-fit: cover;
-    object-position: 50% 50%;
-  }
-
-  .shop-fit .shop-girdle-engrave .cfg-engrave-gem-picture .cfg-engrave-gem {
-    position: static;
   }
 
   /* Engraving text/symbols overlay was capped at 18px on every screen size,
