@@ -2222,3 +2222,33 @@
   }
 }
 
+
+/* Older kiosk / tablet browsers (Chrome < 88, Safari < 15) ignore aspect-ratio
+   and inset. These boxes hold absolutely positioned photos, so they collapsed
+   to 0 px there and the photos vanished, leaving blank gaps. A ::before spacer
+   (padding % = the box's own width) keeps the same ratio; modern browsers skip
+   both blocks. */
+@supports not (aspect-ratio: 1 / 1) {
+  .series-page-media::before,
+  .pd-main::before,
+  .pd-thumb::before { content: ""; display: block; }
+  .series-page-media::before,
+  .pd-main::before { padding-top: 77.5%; }   /* 4 / 3.1 */
+  .pd-thumb::before { padding-top: 100%; }
+  .dna-page .page-hero-media::before { content: ""; display: block; padding-top: 56.25%; }  /* 16 / 9 */
+  @media (max-width: 900px) {
+    .page-hero-media::before { content: ""; display: block; padding-top: 62.5%; }  /* 16 / 10 */
+  }
+}
+@supports not (inset: 0) {
+  .page-hero-media picture,
+  .page-hero-media img,
+  .page-hero-media iframe,
+  .series-page-media picture,
+  .series-page-media__icon,
+  .pd-main-fallback,
+  .pd-main img,
+  .pd-thumb-fallback,
+  .pd-thumb picture,
+  .series-media picture { top: 0; right: 0; bottom: 0; left: 0; }
+}
