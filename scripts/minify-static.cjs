@@ -19,9 +19,16 @@ function listFiles(dir, ext) {
     .map((e) => path.join(dir, e.name));
 }
 
+/* CSS target = oldest browsers we still serve (in-store kiosk, old iPads).
+   Without it esbuild merges top/right/bottom/left fallbacks into `inset`,
+   which those browsers ignore; with it, `inset` is lowered to longhands. */
+const CSS_TARGET = ['chrome80', 'safari13'];
+
 async function minifyFile(file, loader) {
   const src = fs.readFileSync(file, 'utf8');
-  const { code, warnings } = await esbuild.transform(src, { loader, minify: true });
+  const opts = { loader, minify: true };
+  if (loader === 'css') opts.target = CSS_TARGET;
+  const { code, warnings } = await esbuild.transform(src, opts);
   for (const w of warnings) console.warn(`[minify-static] ${path.basename(file)}: ${w.text}`);
   fs.writeFileSync(file, code);
   return { before: Buffer.byteLength(src), after: Buffer.byteLength(code) };

@@ -1176,8 +1176,15 @@ body.shop-terms-blocked .shop-page {
 
 .shop-terms-dialog[open] {
   position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   inset: 0;
   z-index: 1000;
+  /* Parent .shop-calculator-wrap is visibility:hidden during the gate; old
+     browsers lack the UA `dialog:modal { visibility: visible }` rule. */
+  visibility: visible;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -1380,6 +1387,10 @@ body.shop-terms-blocked .shop-page {
 
 @media (max-width: 639px), (max-height: 540px) {
   .shop-terms-dialog[open] {
+    top: max(0.5rem, env(safe-area-inset-top, 0px));
+    right: max(0.5rem, env(safe-area-inset-right, 0px));
+    bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+    left: max(0.5rem, env(safe-area-inset-left, 0px));
     inset: max(0.5rem, env(safe-area-inset-top, 0px))
       max(0.5rem, env(safe-area-inset-right, 0px))
       max(0.5rem, env(safe-area-inset-bottom, 0px))

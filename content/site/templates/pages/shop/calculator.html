@@ -15,8 +15,14 @@
   .shop-terms-dialog:not([open]) { display: none; }
   .shop-terms-dialog[open] {
     position: fixed;
+    top: 0; right: 0; bottom: 0; left: 0;
     inset: 0;
     z-index: 1000;
+    /* The dialog sits inside .shop-calculator-wrap, which is visibility:hidden
+       while the gate is up. New browsers' UA sheet makes :modal visible; old
+       kiosk browsers (Chrome < ~88) don't, so the gate rendered as a blank
+       white backdrop with nothing to tap. */
+    visibility: visible;
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
@@ -55,6 +61,10 @@
   .shop-terms-btn--primary { background: #17231f; color: #fff; }
   @media (max-width: 639px), (max-height: 540px) {
     .shop-terms-dialog[open] {
+      top: max(0.5rem, env(safe-area-inset-top, 0px));
+      right: max(0.5rem, env(safe-area-inset-right, 0px));
+      bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+      left: max(0.5rem, env(safe-area-inset-left, 0px));
       inset: max(0.5rem, env(safe-area-inset-top, 0px))
         max(0.5rem, env(safe-area-inset-right, 0px))
         max(0.5rem, env(safe-area-inset-bottom, 0px))
@@ -196,7 +206,7 @@
     object-fit: contain;
   }
 </style>
-<link rel="stylesheet" href="/static/css/shop.css?v=6.75">
+<link rel="stylesheet" href="/static/css/shop.css?v=6.76">
 <script>
 /* Old Safari (<14.1) has no flexbox gap: flag it so shop.css can add margins. ES5 on purpose. */
 (function () {
