@@ -39,7 +39,7 @@ def test_home_defers_htmx_gtag_and_extras(client):
     assert "https://www.googletagmanager.com/gtm.js?id=" in html
     assert "G-J5QPK34V89" not in html
     assert "gtagMinDelayMs" not in html
-    assert "gtag/js" not in html
+    _assert_gtag_only_for_line_ads(html)
     assert "AW-18310006207" not in html
 
     assert "HOME_WALL_MS = 10000" in html
@@ -64,6 +64,13 @@ PUBLIC_GTM_TEMPLATES = (
 )
 
 
+def _assert_gtag_only_for_line_ads(html: str) -> None:
+    # gtag.js may load only for the Google Ads LINE-click conversion block.
+    if "gtag/js" in html:
+        assert "Google Ads: LINE click conversion" in html
+        assert html.count("gtag/js") == 1
+
+
 def _assert_deferred_gtm(html: str) -> None:
     assert "GTM-KD4FZ458" in html
     assert html.count("GTM-KD4FZ458") == 2
@@ -76,7 +83,7 @@ def _assert_deferred_gtm(html: str) -> None:
     assert '<script src="https://www.googletagmanager.com/gtm.js' not in html
     assert "G-J5QPK34V89" not in html
     assert "gtagMinDelayMs" not in html
-    assert "gtag/js" not in html
+    _assert_gtag_only_for_line_ads(html)
     assert "AW-18310006207" not in html
     assert "GTM-" in html
     assert html.count("GTM-") == html.count("GTM-KD4FZ458")
@@ -94,8 +101,12 @@ def test_public_layouts_share_one_deferred_gtm_snippet():
     assert "ad.doubleclick.net" not in head
     assert "googleads.g.doubleclick.net" not in head
     assert "G-J5QPK34V89" not in head
-    assert "gtag/js" not in head
     assert "AW-18310006207" not in head
+    # gtag.js only inside the config-gated Google Ads LINE conversion block.
+    ads_start = head.index("{% if gads_id and gads_line_label %}")
+    ads_end = head.index("{% endif %}", ads_start)
+    assert head.count("gtag/js") == 1
+    assert ads_start < head.index("gtag/js") < ads_end
 
     for rel in PUBLIC_GTM_TEMPLATES:
         text = (ROOT / rel).read_text(encoding="utf-8")
@@ -112,13 +123,14 @@ def test_home_auth_quote_and_share_defer_gtm(client):
         _assert_deferred_gtm(resp.text)
 
 
-def test_csp_still_omits_ads_collect_hosts():
+def test_csp_allows_only_requested_ads_hosts():
+    # Google Ads conversion hosts are allowed (in-house Ads, #58); the
+    # ad.doubleclick.net collect host and a bare doubleclick wildcard stay out.
     from app import HTML_CONTENT_SECURITY_POLICY
 
     assert "ad.doubleclick.net" not in HTML_CONTENT_SECURITY_POLICY
-    assert "googleads.g.doubleclick.net" not in HTML_CONTENT_SECURITY_POLICY
-    assert "doubleclick.net" not in HTML_CONTENT_SECURITY_POLICY
-    assert "googleads" not in HTML_CONTENT_SECURITY_POLICY
+    assert "https://*.doubleclick.net" not in HTML_CONTENT_SECURITY_POLICY
+    assert "googleads.g.doubleclick.net" in HTML_CONTENT_SECURITY_POLICY
 
 
 def test_ringflip_split_out_of_main():
@@ -153,3 +165,32 @@ def test_shop_third_party_and_quote_work_is_deferred_and_deduplicated():
     assert "quoteCache" in shop
     assert "activeQuoteController?.abort()" in shop
     assert "JSON.stringify(buildQuotePayload())" in shop
+
+
+def _render_gtm_head(gads_id: str = "", label: str = "") -> str:
+    from jinja2 import Environment
+
+    src = (ROOT / "content/site/templates/partials/gtm-head.html").read_text(
+        encoding="utf-8"
+    )
+    src = src.replace('{%- set gads_id = "" -%}', f'{{%- set gads_id = "{gads_id}" -%}}')
+    src = src.replace(
+        '{%- set gads_line_label = "" -%}', f'{{%- set gads_line_label = "{label}" -%}}'
+    )
+    return Environment(autoescape=True).from_string(src).render()
+
+
+def test_line_ads_conversion_off_until_configured():
+    html = _render_gtm_head()
+    assert "gtag/js" not in html
+    assert "send_to" not in html
+    assert "GTM-KD4FZ458" in html
+
+
+def test_line_ads_conversion_fires_on_line_links_when_configured():
+    html = _render_gtm_head("AW-111", "LbL")
+    assert "Google Ads: LINE click conversion" in html
+    assert '"AW-111"' in html and '"LbL"' in html
+    assert "gtag('event', 'conversion'" in html
+    assert "lin.ee" in html and "line.me" in html
+    assert html.count("gtag/js") == 1

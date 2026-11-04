@@ -1,3 +1,43 @@
+{#- Google Ads conversion for LINE clicks. Fill both values from Google Ads
+    (Goals → Conversions → the LINE conversion → Tag setup). Empty = off. -#}
+{%- set gads_id = "" -%}{#- e.g. AW-123456789 -#}
+{%- set gads_line_label = "" -%}{#- e.g. AbC1dEfGhIjK -#}
+{% if gads_id and gads_line_label %}
+<!-- Google Ads: LINE click conversion -->
+<script>
+(function () {
+  var ADS_ID = {{ gads_id|tojson }};
+  var SEND_TO = ADS_ID + '/' + {{ gads_line_label|tojson }};
+  window.dataLayer = window.dataLayer || [];
+  window.gtag = window.gtag || function () { window.dataLayer.push(arguments); };
+  gtag('js', new Date());
+  gtag('config', ADS_ID);
+  function loadGtag() {
+    if (window.__gadsInjected) return;
+    window.__gadsInjected = true;
+    var j = document.createElement('script');
+    j.async = true;
+    j.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(ADS_ID);
+    var f = document.getElementsByTagName('script')[0];
+    f.parentNode.insertBefore(j, f);
+  }
+  function isLineLink(a) {
+    var h = (a.hostname || '').toLowerCase();
+    return h === 'lin.ee' || h === 'line.me' || /\.line\.me$/.test(h);
+  }
+  document.addEventListener('click', function (e) {
+    var el = e.target;
+    while (el && el.nodeType === 1 && el.tagName !== 'A') el = el.parentNode;
+    if (!el || el.tagName !== 'A' || !isLineLink(el)) return;
+    loadGtag();
+    gtag('event', 'conversion', { send_to: SEND_TO, transport_type: 'beacon' });
+  }, true);
+  if (document.readyState === 'complete') loadGtag();
+  else window.addEventListener('load', loadGtag);
+})();
+</script>
+<!-- End Google Ads -->
+{% endif %}
 <!-- Google Tag Manager -->
 <script>
 (function () {
