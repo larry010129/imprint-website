@@ -44,3 +44,20 @@ def test_html_csp_allows_recaptcha_v2_hosts():
     assert "https://www.gstatic.com" in connect_src
     assert "https://www.google.com" in frame_src
     assert "https://recaptcha.google.com" in frame_src
+
+
+def test_html_csp_allows_google_ads_conversion_hosts():
+    script_src = _directive("script-src")
+    img_src = _directive("img-src")
+    connect_src = _directive("connect-src")
+    frame_src = _directive("frame-src")
+    for host in ("https://www.googleadservices.com", "https://googleads.g.doubleclick.net"):
+        assert host in script_src
+        assert host in img_src
+        assert host in connect_src
+    assert "https://*.g.doubleclick.net" in img_src
+    assert "https://pagead2.googlesyndication.com" in connect_src
+    assert "https://td.doubleclick.net" in frame_src
+    # Existing sources are kept.
+    assert "https://www.googletagmanager.com" in script_src
+    assert "https://www.youtube.com" in frame_src
