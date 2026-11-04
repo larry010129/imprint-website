@@ -137,6 +137,12 @@ async def contact_submit(request: Request) -> HTMLResponse:
         )
     except Exception:
         pass
+    try:
+        from app.discord_notify import notify_contact
+
+        notify_contact(name=name, phone=phone, message=message)
+    except Exception:
+        log.exception("contact discord notify failed")
     return html(request, "form_msg.html", {"ok": True, "message": "已收到您的留言，顧問將盡快聯繫。"})
 
 
