@@ -162,16 +162,21 @@
   height: 30px;
 }
 
-.imprint-contact-fab__item span {
+.imprint-contact-fab__name {
   position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
+  right: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #fff;
+  color: #2b2320;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
   white-space: nowrap;
-  border: 0;
+  box-shadow: var(--fab-shadow);
 }
 
 .imprint-contact-fab__item--chat {

@@ -70,7 +70,7 @@
   function setOpen(open) {
     root.classList.toggle('is-open', open);
     toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-    toggle.setAttribute('aria-label', open ? '聯絡選單已展開' : '開啟聯絡選單');
+    toggle.setAttribute('aria-label', open ? '訊息選單已展開' : '開啟訊息選單');
     menu.hidden = !open;
     menu.setAttribute('aria-hidden', open ? 'false' : 'true');
   }
