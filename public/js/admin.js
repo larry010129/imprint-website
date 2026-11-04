@@ -433,6 +433,7 @@
 
     /* ---------- 諮詢名單（合併聯絡表單＋線上估價） ---------- */
     var _leadsByKey = {};
+    var _pendingLeadKey = null;
 
     function leadDetailRow(label, value) {
       if (value == null || value === '') return '';
@@ -513,6 +514,24 @@
       }
     }
 
+    /* Notification bell / deep links: open one lead's 詳情 once its row is loaded. */
+    function consumePendingLead() {
+      var key = _pendingLeadKey;
+      _pendingLeadKey = null;
+      if (key && _leadsByKey[key]) openLeadDetail(key);
+    }
+
+    window.AdminLeadsPanel = {
+      focus: function (key) {
+        if (_leadsByKey[key]) {
+          openLeadDetail(key);
+          return;
+        }
+        _pendingLeadKey = key;
+        if (leadsLoaded) loadLeads(true, true);
+      }
+    };
+
     function loadLeads(silent, force) {
       var tbody = document.getElementById('leadsTableBody');
       if (!tbody) return;
@@ -528,6 +547,7 @@
         tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--ink-faint);">' +
           escapeHtml(msg || '載入失敗，請重新整理頁面。') + '</td></tr>';
         leadsLoaded = false;
+        _pendingLeadKey = null;
       }
 
       function attr(s) {
@@ -649,6 +669,7 @@
                 if (window.showToast) window.showToast('已刪除諮詢紀錄', 'success');
                 loadLeads(true, true);
                 loadDashboardStats();
+                if (window.Admin1Shell) window.Admin1Shell.refreshNotifications();
               });
             });
           });
@@ -676,6 +697,7 @@
                 if (window.showToast) window.showToast('已標記為垃圾並移除' + note, 'success');
                 loadLeads(true, true);
                 loadDashboardStats();
+                if (window.Admin1Shell) window.Admin1Shell.refreshNotifications();
               });
             });
           });
@@ -696,9 +718,11 @@
                 }
                 loadLeads(true, true);
                 loadDashboardStats();
+                if (window.Admin1Shell) window.Admin1Shell.refreshNotifications();
               });
             });
           });
+          consumePendingLead();
         } catch (err) {
           console.error('[admin] leads render', err);
           fail('畫面渲染失敗，請重新整理。');

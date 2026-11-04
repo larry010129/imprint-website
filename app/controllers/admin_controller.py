@@ -284,6 +284,118 @@ def dashboard_export(
     )
 
 
+@router.get("/notify-summary")
+def notify_summary_get(request: Request) -> dict:
+    _require_admin(request)
+
+    with get_connection() as conn, conn.cursor() as cur:
+        # 1. Total counts of pending items
+        cur.execute(
+            """
+            select
+              (select count(*)::int from contact_messages where status = 'new') as pending_messages,
+              (select count(*)::int from quote_requests where status = 'pending') as pending_quotes,
+              (select count(*)::int from orders where status in ('received', 'order_confirming', 'dna_lab', 'deposit_confirmed')) as pending_orders
+            """
+        )
+        row = cur.fetchone() or {}
+        msg_cnt = int(row.get("pending_messages") or 0)
+        quote_cnt = int(row.get("pending_quotes") or 0)
+        order_cnt = int(row.get("pending_orders") or 0)
+        total_cnt = msg_cnt + quote_cnt + order_cnt
+
+        # 2. Fetch top 8 pending items across all 3 tables (cheap indexed/limited fetch)
+        cur.execute(
+            """
+            select id, name, created_at
+            from contact_messages
+            where status = 'new'
+            order by created_at desc
+            limit 8
+            """
+        )
+        recent_messages = cur.fetchall() or []
+
+        cur.execute(
+            """
+            select id, name, created_at
+            from quote_requests
+            where status = 'pending'
+            order by created_at desc
+            limit 8
+            """
+        )
+        recent_quotes = cur.fetchall() or []
+
+        cur.execute(
+            """
+            select o.id, o.order_number, o.created_at, coalesce(oc.customer_name, '') as customer_name
+            from orders o
+            left join order_contacts oc on oc.order_id = o.id
+            where o.status in ('received', 'order_confirming', 'dna_lab', 'deposit_confirmed')
+            order by o.created_at desc
+            limit 8
+            """
+        )
+        recent_orders = cur.fetchall() or []
+
+    candidates = []
+    for m in recent_messages:
+        created = m.get("created_at")
+        candidates.append({
+            "type": "message",
+            "id": str(m["id"]) if m.get("id") is not None else "",
+            "order_number": None,
+            "name": str(m.get("name") or ""),
+            "created_at": created.isoformat() if hasattr(created, "isoformat") else (str(created) if created else ""),
+            "_sort_at": created,
+        })
+
+    for q in recent_quotes:
+        created = q.get("created_at")
+        candidates.append({
+            "type": "quote",
+            "id": str(q["id"]) if q.get("id") is not None else "",
+            "order_number": None,
+            "name": str(q.get("name") or ""),
+            "created_at": created.isoformat() if hasattr(created, "isoformat") else (str(created) if created else ""),
+            "_sort_at": created,
+        })
+
+    for o in recent_orders:
+        created = o.get("created_at")
+        candidates.append({
+            "type": "order",
+            "id": str(o["id"]) if o.get("id") is not None else "",
+            "order_number": str(o.get("order_number")) if o.get("order_number") is not None else None,
+            "name": str(o.get("customer_name") or ""),
+            "created_at": created.isoformat() if hasattr(created, "isoformat") else (str(created) if created else ""),
+            "_sort_at": created,
+        })
+
+    # Sort descending by creation date (handling datetime vs str)
+    def _key(item):
+        val = item["_sort_at"]
+        if hasattr(val, "isoformat"):
+            return val.isoformat()
+        return str(val or "")
+
+    candidates.sort(key=_key, reverse=True)
+    top_items = candidates[:8]
+    for item in top_items:
+        item.pop("_sort_at", None)
+
+    return {
+        "counts": {
+            "messages": msg_cnt,
+            "quotes": quote_cnt,
+            "orders": order_cnt,
+            "total": total_cnt,
+        },
+        "items": top_items,
+    }
+
+
 @router.get("/leads")
 def leads_get(request: Request) -> dict:
     _require_admin(request)

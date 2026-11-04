@@ -721,7 +721,7 @@ body.admin1-body .admin1-badge {
   height: 16px;
   padding: 0 4px;
   border-radius: 999px;
-  background: #ef4444;
+  background: #dc2626;
   color: #fff;
   font-size: 10px;
   font-weight: 600;
@@ -1194,7 +1194,8 @@ body.admin1-body .admin1-search-hit-text small {
   font-size: 11px;
 }
 
-body.admin1-body button.admin1-notify-row {
+body.admin1-body button.admin1-notify-row,
+body.admin1-body a.admin1-notify-row {
   display: block;
   width: 100%;
   margin: 0;
@@ -1207,10 +1208,24 @@ body.admin1-body button.admin1-notify-row {
   font-size: 12px;
   text-align: left;
   cursor: pointer;
+  text-decoration: none;
+  box-sizing: border-box;
 }
 
-body.admin1-body button.admin1-notify-row:hover {
+body.admin1-body button.admin1-notify-row:hover,
+body.admin1-body a.admin1-notify-row:hover {
   background: var(--a1-hover);
+}
+
+body.admin1-body .admin1-notify-retry {
+  margin-left: 6px;
+  padding: 2px 8px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
 }
 
 /* ---- KPI strip (replaces demo cards) ---- */

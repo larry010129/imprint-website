@@ -423,7 +423,7 @@ def create_app() -> FastAPI:
         if _response_sets_cookie(response, COOKIE_NAME):
             return response
         claims = verify_session_claims(token)
-        if not claims or not session_needs_slide(claims):
+        if not claims or not session_needs_slide(claims, request=request):
             return response
         set_session_cookie(
             response,

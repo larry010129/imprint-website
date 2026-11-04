@@ -9,9 +9,8 @@
   var STORAGE_THEME = 'admin1-theme';
   var STORAGE_MENU = 'admin1-menu-state';
   var LOGIN_NEXT = '/login?next=/admin';
-  var PENDING_ORDER = {
-    received: 1, order_confirming: 1, dna_lab: 1, deposit_confirmed: 1
-  };
+  var LEAD_ID = /^[0-9a-f-]{1,64}$/i;
+  var ORDER_NO = /^[A-Za-z0-9_-]{1,40}$/;
   var SEARCH_MIN = 2;
   var NOTIFY_LIMIT = 8;
 
@@ -225,65 +224,46 @@
   }
 
   /* ---- Notifications ---- */
-  function isPendingOrder(o) {
-    return !!(o && PENDING_ORDER[o.status]);
-  }
-
-  function isPendingLead(item) {
-    if (!item) return false;
-    if (item.type === 'message') return item.status === 'new';
-    if (item.type === 'quote') return item.status === 'pending';
-    return false;
-  }
-
-  function notifyItemsFromPayload(ordersRes, leadsRes) {
+  /* Items come from /api/admin/notify-summary; hrefs are built only from validated ids. */
+  function notifyItemsFromSummary(summary) {
     var items = [];
-    var orders = (ordersRes && ordersRes.orders) || (Array.isArray(ordersRes) ? ordersRes : []) || [];
-    orders.forEach(function (o) {
-      if (!isPendingOrder(o)) return;
-      var num = o.order_number || o.id || '';
-      var who = o.customer_name || '客戶';
-      items.push({
-        panel: 'orders',
-        title: '待處理訂單 ' + num,
-        sub: who + (o.created_at ? ' · ' + relativeTime(o.created_at) : ''),
-        at: o.created_at || ''
-      });
-    });
-    var messages = (leadsRes && leadsRes.messages) || [];
-    var quotes = (leadsRes && leadsRes.quotes) || [];
-    messages.forEach(function (m) {
-      var item = { type: 'message', status: m.status, name: m.name, created_at: m.created_at };
-      if (!isPendingLead(item)) return;
-      items.push({
-        panel: 'leads',
-        title: '新留言・' + (m.name || '訪客'),
-        sub: relativeTime(m.created_at) || '諮詢名單',
-        at: m.created_at || ''
-      });
-    });
-    quotes.forEach(function (q) {
-      var item = { type: 'quote', status: q.status, name: q.name, created_at: q.created_at };
-      if (!isPendingLead(item)) return;
+    ((summary && summary.items) || []).forEach(function (it) {
+      if (!it) return;
+      var sub = relativeTime(it.created_at);
+      var name = it.name || '訪客';
+      if (it.type === 'order') {
+        var num = String(it.order_number || '');
+        if (!ORDER_NO.test(num)) return;
+        items.push({
+          panel: 'orders',
+          href: '/admin/orders?order=' + encodeURIComponent(num),
+          order: num,
+          title: '待處理訂單 #' + num,
+          sub: sub
+        });
+        return;
+      }
+      if (it.type !== 'message' && it.type !== 'quote') return;
+      var id = String(it.id == null ? '' : it.id);
+      if (!LEAD_ID.test(id)) return;
+      var key = it.type + ':' + id;
       items.push({
         panel: 'leads',
-        title: '待估價・' + (q.name || '訪客'),
-        sub: relativeTime(q.created_at) || '諮詢名單',
-        at: q.created_at || ''
+        href: '/admin/leads?lead=' + encodeURIComponent(key),
+        lead: key,
+        title: (it.type === 'message' ? '新留言・' : '待估價・') + name,
+        sub: sub || '諮詢名單'
       });
-    });
-    items.sort(function (a, b) {
-      return new Date(b.at || 0) - new Date(a.at || 0);
     });
     return items;
   }
 
-  function renderNotify(items) {
+  function renderNotify(items, total) {
     var list = document.getElementById('admin1NotifyList');
     var badge = document.getElementById('admin1NotifyBadge');
     var btn = document.getElementById('admin1NotifyBtn');
     if (!list) return;
-    var count = items.length;
+    var count = total;
     if (badge) {
       badge.textContent = count > 99 ? '99+' : String(count);
       badge.hidden = count === 0;
@@ -291,45 +271,121 @@
     if (btn) {
       btn.setAttribute('aria-label', count ? ('通知（' + count + '）') : '通知');
     }
-    if (!count) {
+    if (!items.length) {
       list.innerHTML = '<div class="admin1-notify-empty">尚無新通知</div>';
       return;
     }
     list.innerHTML = items.slice(0, NOTIFY_LIMIT).map(function (it) {
       return (
-        '<button type="button" class="admin1-notify-row" data-panel="' + esc(it.panel) + '">' +
+        '<a class="admin1-notify-row" href="' + esc(it.href) + '" data-panel="' + esc(it.panel) + '"' +
+          (it.lead ? ' data-lead="' + esc(it.lead) + '"' : '') +
+          (it.order ? ' data-order="' + esc(it.order) + '"' : '') + '>' +
           esc(it.title) +
           '<small>' + esc(it.sub) + '</small>' +
-        '</button>'
+        '</a>'
       );
     }).join('');
-    list.querySelectorAll('[data-panel]').forEach(function (el) {
-      el.addEventListener('click', function () {
-        closeDropdowns();
-        switchPanel(el.getAttribute('data-panel'));
-      });
+  }
+
+  function renderNotifyError() {
+    var list = document.getElementById('admin1NotifyList');
+    if (!list) return;
+    list.innerHTML =
+      '<div class="admin1-notify-empty">通知載入失敗 ' +
+      '<button type="button" class="admin1-notify-retry" data-notify-retry>重試</button></div>';
+  }
+
+  /* Open the exact item in place when this page has the panel; otherwise the link navigates. */
+  function openNotifyTarget(lead, order) {
+    if (order) {
+      openPanelWithSearch('orders', 'searchFor', order);
+    } else if (lead) {
+      switchPanel('leads');
+      if (window.AdminLeadsPanel) window.AdminLeadsPanel.focus(lead);
+    }
+  }
+
+  function bindNotifyList() {
+    var list = document.getElementById('admin1NotifyList');
+    if (!list) return;
+    list.addEventListener('click', function (e) {
+      var t = e.target;
+      var retry = t.closest ? t.closest('[data-notify-retry]') : null;
+      if (retry) {
+        loadNotifications();
+        return;
+      }
+      var row = t.closest ? t.closest('a.admin1-notify-row') : null;
+      if (!row) return;
+      var panel = row.getAttribute('data-panel');
+      if (!document.querySelector('.side-nav button[data-panel="' + panel + '"]')) return;
+      e.preventDefault();
+      closeDropdowns();
+      openNotifyTarget(row.getAttribute('data-lead'), row.getAttribute('data-order'));
+    });
+  }
+
+  /* ?lead= / ?order= deep links: open the item once every script has loaded. */
+  function openDeepLink() {
+    var params;
+    try { params = new URLSearchParams(location.search); } catch (e) { return; }
+    var lead = params.get('lead');
+    var order = params.get('order');
+    if (lead === null && order === null) return;
+    var leadParts = lead ? lead.split(':') : [];
+    if (leadParts.length !== 2 || (leadParts[0] !== 'message' && leadParts[0] !== 'quote') || !LEAD_ID.test(leadParts[1])) {
+      lead = null;
+    }
+    if (!order || !ORDER_NO.test(order)) order = null;
+    if ((order || lead) && document.querySelector('.side-nav button[data-panel="' + (order ? 'orders' : 'leads') + '"]')) {
+      openNotifyTarget(lead, order);
+    }
+    params.delete('lead');
+    params.delete('order');
+    var qs = params.toString();
+    try {
+      history.replaceState(null, '', location.pathname + (qs ? '?' + qs : '') + location.hash);
+    } catch (e2) { /* ignore */ }
+  }
+
+  var NOTIFY_POLL_MS = 60000;
+  var notifyTimer = null;
+  var notifyStopped = false;
+
+  function stopNotifyPolling() {
+    notifyStopped = true;
+    if (notifyTimer) clearInterval(notifyTimer);
+    notifyTimer = null;
+  }
+
+  function startNotifyPolling() {
+    if (notifyTimer || notifyStopped) return;
+    notifyTimer = setInterval(function () {
+      if (document.visibilityState === 'visible') loadNotifications();
+    }, NOTIFY_POLL_MS);
+    document.addEventListener('visibilitychange', function () {
+      if (!notifyStopped && document.visibilityState === 'visible') loadNotifications();
     });
   }
 
   function loadNotifications() {
     var a = api();
-    if (!a || !a.admin) return Promise.resolve();
-    var ordersP = typeof a.admin.getOrders === 'function'
-      ? a.admin.getOrders()
-      : Promise.resolve({ orders: [] });
-    var leadsP = typeof a.admin.getLeads === 'function'
-      ? a.admin.getLeads()
-      : Promise.resolve({ messages: [], quotes: [] });
-    return Promise.all([ordersP, leadsP]).then(function (pair) {
-      var ordersRes = pair[0] || {};
-      var leadsRes = pair[1] || {};
-      if (ordersRes.error || leadsRes.error) {
-        renderNotify([]);
+    if (notifyStopped || !a || !a.admin || typeof a.admin.getNotifySummary !== 'function') {
+      return Promise.resolve();
+    }
+    return a.admin.getNotifySummary().then(function (res) {
+      res = res || {};
+      if (res._httpStatus === 401 || res._httpStatus === 403) {
+        stopNotifyPolling();
         return;
       }
-      renderNotify(notifyItemsFromPayload(ordersRes, leadsRes));
+      if (res.error || !res.counts) {
+        renderNotifyError();
+        return;
+      }
+      renderNotify(notifyItemsFromSummary(res), Number(res.counts.total) || 0);
     }).catch(function () {
-      renderNotify([]);
+      renderNotifyError();
     });
   }
 
@@ -696,6 +752,7 @@
   function bootData() {
     loadSession();
     loadNotifications();
+    startNotifyPolling();
   }
 
   document.addEventListener('click', function () {
@@ -719,9 +776,12 @@
   bindSearch();
   bindGroups();
   bindSignOut();
+  bindNotifyList();
   bindTabs();
   bindResize();
   bootData();
+
+  window.addEventListener('load', openDeepLink);
 
   window.Admin1Shell = {
     setMenuState: setMenuState,

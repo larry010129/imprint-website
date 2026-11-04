@@ -18,7 +18,9 @@
     return fetch(API_BASE + path, {
       method: options.method || 'GET',
       credentials: 'include',
-      headers: options.body ? { 'Content-Type': 'application/json' } : undefined,
+      headers: options.body
+        ? Object.assign({ 'Content-Type': 'application/json' }, options.headers)
+        : options.headers,
       body: options.body ? JSON.stringify(options.body) : undefined,
     })
       .then(function (res) {
@@ -294,6 +296,10 @@
         return (API_BASE || '') + '/api/admin/dashboard/export' + qs;
       },
       getLeads: function () { return request('/api/admin/leads'); },
+      /* Background header: polling must not keep the admin session alive. */
+      getNotifySummary: function () {
+        return request('/api/admin/notify-summary', { headers: { 'X-Admin-Background': '1' } });
+      },
       markLeadDone: function (type, id) { return request('/api/admin/leads', { method: 'POST', body: { type: type, id: id } }); },
       deleteLead: function (type, id) { return request('/api/admin/leads-delete', { method: 'POST', body: { type: type, id: id } }); },
       markLeadSpam: function (type, id) { return request('/api/admin/leads-mark-spam', { method: 'POST', body: { type: type, id: id } }); },

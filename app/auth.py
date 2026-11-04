@@ -262,7 +262,9 @@ def verify_session_token(token: str) -> tuple[str, int] | None:
     return claims.user_id, claims.token_version
 
 
-def session_needs_slide(claims: SessionClaims) -> bool:
+def session_needs_slide(claims: SessionClaims, request: Request | None = None) -> bool:
+    if request is not None and request.headers.get("x-admin-background") == "1":
+        return False
     idle = idle_ttl_for_role(claims.role)
     elapsed = datetime.now(timezone.utc) - claims.iat
     return elapsed > idle / 2
