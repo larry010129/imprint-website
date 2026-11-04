@@ -49,7 +49,7 @@ HTML_CONTENT_SECURITY_POLICY = (
     "https://www.google-analytics.com https://*.google-analytics.com "
     "https://i.ytimg.com "
     "https://www.googleadservices.com https://googleads.g.doubleclick.net "
-    "https://*.g.doubleclick.net; "
+    "https://*.g.doubleclick.net https://ad.doubleclick.net; "
     "connect-src 'self' https://*.botpress.cloud wss://*.botpress.cloud "
     "https://cdn.botpress.cloud https://files.bpcontent.cloud "
     "https://accounts.google.com https://oauth2.googleapis.com "
@@ -59,7 +59,7 @@ HTML_CONTENT_SECURITY_POLICY = (
     "https://analytics.google.com https://*.google-analytics.com "
     "https://*.analytics.google.com "
     "https://www.googleadservices.com https://googleads.g.doubleclick.net "
-    "https://pagead2.googlesyndication.com; "
+    "https://pagead2.googlesyndication.com https://ad.doubleclick.net; "
     # 'self' required for CMS page-builder preview iframe (/p/{slug}?preview=1)
     # www.google.com / recaptcha.google.com required for reCAPTCHA v2 checkbox
     "frame-src 'self' https://www.google.com https://recaptcha.google.com "

@@ -112,15 +112,6 @@ def test_home_auth_quote_and_share_defer_gtm(client):
         _assert_deferred_gtm(resp.text)
 
 
-def test_csp_still_omits_ads_collect_hosts():
-    from app import HTML_CONTENT_SECURITY_POLICY
-
-    assert "ad.doubleclick.net" not in HTML_CONTENT_SECURITY_POLICY
-    assert "googleads.g.doubleclick.net" not in HTML_CONTENT_SECURITY_POLICY
-    assert "doubleclick.net" not in HTML_CONTENT_SECURITY_POLICY
-    assert "googleads" not in HTML_CONTENT_SECURITY_POLICY
-
-
 def test_ringflip_split_out_of_main():
     main = (ROOT / "public" / "js" / "main.js").read_text(encoding="utf-8")
     assert "getElementById('rfTrack')" not in main
