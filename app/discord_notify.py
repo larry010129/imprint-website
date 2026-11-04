@@ -35,6 +35,7 @@ _EMAIL = re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+")
 # Taiwan numbers (09xx / 0x / +886); dates like 2026-11-08 don't start with 0.
 _PHONEISH = re.compile(r"(?<!\d)(?:\+?886[\s-]?|0)\d(?:[\s-]?\d){7,9}(?!\d)")
 _MD = re.compile(r"([\\*_~`|>\[\]()#<@])")
+_MD_EMAIL = re.compile(r"([\\*_~`|>\[\]()#<])")  # @ stays readable; allowed_mentions blocks pings
 
 _POOL = ThreadPoolExecutor(max_workers=2, thread_name_prefix="discord-notify")
 _sent_at: list[float] = []
@@ -62,7 +63,7 @@ def mask_phone(phone: str) -> str:
     digits = re.sub(r"\D", "", phone or "")
     if len(digits) < 4:
         return "（未填）" if not digits else "***"
-    return "*" * (len(digits) - 3) + digits[-3:]
+    return "*" * (len(digits) - 4) + digits[-4:]
 
 
 def split_message(message: str) -> tuple[str, list[str]]:
@@ -80,13 +81,13 @@ def safe_text(text: str | None, limit: int) -> str:
     """Customer text -> Discord: hide emails/phones, escape markdown, cap length."""
     text = " ".join((text or "").split())
     text = _EMAIL.sub("（email）", text)
-    text = _PHONEISH.sub(lambda m: "•••" + re.sub(r"\D", "", m.group())[-3:], text)
+    text = _PHONEISH.sub(lambda m: "•••" + re.sub(r"\D", "", m.group())[-4:], text)
     if len(text) > limit:
         text = text[:limit] + "…"
     return _MD.sub(r"\\\1", text)
 
 
-def build_payload(*, name: str, phone: str, message: str,
+def build_payload(*, name: str, phone: str, message: str, email: str = "",
                   admin_url: str | None) -> dict:
     text, slots = split_message(message)
     fields = []
@@ -97,6 +98,9 @@ def build_payload(*, name: str, phone: str, message: str,
     fields += [
         {"name": "姓名", "value": safe_text(mask_name(name), 40), "inline": True},
         {"name": "電話", "value": mask_phone(phone), "inline": True},
+        # Full email on purpose (owner's call); escaped and capped, not masked.
+        {"name": "Email", "value": _MD_EMAIL.sub(r"\\\1", (email or "").strip()[:100]) or "（未填）",
+         "inline": True},
         {"name": "需求", "value": safe_text(text, PREVIEW_CHARS) or "（無內容）", "inline": False},
     ]
     embed = {
@@ -160,7 +164,7 @@ def _under_cap() -> bool:
         return True
 
 
-def notify_contact(*, name: str, phone: str, message: str,
+def notify_contact(*, name: str, phone: str, message: str, email: str = "",
                    background: bool = True) -> bool:
     """Queue a Discord alert for a saved contact form. Returns False when disabled."""
     url = webhook_url()
@@ -171,7 +175,8 @@ def notify_contact(*, name: str, phone: str, message: str,
                     MAX_ALERTS_PER_WINDOW, WINDOW_SECONDS)
         return False
     try:
-        payload = build_payload(name=name, phone=phone, message=message, admin_url=_admin_url())
+        payload = build_payload(name=name, phone=phone, message=message, email=email,
+                                admin_url=_admin_url())
     except Exception:
         log.exception("discord contact payload failed")
         return False

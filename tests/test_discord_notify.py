@@ -12,14 +12,14 @@ def _env(monkeypatch, booking="", report=""):
 
 def test_dates_are_not_mistaken_for_phones():
     assert dn.safe_text("2026-11-08 14:00", 60) == "2026-11-08 14:00"
-    assert dn.safe_text("call +886 912 345 678", 60) == "call •••678"
+    assert dn.safe_text("call +886 912 345 678", 60) == "call •••5678"
 
 
 def test_masks_name_and_phone():
     assert dn.mask_name("王小明") == "王○明"
     assert dn.mask_name("王明") == "王○"
     assert dn.mask_name("") == "（未填）"
-    assert dn.mask_phone("0912-345-678") == "*******678"
+    assert dn.mask_phone("0912-345-678") == "******5678"
     assert dn.mask_phone("") == "（未填）"
 
 
@@ -138,6 +138,7 @@ def test_valid_contact_form_calls_notify_contact_once(contact_client, monkeypatc
     call = notify_calls[0]
     assert call["name"] == "王小明"
     assert call["phone"] == "0912345678"
+    assert call["email"] == "test@example.com"
     assert "【希望預約時段】" in call["message"]
     assert "2026-11-08 14:00" in call["message"]
 
@@ -270,3 +271,13 @@ def test_rejected_button_resends_without_it(monkeypatch):
              dn.build_payload(name="a", phone="1", message="m", admin_url=ADMIN))
     assert calls == [("https://discord.test/hook?with_components=true", True),
                      ("https://discord.test/hook", False)]
+
+
+def test_email_shown_in_full_and_phone_keeps_last_four():
+    p = dn.build_payload(name="王小明", phone="0912345678", message="hi",
+                         email="amy_lin@example.com", admin_url=None)
+    fields = {f["name"]: f["value"] for f in p["embeds"][0]["fields"]}
+    assert fields["Email"] == r"amy\_lin@example.com"
+    assert fields["電話"] == "******5678"
+    assert dn.build_payload(name="a", phone="1", message="m",
+                            admin_url=None)["embeds"][0]["fields"][2]["value"] == "（未填）"
