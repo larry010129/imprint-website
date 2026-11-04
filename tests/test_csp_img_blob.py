@@ -58,6 +58,9 @@ def test_html_csp_allows_google_ads_conversion_hosts():
     assert "https://*.g.doubleclick.net" in img_src
     assert "https://pagead2.googlesyndication.com" in connect_src
     assert "https://td.doubleclick.net" in frame_src
+    # Google tag's ccm/s/collect beacon (not covered by *.g.doubleclick.net).
+    assert "https://ad.doubleclick.net" in img_src
+    assert "https://ad.doubleclick.net" in connect_src
     # Existing sources are kept.
     assert "https://www.googletagmanager.com" in script_src
     assert "https://www.youtube.com" in frame_src

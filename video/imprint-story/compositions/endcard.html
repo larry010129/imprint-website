@@ -1,0 +1,112 @@
+<template>
+  <style>
+    @font-face {
+      font-family: "Noto Sans TC";
+      src: url("assets/fonts/noto-sans-tc-vf.woff2") format("woff2");
+      font-weight: 100 900;
+    }
+    @font-face {
+      font-family: "Noto Serif TC";
+      src: url("assets/fonts/noto-serif-tc-vf.woff2") format("woff2");
+      font-weight: 200 900;
+    }
+    #root {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      font-family: "Noto Serif TC", serif;
+      color: #fbfaf8;
+    }
+    #end-ground {
+      position: absolute;
+      inset: 0;
+      background: #2b2320;
+    }
+    #end-stack {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    /* The brand mark from favicon.svg, filled in mint */
+    #end-mark {
+      width: 300px;
+      height: 300px;
+      margin: -90px 0 -80px;
+      background: #9cefef;
+      -webkit-mask: url("assets/brand/mark.svg") center / contain no-repeat;
+      mask: url("assets/brand/mark.svg") center / contain no-repeat;
+    }
+    #end-wordmark {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+    #end-name {
+      font-size: 84px;
+      font-weight: 600;
+      letter-spacing: 0.16em;
+      margin-right: -0.16em;
+    }
+    #end-latin {
+      font-family: "Noto Sans TC", sans-serif;
+      font-size: 28px;
+      font-weight: 500;
+      letter-spacing: 0.42em;
+      margin-right: -0.42em;
+      color: #c9c2bc;
+    }
+    #end-tagline {
+      margin-top: 52px;
+      font-size: 50px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+    }
+    #end-tagline .w {
+      display: inline-block;
+    }
+    #end-accent {
+      color: #9cefef;
+    }
+    #end-cta {
+      margin-top: 44px;
+      padding: 16px 40px;
+      border-radius: 999px;
+      background: #52c4c8;
+      color: #2b2320;
+      font-family: "Noto Sans TC", sans-serif;
+      font-size: 32px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+    }
+  </style>
+  <div data-hf-id="hf-32ii" id="root" data-composition-id="endcard" data-width="1920" data-height="1080">
+    <div data-hf-id="hf-fwzw" id="end-ground"></div>
+    <div data-hf-id="hf-xywv" id="end-stack">
+      <div data-hf-id="hf-tv5t" id="end-mark" role="img" aria-label="銘印鑽石"></div>
+      <div data-hf-id="hf-y4li" id="end-wordmark">
+        <div data-hf-id="hf-uov0" id="end-name">銘印鑽石</div>
+        <div data-hf-id="hf-w35y" id="end-latin">IMPRINT DIAMOND</div>
+      </div>
+      <!-- Answers the mother's 「很貴吧」, in the site's own claim (lab-grown-diamond page) -->
+      <div data-hf-id="hf-e5p5" id="end-tagline"><span data-hf-id="hf-sc1x" class="w">與天然鑽石成分一致，</span><span data-hf-id="hf-j7bm" class="w">價格<span data-hf-id="hf-aj1d" id="end-accent">更親民</span></span></div>
+      <div data-hf-id="hf-yabn" id="end-cta" data-var-text="cta">線上試算 · imprint-diamond.com</div>
+    </div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    // The brand's dark floods over the necklace.
+    tl.fromTo("#end-ground", { opacity: 0 }, { opacity: 1, duration: 0.45, ease: "power2.inOut" }, 0);
+    // The mark fills from the bottom up.
+    tl.fromTo("#end-mark", { clipPath: "inset(100% 0% 0% 0%)" }, { clipPath: "inset(0% 0% 0% 0%)", duration: 0.5, ease: "power2.inOut" }, 0.25);
+    // Wordmark wipes in left to right.
+    tl.fromTo("#end-name", { clipPath: "inset(0% 100% 0% 0%)" }, { clipPath: "inset(0% 0% 0% 0%)", duration: 0.45, ease: "expo.out" }, 0.4);
+    tl.fromTo("#end-latin", { clipPath: "inset(0% 100% 0% 0%)" }, { clipPath: "inset(0% 0% 0% 0%)", duration: 0.45, ease: "expo.out" }, 0.47);
+    tl.fromTo("#end-tagline .w", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.3, ease: "expo.out", stagger: 0.12 }, 0.6);
+    tl.fromTo("#end-cta", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power4.out" }, 0.85);
+    window.__timelines["endcard"] = tl;
+  </script>
+</template>

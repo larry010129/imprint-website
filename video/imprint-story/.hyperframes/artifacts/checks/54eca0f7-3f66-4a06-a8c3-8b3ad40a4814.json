@@ -1,0 +1,206 @@
+{
+  "ok": true,
+  "strict": false,
+  "browserSkipped": false,
+  "lint": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 1,
+    "infoCount": 0,
+    "findings": [
+      {
+        "code": "timeline_track_too_dense",
+        "severity": "warning",
+        "message": "Track 1 has 8 timed elements in this HTML file. Smaller sub-compositions keep timelines easier to read, iterate on, and diff.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {},
+        "sourceFile": "C:\\Users\\e1253\\Documents\\imprint-website\\video\\imprint-story\\compositions\\subs.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0,
+        "fixHint": "Move coherent scene groups into smaller .html files and mount them from the parent with data-composition-src so the timeline stays easier to inspect, revise, and validate."
+      }
+    ],
+    "filesScanned": 11
+  },
+  "runtime": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": []
+  },
+  "layout": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 1,
+    "findings": [
+      {
+        "code": "canvas_covered",
+        "severity": "info",
+        "time": 11.861,
+        "selector": "#catalog > div:nth-of-type(1)",
+        "message": "An opaque element covers the canvas above every other visible clip, so the frame shows only it.",
+        "rect": {
+          "left": 0,
+          "top": 0,
+          "right": 1920,
+          "bottom": 1080,
+          "width": 1920,
+          "height": 1080
+        },
+        "fixHint": "Move the full-frame element below the content (earlier in the DOM or a lower z-index / track), or mark a deliberate full-frame card with data-layout-allow-occlusion.",
+        "dataAttributes": {
+          "data-hf-inner-root": "true",
+          "data-hf-authored-id": "root",
+          "data-hf-id": "hf-k0aa",
+          "data-width": "1920",
+          "data-height": "1080"
+        },
+        "sourceFile": "compositions/catalog.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 1920,
+          "height": 1080
+        },
+        "firstSeen": 11.861,
+        "lastSeen": 11.861,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          11.861
+        ]
+      }
+    ],
+    "duration": 30.5,
+    "samples": [
+      1.694,
+      5.083,
+      8.472,
+      11.861,
+      15.25,
+      18.639,
+      22.028,
+      25.417,
+      28.806
+    ],
+    "transitionSamples": [],
+    "transitionSamplesDropped": 0,
+    "tolerance": 2,
+    "totalIssueCount": 1,
+    "truncated": false
+  },
+  "motion": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "enabled": false,
+    "samples": 0
+  },
+  "contrast": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "enabled": true,
+    "samples": [
+      1.694,
+      8.472,
+      15.25,
+      22.028,
+      28.806
+    ],
+    "checked": 26,
+    "passed": 26
+  },
+  "craft": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 3,
+    "infoCount": 0,
+    "findings": [
+      {
+        "code": "first_frame_empty",
+        "severity": "warning",
+        "message": "Frame 0 is covered by #memory > div:nth-of-type(1): an opaque element over the canvas hides every other clip, and the first frame is the thumbnail on social players. Move it below the content; see canvas_covered.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0
+      },
+      {
+        "code": "line_unread",
+        "severity": "warning",
+        "message": "The film's last line \"與天然鑽石成分一致，價格更親民\" (9 words) is on screen 2.27 s (±0.01 s), under the 2.40 s a closing line needs: hold it about 0.5 s + 0.3 s a word and at least 2 s before the film ends; see references/motion.md.",
+        "text": "與天然鑽石成分一致，價格更親民",
+        "selector": "#end-tagline",
+        "dataAttributes": {},
+        "sourceFile": "compositions/endcard.html",
+        "bbox": {
+          "x": 555,
+          "y": 617.5,
+          "width": 540,
+          "height": 72
+        },
+        "time": 28.234,
+        "words": 9,
+        "seconds": 2.27,
+        "floorSeconds": 2.4
+      },
+      {
+        "code": "line_unread",
+        "severity": "warning",
+        "message": "The film's last line \"線上試算 · imprint-diamond.com\" (5 words) is on screen 1.96 s (±0.01 s), under the 2.00 s a closing line needs: hold it about 0.5 s + 0.3 s a word and at least 2 s before the film ends; see references/motion.md.",
+        "text": "線上試算 · imprint-diamond.com",
+        "selector": "#end-cta",
+        "dataAttributes": {},
+        "sourceFile": "compositions/endcard.html",
+        "bbox": {
+          "x": 676.88,
+          "y": 749.5,
+          "width": 566.2300000000001,
+          "height": 46
+        },
+        "time": 28.539,
+        "words": 5,
+        "seconds": 1.965,
+        "floorSeconds": 2
+      }
+    ],
+    "enabled": true,
+    "step": 0.125,
+    "samples": 244
+  },
+  "audio": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": []
+  },
+  "hdr": {
+    "autoPromotion": null,
+    "inspection": "available"
+  },
+  "snapshots": {
+    "enabled": false,
+    "files": [],
+    "times": [],
+    "findingFiles": []
+  }
+}

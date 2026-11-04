@@ -1,0 +1,39 @@
+<template>
+  <style>
+    #root {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      background: #fdfcfa;
+    }
+    #catalog-cam {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 1920px;
+      height: 1080px;
+      transform-origin: 0 0;
+    }
+    #catalog-cam img {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 1920px;
+      height: 1080px;
+    }
+  </style>
+  <div data-hf-id="hf-k0aa" id="root" data-composition-id="catalog" data-width="1920" data-height="1080">
+    <!-- Step 1 of the live calculator: 選品項 -->
+    <div data-hf-id="hf-aibj" id="catalog-cam" data-layout-allow-overflow>
+      <img data-hf-id="hf-1f4y" id="catalog-shot" src="assets/screens/01-catalog.jpg" alt="" />
+    </div>
+  </div>
+  <script>
+    // Camera: page point (fx, fy) sits at frame centre at scale s.
+    const cam = (fx, fy, s) => ({ x: 960 - fx * s, y: 540 - fy * s, scale: s });
+    const tl = gsap.timeline({ paused: true });
+    // Establish the whole page, then move to the category tiles the cursor needs.
+    tl.fromTo("#catalog-cam", cam(960, 540, 1), { ...cam(900, 640, 1.35), duration: 0.55, ease: "power2.inOut" }, 0.3);
+    window.__timelines["catalog"] = tl;
+  </script>
+</template>

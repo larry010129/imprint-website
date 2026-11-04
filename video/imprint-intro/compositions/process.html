@@ -1,0 +1,62 @@
+<template>
+  <style>
+    @font-face {
+      font-family: "Noto Serif TC";
+      src: url("assets/fonts/noto-serif-tc-500.woff2") format("woff2");
+      font-weight: 500;
+    }
+    #root {
+      position: absolute;
+      inset: 0;
+      font-family: "Noto Serif TC", serif;
+    }
+    /* Set vertically in the pale strip right of the grower */
+    .proc-line {
+      position: absolute;
+      left: 1660px;
+      top: 170px;
+      writing-mode: vertical-rl;
+      font-size: 60px;
+      font-weight: 500;
+      letter-spacing: 0.14em;
+      white-space: nowrap;
+    }
+    .proc-line .c {
+      display: inline-block;
+      opacity: 0;
+      color: #2b2320;
+    }
+  </style>
+  <div data-hf-id="hf-2br8" id="root" data-composition-id="process" data-width="1920" data-height="1080">
+    <div data-hf-id="hf-kdwd" id="proc-a" class="proc-line clip" data-start="0.5" data-duration="3.4">
+      <span data-hf-id="hf-tid9" class="c">萃</span><span data-hf-id="hf-1qa6" class="c">取</span><span data-hf-id="hf-l8d1" class="c">毛</span><span data-hf-id="hf-fbqe" class="c">髮</span><span data-hf-id="hf-01sn" class="c">、</span><span data-hf-id="hf-l1jg" class="c">骨</span><span data-hf-id="hf-trbo" class="c">灰</span><span data-hf-id="hf-qgnn" class="c">中</span><span data-hf-id="hf-a01k" class="c">的</span><span data-hf-id="hf-ir99" class="c">元</span><span data-hf-id="hf-hbfo" class="c">素</span>
+    </div>
+    <div data-hf-id="hf-tqce" id="proc-b" class="proc-line clip" data-start="4.2" data-duration="3.5">
+      <span data-hf-id="hf-ca9c" class="c">於</span><span data-hf-id="hf-dnh0" class="c">台</span><span data-hf-id="hf-yxb1" class="c">灣</span><span data-hf-id="hf-5zm4" class="c">在</span><span data-hf-id="hf-wg9g" class="c">地</span><span data-hf-id="hf-7l73" class="c">培</span><span data-hf-id="hf-nz7e" class="c">育</span>
+    </div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    // Per character: appears light grey, then settles to ink; no position change
+    const inkIn = (sel, at) =>
+      tl.fromTo(
+        sel,
+        { opacity: 0, color: "#b9b4b1" },
+        {
+          keyframes: [
+            { opacity: 1, duration: 0.12 },
+            { color: "#2b2320", duration: 0.35 },
+          ],
+          ease: "power2.out",
+          stagger: 0.05,
+        },
+        at,
+      );
+    inkIn("#proc-a .c", 0.6);
+    tl.to("#proc-a .c", { opacity: 0, filter: "blur(6px)", duration: 0.2, stagger: 0.02 }, 3.6);
+    inkIn("#proc-b .c", 4.3);
+    // Leaves with the zoom through the bell
+    tl.to("#proc-b", { opacity: 0, duration: 0.25, ease: "power3.in" }, 7.4);
+    window.__timelines["process"] = tl;
+  </script>
+</template>

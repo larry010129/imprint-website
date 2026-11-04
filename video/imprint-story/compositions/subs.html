@@ -1,0 +1,67 @@
+<template>
+  <style>
+    @font-face {
+      font-family: "Noto Sans TC";
+      src: url("assets/fonts/noto-sans-tc-vf.woff2") format("woff2");
+      font-weight: 100 900;
+    }
+    #root {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      font-family: "Noto Sans TC", sans-serif;
+    }
+    .sub {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 72px;
+      display: flex;
+      justify-content: center;
+    }
+    .sub-box {
+      display: flex;
+      align-items: baseline;
+      gap: 20px;
+      padding: 14px 32px 16px;
+      border-radius: 14px;
+      background: rgba(43, 35, 32, 0.74);
+      white-space: nowrap;
+    }
+    .sub-who {
+      font-size: 28px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      color: #9cefef;
+    }
+    .sub-text {
+      font-size: 46px;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      color: #fbfaf8;
+    }
+  </style>
+  <div data-hf-id="hf-fk98" id="root" data-composition-id="subs" data-width="1920" data-height="1080">
+    <!-- One subtitle per spoken line (music/voices.py), on the film's clock -->
+    <div data-hf-id="hf-vp0m" id="sub-d1" class="sub clip" data-start="0.3" data-duration="2.5" data-track-index="1"><div data-hf-id="hf-2oz2" class="sub-box"><span data-hf-id="hf-a51f" class="sub-who">女兒</span><span data-hf-id="hf-ycn1" class="sub-text">媽，我好想外婆。</span></div></div>
+    <div data-hf-id="hf-pxn8" id="sub-m1" class="sub clip" data-start="2.85" data-duration="2.96" data-track-index="1"><div data-hf-id="hf-ibjm" class="sub-box"><span data-hf-id="hf-zoi8" class="sub-who">媽媽</span><span data-hf-id="hf-zlwb" class="sub-text">她以前總說，想一直陪著我們。</span></div></div>
+    <div data-hf-id="hf-pk82" id="sub-d2" class="sub clip" data-start="5.95" data-duration="5.1" data-track-index="1"><div data-hf-id="hf-ipun" class="sub-box"><span data-hf-id="hf-1nr7" class="sub-who">女兒</span><span data-hf-id="hf-vc99" class="sub-text">那就用外婆留下的頭髮，做成一顆鑽石吧。</span></div></div>
+    <div data-hf-id="hf-q7pk" id="sub-m2" class="sub clip" data-start="11.1" data-duration="2.02" data-track-index="1"><div data-hf-id="hf-j45o" class="sub-box"><span data-hf-id="hf-2rvs" class="sub-who">媽媽</span><span data-hf-id="hf-k9rp" class="sub-text">鑽石？很貴吧。</span></div></div>
+    <div data-hf-id="hf-5hme" id="sub-d3" class="sub clip" data-start="13.25" data-duration="5.09" data-track-index="1"><div data-hf-id="hf-jigp" class="sub-box"><span data-hf-id="hf-19g6" class="sub-who">女兒</span><span data-hf-id="hf-07y4" class="sub-text">妳看，款式、規格都能選，價格馬上算出來。</span></div></div>
+    <div data-hf-id="hf-z8ck" id="sub-m3" class="sub clip" data-start="20.8" data-duration="2.55" data-track-index="1"><div data-hf-id="hf-jwrq" class="sub-box"><span data-hf-id="hf-1kyp" class="sub-who">媽媽</span><span data-hf-id="hf-21py" class="sub-text">那現在，做到哪裡了？</span></div></div>
+    <div data-hf-id="hf-16i6" id="sub-d4" class="sub clip" data-start="23.4" data-duration="3.57" data-track-index="1"><div data-hf-id="hf-kb2r" class="sub-box"><span data-hf-id="hf-0v55" class="sub-who">女兒</span><span data-hf-id="hf-jl11" class="sub-text">鑑定完成了，已經在製作中。</span></div></div>
+    <div data-hf-id="hf-4z3g" id="sub-m4" class="sub clip" data-start="27.25" data-duration="2.53" data-track-index="1"><div data-hf-id="hf-kpds" class="sub-box"><span data-hf-id="hf-1z9q" class="sub-who">媽媽</span><span data-hf-id="hf-m6mm" class="sub-text">外婆，又回到我們身邊了。</span></div></div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    // Each line fades in with its voice and out just before its clip ends.
+    for (const el of document.querySelectorAll("#root .sub")) {
+      const start = parseFloat(el.dataset.start);
+      const end = start + parseFloat(el.dataset.duration);
+      const box = el.querySelector(".sub-box");
+      tl.fromTo(box, { opacity: 0 }, { opacity: 1, duration: 0.14, ease: "power2.out" }, start);
+      tl.to(box, { opacity: 0, duration: 0.14, ease: "power2.in" }, end - 0.16);
+    }
+    window.__timelines["subs"] = tl;
+  </script>
+</template>

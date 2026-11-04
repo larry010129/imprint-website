@@ -1,0 +1,145 @@
+<template>
+  <style>
+    @font-face {
+      font-family: "Noto Sans TC";
+      src: url("assets/fonts/noto-sans-tc-vf.woff2") format("woff2");
+      font-weight: 100 900;
+    }
+    @font-face {
+      font-family: "Noto Serif TC";
+      src: url("assets/fonts/noto-serif-tc-vf.woff2") format("woff2");
+      font-weight: 200 900;
+    }
+    #root {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      background: #fdfcfa;
+      font-family: "Noto Sans TC", sans-serif;
+      color: #2b2320;
+    }
+    /* Rebuilt from the site's order progress (history_order_rows.html + member-app.css),
+       shown at 2.5x its real size. Labels and colours come from app/orders.py. */
+    #track-card {
+      position: absolute;
+      left: 160px;
+      top: 150px;
+      width: 1600px;
+      padding: 60px 72px 64px;
+      background: #ffffff;
+      border: 1px solid #ece7e2;
+      border-radius: 16px;
+      box-shadow: 0 24px 64px rgba(43, 35, 32, 0.08);
+    }
+    #track-title {
+      font-family: "Noto Serif TC", serif;
+      font-size: 60px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+    }
+    #track-meta {
+      display: flex;
+      gap: 96px;
+      margin-top: 32px;
+    }
+    .track-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .track-label {
+      font-size: 28px;
+      color: #7a716b;
+      letter-spacing: 0.06em;
+    }
+    .track-value {
+      font-size: 36px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+    #track-status {
+      color: #26878b;
+    }
+    #track-steps {
+      display: flex;
+      gap: 12px;
+      margin-top: 48px;
+    }
+    .track-step {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .track-bar {
+      position: relative;
+      height: 10px;
+      border-radius: 999px;
+      background: #d6d3d1;
+      overflow: hidden;
+    }
+    .track-fill {
+      position: absolute;
+      inset: 0;
+      border-radius: 999px;
+      transform-origin: 0 50%;
+    }
+    .track-name {
+      font-size: 28px;
+      line-height: 1.35;
+      text-align: center;
+      color: #8f8883;
+      min-height: 76px;
+    }
+    .track-check {
+      opacity: 0;
+    }
+    #track-mint {
+      position: absolute;
+      inset: 0;
+      background: #52c4c8;
+    }
+  </style>
+  <div data-hf-id="hf-l066" id="root" data-composition-id="track" data-width="1920" data-height="1080">
+    <div data-hf-id="hf-2xg1" id="track-card">
+      <h2 data-hf-id="hf-e8xi" id="track-title">查詢訂製進度</h2>
+      <div data-hf-id="hf-i4lw" id="track-meta">
+        <div data-hf-id="hf-zehy" class="track-field">
+          <span data-hf-id="hf-960m" class="track-label">訂單編號</span>
+          <!-- The site's own example number from the track-order form -->
+          <span data-hf-id="hf-tqsj" class="track-value">IMP-20260714-0001</span>
+        </div>
+        <div data-hf-id="hf-qx7u" class="track-field">
+          <span data-hf-id="hf-etkz" class="track-label">目前狀態</span>
+          <span data-hf-id="hf-7zrw" class="track-value" id="track-status">製作中</span>
+        </div>
+      </div>
+      <div data-hf-id="hf-3bxc" id="track-steps">
+        <div data-hf-id="hf-fw2k" class="track-step"><div data-hf-id="hf-c3px" class="track-bar"><div data-hf-id="hf-56ai" class="track-fill" id="track-fill-1" style="background: #e0a458"></div></div><div data-hf-id="hf-2ot2" class="track-name" id="track-name-1"><span data-hf-id="hf-4os6" class="track-check">✓ </span>已收到申請</div></div>
+        <div data-hf-id="hf-uiok" class="track-step"><div data-hf-id="hf-7tvt" class="track-bar"><div data-hf-id="hf-k2hs" class="track-fill" id="track-fill-2" style="background: #e09a6a"></div></div><div data-hf-id="hf-9766" class="track-name" id="track-name-2"><span data-hf-id="hf-9knu" class="track-check">✓ </span>訂單已確認</div></div>
+        <div data-hf-id="hf-tbrh" class="track-step"><div data-hf-id="hf-90sw" class="track-bar"><div data-hf-id="hf-vb3e" class="track-fill" id="track-fill-3" style="background: #5bc0de"></div></div><div data-hf-id="hf-rf7u" class="track-name" id="track-name-3"><span data-hf-id="hf-9yyv" class="track-check">✓ </span>訂金已確認</div></div>
+        <div data-hf-id="hf-tq2i" class="track-step"><div data-hf-id="hf-8mhv" class="track-bar"><div data-hf-id="hf-lxe5" class="track-fill" id="track-fill-4" style="background: #6c9bd1"></div></div><div data-hf-id="hf-4wgr" class="track-name" id="track-name-4"><span data-hf-id="hf-ad9w" class="track-check">✓ </span>DNA 萃取鑑定中</div></div>
+        <div data-hf-id="hf-vpln" class="track-step"><div data-hf-id="hf-6myq" class="track-bar"><div data-hf-id="hf-dx4l" class="track-fill" id="track-fill-5" style="background: #9cefef"></div></div><div data-hf-id="hf-jim0" class="track-name" id="track-name-5">製作中</div></div>
+        <div data-hf-id="hf-w3wo" class="track-step"><div data-hf-id="hf-68np" class="track-bar"></div><div data-hf-id="hf-39gd" class="track-name">品管檢驗中</div></div>
+        <div data-hf-id="hf-uwzl" class="track-step"><div data-hf-id="hf-7fks" class="track-bar"></div><div data-hf-id="hf-f9w5" class="track-name">已出貨</div></div>
+        <div data-hf-id="hf-vbam" class="track-step"><div data-hf-id="hf-719r" class="track-bar"></div><div data-hf-id="hf-prrv" class="track-name">已完成</div></div>
+      </div>
+    </div>
+    <!-- The 訂購 button's fill carried in from the previous scene -->
+    <div data-hf-id="hf-uv7y" id="track-mint" data-layout-ignore></div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo("#track-mint", { opacity: 1, filter: "blur(0px)" }, { opacity: 0, filter: "blur(12px)", duration: 0.3, ease: "power2.out" }, 0);
+    tl.fromTo("#track-card", { scale: 1.06 }, { scale: 1, duration: 0.6, ease: "expo.out" }, 0);
+    // Completed stages fill in order, then the current one (製作中).
+    for (let i = 1; i <= 5; i++) {
+      const at = 0.3 + (i - 1) * 0.13;
+      tl.fromTo(`#track-fill-${i}`, { scaleX: 0 }, { scaleX: 1, duration: 0.22, ease: "power2.out" }, at);
+      tl.fromTo(`#track-name-${i}`, { color: "#8f8883" }, { color: "#2b2320", fontWeight: 600, duration: 0.15, ease: "none" }, at + 0.12);
+      if (i < 5) tl.fromTo(`#track-name-${i} .track-check`, { opacity: 0 }, { opacity: 1, duration: 0.12, ease: "none" }, at + 0.12);
+    }
+    tl.fromTo("#track-status", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.18, ease: "power4.out" }, 0.95);
+    window.__timelines["track"] = tl;
+  </script>
+</template>

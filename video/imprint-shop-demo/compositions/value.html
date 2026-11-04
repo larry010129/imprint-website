@@ -1,0 +1,81 @@
+<template>
+  <style>
+    @font-face {
+      font-family: "Noto Sans TC";
+      src: url("assets/fonts/noto-sans-tc-vf.woff2") format("woff2");
+      font-weight: 100 900;
+    }
+    @font-face {
+      font-family: "Noto Serif TC";
+      src: url("assets/fonts/noto-serif-tc-vf.woff2") format("woff2");
+      font-weight: 200 900;
+    }
+    #root {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      background: #f3ece4;
+      font-family: "Noto Serif TC", serif;
+      color: #2b2320;
+    }
+    #value-plate {
+      position: absolute;
+      inset: 0;
+      transform-origin: 70% 60%;
+    }
+    #value-plate img {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 1920px;
+      height: 1080px;
+      object-fit: cover;
+    }
+    #value-copy {
+      position: absolute;
+      left: 192px;
+      top: 300px;
+    }
+    .value-line {
+      display: block;
+      font-size: 74px;
+      font-weight: 600;
+      line-height: 1.45;
+      letter-spacing: 0.05em;
+      white-space: nowrap;
+    }
+    #value-accent {
+      color: #26878b;
+    }
+    #value-sub {
+      display: block;
+      margin-top: 28px;
+      font-family: "Noto Sans TC", sans-serif;
+      font-size: 38px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      color: #4a403b;
+    }
+  </style>
+  <div id="root" data-composition-id="value" data-width="1920" data-height="1080">
+    <!-- Site photography: 全家福 rings and pendants, the finished result of production -->
+    <div id="value-plate" data-layout-allow-overflow>
+      <img id="value-img" src="assets/photos/family-portrait-jewelry.jpg" alt="" />
+    </div>
+    <!-- Claims as the site states them (lab-grown-diamond page, price page) -->
+    <div id="value-copy">
+      <span id="value-l1" class="value-line">與天然鑽石成分一致，</span>
+      <span id="value-l2" class="value-line">價格<span id="value-accent">更親民</span>。</span>
+      <span id="value-sub">從培育到鑲嵌，台灣在地完成</span>
+    </div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    // Hard cut from the tracker: the finished jewelry lands slightly large and settles.
+    tl.fromTo("#value-plate", { scale: 1.08 }, { scale: 1, duration: 0.7, ease: "expo.out" }, 0);
+    tl.fromTo("#value-l1", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power4.out" }, 0.25);
+    tl.fromTo("#value-l2", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, ease: "power4.out" }, 0.6);
+    tl.fromTo("#value-sub", { opacity: 0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.3, ease: "expo.out" }, 1.05);
+    window.__timelines["value"] = tl;
+  </script>
+</template>

@@ -1,0 +1,50 @@
+<template>
+  <style>
+    @font-face {
+      font-family: "Noto Serif TC";
+      src: url("assets/fonts/noto-serif-tc-500.woff2") format("woff2");
+      font-weight: 500;
+    }
+    #root {
+      position: absolute;
+      inset: 0;
+      font-family: "Noto Serif TC", serif;
+      color: var(--ink, #2b2320);
+    }
+    #hook-copy {
+      position: absolute;
+      left: 192px;
+      top: 300px;
+      font-size: 60px;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      line-height: 1.5;
+    }
+    #hook-copy .line {
+      display: block;
+      white-space: nowrap;
+    }
+    #hook-copy .w {
+      display: inline-block;
+      opacity: 0;
+    }
+  </style>
+  <div data-hf-id="hf-ktv8" id="root" data-composition-id="hook" data-width="1920" data-height="1080">
+    <div data-hf-id="hf-9emm" id="hook-copy" class="clip" data-start="0.4" data-duration="6.9">
+      <span data-hf-id="hf-zeic" id="hook-l1" class="line"
+        ><span data-hf-id="hf-ujl3" class="w">一段</span><span data-hf-id="hf-afee" class="w">思念，</span></span
+      >
+      <span data-hf-id="hf-82e7" id="hook-l2" class="line"
+        ><span data-hf-id="hf-rr0h" class="w">如何</span><span data-hf-id="hf-e0yu" class="w">成為</span><span data-hf-id="hf-4kaa" class="w">永恆</span></span
+      >
+    </div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    const blurIn = { opacity: 1, filter: "blur(0px)", duration: 0.5, ease: "expo.out", stagger: 0.12 };
+    tl.fromTo("#hook-l1 .w", { opacity: 0, filter: "blur(6px)" }, blurIn, 0.5);
+    tl.fromTo("#hook-l2 .w", { opacity: 0, filter: "blur(6px)" }, blurIn, 1.3);
+    tl.to("#hook-copy .w", { opacity: 0, filter: "blur(6px)", duration: 0.2, ease: "power2.in", stagger: 0.04 }, 6.85);
+    window.__timelines["hook"] = tl;
+  </script>
+</template>

@@ -1,0 +1,38 @@
+<template>
+  <style>
+    #root {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      background: #fdfcfa;
+    }
+    #styles-cam {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 1920px;
+      height: 1080px;
+      transform-origin: 0 0;
+    }
+    #styles-cam img {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 1920px;
+      height: 1080px;
+    }
+  </style>
+  <div data-hf-id="hf-azih" id="root" data-composition-id="styles" data-width="1920" data-height="1080">
+    <!-- Step 2: 選款式, after clicking 戒指 -->
+    <div data-hf-id="hf-2auk" id="styles-cam" data-layout-allow-overflow>
+      <img data-hf-id="hf-olrh" id="styles-shot" src="assets/screens/02-styles.jpg" alt="" />
+    </div>
+  </div>
+  <script>
+    const cam = (fx, fy, s) => ({ x: 960 - fx * s, y: 540 - fy * s, scale: s });
+    const tl = gsap.timeline({ paused: true });
+    // The new screen comes in slightly large on the click's rebound and settles.
+    tl.fromTo("#styles-cam", cam(760, 700, 1.52), { ...cam(760, 700, 1.45), duration: 0.45, ease: "expo.out" }, 0);
+    window.__timelines["styles"] = tl;
+  </script>
+</template>
