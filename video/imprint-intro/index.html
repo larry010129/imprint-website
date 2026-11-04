@@ -1,0 +1,193 @@
+<!doctype html>
+<html
+  lang="zh-Hant"
+  data-composition-variables='[
+    {"id":"accent","type":"color","label":"Accent (銘印成永恆)","default":"#26878B"},
+    {"id":"ink","type":"color","label":"Ink","default":"#2B2320"},
+    {"id":"endGround","type":"color","label":"End card ground","default":"#332D2A"},
+    {"id":"plateA","type":"string","label":"Plate 1 (ring)","default":"assets/plates/ring.jpg"},
+    {"id":"plateB","type":"string","label":"Plate 2 (grower)","default":"assets/plates/grower.jpg"},
+    {"id":"plateC","type":"string","label":"Plate 3 (hands)","default":"assets/plates/hands.jpg"}
+  ]'
+>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
+    <style>
+      @font-face {
+        font-family: "Noto Serif TC";
+        src: url("assets/fonts/noto-serif-tc-500.woff2") format("woff2");
+        font-weight: 500;
+      }
+      @font-face {
+        font-family: "Noto Serif TC";
+        src: url("assets/fonts/noto-serif-tc-600.woff2") format("woff2");
+        font-weight: 600;
+      }
+      :root {
+        --accent: #26878b;
+        --ink: #2b2320;
+        --endGround: #332d2a;
+        --cream: #fbfaf8;
+        --mint: #9cefef;
+        --font-display: "Noto Serif TC", serif;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: var(--endGround);
+      }
+      #root {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        font-family: var(--font-display);
+      }
+      .plate {
+        position: absolute;
+        inset: 0;
+        transform-origin: 50% 50%;
+      }
+      .plate img {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 1920px;
+        height: 1080px;
+        object-fit: cover;
+      }
+      /* Push origins sit on each plate's diamond so the cuts match on it */
+      #plate-a {
+        transform-origin: 46% 52%;
+      }
+      #plate-b {
+        transform-origin: 46% 60%;
+      }
+      #plate-c {
+        transform-origin: 42% 62%;
+      }
+    </style>
+  </head>
+  <body>
+    <div data-hf-id="hf-j7pz"
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="30"
+      data-width="1920"
+      data-height="1080"
+    >
+      <!-- Plates: the site's own photos, pushed by their wrappers; hard match cuts at 7.5 s and 15.5 s -->
+      <div data-hf-id="hf-eork" id="plate-a" class="plate" style="z-index: 1">
+        <img data-hf-id="hf-blc6"
+          id="still-a"
+          class="clip"
+          src="assets/plates/ring.jpg"
+          data-var-src="plateA"
+          data-start="0"
+          data-duration="7.5"
+          data-track-index="1"
+          alt=""
+        />
+      </div>
+      <div data-hf-id="hf-okoy" id="plate-b" class="plate" style="z-index: 2">
+        <img data-hf-id="hf-hsge"
+          id="still-b"
+          class="clip"
+          src="assets/plates/grower.jpg"
+          data-var-src="plateB"
+          data-start="7.5"
+          data-duration="8"
+          data-track-index="1"
+          alt=""
+        />
+      </div>
+      <div data-hf-id="hf-8hpo" id="plate-c" class="plate" style="z-index: 3">
+        <img data-hf-id="hf-kb9r"
+          id="still-c"
+          class="clip"
+          src="assets/plates/hands.jpg"
+          data-var-src="plateC"
+          data-start="15.5"
+          data-duration="9.5"
+          data-track-index="1"
+          alt=""
+        />
+      </div>
+
+      <div data-hf-id="hf-mrxb"
+        id="hook"
+        data-composition-id="hook"
+        data-composition-src="compositions/hook.html"
+        data-start="0"
+        data-duration="7.5"
+        data-track-index="2"
+        data-track-kind="graphics"
+        data-width="1920"
+        data-height="1080"
+        style="z-index: 10"
+      ></div>
+      <div data-hf-id="hf-ps5x"
+        id="process"
+        data-composition-id="process"
+        data-composition-src="compositions/process.html"
+        data-start="7.5"
+        data-duration="8"
+        data-track-index="2"
+        data-track-kind="graphics"
+        data-width="1920"
+        data-height="1080"
+        style="z-index: 10"
+      ></div>
+      <div data-hf-id="hf-g69n"
+        id="title"
+        data-composition-id="title"
+        data-composition-src="compositions/title.html"
+        data-start="15.5"
+        data-duration="9.1"
+        data-track-index="2"
+        data-track-kind="graphics"
+        data-width="1920"
+        data-height="1080"
+        style="z-index: 10"
+      ></div>
+      <div data-hf-id="hf-rxyo"
+        id="endcard"
+        data-composition-id="endcard"
+        data-composition-src="compositions/endcard.html"
+        data-start="24.2"
+        data-duration="5.8"
+        data-track-index="3"
+        data-track-kind="graphics"
+        data-width="1920"
+        data-height="1080"
+        style="z-index: 20"
+      ></div>
+
+    </div>
+    <script>
+      const tl = gsap.timeline({ paused: true });
+      // S1: slow push on the ring, then a quick push into the stone before the match cut
+      tl.fromTo("#plate-a", { scale: 1 }, { scale: 1.04, duration: 7.1, ease: "none" }, 0);
+      tl.to("#plate-a", { scale: 1.12, duration: 0.4, ease: "power3.in" }, 7.1);
+      // S2: lands from the punch, holds a gentle push, then zooms through the bell
+      tl.fromTo("#plate-b", { scale: 1.2, x: -80 }, { scale: 1.1, x: -80, duration: 0.9, ease: "expo.out" }, 7.5);
+      tl.to("#plate-b", { scale: 1.13, duration: 6.75, ease: "none" }, 8.4);
+      tl.to("#plate-b", { scale: 1.6, duration: 0.35, ease: "power3.in" }, 15.15);
+      // S3: arrives from the zoom-through, then a 3% push under the title
+      tl.fromTo("#plate-c", { scale: 1.25 }, { scale: 1, duration: 0.9, ease: "expo.out" }, 15.5);
+      tl.to("#plate-c", { scale: 1.03, duration: 8.1, ease: "none" }, 16.4);
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

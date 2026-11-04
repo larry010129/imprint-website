@@ -1,0 +1,62 @@
+<template>
+  <style>
+    #root {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      background: #fdfcfa;
+    }
+    #configure-cam {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 1920px;
+      height: 1080px;
+      transform-origin: 0 0;
+    }
+    #configure-cam img {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 1920px;
+      height: 1080px;
+    }
+    /* The 訂購 button's own fill, grown to the frame */
+    #configure-flood {
+      position: absolute;
+      inset: 0;
+      background: #52c4c8;
+      opacity: 0;
+    }
+  </style>
+  <div data-hf-id="hf-x70d" id="root" data-composition-id="configure" data-width="1920" data-height="1080">
+    <!-- Step 3: 配置下單. Three real states of the same screen:
+         before a metal is chosen, 18K (price appears), 18K玫瑰金 (ring turns rose) -->
+    <div data-hf-id="hf-o7xq" id="configure-cam" data-layout-allow-overflow>
+      <img data-hf-id="hf-8z0w" id="configure-shot-a" src="assets/screens/03-configure.jpg" alt="" />
+      <img data-hf-id="hf-cc9d" id="configure-shot-b" src="assets/screens/03a-config-18k-white.jpg" alt="" />
+      <img data-hf-id="hf-hvqi" id="configure-shot-c" src="assets/screens/04-config-18k.jpg" alt="" />
+    </div>
+    <div data-hf-id="hf-92mb" id="configure-flood" data-layout-ignore></div>
+  </div>
+  <script>
+    const cam = (fx, fy, s) => ({ x: 960 - fx * s, y: 540 - fy * s, scale: s });
+    const tl = gsap.timeline({ paused: true });
+    tl.fromTo("#configure-cam", cam(960, 660, 1.36), { ...cam(960, 660, 1.3), duration: 0.45, ease: "expo.out" }, 0);
+    // Click 18K金 (0.86): metal colours and the live price appear.
+    tl.fromTo("#configure-shot-b", { opacity: 0 }, { opacity: 1, duration: 0.1, ease: "none" }, 0.86);
+    // Click 18K玫瑰金 (1.56): the ring turns rose gold.
+    tl.fromTo("#configure-shot-c", { opacity: 0 }, { opacity: 1, duration: 0.12, ease: "none" }, 1.56);
+    // Punch in on the price panel: total, diamond and metalwork prices.
+    tl.to("#configure-cam", { ...cam(1240, 760, 1.9), duration: 0.55, ease: "power2.inOut" }, 1.75);
+    // Click 訂購 (2.82): its fill grows to the frame while the camera pushes into it.
+    tl.fromTo(
+      "#configure-flood",
+      { opacity: 1, clipPath: "inset(831px 477px 183px 932px round 6px)" },
+      { opacity: 1, clipPath: "inset(0px 0px 0px 0px round 0px)", duration: 0.33, ease: "power3.in", immediateRender: false },
+      2.82,
+    );
+    tl.to("#configure-cam", { ...cam(1359, 930, 2.6), duration: 0.33, ease: "power3.in" }, 2.82);
+    window.__timelines["configure"] = tl;
+  </script>
+</template>

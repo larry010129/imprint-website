@@ -1,0 +1,63 @@
+<template>
+  <style>
+    #root {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+    /* Tip of the arrow is the element's origin, so x/y are the click point */
+    #cursor-pos {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 1px;
+      height: 1px;
+    }
+    #cursor-press {
+      position: absolute;
+      left: 0;
+      top: 0;
+      transform-origin: 0 0;
+    }
+    #cursor-press svg {
+      display: block;
+      width: 52px;
+      height: 76px;
+      overflow: visible;
+      filter: drop-shadow(0 6px 10px rgba(43, 35, 32, 0.28));
+    }
+  </style>
+  <div data-hf-id="hf-nrk9" id="root" data-composition-id="cursor" data-width="1920" data-height="1080">
+    <div data-hf-id="hf-29wj" id="cursor-pos" data-layout-allow-overflow>
+      <div data-hf-id="hf-4cp1" id="cursor-press">
+        <svg data-hf-id="hf-z28u" viewBox="0 0 36 54" aria-hidden="true">
+          <path data-hf-id="hf-uvef" d="M1.5 1.5 L1.5 43 L12 33.5 L19.5 51 L27 47.8 L19.6 30.6 L33.5 30.6 Z"
+            fill="#2b2320" stroke="#ffffff" stroke-width="3" stroke-linejoin="round" />
+        </svg>
+      </div>
+    </div>
+  </div>
+  <script>
+    // Click points are in frame pixels, measured from the real screens under each scene's camera.
+    const tl = gsap.timeline({ paused: true });
+    const move = (x, y, at, dur) => tl.to("#cursor-pos", { x, y, duration: dur, ease: "power2.inOut" }, at);
+    const click = (at) => {
+      tl.to("#cursor-press", { scale: 0.82, duration: 0.07, ease: "power2.in" }, at);
+      tl.to("#cursor-press", { scale: 1, duration: 0.08, ease: "power2.out" }, at + 0.07);
+    };
+    tl.fromTo("#cursor-pos", { x: 1580, y: 1150 }, { x: 1580, y: 1150, duration: 0.01 }, 0);
+    tl.fromTo("#cursor-press", { scale: 1 }, { scale: 1, duration: 0.01 }, 0);
+    move(1200, 518, 0.45, 0.8); //  戒指 tile
+    click(1.38);
+    move(635, 555, 1.75, 0.8); //   六爪單鑽戒
+    click(2.86);
+    move(887, 774, 3.15, 0.55); //  18K金
+    click(3.79);
+    move(1174, 782, 3.98, 0.44); // 18K玫瑰金
+    click(4.49);
+    move(1186, 863, 5.35, 0.35); // 訂購
+    click(5.75);
+    tl.to("#cursor-pos", { opacity: 0, duration: 0.12, ease: "power2.in" }, 5.86);
+    window.__timelines["cursor"] = tl;
+  </script>
+</template>

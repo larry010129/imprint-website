@@ -1,0 +1,77 @@
+<!doctype html>
+<html
+  lang="zh-Hant"
+  data-composition-variables='[
+    {"id":"cta","type":"string","label":"End card CTA","default":"線上試算 · imprint-diamond.com"}
+  ]'
+>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
+    <style>
+      :root {
+        --ground: #fdfcfa;
+        --ink: #2b2320;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: var(--ground);
+      }
+      #root {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <div data-hf-id="hf-199x"
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="10"
+      data-width="1920"
+      data-height="1080"
+    >
+      <!-- Real shop screens from imprint-diamond.com/shop/calculator/, walked click by click -->
+      <div data-hf-id="hf-8jjt" id="catalog" data-composition-id="catalog" data-composition-src="compositions/catalog.html"
+        data-start="0" data-duration="1.55" data-track-index="1" data-track-kind="graphics"
+        data-width="1920" data-height="1080" style="z-index: 1"></div>
+      <div data-hf-id="hf-jq88" id="styles" data-composition-id="styles" data-composition-src="compositions/styles.html"
+        data-start="1.55" data-duration="1.45" data-track-index="1" data-track-kind="graphics"
+        data-width="1920" data-height="1080" style="z-index: 1"></div>
+      <div data-hf-id="hf-5llj" id="configure" data-composition-id="configure" data-composition-src="compositions/configure.html"
+        data-start="3" data-duration="3.15" data-track-index="1" data-track-kind="graphics"
+        data-width="1920" data-height="1080" style="z-index: 1"></div>
+      <div data-hf-id="hf-wmhm" id="track" data-composition-id="track" data-composition-src="compositions/track.html"
+        data-start="6.15" data-duration="1.45" data-track-index="1" data-track-kind="graphics"
+        data-width="1920" data-height="1080" style="z-index: 1"></div>
+      <div data-hf-id="hf-ez3n" id="endcard" data-composition-id="endcard" data-composition-src="compositions/endcard.html"
+        data-start="7.6" data-duration="2.4" data-track-index="1" data-track-kind="graphics"
+        data-width="1920" data-height="1080" style="z-index: 1"></div>
+
+      <!-- Overlays: the step card and the cursor run across the shop scenes -->
+      <div data-hf-id="hf-sk0i" id="steps" data-composition-id="steps" data-composition-src="compositions/steps.html"
+        data-start="0" data-duration="7.6" data-track-index="2" data-track-kind="graphics"
+        data-width="1920" data-height="1080" style="z-index: 10"></div>
+      <div data-hf-id="hf-qr3r" id="cursor" data-composition-id="cursor" data-composition-src="compositions/cursor.html"
+        data-start="0" data-duration="6.05" data-track-index="3" data-track-kind="graphics"
+        data-width="1920" data-height="1080" style="z-index: 20"></div>
+    </div>
+    <script>
+      const tl = gsap.timeline({ paused: true });
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

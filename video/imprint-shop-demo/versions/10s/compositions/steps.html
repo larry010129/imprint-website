@@ -1,0 +1,125 @@
+<template>
+  <style>
+    @font-face {
+      font-family: "Noto Sans TC";
+      src: url("assets/fonts/noto-sans-tc-vf.woff2") format("woff2");
+      font-weight: 100 900;
+    }
+    @font-face {
+      font-family: "Noto Serif TC";
+      src: url("assets/fonts/noto-serif-tc-vf.woff2") format("woff2");
+      font-weight: 200 900;
+    }
+    #root {
+      position: absolute;
+      inset: 0;
+      font-family: "Noto Sans TC", sans-serif;
+    }
+    /* One card that stays put while its words change per step */
+    #steps-card {
+      position: absolute;
+      left: 192px;
+      top: 800px;
+      width: 660px;
+      height: 164px;
+      border-radius: 18px;
+      background: rgba(43, 35, 32, 0.95);
+      box-shadow: 0 16px 40px rgba(43, 35, 32, 0.22);
+    }
+    .step {
+      position: absolute;
+      left: 216px;
+      top: 822px;
+      width: 612px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      color: #fbfaf8;
+    }
+    .step-head {
+      display: flex;
+      align-items: baseline;
+      gap: 18px;
+    }
+    .step-num {
+      font-size: 28px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      color: #9cefef;
+    }
+    .step-title {
+      font-family: "Noto Serif TC", serif;
+      font-size: 48px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+    }
+    .step-sub {
+      font-size: 29px;
+      font-weight: 400;
+      letter-spacing: 0.04em;
+      color: #e6dfd8;
+      white-space: nowrap;
+    }
+    #step-3-price {
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      color: #9cefef;
+      font-weight: 500;
+    }
+    #step-3-subs {
+      position: relative;
+      height: 42px;
+    }
+    #step-3-spec {
+      position: absolute;
+      left: 0;
+      bottom: 0;
+    }
+  </style>
+  <div data-hf-id="hf-tvp2" id="root" data-composition-id="steps" data-width="1920" data-height="1080">
+    <div data-hf-id="hf-t6jv" id="steps-card" class="clip" data-start="0.15" data-duration="7.45" data-track-index="1"></div>
+
+    <div data-hf-id="hf-iam1" id="step-1" class="step clip" data-start="0.15" data-duration="1.4" data-track-index="2">
+      <div data-hf-id="hf-yx4x" class="step-head"><span data-hf-id="hf-hqo3" class="step-num">01</span><span data-hf-id="hf-xd0o" class="step-title">選品項</span></div>
+      <div data-hf-id="hf-itpi" class="step-sub">紀念鑽石、項墜、戒指、耳環</div>
+    </div>
+    <div data-hf-id="hf-ob0m" id="step-2" class="step clip" data-start="1.55" data-duration="1.45" data-track-index="2">
+      <div data-hf-id="hf-l8id" class="step-head"><span data-hf-id="hf-hcd2" class="step-num">02</span><span data-hf-id="hf-zm7h" class="step-title">選款式</span></div>
+      <div data-hf-id="hf-kvlc" class="step-sub">點選喜歡的戒台</div>
+    </div>
+    <div data-hf-id="hf-fstq" id="step-3" class="step clip" data-start="3" data-duration="3.15" data-track-index="2">
+      <div data-hf-id="hf-mffg" class="step-head"><span data-hf-id="hf-gy21" class="step-num">03</span><span data-hf-id="hf-m2dh" class="step-title">配置規格・即時試算</span></div>
+      <div data-hf-id="hf-okb9" id="step-3-subs">
+        <div data-hf-id="hf-rmhq" id="step-3-spec" class="step-sub">選材質與金屬顏色</div>
+        <div data-hf-id="hf-wjjr" id="step-3-price" class="step-sub">鑽石 NT$24,000 ＋ 金工 NT$16,147</div>
+      </div>
+    </div>
+    <div data-hf-id="hf-i4vz" id="step-4" class="step clip" data-start="6.15" data-duration="1.45" data-track-index="2">
+      <div data-hf-id="hf-m14f" class="step-head"><span data-hf-id="hf-gjr0" class="step-num">04</span><span data-hf-id="hf-at2w" class="step-title">查詢訂製進度</span></div>
+      <div data-hf-id="hf-etfo" class="step-sub">輸入訂單編號即可查詢</div>
+    </div>
+  </div>
+  <script>
+    const tl = gsap.timeline({ paused: true });
+    // The card wipes open from the left, then each step's words blur in on the same stage.
+    tl.fromTo("#steps-card", { clipPath: "inset(0% 100% 0% 0% round 18px)" }, { clipPath: "inset(0% 0% 0% 0% round 18px)", duration: 0.45, ease: "expo.out" }, 0.15);
+    const blurIn = (sel, at) =>
+      tl.fromTo(sel, { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.18, ease: "power4.out" }, at);
+    const blurOut = (sel, at) => tl.to(sel, { opacity: 0, filter: "blur(8px)", duration: 0.13, ease: "power2.in" }, at);
+    blurIn("#step-1 > *", 0.3);
+    blurOut("#step-1 > *", 1.42);
+    blurIn("#step-2 > *", 1.6);
+    blurOut("#step-2 > *", 2.87);
+    blurIn("#step-3 .step-head", 3.05);
+    blurIn("#step-3-spec", 3.12);
+    // When the price appears on screen, the line swaps to its breakdown.
+    blurOut("#step-3-spec", 3.88);
+    blurIn("#step-3-price", 4.0);
+    blurOut("#step-3 > *", 6.02);
+    blurIn("#step-4 > *", 6.3);
+    blurOut("#step-4 > *", 7.4);
+    tl.to("#steps-card", { opacity: 0, filter: "blur(8px)", duration: 0.15, ease: "power2.in" }, 7.44);
+    window.__timelines["steps"] = tl;
+  </script>
+</template>

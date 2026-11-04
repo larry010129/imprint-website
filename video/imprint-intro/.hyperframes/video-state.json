@@ -1,0 +1,657 @@
+{
+  "version": 1,
+  "historyId": "e978a355-094f-43ee-9529-4d88b32c1409",
+  "currentRevision": "b6bee0f2-2dd3-47f3-87ae-3ef8ddab2c28",
+  "pendingChanges": false,
+  "files": {
+    "AGENTS.md": {
+      "hash": "1b36171117cb7c18f4100a0db6a3782ff2e096115995733200445cc2e80a4060",
+      "content": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\1b\\1b36171117cb7c18f4100a0db6a3782ff2e096115995733200445cc2e80a4060"
+    },
+    "CLAUDE.md": {
+      "hash": "1b36171117cb7c18f4100a0db6a3782ff2e096115995733200445cc2e80a4060",
+      "content": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\1b\\1b36171117cb7c18f4100a0db6a3782ff2e096115995733200445cc2e80a4060"
+    },
+    "SPEC.md": {
+      "hash": "26487e46bf116b4257ca3ab3b2b192dd3a93d45a99642b5cc3d155c2c9551f9d",
+      "content": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\26\\26487e46bf116b4257ca3ab3b2b192dd3a93d45a99642b5cc3d155c2c9551f9d"
+    },
+    "STORYLINES.md": {
+      "hash": "500b7776ebdb94e21681037fb6e59715fe2811011a9c96a90752cdb6768338aa",
+      "content": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\50\\500b7776ebdb94e21681037fb6e59715fe2811011a9c96a90752cdb6768338aa"
+    },
+    "assets/brand/mark.svg": {
+      "hash": "43cb7e9a9fd1ee32d3998786e06bce58e9e5f10c443be3a62af78bb00a9f3837",
+      "content": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\43\\43cb7e9a9fd1ee32d3998786e06bce58e9e5f10c443be3a62af78bb00a9f3837"
+    },
+    "assets/fonts/noto-serif-tc-500.woff2": {
+      "hash": "c9777104c6e21d587306d9221d5e52ca4e5493efd3963da1d76524a4b4b84fb6",
+      "content": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\c9\\c9777104c6e21d587306d9221d5e52ca4e5493efd3963da1d76524a4b4b84fb6"
+    },
+    "assets/fonts/noto-serif-tc-600.woff2": {
+      "hash": "771b6da1ace27a02e6926e8dd5e267eb601569976a6b98e61a0b6bc881731183",
+      "content": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\77\\771b6da1ace27a02e6926e8dd5e267eb601569976a6b98e61a0b6bc881731183"
+    },
+    "compositions/endcard.html": {
+      "hash": "a3b0f8306985cbe1e9f77c83fe47ddb1041cc026dceda721db60697fd61e8294",
+      "content": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\a3\\a3b0f8306985cbe1e9f77c83fe47ddb1041cc026dceda721db60697fd61e8294"
+    },
+    "compositions/hook.html": {
+      "hash": "e3d32ef50882b809ac87bef5ec826285c7781328da0167564cf38ab9b6a28214",
+      "content": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\e3\\e3d32ef50882b809ac87bef5ec826285c7781328da0167564cf38ab9b6a28214"
+    },
+    "compositions/process.html": {
+      "hash": "46b541a8dcdd9b6e5d2f031c891362ca0ec600c044587f5dd38bb40ee2a59bfe",
+      "content": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\46\\46b541a8dcdd9b6e5d2f031c891362ca0ec600c044587f5dd38bb40ee2a59bfe"
+    },
+    "compositions/title.html": {
+      "hash": "4dad0d5882d37c923dfb5b1940b7dbb8cf9296b1a415858111a271d1a1b1769d",
+      "content": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\4d\\4dad0d5882d37c923dfb5b1940b7dbb8cf9296b1a415858111a271d1a1b1769d"
+    },
+    "hyperframes.json": {
+      "hash": "35a6d4ea79ebe911f0d81705f7aace5d8ff0316b745b0311d56af50c9c237cb7",
+      "content": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\35\\35a6d4ea79ebe911f0d81705f7aace5d8ff0316b745b0311d56af50c9c237cb7"
+    },
+    "index.html": {
+      "hash": "85306d886903fa613bf9d414a3cf9a8adcb41626edcb1aaa89f102bebef04b70",
+      "content": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\85\\85306d886903fa613bf9d414a3cf9a8adcb41626edcb1aaa89f102bebef04b70"
+    },
+    "meta.json": {
+      "hash": "3583ebc0e3d524e47d5e0c082ff120765c4999ff92b1f2120afa314e8ddd362e",
+      "content": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\35\\3583ebc0e3d524e47d5e0c082ff120765c4999ff92b1f2120afa314e8ddd362e"
+    },
+    "package.json": {
+      "hash": "503dfb8e00b7483a32bfec41e94bfbd9cdb0b540bafaa7f48c6abef24d3374a3",
+      "content": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\50\\503dfb8e00b7483a32bfec41e94bfbd9cdb0b540bafaa7f48c6abef24d3374a3"
+    },
+    "assets/plates/grower.jpg": {
+      "hash": "96071ed03c06fb6efca1afb399c449cebbeba0c6034a97b910d1ce15b3896ae6",
+      "content": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\96\\96071ed03c06fb6efca1afb399c449cebbeba0c6034a97b910d1ce15b3896ae6"
+    },
+    "assets/plates/hands.jpg": {
+      "hash": "47d530c0c7e93342be158faf82f101f40155484f36fac4d927543c5409416f81",
+      "content": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\47\\47d530c0c7e93342be158faf82f101f40155484f36fac4d927543c5409416f81"
+    },
+    "assets/plates/ring.jpg": {
+      "hash": "8af0aaae95c6f7bd40e89416f5d6db9b5fdf37cd816e48149b4d70e3e533cac5",
+      "content": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\8a\\8af0aaae95c6f7bd40e89416f5d6db9b5fdf37cd816e48149b4d70e3e533cac5"
+    },
+    "assets/source/grower.png": {
+      "hash": "135ed9f4a8b6e90fcbf9f81aae164f88f0249d5d1430cdad825a62395f901fea",
+      "content": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\13\\135ed9f4a8b6e90fcbf9f81aae164f88f0249d5d1430cdad825a62395f901fea"
+    },
+    "assets/source/hands.png": {
+      "hash": "cb492830a642fade1fcfcfb2aed5d0419dfda832a8fb5469dde04db5463cac2e",
+      "content": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\cb\\cb492830a642fade1fcfcfb2aed5d0419dfda832a8fb5469dde04db5463cac2e"
+    },
+    "assets/source/ring.png": {
+      "hash": "7a1be98ee5128f80216a5afcc69b4ec363d1feac4b81932acce0d8672a1bede3",
+      "content": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\7a\\7a1be98ee5128f80216a5afcc69b4ec363d1feac4b81932acce0d8672a1bede3"
+    },
+    "REVIEW.md": {
+      "hash": "cb97e9fd2346bffa24ceded289294f62e1a3089f7fc14f7c72d0fa6a27d39f7e",
+      "content": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\cb\\cb97e9fd2346bffa24ceded289294f62e1a3089f7fc14f7c72d0fa6a27d39f7e"
+    }
+  },
+  "revisions": {
+    "0bba2f9f-1f28-4b7d-80c9-4d5de2bf1bee": {
+      "actor": {
+        "kind": "outside",
+        "name": "Outside"
+      },
+      "label": "Changed outside the app",
+      "startedAt": 1793556360568,
+      "endedAt": 1793556360615,
+      "files": {
+        "assets/plates/grower.jpg": {
+          "before": null,
+          "after": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\96\\96071ed03c06fb6efca1afb399c449cebbeba0c6034a97b910d1ce15b3896ae6"
+        },
+        "assets/plates/hands.jpg": {
+          "before": null,
+          "after": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\47\\47d530c0c7e93342be158faf82f101f40155484f36fac4d927543c5409416f81"
+        },
+        "assets/plates/ring.jpg": {
+          "before": null,
+          "after": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\8a\\8af0aaae95c6f7bd40e89416f5d6db9b5fdf37cd816e48149b4d70e3e533cac5"
+        },
+        "assets/source/grower.png": {
+          "before": null,
+          "after": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\13\\135ed9f4a8b6e90fcbf9f81aae164f88f0249d5d1430cdad825a62395f901fea"
+        },
+        "assets/source/hands.png": {
+          "before": null,
+          "after": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\cb\\cb492830a642fade1fcfcfb2aed5d0419dfda832a8fb5469dde04db5463cac2e"
+        },
+        "assets/source/ring.png": {
+          "before": null,
+          "after": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\7a\\7a1be98ee5128f80216a5afcc69b4ec363d1feac4b81932acce0d8672a1bede3"
+        },
+        "compositions/process.html": {
+          "before": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\38\\38568f96957bdda41c4d3c5df122363789f8fcae7cdb4ed3cb8109cb5bee8605",
+          "after": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\87\\8703b76827aa9adc9d8133e64685a87d1ff555d3c9ab89db21ebca331d9d260b"
+        },
+        "compositions/title.html": {
+          "before": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\ab\\abf8adc496cf4502fdc91722ab0555522c84d5bf807dd4f4a1509ece0c2f2554",
+          "after": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\62\\62331c7d04939fdc8b73a51aab4e275ff9194941a389125075a28a7af00691e6"
+        },
+        "index.html": {
+          "before": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\66\\66d6c65ef11d5388a28a1547a602165179b3acd32ea6ea1be0bcc0eb39904bad",
+          "after": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\9e\\9e46951a3b656578b1020f69d7d364ac153105ab529d4c811bc0f4a0cd48db2c"
+        }
+      }
+    },
+    "f6b35f61-126d-4cef-928a-9a7bb0024cd7": {
+      "actor": {
+        "kind": "outside",
+        "name": "Outside"
+      },
+      "label": "Changed outside the app",
+      "startedAt": 1793556387708,
+      "endedAt": 1793556387711,
+      "files": {
+        "compositions/process.html": {
+          "before": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\87\\8703b76827aa9adc9d8133e64685a87d1ff555d3c9ab89db21ebca331d9d260b",
+          "after": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\08\\08051f3f030db5643425c01258ecd371be7c8522986226ec0378e57e997b0091"
+        }
+      }
+    },
+    "593afd64-adc8-4186-8b30-be03c531e235": {
+      "actor": {
+        "kind": "outside",
+        "name": "Outside"
+      },
+      "label": "Changed outside the app",
+      "startedAt": 1793556433571,
+      "endedAt": 1793556433582,
+      "files": {
+        "compositions/process.html": {
+          "before": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\08\\08051f3f030db5643425c01258ecd371be7c8522986226ec0378e57e997b0091",
+          "after": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\99\\99e5ad43218d8eb1dc03a5b1f382a061409383d1abddaa2c872ae3b26f4419ba"
+        },
+        "compositions/title.html": {
+          "before": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\62\\62331c7d04939fdc8b73a51aab4e275ff9194941a389125075a28a7af00691e6",
+          "after": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\56\\568fb7b6797f9257d6fe7ef7a737e88f3fe7ea4f996fb8f866a9baf33c8d10e2"
+        }
+      }
+    },
+    "791043cc-31e3-47e4-b17b-562af9edc4e5": {
+      "actor": {
+        "kind": "outside",
+        "name": "Outside"
+      },
+      "label": "Changed outside the app",
+      "startedAt": 1793556454264,
+      "endedAt": 1793556454292,
+      "files": {
+        "compositions/endcard.html": {
+          "before": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\3d\\3ddaa9fc334ec6c37c75ee7c5085952786142bbc7d5e6167d8f70db6a6fbcb46",
+          "after": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\a3\\a3b0f8306985cbe1e9f77c83fe47ddb1041cc026dceda721db60697fd61e8294"
+        },
+        "compositions/hook.html": {
+          "before": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\bf\\bf5cf46ea0aff5ff05d69056b506411bbad7cd48f9c21ae94ca0d4b7dd257268",
+          "after": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\e3\\e3d32ef50882b809ac87bef5ec826285c7781328da0167564cf38ab9b6a28214"
+        },
+        "compositions/process.html": {
+          "before": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\99\\99e5ad43218d8eb1dc03a5b1f382a061409383d1abddaa2c872ae3b26f4419ba",
+          "after": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\46\\46b541a8dcdd9b6e5d2f031c891362ca0ec600c044587f5dd38bb40ee2a59bfe"
+        },
+        "compositions/title.html": {
+          "before": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\56\\568fb7b6797f9257d6fe7ef7a737e88f3fe7ea4f996fb8f866a9baf33c8d10e2",
+          "after": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\4d\\4dad0d5882d37c923dfb5b1940b7dbb8cf9296b1a415858111a271d1a1b1769d"
+        },
+        "index.html": {
+          "before": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\9e\\9e46951a3b656578b1020f69d7d364ac153105ab529d4c811bc0f4a0cd48db2c",
+          "after": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\85\\85306d886903fa613bf9d414a3cf9a8adcb41626edcb1aaa89f102bebef04b70"
+        },
+        "SPEC.md": {
+          "before": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\4b\\4b4f49e163fb1d06b41ea68e361a0b9415a2279ce19fa7d1e9f335038c935150",
+          "after": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\26\\26487e46bf116b4257ca3ab3b2b192dd3a93d45a99642b5cc3d155c2c9551f9d"
+        }
+      }
+    },
+    "b6bee0f2-2dd3-47f3-87ae-3ef8ddab2c28": {
+      "actor": {
+        "kind": "outside",
+        "name": "Outside"
+      },
+      "label": "Changed outside the app",
+      "startedAt": 1793556806838,
+      "endedAt": 1793556808844,
+      "files": {
+        "REVIEW.md": {
+          "before": null,
+          "after": "C:\\Users\\e1253\\.cache\\hyperframes\\history\\e978a355-094f-43ee-9529-4d88b32c1409\\blobs\\cb\\cb97e9fd2346bffa24ceded289294f62e1a3089f7fc14f7c72d0fa6a27d39f7e"
+        }
+      }
+    }
+  },
+  "checks": {
+    "latest": {
+      "revision": "593afd64-adc8-4186-8b30-be03c531e235",
+      "id": "0a6906ba-8ccb-4960-9074-db74d82c25a7"
+    },
+    "revisions": {
+      "0bba2f9f-1f28-4b7d-80c9-4d5de2bf1bee": [
+        {
+          "id": "9dc81637-143a-45ae-9dd3-40ce5dcf25c6",
+          "scope": "project",
+          "report": "C:\\Users\\e1253\\Documents\\imprint-website\\video\\imprint-intro\\.hyperframes\\artifacts\\checks\\9dc81637-143a-45ae-9dd3-40ce5dcf25c6.json",
+          "metadata": {
+            "ok": false,
+            "browserSkipped": false,
+            "options": {
+              "samples": 9,
+              "atTransitions": false,
+              "maxIssues": 80,
+              "collapseStatic": true,
+              "tolerance": 2,
+              "timeout": 10000,
+              "contrast": true,
+              "strict": false,
+              "snapshots": false,
+              "browserGpuMode": "auto"
+            }
+          },
+          "createdAt": 1793556370150,
+          "contentHash": "34c50af89071d2ef7ef3ee55277f2b4df612776ea27ed14e3aee373992045be3",
+          "revision": "0bba2f9f-1f28-4b7d-80c9-4d5de2bf1bee",
+          "inputFingerprint": "54af35ef50ce0639615a02b6e2070bba58451d2f1bf438c8332b89915ead7200",
+          "inputScope": "local-project-files",
+          "attribution": "recorded-revision"
+        }
+      ],
+      "593afd64-adc8-4186-8b30-be03c531e235": [
+        {
+          "id": "0a6906ba-8ccb-4960-9074-db74d82c25a7",
+          "scope": "project",
+          "report": "C:\\Users\\e1253\\Documents\\imprint-website\\video\\imprint-intro\\.hyperframes\\artifacts\\checks\\0a6906ba-8ccb-4960-9074-db74d82c25a7.json",
+          "metadata": {
+            "ok": true,
+            "browserSkipped": false,
+            "options": {
+              "samples": 9,
+              "atTransitions": false,
+              "maxIssues": 80,
+              "collapseStatic": true,
+              "tolerance": 2,
+              "timeout": 10000,
+              "contrast": true,
+              "strict": false,
+              "snapshots": false,
+              "browserGpuMode": "auto"
+            }
+          },
+          "createdAt": 1793556440782,
+          "contentHash": "dda8a4a111864bc7752d2f138be6871afbdd462a7b31b67abc4de19fd914d423",
+          "revision": "593afd64-adc8-4186-8b30-be03c531e235",
+          "inputFingerprint": "7fc66b4deb9c9d97aac3252cb36709e2fb3306aff611e6432acc9fc3e6164294",
+          "inputScope": "local-project-files",
+          "attribution": "recorded-revision"
+        }
+      ]
+    },
+    "unversioned": [
+      {
+        "id": "f01340fa-dd4a-4d86-9b9f-c245adfac033",
+        "scope": "project",
+        "report": "C:\\Users\\e1253\\Documents\\imprint-website\\video\\imprint-intro\\.hyperframes\\artifacts\\checks\\f01340fa-dd4a-4d86-9b9f-c245adfac033.json",
+        "metadata": {
+          "ok": false,
+          "browserSkipped": true,
+          "options": {
+            "samples": 9,
+            "atTransitions": false,
+            "maxIssues": 80,
+            "collapseStatic": true,
+            "tolerance": 2,
+            "timeout": 10000,
+            "contrast": true,
+            "strict": false,
+            "snapshots": false,
+            "browserGpuMode": "auto"
+          }
+        },
+        "createdAt": 1793555962838,
+        "contentHash": "b6796983ed109c25e5c1a497fbd0c8b1d985456412ac36717394d8d849c74fd5",
+        "revision": null,
+        "inputFingerprint": "f42b5565caf9e771f6f3e9c7459a1004c09a815f612aef1f9ec1204cfc7aa841",
+        "inputScope": "local-project-files",
+        "attribution": "unversioned"
+      }
+    ]
+  },
+  "snapshots": {
+    "latest": {
+      "revision": "791043cc-31e3-47e4-b17b-562af9edc4e5",
+      "id": "b1f8417a-0525-4a2d-8b05-a53404aa5a5f-5"
+    },
+    "revisions": {
+      "f6b35f61-126d-4cef-928a-9a7bb0024cd7": [
+        {
+          "scope": "full",
+          "id": "347cc47f-8408-47a7-b9ab-f31f8e4c1b08-0",
+          "image": "C:\\Users\\e1253\\Documents\\imprint-website\\video\\imprint-intro\\.hyperframes\\artifacts\\snapshots\\ee4cf42a-1a2e-48dd-a73c-7a399a6a79db\\frame-00-at-0s.png",
+          "time": 0,
+          "metadata": {
+            "width": 1920,
+            "height": 1080,
+            "zoomScale": 1,
+            "browserGpuMode": "auto",
+            "warnings": [],
+            "partial": false
+          },
+          "createdAt": 1793556397399,
+          "contentHash": "d45787e54e6e4ced4ff6461f0b46fa6a46e366f768ffb16a979ee4692ff162ce",
+          "revision": "f6b35f61-126d-4cef-928a-9a7bb0024cd7",
+          "inputFingerprint": "9a2dcd18bffb1d66517e6838c67c6f09d319dd7c3db2a428be0186f869bb2919",
+          "inputScope": "local-project-files",
+          "attribution": "recorded-revision"
+        },
+        {
+          "scope": "full",
+          "id": "347cc47f-8408-47a7-b9ab-f31f8e4c1b08-1",
+          "image": "C:\\Users\\e1253\\Documents\\imprint-website\\video\\imprint-intro\\.hyperframes\\artifacts\\snapshots\\ee4cf42a-1a2e-48dd-a73c-7a399a6a79db\\frame-01-at-2.5s.png",
+          "time": 2.5,
+          "metadata": {
+            "width": 1920,
+            "height": 1080,
+            "zoomScale": 1,
+            "browserGpuMode": "auto",
+            "warnings": [],
+            "partial": false
+          },
+          "createdAt": 1793556397399,
+          "contentHash": "6f194ef0199707f8560b64db2af24f2eb264d4cfc87948b8addead4589501a9f",
+          "revision": "f6b35f61-126d-4cef-928a-9a7bb0024cd7",
+          "inputFingerprint": "9a2dcd18bffb1d66517e6838c67c6f09d319dd7c3db2a428be0186f869bb2919",
+          "inputScope": "local-project-files",
+          "attribution": "recorded-revision"
+        },
+        {
+          "scope": "full",
+          "id": "347cc47f-8408-47a7-b9ab-f31f8e4c1b08-2",
+          "image": "C:\\Users\\e1253\\Documents\\imprint-website\\video\\imprint-intro\\.hyperframes\\artifacts\\snapshots\\ee4cf42a-1a2e-48dd-a73c-7a399a6a79db\\frame-02-at-7.4s.png",
+          "time": 7.4,
+          "metadata": {
+            "width": 1920,
+            "height": 1080,
+            "zoomScale": 1,
+            "browserGpuMode": "auto",
+            "warnings": [],
+            "partial": false
+          },
+          "createdAt": 1793556397399,
+          "contentHash": "4fda8b3f3f5133a2f0bc7b510d4a40979c113cc6ae39458911c181362435742e",
+          "revision": "f6b35f61-126d-4cef-928a-9a7bb0024cd7",
+          "inputFingerprint": "9a2dcd18bffb1d66517e6838c67c6f09d319dd7c3db2a428be0186f869bb2919",
+          "inputScope": "local-project-files",
+          "attribution": "recorded-revision"
+        },
+        {
+          "scope": "full",
+          "id": "347cc47f-8408-47a7-b9ab-f31f8e4c1b08-3",
+          "image": "C:\\Users\\e1253\\Documents\\imprint-website\\video\\imprint-intro\\.hyperframes\\artifacts\\snapshots\\ee4cf42a-1a2e-48dd-a73c-7a399a6a79db\\frame-03-at-9.5s.png",
+          "time": 9.5,
+          "metadata": {
+            "width": 1920,
+            "height": 1080,
+            "zoomScale": 1,
+            "browserGpuMode": "auto",
+            "warnings": [],
+            "partial": false
+          },
+          "createdAt": 1793556397399,
+          "contentHash": "355d126b83e2159268fee96b8e5c3bd2f1c8cf9e8e1379545181006e532b2109",
+          "revision": "f6b35f61-126d-4cef-928a-9a7bb0024cd7",
+          "inputFingerprint": "9a2dcd18bffb1d66517e6838c67c6f09d319dd7c3db2a428be0186f869bb2919",
+          "inputScope": "local-project-files",
+          "attribution": "recorded-revision"
+        },
+        {
+          "scope": "full",
+          "id": "347cc47f-8408-47a7-b9ab-f31f8e4c1b08-4",
+          "image": "C:\\Users\\e1253\\Documents\\imprint-website\\video\\imprint-intro\\.hyperframes\\artifacts\\snapshots\\ee4cf42a-1a2e-48dd-a73c-7a399a6a79db\\frame-04-at-13.5s.png",
+          "time": 13.5,
+          "metadata": {
+            "width": 1920,
+            "height": 1080,
+            "zoomScale": 1,
+            "browserGpuMode": "auto",
+            "warnings": [],
+            "partial": false
+          },
+          "createdAt": 1793556397400,
+          "contentHash": "bfe5ad15a8ba2a1aa462f05bbdb1b560bc03cbcb1c3d5697de3a4465a5ed15e5",
+          "revision": "f6b35f61-126d-4cef-928a-9a7bb0024cd7",
+          "inputFingerprint": "9a2dcd18bffb1d66517e6838c67c6f09d319dd7c3db2a428be0186f869bb2919",
+          "inputScope": "local-project-files",
+          "attribution": "recorded-revision"
+        },
+        {
+          "scope": "full",
+          "id": "347cc47f-8408-47a7-b9ab-f31f8e4c1b08-5",
+          "image": "C:\\Users\\e1253\\Documents\\imprint-website\\video\\imprint-intro\\.hyperframes\\artifacts\\snapshots\\ee4cf42a-1a2e-48dd-a73c-7a399a6a79db\\frame-05-at-15.3s.png",
+          "time": 15.3,
+          "metadata": {
+            "width": 1920,
+            "height": 1080,
+            "zoomScale": 1,
+            "browserGpuMode": "auto",
+            "warnings": [],
+            "partial": false
+          },
+          "createdAt": 1793556397401,
+          "contentHash": "3343ecfc6f036597727447c2472c625479adf2dc8f58920f4bd95600a92e69cf",
+          "revision": "f6b35f61-126d-4cef-928a-9a7bb0024cd7",
+          "inputFingerprint": "9a2dcd18bffb1d66517e6838c67c6f09d319dd7c3db2a428be0186f869bb2919",
+          "inputScope": "local-project-files",
+          "attribution": "recorded-revision"
+        },
+        {
+          "scope": "full",
+          "id": "347cc47f-8408-47a7-b9ab-f31f8e4c1b08-6",
+          "image": "C:\\Users\\e1253\\Documents\\imprint-website\\video\\imprint-intro\\.hyperframes\\artifacts\\snapshots\\ee4cf42a-1a2e-48dd-a73c-7a399a6a79db\\frame-06-at-19.5s.png",
+          "time": 19.5,
+          "metadata": {
+            "width": 1920,
+            "height": 1080,
+            "zoomScale": 1,
+            "browserGpuMode": "auto",
+            "warnings": [],
+            "partial": false
+          },
+          "createdAt": 1793556397401,
+          "contentHash": "d42ed22823a2d4bdd878052c3796cd42cd10aee5331713ed368b81da783dbc33",
+          "revision": "f6b35f61-126d-4cef-928a-9a7bb0024cd7",
+          "inputFingerprint": "9a2dcd18bffb1d66517e6838c67c6f09d319dd7c3db2a428be0186f869bb2919",
+          "inputScope": "local-project-files",
+          "attribution": "recorded-revision"
+        },
+        {
+          "scope": "full",
+          "id": "347cc47f-8408-47a7-b9ab-f31f8e4c1b08-7",
+          "image": "C:\\Users\\e1253\\Documents\\imprint-website\\video\\imprint-intro\\.hyperframes\\artifacts\\snapshots\\ee4cf42a-1a2e-48dd-a73c-7a399a6a79db\\frame-07-at-25.2s.png",
+          "time": 25.2,
+          "metadata": {
+            "width": 1920,
+            "height": 1080,
+            "zoomScale": 1,
+            "browserGpuMode": "auto",
+            "warnings": [],
+            "partial": false
+          },
+          "createdAt": 1793556397402,
+          "contentHash": "5875125f60f8dbcacafbcbe3fd7b17dc283ff43401848e1cb64403657e0cfb1a",
+          "revision": "f6b35f61-126d-4cef-928a-9a7bb0024cd7",
+          "inputFingerprint": "9a2dcd18bffb1d66517e6838c67c6f09d319dd7c3db2a428be0186f869bb2919",
+          "inputScope": "local-project-files",
+          "attribution": "recorded-revision"
+        },
+        {
+          "scope": "full",
+          "id": "347cc47f-8408-47a7-b9ab-f31f8e4c1b08-8",
+          "image": "C:\\Users\\e1253\\Documents\\imprint-website\\video\\imprint-intro\\.hyperframes\\artifacts\\snapshots\\ee4cf42a-1a2e-48dd-a73c-7a399a6a79db\\frame-08-at-28s.png",
+          "time": 28,
+          "metadata": {
+            "width": 1920,
+            "height": 1080,
+            "zoomScale": 1,
+            "browserGpuMode": "auto",
+            "warnings": [],
+            "partial": false
+          },
+          "createdAt": 1793556397403,
+          "contentHash": "7bef81661463e71185f00e433f7b4c65bca21d70d8c3eb9e74401272dca7d33c",
+          "revision": "f6b35f61-126d-4cef-928a-9a7bb0024cd7",
+          "inputFingerprint": "9a2dcd18bffb1d66517e6838c67c6f09d319dd7c3db2a428be0186f869bb2919",
+          "inputScope": "local-project-files",
+          "attribution": "recorded-revision"
+        },
+        {
+          "scope": "full",
+          "id": "347cc47f-8408-47a7-b9ab-f31f8e4c1b08-9",
+          "image": "C:\\Users\\e1253\\Documents\\imprint-website\\video\\imprint-intro\\.hyperframes\\artifacts\\snapshots\\ee4cf42a-1a2e-48dd-a73c-7a399a6a79db\\frame-09-at-29.75s.png",
+          "time": 29.75,
+          "metadata": {
+            "width": 1920,
+            "height": 1080,
+            "zoomScale": 1,
+            "browserGpuMode": "auto",
+            "warnings": [],
+            "partial": false
+          },
+          "createdAt": 1793556397404,
+          "contentHash": "7bef81661463e71185f00e433f7b4c65bca21d70d8c3eb9e74401272dca7d33c",
+          "revision": "f6b35f61-126d-4cef-928a-9a7bb0024cd7",
+          "inputFingerprint": "9a2dcd18bffb1d66517e6838c67c6f09d319dd7c3db2a428be0186f869bb2919",
+          "inputScope": "local-project-files",
+          "attribution": "recorded-revision"
+        }
+      ],
+      "791043cc-31e3-47e4-b17b-562af9edc4e5": [
+        {
+          "scope": "full",
+          "id": "b1f8417a-0525-4a2d-8b05-a53404aa5a5f-0",
+          "image": "C:\\Users\\e1253\\Documents\\imprint-website\\video\\imprint-intro\\.hyperframes\\artifacts\\snapshots\\30f53900-425c-4807-89ce-a92ed99a38de\\frame-00-at-15.1s.png",
+          "time": 15.1,
+          "metadata": {
+            "width": 1920,
+            "height": 1080,
+            "zoomScale": 1,
+            "browserGpuMode": "auto",
+            "warnings": [],
+            "partial": false
+          },
+          "createdAt": 1793556791186,
+          "contentHash": "382951a4931fac2c71ef166937724c8a244155cee9da01839b85bd93fd62d4af",
+          "revision": "791043cc-31e3-47e4-b17b-562af9edc4e5",
+          "inputFingerprint": "2234758b068f0b784f7a65e1d045ce4406d93596cedc6c7bda9459b24f77a637",
+          "inputScope": "local-project-files",
+          "attribution": "recorded-revision"
+        },
+        {
+          "scope": "full",
+          "id": "b1f8417a-0525-4a2d-8b05-a53404aa5a5f-1",
+          "image": "C:\\Users\\e1253\\Documents\\imprint-website\\video\\imprint-intro\\.hyperframes\\artifacts\\snapshots\\30f53900-425c-4807-89ce-a92ed99a38de\\frame-01-at-15.28s.png",
+          "time": 15.28,
+          "metadata": {
+            "width": 1920,
+            "height": 1080,
+            "zoomScale": 1,
+            "browserGpuMode": "auto",
+            "warnings": [],
+            "partial": false
+          },
+          "createdAt": 1793556791187,
+          "contentHash": "6d8ef95708d055bb43c03ec5cd2f75d768b8e20659ace6d9c42aff4e683953bc",
+          "revision": "791043cc-31e3-47e4-b17b-562af9edc4e5",
+          "inputFingerprint": "2234758b068f0b784f7a65e1d045ce4406d93596cedc6c7bda9459b24f77a637",
+          "inputScope": "local-project-files",
+          "attribution": "recorded-revision"
+        },
+        {
+          "scope": "full",
+          "id": "b1f8417a-0525-4a2d-8b05-a53404aa5a5f-2",
+          "image": "C:\\Users\\e1253\\Documents\\imprint-website\\video\\imprint-intro\\.hyperframes\\artifacts\\snapshots\\30f53900-425c-4807-89ce-a92ed99a38de\\frame-02-at-15.46s.png",
+          "time": 15.459999999999999,
+          "metadata": {
+            "width": 1920,
+            "height": 1080,
+            "zoomScale": 1,
+            "browserGpuMode": "auto",
+            "warnings": [],
+            "partial": false
+          },
+          "createdAt": 1793556791189,
+          "contentHash": "3d2e050b33195677a84b6378087bf1d793b2c202db05f46ce6520ce722424507",
+          "revision": "791043cc-31e3-47e4-b17b-562af9edc4e5",
+          "inputFingerprint": "2234758b068f0b784f7a65e1d045ce4406d93596cedc6c7bda9459b24f77a637",
+          "inputScope": "local-project-files",
+          "attribution": "recorded-revision"
+        },
+        {
+          "scope": "full",
+          "id": "b1f8417a-0525-4a2d-8b05-a53404aa5a5f-3",
+          "image": "C:\\Users\\e1253\\Documents\\imprint-website\\video\\imprint-intro\\.hyperframes\\artifacts\\snapshots\\30f53900-425c-4807-89ce-a92ed99a38de\\frame-03-at-15.64s.png",
+          "time": 15.64,
+          "metadata": {
+            "width": 1920,
+            "height": 1080,
+            "zoomScale": 1,
+            "browserGpuMode": "auto",
+            "warnings": [],
+            "partial": false
+          },
+          "createdAt": 1793556791191,
+          "contentHash": "f4a234ee61903eb1f588dd8d1fb36a9d131de76a9e512a7081d5c9406761256d",
+          "revision": "791043cc-31e3-47e4-b17b-562af9edc4e5",
+          "inputFingerprint": "2234758b068f0b784f7a65e1d045ce4406d93596cedc6c7bda9459b24f77a637",
+          "inputScope": "local-project-files",
+          "attribution": "recorded-revision"
+        },
+        {
+          "scope": "full",
+          "id": "b1f8417a-0525-4a2d-8b05-a53404aa5a5f-4",
+          "image": "C:\\Users\\e1253\\Documents\\imprint-website\\video\\imprint-intro\\.hyperframes\\artifacts\\snapshots\\30f53900-425c-4807-89ce-a92ed99a38de\\frame-04-at-15.82s.png",
+          "time": 15.82,
+          "metadata": {
+            "width": 1920,
+            "height": 1080,
+            "zoomScale": 1,
+            "browserGpuMode": "auto",
+            "warnings": [],
+            "partial": false
+          },
+          "createdAt": 1793556791192,
+          "contentHash": "43077b01d6182a3b8d7e1d5bd04be2c76f388a6e35089b4f4022cdd7b012eeb5",
+          "revision": "791043cc-31e3-47e4-b17b-562af9edc4e5",
+          "inputFingerprint": "2234758b068f0b784f7a65e1d045ce4406d93596cedc6c7bda9459b24f77a637",
+          "inputScope": "local-project-files",
+          "attribution": "recorded-revision"
+        },
+        {
+          "scope": "full",
+          "id": "b1f8417a-0525-4a2d-8b05-a53404aa5a5f-5",
+          "image": "C:\\Users\\e1253\\Documents\\imprint-website\\video\\imprint-intro\\.hyperframes\\artifacts\\snapshots\\30f53900-425c-4807-89ce-a92ed99a38de\\frame-05-at-16s.png",
+          "time": 16,
+          "metadata": {
+            "width": 1920,
+            "height": 1080,
+            "zoomScale": 1,
+            "browserGpuMode": "auto",
+            "warnings": [],
+            "partial": false
+          },
+          "createdAt": 1793556791194,
+          "contentHash": "3d93b5f07da44fc5e685188a6bdd7b4cf14a3d13e805bae8fbb6bcb46261271a",
+          "revision": "791043cc-31e3-47e4-b17b-562af9edc4e5",
+          "inputFingerprint": "2234758b068f0b784f7a65e1d045ce4406d93596cedc6c7bda9459b24f77a637",
+          "inputScope": "local-project-files",
+          "attribution": "recorded-revision"
+        }
+      ]
+    },
+    "unversioned": []
+  }
+}

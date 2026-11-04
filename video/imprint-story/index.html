@@ -1,0 +1,115 @@
+<!doctype html>
+<html
+  lang="zh-Hant"
+  data-composition-variables='[
+    {"id":"cta","type":"string","label":"End card CTA","default":"線上試算 · imprint-diamond.com"}
+  ]'
+>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
+    <style>
+      :root {
+        --ground: #fdfcfa;
+        --ink: #2b2320;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: var(--ground);
+      }
+      #root {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- 外婆的項鍊: a daughter and her mother, a few weeks after grandma passed. 33.03 s, cut to the dialogue. -->
+    <div data-hf-id="hf-nodm"
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="33.03"
+      data-width="1920"
+      data-height="1080"
+    >
+      <!-- Grandma's photo and letter (the site's 故事 photograph) -->
+      <div data-hf-id="hf-ou7d" id="memory" data-composition-id="memory" data-composition-src="compositions/memory.html"
+        data-start="0" data-duration="5.85" data-track-index="1" data-track-kind="graphics"
+        data-width="1920" data-height="1080" style="z-index: 1"></div>
+      <!-- 「做成一顆鑽石吧」 over three generations of hands -->
+      <div data-hf-id="hf-gj6w" id="idea" data-composition-id="idea" data-composition-src="compositions/idea.html"
+        data-start="5.85" data-duration="7.25" data-track-index="1" data-track-kind="graphics"
+        data-width="1920" data-height="1080" style="z-index: 1"></div>
+      <!-- Real shop screens from imprint-diamond.com/shop/calculator/, walked click by click -->
+      <div data-hf-id="hf-ajvz" id="catalog" data-composition-id="catalog" data-composition-src="compositions/catalog.html"
+        data-start="13.1" data-duration="1.9" data-track-index="1" data-track-kind="graphics"
+        data-width="1920" data-height="1080" style="z-index: 1"></div>
+      <div data-hf-id="hf-xoma" id="styles" data-composition-id="styles" data-composition-src="compositions/styles.html"
+        data-start="15" data-duration="1.9" data-track-index="1" data-track-kind="graphics"
+        data-width="1920" data-height="1080" style="z-index: 1"></div>
+      <div data-hf-id="hf-whpj" id="configure" data-composition-id="configure" data-composition-src="compositions/configure.html"
+        data-start="16.9" data-duration="3.8" data-track-index="1" data-track-kind="graphics"
+        data-width="1920" data-height="1080" style="z-index: 1"></div>
+      <div data-hf-id="hf-cin9" id="track" data-composition-id="track" data-composition-src="compositions/track.html"
+        data-start="20.7" data-duration="6.4" data-track-index="1" data-track-kind="graphics"
+        data-width="1920" data-height="1080" style="z-index: 1"></div>
+      <!-- The opening shot again, pulled back to the finished necklace; stays under the end card's fade -->
+      <div data-hf-id="hf-vfvk" id="reveal" data-composition-id="reveal" data-composition-src="compositions/reveal.html"
+        data-start="27.1" data-duration="3.13" data-track-index="1" data-track-kind="graphics"
+        data-width="1920" data-height="1080" style="z-index: 1"></div>
+      <div data-hf-id="hf-p4m6" id="endcard" data-composition-id="endcard" data-composition-src="compositions/endcard.html"
+        data-start="29.78" data-duration="3.25" data-track-index="4" data-track-kind="graphics"
+        data-width="1920" data-height="1080" style="z-index: 2"></div>
+
+      <!-- Overlays: the cursor through the shop, subtitles for every line -->
+      <div data-hf-id="hf-k0q1" id="cursor" data-composition-id="cursor" data-composition-src="compositions/cursor.html"
+        data-start="0" data-duration="20.7" data-track-index="3" data-track-kind="graphics"
+        data-width="1920" data-height="1080" style="z-index: 20"></div>
+      <div data-hf-id="hf-b8da" id="subs" data-composition-id="subs" data-composition-src="compositions/subs.html"
+        data-start="0" data-duration="29.78" data-track-index="2" data-track-kind="captions"
+        data-width="1920" data-height="1080" style="z-index: 30"></div>
+
+      <!-- Dialogue: daughter (d) and mother (m), voiced by music/voices.py (BreezyVoice, Taiwan Mandarin) -->
+      <audio data-hf-id="hf-l0qa" id="vo-d1" class="clip" src="assets/voice/d1.wav" data-start="0.35" data-duration="2.26" data-track-index="8" data-volume="1.25"></audio>
+      <audio data-hf-id="hf-tf9g" id="vo-m1" class="clip" src="assets/voice/m1.wav" data-start="2.9" data-duration="2.71" data-track-index="9" data-volume="1.25"></audio>
+      <audio data-hf-id="hf-m9de" id="vo-d2" class="clip" src="assets/voice/d2.wav" data-start="6" data-duration="4.89" data-track-index="8" data-volume="1.25"></audio>
+      <audio data-hf-id="hf-kdlm" id="vo-m2" class="clip" src="assets/voice/m2.wav" data-start="11.15" data-duration="1.77" data-track-index="9" data-volume="1.25"></audio>
+      <audio data-hf-id="hf-4va5" id="vo-d3" class="clip" src="assets/voice/d3.wav" data-start="13.3" data-duration="4.84" data-track-index="8" data-volume="1.25"></audio>
+      <audio data-hf-id="hf-fpwf" id="vo-m3" class="clip" src="assets/voice/m3.wav" data-start="20.85" data-duration="2.51" data-track-index="9" data-volume="1.25"></audio>
+      <audio data-hf-id="hf-pic7" id="vo-d4" class="clip" src="assets/voice/d4.wav" data-start="23.45" data-duration="3.32" data-track-index="8" data-volume="1.25"></audio>
+      <audio data-hf-id="hf-x77b" id="vo-m4" class="clip" src="assets/voice/m4.wav" data-start="27.3" data-duration="2.33" data-track-index="9" data-volume="1.25"></audio>
+
+      <!-- Sound: a click on each real click (file peaks 0.07 s in), a whoosh into the shop and through 訂購 -->
+      <audio data-hf-id="hf-bsne" id="sfx-whoosh-1" class="clip" src="assets/audio/whoosh.mp3" data-start="12.5" data-duration="1"
+        data-media-start="1.9" data-track-index="5" data-volume="0.4" data-fade-in="0.2" data-fade-out="0.3"></audio>
+      <audio data-hf-id="hf-u4is" id="sfx-click-1" class="clip" src="assets/audio/click.mp3" data-start="14.71" data-duration="0.36" data-track-index="6" data-volume="0.9"></audio>
+      <audio data-hf-id="hf-fkdy" id="sfx-click-2" class="clip" src="assets/audio/click.mp3" data-start="16.66" data-duration="0.36" data-track-index="6" data-volume="0.9"></audio>
+      <audio data-hf-id="hf-7lng" id="sfx-click-3" class="clip" src="assets/audio/click.mp3" data-start="17.66" data-duration="0.36" data-track-index="6" data-volume="0.9"></audio>
+      <audio data-hf-id="hf-9xk4" id="sfx-click-4" class="clip" src="assets/audio/click.mp3" data-start="18.46" data-duration="0.36" data-track-index="6" data-volume="0.9"></audio>
+      <audio data-hf-id="hf-yeel" id="sfx-click-5" class="clip" src="assets/audio/click.mp3" data-start="20.31" data-duration="0.36" data-track-index="6" data-volume="0.9"></audio>
+      <audio data-hf-id="hf-ic7b" id="sfx-whoosh-2" class="clip" src="assets/audio/whoosh.mp3" data-start="20.1" data-duration="1"
+        data-media-start="1.9" data-track-index="5" data-volume="0.45" data-fade-in="0.2" data-fade-out="0.3"></audio>
+
+      <!-- Music bed: written for this cut by music/score.py (ducks under each line) -->
+      <audio data-hf-id="hf-sl0j" id="music-bed" class="clip" src="assets/audio/score.wav" data-start="0" data-duration="33.03"
+        data-track-index="7" data-volume="0.3"></audio>
+    </div>
+    <script>
+      const tl = gsap.timeline({ paused: true });
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

@@ -1,0 +1,405 @@
+{
+  "ok": false,
+  "strict": false,
+  "browserSkipped": false,
+  "lint": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "filesScanned": 5
+  },
+  "runtime": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": []
+  },
+  "layout": {
+    "ok": false,
+    "errorCount": 7,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [
+      {
+        "code": "text_not_painted",
+        "severity": "error",
+        "time": 8.333,
+        "selector": "#proc-a > span:nth-of-type(5)",
+        "message": "Text paints with an effectively transparent fill (-webkit-text-fill-color / color), so its glyphs are invisible.",
+        "rect": {
+          "left": 1600,
+          "top": 443.63,
+          "right": 1686,
+          "bottom": 512.03,
+          "width": 86,
+          "height": 68.41
+        },
+        "text": "、",
+        "fixHint": "Set an explicit, opaque `color` on the text — and an explicit `-webkit-text-fill-color` if an ancestor makes the fill transparent. If the transparency is intentional gradient text, add `background-clip: text`.",
+        "dataAttributes": {},
+        "sourceFile": "compositions/process.html",
+        "bbox": {
+          "x": 1600,
+          "y": 443.63,
+          "width": 86,
+          "height": 68.41
+        },
+        "firstSeen": 8.333,
+        "lastSeen": 8.333,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          8.333
+        ]
+      },
+      {
+        "code": "text_not_painted",
+        "severity": "error",
+        "time": 8.333,
+        "selector": "#proc-a > span:nth-of-type(6)",
+        "message": "Text paints with an effectively transparent fill (-webkit-text-fill-color / color), so its glyphs are invisible.",
+        "rect": {
+          "left": 1600,
+          "top": 512.03,
+          "right": 1686,
+          "bottom": 580.44,
+          "width": 86,
+          "height": 68.41
+        },
+        "text": "骨",
+        "fixHint": "Set an explicit, opaque `color` on the text — and an explicit `-webkit-text-fill-color` if an ancestor makes the fill transparent. If the transparency is intentional gradient text, add `background-clip: text`.",
+        "dataAttributes": {},
+        "sourceFile": "compositions/process.html",
+        "bbox": {
+          "x": 1600,
+          "y": 512.03,
+          "width": 86,
+          "height": 68.41
+        },
+        "firstSeen": 8.333,
+        "lastSeen": 8.333,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          8.333
+        ]
+      },
+      {
+        "code": "text_not_painted",
+        "severity": "error",
+        "time": 8.333,
+        "selector": "#proc-a > span:nth-of-type(7)",
+        "message": "Text paints with an effectively transparent fill (-webkit-text-fill-color / color), so its glyphs are invisible.",
+        "rect": {
+          "left": 1600,
+          "top": 580.44,
+          "right": 1686,
+          "bottom": 648.84,
+          "width": 86,
+          "height": 68.41
+        },
+        "text": "灰",
+        "fixHint": "Set an explicit, opaque `color` on the text — and an explicit `-webkit-text-fill-color` if an ancestor makes the fill transparent. If the transparency is intentional gradient text, add `background-clip: text`.",
+        "dataAttributes": {},
+        "sourceFile": "compositions/process.html",
+        "bbox": {
+          "x": 1600,
+          "y": 580.44,
+          "width": 86,
+          "height": 68.41
+        },
+        "firstSeen": 8.333,
+        "lastSeen": 8.333,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          8.333
+        ]
+      },
+      {
+        "code": "text_not_painted",
+        "severity": "error",
+        "time": 8.333,
+        "selector": "#proc-a > span:nth-of-type(8)",
+        "message": "Text paints with an effectively transparent fill (-webkit-text-fill-color / color), so its glyphs are invisible.",
+        "rect": {
+          "left": 1600,
+          "top": 648.84,
+          "right": 1686,
+          "bottom": 717.25,
+          "width": 86,
+          "height": 68.41
+        },
+        "text": "中",
+        "fixHint": "Set an explicit, opaque `color` on the text — and an explicit `-webkit-text-fill-color` if an ancestor makes the fill transparent. If the transparency is intentional gradient text, add `background-clip: text`.",
+        "dataAttributes": {},
+        "sourceFile": "compositions/process.html",
+        "bbox": {
+          "x": 1600,
+          "y": 648.84,
+          "width": 86,
+          "height": 68.41
+        },
+        "firstSeen": 8.333,
+        "lastSeen": 8.333,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          8.333
+        ]
+      },
+      {
+        "code": "text_not_painted",
+        "severity": "error",
+        "time": 8.333,
+        "selector": "#proc-a > span:nth-of-type(9)",
+        "message": "Text paints with an effectively transparent fill (-webkit-text-fill-color / color), so its glyphs are invisible.",
+        "rect": {
+          "left": 1600,
+          "top": 717.25,
+          "right": 1686,
+          "bottom": 785.66,
+          "width": 86,
+          "height": 68.41
+        },
+        "text": "的",
+        "fixHint": "Set an explicit, opaque `color` on the text — and an explicit `-webkit-text-fill-color` if an ancestor makes the fill transparent. If the transparency is intentional gradient text, add `background-clip: text`.",
+        "dataAttributes": {},
+        "sourceFile": "compositions/process.html",
+        "bbox": {
+          "x": 1600,
+          "y": 717.25,
+          "width": 86,
+          "height": 68.41
+        },
+        "firstSeen": 8.333,
+        "lastSeen": 8.333,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          8.333
+        ]
+      },
+      {
+        "code": "text_not_painted",
+        "severity": "error",
+        "time": 8.333,
+        "selector": "#proc-a > span:nth-of-type(10)",
+        "message": "Text paints with an effectively transparent fill (-webkit-text-fill-color / color), so its glyphs are invisible.",
+        "rect": {
+          "left": 1600,
+          "top": 785.66,
+          "right": 1686,
+          "bottom": 854.06,
+          "width": 86,
+          "height": 68.41
+        },
+        "text": "元",
+        "fixHint": "Set an explicit, opaque `color` on the text — and an explicit `-webkit-text-fill-color` if an ancestor makes the fill transparent. If the transparency is intentional gradient text, add `background-clip: text`.",
+        "dataAttributes": {},
+        "sourceFile": "compositions/process.html",
+        "bbox": {
+          "x": 1600,
+          "y": 785.66,
+          "width": 86,
+          "height": 68.41
+        },
+        "firstSeen": 8.333,
+        "lastSeen": 8.333,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          8.333
+        ]
+      },
+      {
+        "code": "text_not_painted",
+        "severity": "error",
+        "time": 8.333,
+        "selector": "#proc-a > span:nth-of-type(11)",
+        "message": "Text paints with an effectively transparent fill (-webkit-text-fill-color / color), so its glyphs are invisible.",
+        "rect": {
+          "left": 1600,
+          "top": 854.06,
+          "right": 1686,
+          "bottom": 922.47,
+          "width": 86,
+          "height": 68.41
+        },
+        "text": "素",
+        "fixHint": "Set an explicit, opaque `color` on the text — and an explicit `-webkit-text-fill-color` if an ancestor makes the fill transparent. If the transparency is intentional gradient text, add `background-clip: text`.",
+        "dataAttributes": {},
+        "sourceFile": "compositions/process.html",
+        "bbox": {
+          "x": 1600,
+          "y": 854.06,
+          "width": 86,
+          "height": 68.41
+        },
+        "firstSeen": 8.333,
+        "lastSeen": 8.333,
+        "occurrences": 1,
+        "heldMs": 0,
+        "times": [
+          8.333
+        ]
+      }
+    ],
+    "duration": 30,
+    "samples": [
+      1.667,
+      5,
+      8.333,
+      11.667,
+      15,
+      18.333,
+      21.667,
+      25,
+      28.333
+    ],
+    "transitionSamples": [],
+    "transitionSamplesDropped": 0,
+    "tolerance": 2,
+    "totalIssueCount": 7,
+    "truncated": false
+  },
+  "motion": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 0,
+    "findings": [],
+    "enabled": false,
+    "samples": 0
+  },
+  "contrast": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 2,
+    "infoCount": 0,
+    "findings": [
+      {
+        "code": "contrast_aa_failure",
+        "severity": "warning",
+        "message": "Contrast is 2.61:1; WCAG AA requires 3:1.",
+        "text": "毛",
+        "fg": "rgb(110,108,107)",
+        "bg": "rgb(180,184,185)",
+        "ratio": 2.61,
+        "requiredRatio": 3,
+        "suggestedColor": "rgb(100,98,97)",
+        "large": true,
+        "selector": "div > div:nth-of-type(5) > div > div:nth-of-type(1) > span:nth-of-type(3)",
+        "dataAttributes": {},
+        "sourceFile": "compositions/process.html",
+        "bbox": {
+          "x": 1600,
+          "y": 306.8125,
+          "width": 86,
+          "height": 68.40625
+        },
+        "time": 8.333,
+        "times": [
+          8.333
+        ]
+      },
+      {
+        "code": "contrast_aa_failure",
+        "severity": "warning",
+        "message": "Contrast is 1.64:1; WCAG AA requires 3:1.",
+        "text": "髮",
+        "fg": "rgb(141,142,142)",
+        "bg": "rgb(180,184,185)",
+        "ratio": 1.64,
+        "requiredRatio": 3,
+        "suggestedColor": "rgb(98,99,99)",
+        "large": true,
+        "selector": "div > div:nth-of-type(5) > div > div:nth-of-type(1) > span:nth-of-type(4)",
+        "dataAttributes": {},
+        "sourceFile": "compositions/process.html",
+        "bbox": {
+          "x": 1600,
+          "y": 375.21875,
+          "width": 86,
+          "height": 68.40625
+        },
+        "time": 8.333,
+        "times": [
+          8.333
+        ]
+      }
+    ],
+    "enabled": true,
+    "samples": [
+      1.667,
+      8.333,
+      15,
+      21.667,
+      28.333
+    ],
+    "checked": 23,
+    "passed": 21
+  },
+  "craft": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 1,
+    "infoCount": 0,
+    "findings": [
+      {
+        "code": "film_silent",
+        "severity": "warning",
+        "message": "This 30 s film has no sound source (no <audio>, no <video> with sound): add a music bed and sounds on the visible actions unless the person asked for silence; see references/sound.md.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0
+      }
+    ],
+    "enabled": true,
+    "step": 0.125,
+    "samples": 240
+  },
+  "audio": {
+    "ok": true,
+    "errorCount": 0,
+    "warningCount": 0,
+    "infoCount": 1,
+    "findings": [
+      {
+        "code": "audio_none",
+        "severity": "info",
+        "message": "The film has no sound: no clip in it plays audio.",
+        "selector": "[data-composition-id]",
+        "dataAttributes": {},
+        "sourceFile": "index.html",
+        "bbox": {
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        },
+        "time": 0
+      }
+    ]
+  },
+  "hdr": {
+    "autoPromotion": null,
+    "inspection": "available"
+  },
+  "snapshots": {
+    "enabled": false,
+    "files": [],
+    "times": [],
+    "findingFiles": []
+  }
+}

@@ -1,0 +1,38 @@
+<template>
+  <style>
+    #root {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      background: #2b2320;
+    }
+    #reveal-cam {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 1920px;
+      height: 1280px;
+      transform-origin: 0 0;
+    }
+    #reveal-cam img {
+      position: absolute;
+      inset: 0;
+      width: 1920px;
+      height: 1280px;
+    }
+  </style>
+  <div data-hf-id="hf-yqoq" id="root" data-composition-id="reveal" data-width="1920" data-height="1080">
+    <!-- The opening shot again: the camera pulls back to the finished necklace beside her photo -->
+    <div data-hf-id="hf-e98d" id="reveal-cam" data-layout-allow-overflow>
+      <img data-hf-id="hf-47tx" id="reveal-img" src="assets/photos/grandma-letter.jpg" alt="" />
+    </div>
+  </div>
+  <script>
+    const cam = (fx, fy, s) => ({ x: 960 - fx * s, y: 540 - fy * s, scale: s });
+    const tl = gsap.timeline({ paused: true });
+    // Starts on the opening's framing, then pulls back until the necklace sits beside her.
+    tl.fromTo("#reveal-cam", cam(610, 395, 1.9), { ...cam(610, 395, 1.9), duration: 0.3, ease: "none" }, 0);
+    tl.to("#reveal-cam", { ...cam(900, 560, 1.15), duration: 2.6, ease: "power2.inOut" }, 0.3);
+    window.__timelines["reveal"] = tl;
+  </script>
+</template>

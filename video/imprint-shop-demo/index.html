@@ -1,0 +1,100 @@
+<!doctype html>
+<html
+  lang="zh-Hant"
+  data-composition-variables='[
+    {"id":"cta","type":"string","label":"End card CTA","default":"線上試算 · imprint-diamond.com"}
+  ]'
+>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
+    <style>
+      :root {
+        --ground: #fdfcfa;
+        --ink: #2b2320;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: var(--ground);
+      }
+      #root {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <div data-hf-id="hf-199x"
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="20"
+      data-width="1920"
+      data-height="1080"
+    >
+      <!-- Hook: the site's own photography -->
+      <div id="hook" data-composition-id="hook" data-composition-src="compositions/hook.html"
+        data-start="0" data-duration="2.6" data-track-index="1" data-track-kind="graphics"
+        data-width="1920" data-height="1080" style="z-index: 1"></div>
+      <!-- Real shop screens from imprint-diamond.com/shop/calculator/, walked click by click -->
+      <div data-hf-id="hf-8jjt" id="catalog" data-composition-id="catalog" data-composition-src="compositions/catalog.html"
+        data-start="2.6" data-duration="2.3" data-track-index="1" data-track-kind="graphics"
+        data-width="1920" data-height="1080" style="z-index: 1"></div>
+      <div data-hf-id="hf-jq88" id="styles" data-composition-id="styles" data-composition-src="compositions/styles.html"
+        data-start="4.9" data-duration="2.15" data-track-index="1" data-track-kind="graphics"
+        data-width="1920" data-height="1080" style="z-index: 1"></div>
+      <div data-hf-id="hf-5llj" id="configure" data-composition-id="configure" data-composition-src="compositions/configure.html"
+        data-start="7.05" data-duration="4.8" data-track-index="1" data-track-kind="graphics"
+        data-width="1920" data-height="1080" style="z-index: 1"></div>
+      <div data-hf-id="hf-wmhm" id="track" data-composition-id="track" data-composition-src="compositions/track.html"
+        data-start="11.85" data-duration="2.45" data-track-index="1" data-track-kind="graphics"
+        data-width="1920" data-height="1080" style="z-index: 1"></div>
+      <!-- Why it is worth it, in the site's own claims; stays under the end card's fade -->
+      <div id="value" data-composition-id="value" data-composition-src="compositions/value.html"
+        data-start="14.3" data-duration="3.05" data-track-index="1" data-track-kind="graphics"
+        data-width="1920" data-height="1080" style="z-index: 1"></div>
+      <div data-hf-id="hf-ez3n" id="endcard" data-composition-id="endcard" data-composition-src="compositions/endcard.html"
+        data-start="16.9" data-duration="3.1" data-track-index="4" data-track-kind="graphics"
+        data-width="1920" data-height="1080" style="z-index: 2"></div>
+
+      <!-- Overlays: the step card and the cursor run across the shop scenes -->
+      <div data-hf-id="hf-sk0i" id="steps" data-composition-id="steps" data-composition-src="compositions/steps.html"
+        data-start="0" data-duration="14.3" data-track-index="2" data-track-kind="graphics"
+        data-width="1920" data-height="1080" style="z-index: 10"></div>
+      <div data-hf-id="hf-qr3r" id="cursor" data-composition-id="cursor" data-composition-src="compositions/cursor.html"
+        data-start="0" data-duration="11.75" data-track-index="3" data-track-kind="graphics"
+        data-width="1920" data-height="1080" style="z-index: 20"></div>
+
+      <!-- Sound: a click on each real click (file peaks 0.07 s in), a whoosh into the shop and through 訂購 -->
+      <audio id="sfx-whoosh-1" class="clip" src="assets/audio/whoosh.mp3" data-start="2" data-duration="1"
+        data-media-start="1.9" data-track-index="5" data-volume="0.6" data-fade-in="0.2" data-fade-out="0.3"></audio>
+      <audio id="sfx-click-1" class="clip" src="assets/audio/click.mp3" data-start="4.68" data-duration="0.36" data-track-index="6" data-volume="1.3"></audio>
+      <audio id="sfx-click-2" class="clip" src="assets/audio/click.mp3" data-start="6.81" data-duration="0.36" data-track-index="6" data-volume="1.3"></audio>
+      <audio id="sfx-click-3" class="clip" src="assets/audio/click.mp3" data-start="8.01" data-duration="0.36" data-track-index="6" data-volume="1.3"></audio>
+      <audio id="sfx-click-4" class="clip" src="assets/audio/click.mp3" data-start="8.91" data-duration="0.36" data-track-index="6" data-volume="1.3"></audio>
+      <audio id="sfx-click-5" class="clip" src="assets/audio/click.mp3" data-start="11.31" data-duration="0.36" data-track-index="6" data-volume="1.3"></audio>
+      <audio id="sfx-whoosh-2" class="clip" src="assets/audio/whoosh.mp3" data-start="11.2" data-duration="1"
+        data-media-start="1.9" data-track-index="5" data-volume="0.55" data-fade-in="0.2" data-fade-out="0.3"></audio>
+
+      <!-- Music bed: written for this cut by music/score.py (D major, 100 BPM, opens at 2.6 s, resolves on the mark at 17 s) -->
+      <audio id="music-bed" class="clip" src="assets/audio/score.wav" data-start="0" data-duration="20"
+        data-track-index="7" data-volume="0.95"></audio>
+    </div>
+    <script>
+      const tl = gsap.timeline({ paused: true });
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>
