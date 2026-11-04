@@ -400,8 +400,12 @@
     if (wrap) wrap.classList.remove('is-search-open');
   }
 
-  function matchText(hay, q) {
-    return String(hay || '').toLowerCase().indexOf(q) !== -1;
+  /* Each word must appear somewhere. "黃金 18k" matches a row that has both, in any field. */
+  function matchesWords(hay, q) {
+    var words = String(q || '').toLowerCase().split(/\s+/).filter(Boolean);
+    if (!words.length) return false;
+    var text = String(hay || '').toLowerCase();
+    return words.every(function (word) { return text.indexOf(word) !== -1; });
   }
 
   var SEARCH_HITS_PER_TYPE = 6;
@@ -461,12 +465,12 @@
   function hitsFromLeads(res, needle) {
     var out = [];
     ((res && res.messages) || []).forEach(function (m) {
-      if (matchText([m.name, m.phone, m.email, m.message, m.source_page].join(' '), needle)) {
+      if (matchesWords([m.name, m.phone, m.email, m.message, m.source_page, m.status].join(' '), needle)) {
         out.push({ type: '諮詢', label: m.name || m.email || '留言', sub: m.phone || m.email || '' });
       }
     });
     ((res && res.quotes) || []).forEach(function (r) {
-      if (matchText([r.name, r.phone, r.email, r.series, r.product_type].join(' '), needle)) {
+      if (matchesWords([r.name, r.phone, r.email, r.series, r.product_type, r.carat, r.color, r.shape, r.metal, r.status].join(' '), needle)) {
         out.push({ type: '估價', label: r.name || r.email || '估價', sub: [r.series, r.product_type].filter(Boolean).join(' · ') });
       }
     });

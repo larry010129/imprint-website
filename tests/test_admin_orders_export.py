@@ -196,8 +196,8 @@ def test_export_search_sql_skips_config_json_cast():
         ac._fetch_admin_orders
     )
     assert "config_json::text" not in src
-    assert "oi.summary_zh ilike" in src
-    assert "o.order_number ilike" in src
+    assert "oi.summary_zh" in src
+    assert "o.order_number" in src
 
 
 class _Cur:

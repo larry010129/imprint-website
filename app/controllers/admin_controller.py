@@ -541,25 +541,41 @@ async def leads_mark_spam(request: Request) -> JSONResponse:
     return JSONResponse(content={"ok": True, "deleted": deleted, "keywords": added_keywords})
 
 
-def _admin_orders_search_from() -> str:
-    return """
+def _search_words(search: str) -> list[str]:
+    """Space-separated words. Each word must match; order does not matter."""
+    return [part for part in re.split(r"\s+", (search or "").strip()) if part]
+
+
+def _admin_orders_search_from(search: str) -> tuple[str, tuple]:
+    # Text columns only. Do not cast config_json: that scan is too heavy for the top bar.
+    fields = (
+        "o.order_number",
+        "o.status",
+        "coalesce(o.summary_zh, '')",
+        "coalesce(o.status_note, '')",
+        "coalesce(o.cancel_reason, '')",
+        "coalesce(oc.customer_name, '')",
+        "coalesce(oc.customer_phone, '')",
+        "coalesce(oc.customer_email, '')",
+        "coalesce(oful.shipping_address, '')",
+        "coalesce(oful.shipping_city, '')",
+        "coalesce(oful.order_note, '')",
+        "coalesce(oi.summary_zh, '')",
+    )
+    words = _search_words(search)
+    word_sql = "(" + " or ".join(f"{col} ilike %s" for col in fields) + ")"
+    params: list[str] = []
+    for word in words:
+        like = f"%{word}%"
+        params.extend([like] * len(fields))
+    sql = f"""
     from orders o
     left join order_items oi on oi.order_id = o.id
     left join order_contacts oc on oc.order_id = o.id
-    where (
-          o.order_number ilike %s
-       or o.status ilike %s
-       or o.summary_zh ilike %s
-       or oc.customer_name ilike %s
-       or oc.customer_phone ilike %s
-       or oi.summary_zh ilike %s
-    )
+    left join order_fulfillment oful on oful.order_id = o.id
+    where {" and ".join(word_sql for _ in words)}
     """
-
-
-def _admin_order_like_params(search: str) -> tuple:
-    like = f"%{search}%"
-    return (like, like, like, like, like, like)
+    return sql, tuple(params)
 
 
 def _admin_tab_statuses(tab: str | None) -> frozenset[str] | None:
@@ -579,13 +595,12 @@ def _fetch_admin_orders(
     statuses = _admin_tab_statuses(tab)
     status_params = (list(statuses),) if statuses else ()
     if q:
-        sql = "select distinct o.* " + _admin_orders_search_from()
+        from_sql, like_params = _admin_orders_search_from(q)
+        sql = "select distinct o.* " + from_sql
         if statuses:
             sql += " and" + _admin_status_sql(aliased=True)
         sql += " order by o.created_at desc limit %s offset %s"
-        cur.execute(
-            sql, (*_admin_order_like_params(q), *status_params, limit, offset)
-        )
+        cur.execute(sql, (*like_params, *status_params, limit, offset))
     else:
         sql = "select * from orders"
         if statuses:
@@ -604,16 +619,12 @@ def _count_admin_orders(cur, search: str, *, tab: str | None = None) -> int:
         if statuses:
             sql += " where" + _admin_status_sql(aliased=False)
         return sql_count_total(cur, sql, status_params or None)
-    sql = (
-        "select count(*)::int from (select distinct o.id "
-        + _admin_orders_search_from()
-    )
+    from_sql, like_params = _admin_orders_search_from(q)
+    sql = "select count(*)::int from (select distinct o.id " + from_sql
     if statuses:
         sql += " and" + _admin_status_sql(aliased=True)
     sql += ") t"
-    return sql_count_total(
-        cur, sql, (*_admin_order_like_params(q), *status_params)
-    )
+    return sql_count_total(cur, sql, (*like_params, *status_params))
 
 
 @router.get("/orders")
@@ -1271,27 +1282,57 @@ async def product_category_upload(
     return JSONResponse(content={"url": url, "category": category})
 
 
+_PRODUCT_CATEGORY_LABEL_SQL = (
+    "case category "
+    "when 'diamond' then '紀念鑽石' "
+    "when 'pendant' then '項墜' "
+    "when 'ring' then '戒指' "
+    "when 'earring' then '耳環' "
+    "when 'bracelet' then '手鍊' "
+    "when 'chain' then '鏈條' "
+    "else coalesce(category, '') end"
+)
+
+_PRODUCT_WORD_SQL = (
+    "(coalesce(name_zh, '') ilike %s or coalesce(name_en, '') ilike %s "
+    "or coalesce(description_zh, '') ilike %s or coalesce(description_en, '') ilike %s "
+    "or coalesce(custom_id, '') ilike %s or coalesce(category, '') ilike %s "
+    "or coalesce(style_key, '') ilike %s or coalesce(chain_type, '') ilike %s "
+    "or coalesce(default_color, '') ilike %s "
+    f"or {_PRODUCT_CATEGORY_LABEL_SQL} ilike %s "
+    "or id::text ilike %s or replace(id::text, '-', '') ilike %s "
+    "or exists (select 1 from product_variants v where v.product_id = products.id "
+    "and (coalesce(v.gold, '') ilike %s or coalesce(v.carat, '') ilike %s)))"
+)
+
+
+def _product_word_params(word: str) -> list[str]:
+    needle = f"%{word}%"
+    compact = f"%{re.sub(r'[-\\s]+', '', word)}%"
+    # 11 text fields, then the dash-stripped id, then variant gold and carat.
+    return [needle] * 11 + [compact, needle, needle]
+
+
 def _admin_product_filters(
     *,
     category: str | None = None,
     search: str | None = None,
 ) -> tuple[str, list]:
-    """Shared WHERE clause + params for the admin product list/count queries."""
+    """Shared WHERE clause + params for the admin product list/count queries.
+
+    Several words are combined with AND. Each word may sit in the name,
+    description, category (including its Chinese label), style, metal, or id.
+    """
     clauses: list[str] = []
     params: list = []
     if category:
         clauses.append("category = %s")
         params.append(category)
-    q = (search or "").strip()
-    if q:
-        # id::text so a product can also be found by its own (long) ID, with or without dashes.
-        clauses.append(
-            "(name_zh ilike %s or name_en ilike %s or custom_id ilike %s"
-            " or id::text ilike %s or replace(id::text, '-', '') ilike %s)"
-        )
-        needle = f"%{q}%"
-        compact = f"%{q.replace('-', '').replace(' ', '')}%"
-        params.extend([needle, needle, needle, needle, compact])
+    words = _search_words(search or "")
+    if words:
+        clauses.append("(" + " and ".join(_PRODUCT_WORD_SQL for _ in words) + ")")
+        for word in words:
+            params.extend(_product_word_params(word))
     where = f" where {' and '.join(clauses)}" if clauses else ""
     return where, params
 
@@ -1926,8 +1967,6 @@ def accounts_list(request: Request, q: str | None = Query(None)) -> dict:
     _require_admin(request)
     search = (q or "").strip()
     page, page_size, limit, offset = parse_paging_from_mapping(request.query_params)
-    # Card shows short id like "9A68 6CB8 40" — match against UUID without hyphens/spaces.
-    compact = re.sub(r"[\s\-]+", "", search)
     with get_connection() as conn, conn.cursor() as cur:
         _ensure_invite_schema(cur)
         _ensure_membership_profile_cols(cur)
@@ -1944,18 +1983,26 @@ def accounts_list(request: Request, q: str | None = Query(None)) -> dict:
             left join staff_admins sa on sa.user_id = u.id
         """
         if search:
-            like = f"%{search}%"
-            like_compact = f"%{compact}%"
-            where = """
-                where u.email ilike %s
+            words = _search_words(search)
+            word_sql = """
+                (u.email ilike %s
                    or coalesce(p.full_name, '') ilike %s
                    or coalesce(p.phone, '') ilike %s
                    or coalesce(p.store_name, '') ilike %s
                    or coalesce(p.referral_code, '') ilike %s
                    or u.id::text ilike %s
-                   or replace(u.id::text, '-', '') ilike %s
+                   or replace(u.id::text, '-', '') ilike %s)
             """
-            like_params = (like, like, like, like, like, like, like_compact)
+            where = " where " + " and ".join(word_sql for _ in words)
+            like_params_list: list[str] = []
+            for word in words:
+                like = f"%{word}%"
+                # Card numbers are shown in groups ("9A68 6CB8 40"); match the UUID with dashes stripped.
+                like_compact = f"%{re.sub(r'[\\s\\-]+', '', word)}%"
+                like_params_list.extend(
+                    [like, like, like, like, like, like, like_compact]
+                )
+            like_params = tuple(like_params_list)
             total = sql_count_total(
                 cur,
                 "select count(*)::int from users u left join profiles p on p.id = u.id "
