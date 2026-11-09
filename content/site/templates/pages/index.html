@@ -182,7 +182,8 @@
   <div class="gh-hero__fade-bottom" aria-hidden="true"></div>
 
   <div id="hcViewport" class="hc-viewport gh-hc-viewport" tabindex="0" role="region" aria-roledescription="carousel" aria-label="銘印鑽石系列輪播">
-    <ul id="hcTrack" class="hc-track">
+    <ul id="hcTrack" class="hc-track"{% if hero_banners_version %} data-banners-version="{{ hero_banners_version }}"{% endif %}>
+{% if hero_slides_html %}{{ hero_slides_html|safe }}{% else %}
 
       <li class="hc-slide is-active" data-align="left" data-tone="warm">
         <div class="hc-media">
@@ -306,6 +307,7 @@
         </div>
       </li>
 
+{% endif %}
     </ul>
 
     <button type="button" class="hc-arrow hc-prev gh-hc-arrow" id="hcPrev" aria-label="上一張">
@@ -315,13 +317,15 @@
       <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
 
-    <div class="hc-dots gh-hc-dots" role="tablist" aria-label="輪播指示">
+    <div class="hc-dots gh-hc-dots" role="tablist" aria-label="輪播指示"{% if hero_banner_count %} style="--hc-n:{{ hero_banner_count }}"{% if hero_banner_count <= 1 %} hidden{% endif %}{% endif %}>
+{% if hero_dots_html %}{{ hero_dots_html|safe }}{% else %}
       <button type="button" class="hc-dot is-active" data-index="0" role="tab" aria-label="品牌主視覺" aria-selected="true"></button>
       <button type="button" class="hc-dot" data-index="1" role="tab" aria-label="滿月鑽石" aria-selected="false"></button>
       <button type="button" class="hc-dot" data-index="2" role="tab" aria-label="寵物鑽石" aria-selected="false"></button>
       <button type="button" class="hc-dot" data-index="3" role="tab" aria-label="結髮鑽石" aria-selected="false"></button>
       <button type="button" class="hc-dot" data-index="4" role="tab" aria-label="全家福鑽石" aria-selected="false"></button>
       <button type="button" class="hc-dot" data-index="5" role="tab" aria-label="生命鑽石" aria-selected="false"></button>
+    {% endif %}
     </div>
   </div>
 
@@ -1176,7 +1180,7 @@
   }
   /* Banner CMS (phone 9:16 crop) must load ASAP — delayed inject left phones on
      PC landscape SSR for 10s+. Wall stays below-fold / PSI-deferred. */
-  inject('/static/js/home-banners.js?v=17');
+  inject('/static/js/home-banners.js?v=18');
   var HOME_WALL_MS = 10000;
   function loadHomeWall() {
     if (window.__homeWallInjected) return;

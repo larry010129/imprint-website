@@ -437,7 +437,11 @@
       .then(function (res) { return res.ok ? res.json() : null; })
       .then(function (data) {
         var list = data && Array.isArray(data.banners) ? data.banners : [];
-        if (!list.length || matchesSsr(list)) return;
+        if (!list.length) return;
+        /* Server already rendered these exact banners (same version hash) — no swap, no jump. */
+        var ssrVersion = track.getAttribute('data-banners-version');
+        if (ssrVersion && data.version && ssrVersion === data.version) return;
+        if (matchesSsr(list)) return;
         apply(list);
       })
       .catch(function () { /* keep SSR slides */ });

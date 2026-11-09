@@ -637,20 +637,10 @@ def public_faq() -> dict:
 
 @router.get("/banners")
 def public_banners() -> dict:
-    from app.content import fetch_published_banners
-    from app.content_cache import (
-        get_public_content_api_cache,
-        set_public_content_api_cache,
-    )
+    # Shared with the home page SSR so both carry the same `version` hash.
+    from app.home_banners_ssr import load_public_banners_payload
 
-    cached = get_public_content_api_cache("banners")
-    if cached is not None:
-        return cached
-
-    with get_connection() as conn, conn.cursor() as cur:
-        payload = {"banners": fetch_published_banners(cur)}
-    set_public_content_api_cache("banners", payload)
-    return payload
+    return load_public_banners_payload()
 
 
 # ── pricing overrides (public read for the configurator, admin write) ───────

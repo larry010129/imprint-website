@@ -564,6 +564,10 @@ def _context(request: Request, meta: PageMeta, *, include_journal_ssr: bool = Tr
         context["stories_ssr"] = _load_stories_ssr()
     if meta.route == "/journal" and include_journal_ssr:
         context["journal_ssr"] = _load_journal_ssr()
+    if meta.route == "/":
+        from app.home_banners_ssr import home_hero_context
+
+        context.update(home_hero_context())
     if meta.route in {"/", "/about"}:
         context["featured_video"] = load_featured_video(request)
     if meta.route == "/about":
