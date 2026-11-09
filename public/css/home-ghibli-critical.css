@@ -161,12 +161,14 @@
 }
 /* Beat .page-home .hc-dots — 48px hits clear the 48px cue by ≥8px. */
 .page-home .hc-dots.gh-hc-dots{ bottom:72px; }
+.page-home .hc-dots[hidden]{ display:none; }
 /* Tight spacing: 28px-wide hit area (≥24px WCAG 2.5.8), 48px tall; pip stays a circle when active. */
 .page-home .hc-dot{
   position:relative;
-  width:28px;
+  /* Fits any banner count: 28px each, shrinking (min 20px) so all dots stay inside the viewport. */
+  width:clamp(20px, calc((100vw - 32px) / var(--hc-n, 6)), 28px);
   height:48px;
-  min-width:28px;
+  min-width:20px;
   min-height:48px;
   margin:0; padding:0; border:0;
   background:transparent;

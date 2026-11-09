@@ -244,6 +244,9 @@
             '" data-index="' + i + '" role="tab" aria-label="' + label.replace(/"/g, '') +
             '" aria-selected="' + (i === 0 ? 'true' : 'false') + '"></button>';
         }).join('');
+        /* Dots auto-fit: CSS reads --hc-n to shrink spacing when there are many banners. */
+        dotsWrap.style.setProperty('--hc-n', String(hcCount));
+        dotsWrap.hidden = hcCount <= 1;
       }
       var hcDots = Array.prototype.slice.call(hcViewport.querySelectorAll('.hc-dot'));
 
