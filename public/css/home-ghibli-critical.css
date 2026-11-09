@@ -246,6 +246,8 @@
 .hc-slide[data-align="left"] .gh-hc-copy .gh-hero__lead{ margin-left:0; }
 .hc-slide[data-align="left"] .gh-hc-copy .gh-hero__actions{ justify-content:flex-start; }
 .gh-hc-copy .gh-hero__title{ margin-bottom:18px; }
+/* Title uses the full slide width so main.js can fit it on one line (beats .gh-hc-copy > * caps). */
+.gh-hc-copy > .gh-hero__title{ width:100%; max-width:100%; }
 .gh-hc-arrow{
   background:rgba(255,255,255,.22); border-color:rgba(255,255,255,.55); color:#fff;
 }

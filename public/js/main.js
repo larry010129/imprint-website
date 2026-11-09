@@ -486,6 +486,40 @@
         if (dragSuppressClick) { e.preventDefault(); e.stopPropagation(); dragSuppressClick = false; }
       }, { capture: true, signal: signal });
 
+      /* Titles stay on ONE line: shrink the font until the whole title fits the slide width
+         (never below a readable minimum — then it wraps as a last resort so no word is cut). */
+      function fitHeroTitles() {
+        var minPx = window.innerWidth <= 900 ? 18 : 28;
+        hcSlides.forEach(function (slide) {
+          var t = slide.querySelector('.gh-hero__title');
+          if (!t) return;
+          t.style.fontSize = '';
+          t.style.whiteSpace = 'nowrap';
+          var avail = t.clientWidth;
+          if (!avail) return;
+          var need = t.scrollWidth;
+          if (need <= avail) return;
+          var base = parseFloat(window.getComputedStyle(t).fontSize) || 32;
+          var size = Math.floor((base * avail / need) * 0.98 * 10) / 10;
+          if (size < minPx) {
+            t.style.fontSize = minPx + 'px';
+            t.style.whiteSpace = 'normal';
+          } else {
+            t.style.fontSize = size + 'px';
+          }
+        });
+      }
+      var fitRaf = 0;
+      function scheduleFit() {
+        if (fitRaf) cancelAnimationFrame(fitRaf);
+        fitRaf = requestAnimationFrame(function () { fitRaf = 0; fitHeroTitles(); });
+      }
+      fitHeroTitles();
+      window.addEventListener('resize', scheduleFit, { signal: signal });
+      window.addEventListener('orientationchange', scheduleFit, { signal: signal });
+      window.addEventListener('load', scheduleFit, { once: true, signal: signal });
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(scheduleFit);
+
       hcRender(false);
       hcStartAuto();
     }
