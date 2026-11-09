@@ -77,13 +77,13 @@
 .hc-arrow svg{ display:block; flex:none; }
 .hc-arrow:hover{ background:rgba(156,239,239,.6); }
 .hc-prev{ left:20px; } .hc-next{ right:20px; }
-.hc-dots{ position:absolute; left:50%; bottom:26px; transform:translateX(-50%); display:flex; gap:8px; z-index:5; }
-/* Hit 48×48 + 8px gap. Pip stays 8×8; active = scaleX to 26px pill. */
+.hc-dots{ position:absolute; left:50%; bottom:26px; transform:translateX(-50%); display:flex; gap:0; z-index:5; }
+/* Tight spacing: 28px-wide hit area (≥24px WCAG 2.5.8), 48px tall; pip stays a circle when active. */
 .hc-dot{
   position:relative;
-  width:48px;
+  width:28px;
   height:48px;
-  min-width:48px;
+  min-width:28px;
   min-height:48px;
   margin:0; padding:0; border:0;
   background:transparent;
@@ -102,8 +102,8 @@
   transition:transform .3s;
 }
 .hc-dot.is-active::after{
-  border-radius:5px; background:#fff;
-  transform:translate(-50%,-50%) scaleX(3.25);
+  border-radius:50%; background:#fff;
+  transform:translate(-50%,-50%) scale(1.5);
 }
 
 /* ---------- 鑽戒滾動翻轉(整合版,兩幕) ---------- */
