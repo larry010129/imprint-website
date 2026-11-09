@@ -1248,6 +1248,38 @@
     return toneValue;
   }
 
+  /** 排序 dropdown: pick a position; the server shifts others so orders never collide. */
+  function bannerOrderFieldHtml(b) {
+    var sorted = _banners.slice().sort(function (x, y) {
+      return Number(x.sort_order || 0) - Number(y.sort_order || 0);
+    });
+    var total = Math.max(Number(_totals.banners) || 0, sorted.length);
+    var isEdit = !!(b && b.id);
+    var slots = isEdit ? total : total + 1;
+    var current = slots - 1; // new banner defaults to last
+    if (isEdit) {
+      current = 0;
+      for (var k = 0; k < sorted.length; k++) {
+        if (String(sorted[k].id) === String(b.id)) { current = k; break; }
+      }
+    }
+    var opts = '';
+    for (var i = 0; i < slots; i++) {
+      var occupant = sorted[i];
+      var hint = '';
+      if (occupant && !(isEdit && String(occupant.id) === String(b.id))) {
+        hint = '（目前：' + truncate(occupant.title || '', 14) + '）';
+      } else if (isEdit && i === current) {
+        hint = '（目前位置）';
+      } else if (!isEdit && i === slots - 1) {
+        hint = '（最後）';
+      }
+      opts += '<option value="' + i + '"' + (i === current ? ' selected' : '') + '>第 ' + (i + 1) + ' 位' + esc(hint) + '</option>';
+    }
+    return '<label class="ap-field"><span>排序（顯示順序）</span><select name="sortOrder">' + opts + '</select>' +
+      '<small class="ap-hint">選擇位置後，其他圖片會自動順延，不會出現重複順序。</small></label>';
+  }
+
   /** Full-page editor (not float modal) so crop dialog can sit above the page cleanly. */
   function openBannerModal(b) {
     var isEdit = !!(b && b.id);
@@ -1303,7 +1335,7 @@
               '<div class="ap-field" id="acPrimaryHrefMount"></div>' +
               '<label class="ap-field"><span>次按鈕文字</span><input name="ctaSecondaryLabel" value="' + esc(isEdit ? b.cta_secondary_label : '') + '"></label>' +
               '<div class="ap-field" id="acSecondaryHrefMount"></div>' +
-              '<label class="ap-field"><span>排序</span><input type="number" name="sortOrder" value="' + esc(String(isEdit ? b.sort_order : 0)) + '"></label>' +
+              bannerOrderFieldHtml(isEdit ? b : null) +
               '<label class="ap-field ap-field--check"><input type="checkbox" name="isPublished"' + (!isEdit || b.is_published ? ' checked' : '') + '><span>發布</span></label>' +
             '</div>' +
             '<div class="ap-form-actions ap-editor-actions">' +

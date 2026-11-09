@@ -3441,7 +3441,11 @@ async def admin_banners_create(request: Request) -> JSONResponse:
     body = await request.json()
     if not isinstance(body, dict):
         body = {}
-    from app.content import ensure_banner_text_color_columns, serialize_banner
+    from app.content import (
+        apply_banner_sort_order,
+        ensure_banner_text_color_columns,
+        serialize_banner,
+    )
 
     fields, err = _parse_banner_fields(body)
     if err:
@@ -3449,6 +3453,10 @@ async def admin_banners_create(request: Request) -> JSONResponse:
 
     with get_connection() as conn, conn.cursor() as cur:
         ensure_banner_text_color_columns(cur)
+        # Always append first, then move to the requested slot so orders never collide.
+        cur.execute("select coalesce(max(sort_order), -1) + 1 as next from home_banners")
+        requested_sort = fields["sort_order"]
+        fields["sort_order"] = int(cur.fetchone()["next"])
         cur.execute(
             """
             insert into home_banners (
@@ -3481,7 +3489,12 @@ async def admin_banners_create(request: Request) -> JSONResponse:
                 fields["is_published"],
             ),
         )
-        row = serialize_banner(cur.fetchone())
+        created = cur.fetchone()
+        if body.get("sortOrder") not in (None, ""):
+            apply_banner_sort_order(cur, created["id"], requested_sort)
+            cur.execute("select * from home_banners where id = %s", (created["id"],))
+            created = cur.fetchone()
+        row = serialize_banner(created)
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute("select email from users where id = %s", (user_id,))
         actor = cur.fetchone()
@@ -3496,7 +3509,11 @@ async def admin_banners_update(request: Request) -> JSONResponse:
     body = await request.json()
     if not isinstance(body, dict):
         body = {}
-    from app.content import ensure_banner_text_color_columns, serialize_banner
+    from app.content import (
+        apply_banner_sort_order,
+        ensure_banner_text_color_columns,
+        serialize_banner,
+    )
 
     bid = body.get("id")
     if not bid:
@@ -3514,7 +3531,7 @@ async def admin_banners_update(request: Request) -> JSONResponse:
               image_webp = %s, image_alt = %s, cta_primary_label = %s, cta_primary_href = %s,
               cta_secondary_label = %s, cta_secondary_href = %s,
               tone = %s, eyebrow_color = %s, title_color = %s, lead_color = %s,
-              align = %s, sort_order = %s, is_published = %s, updated_at = now()
+              align = %s, is_published = %s, updated_at = now()
             where id = %s
             returning *
             """,
@@ -3535,7 +3552,6 @@ async def admin_banners_update(request: Request) -> JSONResponse:
                 fields["title_color"],
                 fields["lead_color"],
                 fields["align"],
-                fields["sort_order"],
                 fields["is_published"],
                 bid,
             ),
@@ -3543,6 +3559,10 @@ async def admin_banners_update(request: Request) -> JSONResponse:
         row = cur.fetchone()
         if not row:
             return JSONResponse(status_code=404, content={"error": "找不到 banner"})
+        if body.get("sortOrder") not in (None, ""):
+            apply_banner_sort_order(cur, row["id"], fields["sort_order"])
+            cur.execute("select * from home_banners where id = %s", (row["id"],))
+            row = cur.fetchone()
         out = serialize_banner(row)
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute("select email from users where id = %s", (user_id,))
@@ -3576,6 +3596,10 @@ async def admin_banner_action(request: Request) -> JSONResponse:
         row = cur.fetchone()
         if not row:
             return JSONResponse(status_code=404, content={"error": "找不到 banner"})
+        if action == "delete":
+            from app.content import renormalize_banner_sort
+
+            renormalize_banner_sort(cur)
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute("select email from users where id = %s", (user_id,))
         actor = cur.fetchone()

@@ -865,6 +865,30 @@ def fetch_all_banners(
     return [serialize_banner(r) for r in rows]
 
 
+def renormalize_banner_sort(cur) -> None:
+    """Make home_banners.sort_order unique and gapless (0..n-1), keeping current order."""
+    cur.execute("select id from home_banners order by sort_order asc, created_at asc, id asc")
+    for index, row in enumerate(cur.fetchall()):
+        cur.execute(
+            "update home_banners set sort_order = %s where id = %s and sort_order is distinct from %s",
+            (index, row["id"], index),
+        )
+
+
+def apply_banner_sort_order(cur, banner_id, target_order: int) -> None:
+    """Move a banner to 0-based position target_order; the others shift (順延), no duplicates."""
+    cur.execute("select id from home_banners order by sort_order asc, created_at asc, id asc")
+    ids = [r["id"] for r in cur.fetchall()]
+    ids = [i for i in ids if str(i) != str(banner_id)]
+    target = min(max(0, int(target_order)), len(ids))
+    ids.insert(target, banner_id)
+    for index, row_id in enumerate(ids):
+        cur.execute(
+            "update home_banners set sort_order = %s where id = %s and sort_order is distinct from %s",
+            (index, row_id, index),
+        )
+
+
 def ensure_banner_mobile_column(cur) -> None:
     """Idempotent: add image_url_mobile to home_banners if it doesn't exist yet."""
     cur.execute(
