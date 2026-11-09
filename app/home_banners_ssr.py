@@ -297,3 +297,33 @@ def home_hero_context() -> dict:
         "hero_banner_count": len(banners),
         "hero_banners_version": payload.get("version") or banners_version(banners),
     }
+
+
+_SLIDES_RE = re.compile(r"<!--hc-slides:start-->.*?<!--hc-slides:end-->", re.S)
+_DOTS_RE = re.compile(r"<!--hc-dots:start-->.*?<!--hc-dots:end-->", re.S)
+
+
+def apply_home_hero(html: str, hero: dict) -> str:
+    """Swap the template's fallback slides/dots for the published banners.
+
+    Runs AFTER the page-image/copy slot passes: those address <img> tags by their
+    position in the page, so the hero must keep its fixed six fallback images until
+    they are done (a different banner count would shift every later index).
+    """
+    if not hero.get("hero_slides_html"):
+        return html
+    html = _SLIDES_RE.sub(lambda _m: hero["hero_slides_html"], html, count=1)
+    html = _DOTS_RE.sub(lambda _m: hero["hero_dots_html"], html, count=1)
+    count = int(hero.get("hero_banner_count") or 0)
+    html = html.replace(
+        '<ul id="hcTrack" class="hc-track">',
+        f'<ul id="hcTrack" class="hc-track" data-banners-version="{_esc(hero.get("hero_banners_version"))}">',
+        1,
+    )
+    dots_attrs = f' style="--hc-n:{count}"' + (" hidden" if count <= 1 else "")
+    html = html.replace(
+        'class="hc-dots gh-hc-dots" role="tablist" aria-label="輪播指示">',
+        f'class="hc-dots gh-hc-dots" role="tablist" aria-label="輪播指示"{dots_attrs}>',
+        1,
+    )
+    return html

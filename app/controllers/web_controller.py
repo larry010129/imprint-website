@@ -567,7 +567,7 @@ def _context(request: Request, meta: PageMeta, *, include_journal_ssr: bool = Tr
     if meta.route == "/":
         from app.home_banners_ssr import home_hero_context
 
-        context.update(home_hero_context())
+        context["home_hero"] = home_hero_context()
     if meta.route in {"/", "/about"}:
         context["featured_video"] = load_featured_video(request)
     if meta.route == "/about":
@@ -604,6 +604,10 @@ def _make_handler(meta: PageMeta, status_code: int = 200):
         html = response.body.decode(response.charset)
         html = apply_page_image_slots(html, meta.route, context["page_images"])
         html = apply_page_copy_slots(html, meta.route, context["page_copy_slots"])
+        if meta.route == "/" and context.get("home_hero"):
+            from app.home_banners_ssr import apply_home_hero
+
+            html = apply_home_hero(html, context["home_hero"])
         from app.image_urls import rewrite_shop_stills_in_html
 
         html = rewrite_shop_stills_in_html(html)
