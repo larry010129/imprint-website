@@ -759,6 +759,22 @@ async def order_update(request: Request) -> JSONResponse:
         order = cur.fetchone()
         if not order:
             return JSONResponse(status_code=404, content={"error": "order not found"})
+        try:
+            import time
+            from app.erp_inbound import enqueue_event
+            enqueue_event(
+                cur,
+                event_type="order.status_changed",
+                idempotency_key=f"order:status:{order_id}:{status}:{int(time.time())}",
+                payload={
+                    "order_number": order.get("order_number") or str(order_id),
+                    "old_status": order.get("status"),
+                    "new_status": status,
+                    "status_note": status_note,
+                },
+            )
+        except Exception as exc:
+            log.warning("ERP enqueue order.status_changed error: %s", exc)
         stamps = merge_status_timestamps(
             order.get("status_timestamps"),
             order.get("status"),

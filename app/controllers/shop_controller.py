@@ -368,6 +368,46 @@ def _insert_order(
     )
     row = cur.fetchone()
     oid = row["id"]
+    try:
+        from app.erp_inbound import enqueue_event
+        enqueue_event(
+            cur,
+            event_type="order.created",
+            idempotency_key=f"order:created:{row['order_number']}",
+            payload={
+                "order": {
+                    "website_order_id": str(oid),
+                    "order_number": row["order_number"],
+                    "status": "received",
+                    "currency": "TWD",
+                    "total_amount": float(final_total),
+                    "paid_amount": 0.0,
+                    "fulfillment": customer.get("fulfillmentMethod") or "pickup",
+                    "shipping_address": customer.get("shippingAddress"),
+                    "shipping_city": customer.get("shippingCity"),
+                    "shipping_postal": customer.get("shippingPostal"),
+                    "note": customer.get("orderNote"),
+                    "coupon_code": coupon_code or None,
+                    "lines": [
+                        {
+                            "sku": it.get("custom_id") or it.get("sku") or str(it.get("product_id")),
+                            "name": it.get("title_zh") or it.get("name") or "Product",
+                            "qty": int(it.get("quantity") or 1),
+                            "unit_price": float(it.get("price") or 0.0),
+                        }
+                        for it in items
+                    ],
+                },
+                "customer": {
+                    "website_user_id": str(user_id) if user_id else None,
+                    "display_name": customer.get("name"),
+                    "phone_full": customer.get("phone"),
+                    "email_full": customer.get("email"),
+                },
+            },
+        )
+    except Exception as exc:
+        log.warning("ERP enqueue order.created error: %s", exc)
     cur.execute(
         """
         insert into order_contacts (order_id, customer_name, customer_phone, customer_email)

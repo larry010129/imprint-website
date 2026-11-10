@@ -238,6 +238,25 @@ async def signup(request: Request, response: Response) -> JSONResponse:
                 (normalized_email, password_hash),
             )
             user = cur.fetchone()
+            try:
+                from app.erp_inbound import enqueue_event
+                enqueue_event(
+                    cur,
+                    event_type="account.created",
+                    idempotency_key=f"account:created:{user['id']}",
+                    payload={
+                        "customer": {
+                            "website_user_id": str(user["id"]),
+                            "display_name": full_name,
+                            "email_full": email,
+                            "phone_full": phone,
+                            "store_name": store_name,
+                            "is_partner": bool(is_partner),
+                        },
+                    },
+                )
+            except Exception as exc:
+                log.warning("ERP enqueue account.created error: %s", exc)
             cur.execute(
                 "insert into profiles (id, full_name, phone, store_name) values (%s, %s, %s, %s)",
                 (user["id"], full_name, phone, store_name),

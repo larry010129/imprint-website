@@ -22,4 +22,15 @@ def delete_blocked_reason(cur, user_id: str) -> str | None:
 
 def hard_delete_user(cur, user_id: str) -> None:
     """FK cascade clears profiles/staff_admins/sessions dependents."""
+    try:
+        from app.erp_inbound import enqueue_event
+        enqueue_event(
+            cur,
+            event_type="customer.deletion_requested",
+            entity_ref=str(user_id),
+            idempotency_key=f"customer:deleted:{user_id}",
+            payload={"user_id": str(user_id)},
+        )
+    except Exception:
+        pass
     cur.execute("delete from users where id = %s", (user_id,))

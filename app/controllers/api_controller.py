@@ -142,6 +142,21 @@ async def submit_contact(request: Request) -> dict:
             """,
             (name, phone, email, message, source_page),
         )
+        try:
+            from app.erp_inbound import enqueue_event
+            enqueue_event(
+                cur,
+                event_type="inquiry.created",
+                payload={
+                    "customer_name": name,
+                    "customer_phone": phone,
+                    "customer_email": email,
+                    "message": message,
+                    "source_page": source_page,
+                },
+            )
+        except Exception:
+            log.exception("failed to enqueue erp inquiry event")
 
     # Best-effort staff email — never fail the form if mail fails.
     try:
@@ -195,6 +210,27 @@ async def submit_quote_request(request: Request) -> dict:
             """,
             (name, phone, email, series, product_type, carat, color, shape, metal, quantity, estimated_price),
         )
+        try:
+            from app.erp_inbound import enqueue_event
+            enqueue_event(
+                cur,
+                event_type="quote.requested",
+                payload={
+                    "customer_name": name,
+                    "customer_phone": phone,
+                    "customer_email": email,
+                    "series": series,
+                    "product_type": product_type,
+                    "carat": carat,
+                    "color": color,
+                    "shape": shape,
+                    "metal": metal,
+                    "quantity": quantity,
+                    "estimated_price": estimated_price,
+                },
+            )
+        except Exception:
+            log.exception("failed to enqueue erp quote event")
     return {"ok": True}
 
 

@@ -430,7 +430,28 @@ def create_booking(cur, *, slot_start: datetime, name, phone, email, note, lead_
         )
     except psycopg.errors.UniqueViolation as exc:
         raise BookingConflict("此時段已被預約") from exc
-    return serialize_booking(cur.fetchone())
+    row = cur.fetchone()
+    booking = serialize_booking(row)
+    try:
+        from app.erp_inbound import enqueue_event
+        enqueue_event(
+            cur,
+            event_type="booking.created",
+            entity_ref=booking["id"],
+            idempotency_key=f"booking:created:{booking['id']}",
+            payload={
+                "booking_id": booking["id"],
+                "slot_start": booking["slot"],
+                "name": booking["name"],
+                "phone": booking["phone"],
+                "email": booking["email"] or None,
+                "note": booking["note"] or None,
+                "lead_id": booking["leadId"],
+            },
+        )
+    except Exception:
+        pass
+    return booking
 
 
 def update_booking(cur, booking_id: str, changes: dict) -> dict | None:

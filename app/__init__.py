@@ -23,6 +23,7 @@ from app.controllers import (
     htmx_controller,
     notifications_controller,
     release_notes_controller,
+    erp_events_controller,
     shop_controller,
     web_controller,
 )
@@ -540,6 +541,7 @@ def create_app() -> FastAPI:
     application.include_router(share_controller.router, prefix="/api")
     application.include_router(cms_admin_controller.router, prefix="/api")
     application.include_router(release_notes_controller.router, prefix="/api")
+    application.include_router(erp_events_controller.router, prefix="/api")
 
     from app.api.v1 import build_v1_router
 

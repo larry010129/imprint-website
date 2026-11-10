@@ -129,6 +129,21 @@ async def contact_submit(request: Request) -> HTMLResponse:
             """,
             (name, phone, email, message, "/contact"),
         )
+        try:
+            from app.erp_inbound import enqueue_event
+            enqueue_event(
+                cur,
+                event_type="inquiry.created",
+                payload={
+                    "customer_name": name,
+                    "customer_phone": phone,
+                    "customer_email": email,
+                    "message": message,
+                    "source_page": "/contact",
+                },
+            )
+        except Exception:
+            log.exception("failed to enqueue erp inquiry event")
     try:
         from app.mail import notify_contact_message
 
