@@ -76,6 +76,9 @@ def persist_gold_price_cache(
             """,
             (xau, xpt, xag, bot_posted_at, source),
         )
+    from app.pricing import invalidate_metal_prices_cache
+
+    invalidate_metal_prices_cache()
 
 
 def _throttle_remaining() -> float:

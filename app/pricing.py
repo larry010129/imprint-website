@@ -9,6 +9,8 @@ Parity fixture for formula tests: public/js/shop-pricing-local.js (calculator us
 
 from __future__ import annotations
 
+import threading
+import time
 from typing import Any
 
 from app.admin_products import RING_SIZE_MIN
@@ -358,16 +360,39 @@ def compute_diamond_list_price(
     return _apply_shape_surcharge(float(base), surcharge)
 
 
+# gold_price_cache is refreshed about hourly; a short cache removes a database
+# round trip from every quote. Hot-path invalidation: invalidate_metal_prices_cache().
+_METAL_CACHE_TTL_SECONDS = 15.0
+_metal_cache_lock = threading.Lock()
+_metal_cache: tuple[float, dict[str, float]] | None = None
+
+
+def invalidate_metal_prices_cache() -> None:
+    global _metal_cache
+    with _metal_cache_lock:
+        _metal_cache = None
+
+
 def get_metal_prices(cur) -> dict[str, float]:
+    global _metal_cache
+    now = time.monotonic()
+    with _metal_cache_lock:
+        hit = _metal_cache
+    if hit and now - hit[0] < _METAL_CACHE_TTL_SECONDS:
+        return dict(hit[1])
     cur.execute("select xau_per_gram, xpt_per_gram, xag_per_gram from gold_price_cache where id = 1")
     row = cur.fetchone()
     if not row:
+        # Not cached: the first real scrape should be picked up immediately.
         return {"XAU": 4300.0, "XPT": 1050.0, "XAG": 61.0}
-    return {
+    prices = {
         "XAU": float(row["xau_per_gram"]),
         "XPT": float(row["xpt_per_gram"]),
         "XAG": float(row["xag_per_gram"]),
     }
+    with _metal_cache_lock:
+        _metal_cache = (now, dict(prices))
+    return prices
 
 
 def _carat_lookup_keys(carat: str) -> list[str]:

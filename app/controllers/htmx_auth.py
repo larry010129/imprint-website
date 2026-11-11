@@ -10,6 +10,7 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, JSONResponse, Response
+from starlette.concurrency import run_in_threadpool
 
 from app.auth import (
     LOGIN_LOCKOUT_SECONDS,
@@ -61,6 +62,11 @@ log = logging.getLogger(__name__)
 @router.post("/auth/login", response_class=HTMLResponse)
 async def auth_login(request: Request) -> Response:
     form = await request.form()
+    # bcrypt verify + several DB round trips: keep them off the event loop.
+    return await run_in_threadpool(_auth_login_sync, request, form)
+
+
+def _auth_login_sync(request: Request, form) -> Response:
     email = str(form.get("email") or "").strip()
     password = str(form.get("password") or "")
     remember = form_bool(form.get("remember"))
@@ -194,6 +200,10 @@ async def auth_check_invite(request: Request) -> JSONResponse:
 @router.post("/auth/register", response_class=HTMLResponse)
 async def auth_register(request: Request) -> Response:
     form = await request.form()
+    return await run_in_threadpool(_auth_register_sync, request, form)
+
+
+def _auth_register_sync(request: Request, form) -> Response:
     email = str(form.get("email") or "").strip()
     password = str(form.get("password") or "")
     password_confirm = str(form.get("passwordConfirm") or "")

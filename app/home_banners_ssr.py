@@ -117,11 +117,12 @@ def _memorial_picture(attr: str, mobile_override: str) -> dict:
     mobile = (
         f'<source media="(max-width:900px)" {attr}="{_esc(mobile_src)}"{typ} sizes="100vw">'
     )
-    img_extra = (
-        ""
-        if mobile_value
-        else f' width="800" height="388" sizes="100vw" srcset="{_esc(MEMORIAL_MOBILE)}"'
-    )
+    img_extra = ""
+    if not mobile_value:
+        img_extra = ' width="800" height="388" sizes="100vw"'
+        # Lazy slides (data-srcset) must not fetch on parse: the loader swaps it in.
+        if attr == "srcset":
+            img_extra += f' srcset="{_esc(MEMORIAL_MOBILE)}"'
     return {"mobile": mobile, "webp": webp, "img_src": img_src, "img_extra": img_extra}
 
 
@@ -200,7 +201,7 @@ def render_slide(b: dict, index: int) -> str:
     mobile_value = str(b.get("image_url_mobile") or "").strip()
     pic = (
         _memorial_picture(attr, mobile_value)
-        if index == 0 and _is_memorial(b)
+        if _is_memorial(b)
         else _remote_picture(b, attr)
     )
     primary = ""
@@ -295,12 +296,16 @@ def home_hero_context() -> dict:
         "hero_slides_html": render_slides(banners),
         "hero_dots_html": render_dots(banners),
         "hero_banner_count": len(banners),
+        "hero_first_is_memorial": _is_memorial(banners[0]),
         "hero_banners_version": payload.get("version") or banners_version(banners),
     }
 
 
 _SLIDES_RE = re.compile(r"<!--hc-slides:start-->.*?<!--hc-slides:end-->", re.S)
 _DOTS_RE = re.compile(r"<!--hc-dots:start-->.*?<!--hc-dots:end-->", re.S)
+_MEMORIAL_PRELOAD_RE = re.compile(
+    r'<link rel="preload" as="image" href="/static/images/hero/imprint-diamond-family-memorial[^>]*>\s*'
+)
 
 
 def apply_home_hero(html: str, hero: dict) -> str:
@@ -312,6 +317,10 @@ def apply_home_hero(html: str, hero: dict) -> str:
     """
     if not hero.get("hero_slides_html"):
         return html
+    if not hero.get("hero_first_is_memorial", True):
+        # The template preloads the memorial image for LCP; when another banner
+        # leads, that preload is never used (wasted request + console warning).
+        html = _MEMORIAL_PRELOAD_RE.sub("", html)
     html = _SLIDES_RE.sub(lambda _m: hero["hero_slides_html"], html, count=1)
     html = _DOTS_RE.sub(lambda _m: hero["hero_dots_html"], html, count=1)
     count = int(hero.get("hero_banner_count") or 0)

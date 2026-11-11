@@ -9,6 +9,7 @@ import secrets
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
+from starlette.concurrency import run_in_threadpool
 
 from app.auth import (
     enforce_rate_limit,
@@ -119,10 +120,14 @@ def _featured_video_sync_authorized(request: Request) -> bool:
 
 @router.post("/contact")
 async def submit_contact(request: Request) -> dict:
+    body = await request.json()
+    return await run_in_threadpool(_submit_contact_sync, request, body)
+
+
+def _submit_contact_sync(request: Request, body: object) -> dict:
     if not enforce_rate_limit(request, action="contact", limit=5, window_seconds=600):
         return _err(429, "提交過於頻繁，請稍後再試")
 
-    body = await request.json()
     if not isinstance(body, dict):
         return _err(400, "invalid body")
 
@@ -162,10 +167,14 @@ async def submit_contact(request: Request) -> dict:
 
 @router.post("/quote-request")
 async def submit_quote_request(request: Request) -> dict:
+    body = await request.json()
+    return await run_in_threadpool(_submit_quote_request_sync, request, body)
+
+
+def _submit_quote_request_sync(request: Request, body: object) -> dict:
     if not enforce_rate_limit(request, action="quote", limit=10, window_seconds=600):
         return _err(429, "提交過於頻繁，請稍後再試")
 
-    body = await request.json()
     if not isinstance(body, dict):
         return _err(400, "invalid body")
 
@@ -269,10 +278,14 @@ async def bot_gold_refresh(request: Request) -> JSONResponse:
 
 @router.post("/track-order")
 async def track_order(request: Request) -> dict:
+    body = await request.json()
+    return await run_in_threadpool(_track_order_sync, request, body)
+
+
+def _track_order_sync(request: Request, body: object) -> dict:
     if not enforce_rate_limit(request, action="track-order", limit=10, window_seconds=600):
         return _err(429, "請求過於頻繁，請稍後再試")
 
-    body = await request.json()
     if not isinstance(body, dict):
         return _err(400, "invalid body")
 
@@ -581,7 +594,7 @@ def public_journal_posts(request: Request) -> dict:
 
 
 @router.get("/cms/pages/{slug}")
-async def cms_page_public(request: Request, slug: str) -> JSONResponse:
+def cms_page_public(request: Request, slug: str) -> JSONResponse:
     """Public/admin JSON for Next SSR — page + ordered sections + full props (no HTML)."""
     from app.cms_boundary import is_reserved_cms_slug, normalize_cms_slug
     from app.cms_pages import fetch_public_cms_bundle
@@ -717,13 +730,30 @@ async def admin_post_membership_config(request: Request) -> JSONResponse:
 
 # ── shop price feed + live quote ────────────────────────────────────────────
 
+_PRICES_CACHE_TTL_SECONDS = 15.0
+_prices_cache: tuple[float, dict] | None = None
+
+
 @router.get("/prices")
 def shop_prices() -> dict:
     """Server-authoritative pricing and configurator metadata.
 
     The API payload includes the option tables and chain defaults needed by the
     live calculator, so API mode does not need its legacy local-pricing bundle.
+    Cached briefly in-process: it needs 4 queries and every calculator boot hits it.
     """
+    global _prices_cache
+    import time
+
+    hit = _prices_cache
+    if hit and time.monotonic() - hit[0] < _PRICES_CACHE_TTL_SECONDS:
+        return hit[1]
+    payload = _build_shop_prices()
+    _prices_cache = (time.monotonic(), payload)
+    return payload
+
+
+def _build_shop_prices() -> dict:
     from app.pricing import (
         CHIN_TO_GRAMS,
         DEFAULT_STONE_COUNT_BY_CATEGORY,
@@ -803,6 +833,10 @@ def shop_prices() -> dict:
 @router.post("/quote")
 async def shop_quote(request: Request, preview: int = Query(0)) -> dict:
     body = await request.json()
+    return await run_in_threadpool(_shop_quote_sync, request, body, preview)
+
+
+def _shop_quote_sync(request: Request, body: object, preview: int) -> dict:
     if not isinstance(body, dict):
         return _err(400, "invalid body")
     apply_girdle_engraving(body)
@@ -987,10 +1021,14 @@ def get_favorites(request: Request) -> dict:
 
 @router.post("/favorites")
 async def add_favorite(request: Request) -> JSONResponse:
+    body = await request.json()
+    return await run_in_threadpool(_add_favorite_sync, request, body)
+
+
+def _add_favorite_sync(request: Request, body: object) -> JSONResponse:
     user_id = get_user_id(request)
     if not user_id:
         raise HTTPException(status_code=401, detail="not signed in")
-    body = await request.json()
     if not isinstance(body, dict):
         return _err(400, "invalid body")
     category = str(body.get("category") or "").strip()

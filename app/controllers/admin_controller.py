@@ -2255,6 +2255,10 @@ async def account_action(request: Request) -> JSONResponse:
                 (account_id, flag),
             )
 
+    # Role / active / password changes must apply to the next request.
+    from app.auth import invalidate_user_cache
+
+    invalidate_user_cache()
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute("select email from users where id = %s", (admin_id,))
         actor = cur.fetchone()

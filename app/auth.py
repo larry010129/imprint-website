@@ -10,6 +10,8 @@ import os
 import re
 import secrets
 import socket
+import threading
+import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
@@ -398,6 +400,7 @@ def bump_token_version(user_id: str) -> None:
     """Invalidates every existing session for a user (logout, password reset)."""
     with get_connection() as conn, conn.cursor() as cur:
         cur.execute("update users set token_version = token_version + 1 where id = %s", (user_id,))
+    invalidate_user_cache(user_id)
 
 
 def _is_secure_request(request: Request) -> bool:
@@ -465,6 +468,56 @@ def clear_nav_hint_cookie(response: Response, request: Request | None = None) ->
     response.delete_cookie(key=NAV_HINT_COOKIE, path="/", secure=secure, samesite="lax")
 
 
+# Per-process cache of the users-table lookup behind get_user_id(). Every
+# logged-in request (and the nav-state call fired on each page load) used to
+# pay a database round trip for it. Entries are keyed by user id and only
+# honoured when the token's version matches, so a bumped token_version still
+# rejects old tokens; bump/deactivate/role paths call invalidate_user_cache().
+_USER_CACHE_TTL_SECONDS = 20.0
+_USER_CACHE_MAX = 2048
+_user_cache: dict[str, tuple[float, int, bool, bool]] = {}
+_user_cache_lock = threading.Lock()
+
+
+def invalidate_user_cache(user_id: str | None = None) -> None:
+    """Drop one user (or everyone) from the get_user_id lookup cache."""
+    with _user_cache_lock:
+        if user_id is None:
+            _user_cache.clear()
+        else:
+            _user_cache.pop(str(user_id), None)
+
+
+def _lookup_user_row(user_id: str) -> tuple[int, bool, bool] | None:
+    """(token_version, is_active, is_admin) from cache or one DB query."""
+    key = str(user_id)
+    now = time.monotonic()
+    with _user_cache_lock:
+        hit = _user_cache.get(key)
+    if hit and now - hit[0] < _USER_CACHE_TTL_SECONDS:
+        return hit[1], hit[2], hit[3]
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            select u.token_version, u.is_active,
+                   exists(select 1 from staff_admins s where s.user_id = u.id) as is_admin
+            from users u where u.id = %s
+            """,
+            (user_id,),
+        )
+        row = cur.fetchone()
+    if not row:
+        with _user_cache_lock:
+            _user_cache.pop(key, None)
+        return None
+    value = (row["token_version"], bool(row["is_active"]), bool(row["is_admin"]))
+    with _user_cache_lock:
+        if len(_user_cache) >= _USER_CACHE_MAX:
+            _user_cache.clear()
+        _user_cache[key] = (now, *value)
+    return value
+
+
 def get_user_id(request: Request) -> str | None:
     if getattr(request.state, "_user_id_resolved", False):
         return getattr(request.state, "user_id", None)
@@ -481,23 +534,14 @@ def get_user_id(request: Request) -> str | None:
     user_id, token_version = decoded
     # Admin flag rides along in the same round trip: require_admin /
     # request_is_admin read request.state.is_admin instead of querying again.
-    with get_connection() as conn, conn.cursor() as cur:
-        cur.execute(
-            """
-            select u.token_version, u.is_active,
-                   exists(select 1 from staff_admins s where s.user_id = u.id) as is_admin
-            from users u where u.id = %s
-            """,
-            (user_id,),
-        )
-        row = cur.fetchone()
-    if not row or row["token_version"] != token_version or not row["is_active"]:
+    row = _lookup_user_row(user_id)
+    if not row or row[0] != token_version or not row[1]:
         request.state._user_id_resolved = True
         request.state.user_id = None
         return None
     request.state._user_id_resolved = True
     request.state.user_id = user_id
-    request.state.is_admin = bool(row["is_admin"])
+    request.state.is_admin = row[2]
     return user_id
 
 
@@ -654,36 +698,39 @@ def enforce_rate_limit(
     keys = [f"{action}:{client_ip(request)}"]
     if subject:
         keys.append(f"{action}:acct:{subject.strip().lower()}")
-    now = datetime.now(timezone.utc)
-    allowed = True
+    # One statement / one round trip for all keys (was a select + upsert per key).
+    # Same fixed-window rule as before: inside the window the counter grows,
+    # outside it restarts at 1; over the limit also sets locked_until.
     with get_connection() as conn, conn.cursor() as cur:
-        for key in keys:
-            cur.execute(
-                "select fail_count, updated_at from login_lockouts where lockout_key = %s",
-                (key,),
-            )
-            row = cur.fetchone()
-            within_window = bool(
-                row
-                and row["updated_at"]
-                and (now - row["updated_at"]).total_seconds() < window_seconds
-            )
-            count = (row["fail_count"] + 1) if within_window else 1
-            locked_until = now + timedelta(seconds=window_seconds) if count > limit else None
-            cur.execute(
-                """
-                insert into login_lockouts (lockout_key, fail_count, locked_until, updated_at)
-                values (%s, %s, %s, now())
-                on conflict (lockout_key) do update set
-                  fail_count = excluded.fail_count,
-                  locked_until = excluded.locked_until,
-                  updated_at = now()
-                """,
-                (key, count, locked_until),
-            )
-            if count > limit:
-                allowed = False
-    return allowed
+        cur.execute(
+            """
+            insert into login_lockouts (lockout_key, fail_count, locked_until, updated_at)
+            select k, 1,
+                   case when 1 > %(limit)s
+                        then now() + make_interval(secs => %(window)s) end,
+                   now()
+            from unnest(%(keys)s::text[]) as k
+            on conflict (lockout_key) do update set
+              fail_count = case
+                when login_lockouts.updated_at is not null
+                     and now() - login_lockouts.updated_at < make_interval(secs => %(window)s)
+                  then login_lockouts.fail_count + 1
+                else 1 end,
+              locked_until = case
+                when (case
+                        when login_lockouts.updated_at is not null
+                             and now() - login_lockouts.updated_at < make_interval(secs => %(window)s)
+                          then login_lockouts.fail_count + 1
+                        else 1 end) > %(limit)s
+                  then now() + make_interval(secs => %(window)s)
+                else null end,
+              updated_at = now()
+            returning fail_count
+            """,
+            {"keys": keys, "limit": limit, "window": window_seconds},
+        )
+        rows = cur.fetchall()
+    return all(int(r["fail_count"]) <= limit for r in rows)
 
 
 def check_login_lockout(request: Request, email: str) -> tuple[list[str], bool]:

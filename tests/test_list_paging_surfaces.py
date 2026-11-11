@@ -66,7 +66,7 @@ def test_history_partial_returns_full_list():
     path = Path("app/controllers/htmx_member.py")
     tree = ast.parse(path.read_text(encoding="utf-8"))
     for node in tree.body:
-        if isinstance(node, ast.AsyncFunctionDef) and node.name == "history_partial":
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == "history_partial":
             returns = [n for n in ast.walk(node) if isinstance(n, ast.Return)]
             assert len(returns) >= 3, "history_partial must return guest, rows, and full list"
             break

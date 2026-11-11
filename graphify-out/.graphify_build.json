@@ -1,0 +1,8 @@
+{
+  "excludes": [
+    "public/react/*.js",
+    "*.min.js",
+    "public/js/vendor/*",
+    "brag-output/*"
+  ]
+}

@@ -11,6 +11,7 @@ from datetime import datetime, timedelta, timezone
 import psycopg
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import JSONResponse
+from starlette.concurrency import run_in_threadpool
 
 from app.auth import (
     COOKIE_NAME,
@@ -166,6 +167,10 @@ def _backfill_google_name(cur, user_id: str, full_name: str) -> None:
 @router.post("/signup")
 async def signup(request: Request, response: Response) -> JSONResponse:
     body = await request.json()
+    return await run_in_threadpool(_signup_sync, request, response, body)
+
+
+def _signup_sync(request: Request, response: Response, body: dict) -> JSONResponse:
     email = (body.get("email") or "").strip()
     password = body.get("password") or ""
     full_name = (body.get("fullName") or "").strip()
@@ -290,6 +295,11 @@ async def signup(request: Request, response: Response) -> JSONResponse:
 @router.post("/login")
 async def login(request: Request) -> JSONResponse:
     body = await request.json()
+    # Password hashing is CPU-bound; run with the DB work off the event loop.
+    return await run_in_threadpool(_login_sync, request, body)
+
+
+def _login_sync(request: Request, body: dict) -> JSONResponse:
     email = (body.get("email") or "").strip()
     password = body.get("password") or ""
     if not email or not password:
@@ -464,7 +474,7 @@ async def google_login(request: Request) -> JSONResponse:
 
 
 @router.post("/logout")
-async def logout(request: Request) -> JSONResponse:
+def logout(request: Request) -> JSONResponse:
     user_id = get_user_id(request)
     if user_id:
         bump_token_version(user_id)
@@ -849,7 +859,7 @@ async def change_password(request: Request) -> JSONResponse:
 
 
 @router.post("/totp/setup/start")
-async def totp_setup_start(request: Request) -> JSONResponse:
+def totp_setup_start(request: Request) -> JSONResponse:
     user_id = get_user_id(request)
     if not user_id:
         return _err(401, "請先登入")

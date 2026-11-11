@@ -9,6 +9,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
 from psycopg.types.json import Jsonb
+from starlette.concurrency import run_in_threadpool
 
 from app.auth import get_user_id
 from app.catalog import resolve_product_id
@@ -466,7 +467,7 @@ def _update_order_row(cur, order_id: str, config: dict[str, Any]) -> None:
 
 
 @router.get("/order")
-async def get_my_order(request: Request) -> dict:
+def get_my_order(request: Request) -> dict:
     user_id = _user_id(request)
     order_number = (request.query_params.get("orderNumber") or "").strip()
     order_id = (request.query_params.get("id") or "").strip()
@@ -483,8 +484,12 @@ async def get_my_order(request: Request) -> dict:
 
 @router.put("/order")
 async def update_my_order(request: Request) -> dict:
-    user_id = _user_id(request)
     body = await request.json()
+    return await run_in_threadpool(_update_my_order_sync, request, body)
+
+
+def _update_my_order_sync(request: Request, body: Any) -> dict:
+    user_id = _user_id(request)
     if not isinstance(body, dict):
         return _err(400, "invalid body")
 
@@ -671,15 +676,19 @@ def _err_from_qty_result(result: dict[str, Any]) -> JSONResponse | None:
 
 
 @router.get("/cart")
-async def get_cart(request: Request) -> dict:
+def get_cart(request: Request) -> dict:
     user_id = _user_id(request)
     return {"items": fetch_cart_items(user_id)}
 
 
 @router.post("/cart/quantity")
 async def cart_quantity(request: Request) -> dict:
-    user_id = _user_id(request)
     body = await request.json()
+    return await run_in_threadpool(_cart_quantity_sync, request, body)
+
+
+def _cart_quantity_sync(request: Request, body: Any) -> dict:
+    user_id = _user_id(request)
     if not isinstance(body, dict):
         return _err(400, "invalid body")
     result = set_cart_item_quantity(user_id, body.get("id"), body.get("quantity"))
@@ -691,8 +700,12 @@ async def cart_quantity(request: Request) -> dict:
 
 @router.post("/cart")
 async def add_to_cart(request: Request) -> dict:
-    user_id = _user_id(request)
     body = await request.json()
+    return await run_in_threadpool(_add_to_cart_sync, request, body)
+
+
+def _add_to_cart_sync(request: Request, body: Any) -> dict:
+    user_id = _user_id(request)
     if not isinstance(body, dict):
         return _err(400, "invalid body")
     error = _validate_config(body)
@@ -737,6 +750,11 @@ async def add_to_cart(request: Request) -> dict:
 
 @router.api_route("/cart-item", methods=["GET", "PUT", "DELETE"])
 async def cart_item(request: Request) -> dict:
+    body = await request.json() if request.method == "PUT" else None
+    return await run_in_threadpool(_cart_item_sync, request, body)
+
+
+def _cart_item_sync(request: Request, put_body: Any) -> dict:
     user_id = _user_id(request)
     item_id = request.query_params.get("id")
     if not item_id:
@@ -756,7 +774,7 @@ async def cart_item(request: Request) -> dict:
             return {"ok": True}
 
         if request.method == "PUT":
-            body = await request.json()
+            body = put_body
             if not isinstance(body, dict):
                 return _err(400, "invalid body")
             error = _validate_config(body)
@@ -834,6 +852,10 @@ async def coupon_validate(request: Request) -> dict:
 
 async def validate_coupon_body(user_id: str, body: dict[str, Any]) -> dict:
     """Shared coupon validate for JSON API + HTMX (no duplicate pricing SQL)."""
+    return await run_in_threadpool(_validate_coupon_body_sync, user_id, body)
+
+
+def _validate_coupon_body_sync(user_id: str, body: dict[str, Any]) -> dict:
     code = body.get("code") or body.get("couponCode") or ""
     item_ids = body.get("itemIds")
 
@@ -915,6 +937,10 @@ async def _cart_checkout_impl(request: Request, body: dict[str, Any] | None = No
     if body is None:
         raw = await request.json()
         body = raw if isinstance(raw, dict) else {}
+    return await run_in_threadpool(_cart_checkout_sync, request, body)
+
+
+def _cart_checkout_sync(request: Request, body: dict[str, Any]) -> dict:
     # Preview gate before auth — never create real orders from admin product preview.
     if _request_is_shop_preview(request, body):
         return _err(403, "預覽模式無法送出真實訂單")

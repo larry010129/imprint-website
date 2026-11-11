@@ -23,3 +23,6 @@ def delete_blocked_reason(cur, user_id: str) -> str | None:
 def hard_delete_user(cur, user_id: str) -> None:
     """FK cascade clears profiles/staff_admins/sessions dependents."""
     cur.execute("delete from users where id = %s", (user_id,))
+    from app.auth import invalidate_user_cache
+
+    invalidate_user_cache(user_id)

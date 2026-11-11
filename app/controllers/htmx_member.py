@@ -6,6 +6,7 @@ import logging
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, Response
+from starlette.concurrency import run_in_threadpool
 
 from app.account_delete import delete_blocked_reason, hard_delete_user
 from app.auth import (
@@ -68,9 +69,13 @@ def _delete_error(message: str, status: int = 400) -> HTMLResponse:
 
 @router.post("/contact", response_class=HTMLResponse)
 async def contact_submit(request: Request) -> HTMLResponse:
+    form = await request.form()
+    return await run_in_threadpool(_contact_submit_sync, request, form)
+
+
+def _contact_submit_sync(request: Request, form) -> HTMLResponse:
     if not enforce_rate_limit(request, action="contact", limit=5, window_seconds=600):
         return html(request, "form_msg.html", {"ok": False, "message": "提交過於頻繁，請稍後再試"}, 429)
-    form = await request.form()
     name = str(form.get("name") or "").strip()
     phone = str(form.get("phone") or "").strip()
     message = str(form.get("message") or "").strip()
@@ -148,11 +153,15 @@ async def contact_submit(request: Request) -> HTMLResponse:
 
 @router.post("/track-order", response_class=HTMLResponse)
 async def track_order_partial(request: Request) -> HTMLResponse:
+    form = await request.form()
+    return await run_in_threadpool(_track_order_partial_sync, request, form)
+
+
+def _track_order_partial_sync(request: Request, form) -> HTMLResponse:
     if not enforce_rate_limit(request, action="track-order", limit=10, window_seconds=600):
         return html(
             request, "track_result.html", {"error": "請求過於頻繁，請稍後再試", "rows": []}, 429
         )
-    form = await request.form()
     order_number = str(form.get("orderNumber") or "").strip()
     phone = str(form.get("phone") or "").strip()
     if not order_number or not phone:
@@ -184,7 +193,7 @@ ACCOUNT_ORDERS_PAGE_SIZE = 12
 
 
 @router.get("/favorites", response_class=HTMLResponse)
-async def favorites_partial(request: Request) -> HTMLResponse:
+def favorites_partial(request: Request) -> HTMLResponse:
     from app.paging import parse_paging_from_mapping, sql_count_total
 
     user_id = get_user_id(request)
@@ -365,7 +374,7 @@ def _history_context_from_request(
 
 
 @router.get("/history", response_class=HTMLResponse)
-async def history_partial(request: Request) -> HTMLResponse:
+def history_partial(request: Request) -> HTMLResponse:
     user_id = get_user_id(request)
     if not user_id:
         return html(
@@ -713,7 +722,7 @@ async def notifications_partial(request: Request) -> HTMLResponse:
 
 
 @router.get("/account", response_class=HTMLResponse)
-async def account_partial(request: Request) -> Response:
+def account_partial(request: Request) -> Response:
     user_id = get_user_id(request)
     if not user_id:
         return html(request, "account_panel.html", {"guest": True, "user": None, "profile": None})
@@ -775,7 +784,7 @@ async def account_partial(request: Request) -> Response:
 
 
 @router.get("/profile", response_class=HTMLResponse)
-async def profile_partial(request: Request) -> HTMLResponse:
+def profile_partial(request: Request) -> HTMLResponse:
     user_id = get_user_id(request)
     if not user_id:
         return html(request, "profile_form.html", {"guest": True, "onboarding": False})
@@ -932,7 +941,7 @@ async def account_delete(request: Request) -> Response:
 
 
 @router.get("/account-security", response_class=HTMLResponse)
-async def account_security_partial(request: Request) -> HTMLResponse:
+def account_security_partial(request: Request) -> HTMLResponse:
     user_id = get_user_id(request)
     if not user_id:
         return html(request, "totp_security_panel.html", {"guest": True})
@@ -956,7 +965,7 @@ async def account_security_partial(request: Request) -> HTMLResponse:
 
 
 @router.get("/stories", response_class=HTMLResponse)
-async def stories_partial(request: Request) -> HTMLResponse:
+def stories_partial(request: Request) -> HTMLResponse:
     from app.content import (
         count_published_testimonials,
         fetch_published_testimonials,

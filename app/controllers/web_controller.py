@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+import threading
 from copy import deepcopy
 from html import escape as html_escape
 from functools import lru_cache
@@ -116,6 +117,66 @@ _PUBLIC_PHONE_TEXT = "電話：02-2977-0268；"
 _PAGE_IMAGE_CACHE_TTL_SECONDS = 300
 
 
+def _swr_cache(ttl_seconds: float, max_entries: int = 512):
+    """Stale-while-revalidate cache for the DB-backed page loaders.
+
+    The old lru_cache keyed on a 5-minute time bucket, so on a low-traffic site
+    nearly every visit landed on a freshly expired bucket and paid several
+    cross-region database round trips before the page could render. Here only the
+    first load of a key blocks; once expired, the stale value is returned at once
+    and a single background thread refreshes it. The trailing positional arg (the
+    legacy time bucket) is ignored, and cache_clear() keeps explicit admin
+    invalidation working.
+    """
+
+    def decorate(fn):
+        store: dict = {}
+        refreshing: set = set()
+        lock = threading.Lock()
+
+        def refresh(key, args):
+            try:
+                value = fn(*args)
+                with lock:
+                    store[key] = (monotonic(), value)
+            except Exception:
+                log.debug("page cache refresh failed for %r", key, exc_info=True)
+            finally:
+                with lock:
+                    refreshing.discard(key)
+
+        def wrapper(*args):
+            key = args[:-1]
+            with lock:
+                entry = store.get(key)
+            if entry is None:
+                value = fn(*args)
+                with lock:
+                    if len(store) >= max_entries:
+                        store.clear()
+                    store[key] = (monotonic(), value)
+                return value
+            stamp, value = entry
+            if monotonic() - stamp >= ttl_seconds:
+                with lock:
+                    start = key not in refreshing
+                    if start:
+                        refreshing.add(key)
+                if start:
+                    threading.Thread(target=refresh, args=(key, args), daemon=True).start()
+            return value
+
+        def cache_clear() -> None:
+            with lock:
+                store.clear()
+
+        wrapper.cache_clear = cache_clear
+        wrapper.__name__ = fn.__name__
+        return wrapper
+
+    return decorate
+
+
 def _strip_public_phone_metadata(block: str) -> str:
     """Remove public phone fields and copy from JSON-LD registry blocks."""
     try:
@@ -135,7 +196,7 @@ def _strip_public_phone_metadata(block: str) -> str:
     return json.dumps(clean(payload), ensure_ascii=False, indent=2)
 
 
-@lru_cache(maxsize=4)
+@_swr_cache(_PAGE_IMAGE_CACHE_TTL_SECONDS, max_entries=4)
 def _fetch_featured_video_cached(_time_bucket: int) -> dict | None:
     from app.featured_video import public_featured_payload, read_featured_video_file
 
@@ -219,7 +280,7 @@ def _load_fragment(relpath: str) -> str:
     return path.read_text(encoding="utf-8")
 
 
-@lru_cache(maxsize=512)
+@_swr_cache(_PAGE_IMAGE_CACHE_TTL_SECONDS)
 def _fetch_page_images_cached(route: str, _time_bucket: int) -> list[dict]:
     from app.content import fetch_page_images
     from app.database import get_connection
@@ -258,7 +319,7 @@ def clear_page_image_cache() -> None:
     clear_content_api_caches()
 
 
-@lru_cache(maxsize=512)
+@_swr_cache(_PAGE_IMAGE_CACHE_TTL_SECONDS)
 def _fetch_page_copy_cached(route: str, _time_bucket: int) -> list[dict]:
     from app.cms_copy_slots import fetch_copy_slots_for_page
     from app.database import get_connection
@@ -436,7 +497,7 @@ def _fetch_site_cms_bundle(route: str, *, visible_only: bool) -> dict:
         return bundle
 
 
-@lru_cache(maxsize=512)
+@_swr_cache(_PAGE_IMAGE_CACHE_TTL_SECONDS)
 def _fetch_site_cms_bundle_cached(route: str, _time_bucket: int) -> dict:
     return _fetch_site_cms_bundle(route, visible_only=True)
 
@@ -469,7 +530,7 @@ def _fetch_public_cms_page(slug: str, *, visible_only: bool) -> dict | None:
         return fetch_public_cms_bundle(cur, slug, visible_only=visible_only)
 
 
-@lru_cache(maxsize=512)
+@_swr_cache(_PAGE_IMAGE_CACHE_TTL_SECONDS)
 def _fetch_public_cms_page_cached(slug: str, _time_bucket: int) -> dict | None:
     bundle = _fetch_public_cms_page(slug, visible_only=True)
     if not bundle or bundle["page"].get("status") != "published":

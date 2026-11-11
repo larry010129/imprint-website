@@ -168,10 +168,12 @@
     var mobile = '<source media="(max-width:900px)" ' + sourceAttr + '="' +
       esc(mobileSrc) + '"' + mobileType + ' sizes="100vw">';
     // Phone-safe srcset only — desktop stays on min-width source.
-    var imgExtra = mobileValue
-      ? ''
-      : ' width="800" height="388" sizes="100vw" srcset="' +
-        esc(MEMORIAL_MOBILE) + '"';
+    var imgExtra = '';
+    if (!mobileValue) {
+      imgExtra = ' width="800" height="388" sizes="100vw"';
+      // Lazy slides (data-srcset) must not fetch on parse.
+      if (sourceAttr === 'srcset') imgExtra += ' srcset="' + esc(MEMORIAL_MOBILE) + '"';
+    }
     return { mobile: mobile, webp: webp, imgSrc: imgSrc, imgExtra: imgExtra };
   }
 
@@ -242,7 +244,7 @@
     /* Lazy slides still need a real src — empty src + imgFallback strips <source>. */
     var imageAttr = 'src';
     var mobileValue = String(b.image_url_mobile || '').trim();
-    var pic = (index === 0 && isMemorial(b))
+    var pic = isMemorial(b)
       ? memorialPicture(sourceAttr, mobileValue)
       : remotePicture(b, sourceAttr);
     var primary = '';

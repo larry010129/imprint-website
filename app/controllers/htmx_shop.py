@@ -36,7 +36,7 @@ def _cart_list_with_badge(request: Request, user_id: str, *, status: int = 200) 
 
 
 @router.get("/cart", response_class=HTMLResponse)
-async def cart_partial(request: Request) -> HTMLResponse:
+def cart_partial(request: Request) -> HTMLResponse:
     user_id = get_user_id(request)
     if not user_id:
         return html(request, "cart_list.html", {"items": [], "guest": True})
@@ -74,7 +74,7 @@ async def cart_qty(request: Request) -> HTMLResponse:
 
 
 @router.get("/checkout", response_class=HTMLResponse)
-async def checkout_partial(request: Request) -> Response:
+def checkout_partial(request: Request) -> Response:
     from app.image_urls import is_uuid
 
     raw_ids = (

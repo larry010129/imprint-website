@@ -14,16 +14,40 @@ deliberately sets a value. Override keys use the client's carat format ('0.10',
 
 from __future__ import annotations
 
+import threading
+import time
+from copy import deepcopy
 from typing import Any
+
+# Every quote / cart / checkout reprice reads this singleton row; it changes only
+# when an admin saves the 價格設定 panel (save_overrides invalidates), so a short
+# process-local cache saves a database round trip per request.
+_CACHE_TTL_SECONDS = 15.0
+_cache_lock = threading.Lock()
+_cache: tuple[float, dict[str, Any]] | None = None
+
+
+def invalidate_overrides_cache() -> None:
+    global _cache
+    with _cache_lock:
+        _cache = None
 
 
 def load_overrides(cur) -> dict[str, Any]:
+    global _cache
+    now = time.monotonic()
+    with _cache_lock:
+        hit = _cache
+    if hit and now - hit[0] < _CACHE_TTL_SECONDS:
+        return deepcopy(hit[1])
     cur.execute("select overrides from pricing_settings where id = 1")
     row = cur.fetchone()
-    if not row:
-        return {}
-    ov = row["overrides"]
-    return ov if isinstance(ov, dict) else {}
+    ov: dict[str, Any] = {}
+    if row and isinstance(row["overrides"], dict):
+        ov = row["overrides"]
+    with _cache_lock:
+        _cache = (now, deepcopy(ov))
+    return ov
 
 
 def save_overrides(cur, overrides: dict[str, Any]) -> dict[str, Any]:
@@ -38,6 +62,7 @@ def save_overrides(cur, overrides: dict[str, Any]) -> dict[str, Any]:
         """,
         (Jsonb(clean),),
     )
+    invalidate_overrides_cache()
     return clean
 
 
