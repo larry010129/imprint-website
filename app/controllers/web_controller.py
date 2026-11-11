@@ -559,6 +559,41 @@ def _load_gold_quote_bootstrap() -> dict | None:
     return None
 
 
+def warm_public_caches() -> int:
+    """Pre-load the per-page DB caches so the first real visitor after a deploy
+    or restart does not pay several cross-region round trips per page.
+
+    Blocking and sequential on purpose (the DB pool is tiny): run it in a worker
+    thread after startup, never before the app starts listening. Every step is
+    best-effort; a failure just leaves that page to load on demand. Returns the
+    number of pages warmed.
+    """
+    warmed = 0
+    seen: set[str] = set()
+    for meta in ALL_PAGES:
+        route = meta.route
+        if route in seen or route == PAGE_404.route:
+            continue
+        seen.add(route)
+        try:
+            if route != "/shop/calculator/":
+                _fetch_page_images_cached(route, 0)
+            _fetch_page_copy_cached(route, 0)
+            if route in _editable_site_routes():
+                _fetch_site_cms_bundle_cached(route, 0)
+            warmed += 1
+        except Exception:
+            log.debug("cache warm-up skipped %s", route, exc_info=True)
+    try:
+        from app.home_banners_ssr import load_public_banners_payload
+
+        load_public_banners_payload()
+        load_featured_video()
+    except Exception:
+        log.debug("cache warm-up skipped home banners/video", exc_info=True)
+    return warmed
+
+
 def _build_canonical_url(canonical_path: str | None, *, omit: bool = False) -> str | None:
     """Absolute canonical from settings.public_base_url + path; None omits the tag."""
     if omit:

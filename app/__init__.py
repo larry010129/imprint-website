@@ -299,6 +299,26 @@ async def lifespan(_app: FastAPI):
             name="imprint-startup-seed",
         )
 
+    # Warm the page caches in a worker thread once the app is up (never awaited
+    # here, so it cannot delay listen). On by default on Render; set
+    # WARM_PUBLIC_CACHES=1/0 to force it on/off elsewhere.
+    warm_env = os.environ.get("WARM_PUBLIC_CACHES", "").strip().lower()
+    warm_enabled = (warm_env in {"1", "true", "yes"}) or (
+        settings.is_render and warm_env not in {"0", "false", "no"}
+    )
+    warm_task: asyncio.Task[None] | None = None
+    if warm_enabled:
+        from app.controllers.web_controller import warm_public_caches
+
+        async def _warm() -> None:
+            try:
+                n = await asyncio.to_thread(warm_public_caches)
+                log.info("startup: warmed %s page cache entries", n)
+            except Exception:
+                log.exception("page cache warm-up failed")
+
+        warm_task = asyncio.create_task(_warm(), name="imprint-cache-warm")
+
     from app.gold_scrape_job import gold_scrape_loop
 
     # Background only — do not await this loop before listen (blocks
@@ -331,6 +351,12 @@ async def lifespan(_app: FastAPI):
             await gold_task
         except asyncio.CancelledError:
             pass
+        if warm_task is not None and not warm_task.done():
+            warm_task.cancel()
+            try:
+                await warm_task
+            except asyncio.CancelledError:
+                pass
         if report_task is not None:
             report_task.cancel()
             try:
