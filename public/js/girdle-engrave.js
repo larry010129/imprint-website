@@ -585,7 +585,7 @@
   // Some kiosk engines leave the photo at its natural 16:9 at the top of a
   // taller preview box, so the box-relative CSS top:49% lands on the photo's
   // bottom edge. Measure the photo and place the text on its band instead.
-  var GIRDLE_BAND_CENTER = 0.52;
+  var GIRDLE_BAND_CENTER = 0.50;
 
   function alignPreviewText(previewEl) {
     var wrap = previewEl && previewEl.parentElement;
@@ -597,7 +597,7 @@
       previewEl.style.top = '';
       return;
     }
-    previewEl.style.top = Math.round(img.offsetTop + imgH * GIRDLE_BAND_CENTER) + 5 + 'px';
+    previewEl.style.top = Math.round(img.offsetTop + imgH * GIRDLE_BAND_CENTER) + 'px';
   }
 
   function useRealGirdlePreview(previewEl, shapeId, colorId) {
