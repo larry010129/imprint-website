@@ -3754,13 +3754,19 @@ body.app-shell:not(.dark-theme) .shop-fit {
   object-fit: contain;
 }
 
-/* Angel paw (pawWings) artwork is drawn small in its canvas — render it 1.5x. */
-.shop-fit .shop-girdle-engrave [data-emblem="pawWings"] img {
+/* These artworks are drawn small in their canvas — render them 1.5x. */
+.shop-fit .shop-girdle-engrave [data-emblem="pawWings"] img,
+.shop-fit .shop-girdle-engrave [data-emblem="heartLine"] img,
+.shop-fit .shop-girdle-engrave [data-emblem="wings"] img {
   transform: scale(1.5);
 }
 
 .shop-fit .shop-girdle-engrave .cfg-engrave-input .cfg-emblem-token[data-emblem="pawWings"],
-.shop-fit .shop-girdle-engrave .cfg-engrave-preview-text .cfg-emblem-token[data-emblem="pawWings"] {
+.shop-fit .shop-girdle-engrave .cfg-engrave-preview-text .cfg-emblem-token[data-emblem="pawWings"],
+.shop-fit .shop-girdle-engrave .cfg-engrave-input .cfg-emblem-token[data-emblem="heartLine"],
+.shop-fit .shop-girdle-engrave .cfg-engrave-preview-text .cfg-emblem-token[data-emblem="heartLine"],
+.shop-fit .shop-girdle-engrave .cfg-engrave-input .cfg-emblem-token[data-emblem="wings"],
+.shop-fit .shop-girdle-engrave .cfg-engrave-preview-text .cfg-emblem-token[data-emblem="wings"] {
   margin-inline: 8px;
   overflow: visible;
 }
