@@ -3754,6 +3754,16 @@ body.app-shell:not(.dark-theme) .shop-fit {
   object-fit: contain;
 }
 
+/* Angel paw (pawWings) artwork is drawn small in its canvas — render it 2x. */
+.shop-fit .shop-girdle-engrave [data-emblem="pawWings"] img {
+  transform: scale(2);
+}
+
+.shop-fit .shop-girdle-engrave .cfg-engrave-input .cfg-emblem-token[data-emblem="pawWings"],
+.shop-fit .shop-girdle-engrave .cfg-engrave-preview-text .cfg-emblem-token[data-emblem="pawWings"] {
+  margin-inline: 8px;
+}
+
 .shop-fit .shop-girdle-engrave .cfg-engrave-input {
   min-height: 2.5rem;
   padding: 0.5rem 0.75rem;
