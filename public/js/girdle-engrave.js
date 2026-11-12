@@ -597,7 +597,7 @@
       previewEl.style.top = '';
       return;
     }
-    previewEl.style.top = Math.round(img.offsetTop + imgH * GIRDLE_BAND_CENTER) + 'px';
+    previewEl.style.top = Math.round(img.offsetTop + imgH * GIRDLE_BAND_CENTER) + 5 + 'px';
   }
 
   function useRealGirdlePreview(previewEl, shapeId, colorId) {
