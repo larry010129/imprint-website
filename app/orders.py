@@ -16,10 +16,10 @@ from app.image_urls import config_image_url, is_uuid, order_product_id, resolve_
 
 _TAIPEI = ZoneInfo("Asia/Taipei")
 
-# Match shop UI: 12 slots, known 〔label〕 emblems cost 2.
+# Match shop UI: 15 slots, known 〔label〕 emblems cost 1.
 # CJK (中文) only at 0.3ct+ — same gate as shop.js caratAllowsChineseEngraving.
-GIRDLE_MAX_SLOTS = 12
-GIRDLE_EMBLEM_SLOT_COST = 2
+GIRDLE_MAX_SLOTS = 15
+GIRDLE_EMBLEM_SLOT_COST = 1
 GIRDLE_ENGRAVING_MAX_LEN = GIRDLE_MAX_SLOTS  # text-only clip; emblems use slots
 GIRDLE_CHINESE_MIN_CARAT = 0.3
 _GIRDLE_CARAT_KEYS = ("carat", "diamondCarat", "diamond_carat")
@@ -38,6 +38,19 @@ _GIRDLE_EMBLEM_LABELS = frozenset(
         "狗掌",
         "愛心",
         "無限",
+        "愛心線",
+        "翅膀",
+        "皇冠",
+        "幼苗",
+        "星星",
+        "閃耀",
+        "月亮",
+        "天使掌印",
+        "掌印",
+        "玫瑰",
+        "小花",
+        "蝴蝶",
+        "鬱金香",
         "戒圈",
         "蝴蝶結",
         "雙愛心",
@@ -49,7 +62,7 @@ _GIRDLE_EMBLEM_LABELS = frozenset(
 
 
 def _trim_girdle_slots(text: str, max_slots: int = GIRDLE_MAX_SLOTS) -> str:
-    """Keep FE-readable tokens until the 12-slot cap. Unknown 〔…〕 dropped."""
+    """Keep FE-readable tokens until the 15-slot cap. Unknown 〔…〕 dropped."""
     out: list[str] = []
     used = 0
     for match in _GIRDLE_TOKEN_RE.finditer(text):
@@ -125,7 +138,7 @@ def sanitize_girdle_engraving(
     *,
     allow_chinese: bool | None = None,
 ) -> str:
-    """Keep shop girdle text; strip controls/HTML; cap 12 slots.
+    """Keep shop girdle text; strip controls/HTML; cap 15 slots.
 
     Letters, digits, punctuation (. @ $ and the rest), spaces, and emblems
     stay at any size. CJK stays only when allow_chinese is true, or when

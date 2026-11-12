@@ -5957,7 +5957,7 @@ function loadGirdleEngrave() {
   if (girdleEngraveLoadPromise) return girdleEngraveLoadPromise;
   girdleEngraveLoadPromise = new Promise((resolve, reject) => {
     const script = document.createElement('script');
-    script.src = '/static/js/girdle-engrave.js?v=32';
+    script.src = '/static/js/girdle-engrave.js?v=35';
     script.async = true;
     script.onload = () => resolve(window.GirdleEngrave);
     script.onerror = () => reject(new Error('girdle engraving script failed to load'));
@@ -6001,7 +6001,7 @@ function ensureGirdleEngrave() {
     previewShape: resolvedDiamondShape(),
     previewColor: selectedDiamondColorId() || 'white',
     allowChinese: caratAllowsChineseEngraving(),
-    max: 12,
+    max: 15,
     onChange: (val) => {
       state.engravingGirdle = val;
       updateSummary();

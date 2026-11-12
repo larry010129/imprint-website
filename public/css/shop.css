@@ -3846,7 +3846,7 @@ body.app-shell:not(.dark-theme) .shop-fit {
   position: absolute;
   left: 8%;
   right: 8%;
-  top: 49%;
+  top: 52%;
   transform: translateY(-50%);
   text-align: center;
   font-size: clamp(14px, 1.85vw, 18px);

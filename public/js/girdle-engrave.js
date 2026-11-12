@@ -11,7 +11,20 @@
     clover: { label: '四葉草', image: 'clover.png' },
     dogPaw: { label: '狗掌', image: 'dog-paw.png' },
     heart: { label: '愛心', image: 'heart.png' },
-    infinity: { label: '無限', image: 'infinity.png' }
+    infinity: { label: '無限', image: 'infinity.png' },
+    heartLine: { label: '愛心線', image: 'heart-line.png' },
+    wings: { label: '翅膀', image: 'wings.png' },
+    crown: { label: '皇冠', image: 'crown.png' },
+    sprout: { label: '幼苗', image: 'sprout.png' },
+    star: { label: '星星', image: 'star.png' },
+    sparkle: { label: '閃耀', image: 'sparkle.png' },
+    moon: { label: '月亮', image: 'moon.png' },
+    pawWings: { label: '天使掌印', image: 'paw-wings.png' },
+    pawPrint: { label: '掌印', image: 'paw-print.png' },
+    rose: { label: '玫瑰', image: 'rose.png' },
+    flower: { label: '小花', image: 'flower.png' },
+    butterfly: { label: '蝴蝶', image: 'butterfly.png' },
+    tulip: { label: '鬱金香', image: 'tulip.png' }
   };
 
   var LEGACY_RING = {
@@ -21,7 +34,7 @@
 
   Object.keys(EMBLEMS).forEach(function (name) {
     var def = EMBLEMS[name];
-    def.svg = '<img src="' + EMBLEM_BASE + def.image + '?v=3" alt="" width="18" height="18" aria-hidden="true">';
+    def.svg = '<img src="' + EMBLEM_BASE + def.image + '?v=4" alt="" width="18" height="18" aria-hidden="true">';
   });
 
   // Keep old stored labels and button IDs readable after the pattern refresh.
@@ -43,10 +56,10 @@
   });
 
   var ZWS = '\u200B';
-  var EMBLEM_SLOT_COST = 2;
+  var EMBLEM_SLOT_COST = 1;
   // Typed text: letters, digits, punctuation, spaces at any carat.
   // CJK Unified Ideographs (+ Ext A) only when setAllowChinese(true) — shop
-  // uses 0.3ct+. Emblem tokens still insert via buttons. Slot cap stays at 12.
+  // uses 0.3ct+. Emblem tokens still insert via buttons. Slot cap stays at 15.
   // ZWS is caret glue; strip C0/C1 controls and line breaks so the field stays single-line.
   var CONTROL_OR_BREAK = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\r\n\t]/g;
   var CJK_CHAR = /[\u3400-\u4DBF\u4E00-\u9FFF]/;
@@ -572,7 +585,7 @@
   // Some kiosk engines leave the photo at its natural 16:9 at the top of a
   // taller preview box, so the box-relative CSS top:49% lands on the photo's
   // bottom edge. Measure the photo and place the text on its band instead.
-  var GIRDLE_BAND_CENTER = 0.49;
+  var GIRDLE_BAND_CENTER = 0.52;
 
   function alignPreviewText(previewEl) {
     var wrap = previewEl && previewEl.parentElement;
@@ -623,12 +636,23 @@
       button.setAttribute('aria-label', '插入' + def.label + '圖樣');
       button.innerHTML = def.svg;
     });
+    // Templates ship only the first few buttons; create the rest from EMBLEMS.
+    var template = buttons[0];
+    if (!template) return;
+    for (var i = buttons.length; i < names.length; i++) {
+      var extra = template.cloneNode(false);
+      var extraDef = EMBLEMS[names[i]];
+      extra.setAttribute('data-emblem', names[i]);
+      extra.setAttribute('aria-label', '插入' + extraDef.label + '圖樣');
+      extra.innerHTML = extraDef.svg;
+      template.parentNode.appendChild(extra);
+    }
   }
 
   function init(opts) {
     var input = typeof opts.input === 'string' ? document.getElementById(opts.input) : opts.input;
     if (!input) return null;
-    var max = opts.max || 12;
+    var max = opts.max || 15;
     var countEl = typeof opts.countEl === 'string' ? document.getElementById(opts.countEl) : opts.countEl;
     var previewEl = typeof opts.previewEl === 'string' ? document.getElementById(opts.previewEl) : opts.previewEl;
     var emblemsRoot = typeof opts.emblemsRoot === 'string' ? document.getElementById(opts.emblemsRoot) : opts.emblemsRoot;

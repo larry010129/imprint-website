@@ -381,7 +381,7 @@ def test_shop_js_non_round_shape_requires_min_carat():
         / "htmx"
         / "shop_catalog.html"
     ).read_text(encoding="utf-8")
-    assert "shop-i18n.js?v=24" in (
+    assert "shop-i18n.js?v=26" in (
         ROOT / "content" / "site" / "templates" / "pages" / "shop" / "calculator.html"
     ).read_text(encoding="utf-8")
     assert "diamond_shape_round_only" in i18n

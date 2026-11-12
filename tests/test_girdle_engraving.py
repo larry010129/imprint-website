@@ -64,13 +64,14 @@ def test_sanitize_strips_html_controls_and_clips():
     assert sanitize_girdle_engraving("x" * 200) == "x" * GIRDLE_MAX_SLOTS
 
 
-def test_sanitize_clips_to_twelve_slots_keeps_emblems():
+def test_sanitize_clips_to_fifteen_slots_keeps_emblems():
     assert sanitize_girdle_engraving("LOVE.@$2024!") == "LOVE.@$2024!"
-    assert sanitize_girdle_engraving("LOVE.@$2024!X") == "LOVE.@$2024!"
-    six = "〔雙心〕" * 6
-    assert sanitize_girdle_engraving(six) == six
-    assert sanitize_girdle_engraving("〔雙心〕" * 7) == six
-    assert sanitize_girdle_engraving("〔雙心〕ABCDEFGHIJK") == "〔雙心〕ABCDEFGHIJ"
+    assert sanitize_girdle_engraving("LOVE.@$2024!ABCX") == "LOVE.@$2024!ABC"
+    fifteen = "〔雙心〕" * 15
+    assert sanitize_girdle_engraving(fifteen) == fifteen
+    assert sanitize_girdle_engraving("〔雙心〕" * 16) == fifteen
+    assert sanitize_girdle_engraving("〔雙心〕ABCDEFGHIJKLMNO") == "〔雙心〕ABCDEFGHIJKLMN"
+    assert sanitize_girdle_engraving("〔玫瑰〕〔皇冠〕AB") == "〔玫瑰〕〔皇冠〕AB"
     assert sanitize_girdle_engraving("〔不是圖騰〕LOVE") == "LOVE"
 
 

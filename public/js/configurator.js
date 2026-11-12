@@ -325,7 +325,7 @@
     });
   }
 
-  var MAX_ENGRAVE = 12;
+  var MAX_ENGRAVE = 15;
   var engraveCtrl = null;
 
   function engraveReadable() {
