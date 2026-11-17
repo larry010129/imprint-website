@@ -31,27 +31,25 @@ from app.controllers import (
 log = logging.getLogger(__name__)
 
 # blob: required for admin/CMS crop UI (URL.createObjectURL local previews).
-# img-src: self + data/blob + known hosts (Supabase media, Botpress, Google).
+# img-src: self + data/blob + known hosts (Supabase media, Google).
 # googletagmanager / google-analytics: GTM (GTM-KD4FZ458) in public layouts.
 HTML_CONTENT_SECURITY_POLICY = (
     "default-src 'self'; "
-    "script-src 'self' 'unsafe-inline' https://cdn.botpress.cloud "
-    "https://files.bpcontent.cloud https://*.botpress.cloud "
+    "script-src 'self' 'unsafe-inline' "
     "https://accounts.google.com https://www.google.com https://www.gstatic.com "
     "https://www.googletagmanager.com https://www.youtube.com "
     # Google Ads conversion tracking (gtag AW-*)
     "https://www.googleadservices.com https://googleads.g.doubleclick.net; "
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
     "font-src 'self' https://fonts.gstatic.com data:; "
-    "img-src 'self' data: blob: https://*.supabase.co https://*.bpcontent.cloud "
-    "https://*.botpress.cloud https://www.google.com https://www.gstatic.com "
+    "img-src 'self' data: blob: https://*.supabase.co "
+    "https://www.google.com https://www.gstatic.com "
     "https://lh3.googleusercontent.com https://www.googletagmanager.com "
     "https://www.google-analytics.com https://*.google-analytics.com "
     "https://i.ytimg.com "
     "https://www.googleadservices.com https://googleads.g.doubleclick.net "
     "https://*.g.doubleclick.net https://ad.doubleclick.net; "
-    "connect-src 'self' https://*.botpress.cloud wss://*.botpress.cloud "
-    "https://cdn.botpress.cloud https://files.bpcontent.cloud "
+    "connect-src 'self' "
     "https://accounts.google.com https://oauth2.googleapis.com "
     "https://people.googleapis.com "
     "https://www.google.com https://www.gstatic.com "
@@ -65,7 +63,7 @@ HTML_CONTENT_SECURITY_POLICY = (
     "frame-src 'self' https://www.google.com https://recaptcha.google.com "
     "https://accounts.google.com https://www.googletagmanager.com "
     "https://www.youtube.com https://www.youtube-nocookie.com "
-    "https://*.botpress.cloud https://td.doubleclick.net; "
+    "https://td.doubleclick.net; "
     "form-action 'self'; "
     "frame-ancestors 'self'; object-src 'none'; base-uri 'self'"
 )
@@ -511,7 +509,7 @@ def create_app() -> FastAPI:
         # 'unsafe-inline' because pages use inline handlers (onerror=…) that
         # can't be nonced piecemeal, but is still locked to an origin allowlist,
         # so injected external <script src=evil> is blocked. Allowed origins are
-        # exactly what the site loads: Botpress webchat, Google Maps, Google
+        # exactly what the site loads: Google Maps, Google
         # Fonts, YouTube embeds. frame-ancestors 'self' + object-src 'none' +
         # base-uri 'self' are the high-value additions.
         if response.headers.get("content-type", "").startswith("text/html"):

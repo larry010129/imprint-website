@@ -113,8 +113,8 @@ window.shopConfig = Object.assign({
 {% endif %}
 <link rel="stylesheet" href="/static/css/responsive.css?v=3.33" media="print" onload="this.media='all'">
 <noscript><link rel="stylesheet" href="/static/css/responsive.css?v=3.33"></noscript>
-<link rel="stylesheet" href="/static/css/social-fab.css?v=13" media="print" onload="this.media='all'">
-<noscript><link rel="stylesheet" href="/static/css/social-fab.css?v=13"></noscript>
+<link rel="stylesheet" href="/static/css/social-fab.css?v=14" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="/static/css/social-fab.css?v=14"></noscript>
 {% block extra_css %}{% endblock %}
 {% if site_cms_sections or site_cms_edit %}
 {% if is_home %}
@@ -221,6 +221,5 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <script src="/static/js/site-layout.js?v=3" defer></script>
 <script src="/static/js/main.js?v=2.14" defer></script>
 {% block social_fab %}{% include "partials/social-fab.html" %}{% endblock %}
-{% block botpress_webchat %}{% include "partials/botpress-webchat.html" %}{% endblock %}
 </body>
 </html>

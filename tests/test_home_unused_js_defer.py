@@ -49,9 +49,9 @@ def test_home_defers_htmx_gtag_and_extras(client):
     assert "main.js?v=2.12" in html
     assert "ringflip.js" not in html
 
-    # Botpress stays click-only (no static inject script tag).
-    assert "loadImprintChat" in html
-    assert 'src="https://cdn.botpress.cloud' not in html
+    # Botpress webchat was removed entirely.
+    assert "loadImprintChat" not in html
+    assert "botpress" not in html.lower()
 
     assert "FAB_FALLBACK_MS = 12000" in html
 
@@ -123,15 +123,14 @@ def test_ringflip_split_out_of_main():
 
 
 def test_shop_third_party_and_quote_work_is_deferred_and_deduplicated():
-    botpress = (
-        ROOT / "content" / "site" / "templates" / "partials" / "botpress-webchat.html"
-    ).read_text(encoding="utf-8")
     tour = (
         ROOT / "content" / "site" / "templates" / "partials" / "shop-tour-react-js.html"
     ).read_text(encoding="utf-8")
     shop = (ROOT / "public" / "js" / "shop.js").read_text(encoding="utf-8")
 
-    assert "scheduleIdlePrefetch" not in botpress
+    assert not (
+        ROOT / "content" / "site" / "templates" / "partials" / "botpress-webchat.html"
+    ).exists()
     assert "/static/css/shop-tour.css" not in (
         ROOT / "content" / "site" / "templates" / "partials" / "shop-tour-react-css.html"
     ).read_text(encoding="utf-8")
