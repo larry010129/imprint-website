@@ -89,10 +89,6 @@
       <div class="side-nav-section">
         <p class="side-nav-label">設定</p>
         <div class="side-nav-items">
-          <button data-panel="leads">
-            <svg class="side-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-            <span>諮詢名單</span>
-          </button>
           <button data-panel="pricing">
             <svg class="side-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
             <span>價格設定</span>
@@ -351,36 +347,6 @@
       </div>
     </section>
 
-    <!-- 諮詢名單 -->
-    <section class="panel" id="panel-leads">
-      <p class="note">
-        這份名單彙整官網表單、LINE 官方帳號與電話來的詢問。此客群考慮期長達數年——
-        「觀望中」的客人請保持低頻率的溫柔跟進，切勿密集催促。
-      </p>
-      <div class="card">
-        <div class="card-head">
-          <h2>諮詢名單</h2>
-          <span class="hint">彙整官網「聯絡表單」與「線上估價需求」，依建立時間排序</span>
-        </div>
-        <table>
-          <thead><tr>
-            <th data-sort-key="name" data-sortable="text">客戶</th>
-            <th data-sort-key="phone" data-sortable="text">電話</th>
-            <th data-sort-key="email" data-sortable="text">電子郵件</th>
-            <th data-sort-key="source" data-sortable="text">來源</th>
-            <th data-sort-key="summary" data-sortable="text">內容摘要</th>
-            <th data-sort-key="created" data-sortable="date">建立時間</th>
-            <th data-sort-key="status" data-sortable="text">狀態</th>
-            <th data-sortable="false">操作</th>
-          </tr></thead>
-          <tbody id="leadsTableBody">
-            <tr class="skel-row"><td colspan="8"><span class="skel-line skel-line--short"></span></td></tr>
-            <tr class="skel-row"><td colspan="8"><span class="skel-line skel-line--short"></span></td></tr>
-            <tr class="skel-row"><td colspan="8"><span class="skel-line skel-line--short"></span></td></tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
 
     <!-- 訂單管理 -->
     <section class="panel" id="panel-orders">
@@ -620,8 +586,8 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
 
 <script src="/js/api-client.js?v=35"></script>
-<script src="/js/admin1-shell.js?v=12"></script>
-<script src="/js/admin-nav-visibility.js?v=3"></script>
+<script src="/js/admin1-shell.js?v=13"></script>
+<script src="/js/admin-nav-visibility.js?v=4"></script>
 <script src="/js/admin-plugin-state.js?v=1"></script>
 <script src="/js/toast.js?v=1"></script>
 <script src="/js/skeleton-ui.js?v=4"></script>
@@ -631,7 +597,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <script src="/js/admin-dashboard-chart.js?v=2"></script>
 <script src="/js/admin-table-sort.js?v=1"></script>
 <script src="/js/admin-image-urls.js?v=12"></script>
-<script src="/js/admin.js?v=34"></script>
+<script src="/js/admin.js?v=35"></script>
 <script src="/js/girdle-engrave.js?v=11"></script>
 <script src="/js/admin-orders.js?v=29"></script>
 <script src="/js/order-detail.js"></script>
@@ -653,7 +619,7 @@ document.addEventListener('DOMContentLoaded', function () {
   var titles = {
     dash: '儀表板', orders: '訂單管理', products: '商品上架',
     accounts: '帳戶管理', 'member-search': '搜尋會員', invites: '邀請碼', coupons: '優惠券',
-    leads: '諮詢名單', pricing: '價格設定', membership: '會員等級', content: '內容與頁面圖片',
+    pricing: '價格設定', membership: '會員等級', content: '內容與頁面圖片',
     'featured-video': '首頁品牌影片'
   };
   var mainEl = document.querySelector('.main');

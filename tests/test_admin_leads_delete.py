@@ -122,17 +122,6 @@ def test_api_client_exposes_delete_lead():
     assert "'/api/admin/leads'" not in block
 
 
-def test_admin_js_confirms_before_deleting_lead():
-    src = (ROOT / "public" / "js" / "admin.js").read_text(encoding="utf-8")
-    assert "data-lead-delete" in src
-    assert "deleteLead" in src
-    assert "confirm(" in src
-    assert "此操作無法復原" in src
-    # Refresh both the list and the dashboard counter after a delete.
-    assert "loadLeads(true, true)" in src
-    assert "loadDashboardStats()" in src
-
-
 def test_admin_pages_ship_bumped_assets():
     for name in ("admin.html", "admin1.html"):
         html = (ROOT / name).read_text(encoding="utf-8")

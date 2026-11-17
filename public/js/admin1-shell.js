@@ -9,7 +9,6 @@
   var STORAGE_THEME = 'admin1-theme';
   var STORAGE_MENU = 'admin1-menu-state';
   var LOGIN_NEXT = '/login?next=/admin';
-  var LEAD_ID = /^[0-9a-f-]{1,64}$/i;
   var ORDER_NO = /^[A-Za-z0-9_-]{1,40}$/;
   var SEARCH_MIN = 2;
   var NOTIFY_LIMIT = 8;
@@ -229,30 +228,15 @@
     var items = [];
     ((summary && summary.items) || []).forEach(function (it) {
       if (!it) return;
-      var sub = relativeTime(it.created_at);
-      var name = it.name || '訪客';
-      if (it.type === 'order') {
-        var num = String(it.order_number || '');
-        if (!ORDER_NO.test(num)) return;
-        items.push({
-          panel: 'orders',
-          href: '/admin/orders?order=' + encodeURIComponent(num),
-          order: num,
-          title: '待處理訂單 #' + num,
-          sub: sub
-        });
-        return;
-      }
-      if (it.type !== 'message' && it.type !== 'quote') return;
-      var id = String(it.id == null ? '' : it.id);
-      if (!LEAD_ID.test(id)) return;
-      var key = it.type + ':' + id;
+      if (it.type !== 'order') return;
+      var num = String(it.order_number || '');
+      if (!ORDER_NO.test(num)) return;
       items.push({
-        panel: 'leads',
-        href: '/admin/leads?lead=' + encodeURIComponent(key),
-        lead: key,
-        title: (it.type === 'message' ? '新留言・' : '待估價・') + name,
-        sub: sub || '諮詢名單'
+        panel: 'orders',
+        href: '/admin/orders?order=' + encodeURIComponent(num),
+        order: num,
+        title: '待處理訂單 #' + num,
+        sub: relativeTime(it.created_at)
       });
     });
     return items;
@@ -278,7 +262,6 @@
     list.innerHTML = items.slice(0, NOTIFY_LIMIT).map(function (it) {
       return (
         '<a class="admin1-notify-row" href="' + esc(it.href) + '" data-panel="' + esc(it.panel) + '"' +
-          (it.lead ? ' data-lead="' + esc(it.lead) + '"' : '') +
           (it.order ? ' data-order="' + esc(it.order) + '"' : '') + '>' +
           esc(it.title) +
           '<small>' + esc(it.sub) + '</small>' +
@@ -296,13 +279,8 @@
   }
 
   /* Open the exact item in place when this page has the panel; otherwise the link navigates. */
-  function openNotifyTarget(lead, order) {
-    if (order) {
-      openPanelWithSearch('orders', 'searchFor', order);
-    } else if (lead) {
-      switchPanel('leads');
-      if (window.AdminLeadsPanel) window.AdminLeadsPanel.focus(lead);
-    }
+  function openNotifyTarget(order) {
+    if (order) openPanelWithSearch('orders', 'searchFor', order);
   }
 
   function bindNotifyList() {
@@ -321,24 +299,19 @@
       if (!document.querySelector('.side-nav button[data-panel="' + panel + '"]')) return;
       e.preventDefault();
       closeDropdowns();
-      openNotifyTarget(row.getAttribute('data-lead'), row.getAttribute('data-order'));
+      openNotifyTarget(row.getAttribute('data-order'));
     });
   }
 
-  /* ?lead= / ?order= deep links: open the item once every script has loaded. */
+  /* ?order= deep links: open the order once every script has loaded. */
   function openDeepLink() {
     var params;
     try { params = new URLSearchParams(location.search); } catch (e) { return; }
-    var lead = params.get('lead');
     var order = params.get('order');
-    if (lead === null && order === null) return;
-    var leadParts = lead ? lead.split(':') : [];
-    if (leadParts.length !== 2 || (leadParts[0] !== 'message' && leadParts[0] !== 'quote') || !LEAD_ID.test(leadParts[1])) {
-      lead = null;
-    }
+    if (params.get('lead') === null && order === null) return;
     if (!order || !ORDER_NO.test(order)) order = null;
-    if ((order || lead) && document.querySelector('.side-nav button[data-panel="' + (order ? 'orders' : 'leads') + '"]')) {
-      openNotifyTarget(lead, order);
+    if (order && document.querySelector('.side-nav button[data-panel="orders"]')) {
+      openNotifyTarget(order);
     }
     params.delete('lead');
     params.delete('order');
@@ -383,7 +356,7 @@
         renderNotifyError();
         return;
       }
-      renderNotify(notifyItemsFromSummary(res), Number(res.counts.total) || 0);
+      renderNotify(notifyItemsFromSummary(res), Number(res.counts.orders) || 0);
     }).catch(function () {
       renderNotifyError();
     });
@@ -458,25 +431,6 @@
           else switchPanel('accounts');
         }
       };
-    });
-  }
-
-  /* 諮詢名單 returns the latest 50 messages and 50 quote requests; match those here. */
-  function hitsFromLeads(res, needle) {
-    var out = [];
-    ((res && res.messages) || []).forEach(function (m) {
-      if (matchesWords([m.name, m.phone, m.email, m.message, m.source_page, m.status].join(' '), needle)) {
-        out.push({ type: '諮詢', label: m.name || m.email || '留言', sub: m.phone || m.email || '' });
-      }
-    });
-    ((res && res.quotes) || []).forEach(function (r) {
-      if (matchesWords([r.name, r.phone, r.email, r.series, r.product_type, r.carat, r.color, r.shape, r.metal, r.status].join(' '), needle)) {
-        out.push({ type: '估價', label: r.name || r.email || '估價', sub: [r.series, r.product_type].filter(Boolean).join(' · ') });
-      }
-    });
-    return out.slice(0, SEARCH_HITS_PER_TYPE).map(function (hit) {
-      hit.open = function () { switchPanel('leads'); };
-      return hit;
     });
   }
 
@@ -559,9 +513,7 @@
       { name: '會員', run: function () { return accountsP; },
         hits: function (res) { return hitsFromAccounts(res.accounts || res.users || (Array.isArray(res) ? res : [])); } },
       { name: '商品', run: function () { return a.admin.getProducts({ q: q, pageSize: SEARCH_HITS_PER_TYPE }); },
-        hits: function (res) { return hitsFromProducts(res); } },
-      { name: '諮詢', run: function () { return a.admin.getLeads(); },
-        hits: function (res) { return hitsFromLeads(res, needle); } }
+        hits: function (res) { return hitsFromProducts(res); } }
     ];
     var results = sources.map(function () { return []; });
     var failed = [];
