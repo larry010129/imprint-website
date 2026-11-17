@@ -2,27 +2,7 @@
   'use strict';
 
   var root = document.querySelector('[data-social-fab]');
-
-  function hideBotpressFab() {
-    var shadowRoot = document.querySelector('.bpChatContainer > #fab-root')?.shadowRoot;
-    if (!shadowRoot || !shadowRoot.querySelector('.bpFabWrapper')) return false;
-    var styleId = 'imprint-hide-botpress-fab';
-    if (shadowRoot.getElementById(styleId)) return true;
-
-    var style = document.createElement('style');
-    style.id = styleId;
-    style.textContent = [
-      '.bpFabWrapper { display: none !important; visibility: hidden !important; pointer-events: none !important; }',
-      '@media (max-width: 900px) {',
-      '  #message-preview-root {',
-      '    bottom: calc(var(--shop-mobile-buy-bar-height, 0px) + 104px) !important;',
-      '    visibility: var(--shop-mobile-chat-visibility, visible) !important;',
-      '  }',
-      '}',
-    ].join('\n');
-    shadowRoot.appendChild(style);
-    return true;
-  }
+  if (!root) return;
 
   function isCheckoutFlowPage() {
     var path = (window.location.pathname || '').toLowerCase();
@@ -34,33 +14,16 @@
   }
 
   if (isCheckoutFlowPage()) {
-    if (root) {
-      root.hidden = true;
-      root.setAttribute('aria-hidden', 'true');
-      root.style.display = 'none';
-    }
-    document.querySelectorAll('.bpChatContainer, #webchat-root, #fab-root, #message-preview-root').forEach(function (el) {
-      el.style.display = 'none';
-      el.setAttribute('aria-hidden', 'true');
-    });
-    hideBotpressFab();
-    var checkoutHidePoll = window.setInterval(function () {
-      if (hideBotpressFab()) window.clearInterval(checkoutHidePoll);
-    }, 250);
-    window.setTimeout(function () {
-      hideBotpressFab();
-      window.clearInterval(checkoutHidePoll);
-    }, 15000);
+    root.hidden = true;
+    root.setAttribute('aria-hidden', 'true');
+    root.style.display = 'none';
     return;
   }
-
-  if (!root) return;
 
   var menu = document.getElementById('imprintContactFabMenu');
   var toggle = document.getElementById('imprintContactFabToggle');
   if (!menu || !toggle) return;
 
-  var BP_HIDE_STYLE_ID = 'imprint-hide-botpress-fab';
   var HOVER_CLOSE_MS = 280;
   var hoverCapable = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
   var closeTimer = null;
@@ -70,7 +33,7 @@
   function setOpen(open) {
     root.classList.toggle('is-open', open);
     toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-    toggle.setAttribute('aria-label', open ? '訊息選單已展開' : '開啟訊息選單');
+    toggle.setAttribute('aria-label', open ? '關閉聯絡選單' : '開啟聯絡選單');
     menu.hidden = !open;
     menu.setAttribute('aria-hidden', open ? 'false' : 'true');
   }
@@ -101,38 +64,6 @@
     }, HOVER_CLOSE_MS);
   }
 
-  function openBotpressChat() {
-    if (window.botpress && typeof window.botpress.open === 'function') {
-      window.botpress.open();
-      return true;
-    }
-    if (window.botpress && typeof window.botpress.toggle === 'function') {
-      window.botpress.toggle();
-      return true;
-    }
-    return false;
-  }
-
-  function hideBotpressLauncher() {
-    var shadowRoot = document.querySelector('.bpChatContainer > #fab-root')?.shadowRoot;
-    if (!shadowRoot || !shadowRoot.querySelector('.bpFabWrapper')) return false;
-    if (shadowRoot.getElementById(BP_HIDE_STYLE_ID)) return true;
-
-    var style = document.createElement('style');
-    style.id = BP_HIDE_STYLE_ID;
-    style.textContent = [
-      '.bpFabWrapper { display: none !important; visibility: hidden !important; pointer-events: none !important; }',
-      '@media (max-width: 900px) {',
-      '  #message-preview-root {',
-      '    bottom: calc(var(--shop-mobile-buy-bar-height, 0px) + 104px) !important;',
-      '    visibility: var(--shop-mobile-chat-visibility, visible) !important;',
-      '  }',
-      '}',
-    ].join('\n');
-    shadowRoot.appendChild(style);
-    return true;
-  }
-
   if (hoverCapable) {
     root.addEventListener('mouseenter', openMenu);
     root.addEventListener('mouseleave', scheduleClose);
@@ -159,38 +90,4 @@
   menu.querySelectorAll('[data-social-fab-link]').forEach(function (link) {
     link.addEventListener('click', close);
   });
-
-  var chatBtn = menu.querySelector('[data-social-fab-chat]');
-  if (chatBtn) {
-    chatBtn.addEventListener('click', function () {
-      close();
-      var open = function () {
-        if (!openBotpressChat()) {
-          var tries = 0;
-          var poll = window.setInterval(function () {
-            tries += 1;
-            if (openBotpressChat() || tries > 40) window.clearInterval(poll);
-          }, 250);
-        }
-      };
-      if (typeof window.loadImprintChat === 'function') {
-        window.loadImprintChat().then(open).catch(open);
-      } else {
-        open();
-      }
-    });
-  }
-
-  hideBotpressLauncher();
-  var hidePoll = window.setInterval(function () {
-    if (hideBotpressLauncher()) window.clearInterval(hidePoll);
-  }, 250);
-  window.setTimeout(function () {
-    hideBotpressLauncher();
-    window.clearInterval(hidePoll);
-  }, 15000);
-
-  if (window.botpress && typeof window.botpress.on === 'function') {
-    window.botpress.on('webchat:initialized', hideBotpressLauncher);
-  }
 })();

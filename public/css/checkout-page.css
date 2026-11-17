@@ -1,11 +1,7 @@
 /* Checkout page shell — no hero banner; compact member-app layout */
 
-/* Checkout flow — no chat/contact FAB (blocks submit bar) */
-body.is-checkout-page .imprint-contact-fab,
-body.is-checkout-page .bpChatContainer,
-body.is-checkout-page #webchat-root,
-body.is-checkout-page #fab-root,
-body.is-checkout-page #message-preview-root {
+/* Checkout flow — no contact FAB (blocks submit bar) */
+body.is-checkout-page .imprint-contact-fab {
   display: none !important;
   visibility: hidden !important;
   pointer-events: none !important;

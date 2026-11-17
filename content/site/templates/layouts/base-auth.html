@@ -8,7 +8,7 @@
 <title>{% block title %}{{ title }}{% endblock %}</title>
 <meta name="robots" content="noindex, nofollow">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-<link rel="stylesheet" href="/static/css/social-fab.css?v=13">
+<link rel="stylesheet" href="/static/css/social-fab.css?v=14">
 {% block extra_css %}{% endblock %}
 {% block extra_head %}{% endblock %}
 </head>
@@ -23,6 +23,5 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <script src="/static/js/htmx.min.js" defer></script>
 {% block extra_scripts %}{% endblock %}
 {% include "partials/social-fab.html" %}
-{% include "partials/botpress-webchat.html" %}
 </body>
 </html>
