@@ -19,6 +19,13 @@ _BLOCK_RE = re.compile(
 _STYLING_RE = re.compile(r'<span class="gh-dna">|</span>|</?em>')
 _DNA_RE = re.compile(r"(?<![A-Za-z])DNA(?![A-Za-z])")
 _PLACEHOLDER_RE = re.compile("\x00(\\d+)\x00")
+# The small line above a banner title. It is often English ("First Love"), which
+# the normal pass ignores, so it is translated here and only here: the same word
+# elsewhere on the page is left alone.
+_HEADING_RE = re.compile(
+    r"""(<p\b[^<>]*\sclass="gh-script\b[^"]*"[^<>]*>)([^<>]+)(</p\s*>)"""
+)
+_HAN_RE = re.compile("[一-鿿]")
 
 
 def _restyle(target: str, italic: bool) -> str:
@@ -45,7 +52,17 @@ def swap_styled_blocks(html: str, lookup) -> tuple[str, list[str]]:
         done.append(_restyle(target, "<em>" in inner))
         return f"{match[1]}\x00{len(done) - 1}\x00{match[4]}"
 
-    return _BLOCK_RE.sub(swap, html), done
+    def swap_heading(match: re.Match[str]) -> str:
+        text = " ".join(unescape(match[2]).split())
+        if _HAN_RE.search(text):  # Chinese headings use the normal pass
+            return match[0]
+        target = lookup(text)
+        if target is None:
+            return match[0]
+        done.append(escape(target, quote=False))
+        return f"{match[1]}\x00{len(done) - 1}\x00{match[3]}"
+
+    return _HEADING_RE.sub(swap_heading, _BLOCK_RE.sub(swap, html)), done
 
 
 def restore_styled_blocks(html: str, done: list[str]) -> str:

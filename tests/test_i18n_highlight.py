@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import pytest
+
 from app.home_banners_ssr import _format_lead, _format_title
-from app.i18n import translate_html
+from app.i18n import load_catalog, translate_html
 
 LEAD = "以髮絲與 DNA 培育專屬鑽石，誠摯邀請您成為我們的合作夥伴。"
 
@@ -36,6 +38,25 @@ def test_japanese_result_is_not_looked_up_again():
     )
     assert missing == []
     assert '専用の<span class="gh-dna">DNA</span>ダイヤモンド' in out
+
+
+@pytest.mark.parametrize("language", ["ja", "ko"])
+def test_english_banner_headings_are_translated(language):
+    catalog = load_catalog(language)
+    for word in ("Imprint Diamond", "First Love", "Companion", "Love", "Family",
+                 "Heirloom", "UNIQUE"):
+        out, _ = translate_html(f'<p class="gh-script reveal">{word}</p>', catalog)
+        assert catalog.get(word) and f">{catalog.get(word)}</p>" in out, word
+    # the same word outside a banner heading is left alone
+    out, _ = translate_html("<p>Love</p><a>Family</a>", catalog)
+    assert out == "<p>Love</p><a>Family</a>"
+
+
+def test_english_and_unknown_headings_stay_as_written():
+    html = '<p class="gh-script">First Love</p>'
+    assert translate_html(html, load_catalog("en"))[0] == html
+    other = '<p class="gh-script">Brand New Line</p>'
+    assert translate_html(other, load_catalog("ja"))[0] == other
 
 
 def test_without_a_whole_sentence_the_pieces_still_translate():

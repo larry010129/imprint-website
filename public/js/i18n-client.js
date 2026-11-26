@@ -111,9 +111,23 @@
     }
   }
 
+  // The small line above a banner title is often English ("First Love"), which
+  // lookup() ignores, so it is translated here and only here.
+  function translateHeading(el) {
+    if (!el.matches('p.gh-script') || el.children.length) return;
+    var text = normalize(el.textContent);
+    if (/[一-鿿]/.test(text) ||
+        !Object.prototype.hasOwnProperty.call(data.catalog, text)) return;
+    var node = el.firstChild;
+    if (writtenText.get(node) === node.nodeValue) return;
+    writtenText.set(node, data.catalog[text]);
+    node.nodeValue = data.catalog[text];
+  }
+
   function translateElement(el) {
     if (el.closest('[translate="no"]')) return;
     translateStyled(el);
+    translateHeading(el);
     ATTRS.forEach(function (name) {
       var current = el.getAttribute(name);
       var mine = writtenAttrs.get(el) || {};
