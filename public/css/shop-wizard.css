@@ -887,6 +887,62 @@
   }
 }
 
+/* Translated metal-color names overflow a half column: stack both full width. */
+@media (min-width: 901px) {
+  html:not(:lang(zh)) .shop-fit .product-options-section #metal-step,
+  html:not(:lang(zh)) .shop-fit .product-options-section #color-step {
+    grid-column: 1 / -1;
+  }
+}
+
+/* The 64px color chips cut translated names off: size them to their label. */
+html:not(:lang(zh)) .shop-fit #color-btn-row > * {
+  width: auto;
+  max-width: none;
+}
+
+/* Longer metal names: let each chip keep its text width and wrap the row. */
+html:not(:lang(zh)) .shop-fit #metal-btn-row > * {
+  min-width: auto;
+}
+
+/* Narrow phones: keep the four colors on one even row; labels may wrap. */
+@media (max-width: 480px) {
+  html:not(:lang(zh)) .shop-fit #fancy-color-carousel {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    align-items: start;
+  }
+
+  html:not(:lang(zh)) .shop-fit #fancy-color-carousel .gem-label {
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+}
+
+/* Metal engraving: full row so the placeholder fits. Its hint needs styling
+   here because pages.css is not loaded on the calculator. */
+.shop-fit #engraving-remark-step {
+  grid-column: 1 / -1;
+}
+
+.shop-fit #engraving-remark-step .engraving-input {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.shop-fit #engraving-remark-step .cfg-engrave-hint {
+  margin: 6px 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: #8d8177;
+}
+
+/* Girdle engraving hint is longer than the column in translated languages. */
+.shop-fit .shop-girdle-engrave .cfg-engrave-hint {
+  white-space: normal;
+}
+
 /* Calculator: highlight missing options after order click */
 .shop-field-invalid {
   --shop-invalid-color: #dc2626;
@@ -988,6 +1044,23 @@
     white-space: normal;
     text-align: left;
   }
+}
+
+/* Translated text is much longer than Chinese. The reminder must wrap rather
+   than clip, and the color labels need the full row (half a row broke them
+   into a 2x2 block). */
+html:not(:lang(zh)) .fancy-color-label-row {
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+
+html:not(:lang(zh)) .fancy-color-label-row .diamond-shape-hint--inline {
+  white-space: normal;
+  text-align: left;
+}
+
+html:not(:lang(zh)) .shop-fit #fancy-diamond-step {
+  grid-column: 1 / -1;
 }
 
 /* Tablets (iPad portrait/landscape): 3 columns in portrait, 4 in landscape.
