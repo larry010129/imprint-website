@@ -62,6 +62,18 @@ def normalize_segment(text: str) -> str:
     return " ".join(unescape(text).split())
 
 
+def excerpt_of(translation: str, share: float) -> str:
+    """About the same share of a translation as the Chinese excerpt showed."""
+    length = max(160, int(len(translation) * share))
+    if len(translation) <= length:
+        return translation
+    cut = translation[:length]
+    space = cut.rfind(" ")
+    if space > length * 0.7:  # end on a whole word (Japanese has no spaces)
+        cut = cut[:space]
+    return cut.rstrip(" ,.;:、。，") + "…"
+
+
 class Catalog:
     """Exact phrases first, then "{}" patterns, then truncated excerpts."""
 
@@ -101,12 +113,12 @@ class Catalog:
                 for index, piece in enumerate(pieces[1:]):
                     out += (values[index] if index < len(values) else "") + piece
                 return out
-        # Excerpts such as "長文前 280 字…": show the start of the full translation.
-        if key.endswith("…") and len(key) > 80:
-            head = key[:-1]
+        # Excerpts such as "長文前 88 字…": show the start of the full translation.
+        if key.endswith("…") and len(key) > 60:
+            head = key[:-1].rstrip()
             for source, target in self.exact.items():
                 if source.startswith(head):
-                    return target[: max(160, len(target) * len(head) // len(source))] + "…"
+                    return excerpt_of(target, len(head) / len(source))
         return None
 
 

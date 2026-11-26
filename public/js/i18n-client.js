@@ -53,6 +53,25 @@
       }
       return out;
     }
+    return excerpt(key);
+  }
+
+  // Cut-off text such as the first 88 characters of a story plus "…" (the home
+  // page builds these cards): show the start of the full translation.
+  function excerpt(key) {
+    if (key.length <= 60 || key.slice(-1) !== '…') return null;
+    var head = key.slice(0, -1).trim();
+    var sources = Object.keys(data.catalog);
+    for (var i = 0; i < sources.length; i += 1) {
+      if (sources[i].lastIndexOf(head, 0) !== 0) continue;
+      var full = data.catalog[sources[i]];
+      var length = Math.max(160, Math.floor(full.length * head.length / sources[i].length));
+      if (full.length <= length) return full;
+      var cut = full.slice(0, length);
+      var space = cut.lastIndexOf(' ');
+      if (space > length * 0.7) cut = cut.slice(0, space);
+      return cut.replace(/[ ,.;:、。，]+$/, '') + '…';
+    }
     return null;
   }
 
