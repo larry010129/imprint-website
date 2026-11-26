@@ -1062,3 +1062,66 @@
     padding: 12px 14px;
   }
 }
+
+/* 內容管理「翻譯」分頁 */
+.adx-tr-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+
+.adx-tr-tools select,
+.adx-tr-tools input,
+.adx-tr-input {
+  border: 1px solid #C9BFB2;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font: inherit;
+  background: #fff;
+}
+
+.adx-tr-tools input {
+  flex: 1 1 220px;
+}
+
+.adx-tr-table .adx-tr-text {
+  width: 36%;
+  min-width: 200px;
+  vertical-align: top;
+}
+
+.adx-tr-value {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 12em;
+  overflow-y: auto;
+}
+
+.adx-tr-input {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+}
+
+.adx-tr-actions {
+  white-space: nowrap;
+}
+
+.adx-tr-actions .btn-sm + .btn-sm {
+  margin-left: 6px;
+}
+
+.adx-tr-rows .adx-table-wrap {
+  overflow-x: auto;
+}
+
+.adx-tr-pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 12px;
+  font-size: 13px;
+}

@@ -12,6 +12,7 @@ from starlette.middleware.gzip import GZipMiddleware
 
 from config.settings import settings
 
+from app.i18n_middleware import register_i18n_middleware
 from app.controllers import (
     admin_controller,
     api_controller,
@@ -24,6 +25,7 @@ from app.controllers import (
     notifications_controller,
     release_notes_controller,
     shop_controller,
+    translations_admin_controller,
     web_controller,
 )
 
@@ -385,6 +387,8 @@ def create_app() -> FastAPI:
         redoc_url=settings.redoc_url,
         lifespan=lifespan,
     )
+    # Added before GZip so the translation layer sees uncompressed pages.
+    register_i18n_middleware(application)
     application.add_middleware(GZipMiddleware, minimum_size=1024, compresslevel=5)
 
     _CSRF_SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS", "TRACE"})
@@ -564,6 +568,7 @@ def create_app() -> FastAPI:
     application.include_router(share_controller.router, prefix="/api")
     application.include_router(cms_admin_controller.router, prefix="/api")
     application.include_router(release_notes_controller.router, prefix="/api")
+    application.include_router(translations_admin_controller.router, prefix="/api")
 
     from app.api.v1 import build_v1_router
 

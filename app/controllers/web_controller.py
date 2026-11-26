@@ -30,6 +30,7 @@ from config.routes import (
     PageMeta,
 )
 from config.settings import settings
+from app.i18n import language_links_for_request
 from app.legacy_redirects import is_retired_jewelry_route, register_legacy_redirects
 from app.robots_host import html_robots_content, is_noindex_host
 from app.youtube_channel import fetch_latest_channel_video, resolve_channel_id
@@ -37,6 +38,7 @@ from app.youtube_channel import fetch_latest_channel_video, resolve_channel_id
 log = logging.getLogger(__name__)
 templates = Jinja2Templates(directory=str(settings.templates_dir))
 templates.env.globals["google_client_id"] = settings.google_client_id
+templates.env.globals["language_links_for_request"] = language_links_for_request
 templates.env.globals["recaptcha_site_key"] = settings.recaptcha_site_key
 
 
@@ -688,7 +690,9 @@ def _make_handler(meta: PageMeta, status_code: int = 200):
         from app.page_image_slots import apply_page_image_slots, page_image_slot_specs
 
         site_edit = (
-            str(request.query_params.get("cms_edit") or "").lower() in {"1", "true", "yes"}
+            # Never edit on a translated page: saves would overwrite the Chinese copy.
+            not getattr(request.state, "locale", None)
+            and str(request.query_params.get("cms_edit") or "").lower() in {"1", "true", "yes"}
             and request_is_admin(request)
         )
         context = _context(request, meta)

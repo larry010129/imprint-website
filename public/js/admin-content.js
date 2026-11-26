@@ -624,6 +624,7 @@
         '<button type="button" class="' + tabClassName('testimonials', _tab) + '" data-tab="testimonials"' + tabDisabled + '>見證</button>' +
         '<button type="button" class="' + tabClassName('journal', _tab) + '" data-tab="journal"' + tabDisabled + '>日誌</button>' +
         '<button type="button" class="' + tabClassName('faq', _tab) + '" data-tab="faq"' + tabDisabled + '>FAQ</button>' +
+        '<button type="button" class="' + tabClassName('translations', _tab) + '" data-tab="translations"' + tabDisabled + '>翻譯</button>' +
         '<button type="button" class="' + tabClassName('pages', _tab) + '" data-tab="pages"' + tabDisabled + '>頁面 <span class="adx-risk-tag">Beta · 風險</span></button>' +
       '</div>' +
       pageSubTabsHtml +
@@ -633,7 +634,13 @@
       btn.addEventListener('click', function () {
         var nextTab = btn.dataset.tab;
         if (!nextTab || nextTab === _tab || _loading) return;
+        if (_tab === 'translations' && window.AdminTranslations &&
+            !window.AdminTranslations.mayLeave(root)) return;
         _tab = nextTab;
+        if (_tab === 'translations') {
+          renderShell();
+          return;
+        }
         var force = false;
         if (_pageIndex !== 0) {
           _pageIndex = 0;
@@ -666,7 +673,8 @@
       body.innerHTML = contentBodyLoadingHtml();
       return;
     }
-    if (_tab === 'pages') renderCmsPages(body);
+    if (_tab === 'translations') renderTranslations(body);
+    else if (_tab === 'pages') renderCmsPages(body);
     else if (_tab === 'journal') {
       body.innerHTML = '';
       renderJournal(body);
@@ -752,6 +760,14 @@
       getEngagementRings: function () { return api.admin.getEngagementRings(); },
       saveEngagementRings: function (fields) { return api.admin.saveEngagementRings(fields); },
     };
+  }
+
+  function renderTranslations(body) {
+    if (!window.AdminTranslations) {
+      body.innerHTML = '<p class="note warn">翻譯分頁尚未載入，請重新整理。</p>';
+      return;
+    }
+    window.AdminTranslations.render(body);
   }
 
   function renderCmsPages(body) {
@@ -2108,6 +2124,7 @@
 
   function load(silent, force) {
     var tab = _tab === 'copy' ? 'pages' : _tab;
+    if (tab === 'translations') return;
     if (_loadedTabs[tab] && !force) return;
 
     _loading = true;

@@ -481,6 +481,14 @@
         if (body.error) return Promise.resolve(body);
         return request('/api/admin/faq-category-action', { method: 'POST', body: body });
       },
+      getTranslations: function (opts) {
+        // pagingQuery already adds page, page_size and q.
+        return request('/api/admin/translations' + pagingQuery(opts) +
+          '&lang=' + encodeURIComponent(opts.lang));
+      },
+      updateTranslation: function (fields) {
+        return request('/api/admin/translation-update', { method: 'POST', body: fields });
+      },
       listCmsPages: function (opts) {
         return requestPagedList('/api/admin/cms-pages', 'pages', opts);
       },

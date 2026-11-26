@@ -1,0 +1,9 @@
+/* Translated home pages only: closed-bar layout before nav.css arrives (mirrors nav.css). */
+html:is([lang="en"],[lang="ja"],[lang="ko"]) .nav-brand .brand-name .zh{display:none}
+@media (min-width:1401px){
+  html:is([lang="en"],[lang="ja"],[lang="ko"]) [data-site-nav-root] .nav-cta{gap:6px}
+  html:is([lang="en"],[lang="ja"],[lang="ko"]) [data-site-nav-root] .nav-cta :is(.btn-contact,.btn-appointment){letter-spacing:0;padding-inline:12px}
+  html:is([lang="en"],[lang="ja"],[lang="ko"]) [data-site-nav-root] .nav-cta .nav-ihb{min-width:0;padding-inline:1rem;letter-spacing:0}
+  html:is([lang="en"],[lang="ja"],[lang="ko"]) .account-menu-text{max-width:68px}
+  html:is([lang="en"],[lang="ja"],[lang="ko"]) .site-nav-desktop .nav-menu>.nav-item>a{font-size:13px;letter-spacing:0;padding-inline:4px}
+}

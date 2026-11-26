@@ -1075,3 +1075,42 @@ a.account-menu-trigger{
   }
 }
 
+/* Language switcher: only rendered on pages that have a translation. */
+.nav-lang{ position:relative; flex-shrink:0; font-size:13px; white-space:nowrap; }
+.nav-lang summary{ display:inline-flex; align-items:center; gap:7px; height:36px; padding:0 12px; cursor:pointer; list-style:none; user-select:none; border:1px solid rgba(43,34,32,.14); border-radius:999px; background:#fff; color:#2b2220; box-shadow:0 1px 3px rgba(43,34,32,.07); transition:border-color .15s, box-shadow .15s; }
+.nav-lang summary::-webkit-details-marker{ display:none; }
+.nav-lang summary:hover, .nav-lang[open] summary{ border-color:rgba(19,122,118,.45); box-shadow:0 3px 10px rgba(43,34,32,.1); }
+.nav-lang summary:focus-visible, .nav-lang__menu a:focus-visible{ outline:2px solid #137a76; outline-offset:2px; }
+.nav-lang summary svg{ fill:none; stroke:currentColor; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
+.nav-lang__globe{ width:16px; height:16px; }
+.nav-lang__chevron{ width:14px; height:14px; opacity:.6; transition:transform .18s; }
+.nav-lang[open] .nav-lang__chevron{ transform:rotate(180deg); }
+.nav-lang__menu{ position:absolute; top:calc(100% + 8px); right:0; z-index:50; display:flex; flex-direction:column; gap:2px; min-width:160px; padding:6px; border:1px solid rgba(43,34,32,.1); border-radius:14px; background:#fff; color:#2b2220; box-shadow:0 12px 32px rgba(43,34,32,.16); }
+.nav-lang__menu a{ display:flex; align-items:center; justify-content:space-between; gap:16px; padding:9px 12px; border-radius:9px; color:inherit; text-decoration:none; font-size:14px; }
+.nav-lang__menu a:hover{ background:#f4f2f0; }
+.nav-lang__menu a[aria-current="true"]{ background:#e6f7f6; color:#0f6e6a; font-weight:600; }
+.nav-lang__menu a[aria-current="true"]::after{ content:""; width:5px; height:10px; margin-right:3px; border:solid currentColor; border-width:0 2px 2px 0; transform:rotate(45deg) translateY(-2px); }
+@media (prefers-reduced-motion:reduce){ .nav-lang summary, .nav-lang__chevron{ transition:none; } }
+.mobile-animated-nav__item[translate="no"]{ display:flex; flex-wrap:wrap; justify-content:center; gap:4px 24px; }
+.mobile-animated-nav__item[translate="no"] a[aria-current="true"]{ text-decoration:underline; text-underline-offset:6px; }
+@media (max-width:900px){ .nav-cta .nav-lang{ display:none; } }
+
+/* Translated labels are longer. Brand name would repeat ("Imprint Diamond" twice). */
+html:is([lang="en"],[lang="ja"],[lang="ko"]) .nav-brand .brand-name .zh{ display:none; }
+@media (min-width:1401px){
+  html:is([lang="en"],[lang="ja"],[lang="ko"]) [data-site-nav-root] .nav-cta{ gap:6px; }
+  /* Same buttons as Chinese; tighter inside so the longer words fit. */
+  html:is([lang="en"],[lang="ja"],[lang="ko"]) [data-site-nav-root] .nav-cta :is(.btn-contact,.btn-appointment){
+    letter-spacing:0; padding-inline:12px;
+  }
+  html:is([lang="en"],[lang="ja"],[lang="ko"]) [data-site-nav-root] .nav-cta .nav-ihb{ min-width:0; padding-inline:1rem; letter-spacing:0; }
+  /* Signed in, the cart icon needs room: long names are cut short sooner. */
+  html:is([lang="en"],[lang="ja"],[lang="ko"]) [data-site-nav-root] .account-menu-text{ max-width:68px; }
+  html:is([lang="en"],[lang="ja"],[lang="ko"]) [data-site-nav-root] .site-nav-desktop .nav-menu > .nav-item > a{
+    font-size:13px; letter-spacing:0; padding-inline:4px; white-space:nowrap;
+  }
+}
+/* Native glyph shapes: the site font is Traditional Chinese. */
+html[lang="ja"] body, html[lang="ja"] body :is(h1,h2,h3,p,a,li,span,summary,button){ font-family:"Noto Sans JP","Yu Gothic UI","Hiragino Sans",Meiryo,sans-serif; }
+html[lang="ko"] body, html[lang="ko"] body :is(h1,h2,h3,p,a,li,span,summary,button){ font-family:"Noto Sans KR","Malgun Gothic","Apple SD Gothic Neo",sans-serif; }
+html[lang="ko"] body{ word-break:keep-all; overflow-wrap:anywhere; }

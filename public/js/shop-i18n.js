@@ -1438,15 +1438,23 @@ const translations = {
   }
 };
 
-let currentLang = localStorage.getItem('appLang') || 'zh';
+// On /en, /ja and /ko the address decides the language, not the saved choice.
+const pageLang = (window.IMPRINT_I18N && window.IMPRINT_I18N.lang) || '';
+if (pageLang && !translations[pageLang]) {
+  translations[pageLang] = Object.fromEntries(
+    Object.entries(translations.zh).map(([key, text]) => [key, window.IMPRINT_I18N.t(text)])
+  );
+}
+
+let currentLang = pageLang || localStorage.getItem('appLang') || 'zh';
 
 window.t = key => (translations[currentLang] && translations[currentLang][key]) || key;
 
 function applyLanguage(lang) {
   currentLang = lang;
-  localStorage.setItem('appLang', lang);
+  if (!pageLang) localStorage.setItem('appLang', lang);
 
-  document.documentElement.lang = lang === 'en' ? 'en' : 'zh-Hant';
+  document.documentElement.lang = lang === 'zh' ? 'zh-Hant' : lang;
 
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const key = el.getAttribute('data-i18n');

@@ -363,7 +363,7 @@ def _contact_form(slots, dates):
 
 
 def _run_contact(monkeypatch, form, booked=()):
-    """Drive contact_submit with everything external stubbed (no DB, no email)."""
+    """Drive contact_submit with everything external stubbed (no DB, email or Discord)."""
     sent = []
     cur = _AvailCur(booked=booked)
     req = MagicMock()
@@ -378,6 +378,7 @@ def _run_contact(monkeypatch, form, booked=()):
     monkeypatch.setattr(hm, "recaptcha_error_or_none", lambda *a, **k: None)
     monkeypatch.setattr(cb, "load_settings", lambda: cb.default_settings())
     monkeypatch.setattr("app.mail.notify_contact_message", lambda **k: sent.append(k))
+    monkeypatch.setattr("app.discord_notify.notify_contact", lambda **k: True)
     monkeypatch.setattr(
         hm, "html", lambda request, name, ctx, status=200: (ctx, status)
     )

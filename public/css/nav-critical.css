@@ -242,3 +242,7 @@ a.account-menu-trigger{ text-decoration:none; color:inherit; }
 }
 @media (max-width:900px){ .nav-cta .btn-appointment{ display:none !important; } }
 @media (max-width:640px){ .nav-cta .btn-contact{ display:none !important; } }
+
+.nav-lang{flex-shrink:0;font-size:13px;white-space:nowrap}
+.nav-lang summary{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 12px;list-style:none;border:1px solid rgba(43,34,32,.14);border-radius:999px;background:#fff;color:#2b2220}
+@media (max-width:900px){.nav-cta .nav-lang{display:none}}

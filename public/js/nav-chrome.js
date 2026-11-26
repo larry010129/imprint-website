@@ -92,9 +92,24 @@
         localStorage.removeItem(NAV_CACHE);
         return;
       }
-      localStorage.setItem(NAV_CACHE, JSON.stringify({ key: m[1], html: xhr.responseText }));
+      localStorage.setItem(NAV_CACHE, JSON.stringify({
+        key: m[1], lang: document.documentElement.lang, html: xhr.responseText
+      }));
     } catch (e) {}
   };
+
+  /* Language menu is a native <details>: also close it on outside click / Esc. */
+  var closeLangMenus = function (except) {
+    document.querySelectorAll('details.nav-lang[open]').forEach(function (menu) {
+      if (menu !== except) menu.removeAttribute('open');
+    });
+  };
+  document.addEventListener('click', function (e) {
+    closeLangMenus(e.target.closest ? e.target.closest('details.nav-lang') : null);
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeLangMenus(null);
+  });
 
   window.requestAnimationFrame(boot);
   document.body.addEventListener('htmx:afterRequest', function (e) {

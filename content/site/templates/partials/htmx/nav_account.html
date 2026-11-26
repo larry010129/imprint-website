@@ -1,6 +1,6 @@
 {% if variant == "drawer" %}
 {% if nav_user %}
-<p class="mobile-animated-nav__account-label">{{ nav_user.name[:10] }}</p>
+<p class="mobile-animated-nav__account-label" translate="no">{{ nav_user.name[:10] }}</p>
 <ul class="mobile-animated-nav__sublist mobile-animated-nav__sublist--account">
   <li><a class="mobile-animated-nav__sublink" href="/account">我的帳戶</a></li>
   <li><a class="mobile-animated-nav__sublink" href="/history">訂購紀錄</a></li>
@@ -17,8 +17,8 @@
 {% elif nav_user %}
 <div class="account-menu" data-account-menu>
   <button type="button" class="account-menu-trigger" aria-expanded="false" aria-haspopup="menu" aria-label="{{ nav_user.name }}" data-account-toggle>
-    <span class="account-menu-text"><span class="account-menu-name">{{ nav_user.name[:10] }}</span></span>
-    <span class="account-menu-avatar" aria-hidden="true">{{ nav_user.name[:1] }}</span>
+    <span class="account-menu-text" translate="no"><span class="account-menu-name">{{ nav_user.name[:10] }}</span></span>
+    <span class="account-menu-avatar" aria-hidden="true" translate="no">{{ nav_user.name[:1] }}</span>
   </button>
   <div class="account-menu-panel" role="menu" hidden data-account-panel>
     <a role="menuitem" class="account-menu-item" href="/account">我的帳戶</a>
