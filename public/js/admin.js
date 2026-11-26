@@ -858,6 +858,9 @@
           if (panel === 'featured-video' && window.AdminFeaturedVideoPanel) {
             window.AdminFeaturedVideoPanel.ensureLoaded();
           }
+          if (panel === 'translations' && window.AdminTranslations) {
+            window.AdminTranslations.ensureLoaded(document.getElementById('translationsRoot'));
+          }
           if (panel === 'accounts' && window.AdminAccountsPanel) window.AdminAccountsPanel.ensureLoaded();
           if (panel === 'member-search' && window.AdminMemberSearchPanel) {
             window.AdminMemberSearchPanel.ensureLoaded();

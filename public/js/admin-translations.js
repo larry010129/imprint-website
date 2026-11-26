@@ -126,6 +126,9 @@
     var pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
     function go(next) {
       if (!mayDiscard(root)) return;
+      // The tab and the sidebar panel share state: page within this copy's query.
+      state.lang = root._query.lang;
+      state.search = root._query.search;
       state.page = next;
       state.editing = '';
       load(root);
@@ -159,6 +162,7 @@
   function load(root) {
     var body = root.querySelector('.adx-tr-results');
     var request = ++latestRequest;
+    root._query = { lang: state.lang, search: state.search };
     body.setAttribute('aria-busy', 'true');
     window.imprintAPI.admin.getTranslations({
       lang: state.lang,
@@ -250,8 +254,14 @@
     load(root);
   }
 
+  /* Sidebar panel: refresh on each visit, but never drop an unsaved edit. */
+  function ensureLoaded(container) {
+    if (container && !hasUnsavedEdit(container)) render(container);
+  }
+
   window.AdminTranslations = {
     render: render,
+    ensureLoaded: ensureLoaded,
     mayLeave: function (container) { return mayDiscard(container); },
   };
 })();

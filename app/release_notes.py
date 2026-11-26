@@ -46,6 +46,7 @@ ADMIN_NAV_KEYS = (
     "membership",
     "content",
     "featured-video",
+    "translations",
     "settings",
 )
 

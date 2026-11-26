@@ -16,6 +16,7 @@ from functools import lru_cache
 from html import escape, unescape
 from urllib.parse import urlsplit
 
+from app.i18n_highlight import restore_styled_blocks, swap_styled_blocks
 from config.routes import ALL_PAGES, STANDALONE_PAGES
 from config.settings import settings
 
@@ -179,6 +180,7 @@ def translate_html(
     def swap_link(match: re.Match[str]) -> str:
         return f'{match[1]}"{localized_url(match[2], link_prefix)}"'
 
+    html, styled = swap_styled_blocks(html, catalog.get)
     parts = _TOKEN_RE.split(html)
     skip_tag, skip_depth = "", 0
     option_tag: int | None = None
@@ -228,7 +230,7 @@ def translate_html(
                 tail = " "
                 padded = index
             parts[index] = f"{lead}{escape(target, quote=False)}{tail}"
-    return "".join(parts), list(missing)
+    return restore_styled_blocks("".join(parts), styled), list(missing)
 
 
 def language_links(route: str, current: str = "zh") -> list[dict]:

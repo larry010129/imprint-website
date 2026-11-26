@@ -6,7 +6,7 @@
     ['accounts', '帳戶管理'], ['member-search', '搜尋會員'], ['invites', '邀請碼'],
     ['coupons', '優惠券'], ['leads', '諮詢名單'], ['pricing', '價格設定'],
     ['membership', '會員等級'], ['content', '內容與頁面圖片'],
-    ['featured-video', '首頁品牌影片'], ['settings', '系統設定']
+    ['featured-video', '首頁品牌影片'], ['translations', '翻譯'], ['settings', '系統設定']
   ];
   var endpoint = '/api/admin/nav-visibility';
   var loaded = false;

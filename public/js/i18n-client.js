@@ -82,8 +82,38 @@
     node.nodeValue = lead + found + tail;
   }
 
+  // Banner text split by styling (coloured "DNA", italic half of a title) is
+  // saved as one sentence: translate the block, then put the styling back.
+  var STYLED = '.gh-hero__lead, .gh-hero__title';
+
+  function isOnlyStyling(child) {
+    return (child.tagName === 'EM' || child.className === 'gh-dna') &&
+      Array.prototype.every.call(child.children, isOnlyStyling);
+  }
+
+  function translateStyled(el) {
+    if (!el.matches(STYLED) || !el.children.length ||
+        !Array.prototype.every.call(el.children, isOnlyStyling)) return;
+    var found = lookup(el.textContent);
+    if (found === null || normalize(found) === normalize(el.textContent)) return;
+    var italic = !!el.querySelector('em');
+    var html = found.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    var comma = italic ? /[,，、]\s*/.exec(html) : null;
+    if (comma && comma.index + comma[0].length < html.length) {
+      var at = comma.index + comma[0].length;
+      html = html.slice(0, at) + '<em>' + html.slice(at) + '</em>';
+    }
+    el.innerHTML = html.replace(/\bDNA\b/g, '<span class="gh-dna">DNA</span>');
+    // Mark the new text as ours so it is never translated a second time.
+    var walker = document.createTreeWalker(el, 4 /* text */);
+    for (var node = walker.nextNode(); node; node = walker.nextNode()) {
+      writtenText.set(node, node.nodeValue);
+    }
+  }
+
   function translateElement(el) {
     if (el.closest('[translate="no"]')) return;
+    translateStyled(el);
     ATTRS.forEach(function (name) {
       var current = el.getAttribute(name);
       var mine = writtenAttrs.get(el) || {};

@@ -8,7 +8,7 @@ from functools import lru_cache
 
 from app.i18n import Catalog, load_catalog, page_routes
 
-_CLIENT_VERSION = 6
+_CLIENT_VERSION = 7
 
 
 @lru_cache(maxsize=16)
