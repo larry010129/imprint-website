@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from fastapi import FastAPI, Request
 from starlette.concurrency import run_in_threadpool
-from starlette.responses import RedirectResponse, Response
+from starlette.responses import JSONResponse, RedirectResponse, Response
 
-from app import i18n_store
+from app import fx_rates, i18n_store
 from app.i18n import (
     LOCALES,
     is_localizable,
@@ -49,6 +49,13 @@ def register_i18n_middleware(app: FastAPI) -> None:
     @app.middleware("http")
     async def i18n_layer(request: Request, call_next):
         path = request.scope["path"]
+
+        if request.method in _READ_METHODS and path == "/i18n/fx.json":
+            rates = await run_in_threadpool(fx_rates.get_rates)
+            cache = "public, max-age=3600" if rates else "no-store"
+            return JSONResponse(
+                {"base": "TWD", "rates": rates}, headers={"Cache-Control": cache}
+            )
 
         if request.method in _READ_METHODS and path.startswith("/i18n/"):
             language = path.removeprefix("/i18n/").removesuffix(".js")
