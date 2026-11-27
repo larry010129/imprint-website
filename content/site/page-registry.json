@@ -936,10 +936,10 @@
         "src": "/static/js/shop-terms.js?v=4"
       },
       {
-        "src": "/static/js/fx-estimate.js?v=1"
+        "src": "/static/js/fx-estimate.js?v=3"
       },
       {
-        "src": "/static/js/shop.js?v=178"
+        "src": "/static/js/shop.js?v=179"
       }
     ],
     "head_extras": []

@@ -4716,7 +4716,7 @@ async function refreshQuotePrices() {
     if (totalEl) animateShopTotal(totalEl, NaN);
     if (mobileTotal) mobileTotal.textContent = '—';
     updateCompareAtDisplay(null, null);
-    window.shopFxEstimate?.show(null, null);
+    window.shopFxEstimate?.show(null);
     lastQuoteTotal = null;
     lastQuoteFailed = isReadyToSubmit();
     updatePriceHint(null);
@@ -4778,7 +4778,7 @@ async function refreshQuotePrices() {
     mobileTotal.textContent = roundedTotal != null ? roundedTotal.toLocaleString() : '—';
   }
   updateCompareAtDisplay(roundedTotal, quote.compareAtTotal);
-  window.shopFxEstimate?.show(roundedTotal, quote.manualOverride ? null : quote.diamondPrice);
+  window.shopFxEstimate?.show(roundedTotal);
   updatePriceHint(total);
   updateCtaState(total);
 }

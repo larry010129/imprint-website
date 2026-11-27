@@ -622,32 +622,13 @@
   white-space: nowrap;
 }
 
-.fx-estimate--row {
-  display: block;
-  margin-top: 2px;
-  font-size: 12px;
-}
-
-.fx-estimate[hidden],
-.fx-credit[hidden] {
+.fx-estimate[hidden] {
   display: none;
 }
 
 /* Keep the sale compare-at price below, so the estimate stays beside the total. */
 .shop-price-panel--wizard .hero-price-compare {
   order: 1;
-}
-
-.fx-credit {
-  margin: 4px 0 8px;
-  font-size: 11px;
-  line-height: 1.6;
-  color: var(--ink-soft);
-}
-
-.fx-credit a {
-  color: inherit;
-  text-decoration: underline;
 }
 
 .shop-action-row--primary {
