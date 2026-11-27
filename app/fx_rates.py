@@ -1,8 +1,8 @@
 """Daily TWD exchange rates for the price estimates on /en, /ja and /ko.
 
-Source: ExchangeRate-API with a free key (EXCHANGE_RATE_API_KEY), which needs no
-credit link on the page. Without a key there are no rates and no estimates. Do
-not switch to the no-key endpoint: its terms require a visible credit link.
+Source: fawazahmed0/exchange-api. Free, no key, published as CC0 (public
+domain), so the page needs no credit line. It is community-run with no uptime
+promise: if it fails or stops updating, the calculator shows NT$ only.
 """
 
 from __future__ import annotations
@@ -10,17 +10,22 @@ from __future__ import annotations
 import json
 import logging
 import math
-import os
 import threading
 import time
+from datetime import date, timedelta
 from urllib.request import Request, urlopen
 
-RATES_URL = "https://v6.exchangerate-api.com/v6/latest/TWD"
+# The second address is the fallback the project's README asks clients to use.
+RATES_URLS = (
+    "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/twd.json",
+    "https://latest.currency-api.pages.dev/v1/currencies/twd.json",
+)
 CURRENCIES = ("USD", "JPY", "KRW")
 
-_REFRESH_SECONDS = 12 * 60 * 60
+_REFRESH_SECONDS = 24 * 60 * 60  # one check per day
 _RETRY_SECONDS = 10 * 60
 _MAX_AGE_SECONDS = 3 * 24 * 60 * 60  # hide estimates rather than show old rates
+_MAX_DATA_AGE = timedelta(days=7)
 
 _log = logging.getLogger(__name__)
 _lock = threading.Lock()
@@ -30,47 +35,49 @@ _next_try = 0.0
 
 
 def parse_rates(payload: object) -> dict[str, float] | None:
-    """Return the wanted rates per 1 TWD, or None if anything looks wrong."""
-    if not isinstance(payload, dict) or payload.get("result") != "success":
+    """Return the wanted rates per 1 TWD, or None if wrong or out of date."""
+    if not isinstance(payload, dict) or not isinstance(payload.get("twd"), dict):
         return None
-    table = payload.get("conversion_rates")
-    if payload.get("base_code") != "TWD" or not isinstance(table, dict):
+    try:
+        published = date.fromisoformat(str(payload.get("date")))
+    except ValueError:
+        return None
+    if date.today() - published > _MAX_DATA_AGE:
         return None
     rates = {}
     for code in CURRENCIES:
-        value = table.get(code)
+        value = payload["twd"].get(code.lower())
         if not isinstance(value, (int, float)) or not math.isfinite(value) or value <= 0:
             return None
         rates[code] = float(value)
     return rates
 
 
-def _api_key() -> str:
-    return os.environ.get("EXCHANGE_RATE_API_KEY", "").strip()
-
-
-def _download(key: str) -> object:
-    # The key goes in a header so it never appears in a logged address.
-    headers = {"Authorization": f"Bearer {key}", "User-Agent": "price-estimate/1.0"}
-    request = Request(RATES_URL, headers=headers)
+def _download(url: str) -> object:
+    request = Request(url, headers={"User-Agent": "price-estimate/1.0"})
     with urlopen(request, timeout=6) as response:
         return json.load(response)
+
+
+def _fetch() -> dict[str, float] | None:
+    for url in RATES_URLS:
+        try:
+            rates = parse_rates(_download(url))
+        except (OSError, ValueError) as error:
+            _log.warning("Exchange rate fetch failed (%s): %s", url, error)
+            continue
+        if rates:
+            return rates
+    return None
 
 
 def get_rates() -> dict[str, float] | None:
     """Cached rates. Blocking: call from a worker thread."""
     global _rates, _fetched_at, _next_try
-    key = _api_key()
-    if not key:
-        return None
     with _lock:
         now = time.monotonic()
         if now >= _next_try:
-            try:
-                fresh = parse_rates(_download(key))
-            except (OSError, ValueError) as error:
-                _log.warning("Exchange rate fetch failed: %s", error)
-                fresh = None
+            fresh = _fetch()
             if fresh:
                 _rates, _fetched_at = fresh, now
                 _next_try = now + _REFRESH_SECONDS
